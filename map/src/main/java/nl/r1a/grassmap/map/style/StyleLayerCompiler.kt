@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.map.style
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -107,6 +108,17 @@ internal object StyleLayerCompiler {
                     UnsupportedProperty(
                         layerId = slotted.spec.id.value,
                         reason = exception.message.orEmpty(),
+                    )
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                // Malformed plugin JSON reaches array access or casts that throw
+                // beyond the compiler's own checks. A layer may not cross the seam
+                // with an exception, so report it and keep checking the rest.
+                unsupported +=
+                    UnsupportedProperty(
+                        layerId = slotted.spec.id.value,
+                        reason = exception.message ?: exception::class.simpleName.orEmpty(),
                     )
             }
         }

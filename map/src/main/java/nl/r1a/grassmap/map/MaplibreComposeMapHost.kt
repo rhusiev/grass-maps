@@ -34,6 +34,7 @@ import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerSpec
 import nl.r1a.grassmap.plugin.api.model.MapSource
 import nl.r1a.grassmap.plugin.api.model.ScreenOffset
+import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.SourceId
 import nl.r1a.grassmap.plugin.api.model.SourceKind
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
@@ -94,6 +95,22 @@ internal class MapHostState(
         layers.value =
             layers.value.filterNot { it.owner == null } +
             diff.layers.map { OwnedLayer(owner = null, slot = it.slot, spec = it.spec) }
+        return Outcome.Success(Unit)
+    }
+
+    /** Adds [spec] to [slot] for [owner] after compiling it. */
+    fun addLayer(
+        slot: LayerSlot,
+        spec: LayerSpec,
+        owner: PluginId,
+    ): Outcome<Unit> {
+        val report = StyleLayerCompiler.compileAll(listOf(SlottedLayer(slot, spec)))
+        if (!report.isComplete) {
+            return Outcome.Failure(AppError.Unsupported)
+        }
+        layers.value =
+            layers.value.filterNot { it.spec.id == spec.id } +
+            OwnedLayer(owner = owner, slot = slot, spec = spec)
         return Outcome.Success(Unit)
     }
 
@@ -206,10 +223,7 @@ class MaplibreComposeMapHost internal constructor(
         owner: PluginId,
     ): Outcome<Unit> =
         withContext(Dispatchers.Main.immediate) {
-            session.layers.value =
-                session.layers.value.filterNot { it.spec.id == spec.id } +
-                OwnedLayer(owner = owner, slot = slot, spec = spec)
-            Outcome.Success(Unit)
+            session.addLayer(slot, spec, owner)
         }
 
     override suspend fun removeLayers(owner: PluginId): Outcome<Unit> =

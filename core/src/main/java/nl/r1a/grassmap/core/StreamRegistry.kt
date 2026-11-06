@@ -15,14 +15,17 @@ import nl.r1a.grassmap.plugin.api.host.StreamAccess
 class StreamRegistry(
     private val host: PluginHost,
 ) : StreamAccess {
-    override fun <T : Any> subscribe(streamId: StreamId): Flow<T> = flow {
-        when (val stream = host.stream(streamId)) {
-            is Outcome.Success -> {
-                @Suppress("UNCHECKED_CAST")
-                emitAll(stream.value.flow as Flow<T>)
-            }
+    override fun <T : Any> subscribe(streamId: StreamId): Flow<T> =
+        flow {
+            when (val stream = host.stream(streamId)) {
+                is Outcome.Success -> {
+                    @Suppress("UNCHECKED_CAST")
+                    emitAll(stream.value.flow as Flow<T>)
+                }
 
-            is Outcome.Failure -> Unit
+                is Outcome.Failure -> {
+                    Unit
+                }
+            }
         }
-    }
 }

@@ -1,7 +1,5 @@
 package nl.r1a.grassmap.core
 
-import java.util.concurrent.ConcurrentHashMap
-import kotlin.time.TimeSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -27,6 +25,8 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.CommandInvoker
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.TimeSource
 
 /**
  * Dispatches commands from the generated registry. Validates parameters, applies
@@ -43,21 +43,26 @@ class CommandBus(
     private val inFlight = ConcurrentHashMap<CancellationKey, Job>()
     private val history = CommandHistory()
     private val historyMutex = Mutex()
-    private val _events = MutableSharedFlow<CommandInvoked>(
-        extraBufferCapacity = EVENT_BUFFER_CAPACITY,
-    )
+    private val _events =
+        MutableSharedFlow<CommandInvoked>(
+            extraBufferCapacity = EVENT_BUFFER_CAPACITY,
+        )
 
     val events: SharedFlow<CommandInvoked> = _events.asSharedFlow()
 
-    override suspend fun invoke(id: CommandId, params: JsonElement): Outcome<JsonElement> =
+    override suspend fun invoke(
+        id: CommandId,
+        params: JsonElement,
+    ): Outcome<JsonElement> =
         executeInvocation(
             invocation = CommandInvocation(commandId = id, params = params),
             recordHistory = true,
         ).outcome
 
     override suspend fun undo(): Outcome<Unit> {
-        val invocation = historyMutex.withLock { history.popUndo() }
-            ?: return Outcome.Failure(AppError.NotReady)
+        val invocation =
+            historyMutex.withLock { history.popUndo() }
+                ?: return Outcome.Failure(AppError.NotReady)
         val execution = executeInvocation(invocation, recordHistory = false)
         val outcome = execution.outcome
         if (outcome is Outcome.Failure) {
@@ -71,8 +76,9 @@ class CommandBus(
     }
 
     override suspend fun redo(): Outcome<Unit> {
-        val invocation = historyMutex.withLock { history.popRedo() }
-            ?: return Outcome.Failure(AppError.NotReady)
+        val invocation =
+            historyMutex.withLock { history.popRedo() }
+                ?: return Outcome.Failure(AppError.NotReady)
         val execution = executeInvocation(invocation, recordHistory = false)
         val outcome = execution.outcome
         if (outcome is Outcome.Failure) {
@@ -93,19 +99,21 @@ class CommandBus(
         val generatedCommand = generated[invocation.commandId]
         var outcome: Outcome<JsonElement>? = null
         try {
-            val execution = if (generatedCommand == null) {
-                Execution(outcome = Outcome.Failure(AppError.NotFound), inverse = null)
-            } else {
-                dispatch(generatedCommand, invocation, recordHistory)
-            }
+            val execution =
+                if (generatedCommand == null) {
+                    Execution(outcome = Outcome.Failure(AppError.NotFound), inverse = null)
+                } else {
+                    dispatch(generatedCommand, invocation, recordHistory)
+                }
             outcome = execution.outcome
             return execution
         } finally {
-            val error = when (val result = outcome) {
-                null -> AppError.Cancelled
-                is Outcome.Failure -> result.error
-                is Outcome.Success -> null
-            }
+            val error =
+                when (val result = outcome) {
+                    null -> AppError.Cancelled
+                    is Outcome.Failure -> result.error
+                    is Outcome.Success -> null
+                }
             _events.tryEmit(
                 CommandInvoked(
                     commandId = invocation.commandId,
@@ -128,10 +136,11 @@ class CommandBus(
             return Execution(outcome = Outcome.Failure(AppError.SwitchOff(requiredSwitch)), inverse = null)
         }
 
-        val command = when (val commandOutcome = host.command(invocation.commandId)) {
-            is Outcome.Success -> commandOutcome.value
-            is Outcome.Failure -> return Execution(outcome = commandOutcome, inverse = null)
-        }
+        val command =
+            when (val commandOutcome = host.command(invocation.commandId)) {
+                is Outcome.Success -> commandOutcome.value
+                is Outcome.Failure -> return Execution(outcome = commandOutcome, inverse = null)
+            }
 
         val cancellationKey = command.policy.cancellableBy
         if (cancellationKey == null) {
@@ -152,20 +161,21 @@ class CommandBus(
         owner: PluginId,
         invocation: CommandInvocation,
         recordHistory: Boolean,
-    ): Execution = coroutineScope {
-        val job = async { executeCommand(command, owner, invocation, recordHistory) }
-        inFlight.put(key, job)?.cancel()
-        try {
-            job.await()
-        } catch (exception: CancellationException) {
-            if (!currentCoroutineContext().isActive) {
-                throw exception
+    ): Execution =
+        coroutineScope {
+            val job = async { executeCommand(command, owner, invocation, recordHistory) }
+            inFlight.put(key, job)?.cancel()
+            try {
+                job.await()
+            } catch (exception: CancellationException) {
+                if (!currentCoroutineContext().isActive) {
+                    throw exception
+                }
+                Execution(outcome = Outcome.Failure(AppError.Cancelled), inverse = null)
+            } finally {
+                inFlight.remove(key, job)
             }
-            Execution(outcome = Outcome.Failure(AppError.Cancelled), inverse = null)
-        } finally {
-            inFlight.remove(key, job)
         }
-    }
 
     private suspend fun executeCommand(
         command: Command<*, *>,
@@ -173,19 +183,20 @@ class CommandBus(
         invocation: CommandInvocation,
         recordHistory: Boolean,
     ): Execution {
-        val outcome = try {
-            withContext(dispatchers.forPolicy(command.policy)) {
-                command.invokeRaw(invocation.params)
+        val outcome =
+            try {
+                withContext(dispatchers.forPolicy(command.policy)) {
+                    command.invokeRaw(invocation.params)
+                }
+            } catch (exception: CancellationException) {
+                if (!currentCoroutineContext().isActive) {
+                    throw exception
+                }
+                return Execution(outcome = Outcome.Failure(AppError.Cancelled), inverse = null)
+            } catch (exception: Exception) {
+                host.recordFailure(owner)
+                return Execution(outcome = Outcome.Failure(AppError.PluginFailed(owner)), inverse = null)
             }
-        } catch (exception: CancellationException) {
-            if (!currentCoroutineContext().isActive) {
-                throw exception
-            }
-            return Execution(outcome = Outcome.Failure(AppError.Cancelled), inverse = null)
-        } catch (exception: Exception) {
-            host.recordFailure(owner)
-            return Execution(outcome = Outcome.Failure(AppError.PluginFailed(owner)), inverse = null)
-        }
 
         return when (outcome) {
             is Outcome.Success -> {
@@ -197,7 +208,9 @@ class CommandBus(
                 Execution(outcome = Outcome.Success(outcome.value.value), inverse = inverse)
             }
 
-            is Outcome.Failure -> Execution(outcome = outcome, inverse = null)
+            is Outcome.Failure -> {
+                Execution(outcome = outcome, inverse = null)
+            }
         }
     }
 

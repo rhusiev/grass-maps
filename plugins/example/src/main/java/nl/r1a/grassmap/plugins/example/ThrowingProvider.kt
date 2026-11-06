@@ -8,10 +8,11 @@ import nl.r1a.grassmap.plugin.api.provider.ProviderContract
  * provider exceptions and disables the provider after three failures.
  */
 class ThrowingProvider : Provider {
-    override val contract: ProviderContract = ProviderContract(
-        name = "example.throwing",
-        version = "1.0.0",
-    )
+    override val contract: ProviderContract =
+        ProviderContract(
+            name = "example.throwing",
+            version = "1.0.0",
+        )
 
     var calls: Int = 0
         private set

@@ -4,16 +4,18 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
-val pluginManifestFiles = rootProject.subprojects
-    .filter { it.path.startsWith(":plugins:") }
-    .map { it.file("src/main/plugin.json") }
+val pluginManifestFiles =
+    rootProject.subprojects
+        .filter { it.path.startsWith(":plugins:") }
+        .map { it.file("src/main/plugin.json") }
 
-val generatePluginRegistry = tasks.register<GeneratePluginRegistryTask>("generatePluginRegistry") {
-    group = "build"
-    description = "Generates GeneratedPlugins.kt and GeneratedStreams.kt from plugin manifests."
-    manifests.from(pluginManifestFiles)
-    outputDirectory.set(layout.buildDirectory.dir("generated/plugin-registry"))
-}
+val generatePluginRegistry =
+    tasks.register<GeneratePluginRegistryTask>("generatePluginRegistry") {
+        group = "build"
+        description = "Generates GeneratedPlugins.kt and GeneratedStreams.kt from plugin manifests."
+        manifests.from(pluginManifestFiles)
+        outputDirectory.set(layout.buildDirectory.dir("generated/plugin-registry"))
+    }
 
 android {
     namespace = "nl.r1a.grassmap.app"

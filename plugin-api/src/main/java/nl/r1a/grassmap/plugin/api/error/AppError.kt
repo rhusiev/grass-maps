@@ -15,11 +15,16 @@ sealed interface AppError {
 
     data object PermissionDenied : AppError
 
-    data class SwitchOff(val switch: SwitchId) : AppError
+    data class SwitchOff(
+        val switch: SwitchId,
+    ) : AppError
 
     data object Network : AppError
 
-    data class Server(val status: Int, val retryAfter: Long? = null) : AppError
+    data class Server(
+        val status: Int,
+        val retryAfter: Long? = null,
+    ) : AppError
 
     data object CorruptData : AppError
 
@@ -27,7 +32,12 @@ sealed interface AppError {
 
     data object Cancelled : AppError
 
-    data class PluginFailed(val pluginId: PluginId) : AppError
+    data class PluginFailed(
+        val pluginId: PluginId,
+    ) : AppError
 
-    data class Internal(val id: String, val detail: String? = null) : AppError
+    data class Internal(
+        val id: String,
+        val detail: String? = null,
+    ) : AppError
 }

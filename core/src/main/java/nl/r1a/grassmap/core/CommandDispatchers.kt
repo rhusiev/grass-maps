@@ -13,9 +13,10 @@ class CommandDispatchers(
     val default: CoroutineDispatcher = Dispatchers.Default,
     val io: CoroutineDispatcher = Dispatchers.IO,
 ) {
-    fun forPolicy(policy: CommandPolicy): CoroutineDispatcher = when (policy.dispatcher) {
-        CommandDispatcher.MAIN -> main
-        CommandDispatcher.DEFAULT -> default
-        CommandDispatcher.IO -> io
-    }
+    fun forPolicy(policy: CommandPolicy): CoroutineDispatcher =
+        when (policy.dispatcher) {
+            CommandDispatcher.MAIN -> main
+            CommandDispatcher.DEFAULT -> default
+            CommandDispatcher.IO -> io
+        }
 }

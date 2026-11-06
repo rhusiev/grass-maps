@@ -87,9 +87,10 @@ subprojects {
 // Manifest-driven registries (architecture section 13): each plugin module carries
 // src/main/plugin.json. The app generates the static registries; this task
 // validates the same manifests.
-val pluginManifestFiles = subprojects
-    .filter { it.path.startsWith(":plugins:") }
-    .map { it.file("src/main/plugin.json") }
+val pluginManifestFiles =
+    subprojects
+        .filter { it.path.startsWith(":plugins:") }
+        .map { it.file("src/main/plugin.json") }
 
 tasks.register<LintPluginManifestsTask>("checkPluginManifests") {
     group = "verification"

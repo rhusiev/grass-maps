@@ -1,6 +1,5 @@
 package nl.r1a.grassmap.core
 
-import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,6 +12,7 @@ import nl.r1a.grassmap.plugin.api.model.ProviderState
 import nl.r1a.grassmap.plugin.api.model.ProviderStatus
 import nl.r1a.grassmap.plugin.api.provider.Provider
 import nl.r1a.grassmap.plugin.api.provider.ProviderContract
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Calls providers behind a boundary that turns an unexpected exception into a
@@ -29,7 +29,10 @@ class ProviderRegistry(
 
     val statuses: StateFlow<List<ProviderStatus>> = _statuses.asStateFlow()
 
-    fun statusOf(pluginId: PluginId, contract: ProviderContract): ProviderStatus? =
+    fun statusOf(
+        pluginId: PluginId,
+        contract: ProviderContract,
+    ): ProviderStatus? =
         statuses.value.firstOrNull {
             it.pluginId == pluginId && it.contract == contract
         }
@@ -44,10 +47,11 @@ class ProviderRegistry(
             return Outcome.Failure(AppError.NotReady)
         }
 
-        val provider = when (val providerOutcome = host.provider(pluginId, contract)) {
-            is Outcome.Success -> providerOutcome.value
-            is Outcome.Failure -> return providerOutcome
-        }
+        val provider =
+            when (val providerOutcome = host.provider(pluginId, contract)) {
+                is Outcome.Success -> providerOutcome.value
+                is Outcome.Failure -> return providerOutcome
+            }
 
         return try {
             val value = block(provider)
@@ -69,13 +73,18 @@ class ProviderRegistry(
         }
     }
 
-    private fun publish(key: ProviderKey, state: ProviderState, failures: Int) {
-        val status = ProviderStatus(
-            pluginId = key.pluginId,
-            contract = key.contract,
-            state = state,
-            failures = failures,
-        )
+    private fun publish(
+        key: ProviderKey,
+        state: ProviderState,
+        failures: Int,
+    ) {
+        val status =
+            ProviderStatus(
+                pluginId = key.pluginId,
+                contract = key.contract,
+                state = state,
+                failures = failures,
+            )
         _statuses.update { statuses ->
             statuses.filterNot {
                 it.pluginId == key.pluginId && it.contract == key.contract

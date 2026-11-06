@@ -11,21 +11,22 @@ import org.junit.Test
 
 class SetValueCommandTest {
     @Test
-    fun commandSetsValueAndBuildsItsInverse() = runTest {
-        val state = MutableStateFlow(3)
-        val command = SetValueCommand(state)
+    fun commandSetsValueAndBuildsItsInverse() =
+        runTest {
+            val state = MutableStateFlow(3)
+            val command = SetValueCommand(state)
 
-        val result = command.execute(7)
+            val result = command.execute(7)
 
-        assertEquals(7, state.value)
-        assertTrue(result is Outcome.Success)
-        val inverse = (result as Outcome.Success).value.inverse
-        assertNotNull(inverse)
-        assertEquals(CommandId("example.set_value"), inverse?.commandId)
+            assertEquals(7, state.value)
+            assertTrue(result is Outcome.Success)
+            val inverse = (result as Outcome.Success).value.inverse
+            assertNotNull(inverse)
+            assertEquals(CommandId("example.set_value"), inverse?.commandId)
 
-        val undo = command.invokeRaw(inverse?.params ?: throw AssertionError("missing inverse"))
+            val undo = command.invokeRaw(inverse?.params ?: throw AssertionError("missing inverse"))
 
-        assertTrue(undo is Outcome.Success)
-        assertEquals(3, state.value)
-    }
+            assertTrue(undo is Outcome.Success)
+            assertEquals(3, state.value)
+        }
 }

@@ -49,61 +49,67 @@ class GeneratedPluginRegistryTest {
     }
 
     @Test
-    fun exampleCommandRunsThroughTheControlAdapterAndDirectly() = runTest {
-        val container = testContainer(testScheduler)
+    fun exampleCommandRunsThroughTheControlAdapterAndDirectly() =
+        runTest {
+            val container = testContainer(testScheduler)
 
-        val viaAdapter = TestControlAdapter(container.commandBus)
-            .invoke("example.set_value", JsonPrimitive(11))
-        assertEquals(Outcome.Success(JsonPrimitive(11)), viaAdapter)
+            val viaAdapter =
+                TestControlAdapter(container.commandBus)
+                    .invoke("example.set_value", JsonPrimitive(11))
+            assertEquals(Outcome.Success(JsonPrimitive(11)), viaAdapter)
 
-        val direct = container.commandBus.invoke(
-            CommandId("example.set_value"),
-            JsonPrimitive(12),
-        )
-        assertEquals(Outcome.Success(JsonPrimitive(12)), direct)
+            val direct =
+                container.commandBus.invoke(
+                    CommandId("example.set_value"),
+                    JsonPrimitive(12),
+                )
+            assertEquals(Outcome.Success(JsonPrimitive(12)), direct)
 
-        assertEquals(
-            12,
-            container.streamAccess.subscribe<Int>(StreamId("example.value")).first(),
-        )
-        assertEquals(Outcome.Success(Unit), container.commandBus.undo())
-        assertEquals(
-            11,
-            container.streamAccess.subscribe<Int>(StreamId("example.value")).first(),
-        )
-        assertEquals(Outcome.Success(Unit), container.commandBus.redo())
-        assertEquals(
-            12,
-            container.streamAccess.subscribe<Int>(StreamId("example.value")).first(),
-        )
-    }
-
-    @Test
-    fun throwingExampleProviderIsDisabledAfterThreeFailures() = runTest {
-        val container = testContainer(testScheduler)
-        val pluginId = PluginId("example")
-        val contract = ProviderContract("example.throwing", "1.0.0")
-
-        repeat(3) {
-            val result = container.providerRegistry.invoke(pluginId, contract) { provider ->
-                (provider as ThrowingProvider).fail()
-            }
-            assertEquals(Outcome.Failure(AppError.PluginFailed(pluginId)), result)
+            assertEquals(
+                12,
+                container.streamAccess.subscribe<Int>(StreamId("example.value")).first(),
+            )
+            assertEquals(Outcome.Success(Unit), container.commandBus.undo())
+            assertEquals(
+                11,
+                container.streamAccess.subscribe<Int>(StreamId("example.value")).first(),
+            )
+            assertEquals(Outcome.Success(Unit), container.commandBus.redo())
+            assertEquals(
+                12,
+                container.streamAccess.subscribe<Int>(StreamId("example.value")).first(),
+            )
         }
 
-        val status = container.providerRegistry.statusOf(pluginId, contract)
-        assertEquals(ProviderState.DISABLED, status?.state)
-        assertEquals(3, status?.failures)
-    }
+    @Test
+    fun throwingExampleProviderIsDisabledAfterThreeFailures() =
+        runTest {
+            val container = testContainer(testScheduler)
+            val pluginId = PluginId("example")
+            val contract = ProviderContract("example.throwing", "1.0.0")
+
+            repeat(3) {
+                val result =
+                    container.providerRegistry.invoke(pluginId, contract) { provider ->
+                        (provider as ThrowingProvider).fail()
+                    }
+                assertEquals(Outcome.Failure(AppError.PluginFailed(pluginId)), result)
+            }
+
+            val status = container.providerRegistry.statusOf(pluginId, contract)
+            assertEquals(ProviderState.DISABLED, status?.state)
+            assertEquals(3, status?.failures)
+        }
 
     private fun testContainer(scheduler: kotlinx.coroutines.test.TestCoroutineScheduler): AppContainer {
         val dispatcher = StandardTestDispatcher(scheduler)
         return AppContainer(
-            dispatchers = CommandDispatchers(
-                main = dispatcher,
-                default = dispatcher,
-                io = dispatcher,
-            ),
+            dispatchers =
+                CommandDispatchers(
+                    main = dispatcher,
+                    default = dispatcher,
+                    io = dispatcher,
+                ),
         )
     }
 }

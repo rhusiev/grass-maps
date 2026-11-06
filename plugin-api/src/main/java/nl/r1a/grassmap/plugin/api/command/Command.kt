@@ -12,7 +12,9 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 
 @JvmInline
-value class CancellationKey(val value: String) {
+value class CancellationKey(
+    val value: String,
+) {
     override fun toString(): String = value
 }
 
@@ -48,10 +50,11 @@ data class CommandInvocation(
     val params: JsonElement = JsonNull,
 )
 
-val CommandJson: Json = Json {
-    encodeDefaults = true
-    explicitNulls = true
-}
+val CommandJson: Json =
+    Json {
+        encodeDefaults = true
+        explicitNulls = true
+    }
 
 /**
  * A typed command. [execute] returns a typed error as a value; the host catches
@@ -66,31 +69,37 @@ abstract class Command<P : Any, R : Any>(
 ) {
     abstract suspend fun execute(params: P): Outcome<CommandResult<R>>
 
-    fun invocation(params: P): CommandInvocation = CommandInvocation(
-        commandId = id,
-        params = CommandJson.encodeToJsonElement(paramsSerializer, params),
-    )
+    fun invocation(params: P): CommandInvocation =
+        CommandInvocation(
+            commandId = id,
+            params = CommandJson.encodeToJsonElement(paramsSerializer, params),
+        )
 
     /**
      * Decodes raw parameters at the command boundary, runs the command and encodes
      * the result. Invalid parameters are [AppError.InvalidInput] values.
      */
     suspend fun invokeRaw(params: JsonElement): Outcome<CommandResult<JsonElement>> {
-        val decoded = try {
-            CommandJson.decodeFromJsonElement(paramsSerializer, params)
-        } catch (exception: IllegalArgumentException) {
-            return Outcome.Failure(AppError.InvalidInput)
-        }
+        val decoded =
+            try {
+                CommandJson.decodeFromJsonElement(paramsSerializer, params)
+            } catch (exception: IllegalArgumentException) {
+                return Outcome.Failure(AppError.InvalidInput)
+            }
 
         return when (val outcome = execute(decoded)) {
-            is Outcome.Success -> Outcome.Success(
-                CommandResult(
-                    value = CommandJson.encodeToJsonElement(resultSerializer, outcome.value.value),
-                    inverse = outcome.value.inverse,
-                ),
-            )
+            is Outcome.Success -> {
+                Outcome.Success(
+                    CommandResult(
+                        value = CommandJson.encodeToJsonElement(resultSerializer, outcome.value.value),
+                        inverse = outcome.value.inverse,
+                    ),
+                )
+            }
 
-            is Outcome.Failure -> outcome
+            is Outcome.Failure -> {
+                outcome
+            }
         }
     }
 }

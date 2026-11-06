@@ -66,7 +66,9 @@ abstract class LintPluginManifestsTask : DefaultTask() {
             }
 
             val contributes = raw.objectValue("contributes")
-            for (command in contributes.objectList("commands")) {
+            val declaredCommands = contributes.objectList("commands")
+            errors += reservedNamespaceErrors(where, declaredCommands)
+            for (command in declaredCommands) {
                 commandCount += 1
                 val commandId = requiredString(command, "id", where, errors)
                 if (commandId.isNotBlank()) {
@@ -235,3 +237,23 @@ abstract class LintPluginManifestsTask : DefaultTask() {
         val COMMAND_DISPATCHERS = setOf("main", "default", "io")
     }
 }
+
+/** The namespace the host reserves for commands it owns, such as `core.map.zoom_in`. */
+internal const val RESERVED_COMMAND_NAMESPACE = "core"
+
+/**
+ * Rejects a plugin command in the reserved host namespace. `PluginHost` would
+ * otherwise shadow the plugin command with the host command of the same id.
+ */
+internal fun reservedNamespaceErrors(
+    where: String,
+    commands: List<Map<String, Any?>>,
+): List<String> =
+    commands.mapNotNull { command ->
+        val id = command.string("id") ?: return@mapNotNull null
+        if (id == RESERVED_COMMAND_NAMESPACE || id.startsWith("$RESERVED_COMMAND_NAMESPACE.")) {
+            "$where: command id '$id' uses the reserved '$RESERVED_COMMAND_NAMESPACE' namespace"
+        } else {
+            null
+        }
+    }

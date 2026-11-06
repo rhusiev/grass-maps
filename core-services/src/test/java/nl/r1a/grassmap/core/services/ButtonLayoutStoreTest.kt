@@ -1,9 +1,12 @@
 package nl.r1a.grassmap.core.services
 
+import nl.r1a.grassmap.plugin.api.contract.CommandId
+import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.util.UUID
@@ -14,6 +17,7 @@ class ButtonLayoutStoreTest {
 
     @After
     fun removeDirectory() {
+        directory.setWritable(true)
         directory.deleteRecursively()
     }
 
@@ -80,9 +84,40 @@ class ButtonLayoutStoreTest {
     @Test
     fun anUnknownProfileLoadsTheDefaultOrder() {
         val store = ButtonLayoutStore(file)
-        store.save(ProfileId("walking"), listOf(MapControlCommands.NORTH_UP))
+        store.save(ProfileId("walking"), MapControlCommands.DEFAULT_ORDER)
 
         assertEquals(MapControlCommands.DEFAULT_ORDER, store.load(ProfileId("cycling")))
+    }
+
+    @Test
+    fun aStoredOrderWithAnUnknownIdFallsBackToTheDefault() {
+        directory.mkdirs()
+        file.writeText(
+            """{"profiles":{"default":["core.map.zoom_in","core.map.zoom_out","core.map.other"]}}""",
+        )
+        val store = ButtonLayoutStore(file)
+
+        assertEquals(MapControlCommands.DEFAULT_ORDER, store.load(ProfileId("default")))
+    }
+
+    @Test
+    fun aStoredOrderWithADuplicateFallsBackToTheDefault() {
+        directory.mkdirs()
+        file.writeText(
+            """{"profiles":{"default":["core.map.zoom_in","core.map.zoom_in","core.map.north_up"]}}""",
+        )
+        val store = ButtonLayoutStore(file)
+
+        assertEquals(MapControlCommands.DEFAULT_ORDER, store.load(ProfileId("default")))
+    }
+
+    @Test
+    fun aPartialStoredOrderFallsBackToTheDefault() {
+        directory.mkdirs()
+        file.writeText("""{"profiles":{"default":["core.map.zoom_out","core.map.north_up"]}}""")
+        val store = ButtonLayoutStore(file)
+
+        assertEquals(MapControlCommands.DEFAULT_ORDER, store.load(ProfileId("default")))
     }
 
     @Test
@@ -95,12 +130,55 @@ class ButtonLayoutStoreTest {
     }
 
     @Test
+    fun invalidLayoutsAreRejectedOnSave() {
+        val store = ButtonLayoutStore(file)
+        store.save(ProfileId("default"), MapControlCommands.DEFAULT_ORDER)
+        val invalid =
+            listOf(
+                emptyList<CommandId>(),
+                listOf(MapControlCommands.NORTH_UP),
+                listOf(MapControlCommands.ZOOM_IN, MapControlCommands.ZOOM_IN, MapControlCommands.NORTH_UP),
+                listOf(MapControlCommands.ZOOM_IN, MapControlCommands.ZOOM_OUT, CommandId("core.map.other")),
+            )
+
+        for (layout in invalid) {
+            assertEquals(Outcome.Failure(AppError.InvalidInput), store.save(ProfileId("default"), layout))
+        }
+        assertEquals(MapControlCommands.DEFAULT_ORDER, store.load(ProfileId("default")))
+    }
+
+    @Test
+    fun aFailedWriteLeavesThePreviousOrderReadable() {
+        val store = ButtonLayoutStore(file)
+        val saved = listOf(MapControlCommands.NORTH_UP, MapControlCommands.ZOOM_IN, MapControlCommands.ZOOM_OUT)
+        assertEquals(Outcome.Success(Unit), store.save(ProfileId("default"), saved))
+        val temporary = File(directory, "${file.name}.tmp")
+        assertTrue(temporary.mkdirs())
+
+        val result = store.save(ProfileId("default"), MapControlCommands.DEFAULT_ORDER)
+
+        assertTrue(result is Outcome.Failure && (result as Outcome.Failure).error is AppError.Internal)
+        assertEquals(saved, store.load(ProfileId("default")))
+    }
+
+    @Test
+    fun aTargetThatIsADirectoryFailsWithoutThrowing() {
+        assertTrue(file.mkdirs())
+        val store = ButtonLayoutStore(file)
+
+        val result = store.save(ProfileId("default"), MapControlCommands.DEFAULT_ORDER)
+
+        assertTrue(result is Outcome.Failure)
+        assertEquals(MapControlCommands.DEFAULT_ORDER, store.load(ProfileId("default")))
+    }
+
+    @Test
     fun noTemporaryFileRemainsAfterSave() {
         val store = ButtonLayoutStore(file)
 
-        store.save(ProfileId("default"), listOf(MapControlCommands.NORTH_UP))
+        store.save(ProfileId("default"), MapControlCommands.DEFAULT_ORDER)
 
         assertFalse(File(directory, "button-layout.json.tmp").exists())
-        assertEquals(1, store.load(ProfileId("default")).size)
+        assertEquals(3, store.load(ProfileId("default")).size)
     }
 }

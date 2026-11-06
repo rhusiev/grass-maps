@@ -15,6 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -124,6 +125,16 @@ private fun MapContent(
         }
     var layout by remember { mutableStateOf(MapControlCommands.DEFAULT_ORDER) }
     var isEditing by remember { mutableStateOf(false) }
+    val currentLayout = rememberUpdatedState(layout)
+    val writer =
+        remember(store) {
+            store?.let { store ->
+                LayoutWriter(
+                    currentLayout = { currentLayout.value },
+                    save = { layout -> withContext(Dispatchers.IO) { store.save(DEFAULT_PROFILE, layout) } },
+                )
+            }
+        }
     LaunchedEffect(store) {
         val active = store ?: return@LaunchedEffect
         layout = withContext(Dispatchers.IO) { active.load(DEFAULT_PROFILE) }
@@ -142,13 +153,15 @@ private fun MapContent(
                 }
             },
             onMove = onMove@{ id, delta ->
-                val active = store ?: return@onMove
+                val activeWriter = writer ?: return@onMove
                 val moved = moveControl(layout, id, delta)
-                if (moved != layout) {
-                    layout = moved
-                    scope.launch {
-                        withContext(Dispatchers.IO) { active.save(DEFAULT_PROFILE, moved) }
-                            .onFailure { error -> Log.w(TAG, "layout not saved: $error") }
+                if (moved == layout) {
+                    return@onMove
+                }
+                layout = moved
+                scope.launch {
+                    activeWriter.saveLatest().onFailure { error ->
+                        Log.w(TAG, "layout not saved: $error")
                     }
                 }
             },

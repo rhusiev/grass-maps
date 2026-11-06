@@ -194,8 +194,10 @@ command directly, so dispatching one never creates or activates a plugin.
 
 The button order is per profile and stored by `ButtonLayoutStore` in
 `filesDir/controls/button-layout.json`. The file is a JSON object keyed by
-profile id; a write goes to a temporary sibling, is flushed and renamed, and a
-missing or corrupt file reads as `zoom_in, zoom_out, north_up`. The active
+profile id; a write goes to a temporary sibling, is flushed and moved over the
+target atomically, so a failed write leaves the old order. A stored order must
+be a permutation of the three known command IDs, and a missing, corrupt,
+partial or repeated order reads as `zoom_in, zoom_out, north_up`. The active
 profile is the fixed `default` profile until T-0601. The bar itself lives in
 `ui-shell` and only receives control IDs, labels and callbacks, so it never
 touches the command bus or the map host.
@@ -232,8 +234,9 @@ plugin declares one command, one stream and one provider.
 
 `checkPluginManifests` fails the build when a manifest breaks the rules above,
 including a declared command whose implementation class is missing from the
-plugin's source or a policy field the generator does not understand. Each plugin
-module's `check` and `app:check` depend on it.
+plugin's source, a command id in the reserved `core` host namespace, or a policy
+field the generator does not understand. Each plugin module's `check` and
+`app:check` depend on it.
 
 ## Debug control channel
 

@@ -14,14 +14,16 @@ import nl.r1a.grassmap.plugin.api.error.Outcome
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 /**
  * Persists the button order of one profile in a JSON file.
  *
- * The file is written to a temporary sibling, flushed and renamed, so a crash
- * leaves either the old order or the new one. A missing, corrupt or unreadable
- * file reads as [MapControlCommands.DEFAULT_ORDER]; it never throws at the
- * caller.
+ * The file is written to a temporary sibling, flushed and moved over the target
+ * atomically, so a crash or a failed move leaves the old order in place. A
+ * missing, corrupt or unreadable file reads as
+ * [MapControlCommands.DEFAULT_ORDER]; it never throws at the caller.
  */
 class ButtonLayoutStore(
     private val file: File,
@@ -29,16 +31,21 @@ class ButtonLayoutStore(
     @Synchronized
     fun load(profileId: ProfileId): List<CommandId> {
         val stored = readProfiles()[profileId.value] ?: return MapControlCommands.DEFAULT_ORDER
-        val layout = stored.map(::CommandId)
-        return layout.ifEmpty { MapControlCommands.DEFAULT_ORDER }
+        return validated(stored) ?: MapControlCommands.DEFAULT_ORDER
     }
 
-    /** Writes the order for [profileId], keeping every other profile untouched. */
+    /**
+     * Writes the order for [profileId], keeping every other profile untouched.
+     * Only a permutation of [MapControlCommands.DEFAULT_ORDER] is accepted.
+     */
     @Synchronized
     fun save(
         profileId: ProfileId,
         layout: List<CommandId>,
     ): Outcome<Unit> {
+        if (!isPermutation(layout)) {
+            return Outcome.Failure(AppError.InvalidInput)
+        }
         val profiles = readProfiles() + (profileId.value to layout.map { it.value })
         return writeProfiles(profiles)
     }
@@ -95,12 +102,12 @@ class ButtonLayoutStore(
                 stream.write(document.toString().toByteArray())
                 stream.fd.sync()
             }
-            if (!temporary.renameTo(file)) {
-                file.delete()
-                if (!temporary.renameTo(file)) {
-                    return failure("cannot rename $temporary to $file")
-                }
-            }
+            Files.move(
+                temporary.toPath(),
+                file.toPath(),
+                StandardCopyOption.ATOMIC_MOVE,
+                StandardCopyOption.REPLACE_EXISTING,
+            )
             Outcome.Success(Unit)
         } catch (exception: IOException) {
             failure(exception.message)
@@ -108,6 +115,15 @@ class ButtonLayoutStore(
             failure(exception.message)
         }
     }
+
+    private fun validated(ids: List<String>): List<CommandId>? {
+        val layout = ids.map(::CommandId)
+        return layout.takeIf(::isPermutation)
+    }
+
+    private fun isPermutation(layout: List<CommandId>): Boolean =
+        layout.size == MapControlCommands.DEFAULT_ORDER.size &&
+            layout.toSet() == MapControlCommands.DEFAULT_ORDER.toSet()
 
     private fun failure(detail: String?): Outcome.Failure = Outcome.Failure(AppError.Internal(ERROR_ID, detail))
 

@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.core
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -19,6 +20,53 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PluginHostTest {
+    private lateinit var injectedHost: PluginHost
+
+    @Test
+    fun activationCancellationReturnsPluginFailedAndIsRemembered() = runTest {
+        var created = 0
+        val manifest = testManifest()
+        val host = testHost(testScheduler, manifest) {
+            created += 1
+            TestPlugin(onActivate = { throw CancellationException("activation cancelled") })
+        }
+        val id = PluginId(TEST_PLUGIN_ID)
+
+        val first = host.ensureActive(id)
+        val second = host.ensureActive(id)
+
+        assertEquals(Outcome.Failure(AppError.PluginFailed(id)), first)
+        assertEquals(first, second)
+        assertEquals(1, created)
+        assertEquals(PluginState.FAILED, host.statusOf(id)?.state)
+    }
+
+    @Test
+    fun normalActivationSucceeds() = runTest {
+        val manifest = testManifest()
+        val host = testHost(testScheduler, manifest) { TestPlugin() }
+        val id = PluginId(TEST_PLUGIN_ID)
+
+        assertEquals(Outcome.Success(Unit), host.ensureActive(id))
+        assertEquals(Outcome.Success(Unit), host.ensureActive(id))
+        assertEquals(PluginState.RUNNING, host.statusOf(id)?.state)
+    }
+
+    @Test
+    fun activationCannotAwaitItself() = runTest {
+        val results = mutableListOf<Outcome<Unit>>()
+        val id = PluginId(TEST_PLUGIN_ID)
+        val manifest = testManifest()
+        val host = testHost(testScheduler, manifest) {
+            TestPlugin(onActivate = { results += injectedHost.ensureActive(id) })
+        }
+        injectedHost = host
+
+        assertEquals(Outcome.Success(Unit), host.ensureActive(id))
+        assertEquals(listOf(Outcome.Failure(AppError.NotReady)), results)
+        assertEquals(PluginState.RUNNING, host.statusOf(id)?.state)
+    }
+
     @Test
     fun concurrentActivationCreatesThePluginOnce() = runTest {
         val gate = CompletableDeferred<Unit>()

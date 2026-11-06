@@ -126,8 +126,26 @@ internal fun commandDispatcher(value: Any?, where: String): String = when (value
     else -> throw GradleException("$where: invalid command dispatcher '$value'")
 }
 
-internal fun switchId(value: String?): String =
-    if (value == null) "null" else "SwitchId(${value.literal()})"
+internal fun switchId(value: Any?, commandId: String, where: String): String = when (value) {
+    null -> "null"
+    is String -> "SwitchId(${value.literal()})"
+    else -> throw GradleException(
+        "$where: command '$commandId' requiresSwitch must be a string, got '$value'",
+    )
+}
+
+internal fun booleanFlag(
+    value: Any?,
+    key: String,
+    commandId: String,
+    where: String,
+): Boolean = when (value) {
+    null -> false
+    is Boolean -> value
+    else -> throw GradleException(
+        "$where: command '$commandId' $key must be a boolean, got '$value'",
+    )
+}
 
 internal fun providerCapabilities(value: Any?): String =
     if (value is Map<*, *>) emitJson(value) else "JsonObject(emptyMap())"
@@ -201,15 +219,20 @@ abstract class GeneratePluginRegistryTask : DefaultTask() {
             val where = manifest.file.path
             for (command in commands) {
                 val commandId = command.string("id").orEmpty()
+                val undoable = booleanFlag(command["undoable"], "undoable", commandId, where)
+                val requiresSwitch = switchId(command["requiresSwitch"], commandId, where)
+                val allowlisted = booleanFlag(
+                    command["allowlistedForControl"],
+                    "allowlistedForControl",
+                    commandId,
+                    where,
+                )
                 appendLine("        GeneratedCommand(")
                 appendLine("            id = CommandId(${commandId.literal()}),")
                 appendLine("            pluginId = PluginId(${pluginId.literal()}),")
-                appendLine("            undoable = ${command["undoable"] as? Boolean ?: false},")
-                appendLine("            requiresSwitch = ${switchId(command.string("requiresSwitch"))},")
-                appendLine(
-                    "            allowlistedForControl = " +
-                        "${command["allowlistedForControl"] as? Boolean ?: false},",
-                )
+                appendLine("            undoable = $undoable,")
+                appendLine("            requiresSwitch = $requiresSwitch,")
+                appendLine("            allowlistedForControl = $allowlisted,")
                 appendLine(
                     "            dispatcher = " +
                         "${commandDispatcher(command["dispatcher"], where)},",
@@ -288,17 +311,23 @@ abstract class GeneratePluginRegistryTask : DefaultTask() {
         appendLine("$indent    contributes = PluginContributions(")
         appendLine("$indent        commands = listOf(")
         for (command in contributes.objectList("commands")) {
+            val commandId = command.string("id").orEmpty()
+            val undoable = booleanFlag(command["undoable"], "undoable", commandId, where)
+            val requiresSwitch = switchId(command["requiresSwitch"], commandId, where)
+            val allowlisted = booleanFlag(
+                command["allowlistedForControl"],
+                "allowlistedForControl",
+                commandId,
+                where,
+            )
             appendLine("$indent            CommandDeclaration(")
-            appendLine("$indent                id = CommandId(${command.string("id").orEmpty().literal()}),")
+            appendLine("$indent                id = CommandId(${commandId.literal()}),")
             appendLine("$indent                params = ${command.string("params").orEmpty().literal()},")
             appendLine("$indent                result = ${command.string("result").orEmpty().literal()},")
             appendLine("$indent                doc = ${command.string("doc").orEmpty().literal()},")
-            appendLine("$indent                undoable = ${command["undoable"] as? Boolean ?: false},")
-            appendLine("$indent                requiresSwitch = ${switchId(command.string("requiresSwitch"))},")
-            appendLine(
-                "$indent                allowlistedForControl = " +
-                    "${command["allowlistedForControl"] as? Boolean ?: false},",
-            )
+            appendLine("$indent                undoable = $undoable,")
+            appendLine("$indent                requiresSwitch = $requiresSwitch,")
+            appendLine("$indent                allowlistedForControl = $allowlisted,")
             appendLine(
                 "$indent                dispatcher = " +
                     "${commandDispatcher(command["dispatcher"], where)},",

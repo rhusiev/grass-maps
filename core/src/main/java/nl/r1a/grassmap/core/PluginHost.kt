@@ -1,5 +1,9 @@
 package nl.r1a.grassmap.core
 
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
+import kotlin.time.TimeSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -8,10 +12,12 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import nl.r1a.grassmap.plugin.api.command.Command
@@ -49,7 +55,7 @@ class PluginHost(
     private val commandOwners: Map<CommandId, PluginId> = commands.associate { it.id to it.pluginId }
     private val mutex = Mutex()
     private val activationScope = CoroutineScope(SupervisorJob() + dispatcher)
-    private val activations = mutableMapOf<PluginId, Deferred<Outcome<Unit>>>()
+    private val activations = ConcurrentHashMap<PluginId, Deferred<Outcome<Unit>>>()
     private val active = mutableMapOf<PluginId, ActivePlugin>()
     private val failed = mutableSetOf<PluginId>()
     private val _statuses = MutableStateFlow(
@@ -64,34 +70,52 @@ class PluginHost(
         statuses.value.firstOrNull { it.pluginId == pluginId }
 
     suspend fun ensureActive(pluginId: PluginId): Outcome<Unit> {
+        if (currentCoroutineContext()[ActivationElement]?.pluginId == pluginId) {
+            return Outcome.Failure(AppError.NotReady)
+        }
         val activation = mutex.withLock { claimActivation(pluginId) }
         val job = when (activation) {
             is Activation.Ready -> return activation.outcome
             is Activation.Pending -> activation.job
         }
         job.start()
-        return job.await()
+        return try {
+            job.await()
+        } catch (exception: CancellationException) {
+            if (!currentCoroutineContext().isActive) {
+                throw exception
+            }
+            Outcome.Failure(AppError.PluginFailed(pluginId))
+        }
     }
 
     /**
      * Claims one in-flight activation per plugin under the lock. The caller awaits
      * the returned job outside the lock, so activation work never blocks lookups.
+     * A finished job removes its own entry, never a newer job for the same plugin.
      */
-    private fun claimActivation(pluginId: PluginId): Activation = when {
-        active.containsKey(pluginId) -> Activation.Ready(Outcome.Success(Unit))
-        pluginId in failed -> Activation.Ready(Outcome.Failure(AppError.PluginFailed(pluginId)))
-        else -> {
-            val factory = factories[pluginId]
-            if (factory == null) {
-                Activation.Ready(Outcome.Failure(AppError.NotFound))
-            } else {
-                Activation.Pending(
-                    activations.getOrPut(pluginId) {
-                        activationScope.async(start = CoroutineStart.LAZY) { activate(factory) }
-                    },
-                )
-            }
+    private fun claimActivation(pluginId: PluginId): Activation {
+        if (active.containsKey(pluginId)) {
+            return Activation.Ready(Outcome.Success(Unit))
         }
+        if (pluginId in failed) {
+            return Activation.Ready(Outcome.Failure(AppError.PluginFailed(pluginId)))
+        }
+        val factory = factories[pluginId]
+            ?: return Activation.Ready(Outcome.Failure(AppError.NotFound))
+        val existing = activations[pluginId]
+        if (existing != null) {
+            return Activation.Pending(existing)
+        }
+        val job = activationScope.async(
+            context = ActivationElement(pluginId),
+            start = CoroutineStart.LAZY,
+        ) {
+            activate(factory)
+        }
+        activations[pluginId] = job
+        job.invokeOnCompletion { activations.remove(pluginId, job) }
+        return Activation.Pending(job)
     }
 
     suspend fun command(id: CommandId): Outcome<Command<*, *>> {
@@ -158,12 +182,16 @@ class PluginHost(
 
     private suspend fun activate(factory: PluginFactory): Outcome<Unit> {
         val pluginId = factory.manifest.id
-        val started = clockMillis()
+        val started = TimeSource.Monotonic.markNow()
         updateState(pluginId, PluginState.ACTIVATING)
         val plugin = try {
             factory.create()
         } catch (exception: CancellationException) {
-            throw exception
+            if (!currentCoroutineContext().isActive) {
+                throw exception
+            }
+            markFailed(pluginId)
+            return Outcome.Failure(AppError.PluginFailed(pluginId))
         } catch (exception: Exception) {
             markFailed(pluginId)
             return Outcome.Failure(AppError.PluginFailed(pluginId))
@@ -173,7 +201,11 @@ class PluginHost(
         val activation = try {
             plugin.activate(session)
         } catch (exception: CancellationException) {
-            throw exception
+            if (!currentCoroutineContext().isActive) {
+                throw exception
+            }
+            markFailed(pluginId, plugin)
+            return Outcome.Failure(AppError.PluginFailed(pluginId))
         } catch (exception: Exception) {
             Outcome.Failure(AppError.PluginFailed(pluginId))
         }
@@ -199,7 +231,7 @@ class PluginHost(
             pluginId = pluginId,
             state = PluginState.RUNNING,
             activatedAtMillis = activatedAt,
-            activationMillis = activatedAt - started,
+            activationMillis = started.elapsedNow().inWholeMilliseconds,
         )
         return Outcome.Success(Unit)
     }
@@ -307,6 +339,13 @@ class PluginHost(
     private sealed interface Activation {
         data class Ready(val outcome: Outcome<Unit>) : Activation
         data class Pending(val job: Deferred<Outcome<Unit>>) : Activation
+    }
+
+    /** Marks the coroutine that activates [pluginId], so it cannot await itself. */
+    private class ActivationElement(
+        val pluginId: PluginId,
+    ) : AbstractCoroutineContextElement(Key) {
+        companion object Key : CoroutineContext.Key<ActivationElement>
     }
 
     private class ActivePlugin(

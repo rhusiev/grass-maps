@@ -110,14 +110,16 @@ private fun MapMeasurement(
                             Log.i(TAG, "switch-start")
                             repeat(styleSwitches) { index ->
                                 val touring = index % 2 == 0
+                                val style = if (touring) bundle.touring else bundle.style
+                                val layers = if (touring) bundle.touringLayers else bundle.layers
+                                surface.host.setStyle(style).onFailure { error ->
+                                    Log.w(TAG, "style rejected: $error")
+                                }
                                 surface.host
-                                    .applyStyleDiff(
-                                        if (touring) {
-                                            StyleDiff(TOURING, bundle.touringLayers)
-                                        } else {
-                                            StyleDiff(STANDARD, bundle.layers)
-                                        },
-                                    ).onFailure { error -> Log.w(TAG, "style diff rejected: $error") }
+                                    .applyStyleDiff(StyleDiff(style.id, layers))
+                                    .onFailure { error ->
+                                        Log.w(TAG, "style diff rejected: $error")
+                                    }
                             }
                             delay(SWITCH_SETTLE_MS)
                             Log.i(

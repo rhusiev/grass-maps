@@ -10,3 +10,7 @@ local.properties
 captures/
 .externalNativeBuild/
 .cxx/
+
+# Python tooling
+__pycache__/
+*.pyc

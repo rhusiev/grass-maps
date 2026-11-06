@@ -71,9 +71,12 @@ dependencies {
     implementation(project(":places"))
     implementation(project(":tracks"))
     implementation(project(":ui-shell"))
-    implementation(project(":control"))
-    implementation(project(":devtools"))
     implementation(project(":plugins:example"))
+
+    // Debug-only: the control channel and the devtools harness must not be
+    // packaged into a release build at all (architecture section 22).
+    debugImplementation(project(":control"))
+    debugImplementation(project(":devtools"))
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

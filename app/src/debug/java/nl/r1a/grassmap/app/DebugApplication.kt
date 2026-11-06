@@ -27,6 +27,7 @@ class DebugApplication : GrassMapsApplication() {
                 .build(),
         )
         Log.i(TAG, "StrictMode thread policy enabled")
+        DebugControl.start(this, container, DebugControl.settings)
     }
 
     private companion object {

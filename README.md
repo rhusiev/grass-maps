@@ -137,14 +137,30 @@ including a declared command whose implementation class is missing from the
 plugin's source or a policy field the generator does not understand. Each plugin
 module's `check` and `app:check` depend on it.
 
+## Debug control channel
+
+A debug build starts a JSON-RPC 2.0 control channel on the Linux abstract
+socket `nl.r1a.grassmap.control`. Two gates protect it: the peer UID from
+`SO_PEERCRED` must be the app's or the adb daemon's that carries `adb forward`,
+and the peer must send the 256-bit bearer token from the app-private
+`files/control-token` file. Only commands whose generated
+registry entry has `allowlistedForControl` run. A release build does not contain
+`:control` or `:devtools` at all, because the app depends on them in the debug
+configuration only.
+
+`tools/control/grassctl.py` lists commands, invokes an allowlisted command,
+prints stream values and saves a screenshot. `tools/control/mcp_server.py`
+exposes the same channel over stdio MCP. See `tools/control/README.md` for the
+method list, the token handling and the CLI examples.
+
 ## Follow-ups
 
 `plugin-api` and `plugin-ui-api` are ordinary Android libraries in this
 skeleton. Moving them to Kotlin Multiplatform source sets is a follow-up, so
 their contracts stay free of Android types now.
 
-CI, `docs/`, the control channel and the benchmarks belong to the later
-milestone-0 tasks from T-0012 onward.
+CI, `docs/` and the benchmarks belong to the later milestone-0 tasks from
+T-0012 onward. The release AI-control switch and its allowlist are T-0114.
 
 ## Licence
 

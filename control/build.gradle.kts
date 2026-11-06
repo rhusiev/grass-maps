@@ -19,4 +19,7 @@ android {
 dependencies {
     api(project(":core"))
     api(project(":plugin-api"))
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

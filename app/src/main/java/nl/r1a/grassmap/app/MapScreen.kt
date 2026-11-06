@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -152,7 +153,11 @@ private fun MapContent(
                 }
             },
             onEditingChange = { isEditing = it },
-            modifier = Modifier.align(Alignment.TopEnd).padding(BAR_PADDING_DP.dp),
+            modifier =
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(BAR_PADDING_DP.dp),
         )
     }
     LaunchedEffect(surface.host, bundle) {

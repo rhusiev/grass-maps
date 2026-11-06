@@ -8,6 +8,7 @@ import kotlinx.coroutines.delay
 import nl.r1a.grassmap.map.MapSurface
 import nl.r1a.grassmap.plugin.api.error.onFailure
 import nl.r1a.grassmap.plugin.api.host.MapEvent
+import nl.r1a.grassmap.plugin.api.model.CameraUpdate
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 
 /**
@@ -17,11 +18,15 @@ import nl.r1a.grassmap.plugin.api.model.StyleDiff
  */
 internal class DebugMapHarness(
     private val styleSwitches: Int,
+    private val initialBearing: Double,
 ) : MapHarness {
     override suspend fun run(
         surface: MapSurface,
         bundle: MapBundle,
     ) {
+        if (initialBearing != 0.0) {
+            surface.host.moveCamera(CameraUpdate(bearing = initialBearing))
+        }
         var sawFullFrame = false
         var loggedFirstFrame = false
         var switchesDone = false
@@ -65,6 +70,10 @@ internal class DebugMapHarness(
                     }
                 }
 
+                is MapEvent.CameraChanged -> {
+                    Log.i(TAG, "camera zoom=${event.camera.zoom} bearing=${event.camera.bearing}")
+                }
+
                 else -> {
                     Unit
                 }
@@ -74,9 +83,14 @@ internal class DebugMapHarness(
 
     companion object {
         private const val EXTRA_STYLE_SWITCHES = "t0020_style_switches"
+        private const val EXTRA_INITIAL_BEARING = "t0021_initial_bearing"
         private const val SWITCH_SETTLE_MS = 3_000L
         private const val TAG = "T0020"
 
-        fun from(intent: Intent): DebugMapHarness = DebugMapHarness(intent.getIntExtra(EXTRA_STYLE_SWITCHES, 0))
+        fun from(intent: Intent): DebugMapHarness =
+            DebugMapHarness(
+                styleSwitches = intent.getIntExtra(EXTRA_STYLE_SWITCHES, 0),
+                initialBearing = intent.getDoubleExtra(EXTRA_INITIAL_BEARING, 0.0),
+            )
     }
 }

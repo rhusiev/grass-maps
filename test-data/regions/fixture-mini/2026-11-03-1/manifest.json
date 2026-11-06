@@ -1,0 +1,73 @@
+{
+  "region": "fixture-mini",
+  "version": "2026-11-03-1",
+  "packageFormat": 1,
+  "osmTimestamp": "2026-11-03T21:24:23Z",
+  "pipeline": {
+    "tool": "pmtiles extract",
+    "bbox": [
+      23.94,
+      49.94,
+      23.96,
+      49.96
+    ],
+    "mapSource": {
+      "archive": "ukraine-final.pmtiles",
+      "sha256": "bee6252be2e6d9387f72884ca60fd5613d55339cad95fb5d2528ff22a2330cfe"
+    },
+    "contoursSource": {
+      "archive": "lviv-90m-20m.pmtiles",
+      "sha256": "01a8876116a5c7bf3129abf5a24539ebaaf74535b4e4f45681cbb44883c0445f"
+    }
+  },
+  "components": [
+    {
+      "kind": "map",
+      "file": "map.pmtiles",
+      "format": "pmtiles",
+      "formatVersion": 3,
+      "version": "2026-11-03-1",
+      "bytes": 90141,
+      "sha256": "c29ca3203c4d4c7e4c52e5a505fbc56f365d1c4a980a80c280273ce82fdd722c",
+      "standIn": false,
+      "zoomLevels": [
+        12,
+        14
+      ]
+    },
+    {
+      "kind": "contours",
+      "file": "contours.pmtiles",
+      "format": "pmtiles",
+      "formatVersion": 3,
+      "version": "2026-11-03-1",
+      "bytes": 23418,
+      "sha256": "98d364edfc3989430806b69a3b1ebeb1f96f6baa72376db64311e58e63fe2a04",
+      "standIn": false,
+      "zoomLevels": [
+        9,
+        14
+      ]
+    },
+    {
+      "kind": "elevation",
+      "file": "elevation.bin",
+      "format": "stand-in",
+      "formatVersion": 1,
+      "version": "2026-11-03-1",
+      "bytes": 102,
+      "sha256": "6bd344ccd04072e837f40765f678cd0961035dafd3b7f4c597be2bc309f307b7",
+      "standIn": true
+    },
+    {
+      "kind": "search",
+      "file": "search.idx",
+      "format": "stand-in",
+      "formatVersion": 1,
+      "version": "2026-11-03-1",
+      "bytes": 94,
+      "sha256": "03d56de2d7c5a0e6aa0a8342083505e3874bfdd036f566cf797842cfa9d3df60",
+      "standIn": true
+    }
+  ]
+}

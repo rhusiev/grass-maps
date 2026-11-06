@@ -77,6 +77,15 @@ fast job; reproducibility and the API 29 emulator run as separate jobs. The
 iOS compile job is named as pending until an iOS or Kotlin Multiplatform target
 exists, and its summary says that it verified nothing.
 
+## Test data and contract suite
+
+`test-data/regions/fixture-mini/` is a small region package for JVM tests. It is
+built by `tools/pipeline/build-test-region.sh` with the same `pmtiles extract`
+stage real oblast packs use, and its manifest records each file's size and
+sha256. `plugin-api` publishes the shared paged-provider contract suite as test
+fixtures; `PagedProviderContractSuite` covers limits, paging, ordering,
+concurrency and cancellation. See `tools/pipeline/README.md`.
+
 ## Module map
 
 Each namespace is `nl.r1a.grassmap.<module>`, with dots in place of hyphens in

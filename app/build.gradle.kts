@@ -1,5 +1,18 @@
+import buildlogic.GeneratePluginRegistryTask
+
 plugins {
     alias(libs.plugins.android.application)
+}
+
+val pluginManifestFiles = rootProject.subprojects
+    .filter { it.path.startsWith(":plugins:") }
+    .map { it.file("src/main/plugin.json") }
+
+val generatePluginRegistry = tasks.register<GeneratePluginRegistryTask>("generatePluginRegistry") {
+    group = "build"
+    description = "Generates GeneratedPlugins.kt and GeneratedStreams.kt from plugin manifests."
+    manifests.from(pluginManifestFiles)
+    outputDirectory.set(layout.buildDirectory.dir("generated/plugin-registry"))
 }
 
 android {
@@ -26,6 +39,15 @@ android {
     }
 }
 
+androidComponents {
+    onVariants { variant ->
+        variant.sources.kotlin?.addGeneratedSourceDirectory(
+            generatePluginRegistry,
+            GeneratePluginRegistryTask::outputDirectory,
+        )
+    }
+}
+
 dependencies {
     implementation(project(":plugin-api"))
     implementation(project(":plugin-ui-api"))
@@ -42,4 +64,11 @@ dependencies {
     implementation(project(":control"))
     implementation(project(":devtools"))
     implementation(project(":plugins:example"))
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+}
+
+tasks.named("check") {
+    dependsOn(":checkPluginManifests")
 }

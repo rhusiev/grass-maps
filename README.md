@@ -6,7 +6,8 @@ data. MapLibre Native sits behind our own map interface, so the map binding
 stays a one-module swap.
 
 This repository holds the milestone-0 skeleton: the Gradle build, the module
-layout and the plugin boundary rule. It implements no product feature yet.
+layout, the plugin boundary rule, the command bus, and the plugin host. No
+product feature is implemented yet.
 
 ## Build
 
@@ -31,10 +32,15 @@ targetSdk 36 and minSdk 29.
 
 ```sh
 ./gradlew checkPluginBoundaries
+./gradlew checkPluginManifests
 ./gradlew :plugins:example:check
 ```
 
-The second command runs the boundary task through `check` for a plugin module.
+`checkPluginBoundaries` enforces the plugin module dependency rule.
+`checkPluginManifests` validates every `src/main/plugin.json`: unique plugin
+ids, namespaced command and stream ids, command implementations, setting
+defaults and scopes, and stream serializers. Plugin modules wire the boundary
+task into `check`.
 
 ## Module map
 
@@ -44,7 +50,7 @@ the module name. Only `app` is an application module; its application ID is
 
 | Module | Owns | Depends on |
 |---|---|---|
-| `plugin-api` | base types, domain value types, host interfaces, service contracts, capability contracts, manifest schema, contract versions | none |
+| `plugin-api` | base types, domain value types, host interfaces, service contracts, capability contracts, manifest schema, contract versions | Kotlin stdlib, coroutines, serialization |
 | `plugin-ui-api` | Compose UI contracts for compiled-in UI plugins | `plugin-api` |
 | `core` | command bus, plugin host, stream registry, capability registry, lifecycle, undo/redo stacks | `plugin-api` |
 | `core-services` | settings and profiles, storage, location, network gate, i18n, clock, logging | `core`, `plugin-api` |
@@ -75,6 +81,23 @@ Feature modules never import `core` or `core-services`. They take the host and
 service interfaces they need in their constructors, and `app` wires the
 implementations. The only feature-to-feature edges are `navigation -> routing`
 and `alerts -> navigation`.
+
+## Plugin manifests
+
+Every module under `plugins/` carries `src/main/plugin.json`. At build time the
+`generatePluginRegistry` task reads those manifests and writes
+`GeneratedPlugins.kt` and `GeneratedStreams.kt` into `app`, so the host never
+scans the classpath or uses reflection.
+
+A manifest declares the plugin id, version, the `plugin-api` version, the
+implementation class, and its contributions: commands with parameter and result
+schemas, providers with contract versions and static capabilities, streams with
+a value type and serializer, and settings with defaults and scopes. The example
+plugin declares one command, one stream and one provider.
+
+`checkPluginManifests` fails the build when a manifest breaks the rules above,
+including a declared command whose implementation class is missing from the
+plugin's source.
 
 ## Follow-ups
 

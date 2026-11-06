@@ -1,0 +1,54 @@
+{
+  "id": "example",
+  "name": "plugin.example.name",
+  "description": "plugin.example.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.example.ExamplePlugin",
+  "contributes": {
+    "commands": [
+      {
+        "id": "example.set_value",
+        "params": "kotlin.Int",
+        "result": "kotlin.Int",
+        "doc": "Sets the example counter and returns the new value.",
+        "undoable": true,
+        "implementation": "nl.r1a.grassmap.plugins.example.SetValueCommand"
+      }
+    ],
+    "providers": [
+      {
+        "contract": "example.throwing",
+        "version": "1.0.0",
+        "capabilities": {
+          "mode": "on-demand"
+        }
+      }
+    ],
+    "streams": [
+      {
+        "id": "example.value",
+        "valueType": "kotlin.Int",
+        "serializer": "kotlinx.serialization.builtins.IntSerializer"
+      }
+    ],
+    "settings": [
+      {
+        "key": "example.show_counter",
+        "type": "boolean",
+        "default": true,
+        "scope": "global"
+      }
+    ]
+  },
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": []
+  },
+  "activation": [
+    "command",
+    "stream",
+    "provider"
+  ]
+}

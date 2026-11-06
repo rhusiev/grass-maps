@@ -71,6 +71,7 @@ document, section 3, plus the build and module rules of this repository.
 - Build the app:
   `JAVA_HOME=$HOME/dotfiles/local/share/jdk ./gradlew :app:assembleDebug`
 - Check the plugin boundary rule: `./gradlew checkPluginBoundaries`
+- Check plugin manifests: `./gradlew checkPluginManifests`
 - The build uses Gradle 9.3.1, AGP 9.1.0 with built-in Kotlin, compileSdk 37,
   targetSdk 36 and minSdk 29. Do not apply the standalone Kotlin Android
   plugin; AGP 9 compiles Kotlin itself

@@ -1,3 +1,5 @@
+import buildlogic.LintPluginManifestsTask
+
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.android.library) apply false
@@ -55,4 +57,17 @@ subprojects {
             }
         }
     }
+}
+
+// Manifest-driven registries (architecture section 13): each plugin module carries
+// src/main/plugin.json. The app generates the static registries; this task
+// validates the same manifests.
+val pluginManifestFiles = subprojects
+    .filter { it.path.startsWith(":plugins:") }
+    .map { it.file("src/main/plugin.json") }
+
+tasks.register<LintPluginManifestsTask>("checkPluginManifests") {
+    group = "verification"
+    description = "Validates plugin manifests: ids, commands, settings, streams and providers."
+    manifests.from(pluginManifestFiles)
 }

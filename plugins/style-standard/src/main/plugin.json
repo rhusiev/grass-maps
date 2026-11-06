@@ -1,0 +1,27 @@
+{
+  "id": "style.standard",
+  "name": "plugin.style_standard.name",
+  "description": "plugin.style_standard.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.style.standard.StandardStylePlugin",
+  "contributes": {
+    "providers": [
+      {
+        "contract": "map.layers",
+        "version": "1.0.0",
+        "capabilities": {
+          "styles": ["standard", "touring"]
+        }
+      }
+    ]
+  },
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": ["map", "contours"]
+  },
+  "activation": [
+    "provider"
+  ]
+}

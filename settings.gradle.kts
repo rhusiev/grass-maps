@@ -33,4 +33,5 @@ include(
     ":devtools",
     ":app",
     ":plugins:example",
+    ":plugins:style-standard",
 )

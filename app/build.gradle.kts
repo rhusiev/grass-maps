@@ -2,6 +2,7 @@ import buildlogic.GeneratePluginRegistryTask
 
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.compose)
 }
 
 val pluginManifestFiles =
@@ -33,6 +34,15 @@ android {
         release {
             isMinifyEnabled = false
         }
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    // MapLibre reads glyph PBFs from assets by path, so they stay uncompressed.
+    androidResources {
+        noCompress += "pbf"
     }
 
     compileOptions {
@@ -72,6 +82,12 @@ dependencies {
     implementation(project(":tracks"))
     implementation(project(":ui-shell"))
     implementation(project(":plugins:example"))
+    implementation(project(":plugins:style-standard"))
+
+    implementation("androidx.activity:activity-compose:1.13.0")
+    implementation("org.jetbrains.compose.ui:ui:1.12.1")
+    implementation("org.jetbrains.compose.foundation:foundation:1.12.1")
+    implementation("org.jetbrains.compose.runtime:runtime:1.12.1")
 
     // Debug-only: the control channel and the devtools harness must not be
     // packaged into a release build at all (architecture section 22).

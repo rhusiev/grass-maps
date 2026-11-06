@@ -2,4 +2,6 @@
 <resources>
     <!-- The product name is a brand and stays the same in every language. -->
     <string name="app_name">Grass Maps</string>
+    <string name="plugin.style_standard.name">Стандартний стиль карти</string>
+    <string name="plugin.style_standard.description">Стандартний і туристичний стилі карти.</string>
 </resources>

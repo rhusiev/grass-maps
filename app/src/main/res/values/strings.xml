@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Grass Maps</string>
+    <string name="plugin.style_standard.name">Standard map style</string>
+    <string name="plugin.style_standard.description">The Standard and Touring map styles.</string>
 </resources>

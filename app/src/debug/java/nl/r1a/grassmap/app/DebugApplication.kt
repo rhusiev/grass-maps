@@ -1,6 +1,5 @@
 package nl.r1a.grassmap.app
 
-import android.app.Application
 import android.os.StrictMode
 import android.util.Log
 
@@ -11,12 +10,11 @@ import android.util.Log
  * while starting. `Log.i` below is the marker the job checks for, so an APK
  * without this policy cannot pass the check by staying silent.
  *
- * If a main-source Application class lands later (for example with the command
- * bus in T-0012), this class must extend it and call super.onCreate() first.
- * The debug manifest replaces `android:name`, so otherwise debug builds would
- * skip that startup code.
+ * The debug manifest replaces the main application name, so this class extends
+ * [GrassMapsApplication] to keep the process-scoped container and its startup
+ * path.
  */
-class DebugApplication : Application() {
+class DebugApplication : GrassMapsApplication() {
     override fun onCreate() {
         super.onCreate()
         StrictMode.setThreadPolicy(

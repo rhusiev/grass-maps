@@ -74,6 +74,12 @@ scripts/ci/test-count.sh || fail "unit tests (empty suite)"
 step "Plugin boundaries"
 ./gradlew --console=plain checkPluginBoundaries || fail "plugin boundaries"
 
+step "Plugin manifests"
+./gradlew --console=plain checkPluginManifests || fail "plugin manifests"
+
+step "Build logic tests"
+./gradlew --console=plain -p buildSrc test || fail "build logic tests"
+
 if [[ $SKIP_REPRO -eq 0 ]]; then
     step "Reproducibility (two release builds in separate paths)"
     scripts/ci/reproducibility.sh || fail "reproducibility"

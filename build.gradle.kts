@@ -3,6 +3,30 @@ import buildlogic.LintPluginManifestsTask
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.android.library) apply false
+    alias(libs.plugins.spotless) apply false
+}
+
+// Formatting is configured once for every project, so a module build file does
+// not repeat it. `./gradlew spotlessCheck` from the root covers all of them.
+val spotlessPluginId =
+    libs.plugins.spotless
+        .get()
+        .pluginId
+val ktlintVersion = libs.versions.ktlint.get()
+
+allprojects {
+    apply(plugin = spotlessPluginId)
+
+    extensions.configure<com.diffplug.gradle.spotless.SpotlessExtension> {
+        kotlin {
+            target("src/**/*.kt")
+            ktlint(ktlintVersion)
+        }
+        kotlinGradle {
+            target("*.gradle.kts")
+            ktlint(ktlintVersion)
+        }
+    }
 }
 
 // The plugin boundary rule (README.md): a module under plugins/ may depend on

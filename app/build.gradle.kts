@@ -37,6 +37,14 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    // AGP dependency metadata embeds build-specific data in the APK and breaks
+    // byte reproducibility (bench RESULTS.md, T-0008). The CI reproducibility
+    // check compares two unsigned release APKs, so it must stay off.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
 }
 
 androidComponents {

@@ -30,17 +30,42 @@ targetSdk 36 and minSdk 29.
 
 ## Checks
 
+`./check.sh` is the gate every agent and the orchestrator runs before merging.
+On this machine it re-executes itself under the `gm-build` slot, so Gradle
+never runs outside the slot:
+
 ```sh
-./gradlew checkPluginBoundaries
-./gradlew checkPluginManifests
-./gradlew :plugins:example:check
+./check.sh                 # everything below, including reproducibility
+./check.sh --skip-repro    # the fast loop; CI runs reproducibility separately
 ```
+
+It runs Spotless with ktlint from the root, Android lint,
+`:app:assembleDebug`, the JVM unit tests, `checkPluginBoundaries`,
+`checkPluginManifests`, and two unsigned release builds at different paths
+compared byte for byte. The test count is reported; an empty suite fails the
+gate instead of passing silently.
 
 `checkPluginBoundaries` enforces the plugin module dependency rule.
 `checkPluginManifests` validates every `src/main/plugin.json`: unique plugin
 ids, namespaced command and stream ids, command implementations, setting
-defaults and scopes, and stream serializers. Plugin modules wire the boundary
-task into `check`.
+defaults and scopes, dispatch policies, and stream serializers. Plugin modules
+wire both checks into `check`.
+
+```sh
+./scripts/ci/android-smoke.sh app/build/outputs/apk/debug/app-debug.apk
+```
+
+The device check installs and launches the debug APK and fails on a crash or
+on a StrictMode policy violation. CI runs it on an API 29 x86_64 emulator.
+Debug builds install the policy through `DebugApplication`, which extends the
+main `GrassMapsApplication` and is also the marker the script requires, so an
+APK without the policy cannot pass by staying silent.
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull
+request. Format, lint, build, unit tests, boundaries and manifest lint are one
+fast job; reproducibility and the API 29 emulator run as separate jobs. The
+iOS compile job is named as pending until an iOS or Kotlin Multiplatform target
+exists, and its summary says that it verified nothing.
 
 ## Module map
 
@@ -109,7 +134,7 @@ skeleton. Moving them to Kotlin Multiplatform source sets is a follow-up, so
 their contracts stay free of Android types now.
 
 CI, `docs/`, the control channel and the benchmarks belong to the later
-milestone-0 tasks from T-0011 onward.
+milestone-0 tasks from T-0012 onward.
 
 ## Licence
 

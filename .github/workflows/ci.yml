@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+# A new commit on the same branch or pull request cancels the older run.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Format, lint, build, unit tests, boundaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+      # --skip-repro keeps this job fast; the reproducibility job runs the two
+      # release builds. The emulator job runs the device smoke and strict mode.
+      - name: Run the local gate
+        run: ./check.sh --skip-repro
+      - name: Keep test and lint reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: checks-reports
+          path: |
+            **/build/reports/lint-results-*.html
+            **/build/test-results/**
+          if-no-files-found: ignore
+
+  reproducibility:
+    name: Byte-reproducible release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+      - name: Build twice in separate paths and compare
+        run: ./scripts/ci/reproducibility.sh
+
+  emulator-api29:
+    name: API 29 emulator smoke and strict mode
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+      - name: Build the debug APK
+        run: ./gradlew --console=plain :app:assembleDebug
+      - name: Boot API 29 and run the smoke check
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: ./scripts/ci/android-smoke.sh app/build/outputs/apk/debug/app-debug.apk
+
+  # The design asks for an iOS target compile on a macOS runner "once iOS code
+  # exists" (walking-skeleton.md, T-0011; architecture.md section 24). There is
+  # no iOS or Kotlin Multiplatform target yet, so this job reports the gap
+  # instead of pretending to build one. Replace the pending-check call with the
+  # real macOS build when the target lands; do not delete the job.
+  ios-target-compile:
+    name: iOS target compile (pending, no iOS target yet)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+      - name: Report the pending check
+        run: ./scripts/ci/pending-check.sh "iOS target compile on a macOS runner" "No iOS or Kotlin Multiplatform target exists in the repo yet."

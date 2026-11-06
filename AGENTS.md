@@ -70,6 +70,9 @@ document, section 3, plus the build and module rules of this repository.
   `local.properties`
 - Build the app:
   `JAVA_HOME=$HOME/dotfiles/local/share/jdk ./gradlew :app:assembleDebug`
+- Run the full gate before merging: `./check.sh`. It takes the `gm-build`
+  slot itself and runs format, lint, the build, unit tests, the plugin
+  boundary check and the reproducibility check
 - Check the plugin boundary rule: `./gradlew checkPluginBoundaries`
 - Check plugin manifests: `./gradlew checkPluginManifests`
 - The build uses Gradle 9.3.1, AGP 9.1.0 with built-in Kotlin, compileSdk 37,

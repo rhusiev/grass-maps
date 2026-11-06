@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Debug builds install the StrictMode policy checked by CI. If a main
+         Application class lands, DebugApplication must extend it. -->
+    <application
+        android:name="nl.r1a.grassmap.app.DebugApplication"
+        tools:replace="android:name" />
+</manifest>

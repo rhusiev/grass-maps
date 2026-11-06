@@ -7,8 +7,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmap.plugin.api.contract.CursorToken
 import nl.r1a.grassmap.plugin.api.contract.Page
-import nl.r1a.grassmap.plugin.api.contract.PageCursor
 import nl.r1a.grassmap.plugin.api.contract.PageRequest
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -47,7 +47,7 @@ abstract class PagedProviderContractSuite<T : Any> {
             val provider = createProvider()
 
             for (limit in pageLimits(provider)) {
-                var cursor: PageCursor? = null
+                var cursor: CursorToken? = null
                 var pages = 0
                 do {
                     val page = success(provider.page(PageRequest(limit, cursor), CancellationHandle.None))
@@ -94,7 +94,7 @@ abstract class PagedProviderContractSuite<T : Any> {
         runTest {
             val provider = createProvider()
 
-            val unknown = PageCursor("cursor-from-another-query")
+            val unknown = CursorToken("cursor-from-another-query")
             assertInvalidInput(provider.page(PageRequest(1, unknown), CancellationHandle.None))
         }
 
@@ -185,7 +185,7 @@ abstract class PagedProviderContractSuite<T : Any> {
         limit: Int,
     ): List<T> {
         val items = mutableListOf<T>()
-        var cursor: PageCursor? = null
+        var cursor: CursorToken? = null
         var pages = 0
         do {
             val page = success(provider.page(PageRequest(limit, cursor), CancellationHandle.None))

@@ -2,8 +2,8 @@ package nl.r1a.grassmap.plugin.api.testing
 
 import kotlinx.coroutines.yield
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmap.plugin.api.contract.CursorToken
 import nl.r1a.grassmap.plugin.api.contract.Page
-import nl.r1a.grassmap.plugin.api.contract.PageCursor
 import nl.r1a.grassmap.plugin.api.contract.PageRequest
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -38,11 +38,11 @@ internal class FakePageSource<T : Any>(
             }
             yield()
         }
-        val next = if (end < items.size) PageCursor(end.toString()) else null
+        val next = if (end < items.size) CursorToken(end.toString()) else null
         return Outcome.Success(Page(items.subList(start, end).toList(), next))
     }
 
-    private fun offsetOf(cursor: PageCursor?): Int? {
+    private fun offsetOf(cursor: CursorToken?): Int? {
         if (cursor == null) {
             return 0
         }

@@ -9,7 +9,7 @@ package nl.r1a.grassmap.plugin.api.contract
  * [nl.r1a.grassmap.plugin.api.error.AppError.InvalidInput].
  */
 @JvmInline
-value class PageCursor(
+value class CursorToken(
     val token: String,
 )
 
@@ -24,7 +24,7 @@ value class PageCursor(
  */
 data class PageRequest(
     val limit: Int,
-    val cursor: PageCursor? = null,
+    val cursor: CursorToken? = null,
 )
 
 /**
@@ -37,5 +37,5 @@ data class PageRequest(
  */
 data class Page<T>(
     val items: List<T>,
-    val nextCursor: PageCursor?,
+    val nextCursor: CursorToken?,
 )

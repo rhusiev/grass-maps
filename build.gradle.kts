@@ -54,6 +54,7 @@ subprojects {
         plugins.withId("com.android.library") {
             tasks.named("check") {
                 dependsOn(rootProject.tasks.named("checkPluginBoundaries"))
+                dependsOn(":checkPluginManifests")
             }
         }
     }

@@ -106,16 +106,31 @@ internal fun emitJson(value: Any?): String = when (value) {
     else -> "JsonPrimitive(${value.toString().literal()})"
 }
 
-internal fun locationNeed(value: String?): String = when (value) {
+internal fun locationNeed(value: String?, where: String): String = when (value ?: "none") {
+    "none" -> "LocationNeed.NONE"
     "while_in_use" -> "LocationNeed.WHILE_IN_USE"
     "during_navigation" -> "LocationNeed.DURING_NAVIGATION"
-    else -> "LocationNeed.NONE"
+    else -> throw GradleException("$where: invalid location need '$value'")
 }
 
-internal fun settingScope(value: String?): String = when (value) {
+internal fun settingScope(value: String?, where: String): String = when (value) {
+    "global" -> "SettingScope.GLOBAL"
     "profile" -> "SettingScope.PROFILE"
-    else -> "SettingScope.GLOBAL"
+    else -> throw GradleException("$where: invalid setting scope '${value.orEmpty()}'")
 }
+
+internal fun commandDispatcher(value: String?, where: String): String = when (value ?: "default") {
+    "main" -> "CommandDispatcher.MAIN"
+    "default" -> "CommandDispatcher.DEFAULT"
+    "io" -> "CommandDispatcher.IO"
+    else -> throw GradleException("$where: invalid command dispatcher '$value'")
+}
+
+internal fun switchId(value: String?): String =
+    if (value == null) "null" else "SwitchId(${value.literal()})"
+
+internal fun providerCapabilities(value: Any?): String =
+    if (value is Map<*, *>) emitJson(value) else "JsonObject(emptyMap())"
 
 internal fun emitStringList(values: List<String>): String =
     "listOf(${values.joinToString(", ") { it.literal() }})"
@@ -150,9 +165,11 @@ abstract class GeneratePluginRegistryTask : DefaultTask() {
         appendLine("import kotlinx.serialization.json.JsonObject")
         appendLine("import kotlinx.serialization.json.JsonPrimitive")
         appendLine("import nl.r1a.grassmap.plugin.api.command.Command")
+        appendLine("import nl.r1a.grassmap.plugin.api.command.CommandDispatcher")
         appendLine("import nl.r1a.grassmap.plugin.api.contract.CommandId")
         appendLine("import nl.r1a.grassmap.plugin.api.contract.PluginId")
         appendLine("import nl.r1a.grassmap.plugin.api.contract.StreamId")
+        appendLine("import nl.r1a.grassmap.plugin.api.contract.SwitchId")
         appendLine("import nl.r1a.grassmap.plugin.api.manifest.CommandDeclaration")
         appendLine("import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand")
         appendLine("import nl.r1a.grassmap.plugin.api.manifest.GeneratedProvider")
@@ -171,7 +188,7 @@ abstract class GeneratePluginRegistryTask : DefaultTask() {
         appendLine("    val plugins: List<PluginFactory> = listOf(")
         for (manifest in manifests) {
             appendLine("        PluginFactory(")
-            appendLine("            manifest = ${emitManifest(manifest.raw, "            ")},")
+            appendLine("            manifest = ${emitManifest(manifest.raw, manifest.file.path, "            ")},")
             appendLine("            create = { ${manifest.raw.string("implementation")}() },")
             appendLine("        ),")
         }
@@ -181,12 +198,23 @@ abstract class GeneratePluginRegistryTask : DefaultTask() {
         for (manifest in manifests) {
             val pluginId = manifest.raw.string("id").orEmpty()
             val commands = manifest.raw.objectValue("contributes").objectList("commands")
+            val where = manifest.file.path
             for (command in commands) {
                 val commandId = command.string("id").orEmpty()
+                appendLine("        GeneratedCommand(")
+                appendLine("            id = CommandId(${commandId.literal()}),")
+                appendLine("            pluginId = PluginId(${pluginId.literal()}),")
+                appendLine("            undoable = ${command["undoable"] as? Boolean ?: false},")
+                appendLine("            requiresSwitch = ${switchId(command.string("requiresSwitch"))},")
                 appendLine(
-                    "        GeneratedCommand(id = CommandId(${commandId.literal()}), " +
-                        "pluginId = PluginId(${pluginId.literal()})),",
+                    "            allowlistedForControl = " +
+                        "${command["allowlistedForControl"] as? Boolean ?: false},",
                 )
+                appendLine(
+                    "            dispatcher = " +
+                        "${commandDispatcher(command.string("dispatcher"), where)},",
+                )
+                appendLine("        ),")
             }
         }
         appendLine("    )")
@@ -247,7 +275,7 @@ abstract class GeneratePluginRegistryTask : DefaultTask() {
         appendLine("}")
     }
 
-    private fun emitManifest(raw: Map<String, Any?>, indent: String): String = buildString {
+    private fun emitManifest(raw: Map<String, Any?>, where: String, indent: String): String = buildString {
         val contributes = raw.objectValue("contributes")
         val needs = raw.objectValue("needs")
         appendLine("PluginManifest(")
@@ -266,6 +294,15 @@ abstract class GeneratePluginRegistryTask : DefaultTask() {
             appendLine("$indent                result = ${command.string("result").orEmpty().literal()},")
             appendLine("$indent                doc = ${command.string("doc").orEmpty().literal()},")
             appendLine("$indent                undoable = ${command["undoable"] as? Boolean ?: false},")
+            appendLine("$indent                requiresSwitch = ${switchId(command.string("requiresSwitch"))},")
+            appendLine(
+                "$indent                allowlistedForControl = " +
+                    "${command["allowlistedForControl"] as? Boolean ?: false},",
+            )
+            appendLine(
+                "$indent                dispatcher = " +
+                    "${commandDispatcher(command.string("dispatcher"), where)},",
+            )
             appendLine(
                 "$indent                implementation = " +
                     "${command.string("implementation").orEmpty().literal()},",
@@ -278,7 +315,7 @@ abstract class GeneratePluginRegistryTask : DefaultTask() {
             appendLine("$indent            ProviderDeclaration(")
             appendLine("$indent                contract = ${provider.string("contract").orEmpty().literal()},")
             appendLine("$indent                version = ${provider.string("version").orEmpty().literal()},")
-            appendLine("$indent                capabilities = ${emitJson(provider["capabilities"])},")
+            appendLine("$indent                capabilities = ${providerCapabilities(provider["capabilities"])},")
             appendLine("$indent            ),")
         }
         appendLine("$indent        ),")
@@ -297,14 +334,14 @@ abstract class GeneratePluginRegistryTask : DefaultTask() {
             appendLine("$indent                key = ${setting.string("key").orEmpty().literal()},")
             appendLine("$indent                type = ${setting.string("type").orEmpty().literal()},")
             appendLine("$indent                default = ${emitJson(setting["default"])},")
-            appendLine("$indent                scope = ${settingScope(setting.string("scope"))},")
+            appendLine("$indent                scope = ${settingScope(setting.string("scope"), where)},")
             appendLine("$indent            ),")
         }
         appendLine("$indent        ),")
         appendLine("$indent    ),")
         appendLine("$indent    needs = PluginNeeds(")
         appendLine("$indent        network = ${emitStringList(needs.stringListValue("network"))},")
-        appendLine("$indent        location = ${locationNeed(needs.string("location"))},")
+        appendLine("$indent        location = ${locationNeed(needs.string("location"), where)},")
         appendLine("$indent        regions = ${emitStringList(needs.stringListValue("regions"))},")
         appendLine("$indent    ),")
         appendLine("$indent    activation = ${emitStringList(raw.stringListValue("activation"))},")

@@ -5,7 +5,9 @@ import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.error.AppError
 
 /**
- * Emitted for every command dispatch, including failed and cancelled ones.
+ * Emitted on a best-effort basis for every command dispatch, including failed and
+ * cancelled ones. The flow has no replay and drops events when nothing collects,
+ * so it is not a guaranteed audit log.
  */
 data class CommandInvoked(
     val commandId: CommandId,

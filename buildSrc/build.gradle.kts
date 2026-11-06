@@ -8,4 +8,5 @@ repositories {
 
 dependencies {
     implementation(localGroovy())
+    testImplementation("junit:junit:4.13.2")
 }

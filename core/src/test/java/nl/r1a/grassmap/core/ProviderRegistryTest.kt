@@ -43,7 +43,7 @@ class ProviderRegistryTest {
         }
 
         assertEquals(
-            Outcome.Failure(AppError.PluginFailed(PluginId(TEST_PLUGIN_ID))),
+            Outcome.Failure(AppError.NotReady),
             fourth,
         )
         assertEquals(3, provider.calls)

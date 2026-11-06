@@ -41,7 +41,7 @@ class ProviderRegistry(
     ): Outcome<T> {
         val key = ProviderKey(pluginId, contract)
         if (key in disabled) {
-            return Outcome.Failure(AppError.PluginFailed(pluginId))
+            return Outcome.Failure(AppError.NotReady)
         }
 
         val provider = when (val providerOutcome = host.provider(pluginId, contract)) {

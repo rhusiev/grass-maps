@@ -84,6 +84,25 @@ abstract class LintPluginManifestsTask : DefaultTask() {
                 if (commandImplementation.isNotBlank()) {
                     checkImplementation(manifest.pluginDirectory, commandImplementation, where, errors)
                 }
+                val undoable = command["undoable"]
+                if (undoable != null && undoable !is Boolean) {
+                    errors += "$where: command '$commandId' undoable must be a boolean"
+                }
+                val allowlisted = command["allowlistedForControl"]
+                if (allowlisted != null && allowlisted !is Boolean) {
+                    errors += "$where: command '$commandId' allowlistedForControl must be a boolean"
+                }
+                val requiredSwitch = command["requiresSwitch"]
+                if (requiredSwitch != null) {
+                    val switchId = requiredSwitch as? String
+                    if (switchId == null || !NAMESPACED.matches(switchId)) {
+                        errors += "$where: command '$commandId' requiresSwitch must be a namespaced switch id"
+                    }
+                }
+                val dispatcher = command.string("dispatcher")
+                if (dispatcher != null && dispatcher !in COMMAND_DISPATCHERS) {
+                    errors += "$where: command '$commandId' has invalid dispatcher '$dispatcher'"
+                }
             }
 
             for (provider in contributes.objectList("providers")) {
@@ -211,5 +230,6 @@ abstract class LintPluginManifestsTask : DefaultTask() {
         val SEMVER = Regex("^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$")
         val SETTING_SCOPES = setOf("global", "profile")
         val LOCATION_NEEDS = setOf("none", "while_in_use", "during_navigation")
+        val COMMAND_DISPATCHERS = setOf("main", "default", "io")
     }
 }

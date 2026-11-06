@@ -13,6 +13,7 @@
         "result": "kotlin.Int",
         "doc": "Sets the example counter and returns the new value.",
         "undoable": true,
+        "allowlistedForControl": true,
         "implementation": "nl.r1a.grassmap.plugins.example.SetValueCommand"
       }
     ],

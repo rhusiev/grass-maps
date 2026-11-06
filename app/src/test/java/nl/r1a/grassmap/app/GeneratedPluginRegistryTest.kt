@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import nl.r1a.grassmap.app.generated.GeneratedPlugins
 import nl.r1a.grassmap.app.generated.GeneratedStreams
 import nl.r1a.grassmap.core.CommandDispatchers
+import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
 import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.contract.StreamId
@@ -37,6 +38,14 @@ class GeneratedPluginRegistryTest {
         assertTrue(
             GeneratedStreams.streams.any { it.id == StreamId("example.value") },
         )
+    }
+
+    @Test
+    fun generatedRegistryExposesTheControlAllowlistWithoutActivation() {
+        val command = GeneratedPlugins.commands.single { it.id == CommandId("example.set_value") }
+
+        assertTrue(command.allowlistedForControl)
+        assertEquals(CommandDispatcher.DEFAULT, command.dispatcher)
     }
 
     @Test

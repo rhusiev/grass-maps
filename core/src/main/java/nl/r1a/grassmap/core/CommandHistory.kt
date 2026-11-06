@@ -9,9 +9,11 @@ internal class CommandHistory {
     private val undoStack = ArrayDeque<CommandInvocation>()
     private val redoStack = ArrayDeque<CommandInvocation>()
 
-    fun record(inverse: CommandInvocation) {
-        undoStack.addLast(inverse)
+    fun record(inverse: CommandInvocation?) {
         redoStack.clear()
+        if (inverse != null) {
+            undoStack.addLast(inverse)
+        }
     }
 
     fun popUndo(): CommandInvocation? = undoStack.removeLastOrNull()

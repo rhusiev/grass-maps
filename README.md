@@ -91,13 +91,16 @@ scans the classpath or uses reflection.
 
 A manifest declares the plugin id, version, the `plugin-api` version, the
 implementation class, and its contributions: commands with parameter and result
-schemas, providers with contract versions and static capabilities, streams with
-a value type and serializer, and settings with defaults and scopes. The example
+schemas, their dispatch policy (undoable, required switch, control allowlist and
+dispatcher), providers with contract versions and static capabilities, streams
+with a value type and serializer, and settings with defaults and scopes. The host
+rejects a command whose code policy disagrees with its manifest. The example
 plugin declares one command, one stream and one provider.
 
 `checkPluginManifests` fails the build when a manifest breaks the rules above,
 including a declared command whose implementation class is missing from the
-plugin's source.
+plugin's source or a policy field the generator does not understand. Each plugin
+module's `check` and `app:check` depend on it.
 
 ## Follow-ups
 

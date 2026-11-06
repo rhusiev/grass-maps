@@ -50,7 +50,7 @@ data class CommandInvocation(
 
 val CommandJson: Json = Json {
     encodeDefaults = true
-    explicitNulls = false
+    explicitNulls = true
 }
 
 /**

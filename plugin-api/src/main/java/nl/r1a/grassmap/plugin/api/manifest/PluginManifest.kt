@@ -3,10 +3,12 @@ package nl.r1a.grassmap.plugin.api.manifest
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
 import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.contract.Plugin
 import nl.r1a.grassmap.plugin.api.contract.StreamId
+import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.provider.ProviderContract
 
 /**
@@ -38,6 +40,9 @@ data class CommandDeclaration(
     val result: String,
     val doc: String,
     val undoable: Boolean = false,
+    val requiresSwitch: SwitchId? = null,
+    val allowlistedForControl: Boolean = false,
+    val dispatcher: CommandDispatcher = CommandDispatcher.DEFAULT,
     val implementation: String,
 )
 
@@ -89,6 +94,10 @@ class PluginFactory(
 data class GeneratedCommand(
     val id: CommandId,
     val pluginId: PluginId,
+    val undoable: Boolean = false,
+    val requiresSwitch: SwitchId? = null,
+    val allowlistedForControl: Boolean = false,
+    val dispatcher: CommandDispatcher = CommandDispatcher.DEFAULT,
 )
 
 data class GeneratedProvider(

@@ -1,12 +1,17 @@
 package nl.r1a.grassmap.core
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
 import nl.r1a.grassmap.plugin.api.command.CancellationKey
 import nl.r1a.grassmap.plugin.api.command.Command
+import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
+import nl.r1a.grassmap.plugin.api.command.CommandInvocation
 import nl.r1a.grassmap.plugin.api.command.CommandPolicy
 import nl.r1a.grassmap.plugin.api.command.CommandResult
 import nl.r1a.grassmap.plugin.api.contract.CommandId
@@ -33,21 +38,40 @@ internal const val TEST_PLUGIN_ID = "test"
 internal fun testCommandDeclaration(
     id: String,
     undoable: Boolean = false,
+    requiresSwitch: SwitchId? = null,
+    allowlistedForControl: Boolean = false,
+    dispatcher: CommandDispatcher = CommandDispatcher.DEFAULT,
 ): CommandDeclaration = CommandDeclaration(
     id = CommandId(id),
     params = "kotlin.Int",
     result = "kotlin.Int",
     doc = "Test command.",
     undoable = undoable,
+    requiresSwitch = requiresSwitch,
+    allowlistedForControl = allowlistedForControl,
+    dispatcher = dispatcher,
     implementation = "test.Command",
+)
+
+internal fun testGeneratedCommand(
+    declaration: CommandDeclaration,
+    pluginId: PluginId,
+): GeneratedCommand = GeneratedCommand(
+    id = declaration.id,
+    pluginId = pluginId,
+    undoable = declaration.undoable,
+    requiresSwitch = declaration.requiresSwitch,
+    allowlistedForControl = declaration.allowlistedForControl,
+    dispatcher = declaration.dispatcher,
 )
 
 internal fun testManifest(
     commands: List<CommandDeclaration> = emptyList(),
     providers: List<ProviderDeclaration> = emptyList(),
     streams: List<StreamDeclaration> = emptyList(),
+    pluginId: PluginId = PluginId(TEST_PLUGIN_ID),
 ): PluginManifest = PluginManifest(
-    id = PluginId(TEST_PLUGIN_ID),
+    id = pluginId,
     name = "plugin.test.name",
     description = "plugin.test.description",
     version = "1.0.0",
@@ -69,7 +93,9 @@ internal fun testHost(
 ): PluginHost = PluginHost(
     plugins = listOf(PluginFactory(manifest = manifest, create = create)),
     streams = streams,
-    commands = manifest.contributes.commands.map { GeneratedCommand(it.id, manifest.id) },
+    commands = manifest.contributes.commands.map {
+        testGeneratedCommand(it, manifest.id)
+    },
     dispatcher = StandardTestDispatcher(scheduler),
 )
 
@@ -82,7 +108,9 @@ internal fun testBus(
     val dispatcher = StandardTestDispatcher(scheduler)
     return CommandBus(
         host = host,
-        commands = manifest.contributes.commands.map { GeneratedCommand(it.id, manifest.id) },
+        commands = manifest.contributes.commands.map {
+            testGeneratedCommand(it, manifest.id)
+        },
         dispatchers = CommandDispatchers(
             main = dispatcher,
             default = dispatcher,
@@ -144,6 +172,54 @@ internal class SwitchCommand : Command<Int, Int>(
 ) {
     override suspend fun execute(params: Int): Outcome<CommandResult<Int>> =
         Outcome.Success(CommandResult(params))
+}
+
+internal class SelfCancellingCommand : Command<Int, Int>(
+    id = CommandId("$TEST_PLUGIN_ID.cancel"),
+    paramsSerializer = Int.serializer(),
+    resultSerializer = Int.serializer(),
+    doc = "Throws a cancellation from inside the command.",
+) {
+    override suspend fun execute(params: Int): Outcome<CommandResult<Int>> {
+        throw CancellationException("command cancelled itself")
+    }
+}
+
+internal class ChainCommand : Command<Int, Int>(
+    id = CommandId("$TEST_PLUGIN_ID.chain"),
+    paramsSerializer = Int.serializer(),
+    resultSerializer = Int.serializer(),
+    doc = "Undoes through the nesting command.",
+    policy = CommandPolicy(undoable = true),
+) {
+    override suspend fun execute(params: Int): Outcome<CommandResult<Int>> =
+        Outcome.Success(
+            CommandResult(
+                value = params,
+                inverse = CommandInvocation(
+                    commandId = CommandId("$TEST_PLUGIN_ID.nest"),
+                    params = JsonPrimitive(params),
+                ),
+            ),
+        )
+}
+
+internal class NestingCommand(
+    private val invoke: suspend (CommandId, JsonElement) -> Outcome<JsonElement>,
+) : Command<Int, Int>(
+    id = CommandId("$TEST_PLUGIN_ID.nest"),
+    paramsSerializer = Int.serializer(),
+    resultSerializer = Int.serializer(),
+    doc = "Dispatches another command through the host.",
+    policy = CommandPolicy(undoable = true),
+) {
+    override suspend fun execute(params: Int): Outcome<CommandResult<Int>> {
+        val nested = invoke(CommandId("$TEST_PLUGIN_ID.set"), JsonPrimitive(params))
+        if (nested is Outcome.Failure) {
+            return nested
+        }
+        return Outcome.Success(CommandResult(params))
+    }
 }
 
 internal class BlockingCommand(

@@ -2,14 +2,18 @@ package nl.r1a.grassmap.core
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.contract.Plugin
@@ -44,6 +48,8 @@ class PluginHost(
     private val streamDeclarations: Map<StreamId, GeneratedStream> = streams.associateBy { it.id }
     private val commandOwners: Map<CommandId, PluginId> = commands.associate { it.id to it.pluginId }
     private val mutex = Mutex()
+    private val activationScope = CoroutineScope(SupervisorJob() + dispatcher)
+    private val activations = mutableMapOf<PluginId, Deferred<Outcome<Unit>>>()
     private val active = mutableMapOf<PluginId, ActivePlugin>()
     private val failed = mutableSetOf<PluginId>()
     private val _statuses = MutableStateFlow(
@@ -57,11 +63,34 @@ class PluginHost(
     fun statusOf(pluginId: PluginId): PluginStatus? =
         statuses.value.firstOrNull { it.pluginId == pluginId }
 
-    suspend fun ensureActive(pluginId: PluginId): Outcome<Unit> = mutex.withLock {
-        when {
-            active.containsKey(pluginId) -> Outcome.Success(Unit)
-            pluginId in failed -> Outcome.Failure(AppError.PluginFailed(pluginId))
-            else -> activateLocked(pluginId)
+    suspend fun ensureActive(pluginId: PluginId): Outcome<Unit> {
+        val activation = mutex.withLock { claimActivation(pluginId) }
+        val job = when (activation) {
+            is Activation.Ready -> return activation.outcome
+            is Activation.Pending -> activation.job
+        }
+        job.start()
+        return job.await()
+    }
+
+    /**
+     * Claims one in-flight activation per plugin under the lock. The caller awaits
+     * the returned job outside the lock, so activation work never blocks lookups.
+     */
+    private fun claimActivation(pluginId: PluginId): Activation = when {
+        active.containsKey(pluginId) -> Activation.Ready(Outcome.Success(Unit))
+        pluginId in failed -> Activation.Ready(Outcome.Failure(AppError.PluginFailed(pluginId)))
+        else -> {
+            val factory = factories[pluginId]
+            if (factory == null) {
+                Activation.Ready(Outcome.Failure(AppError.NotFound))
+            } else {
+                Activation.Pending(
+                    activations.getOrPut(pluginId) {
+                        activationScope.async(start = CoroutineStart.LAZY) { activate(factory) }
+                    },
+                )
+            }
         }
     }
 
@@ -97,7 +126,7 @@ class PluginHost(
         }
     }
 
-    suspend fun provider(
+    internal suspend fun provider(
         pluginId: PluginId,
         contract: ProviderContract,
     ): Outcome<Provider> {
@@ -127,9 +156,9 @@ class PluginHost(
         }
     }
 
-    private suspend fun activateLocked(pluginId: PluginId): Outcome<Unit> {
-        val factory = factories[pluginId] ?: return Outcome.Failure(AppError.NotFound)
-
+    private suspend fun activate(factory: PluginFactory): Outcome<Unit> {
+        val pluginId = factory.manifest.id
+        val started = clockMillis()
         updateState(pluginId, PluginState.ACTIVATING)
         val plugin = try {
             factory.create()
@@ -142,7 +171,7 @@ class PluginHost(
 
         val session = ActivationSession(pluginId)
         val activation = try {
-            withContext(dispatcher) { plugin.activate(session) }
+            plugin.activate(session)
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: Exception) {
@@ -164,11 +193,13 @@ class PluginHost(
             }
         }
 
-        active[pluginId] = activePlugin
+        mutex.withLock { active[pluginId] = activePlugin }
+        val activatedAt = clockMillis()
         updateState(
             pluginId = pluginId,
             state = PluginState.RUNNING,
-            activatedAtMillis = clockMillis(),
+            activatedAtMillis = activatedAt,
+            activationMillis = activatedAt - started,
         )
         return Outcome.Success(Unit)
     }
@@ -187,9 +218,19 @@ class PluginHost(
             return Outcome.Failure(AppError.PluginFailed(manifest.id))
         }
 
-        val declaredCommands = manifest.contributes.commands.map { it.id }.toSet()
-        if (commands.keys != declaredCommands) {
+        val declaredCommands = manifest.contributes.commands.associateBy { it.id }
+        if (commands.keys != declaredCommands.keys) {
             return Outcome.Failure(AppError.PluginFailed(manifest.id))
+        }
+        for ((id, command) in commands) {
+            val declaration = declaredCommands[id] ?: return invalid(manifest)
+            if (declaration.undoable != command.policy.undoable ||
+                declaration.requiresSwitch != command.policy.requiresSwitch ||
+                declaration.allowlistedForControl != command.policy.allowlistedForControl ||
+                declaration.dispatcher != command.policy.dispatcher
+            ) {
+                return invalid(manifest)
+            }
         }
 
         val declaredProviders = manifest.contributes.providers
@@ -222,8 +263,7 @@ class PluginHost(
     private fun invalid(manifest: PluginManifest): Outcome<ActivePlugin> =
         Outcome.Failure(AppError.PluginFailed(manifest.id))
 
-    private fun markFailed(pluginId: PluginId, plugin: Plugin? = null) {
-        failed += pluginId
+    private suspend fun markFailed(pluginId: PluginId, plugin: Plugin? = null) {
         if (plugin != null) {
             try {
                 plugin.deactivate()
@@ -231,6 +271,7 @@ class PluginHost(
                 // Deactivation is best effort; the plugin is already failed.
             }
         }
+        mutex.withLock { failed += pluginId }
         _statuses.update { statuses ->
             statuses.map { status ->
                 if (status.pluginId == pluginId) {
@@ -246,6 +287,7 @@ class PluginHost(
         pluginId: PluginId,
         state: PluginState,
         activatedAtMillis: Long? = null,
+        activationMillis: Long? = null,
     ) {
         _statuses.update { statuses ->
             statuses.map { status ->
@@ -253,12 +295,18 @@ class PluginHost(
                     status.copy(
                         state = state,
                         activatedAtMillis = activatedAtMillis ?: status.activatedAtMillis,
+                        activationMillis = activationMillis ?: status.activationMillis,
                     )
                 } else {
                     status
                 }
             }
         }
+    }
+
+    private sealed interface Activation {
+        data class Ready(val outcome: Outcome<Unit>) : Activation
+        data class Pending(val job: Deferred<Outcome<Unit>>) : Activation
     }
 
     private class ActivePlugin(

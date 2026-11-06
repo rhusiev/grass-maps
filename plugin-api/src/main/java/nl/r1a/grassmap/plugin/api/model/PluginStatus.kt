@@ -16,6 +16,7 @@ data class PluginStatus(
     val state: PluginState,
     val failures: Int = 0,
     val activatedAtMillis: Long? = null,
+    val activationMillis: Long? = null,
 )
 
 enum class ProviderState {

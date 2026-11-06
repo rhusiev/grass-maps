@@ -19,7 +19,7 @@ class SetValueCommand(
     paramsSerializer = Int.serializer(),
     resultSerializer = Int.serializer(),
     doc = "Sets the example counter and returns the new value.",
-    policy = CommandPolicy(undoable = true),
+    policy = CommandPolicy(undoable = true, allowlistedForControl = true),
 ) {
     override suspend fun execute(params: Int): Outcome<CommandResult<Int>> {
         val previous = value.value

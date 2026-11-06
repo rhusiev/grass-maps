@@ -410,7 +410,7 @@ def frame_pacing(adb: Adb, refresh_hz: float) -> dict[str, object]:
             "kind": interaction_kind,
             "commands": commands,
         },
-        "frames": int(total_frames) if total_frames is not None else len(durations),
+        "frames": len(durations),
         "sample_windows": windows,
         "frame_time_ms": {
             "p50": duration_summary["median"],
@@ -583,6 +583,9 @@ def main() -> int:
     device = device_context(adb, refresh_hz, refresh_source)
 
     runs = []
+    print("warm-up launch (not recorded)", file=sys.stderr)
+    cold_start_run(adb)
+    time.sleep(SETTLE_BETWEEN_RUNS_S)
     for index in range(args.runs):
         print(f"cold start run {index + 1}/{args.runs}", file=sys.stderr)
         runs.append(cold_start_run(adb))
@@ -610,6 +613,7 @@ def main() -> int:
             "device_source": args.device_source,
             "gpu_mode": args.gpu_mode,
             "runs": args.runs,
+            "warmup_launches": 1,
             "settle_between_runs_s": SETTLE_BETWEEN_RUNS_S,
             "interaction_settle_s": INTERACTION_SETTLE_S,
             "idle_gap_ms": IDLE_GAP_MS,

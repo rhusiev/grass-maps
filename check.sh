@@ -6,6 +6,9 @@
 # Gradle never runs outside the slot. Export GRASS_MAPS_IN_BUILD_SLOT=1 to
 # suppress that (CI sets CI=true, which also suppresses it).
 #
+# All steps run even when one fails, so a single run names every gap. The exit
+# code is non-zero when any step failed.
+#
 # Usage: ./check.sh [--skip-repro] [--with-device]
 #   --skip-repro   skip the two reproducible release builds (the slow part)
 #   --with-device  also install and launch the debug APK on a connected device
@@ -15,6 +18,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKIP_REPRO=0
 WITH_DEVICE=0
+failures=0
 
 for arg in "$@"; do
     case "$arg" in
@@ -49,25 +53,30 @@ step() {
     printf '\n== %s ==\n' "$1"
 }
 
+fail() {
+    failures=$((failures + 1))
+    echo "FAILED: $1" >&2
+}
+
 step "Format (Spotless with ktlint)"
-./gradlew --console=plain spotlessCheck
+./gradlew --console=plain spotlessCheck || fail "format"
 
 step "Android lint"
-./gradlew --console=plain lint
+./gradlew --console=plain lint || fail "lint"
 
 step "Build :app:assembleDebug"
-./gradlew --console=plain :app:assembleDebug
+./gradlew --console=plain :app:assembleDebug || fail "build"
 
 step "Unit tests"
-./gradlew --console=plain test
-scripts/ci/test-count.sh
+./gradlew --console=plain test || fail "unit tests (Gradle test task)"
+scripts/ci/test-count.sh || fail "unit tests (empty suite)"
 
 step "Plugin boundaries"
-./gradlew --console=plain checkPluginBoundaries
+./gradlew --console=plain checkPluginBoundaries || fail "plugin boundaries"
 
 if [[ $SKIP_REPRO -eq 0 ]]; then
     step "Reproducibility (two release builds in separate paths)"
-    scripts/ci/reproducibility.sh
+    scripts/ci/reproducibility.sh || fail "reproducibility"
 else
     step "Reproducibility: skipped by --skip-repro"
     echo "CI runs this in the reproducibility job; do not treat this run as complete evidence."
@@ -75,10 +84,15 @@ fi
 
 if [[ $WITH_DEVICE -eq 1 ]]; then
     step "API 29 emulator smoke and strict mode"
-    scripts/ci/android-smoke.sh app/build/outputs/apk/debug/app-debug.apk
+    scripts/ci/android-smoke.sh app/build/outputs/apk/debug/app-debug.apk || fail "device smoke"
 else
     step "Device smoke: not run"
     echo "Pass --with-device with an emulator or phone connected; CI runs it on API 29."
+fi
+
+if [[ $failures -ne 0 ]]; then
+    printf '\n%d check step(s) failed\n' "$failures"
+    exit 1
 fi
 
 printf '\nAll requested checks passed\n'

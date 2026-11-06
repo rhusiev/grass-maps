@@ -43,7 +43,7 @@ It runs Spotless with ktlint from the root, Android lint,
 `:app:assembleDebug`, the JVM unit tests, `checkPluginBoundaries`,
 `checkPluginManifests`, and two unsigned release builds at different paths
 compared byte for byte. The test count is reported; an empty suite fails the
-gate instead of passing silently.
+gate, so deleting the last test cannot pass CI.
 
 `checkPluginBoundaries` enforces the plugin module dependency rule.
 `checkPluginManifests` validates every `src/main/plugin.json`: unique plugin

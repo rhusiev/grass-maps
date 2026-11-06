@@ -25,9 +25,10 @@ while IFS= read -r report; do
 done <<<"$reports"
 
 if [[ $count -eq 0 ]]; then
-    echo "UNIT TESTS: 0 executed."
-    echo "TODO: the skeleton has no unit tests yet (T-0012 adds the first ones)."
-    echo "This check ran and found an empty suite; it is not evidence that tests pass."
-else
-    echo "UNIT TESTS: $count executed in $suites report files."
+    echo "FAIL: no JVM unit tests ran." >&2
+    echo "An empty suite would let a change that deletes every test pass the gate." >&2
+    echo "T-0012 adds the first unit tests; until it lands this check stays red." >&2
+    exit 1
 fi
+
+echo "UNIT TESTS: $count executed in $suites report files."

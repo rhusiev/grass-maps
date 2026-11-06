@@ -71,9 +71,38 @@ Debug builds install the policy through `DebugApplication`, which extends the
 main `GrassMapsApplication` and is also the marker the script requires, so an
 APK without the policy cannot pass by staying silent.
 
+### Benchmarks (emulator, trend only)
+
+The emulator benchmark records cold start and frame pacing for every change so
+the trend is visible per commit:
+
+```sh
+./scripts/ci/android-benchmark.sh app/build/outputs/apk/debug/app-debug.apk
+```
+
+On this machine the script takes the `gm-emulator` slot itself and boots the
+`grassmaps-bench` AVD when no device is attached. It prints the JSON on stdout
+and writes the same document to `build/benchmarks/`, which is not committed.
+CI runs the measurement in its own job on an API 35 x86_64 emulator and uploads
+the JSON as an artifact named after the commit.
+
+The document is keyed by `commit`, `ci`, `timestamp` and `device`, and holds
+`cold_start.total_time_ms` from `am start -W`, `cold_start.displayed_ms` and
+`cold_start.process_to_first_frame_ms` from the launch logcat, and
+`frame_pacing` from `dumpsys gfxinfo framestats`: frame-time p50/p90/p99, frame
+intervals when a window draws more than one frame, late intervals over 1.5
+vsync, the system's own frame percentiles, and the interaction commands.
+Frame pacing covers app-window UI frames only; MapLibre's SurfaceView frames
+carry no FrameTimeline vsync id, so a map needs the SurfaceFlinger latch method
+from the bench `RESULTS.md`.
+
+These numbers are trends. They are not the Moto g32 acceptance gate and must
+not be compared across GPU modes or hosts.
+
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull
 request. Format, lint, build, unit tests, boundaries and manifest lint are one
-fast job; reproducibility and the API 29 emulator run as separate jobs. The
+fast job; reproducibility, the API 29 emulator smoke and the trend benchmarks
+run as separate jobs. The
 iOS compile job is named as pending until an iOS or Kotlin Multiplatform target
 exists, and its summary says that it verified nothing.
 

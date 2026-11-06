@@ -13,6 +13,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/device.sh
+source "$SCRIPT_DIR/lib/device.sh"
+
 APK="${1:-app/build/outputs/apk/debug/app-debug.apk}"
 PKG="nl.r1a.grassmap"
 ACTIVITY="${SMOKE_ACTIVITY:-nl.r1a.grassmap.app.MainActivity}"
@@ -30,25 +34,10 @@ fi
 
 # The emulator runner boots the device before this script; a bounded wait keeps
 # a broken attach from blocking the job.
-deadline=$((SECONDS + DEVICE_DEADLINE_SECONDS))
-until timeout 10 adb shell true >/dev/null 2>&1; do
-    if ((SECONDS >= deadline)); then
-        echo "FAIL: no device or emulator became available in ${DEVICE_DEADLINE_SECONDS}s" >&2
-        timeout 10 adb devices >&2 || true
-        exit 1
-    fi
-    sleep 2
-done
+wait_for_device "$DEVICE_DEADLINE_SECONDS"
 
 # Package manager readiness, also bounded.
-deadline=$((SECONDS + 120))
-until timeout 10 adb shell pm path android >/dev/null 2>&1; do
-    if ((SECONDS >= deadline)); then
-        echo "FAIL: package manager was not ready in 120s" >&2
-        exit 1
-    fi
-    sleep 2
-done
+wait_for_package_manager 120
 
 echo "== Installing $APK =="
 timeout 300 adb install -r "$APK"

@@ -31,7 +31,8 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
       # --skip-repro keeps this job fast; the reproducibility job runs the two
-      # release builds. The emulator job runs the device smoke and strict mode.
+      # release builds. The emulator jobs run the device smoke, strict mode and
+      # the trend benchmarks.
       - name: Run the local gate
         run: ./check.sh --skip-repro
       - name: Keep test and lint reports
@@ -87,6 +88,44 @@ jobs:
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: ./scripts/ci/android-smoke.sh app/build/outputs/apk/debug/app-debug.apk
+
+  # Trend numbers only, not the Moto g32 acceptance gate. The JSON lands in
+  # build/benchmarks/ and is uploaded keyed by commit. A commit that regresses
+  # a budget does not fail this job yet; the budget gate belongs to the map and
+  # benchmark harness tasks that follow.
+  benchmarks:
+    name: Emulator benchmarks (cold start and frame pacing, trend only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+      - name: Build the debug APK
+        run: ./gradlew --console=plain :app:assembleDebug
+      - name: Boot the emulator and run the benchmark
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: default
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: BENCH_DEVICE_SOURCE=ci-runner BENCH_GPU_MODE=swiftshader_indirect ./scripts/ci/android-benchmark.sh app/build/outputs/apk/debug/app-debug.apk
+      - name: Upload the benchmark JSON
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-emulator-api35-${{ github.sha }}
+          path: build/benchmarks/*.json
+          if-no-files-found: warn
 
   # The design asks for an iOS target compile on a macOS runner "once iOS code
   # exists" (walking-skeleton.md, T-0011; architecture.md section 24). There is

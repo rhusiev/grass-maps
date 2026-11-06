@@ -7,6 +7,6 @@ import android.widget.TextView
 class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(TextView(this).apply { text = "Grass Maps" })
+        setContentView(TextView(this).apply { text = getString(R.string.app_name) })
     }
 }

@@ -1,3 +1,4 @@
+import buildlogic.CheckTranslationsTask
 import buildlogic.LintPluginManifestsTask
 
 plugins {
@@ -96,4 +97,18 @@ tasks.register<LintPluginManifestsTask>("checkPluginManifests") {
     group = "verification"
     description = "Validates plugin manifests: ids, commands, settings, streams and providers."
     manifests.from(pluginManifestFiles)
+}
+
+// English and Ukrainian land together (AGENTS.md, Product). This checks every
+// module that has Android string resources, so a new module is covered without
+// editing the task.
+tasks.register<CheckTranslationsTask>("checkTranslations") {
+    group = "verification"
+    description = "Fails when a string key is missing from English or Ukrainian, or exists only in the translation."
+    stringResources.from(
+        fileTree(rootDir) {
+            include("**/src/main/res/values*/strings.xml")
+            exclude("**/build/**")
+        },
+    )
 }

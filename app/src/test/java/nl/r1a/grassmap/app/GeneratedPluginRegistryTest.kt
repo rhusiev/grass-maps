@@ -15,6 +15,7 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.ProviderState
 import nl.r1a.grassmap.plugin.api.provider.ProviderContract
+import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugins.example.ThrowingProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -104,6 +105,7 @@ class GeneratedPluginRegistryTest {
     private fun testContainer(scheduler: kotlinx.coroutines.test.TestCoroutineScheduler): AppContainer {
         val dispatcher = StandardTestDispatcher(scheduler)
         return AppContainer(
+            strings = KeyOnlyStrings,
             dispatchers =
                 CommandDispatchers(
                     main = dispatcher,
@@ -111,5 +113,14 @@ class GeneratedPluginRegistryTest {
                     io = dispatcher,
                 ),
         )
+    }
+
+    private object KeyOnlyStrings : Strings {
+        override fun resolve(
+            key: String,
+            arguments: List<String>,
+        ): String = key
+
+        override fun contains(key: String): Boolean = false
     }
 }

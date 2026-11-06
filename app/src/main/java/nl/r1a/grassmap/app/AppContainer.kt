@@ -9,12 +9,14 @@ import nl.r1a.grassmap.core.ProviderRegistry
 import nl.r1a.grassmap.core.StreamRegistry
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
+import nl.r1a.grassmap.plugin.api.service.Strings
 
 /**
  * The one composition root. It wires the generated registries to the core host;
  * modules receive plugin-api interfaces from here.
  */
 class AppContainer(
+    val strings: Strings,
     private val dispatchers: CommandDispatchers = CommandDispatchers(),
     private val switchEnabled: (SwitchId) -> Boolean = { false },
 ) {

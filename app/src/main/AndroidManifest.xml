@@ -4,7 +4,7 @@
     <application
         android:name="nl.r1a.grassmap.app.GrassMapsApplication"
         android:allowBackup="true"
-        android:label="Grass Maps"
+        android:label="@string/app_name"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity
             android:name="nl.r1a.grassmap.app.MainActivity"

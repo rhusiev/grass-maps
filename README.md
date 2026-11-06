@@ -40,10 +40,20 @@ never runs outside the slot:
 ```
 
 It runs Spotless with ktlint from the root, Android lint,
-`:app:assembleDebug`, the JVM unit tests, `checkPluginBoundaries`,
-`checkPluginManifests`, and two unsigned release builds at different paths
-compared byte for byte. The test count is reported; an empty suite fails the
-gate, so deleting the last test cannot pass CI.
+`:app:assembleDebug`, the JVM unit tests, `checkTranslations`,
+`checkPluginBoundaries`, `checkPluginManifests`, and two unsigned release
+builds at different paths compared byte for byte. The test count is reported;
+an empty suite fails the gate, so deleting the last test cannot pass CI.
+
+`checkTranslations` checks every module with `src/main/res/values*/strings.xml`:
+each key must exist in English (`values`) and Ukrainian (`values-uk`), with a
+non-blank value in both, and no key may exist only in the translation. The
+checker parses XML on the JVM, so it needs no emulator or Robolectric.
+
+User-facing text goes through the `Strings` service in `plugin-api`. Core and
+feature modules receive it as a `plugin-api` interface and never take an
+Android `Context`. `core-services` implements it over the application's
+resources; `app` wires `AndroidStrings` in the composition root.
 
 `checkPluginBoundaries` enforces the plugin module dependency rule.
 `checkPluginManifests` validates every `src/main/plugin.json`: unique plugin

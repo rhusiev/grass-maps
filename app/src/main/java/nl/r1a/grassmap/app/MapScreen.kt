@@ -1,45 +1,58 @@
 package nl.r1a.grassmap.app
 
 import android.content.Context
-import android.content.Intent
-import android.os.Process
-import android.os.SystemClock
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import nl.r1a.grassmap.core.services.ButtonLayoutStore
+import nl.r1a.grassmap.core.services.DEFAULT_PROFILE
+import nl.r1a.grassmap.core.services.MapControlCommands
 import nl.r1a.grassmap.map.MapSurface
 import nl.r1a.grassmap.map.MapSurfaceView
 import nl.r1a.grassmap.map.prepareMapEngine
 import nl.r1a.grassmap.map.rememberMapSurface
+import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.error.onFailure
-import nl.r1a.grassmap.plugin.api.host.MapEvent
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleId
 import nl.r1a.grassmap.plugin.api.model.StyleSpec
 import nl.r1a.grassmap.plugin.api.provider.MapLayerContract
 import nl.r1a.grassmap.plugin.api.provider.MapLayerProvider
+import nl.r1a.grassmap.ui.shell.ControlBarLabels
+import nl.r1a.grassmap.ui.shell.ControlButton
+import nl.r1a.grassmap.ui.shell.MapControlBar
+import java.io.File
 
 private val STYLE_PLUGIN = PluginId("style.standard")
 private val STANDARD = StyleId("standard")
 private val TOURING = StyleId("touring")
-private const val TAG = "T0020"
-private const val EXTRA_STYLE_SWITCHES = "t0020_style_switches"
-private const val SWITCH_SETTLE_MS = 3_000L
+private const val TAG = "GrassMapsMap"
+private const val LAYOUT_DIRECTORY = "controls"
+private const val LAYOUT_FILE = "button-layout.json"
+private const val BAR_PADDING_DP = 16
 
 internal data class MapBundle(
     val style: StyleSpec,
@@ -53,7 +66,7 @@ internal data class MapBundle(
 @Composable
 internal fun MapScreen(
     container: AppContainer,
-    styleSwitches: Int,
+    harness: MapHarness,
 ) {
     val context = LocalContext.current
     val bundle by
@@ -73,68 +86,77 @@ internal fun MapScreen(
         return
     }
     val surface = rememberMapSurface(loaded.style, loaded.sources.camera) { loaded.sources.uri(it) }
-    MapSurfaceView(surface = surface, modifier = Modifier.fillMaxSize())
-    MapMeasurement(surface, loaded, styleSwitches)
+    BindMapSession(container.mapSession, surface)
+    MapContent(container, surface, loaded, harness)
 }
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
-private fun MapMeasurement(
+private fun BindMapSession(
+    session: MapSessionHolder,
+    surface: MapSurface,
+) {
+    DisposableEffect(session, surface.host) {
+        session.bind(surface.host)
+        onDispose { session.unbind(surface.host) }
+    }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun MapContent(
+    container: AppContainer,
     surface: MapSurface,
     bundle: MapBundle,
-    styleSwitches: Int,
+    harness: MapHarness,
 ) {
-    LaunchedEffect(surface.host, bundle) {
-        var sawFullFrame = false
-        var loggedFirstFrame = false
-        var switchesDone = false
-        launch {
-            surface.host.events.collect { event ->
-                when (event) {
-                    MapEvent.StyleLoaded -> {
-                        Log.i(TAG, "style-loaded total=${surface.host.styleLoadCount}")
-                    }
-
-                    is MapEvent.FrameRendered -> {
-                        if (event.full && !loggedFirstFrame) {
-                            loggedFirstFrame = true
-                            sawFullFrame = true
-                            val elapsed = SystemClock.uptimeMillis() - Process.getStartUptimeMillis()
-                            Log.i(TAG, "first-full-frame-ms=$elapsed")
-                        }
-                    }
-
-                    MapEvent.Idle -> {
-                        if (sawFullFrame && !switchesDone && styleSwitches > 0) {
-                            switchesDone = true
-                            Log.i(TAG, "switch-start")
-                            repeat(styleSwitches) { index ->
-                                val touring = index % 2 == 0
-                                val style = if (touring) bundle.touring else bundle.style
-                                val layers = if (touring) bundle.touringLayers else bundle.layers
-                                surface.host.setStyle(style).onFailure { error ->
-                                    Log.w(TAG, "style rejected: $error")
-                                }
-                                surface.host
-                                    .applyStyleDiff(StyleDiff(style.id, layers))
-                                    .onFailure { error ->
-                                        Log.w(TAG, "style diff rejected: $error")
-                                    }
-                            }
-                            delay(SWITCH_SETTLE_MS)
-                            Log.i(
-                                TAG,
-                                "style-switches=$styleSwitches total-style-loads=${surface.host.styleLoadCount}",
-                            )
-                        }
-                    }
-
-                    else -> {
-                        Unit
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val store by
+        produceState<ButtonLayoutStore?>(null) {
+            value =
+                withContext(Dispatchers.IO) {
+                    ButtonLayoutStore(
+                        File(context.applicationContext.filesDir, "$LAYOUT_DIRECTORY/$LAYOUT_FILE"),
+                    )
+                }
+        }
+    var layout by remember { mutableStateOf(MapControlCommands.DEFAULT_ORDER) }
+    var isEditing by remember { mutableStateOf(false) }
+    LaunchedEffect(store) {
+        val active = store ?: return@LaunchedEffect
+        layout = withContext(Dispatchers.IO) { active.load(DEFAULT_PROFILE) }
+    }
+    Box(Modifier.fillMaxSize()) {
+        MapSurfaceView(surface = surface, modifier = Modifier.fillMaxSize())
+        MapControlBar(
+            layout = controlButtons(layout, context),
+            labels = controlBarLabels(context),
+            isEditing = isEditing,
+            onInvoke = { id ->
+                scope.launch {
+                    container.commandBus.invoke(id).onFailure { error ->
+                        Log.w(TAG, "control $id failed: $error")
                     }
                 }
-            }
-        }
+            },
+            onMove = onMove@{ id, delta ->
+                val active = store ?: return@onMove
+                val moved = moveControl(layout, id, delta)
+                if (moved != layout) {
+                    layout = moved
+                    scope.launch {
+                        withContext(Dispatchers.IO) { active.save(DEFAULT_PROFILE, moved) }
+                            .onFailure { error -> Log.w(TAG, "layout not saved: $error") }
+                    }
+                }
+            },
+            onEditingChange = { isEditing = it },
+            modifier = Modifier.align(Alignment.TopEnd).padding(BAR_PADDING_DP.dp),
+        )
+    }
+    LaunchedEffect(surface.host, bundle) {
+        launch(start = CoroutineStart.UNDISPATCHED) { harness.run(surface, bundle) }
         surface.host.setStyle(bundle.style).onFailure { error ->
             Log.w(TAG, "style rejected: $error")
         }
@@ -147,6 +169,78 @@ private fun MapMeasurement(
         )
     }
 }
+
+/** Moves one control by [delta] positions; an out-of-range move keeps the order. */
+internal fun moveControl(
+    layout: List<CommandId>,
+    id: CommandId,
+    delta: Int,
+): List<CommandId> {
+    val from = layout.indexOf(id)
+    if (from < 0) {
+        return layout
+    }
+    val to = from + delta
+    if (to !in layout.indices) {
+        return layout
+    }
+    return layout.toMutableList().apply {
+        add(to, removeAt(from))
+    }
+}
+
+private fun controlButtons(
+    layout: List<CommandId>,
+    context: Context,
+): List<ControlButton> {
+    val buttons = layout.mapNotNull { id -> controlButton(id, context) }
+    return buttons.ifEmpty { MapControlCommands.DEFAULT_ORDER.mapNotNull { controlButton(it, context) } }
+}
+
+private fun controlButton(
+    id: CommandId,
+    context: Context,
+): ControlButton? =
+    when (id) {
+        MapControlCommands.ZOOM_IN -> {
+            ControlButton(
+                id = id,
+                label = context.getString(R.string.control_zoom_in_label),
+                contentDescription = context.getString(R.string.control_zoom_in_description),
+            )
+        }
+
+        MapControlCommands.ZOOM_OUT -> {
+            ControlButton(
+                id = id,
+                label = context.getString(R.string.control_zoom_out_label),
+                contentDescription = context.getString(R.string.control_zoom_out_description),
+            )
+        }
+
+        MapControlCommands.NORTH_UP -> {
+            ControlButton(
+                id = id,
+                label = context.getString(R.string.control_north_up_label),
+                contentDescription = context.getString(R.string.control_north_up_description),
+            )
+        }
+
+        else -> {
+            null
+        }
+    }
+
+private fun controlBarLabels(context: Context): ControlBarLabels =
+    ControlBarLabels(
+        edit = context.getString(R.string.control_edit_label),
+        editDone = context.getString(R.string.control_edit_done_label),
+        editDescription = context.getString(R.string.control_edit_description),
+        moveLeft = context.getString(R.string.control_move_left_label),
+        moveLeftDescription = context.getString(R.string.control_move_left_description),
+        moveRight = context.getString(R.string.control_move_right_label),
+        moveRightDescription = context.getString(R.string.control_move_right_description),
+    )
 
 private suspend fun loadBundle(
     container: AppContainer,
@@ -169,9 +263,3 @@ private suspend fun loadBundle(
         }
     return (result as? Outcome.Success)?.value
 }
-
-/** Reads the style-switch count from the launch intent in debug builds only. */
-internal fun styleSwitchCount(
-    intent: Intent,
-    debuggable: Boolean,
-): Int = if (debuggable) intent.getIntExtra(EXTRA_STYLE_SWITCHES, 0) else 0

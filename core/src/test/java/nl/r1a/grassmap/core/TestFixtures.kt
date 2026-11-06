@@ -153,6 +153,18 @@ internal class DoublingCommand :
     override suspend fun execute(params: Int): Outcome<CommandResult<Int>> = Outcome.Success(CommandResult(params + params))
 }
 
+/** A command the host itself owns; no plugin factory is involved. */
+internal class HostDoublingCommand :
+    Command<Int, Int>(
+        id = CommandId("core.test.host_double"),
+        paramsSerializer = Int.serializer(),
+        resultSerializer = Int.serializer(),
+        doc = "Doubles the value on the Main dispatcher.",
+        policy = CommandPolicy(dispatcher = CommandDispatcher.MAIN),
+    ) {
+    override suspend fun execute(params: Int): Outcome<CommandResult<Int>> = Outcome.Success(CommandResult(params + params))
+}
+
 internal class SetCommand(
     private val state: MutableStateFlow<Int>,
 ) : Command<Int, Int>(

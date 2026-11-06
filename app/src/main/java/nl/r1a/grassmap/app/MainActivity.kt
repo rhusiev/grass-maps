@@ -1,6 +1,5 @@
 package nl.r1a.grassmap.app
 
-import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -13,10 +12,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val application = application as GrassMapsApplication
-        val debuggable = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
-        val switches = styleSwitchCount(intent, debuggable)
+        val harness = application.mapHarness(this)
         setContent {
-            MapScreen(container = application.container, styleSwitches = switches)
+            MapScreen(container = application.container, harness = harness)
         }
     }
 }

@@ -171,6 +171,35 @@ directory and `lviv-contours-20m.pmtiles` for the contour overlay. With no
 Lviv archive it copies the small T-0015 fixture (`fixture-mini-map.pmtiles`)
 out of its assets and starts at Ivano-Frankove.
 
+## Map controls
+
+Zoom in, zoom out and north-up are ordinary commands: `core.map.zoom_in`,
+`core.map.zoom_out` and `core.map.north_up`. They run on the `Main` dispatcher,
+are not undoable and are not allowlisted for the control channel. The control
+catalog therefore lists neither them nor a control-bar entry until a later
+task adds the core host commands to it.
+
+The commands are process-scoped, but the map host is not. maplibre-compose 0.20
+owns `MapState` inside the composition, so `app` keeps a `MapSessionHolder` in
+`AppContainer`: `MapScreen` binds the current host in a `DisposableEffect` and
+clears it on dispose. A command before the first bind, or after the surface
+goes away, returns `AppError.NotReady` instead of writing to a dead engine.
+Camera restoration across Activity recreation is deferred with the rest of the
+map session (architecture section 8.1); the holder is not a camera store.
+
+The app builds the three commands once, gives them to `PluginHost` as
+`hostCommands`, and appends matching `GeneratedCommand` entries owned by
+`PluginId("core")` to the bus catalog. `PluginHost.command` returns a host
+command directly, so dispatching one never creates or activates a plugin.
+
+The button order is per profile and stored by `ButtonLayoutStore` in
+`filesDir/controls/button-layout.json`. The file is a JSON object keyed by
+profile id; a write goes to a temporary sibling, is flushed and renamed, and a
+missing or corrupt file reads as `zoom_in, zoom_out, north_up`. The active
+profile is the fixed `default` profile until T-0601. The bar itself lives in
+`ui-shell` and only receives control IDs, labels and callbacks, so it never
+touches the command bus or the map host.
+
 ## Plugin boundary rule
 
 A module under `plugins/` may depend on `:plugin-api`. It may also depend on

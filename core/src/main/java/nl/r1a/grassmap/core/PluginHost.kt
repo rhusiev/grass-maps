@@ -41,18 +41,25 @@ import kotlin.time.TimeSource
 /**
  * Owns plugin lifecycle, generated registries and contribution validation.
  * A plugin is created and activated on its first activation event, off Main.
+ *
+ * [hostCommands] are process-level commands the host itself owns, such as the map
+ * controls. They are looked up directly and never activate a plugin.
  */
 class PluginHost(
     plugins: List<PluginFactory>,
     private val streams: List<GeneratedStream>,
     commands: List<GeneratedCommand>,
+    hostCommands: List<Command<*, *>> = emptyList(),
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val clockMillis: () -> Long = System::currentTimeMillis,
 ) {
     private val factories: Map<PluginId, PluginFactory> = plugins.associateBy { it.manifest.id }
     private val streamOwners: Map<StreamId, PluginId> = streams.associate { it.id to it.pluginId }
     private val streamDeclarations: Map<StreamId, GeneratedStream> = streams.associateBy { it.id }
-    private val commandOwners: Map<CommandId, PluginId> = commands.associate { it.id to it.pluginId }
+    private val hostCommandById: Map<CommandId, Command<*, *>> = hostCommands.associateBy { it.id }
+    private val commandOwners: Map<CommandId, PluginId> =
+        commands.associate { it.id to it.pluginId } +
+            hostCommandById.keys.associateWith { HOST_COMMAND_OWNER }
     private val mutex = Mutex()
     private val activationScope = CoroutineScope(SupervisorJob() + dispatcher)
     private val activations = ConcurrentHashMap<PluginId, Deferred<Outcome<Unit>>>()
@@ -122,6 +129,7 @@ class PluginHost(
     }
 
     suspend fun command(id: CommandId): Outcome<Command<*, *>> {
+        hostCommandById[id]?.let { return Outcome.Success(it) }
         val owner = commandOwners[id] ?: return Outcome.Failure(AppError.NotFound)
         val activation = ensureActive(owner)
         if (activation is Outcome.Failure) {
@@ -389,5 +397,10 @@ class PluginHost(
         override fun addProvider(provider: Provider) {
             providers += provider
         }
+    }
+
+    private companion object {
+        /** Commands the host owns carry the core plugin id in the bus catalog. */
+        val HOST_COMMAND_OWNER: PluginId = PluginId("core")
     }
 }

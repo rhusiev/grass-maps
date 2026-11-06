@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.app
 
+import android.app.Activity
 import android.os.StrictMode
 import android.util.Log
 
@@ -29,6 +30,8 @@ class DebugApplication : GrassMapsApplication() {
         Log.i(TAG, "StrictMode thread policy enabled")
         DebugControl.start(this, container, DebugControl.settings)
     }
+
+    override fun mapHarness(activity: Activity): MapHarness = DebugMapHarness.from(activity.intent)
 
     private companion object {
         const val TAG = "GrassMapsStrictMode"

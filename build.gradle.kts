@@ -1,6 +1,18 @@
 import buildlogic.CheckTranslationsTask
 import buildlogic.LintPluginManifestsTask
 
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        // Built-in Kotlin reads this classpath. AGP 9.1 embeds KGP 2.2.0, and
+        // maplibre-compose 0.20 is compiled with Kotlin 2.4 metadata.
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21")
+    }
+}
+
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.android.library) apply false

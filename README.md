@@ -91,7 +91,8 @@ The document is keyed by `commit`, `ci`, `timestamp` and `device`, and holds
 `cold_start.process_to_first_frame_ms` from the launch logcat, and
 `frame_pacing` from `dumpsys gfxinfo framestats`: frame-time p50/p90/p99, frame
 intervals when a window draws more than one frame, late intervals over 1.5
-vsync, the system's own frame percentiles, and the interaction commands.
+vsync, the system's own frame percentiles, and the interaction commands. One
+warm-up launch is discarded so the first install does not skew the trend.
 Frame pacing covers app-window UI frames only; MapLibre's SurfaceView frames
 carry no FrameTimeline vsync id, so a map needs the SurfaceFlinger latch method
 from the bench `RESULTS.md`.

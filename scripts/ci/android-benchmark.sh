@@ -89,7 +89,7 @@ cleanup() {
 trap cleanup EXIT
 
 if [[ -z "$SERIAL" && -n "${CI:-}" ]]; then
-    SERIAL="$(adb devices | awk 'NR > 1 && $2 == "device" { print $1; exit }')"
+    SERIAL="$(adb devices 2>/dev/null | awk 'NR > 1 && $2 == "device" { print $1; exit }' || true)"
     [[ -n "$SERIAL" ]] || fail "CI attached no emulator: $(adb devices | tr '\n' ' ')"
 fi
 
@@ -110,8 +110,10 @@ else
     emulator_pid=$!
     deadline=$((SECONDS + BOOT_DEADLINE_SECONDS))
     while true; do
-        boot_state="$(timeout 10 adb -s "$SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
-        [[ "$boot_state" == "1" ]] && break
+        boot_state="$(timeout 10 adb -s "$SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+        if [[ "$boot_state" == "1" ]]; then
+            break
+        fi
         if ! kill -0 "$emulator_pid" 2>/dev/null; then
             tail -n 20 "$emulator_log" >&2 || true
             fail "the emulator process died before boot; log: $emulator_log"

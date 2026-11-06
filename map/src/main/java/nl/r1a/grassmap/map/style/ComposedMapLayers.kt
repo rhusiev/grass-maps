@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.map.style
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
@@ -42,6 +43,8 @@ import org.maplibre.compose.sources.getBaseSource
 import org.maplibre.compose.util.DpPadding
 import org.maplibre.compose.util.MaplibreComposable
 
+private const val TAG = "GrassMapsMap"
+
 /**
  * Declares every composed style layer to the map. Layers draw slot by slot and
  * in declaration order inside each slot.
@@ -54,9 +57,12 @@ internal fun ComposedMapLayers(session: MapHostState) {
     val compiled =
         remember(owned) {
             owned.mapNotNull { layer ->
-                val spec = layer.spec
-                val result = runCatching { StyleLayerCompiler.compile(spec) }.getOrNull()
-                result?.let { compiledLayer -> compiledLayer to layer.slot }
+                try {
+                    StyleLayerCompiler.compile(layer.spec) to layer.slot
+                } catch (exception: StyleCompileException) {
+                    Log.w(TAG, "Skipping ${layer.spec.id}: ${exception.message}")
+                    null
+                }
             }
         }
     val sources = rememberBaseSources()

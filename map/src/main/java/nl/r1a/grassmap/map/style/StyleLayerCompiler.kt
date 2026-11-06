@@ -61,6 +61,14 @@ internal object StyleLayerCompiler {
         }
 
     fun compile(spec: LayerSpec): CompiledLayer {
+        when (spec.type) {
+            LayerType.Circle,
+            LayerType.Raster,
+            LayerType.Hillshade,
+            -> throw StyleCompileException("Layer type '${spec.type}' is not rendered yet")
+
+            else -> Unit
+        }
         val supported = propertiesFor(spec.type)
         val properties = LinkedHashMap<String, Expression<*>>()
         for (section in listOf(spec.paint, spec.layout)) {

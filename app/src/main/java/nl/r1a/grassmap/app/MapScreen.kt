@@ -25,6 +25,7 @@ import nl.r1a.grassmap.map.prepareMapEngine
 import nl.r1a.grassmap.map.rememberMapSurface
 import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.error.onFailure
 import nl.r1a.grassmap.plugin.api.host.MapEvent
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
@@ -109,13 +110,14 @@ private fun MapMeasurement(
                             Log.i(TAG, "switch-start")
                             repeat(styleSwitches) { index ->
                                 val touring = index % 2 == 0
-                                surface.host.applyStyleDiff(
-                                    if (touring) {
-                                        StyleDiff(TOURING, bundle.touringLayers)
-                                    } else {
-                                        StyleDiff(STANDARD, bundle.layers)
-                                    },
-                                )
+                                surface.host
+                                    .applyStyleDiff(
+                                        if (touring) {
+                                            StyleDiff(TOURING, bundle.touringLayers)
+                                        } else {
+                                            StyleDiff(STANDARD, bundle.layers)
+                                        },
+                                    ).onFailure { error -> Log.w(TAG, "style diff rejected: $error") }
                             }
                             delay(SWITCH_SETTLE_MS)
                             Log.i(
@@ -131,8 +133,12 @@ private fun MapMeasurement(
                 }
             }
         }
-        surface.host.setStyle(bundle.style)
-        surface.host.applyStyleDiff(StyleDiff(bundle.style.id, bundle.layers))
+        surface.host.setStyle(bundle.style).onFailure { error ->
+            Log.w(TAG, "style rejected: $error")
+        }
+        surface.host.applyStyleDiff(StyleDiff(bundle.style.id, bundle.layers)).onFailure { error ->
+            Log.w(TAG, "style layers rejected: $error")
+        }
         Log.i(
             TAG,
             "map-ready region=${bundle.sources.regionName} contours=${bundle.sources.hasContours}",

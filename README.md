@@ -160,7 +160,9 @@ are `world` (z0-z7), `region` (z8-z14) and `contours` (z9-z14). The host
 resolves each ID to a mounted archive and skips layers whose source is absent.
 
 The Standard and Touring variants share one `BaseStyle.Json` document, so a
-variant switch updates layers in place instead of reloading the style. The
+variant switch updates layers in place instead of reloading the style. A base
+style carries sources and glyphs but no layers; the consumer applies the
+provider's layers with `applyStyleDiff`, and only `setStyle` may reload. The
 T-0020 spike uses the phase-A Protomaps-derived bench style as its reproduction
 baseline; the authored Standard and Touring palettes are T-0603.
 

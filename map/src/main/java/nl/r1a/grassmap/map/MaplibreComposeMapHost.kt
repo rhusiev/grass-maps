@@ -19,6 +19,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nl.r1a.grassmap.map.style.ComposedMapLayers
+import nl.r1a.grassmap.map.style.StyleLayerCompiler
 import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -36,6 +37,7 @@ import nl.r1a.grassmap.plugin.api.model.ScreenOffset
 import nl.r1a.grassmap.plugin.api.model.SourceId
 import nl.r1a.grassmap.plugin.api.model.SourceKind
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
+import nl.r1a.grassmap.plugin.api.model.StyleId
 import nl.r1a.grassmap.plugin.api.model.StyleSpec
 import nl.r1a.grassmap.plugin.api.model.TrackingMode
 import org.maplibre.compose.camera.CameraPosition
@@ -59,13 +61,41 @@ internal class MapHostState(
     initialCamera: Camera,
     val sourceResolver: (SourceId) -> String?,
 ) {
-    val style = mutableStateOf(buildBaseStyle(initialStyle, sourceResolver))
+    val style = mutableStateOf(buildBaseStyle(initialStyle, sourceResolver) ?: emptyBuiltStyle())
     val layers = mutableStateOf<List<OwnedLayer>>(emptyList())
     val camera = MutableStateFlow(initialCamera)
+    var loadedStyleId: StyleId = initialStyle.id
+        private set
     var trackingMode: TrackingMode = TrackingMode.Free
         private set
     var positionOffset: ScreenOffset = ScreenOffset(0f, 0f)
         private set
+
+    /** Loads [style] and makes it the style later diffs must match. */
+    fun applyStyle(style: StyleSpec): Outcome<Unit> {
+        val built = buildBaseStyle(style, sourceResolver) ?: return Outcome.Failure(AppError.InvalidInput)
+        loadedStyleId = style.id
+        this.style.value = built
+        return Outcome.Success(Unit)
+    }
+
+    /**
+     * Replaces the unowned layers with [diff]'s layers. A diff for any style but
+     * the loaded one, or one whose layers do not compile, changes nothing.
+     */
+    fun applyStyleDiff(diff: StyleDiff): Outcome<Unit> {
+        if (diff.styleId != loadedStyleId) {
+            return Outcome.Failure(AppError.InvalidInput)
+        }
+        val report = StyleLayerCompiler.compileAll(diff.layers)
+        if (!report.isComplete) {
+            return Outcome.Failure(AppError.Unsupported)
+        }
+        layers.value =
+            layers.value.filterNot { it.owner == null } +
+            diff.layers.map { OwnedLayer(owner = null, slot = it.slot, spec = it.spec) }
+        return Outcome.Success(Unit)
+    }
 
     fun updateTrackingMode(mode: TrackingMode) {
         trackingMode = mode
@@ -160,22 +190,14 @@ class MaplibreComposeMapHost internal constructor(
     var styleLoadCount: Int = 0
         private set
 
-    override suspend fun setStyle(style: StyleSpec): Outcome<Unit> {
-        if (style.baseStyleJson.isBlank()) {
-            return Outcome.Failure(AppError.InvalidInput)
+    override suspend fun setStyle(style: StyleSpec): Outcome<Unit> =
+        withContext(Dispatchers.Main.immediate) {
+            session.applyStyle(style)
         }
-        return withContext(Dispatchers.Main.immediate) {
-            session.style.value = buildBaseStyle(style, session.sourceResolver)
-            Outcome.Success(Unit)
-        }
-    }
 
     override suspend fun applyStyleDiff(diff: StyleDiff): Outcome<Unit> =
         withContext(Dispatchers.Main.immediate) {
-            session.layers.value =
-                session.layers.value.filterNot { it.owner == null } +
-                diff.layers.map { OwnedLayer(owner = null, slot = it.slot, spec = it.spec) }
-            Outcome.Success(Unit)
+            session.applyStyleDiff(diff)
         }
 
     override suspend fun addLayer(
@@ -294,10 +316,8 @@ class MaplibreComposeMapHost internal constructor(
 private fun buildBaseStyle(
     style: StyleSpec,
     resolver: (SourceId) -> String?,
-): BuiltStyle {
-    val root =
-        parseStyleObject(style.baseStyleJson)
-            ?: return BuiltStyle(BaseStyle.Empty, emptyMap())
+): BuiltStyle? {
+    val root = parseStyleObject(style.baseStyleJson) ?: return null
     val sources = LinkedHashMap<String, JsonObject>()
     val uris = LinkedHashMap<SourceId, String>()
     for (source in style.sources) {
@@ -315,6 +335,8 @@ private fun buildBaseStyle(
         )
     return BuiltStyle(BaseStyle.Json(document.toString()), uris)
 }
+
+private fun emptyBuiltStyle(): BuiltStyle = BuiltStyle(BaseStyle.Empty, emptyMap())
 
 private fun MapSource.toJson(uri: String): JsonObject =
     buildJsonObject {

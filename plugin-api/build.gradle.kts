@@ -15,3 +15,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 }
+
+dependencies {
+    api(libs.kotlinx.coroutines.core)
+    api(libs.kotlinx.serialization.json)
+}

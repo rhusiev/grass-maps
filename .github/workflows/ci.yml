@@ -85,7 +85,7 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: ./scripts/ci/android-smoke.sh app/build/outputs/apk/debug/app-debug.apk
 
   # The design asks for an iOS target compile on a macOS runner "once iOS code

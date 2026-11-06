@@ -109,7 +109,7 @@ def percentile(values: list[float], fraction: float) -> float | None:
     return ordered[max(1, math.ceil(fraction * len(ordered))) - 1]
 
 
-def summary(values: list[float]) -> dict[str, float | int | None]:
+def summary(values: list[float | None]) -> dict[str, float | int | None]:
     """Median, p90, p99, min and max of a metric."""
     clean = [value for value in values if value is not None]
     if not clean:
@@ -221,6 +221,20 @@ def parse_launch_log(raw: str) -> tuple[float | None, float | None]:
     return displayed_ms, process_ms
 
 
+def cold_start_metrics(runs: list[dict[str, object]]) -> dict[str, object]:
+    """Summaries for the measured fields, skipping launches with no value.
+
+    A timed-out launch still carries a wait time and a launch state; it is
+    data, not a failed benchmark run.
+    """
+    metrics = {
+        key: summary([run.get(key) for run in runs])
+        for key in ("total_time_ms", "wait_time_ms", "displayed_ms", "process_to_first_frame_ms")
+    }
+    metrics["timed_out"] = sum(1 for run in runs if run.get("status") == "timeout")
+    return metrics
+
+
 def cold_start_run(adb: Adb) -> dict[str, float | int | str | None]:
     """One force-stopped launch measured with `am start -W` and logcat."""
     adb.shell("am", "force-stop", PACKAGE, timeout_s=30)
@@ -229,10 +243,12 @@ def cold_start_run(adb: Adb) -> dict[str, float | int | str | None]:
     start = parse_start_output(
         adb.shell("am", "start", "-W", "-n", f"{PACKAGE}/{ACTIVITY}", timeout_s=90)
     )
-    if start.get("Status") != "ok":
-        raise BenchmarkError(f"am start -W did not report Status: ok: {start}")
+    status = start.get("Status")
+    if status not in ("ok", "timeout"):
+        raise BenchmarkError(f"am start -W failed: {start}")
     displayed_ms, process_ms = parse_launch_log(adb.logcat("-d", "-v", "epoch", timeout_s=60))
     return {
+        "status": status,
         "total_time_ms": start.get("TotalTime"),
         "wait_time_ms": start.get("WaitTime"),
         "this_time_ms": start.get("ThisTime"),
@@ -333,7 +349,8 @@ def frame_pacing(adb: Adb, refresh_hz: float) -> dict[str, object]:
     start = parse_start_output(
         adb.shell("am", "start", "-W", "-n", f"{PACKAGE}/{ACTIVITY}", timeout_s=90)
     )
-    if start.get("Status") != "ok":
+    status = start.get("Status")
+    if status not in ("ok", "timeout"):
         raise BenchmarkError(f"the frame-pacing launch failed: {start}")
 
     windows: list[dict[str, object]] = []
@@ -440,6 +457,7 @@ def frame_pacing(adb: Adb, refresh_hz: float) -> dict[str, object]:
         "refresh_hz": refresh_hz,
         "system_summary": header,
         "launch": {
+            "status": status,
             "total_time_ms": start.get("TotalTime"),
             "wait_time_ms": start.get("WaitTime"),
         },
@@ -525,9 +543,14 @@ def write_result(result: dict[str, object], output: Path) -> None:
             f"- device: {device['model']} API {device['api_level']}, "
             f"{device['refresh_hz']} Hz, gpu {result['conditions']['gpu_mode']}\n"
         )
+        total = cold["total_time_ms"]
+        if total["median"] is None:
+            total_text = "no completed total-time sample"
+        else:
+            total_text = f"median {total['median']} ms, p90 {total['p90']} ms"
         summary_file.write(
-            f"- cold start total: median {cold['total_time_ms']['median']} ms, "
-            f"p90 {cold['total_time_ms']['p90']} ms over {cold['total_time_ms']['n']} runs\n"
+            f"- cold start: {total_text} over {total['n']} runs; "
+            f"{cold['timed_out']} timed out\n"
         )
         frame_time = pacing["frame_time_ms"]
         if intervals["n"]:
@@ -535,12 +558,14 @@ def write_result(result: dict[str, object], output: Path) -> None:
                 f"- frame interval: p50 {intervals['p50']} ms, p90 {intervals['p90']} ms, "
                 f"{late['percent']} % late over {late['over_ms']} ms\n"
             )
-        else:
+        elif frame_time["n"]:
             summary_file.write(
                 f"- first frame time: p50 {frame_time['p50']} ms, "
                 f"p90 {frame_time['p90']} ms over {frame_time['n']} frames; "
                 "no frame-to-frame interval (one frame per window)\n"
             )
+        else:
+            summary_file.write("- frame pacing: no frames in the sample window\n")
         summary_file.write("Trend numbers only; not the Moto g32 acceptance gate.\n")
 
 
@@ -594,10 +619,7 @@ def main() -> int:
     print("frame pacing window", file=sys.stderr)
     pacing = frame_pacing(adb, refresh_hz)
 
-    metrics = {
-        key: summary([run[key] for run in runs])
-        for key in ("total_time_ms", "wait_time_ms", "displayed_ms", "process_to_first_frame_ms")
-    }
+    metrics = cold_start_metrics(runs)
     result = {
         "schema": SCHEMA,
         "kind": KIND,
@@ -628,6 +650,7 @@ def main() -> int:
         },
         "cold_start": {
             "runs": runs,
+            "timed_out": metrics["timed_out"],
             "total_time_ms": metrics["total_time_ms"],
             "wait_time_ms": metrics["wait_time_ms"],
             "displayed_ms": metrics["displayed_ms"],

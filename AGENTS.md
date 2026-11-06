@@ -77,7 +77,9 @@ document, section 3, plus the build and module rules of this repository.
 - Check plugin manifests: `./gradlew checkPluginManifests`
 - The build uses Gradle 9.3.1, AGP 9.1.0 with built-in Kotlin, compileSdk 37,
   targetSdk 36 and minSdk 29. Do not apply the standalone Kotlin Android
-  plugin; AGP 9 compiles Kotlin itself
+  plugin; AGP 9 compiles Kotlin itself. The root buildscript upgrades the
+  built-in Kotlin Gradle plugin to 2.4.21, because maplibre-compose 0.20 is
+  compiled with Kotlin 2.4 metadata
 
 ## Modules
 

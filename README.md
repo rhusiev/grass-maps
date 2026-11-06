@@ -26,7 +26,10 @@ sdk.dir=/home/you/.local/share/android-sdk
 ```
 
 The build uses Gradle 9.3.1, AGP 9.1.0 with built-in Kotlin, compileSdk 37,
-targetSdk 36 and minSdk 29.
+targetSdk 36 and minSdk 29. The root buildscript puts Kotlin Gradle plugin
+2.4.21 on the classpath: AGP's built-in Kotlin reads it, and maplibre-compose
+0.20 is compiled with Kotlin 2.4 metadata. Do not apply the standalone Kotlin
+Android plugin.
 
 ## Checks
 
@@ -116,6 +119,11 @@ sha256. `plugin-api` publishes the shared paged-provider contract suite as test
 fixtures; `PagedProviderContractSuite` covers limits, paging, ordering,
 concurrency and cancellation. See `tools/pipeline/README.md`.
 
+`test-data/styles/bench-light.json` is the phase-A dense bench style. The
+T-0020 spike checks that every layer, filter and expression in it compiles to a
+maplibre-compose layer node, and `plugins/style-standard` generates its provider
+data from the same file.
+
 ## Module map
 
 Each namespace is `nl.r1a.grassmap.<module>`, with dots in place of hyphens in
@@ -140,6 +148,26 @@ the module name. Only `app` is an application module; its application ID is
 | `devtools` | debug harness: benchmark hooks, GPX replay, screenshot and state probes | `core`, `control`, `plugin-api` |
 | `app` | composition root, Android entry points, foreground service, manifest, resources | every module |
 | `plugins/example` | example of a first-party plugin module | `plugin-api` |
+| `plugins/style-standard` | the Standard and Touring map styles as a `MapLayerProvider` | `plugin-api` |
+
+## Map seam
+
+`MapHost` in `plugin-api` is the only map contract. `map` binds it to
+maplibre-compose 0.20 (OpenGL) and no other module imports that library. A
+`MapLayerProvider` supplies MapLibre style-spec JSON; `map` compiles it to
+Compose layer nodes and draws the layers in fixed slots. The logical source IDs
+are `world` (z0-z7), `region` (z8-z14) and `contours` (z9-z14). The host
+resolves each ID to a mounted archive and skips layers whose source is absent.
+
+The Standard and Touring variants share one `BaseStyle.Json` document, so a
+variant switch updates layers in place instead of reloading the style. The
+T-0020 spike uses the phase-A Protomaps-derived bench style as its reproduction
+baseline; the authored Standard and Touring palettes are T-0603.
+
+The debug app resolves `lviv-protomaps.pmtiles` from its external files
+directory and `lviv-contours-20m.pmtiles` for the contour overlay. With no
+Lviv archive it copies the small T-0015 fixture (`fixture-mini-map.pmtiles`)
+out of its assets and starts at Ivano-Frankove.
 
 ## Plugin boundary rule
 

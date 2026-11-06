@@ -14,6 +14,10 @@ interface NetworkGate {
      * Runs [block] when [switch] is enabled, and refuses the request without
      * running it otherwise. A request the gate allows is counted against
      * [switch] before [block] starts.
+     *
+     * [block] is a value-returning boundary: an unexpected exception from it
+     * becomes [AppError.Network] instead of crossing the gate. Cancellation is
+     * rethrown, and errors are not caught.
      */
     suspend fun <T> request(
         switch: SwitchId,

@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.core.services
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.error.AppError
@@ -123,6 +124,52 @@ class PrivacyNetworkGateTest {
             )
             assertEquals(1, request.calls)
             assertEquals(1L, switches.state(NetworkSwitches.onlineTiles).requests)
+        }
+
+    @Test
+    fun blockExceptionBecomesNetworkFailureAndIsCountedOnce() =
+        runTest {
+            switches.setEnabled(NetworkSwitches.onlineSearch, true)
+
+            val result =
+                gate.request<String>(NetworkSwitches.onlineSearch) {
+                    throw IllegalStateException("boom")
+                }
+
+            assertEquals(Outcome.Failure(AppError.Network), result)
+            assertEquals(1L, switches.state(NetworkSwitches.onlineSearch).requests)
+        }
+
+    @Test
+    fun cancellationFromTheBlockPropagates() =
+        runTest {
+            switches.setEnabled(NetworkSwitches.onlineTiles, true)
+            val cancellation = CancellationException("cancelled")
+
+            var thrown: CancellationException? = null
+            try {
+                gate.request<String>(NetworkSwitches.onlineTiles) { throw cancellation }
+            } catch (exception: CancellationException) {
+                thrown = exception
+            }
+
+            assertEquals(cancellation, thrown)
+        }
+
+    @Test
+    fun errorFromTheBlockIsNotCaught() =
+        runTest {
+            switches.setEnabled(NetworkSwitches.regionUpdates, true)
+            val error = AssertionError("boom")
+
+            var thrown: Throwable? = null
+            try {
+                gate.request<String>(NetworkSwitches.regionUpdates) { throw error }
+            } catch (caught: Throwable) {
+                thrown = caught
+            }
+
+            assertEquals(error, thrown)
         }
 
     private class RecordingRequest(

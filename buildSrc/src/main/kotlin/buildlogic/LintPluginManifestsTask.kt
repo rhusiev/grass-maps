@@ -99,8 +99,10 @@ abstract class LintPluginManifestsTask : DefaultTask() {
                         errors += "$where: command '$commandId' requiresSwitch must be a namespaced switch id"
                     }
                 }
-                val dispatcher = command.string("dispatcher")
-                if (dispatcher != null && dispatcher !in COMMAND_DISPATCHERS) {
+                val dispatcher = command["dispatcher"]
+                if (dispatcher != null &&
+                    (dispatcher !is String || dispatcher !in COMMAND_DISPATCHERS)
+                ) {
                     errors += "$where: command '$commandId' has invalid dispatcher '$dispatcher'"
                 }
             }
@@ -146,15 +148,15 @@ abstract class LintPluginManifestsTask : DefaultTask() {
                 if (!setting.containsKey("default")) {
                     errors += "$where: setting '${key.ifBlank { "?" }}' has no default"
                 }
-                val scope = setting.string("scope")
-                if (scope !in SETTING_SCOPES) {
+                val scope = setting["scope"]
+                if (scope !is String || scope !in SETTING_SCOPES) {
                     errors += "$where: setting '${key.ifBlank { "?" }}' has invalid scope '${scope ?: ""}'"
                 }
             }
 
             val needs = raw.objectValue("needs")
-            val location = needs.string("location") ?: "none"
-            if (location !in LOCATION_NEEDS) {
+            val location = needs["location"]
+            if (location != null && (location !is String || location !in LOCATION_NEEDS)) {
                 errors += "$where: invalid location need '$location'"
             }
             for (entry in needs.stringListValue("network")) {

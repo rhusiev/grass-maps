@@ -106,22 +106,22 @@ internal fun emitJson(value: Any?): String = when (value) {
     else -> "JsonPrimitive(${value.toString().literal()})"
 }
 
-internal fun locationNeed(value: String?, where: String): String = when (value ?: "none") {
-    "none" -> "LocationNeed.NONE"
+internal fun locationNeed(value: Any?, where: String): String = when (value) {
+    null, "none" -> "LocationNeed.NONE"
     "while_in_use" -> "LocationNeed.WHILE_IN_USE"
     "during_navigation" -> "LocationNeed.DURING_NAVIGATION"
     else -> throw GradleException("$where: invalid location need '$value'")
 }
 
-internal fun settingScope(value: String?, where: String): String = when (value) {
+internal fun settingScope(value: Any?, where: String): String = when (value) {
     "global" -> "SettingScope.GLOBAL"
     "profile" -> "SettingScope.PROFILE"
-    else -> throw GradleException("$where: invalid setting scope '${value.orEmpty()}'")
+    else -> throw GradleException("$where: invalid setting scope '${value ?: ""}'")
 }
 
-internal fun commandDispatcher(value: String?, where: String): String = when (value ?: "default") {
+internal fun commandDispatcher(value: Any?, where: String): String = when (value) {
+    null, "default" -> "CommandDispatcher.DEFAULT"
     "main" -> "CommandDispatcher.MAIN"
-    "default" -> "CommandDispatcher.DEFAULT"
     "io" -> "CommandDispatcher.IO"
     else -> throw GradleException("$where: invalid command dispatcher '$value'")
 }
@@ -212,7 +212,7 @@ abstract class GeneratePluginRegistryTask : DefaultTask() {
                 )
                 appendLine(
                     "            dispatcher = " +
-                        "${commandDispatcher(command.string("dispatcher"), where)},",
+                        "${commandDispatcher(command["dispatcher"], where)},",
                 )
                 appendLine("        ),")
             }
@@ -301,7 +301,7 @@ abstract class GeneratePluginRegistryTask : DefaultTask() {
             )
             appendLine(
                 "$indent                dispatcher = " +
-                    "${commandDispatcher(command.string("dispatcher"), where)},",
+                    "${commandDispatcher(command["dispatcher"], where)},",
             )
             appendLine(
                 "$indent                implementation = " +
@@ -334,14 +334,14 @@ abstract class GeneratePluginRegistryTask : DefaultTask() {
             appendLine("$indent                key = ${setting.string("key").orEmpty().literal()},")
             appendLine("$indent                type = ${setting.string("type").orEmpty().literal()},")
             appendLine("$indent                default = ${emitJson(setting["default"])},")
-            appendLine("$indent                scope = ${settingScope(setting.string("scope"), where)},")
+            appendLine("$indent                scope = ${settingScope(setting["scope"], where)},")
             appendLine("$indent            ),")
         }
         appendLine("$indent        ),")
         appendLine("$indent    ),")
         appendLine("$indent    needs = PluginNeeds(")
         appendLine("$indent        network = ${emitStringList(needs.stringListValue("network"))},")
-        appendLine("$indent        location = ${locationNeed(needs.string("location"), where)},")
+        appendLine("$indent        location = ${locationNeed(needs["location"], where)},")
         appendLine("$indent        regions = ${emitStringList(needs.stringListValue("regions"))},")
         appendLine("$indent    ),")
         appendLine("$indent    activation = ${emitStringList(raw.stringListValue("activation"))},")

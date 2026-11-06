@@ -46,6 +46,19 @@ class ManifestEmitTest {
     }
 
     @Test
+    fun nonStringEnumValuesFailTheGenerator() {
+        assertThrows(GradleException::class.java) {
+            commandDispatcher(5, "plugin.json")
+        }
+        assertThrows(GradleException::class.java) {
+            locationNeed(true, "plugin.json")
+        }
+        assertThrows(GradleException::class.java) {
+            settingScope(5, "plugin.json")
+        }
+    }
+
+    @Test
     fun knownEnumValuesMapToTheGeneratedEnums() {
         assertEquals("CommandDispatcher.IO", commandDispatcher("io", "plugin.json"))
         assertEquals("LocationNeed.WHILE_IN_USE", locationNeed("while_in_use", "plugin.json"))

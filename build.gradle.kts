@@ -44,25 +44,52 @@ allprojects {
     }
 }
 
-// The plugin boundary rule (README.md): a module under plugins/ may depend on
-// :plugin-api, and on :plugin-ui-api only when it contributes Compose UI.
+// The module boundary rule (README.md, "Module map"): a module may depend on
+// other project modules only where the documented graph allows it. Plugins may
+// use :plugin-api, and :plugin-ui-api only when they contribute Compose UI.
+// Feature modules never import :core or :core-services; the only
+// feature-to-feature edges are navigation -> routing and alerts -> navigation.
 // Anything else is a build failure, not a convention.
-val pluginDependencyAllowlist = setOf(":plugin-api", ":plugin-ui-api")
-val pluginBoundaryViolations = objects.listProperty(String::class.java)
+val moduleDependencyAllowlist: Map<String, Set<String>> =
+    mapOf(
+        // testFixtures(project(":plugin-api")) is the module's own fixtures.
+        ":plugin-api" to setOf(":plugin-api"),
+        ":plugin-ui-api" to setOf(":plugin-api"),
+        ":core" to setOf(":plugin-api"),
+        ":core-services" to setOf(":core", ":plugin-api"),
+        ":map" to setOf(":plugin-api"),
+        ":regions" to setOf(":plugin-api"),
+        ":routing" to setOf(":plugin-api"),
+        ":navigation" to setOf(":routing", ":plugin-api"),
+        ":alerts" to setOf(":navigation", ":plugin-api"),
+        ":places" to setOf(":plugin-api"),
+        ":tracks" to setOf(":plugin-api"),
+        ":ui-shell" to setOf(":plugin-api", ":plugin-ui-api"),
+        ":control" to setOf(":core", ":plugin-api"),
+        ":devtools" to setOf(":core", ":control", ":plugin-api"),
+        ":plugins:example" to setOf(":plugin-api", ":plugin-ui-api"),
+        ":plugins:gpx" to setOf(":plugin-api", ":plugin-ui-api"),
+        ":plugins:style-standard" to setOf(":plugin-api", ":plugin-ui-api"),
+        ":plugins:synthetic-data" to setOf(":plugin-api", ":plugin-ui-api"),
+    )
+val moduleBoundaryViolations = objects.listProperty(String::class.java)
 
 tasks.register("checkPluginBoundaries") {
     group = "verification"
-    description = "Fails when a module under plugins/ depends on anything other than :plugin-api or :plugin-ui-api."
-    inputs.property("violations", pluginBoundaryViolations)
+    description = "Fails when a module depends on a project outside its documented allowlist."
+    inputs.property("violations", moduleBoundaryViolations)
 
     doLast {
         val violations = (inputs.properties["violations"] as List<*>).map { it.toString() }.sorted()
         if (violations.isNotEmpty()) {
             throw GradleException(
                 buildString {
-                    appendLine("Plugin boundary rule violated.")
-                    appendLine("Modules under :plugins: may depend only on :plugin-api and :plugin-ui-api,")
-                    appendLine("in any configuration. Found these project dependencies:")
+                    appendLine("Module boundary rule violated.")
+                    appendLine("The documented dependency graph allows only these project edges:")
+                    for ((module, allowed) in moduleDependencyAllowlist.entries.sortedBy { it.key }) {
+                        appendLine("  $module -> ${allowed.sorted().joinToString(", ").ifEmpty { "no project modules" }}")
+                    }
+                    appendLine("Found these undeclared project dependencies:")
                     violations.forEach { appendLine("  $it") }
                     append(
                         "Feature modules take the host and service interfaces they need " +
@@ -71,28 +98,41 @@ tasks.register("checkPluginBoundaries") {
                 },
             )
         }
-        println("Plugin boundaries OK")
+        println("Module boundaries OK")
     }
 }
 
 subprojects {
-    if (path.startsWith(":plugins:")) {
-        afterEvaluate {
+    afterEvaluate {
+        if (path != ":app") {
+            val allowed = moduleDependencyAllowlist[path].orEmpty()
             configurations.forEach { configuration ->
                 configuration.dependencies
                     .filterIsInstance<ProjectDependency>()
-                    .filterNot { it.path in pluginDependencyAllowlist }
+                    .filterNot { it.path in allowed }
                     .forEach { dependency ->
-                        pluginBoundaryViolations.add(
+                        moduleBoundaryViolations.add(
                             "${project.path} (${configuration.name}) -> ${dependency.path}",
                         )
                     }
             }
         }
+    }
 
+    plugins.withId("com.android.library") {
+        tasks.named("check") {
+            dependsOn(rootProject.tasks.named("checkPluginBoundaries"))
+        }
+    }
+    plugins.withId("com.android.application") {
+        tasks.named("check") {
+            dependsOn(rootProject.tasks.named("checkPluginBoundaries"))
+        }
+    }
+
+    if (path.startsWith(":plugins:")) {
         plugins.withId("com.android.library") {
             tasks.named("check") {
-                dependsOn(rootProject.tasks.named("checkPluginBoundaries"))
                 dependsOn(":checkPluginManifests")
             }
         }

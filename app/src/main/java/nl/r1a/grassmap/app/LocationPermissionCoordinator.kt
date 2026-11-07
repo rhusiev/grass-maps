@@ -42,6 +42,7 @@ class LocationPermissionCoordinator(
     private var requester: (suspend () -> Boolean?)? = null
 
     /** The answer the current dialog will complete, shared by activity recreations. */
+    @Volatile
     private var pending: CompletableDeferred<Boolean>? = null
 
     /** Binds the activity that can show the system dialog. */

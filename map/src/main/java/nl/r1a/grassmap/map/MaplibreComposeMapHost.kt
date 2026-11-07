@@ -213,7 +213,14 @@ fun MapSurfaceView(
     surface: MapSurface,
     modifier: Modifier = Modifier,
 ) {
-    MaplibreMap(modifier = modifier, state = surface.state)
+    val interactions = remember { MapGestures.interactions() }
+    val uiOptions = remember { MapGestures.uiOptions() }
+    MaplibreMap(
+        modifier = modifier,
+        state = surface.state,
+        interactions = interactions,
+        uiOptions = uiOptions,
+    )
 }
 
 /**
@@ -443,18 +450,7 @@ class MaplibreComposeMapHost internal constructor(
     }
 
     private suspend fun publishCamera() {
-        val position = state.cameraPosition
-        val camera =
-            Camera(
-                center =
-                    GeoPoint(
-                        latitude = position.center.latitude,
-                        longitude = position.center.longitude,
-                    ),
-                zoom = position.zoom,
-                bearing = position.bearing,
-                tilt = position.pitch,
-            )
+        val camera = cameraModel(state.cameraPosition)
         session.camera.value = camera
         eventSink.emit(MapEvent.CameraChanged(camera))
     }
@@ -513,7 +509,24 @@ private fun Camera.toEngine(): CameraPosition =
         pitch = tilt,
     )
 
-private fun CameraPosition.apply(update: CameraUpdate): CameraPosition =
+/**
+ * The engine camera position as the domain camera the streams publish. Gestures
+ * and commands both end here, so a gesture trace and a command trace are read
+ * the same way.
+ */
+internal fun cameraModel(position: CameraPosition): Camera =
+    Camera(
+        center =
+            GeoPoint(
+                latitude = position.center.latitude,
+                longitude = position.center.longitude,
+            ),
+        zoom = position.zoom,
+        bearing = position.bearing,
+        tilt = position.pitch,
+    )
+
+internal fun CameraPosition.apply(update: CameraUpdate): CameraPosition =
     copy(
         center =
             update.center?.let { Position(longitude = it.longitude, latitude = it.latitude) }

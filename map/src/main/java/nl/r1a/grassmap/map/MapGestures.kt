@@ -1,0 +1,74 @@
+package nl.r1a.grassmap.map
+
+import org.maplibre.compose.interaction.MapInteractions
+import org.maplibre.compose.map.MapUiOptions
+
+/**
+ * The map's gesture contract (T-0104). The library defaults happen to match it
+ * today, but the contract is pinned here so a library upgrade cannot change a
+ * gesture silently and the camera tests can name the expected step.
+ *
+ * | Gesture | Seam |
+ * |---|---|
+ * | one-finger pan | drag pan |
+ * | pinch zoom | two-pointer transform zoom |
+ * | two-finger rotate | two-pointer transform rotate |
+ * | double-tap zoom in | tap, exactly one zoom level |
+ * | one-finger zoom | tap-drag after a double tap |
+ */
+internal object MapGestures {
+    /** One double tap changes the zoom by exactly this many levels. */
+    const val DOUBLE_TAP_ZOOM_STEP_LEVELS: Double = 1.0
+
+    /** A two-pointer span ratio maps to the same zoom ratio. */
+    const val PINCH_ZOOM_SCALE: Double = 1.0
+
+    /** A two-pointer rotation maps to the same bearing change. */
+    const val TWO_FINGER_ROTATION_SCALE: Double = 1.0
+
+    /** A full-viewport drag after a double tap changes the zoom by these levels. */
+    const val ONE_FINGER_ZOOM_LEVELS_PER_VIEWPORT: Double = 4.0
+
+    /** The camera movements gestures may use; pitch stays off until T-0313. */
+    fun interactions(): MapInteractions =
+        MapInteractions(MapInteractions.Standard) {
+            camera {
+                pan { enabled = true }
+                zoom { enabled = true }
+                rotate { enabled = true }
+                pitch { enabled = false }
+            }
+        }
+
+    /** The input bindings for the gestures above. */
+    fun uiOptions(): MapUiOptions =
+        MapUiOptions(MapUiOptions.Standard) {
+            bindings {
+                drag {
+                    enabled = true
+                    pan { }
+                }
+                transform {
+                    pan { enabled = true }
+                    zoom {
+                        enabled = true
+                        zoomScale = PINCH_ZOOM_SCALE
+                    }
+                    rotate {
+                        enabled = true
+                        rotationScale = TWO_FINGER_ROTATION_SCALE
+                        allowDuringZoom = true
+                    }
+                    pitch { enabled = false }
+                }
+                doubleTap {
+                    enabled = true
+                    zoomStepLevels = DOUBLE_TAP_ZOOM_STEP_LEVELS
+                }
+                tapDrag {
+                    enabled = true
+                    zoomLevelsPerViewport = ONE_FINGER_ZOOM_LEVELS_PER_VIEWPORT
+                }
+            }
+        }
+}

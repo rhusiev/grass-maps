@@ -143,6 +143,38 @@ The benchmark job is advisory. A failed emulator host leaves the job red and
 the data missing for that commit, but it does not fail the workflow; the gate,
 API 29 smoke and reproducibility jobs are the blocking checks.
 
+### Map pacing (emulator, trend only)
+
+The map draws into a SurfaceView, so `dumpsys gfxinfo` cannot see its frames.
+`scripts/bench/map-pacing.sh` traces SurfaceFlinger with Perfetto during a fixed
+gesture run and times map frames from the layer's `BufferTX` counter, which
+drops on every latch:
+
+```sh
+./scripts/bench/map-pacing.sh app/build/outputs/apk/debug/app-debug.apk
+```
+
+The run pools three traces by default, prints the interval summary and writes
+one JSON document per commit to `build/benchmarks/map-pacing/<sha>.json`. The
+document holds the map-frame interval percentiles, the late-interval count and
+share over 1.5 vsync, missed vsyncs, the trace digests, the device, and the
+refresh rate. The gesture run is a four-pass pan followed by a double-tap zoom;
+pinch and rotate pacing need injected multi-touch and are covered by the map
+module's camera trace test instead.
+
+`scripts/bench/map-frame-timeline.py` does the timing when traces already
+exist. Its rules (a counter fall is one latch, a gap over 250 ms is gesture
+idle, over 1.5 periods is late) have a unit test:
+
+```sh
+python3 scripts/bench/map_frame_timeline_test.py
+```
+
+The late-interval share is the M1 dropped-frame measure. Its acceptance gate is
+the Moto g32 at 90 Hz with the phone's prefixed `BufferTX - *SurfaceView[...]`
+track; emulator numbers are trends and must not be compared across GPU modes or
+hosts.
+
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull
 request. Format, lint, build, unit tests, boundaries and manifest lint are one
 fast job; reproducibility, the API 29 emulator smoke and the trend benchmarks

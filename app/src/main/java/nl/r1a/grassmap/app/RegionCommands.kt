@@ -35,13 +35,17 @@ private const val TAG = "GrassMapsRegions"
  * the version; a token is optional so the 401 path is reachable.
  *
  * The request goes through the production [PrivacyNetworkGate] path unless
- * `bypass` is true. The bypass exists only for this control-channel trigger and
- * logs itself on every call; a release build has no control channel, so there
- * is no path to this command at all.
+ * `bypass` is true. The bypass is allowed only when the running application is
+ * debuggable, which the composition root reports from
+ * `ApplicationInfo.FLAG_DEBUGGABLE`; every other build refuses it before any
+ * network call. Cleartext HTTP is likewise permitted only in a debuggable
+ * build. The command bus can invoke this command in any build, so
+ * `allowlistedForControl` alone is not treated as the gate.
  */
 internal class RegionDownloadTestCommand(
     private val downloader: () -> RegionDownloader?,
     private val network: NetworkAccess,
+    private val debuggable: () -> Boolean = { false },
     private val log: (String) -> Unit = { message -> Log.i(TAG, message) },
 ) : Command<JsonElement, String>(
         id = REGION_DOWNLOAD_COMMAND,
@@ -56,6 +60,14 @@ internal class RegionDownloadTestCommand(
     ) {
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
         val request = parse(params) ?: return Outcome.Failure(AppError.InvalidInput)
+        val debugBuild = debuggable()
+        if (request.bypass && !debugBuild) {
+            log(
+                "download_test region=${request.region} version=${request.version} " +
+                    "bypass refused: build is not debuggable",
+            )
+            return Outcome.Failure(AppError.PermissionDenied)
+        }
         val downloader = downloader() ?: return Outcome.Failure(AppError.NotReady)
         val token =
             when (val parsed = request.token?.let { BearerToken.of(it) }) {
@@ -66,9 +78,10 @@ internal class RegionDownloadTestCommand(
         val policy =
             DownloadPolicy(
                 switch = NetworkSwitches.regionUpdates,
-                allowCleartextHttp = true,
+                allowCleartextHttp = debugBuild,
             )
-        log("request region=${request.region} version=${request.version} cleartext=permitted(debug command)")
+        val cleartext = if (debugBuild) "permitted(debug build)" else "https-only"
+        log("request region=${request.region} version=${request.version} cleartext=$cleartext")
         val access = if (request.bypass) DebugNetworkAccess(log) else network
         val outcome =
             downloader.download(
@@ -138,4 +151,5 @@ private class DebugNetworkAccess(
 internal fun regionCommands(
     downloader: () -> RegionDownloader?,
     network: NetworkAccess,
-): List<Command<*, *>> = listOf(RegionDownloadTestCommand(downloader, network))
+    debuggable: () -> Boolean = { false },
+): List<Command<*, *>> = listOf(RegionDownloadTestCommand(downloader, network, debuggable))

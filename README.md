@@ -520,12 +520,16 @@ tools/control/grassctl.py invoke core.region.download_test \
   '{"url":"http://127.0.0.1:8765/package.zip","token":"<test-token>","region":"fixture-mini","version":"2026-11-03-1","bypass":true}'
 ```
 
-`bypass` is logged on every call and exists only for this debug trigger. A
-release build packages no control channel, so it has no path to the command.
-The trigger permits cleartext so it can reach `adb reverse`; the debug manifest
-allows cleartext only for `127.0.0.1` and `localhost` through
-`app/src/debug/res/xml/network_security_config.xml`, and release keeps the
-platform default of no cleartext. No downloads UI exists yet; T-0504 owns it.
+`bypass` is logged on every call. It is refused with `PermissionDenied` unless
+the running application reports `ApplicationInfo.FLAG_DEBUGGABLE`, so a release
+build always uses the production `NetworkAccess`, where
+`network.region_updates` still gates the request. The command bus can invoke
+this command in any build, so `allowlistedForControl` alone is not the gate.
+Cleartext is permitted only in a debuggable build, so the trigger can reach
+`adb reverse`; the debug manifest allows it only for `127.0.0.1` and
+`localhost` through `app/src/debug/res/xml/network_security_config.xml`, and
+release keeps the platform default of no cleartext. No downloads UI exists yet;
+T-0504 owns it.
 
 ## Follow-ups
 

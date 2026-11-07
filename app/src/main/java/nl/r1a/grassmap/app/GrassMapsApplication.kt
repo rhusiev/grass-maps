@@ -2,6 +2,7 @@ package nl.r1a.grassmap.app
 
 import android.app.Activity
 import android.app.Application
+import android.content.pm.ApplicationInfo
 import nl.r1a.grassmap.core.services.AndroidStrings
 import nl.r1a.grassmap.core.services.LocationSource
 import nl.r1a.grassmap.core.services.NoLocationSource
@@ -21,8 +22,12 @@ open class GrassMapsApplication : Application() {
             searchFilesProvider = { getExternalFilesDir(null) ?: filesDir },
             assetReader = { path -> readAsset(path) },
             regionsRootProvider = { File(filesDir, REGIONS_DIRECTORY) },
+            debuggable = { isDebuggable() },
         )
     }
+
+    /** The debug-only seams check this flag; the manifest sets it for debug builds only. */
+    private fun isDebuggable(): Boolean = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
     /**
      * Reads a debug asset for the control channel. It runs off Main, in the

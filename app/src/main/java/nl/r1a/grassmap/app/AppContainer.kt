@@ -45,6 +45,7 @@ class AppContainer(
     private val searchFilesProvider: () -> File? = { null },
     private val assetReader: (String) -> ByteArray? = { null },
     private val regionsRootProvider: () -> File? = { null },
+    private val debuggable: () -> Boolean = { false },
 ) {
     private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -110,7 +111,7 @@ class AppContainer(
             navCommands(mapSession, { routingEngine }) +
             searchCommands { places } +
             trackCommands({ tracks }, assetReader) +
-            regionCommands({ regionDownloader }, regionNetwork)
+            regionCommands({ regionDownloader }, regionNetwork, debuggable)
     }
 
     /** The catalog entries for the host commands; the debug channel lists these. */

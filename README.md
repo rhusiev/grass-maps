@@ -163,7 +163,8 @@ one JSON document per commit to `build/benchmarks/map-pacing/<sha>.json`. The
 document holds the map-frame interval percentiles, the late-interval count and
 share over 1.5 vsync, missed vsyncs, the trace digests, the device, and the
 refresh rate. The gesture run is a four-pass pan followed by a double-tap zoom;
-pinch and rotate need injected multi-touch and are not part of this run.
+pinch, rotate and the two-finger tap need injected multi-touch and are not part
+of this run.
 
 `scripts/bench/map-frame-timeline.py` does the timing when traces already
 exist. Its rules (a counter fall is one latch, a gap over 250 ms is gesture
@@ -331,6 +332,17 @@ fix adds an accuracy circle. A null fix removes the source and every layer.
 A map gesture does not stop following in T-0022. The camera-mode button and the
 free/follow/heading cycle are T-0106; until then the follow button only toggles
 `Free` and `Follow`.
+
+A two-finger tap zooms out one level. When the distance-by-tap setting is on,
+the same gesture measures instead: the two touch points are projected to the
+map and the ground distance between them is shown in a badge for four seconds.
+The setting is a typed seam, `DistanceByTapSetting` on `AppContainer`, off by
+default until T-0016 binds it to the shared settings service; a debug build
+turns it on with `--ez t0105_distance_by_tap true`. The recogniser
+accepts exactly two pointers held at most 300 ms that travel at most 12 dp; the
+contract lives in `MapGestures`. The emulator cannot inject a second pointer, so
+the recogniser decision and the projection-to-haversine maths are unit tests and
+the pointer loop is unexercised on a device.
 
 ## Map controls
 

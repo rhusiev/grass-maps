@@ -20,6 +20,7 @@ import nl.r1a.grassmap.core.services.NoLocationSource
 import nl.r1a.grassmap.core.services.PrivacyNetworkGate
 import nl.r1a.grassmap.core.services.PrivacySwitchSettings
 import nl.r1a.grassmap.core.services.diagnosticsCommands
+import nl.r1a.grassmap.map.DistanceByTapSetting
 import nl.r1a.grassmap.places.PlacesAccess
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
@@ -58,6 +59,7 @@ class AppContainer(
     private val extraCommands: (MapSessionHolder) -> List<Command<*, *>> = { emptyList() },
     val devTools: DevToolsRuntime = NoDevToolsRuntime,
     private val aiControlEnabled: () -> Boolean = { false },
+    val distanceByTap: DistanceByTapSetting = DistanceByTapSetting { false },
 ) {
     private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 

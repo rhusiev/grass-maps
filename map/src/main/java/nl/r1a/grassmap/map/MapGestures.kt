@@ -15,10 +15,20 @@ import org.maplibre.compose.map.MapUiOptions
  * | two-finger rotate | two-pointer transform rotate |
  * | double-tap zoom in | tap, exactly one zoom level |
  * | one-finger zoom | tap-drag after a double tap |
+ * | two-finger tap | one zoom level out, or distance by tap (T-0105) |
  */
 internal object MapGestures {
     /** One double tap changes the zoom by exactly this many levels. */
     const val DOUBLE_TAP_ZOOM_STEP_LEVELS: Double = 1.0
+
+    /** A two-finger tap zooms out by exactly this many levels. */
+    const val TWO_FINGER_TAP_ZOOM_LEVELS: Double = 1.0
+
+    /** The longest a two-finger tap may stay down. */
+    const val TWO_FINGER_TAP_MAX_MILLIS: Long = 300L
+
+    /** The furthest either finger may travel, in dp, and still count as a tap. */
+    const val TWO_FINGER_TAP_MAX_TRAVEL_DP: Float = 12f
 
     /** A two-pointer span ratio maps to the same zoom ratio. */
     const val PINCH_ZOOM_SCALE: Double = 1.0

@@ -32,11 +32,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.core.services.ButtonLayoutStore
 import nl.r1a.grassmap.core.services.DEFAULT_PROFILE
 import nl.r1a.grassmap.core.services.MapControlCommands
+import nl.r1a.grassmap.map.DistanceReadout
+import nl.r1a.grassmap.map.DistanceUnit
+import nl.r1a.grassmap.map.MapDistance
 import nl.r1a.grassmap.map.MapSurface
 import nl.r1a.grassmap.map.MapSurfaceView
 import nl.r1a.grassmap.map.PuckAgeFormatter
@@ -58,6 +62,7 @@ import nl.r1a.grassmap.ui.shell.ControlBarLabels
 import nl.r1a.grassmap.ui.shell.ControlButton
 import nl.r1a.grassmap.ui.shell.MapControlBar
 import java.io.File
+import java.util.Locale
 
 private val STYLE_PLUGIN = PluginId("style.standard")
 private val STANDARD = StyleId("standard")
@@ -70,7 +75,11 @@ private const val BANNER_CORNER_DP = 8
 private const val BANNER_HORIZONTAL_DP = 16
 private const val BANNER_VERTICAL_DP = 10
 private const val BANNER_FONT_SP = 14
+private const val DISTANCE_BADGE_MILLIS = 4_000L
+private const val METRE_DECIMALS = 1
+private const val KILOMETRE_DECIMALS = 2
 private val NEEDS_REDOWNLOAD_BACKGROUND = Color(0xFFB3261E)
+private val DISTANCE_BADGE_BACKGROUND = Color(0xCC202020)
 
 internal data class MapBundle(
     val style: StyleSpec,
@@ -164,6 +173,7 @@ private fun MapContent(
         }
     var layout by remember { mutableStateOf(MapControlCommands.DEFAULT_ORDER) }
     var isEditing by remember { mutableStateOf(false) }
+    var distance by remember { mutableStateOf<DistanceReadout?>(null) }
     val currentLayout = rememberUpdatedState(layout)
     val writer =
         remember(store) {
@@ -179,7 +189,12 @@ private fun MapContent(
         layout = withContext(Dispatchers.IO) { active.load(DEFAULT_PROFILE) }
     }
     Box(Modifier.fillMaxSize()) {
-        MapSurfaceView(surface = surface, modifier = Modifier.fillMaxSize())
+        MapSurfaceView(
+            surface = surface,
+            modifier = Modifier.fillMaxSize(),
+            distanceByTap = container.distanceByTap,
+            onDistanceMeasured = { meters -> distance = MapDistance.readout(meters) },
+        )
         MapControlBar(
             layout = controlButtons(layout, context),
             labels = controlBarLabels(context),
@@ -214,6 +229,20 @@ private fun MapContent(
                     .statusBarsPadding()
                     .padding(BAR_PADDING_DP.dp),
         )
+        distance?.let { shown ->
+            DistanceBadge(
+                text = formatDistance(context, shown),
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(BAR_PADDING_DP.dp),
+            )
+            LaunchedEffect(shown) {
+                delay(DISTANCE_BADGE_MILLIS)
+                distance = null
+            }
+        }
         bundle.sources.regionProblem?.let { problem ->
             RegionProblemBanner(
                 text = stringResource(R.string.map_region_needs_redownload),
@@ -348,6 +377,52 @@ private fun controlButton(
             null
         }
     }
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun DistanceBadge(
+    text: String,
+    modifier: Modifier,
+) {
+    Box(
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(BANNER_CORNER_DP.dp))
+                .background(DISTANCE_BADGE_BACKGROUND)
+                .padding(horizontal = BANNER_HORIZONTAL_DP.dp, vertical = BANNER_VERTICAL_DP.dp),
+    ) {
+        BasicText(
+            text = text,
+            style = TextStyle(color = Color.White, fontSize = BANNER_FONT_SP.sp),
+        )
+    }
+}
+
+/** The distance the two-finger tap measured, in the unit the label names. */
+internal fun formatDistance(
+    context: Context,
+    readout: DistanceReadout,
+): String =
+    when (readout.unit) {
+        DistanceUnit.Metres -> {
+            context.getString(
+                R.string.map_distance_metres,
+                formatDistanceValue(readout.value, METRE_DECIMALS),
+            )
+        }
+
+        DistanceUnit.Kilometres -> {
+            context.getString(
+                R.string.map_distance_kilometres,
+                formatDistanceValue(readout.value, KILOMETRE_DECIMALS),
+            )
+        }
+    }
+
+private fun formatDistanceValue(
+    value: Double,
+    decimals: Int,
+): String = String.format(Locale.getDefault(), "%.${decimals}f", value)
 
 @Suppress("ktlint:standard:function-naming")
 @Composable

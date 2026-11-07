@@ -35,6 +35,13 @@ class MapGesturesTest {
     }
 
     @Test
+    fun aTwoFingerTapIsPinnedToTheDistanceToolContract() {
+        assertEquals(1.0, MapGestures.TWO_FINGER_TAP_ZOOM_LEVELS, 0.0)
+        assertEquals(300L, MapGestures.TWO_FINGER_TAP_MAX_MILLIS)
+        assertEquals(12f, MapGestures.TWO_FINGER_TAP_MAX_TRAVEL_DP, 0f)
+    }
+
+    @Test
     fun theCameraAllowsOnlyTheGesturesWeShip() {
         val interactions = MapGestures.interactions().toString()
         assertTrue(interactions, interactions.contains("PanCameraConfiguration(enabled=true"))

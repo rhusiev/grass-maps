@@ -37,4 +37,6 @@
     <string name="dev_tools_memory">Memory: %1$d MB</string>
     <string name="dev_tools_start_replay">Start replay</string>
     <string name="dev_tools_stop_replay">Stop replay</string>
+    <string name="map_distance_metres">%1$s m</string>
+    <string name="map_distance_kilometres">%1$s km</string>
 </resources>

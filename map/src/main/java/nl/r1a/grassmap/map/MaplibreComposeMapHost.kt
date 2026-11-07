@@ -6,8 +6,13 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -16,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -212,16 +218,52 @@ class MapSurface internal constructor(
 fun MapSurfaceView(
     surface: MapSurface,
     modifier: Modifier = Modifier,
+    distanceByTap: DistanceByTapSetting = DistanceByTapSetting { false },
+    onDistanceMeasured: (Double) -> Unit = {},
 ) {
     val interactions = remember { MapGestures.interactions() }
     val uiOptions = remember { MapGestures.uiOptions() }
+    val scope = rememberCoroutineScope()
+    val setting = rememberUpdatedState(distanceByTap)
+    val distanceSink = rememberUpdatedState(onDistanceMeasured)
+    val projector = remember(surface) { surface.screenProjector() }
     MaplibreMap(
-        modifier = modifier,
+        modifier =
+            modifier.pointerInput(surface) {
+                detectTwoFingerTap { from, to ->
+                    val camera = cameraModel(surface.state.cameraPosition)
+                    when (val action = twoFingerTapAction(setting.value.isEnabled(), camera.zoom, from, to, projector)) {
+                        is TwoFingerTapAction.ZoomOut -> {
+                            scope.launch {
+                                surface.host.moveCamera(CameraUpdate(zoom = action.zoom))
+                            }
+                        }
+
+                        is TwoFingerTapAction.Distance -> {
+                            distanceSink.value(action.meters)
+                        }
+
+                        TwoFingerTapAction.Ignored -> {
+                            Unit
+                        }
+                    }
+                }
+            },
         state = surface.state,
         interactions = interactions,
         uiOptions = uiOptions,
     )
 }
+
+/** Projects screen points to map points through the attached engine. */
+internal fun MapSurface.screenProjector(): MapScreenProjector =
+    MapScreenProjector { point ->
+        runCatching {
+            state.positionFromScreenLocation(DpOffset(x = point.x.dp, y = point.y.dp))
+        }.getOrNull()?.let { position ->
+            GeoPoint(latitude = position.latitude, longitude = position.longitude)
+        }
+    }
 
 /**
  * Loads the native engine off Main. MapLibre extracts and loads its native

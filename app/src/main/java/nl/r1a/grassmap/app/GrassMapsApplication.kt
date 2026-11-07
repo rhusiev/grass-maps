@@ -15,6 +15,7 @@ import nl.r1a.grassmap.core.services.DeviceInfo
 import nl.r1a.grassmap.core.services.FileLocationPermissionStore
 import nl.r1a.grassmap.core.services.MockGpxLocationSource
 import nl.r1a.grassmap.core.services.installCrashGuard
+import nl.r1a.grassmap.map.DistanceByTapSetting
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -46,6 +47,7 @@ open class GrassMapsApplication : Application() {
             extraCommands = extraCommands(),
             devTools = devToolsAccess(location),
             aiControlEnabled = { aiControlEnabled() },
+            distanceByTap = distanceByTap(),
         )
     }
 
@@ -97,6 +99,13 @@ open class GrassMapsApplication : Application() {
      * empty list, so no unrestricted camera command is compiled into it.
      */
     internal open fun extraCommands(): (MapSessionHolder) -> List<Command<*, *>> = { emptyList() }
+
+    /**
+     * The distance-by-tap mode for this build. The release app keeps the
+     * two-finger tap on zoom out until T-0016 binds the setting to the shared
+     * settings service; a debug build can switch it from the launch intent.
+     */
+    internal open fun distanceByTap(): DistanceByTapSetting = DistanceByTapSetting { false }
 
     /**
      * The location provider for this build. A release build starts on the

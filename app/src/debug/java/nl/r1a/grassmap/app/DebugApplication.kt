@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.core.services.AndroidLocationSource
 import nl.r1a.grassmap.core.services.MockGpxLocationSource
+import nl.r1a.grassmap.map.DistanceByTapSetting
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -32,6 +33,7 @@ import java.io.IOException
  */
 class DebugApplication : GrassMapsApplication() {
     private val platformLocation = MutableStateFlow(false)
+    private val distanceByTapEnabled = MutableStateFlow(false)
 
     override fun onCreate() {
         super.onCreate()
@@ -43,6 +45,8 @@ class DebugApplication : GrassMapsApplication() {
                 ) {
                     platformLocation.value =
                         activity.intent?.getBooleanExtra(EXTRA_PLATFORM_LOCATION, false) == true
+                    distanceByTapEnabled.value =
+                        activity.intent?.getBooleanExtra(EXTRA_DISTANCE_BY_TAP, false) == true
                 }
 
                 override fun onActivityStarted(activity: Activity) = Unit
@@ -81,6 +85,8 @@ class DebugApplication : GrassMapsApplication() {
     /** Debug builds treat the developer as the AI-control switch holder. */
     override fun aiControlEnabled(): Boolean = true
 
+    override fun distanceByTap(): DistanceByTapSetting = DistanceByTapSetting { distanceByTapEnabled.value }
+
     override fun locationSource(): LocationService =
         DebugLocationSource(
             platform = AndroidLocationSource(this),
@@ -113,5 +119,6 @@ class DebugApplication : GrassMapsApplication() {
         const val TAG = "GrassMapsStrictMode"
         const val MOCK_WALK_ASSET = "mock-walk.gpx"
         const val EXTRA_PLATFORM_LOCATION = "t0103_platform_location"
+        const val EXTRA_DISTANCE_BY_TAP = "t0105_distance_by_tap"
     }
 }

@@ -15,6 +15,7 @@ first product asset lands.
 | Noto fonts | SIL OFL 1.1 | map labels and UI text; `app/src/main/assets/fonts` uses the Protomaps basemaps-assets Noto Sans glyph PBFs |
 | Protomaps sprites | MIT | `app/src/main/assets/sprites` (light sprite sheet, basemaps-assets) |
 | valhalla-mobile | MIT | Android/iOS wrapper around the Valhalla engine, used by `routing` |
+| Ferrostar core | BSD-3-Clause | Rust route-following core with UniFFI Kotlin bindings, used by `navigation`; the `core` artifact only, no UI or map binding |
 | Valhalla routing engine | MIT | C++ engine packaged inside valhalla-mobile; routing tiles are OSM-derived data (ODbL-1.0) |
 | `plugins/style-standard` bench style | BSD-3-Clause | The T-0020 phase-A dense style generated from protomaps/basemaps; replaced by the authored styles in T-0603 |
 | `test-data/location/mock-walk.gpx` | Apache-2.0 (this repository) | Synthetic 60-point GPX walk authored for T-0022; no OSM data |

@@ -61,7 +61,8 @@ class AppContainer(
 
     private val hostCommands: List<Command<*, *>> by lazy {
         mapCommands(mapSession, locationController) +
-            routeCommands(mapSession, { routingEngine }, { dataSources })
+            routeCommands(mapSession, { routingEngine }, { dataSources }) +
+            navCommands(mapSession, { routingEngine })
     }
 
     /** The catalog entries for the host commands; the debug channel lists these. */

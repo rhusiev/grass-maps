@@ -52,6 +52,9 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Ferrostar core is built with core library desugaring and declares the
+        // requirement in its AAR metadata.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     // AGP dependency metadata embeds build-specific data in the APK and breaks
@@ -98,6 +101,8 @@ dependencies {
     // packaged into a release build at all (architecture section 22).
     debugImplementation(project(":control"))
     debugImplementation(project(":devtools"))
+
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

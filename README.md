@@ -337,6 +337,37 @@ synthetic DataSource for cost modifiers and routes again. Valhalla takes a
 multiplier as `linear_cost_factors`; when the synthetic line has no graph edges
 near it, the adapter retries with `exclude_polygons` around the same line.
 
+## Navigation seam
+
+`NavigationSession` in `navigation` binds Ferrostar's Rust core to our route
+model. It takes a `Route`, a `Flow<LocationFix>` and a `RoutingEngine`, and
+emits `NavigationState`: phase, on-route relation, distance from the line,
+snapped position, remaining distance and time, and the next instruction. No
+Ferrostar type leaves the module; `FerrostarRouteFollower` is the only file
+that names one.
+
+The `com.stadiamaps.ferrostar:core` AAR (0.59.0) is used without `ui-compose`
+or `ui-maplibre`; the native core is the `uniffi.ferrostar.NavigationSession`
+created by `createNavigationSession`. Route conversion carries geometry,
+bounds, distance, waypoints and steps. Steps are split at the instruction
+distances because our `Route` has no per-step geometry. Elevation and typed way
+attributes stay in our model; Ferrostar's route has neither.
+
+Off-route uses Ferrostar's `StaticThreshold` deviation detector with the
+configured `maxDeviationMeters`. When the core reports no deviation (including
+its own horizontal-accuracy gate) or is unavailable, a `PolylineLocator`
+distance over the whole line decides instead. Two consecutive off-route fixes
+start a reroute through `RoutingEngine` from the current position to the
+original destination, and the session logs the detection-to-route-ready
+milliseconds. That is a seam policy, not the final one: T-0312 owns the 20 s
+profile-scaled, debounced policy with accuracy gating and rejoin-first.
+
+The debug channel exposes `core.nav.test_follow`. It routes a walk, generates a
+GPX from that line with a sideways segment past the deviation threshold, parses
+it through `MockGpxLocationSource`, follows it, and draws the replacement route.
+`{"area":"fixture"}` and `{"area":"lviv"}` select the area; `tick_ms` and
+`detour_m` tune the replay.
+
 ## Follow-ups
 
 `plugin-api` and `plugin-ui-api` are ordinary Android libraries in this

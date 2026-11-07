@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!--
+      Ferrostar's core AAR ships a foreground service class. T-0025 uses the
+      core only and never starts that service; T-0314 owns the navigation
+      service and its POST_NOTIFICATIONS permission. Lint scans the dependency
+      class even though no app code reaches it and reports the missing
+      permission against the app manifest.
+    -->
+    <issue id="NotificationPermission">
+        <ignore path="src/main/AndroidManifest.xml" />
+    </issue>
+</lint>

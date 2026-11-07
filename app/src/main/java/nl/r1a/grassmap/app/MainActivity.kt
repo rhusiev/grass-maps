@@ -5,8 +5,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * The single activity. It composes the map surface from the process-scoped
@@ -20,15 +18,12 @@ import kotlinx.coroutines.withTimeoutOrNull
 class MainActivity : ComponentActivity() {
     private val container: AppContainer by lazy { (application as GrassMapsApplication).container }
 
-    private var pendingPermission: CompletableDeferred<Boolean>? = null
-
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
             val granted =
                 result[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
                     result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-            pendingPermission?.complete(granted)
-            pendingPermission = null
+            container.locationPermission.completePermission(granted)
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,29 +37,19 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        pendingPermission?.complete(false)
-        pendingPermission = null
         container.locationPermission.unbind(this)
         super.onDestroy()
     }
 
-    private suspend fun requestLocationPermission(): Boolean {
-        val deferred =
-            pendingPermission ?: CompletableDeferred<Boolean>().also { created ->
-                pendingPermission = created
-                try {
-                    permissionLauncher.launch(PERMISSIONS)
-                } catch (exception: IllegalStateException) {
-                    pendingPermission = null
-                    created.complete(false)
-                }
+    private suspend fun requestLocationPermission(): Boolean? =
+        container.locationPermission.requestPermission {
+            try {
+                permissionLauncher.launch(PERMISSIONS)
+            } catch (exception: IllegalStateException) {
+                // A launcher that cannot start must not leave the request pending.
+                container.locationPermission.completePermission(false)
             }
-        val answer = withTimeoutOrNull(PERMISSION_TIMEOUT_MILLIS) { deferred.await() }
-        if (pendingPermission === deferred) {
-            pendingPermission = null
         }
-        return answer == true
-    }
 
     private companion object {
         val PERMISSIONS: Array<String> =
@@ -72,6 +57,5 @@ class MainActivity : ComponentActivity() {
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION,
             )
-        const val PERMISSION_TIMEOUT_MILLIS: Long = 5 * 60_000L
     }
 }

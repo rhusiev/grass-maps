@@ -1,10 +1,13 @@
 package nl.r1a.grassmap.app
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.core.services.InMemoryLocationPermissionStore
 import nl.r1a.grassmap.plugin.api.error.AppError
@@ -60,6 +63,7 @@ class LocationPermissionCoordinatorTest {
         runTest {
             val service = PermissionService()
             var requests = 0
+            val gate = CompletableDeferred<Boolean>()
             val coordinator =
                 LocationPermissionCoordinator(
                     service,
@@ -68,16 +72,56 @@ class LocationPermissionCoordinatorTest {
                 )
             coordinator.bind(this) {
                 requests += 1
-                false
+                gate.await()
             }
 
             val first = launch { coordinator.ensureAllowed() }
             val second = launch { coordinator.ensureAllowed() }
+            runCurrent()
+
+            assertEquals(1, requests)
+            gate.complete(false)
             advanceUntilIdle()
             first.join()
             second.join()
 
             assertEquals(1, requests)
+        }
+
+    @Test
+    fun anUnansweredRequestDoesNotConsumeTheOneQuestion() =
+        runTest {
+            val store = InMemoryLocationPermissionStore()
+            val coordinator =
+                LocationPermissionCoordinator(
+                    PermissionService(),
+                    store,
+                    UnconfinedTestDispatcher(testScheduler),
+                )
+            coordinator.bind(this) { null }
+
+            assertEquals(Outcome.Success(false), coordinator.ensureAllowed())
+            assertFalse("a timeout is not a denial", store.hasAsked())
+        }
+
+    @Test
+    fun anAnswerSurvivesActivityRecreation() =
+        runTest {
+            val service = PermissionService()
+            val store = InMemoryLocationPermissionStore()
+            val coordinator =
+                LocationPermissionCoordinator(service, store, UnconfinedTestDispatcher(testScheduler))
+            coordinator.bind(this) { coordinator.requestPermission { } }
+            val answer = async { coordinator.ensureAllowed() }
+            runCurrent()
+
+            coordinator.unbind(this)
+            coordinator.bind(Any()) { coordinator.requestPermission { } }
+            service.granted = true
+            coordinator.completePermission(true)
+
+            assertEquals(Outcome.Success(true), answer.await())
+            assertEquals(true, store.hasAsked())
         }
 
     @Test

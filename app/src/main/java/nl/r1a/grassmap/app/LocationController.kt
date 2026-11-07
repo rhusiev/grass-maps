@@ -35,10 +35,10 @@ class LocationController(
 
     private var job: Job? = null
 
-    /** Starts collection once; later calls do nothing. */
+    /** Starts collection once; later calls do nothing while it is active. */
     @Synchronized
     fun start() {
-        if (job != null) {
+        if (job?.isActive == true) {
             return
         }
         job =
@@ -55,14 +55,17 @@ class LocationController(
     /**
      * Re-collects the source after the user granted the permission, so the
      * cold flow can register provider updates. A source that needs no
-     * permission, such as the replay, keeps running.
+     * permission, such as the replay, keeps running, and an already active
+     * collection is left alone: every follow tap must not re-emit the last fix.
      */
     @Synchronized
     fun onPermissionGranted() {
         if (!source.requiresPermission()) {
             return
         }
-        job?.cancel()
+        if (job?.isActive == true) {
+            return
+        }
         job = null
         start()
     }

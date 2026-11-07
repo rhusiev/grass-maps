@@ -1,7 +1,9 @@
 package nl.r1a.grassmap.app
 
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.core.services.LocationSource
@@ -169,6 +171,37 @@ class LocationControllerTest {
 
             assertEquals(listOf(FIX_ONE), host.locations)
         }
+
+    @Test
+    fun aRepeatedPermissionGrantDoesNotRestartTheCollector() =
+        runTest {
+            val host = FakeMapHost(camera())
+            val session = MapSessionHolder().apply { bind(host) }
+            val source = ReplayingLocationSource()
+            val controller = LocationController(source, session, backgroundScope)
+            controller.start()
+            runCurrent()
+
+            controller.onPermissionGranted()
+            runCurrent()
+
+            assertEquals(1, source.collections)
+            assertEquals(listOf(FIX_ONE), host.locations)
+        }
+
+    private class ReplayingLocationSource : LocationSource {
+        var collections: Int = 0
+            private set
+
+        override val fixes: Flow<LocationFix?> =
+            flow {
+                collections += 1
+                emit(FIX_ONE)
+                awaitCancellation()
+            }
+
+        override fun hasPermission(): Boolean = true
+    }
 
     private class FakeLocationSource : LocationSource {
         private val values = MutableSharedFlow<LocationFix?>()

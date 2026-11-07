@@ -1,4 +1,6 @@
+import buildlogic.CheckPrivacyManifestTask
 import buildlogic.GeneratePluginRegistryTask
+import com.android.build.api.artifact.SingleArtifact
 
 plugins {
     alias(libs.plugins.android.application)
@@ -69,8 +71,24 @@ android {
     }
 }
 
+val checkPrivacyManifest =
+    tasks.register("checkPrivacyManifest") {
+        group = "verification"
+        description = "Checks every merged app manifest for the privacy guards."
+    }
+
 androidComponents {
     onVariants { variant ->
+        val manifestCheck =
+            tasks.register<CheckPrivacyManifestTask>(
+                "checkPrivacyManifest${variant.name.replaceFirstChar { it.uppercase() }}",
+            ) {
+                group = "verification"
+                description = "Checks the merged ${variant.name} app manifest for the privacy guards."
+                this.mainActivity.set("nl.r1a.grassmap.app.MainActivity")
+                mergedManifest.set(variant.artifacts.get(SingleArtifact.MERGED_MANIFEST))
+            }
+        checkPrivacyManifest.configure { dependsOn(manifestCheck) }
         variant.sources.kotlin?.addGeneratedSourceDirectory(
             generatePluginRegistry,
             GeneratePluginRegistryTask::outputDirectory,

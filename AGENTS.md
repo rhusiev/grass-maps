@@ -75,6 +75,8 @@ document, section 3, plus the build and module rules of this repository.
   boundary check and the reproducibility check
 - Check the plugin boundary rule: `./gradlew checkPluginBoundaries`
 - Check plugin manifests: `./gradlew checkPluginManifests`
+- Check the privacy guards (dependency denylist and merged manifests):
+  `./gradlew checkPrivacyGuards`
 - The build uses Gradle 9.3.1, AGP 9.1.0 with built-in Kotlin, compileSdk 37,
   targetSdk 36 and minSdk 29. Do not apply the standalone Kotlin Android
   plugin; AGP 9 compiles Kotlin itself. The root buildscript upgrades the

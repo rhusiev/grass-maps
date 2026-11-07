@@ -1,0 +1,80 @@
+# Dependency denylist for the privacy guard (T-0101).
+#
+# Source: the tracker and ad SDK signatures follow Exodus Privacy's tracker
+# list (the `trackers` endpoint of https://reports.exodus-privacy.eu.org/api/,
+# retrieved 2026-11-07) plus the ad SDKs named in Google's Families ad-SDK
+# guidance. Play Services is denied as a whole group because the F-Droid build
+# must work without it (AGENTS.md, Privacy).
+#
+# The list is checked in on purpose: the guard is offline and deterministic, so
+# a dependency graph either passes here or fails here, with no live lookup that
+# could drift. Add a rule when a tracker appears upstream; remove one only with
+# a decision that names why the rule was wrong.
+#
+# Last reviewed: 2026-11-07.
+#
+# Format, one rule per line:
+#   group  <groupId>              reject every artifact in the group
+#   module <groupId>:<artifactId> reject exactly that artifact
+# Comments start at '#'. Blank lines are ignored.
+
+# --- Play Services and Firebase -------------------------------------------------
+group com.google.android.gms
+group com.google.firebase
+
+# --- Ad SDKs --------------------------------------------------------------------
+group com.adcolony
+group com.amazon.aps
+group com.applovin
+group com.applovin.mediation
+group com.chartboost
+group com.facebook.android
+group com.fyber
+group com.inmobi
+group com.ironsource
+group com.ironsource.sdk
+group com.mbridge.msdk
+group com.mbridge.msdk.oversea
+group com.mopub
+group com.my.target
+group com.ogury
+group com.pangle.global
+group com.smaato
+group com.startapp
+group com.tapjoy
+group com.unity3d.ads
+group com.vungle
+group com.yandex.android
+group io.appodeal
+group io.bidmachine
+
+# --- Trackers and analytics (Exodus) --------------------------------------------
+module com.adjust.sdk:adjust-android
+module com.amplitude:amplitude-android
+module com.amplitude:android-sdk
+module com.appsflyer:af-android-sdk
+module com.baidu.mobstat:mtj
+module com.bugsnag:bugsnag-android
+module com.crashlytics.sdk.android:crashlytics
+module com.datadog:dd-sdk-android
+module com.flurry.android:ads
+module com.flurry.android:analytics
+module com.google.android.gms.analytics:analytics-impl
+module com.kochava.android:tracker
+module com.leanplum:leanplum-core
+module com.localytics.android:library
+module com.logrocket:logrocket
+module com.matomo:matomo-sdk-android
+module com.microsoft.appcenter:appcenter-analytics
+module com.microsoft.appcenter:appcenter-crashes
+module com.mixpanel.android:mixpanel-android
+module com.mparticle:android-core
+module com.newrelic.agent.android:android-agent
+module com.onesignal:OneSignal
+module com.segment.analytics.android:analytics
+module com.smartlook:core
+module com.tencent.bugly:crashreport
+module com.umeng.analytics:analytics
+module io.branch.sdk.android:library
+module io.sentry:sentry-android
+module org.matomo.sdk:tracker

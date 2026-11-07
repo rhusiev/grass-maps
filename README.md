@@ -65,9 +65,10 @@ never runs outside the slot:
 
 It runs Spotless with ktlint from the root, Android lint,
 `:app:assembleDebug`, the JVM unit tests, `checkTranslations`,
-`checkPluginBoundaries`, `checkPluginManifests`, and two unsigned release
-builds at different paths compared byte for byte. The test count is reported;
-an empty suite fails the gate, so deleting the last test cannot pass CI.
+`checkPluginBoundaries`, `checkPluginManifests`, `checkPrivacyGuards`, and two
+unsigned release builds at different paths compared byte for byte. The test
+count is reported; an empty suite fails the gate, so deleting the last test
+cannot pass CI.
 
 `checkTranslations` checks every module with `src/main/res/values*/strings.xml`:
 each key must exist in English (`values`) and Ukrainian (`values-uk`), with a
@@ -84,6 +85,18 @@ resources; `app` wires `AndroidStrings` in the composition root.
 ids, namespaced command and stream ids, command implementations, setting
 defaults and scopes, dispatch policies, and stream serializers. Plugin modules
 wire both checks into `check`.
+
+`checkPrivacyGuards` enforces the privacy rules in `AGENTS.md`. It resolves
+every module's debug and release runtime classpath and fails on a Play Services,
+ads or tracker artifact, including one that arrives transitively; the signatures
+come from the checked-in `ci/privacy-denylist.txt`, so the guard is offline and
+deterministic. It also inspects both merged app manifests and fails on
+`ACCESS_BACKGROUND_LOCATION`, an account authenticator or account permission.
+The same check asserts that `MainActivity` keeps
+`android:screenOrientation="portrait"` and that the application keeps
+`android:allowBackup="true"`. Every failure names the exact coordinate or
+manifest entry. Build-logic unit tests cover both rules and run with the rest of
+`buildSrc` in the gate.
 
 ```sh
 ./scripts/ci/android-smoke.sh app/build/outputs/apk/debug/app-debug.apk

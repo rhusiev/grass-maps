@@ -1,3 +1,4 @@
+import buildlogic.CheckPrivacyDependenciesTask
 import buildlogic.CheckTranslationsTask
 import buildlogic.LintPluginManifestsTask
 
@@ -94,6 +95,40 @@ subprojects {
                 dependsOn(":checkPluginManifests")
             }
         }
+    }
+}
+
+// Privacy guards (T-0101, architecture section 26): no Play Services, ads or
+// tracker dependency may reach a shipped runtime classpath, and the merged app
+// manifest may not add background location or an account authenticator. The
+// dependency rule resolves every module's debug and release runtime classpath,
+// so a transitive artifact is caught as well as a declared one. The rules live
+// in buildSrc and ci/privacy-denylist.txt; unit tests cover both.
+val checkPrivacyDependencies =
+    tasks.register<CheckPrivacyDependenciesTask>("checkPrivacyDependencies") {
+        group = "verification"
+        description =
+            "Fails when a debug or release runtime classpath contains a Play Services, ads or tracker dependency."
+        denylist.set(layout.projectDirectory.file("ci/privacy-denylist.txt"))
+    }
+
+tasks.register("checkPrivacyGuards") {
+    group = "verification"
+    description = "Runs the dependency denylist and merged-manifest privacy guards."
+    dependsOn(checkPrivacyDependencies)
+    dependsOn(":app:checkPrivacyManifest")
+}
+
+// Variant configurations exist only after a module is evaluated, so collect
+// them once every project has been evaluated. The task resolves them on
+// execution, not during configuration.
+gradle.projectsEvaluated {
+    subprojects.forEach { module ->
+        module.configurations
+            .matching { it.name == "debugRuntimeClasspath" || it.name == "releaseRuntimeClasspath" }
+            .forEach { classpath ->
+                checkPrivacyDependencies.configure { runtimeClasspaths.add(classpath) }
+            }
     }
 }
 

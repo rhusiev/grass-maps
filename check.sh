@@ -80,6 +80,9 @@ step "Plugin boundaries"
 step "Plugin manifests"
 ./gradlew --console=plain checkPluginManifests || fail "plugin manifests"
 
+step "Privacy guards"
+./gradlew --console=plain checkPrivacyGuards || fail "privacy guards"
+
 step "Build logic tests"
 ./gradlew --console=plain -p buildSrc test || fail "build logic tests"
 

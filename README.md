@@ -250,8 +250,11 @@ comes from the control channel.
 
 The fixture goldens in `test-data/map-goldens/fixture/` run in CI on the API 29
 emulator with the same image and swiftshader GPU as the smoke job. The
-whole-oblast goldens are local acceptance on the `grassmaps-bench` emulator and
-never enter CI:
+committed set is that renderer's own output: a 1080x1920 API 29 swiftshader
+capture, which matches an API 29 host-GPU capture of the same cameras within
+0.03-1.05 % of blocks. Recapture with `--update` on the same emulator, never
+from a different device size. The whole-oblast goldens are local acceptance on
+the `grassmaps-bench` emulator and never enter CI:
 
 ```sh
 ./scripts/ci/android-map-goldens.sh --profile fixture --update

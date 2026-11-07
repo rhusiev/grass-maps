@@ -23,6 +23,7 @@
 #   GOLDEN_GPU_MODE        emulator -gpu value (default host; pass
 #                          swiftshader_indirect to reproduce the CI renderer)
 #   GOLDEN_NO_LOCK=1       do not take the gm-emulator slot
+#   GOLDEN_SKIP_REBOOT=1   do not reboot after setting the dialog suppression
 #   GOLDEN_TIMEOUT         emulator run limit (default 25m)
 #
 # Every wait is bounded: a device that never boots or attaches fails the script.
@@ -165,6 +166,24 @@ fi
 
 wait_for_device 180 -s "$SERIAL"
 wait_for_package_manager 120 -s "$SERIAL"
+
+# `hide_error_dialogs` suppresses only new ANR dialogs. Under swiftshader the
+# CI SystemUI trips its watchdog during boot, so set the flags and reboot once:
+# the dialog that is already up then never appears on the fresh boot either.
+if [[ "${GOLDEN_SKIP_REBOOT:-0}" != "1" ]]; then
+    echo "== suppressing system dialogs and rebooting once ==" >&2
+    adb -s "$SERIAL" shell settings put global hide_error_dialogs 1 >/dev/null 2>&1 || true
+    adb -s "$SERIAL" shell settings put global anr_show_background 0 >/dev/null 2>&1 || true
+    adb -s "$SERIAL" reboot || fail "adb reboot failed"
+    sleep 5
+    wait_for_device 240 -s "$SERIAL" || fail "the device did not return after the dialog-suppression reboot"
+    wait_for_package_manager 180 -s "$SERIAL" || fail "the package manager did not return after the dialog-suppression reboot"
+    adb -s "$SERIAL" shell input keyevent 82 >/dev/null 2>&1 || true
+    adb -s "$SERIAL" shell settings put global window_animation_scale 0 >/dev/null 2>&1 || true
+    adb -s "$SERIAL" shell settings put global transition_animation_scale 0 >/dev/null 2>&1 || true
+    adb -s "$SERIAL" shell settings put global animator_duration_scale 0 >/dev/null 2>&1 || true
+    echo "== rebooted, dialogs suppressed ==" >&2
+fi
 
 COMMAND=(python3 "$SCRIPT_DIR/map_goldens.py" capture --serial "$SERIAL" --profile "$PROFILE" --apk "$APK" --output "$OUTPUT")
 if [[ -n "$REGION_PACKAGE" ]]; then

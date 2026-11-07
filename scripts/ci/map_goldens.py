@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import struct
 import subprocess
 import sys
@@ -66,6 +67,12 @@ SLOW_FRAME_ALLOWANCE_S = 2.0
 LAUNCH_SETTLE_S = 5.0
 FOCUS_RETRY_TIMEOUT_S = 10.0
 FOCUS_RETRY_PAUSE_S = 0.5
+# An ANR dialog that was already up before the suppression settings landed is
+# dismissed by its own buttons, found through a uiautomator dump rather than
+# fixed coordinates: `hide_error_dialogs` only suppresses new dialogs.
+ANR_DISMISS_ATTEMPTS = 3
+ANR_DISMISS_SETTLE_S = 1.0
+UI_DUMP_PATH = "/data/local/tmp/grass-map-golden-window.xml"
 CHANNEL_TIMEOUT_S = 60.0
 CAMERA_READY_TIMEOUT_S = 45.0
 # `core.map.set_camera` answers only after MapLibre reports idle (up to 15 s on
@@ -347,7 +354,11 @@ def prepare_device(adb: Adb) -> list[str]:
     ]
     for command in commands:
         adb.shell(*command, timeout_s=20, check=False)
-    return ["adb shell " + " ".join(command) for command in commands]
+    entries = ["adb shell " + " ".join(command) for command in commands]
+    if is_anr_dialog(focused_window(adb)):
+        dismissed = dismiss_anr_dialog(adb)
+        entries.append(f"dismissed existing ANR dialog via Wait: {dismissed}")
+    return entries
 
 
 def dismiss_system_dialogs(adb: Adb) -> None:
@@ -371,19 +382,59 @@ def focused_window(adb: Adb) -> str | None:
     return None
 
 
+def is_anr_dialog(focus: str | None) -> bool:
+    return focus is not None and "Application Not Responding" in focus
+
+
+def tap_anr_wait(adb: Adb) -> bool:
+    """Tap the ANR dialog's Wait button, found by text in a uiautomator dump."""
+    adb.shell("uiautomator", "dump", UI_DUMP_PATH, timeout_s=60, check=False)
+    xml = adb.shell("cat", UI_DUMP_PATH, timeout_s=30, check=False)
+    node = re.search(r'<node [^>]*text="Wait"[^>]*>', xml)
+    if node is None:
+        return False
+    bounds = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', node.group(0))
+    if bounds is None:
+        return False
+    x1, y1, x2, y2 = (int(value) for value in bounds.groups())
+    adb.shell(
+        "input",
+        "tap",
+        str((x1 + x2) // 2),
+        str((y1 + y2) // 2),
+        timeout_s=20,
+        check=False,
+    )
+    return True
+
+
+def dismiss_anr_dialog(adb: Adb) -> bool:
+    """Dismiss an existing ANR dialog; True when none remains."""
+    for _ in range(ANR_DISMISS_ATTEMPTS):
+        if not is_anr_dialog(focused_window(adb)):
+            return True
+        if not tap_anr_wait(adb):
+            return False
+        time.sleep(ANR_DISMISS_SETTLE_S)
+    return not is_anr_dialog(focused_window(adb))
+
+
 def require_app_focused(adb: Adb, stage: str) -> str:
     """Fail with a named window when a system dialog owns the focus.
 
     A dialog on top of the map dims every pixel beneath it, so a comparison
-    would fail on a real rendering mismatch that is not there. Retry for a few
-    seconds (a closing dialog hands focus back), then abort and name the window
-    instead of silently comparing the dialog.
+    would fail on a real rendering mismatch that is not there. An ANR dialog
+    is dismissed by its own Wait button, then focus is retried; after the
+    bounded budget the focused window is named instead of silently comparing
+    the dialog.
     """
     deadline = time.monotonic() + FOCUS_RETRY_TIMEOUT_S
     while True:
         focus = focused_window(adb)
         if focus is not None and PACKAGE in focus:
             return focus
+        if is_anr_dialog(focus):
+            dismiss_anr_dialog(adb)
         if time.monotonic() >= deadline:
             raise GoldenError(f"{stage}: the focused window is not {PACKAGE}: {focus}")
         time.sleep(FOCUS_RETRY_PAUSE_S)

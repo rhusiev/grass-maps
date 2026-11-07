@@ -106,12 +106,13 @@ class CapturePositionTest(unittest.TestCase):
 class PrepareDeviceTest(unittest.TestCase):
     def test_hides_error_dialogs_and_closes_existing_ones(self) -> None:
         adb = mock.Mock()
+        adb.shell.return_value = ""
 
         commands = map_goldens.prepare_device(adb)
 
         self.assertTrue(any("hide_error_dialogs" in command for command in commands))
         self.assertTrue(any("CLOSE_SYSTEM_DIALOGS" in command for command in commands))
-        self.assertEqual(adb.shell.call_count, 3)
+        self.assertEqual(adb.shell.call_count, 4)
 
 
 class AppFocusTest(unittest.TestCase):
@@ -140,6 +141,48 @@ class AppFocusTest(unittest.TestCase):
 
         self.assertIn("nl.r1a.grassmap", str(raised.exception))
         self.assertIn("com.android.systemui", str(raised.exception))
+
+
+class FakeAdb:
+    """An adb whose focus moves through a scripted list and which records taps."""
+
+    def __init__(self, focus: list[str], xml: str = "") -> None:
+        self.focus = focus
+        self.xml = xml
+        self.taps: list[tuple[str, str]] = []
+
+    def shell(self, *args: str, timeout_s: float = 0, check: bool = True) -> str:
+        if args[:2] == ("dumpsys", "window"):
+            return self.focus.pop(0) if len(self.focus) > 1 else self.focus[0]
+        if args[0] == "cat":
+            return self.xml
+        if args[:2] == ("input", "tap"):
+            self.taps.append((args[2], args[3]))
+            return ""
+        return ""
+
+
+class AnrDialogTest(unittest.TestCase):
+    ANR_FOCUS = "mCurrentFocus=Window{1 u0 Application Not Responding: com.android.systemui}"
+    APP_FOCUS = (
+        "mCurrentFocus=Window{2 u0 nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity}"
+    )
+    WAIT_XML = '<hierarchy><node text="Wait" bounds="[10,20][110,220]" /></hierarchy>'
+
+    def test_tap_anr_wait_uses_the_wait_button_bounds(self) -> None:
+        adb = FakeAdb([self.ANR_FOCUS], xml=self.WAIT_XML)
+
+        self.assertTrue(map_goldens.tap_anr_wait(adb))
+        self.assertEqual(adb.taps, [("60", "120")])
+
+    def test_dismiss_anr_dialog_rechecks_focus_after_the_tap(self) -> None:
+        adb = FakeAdb([self.ANR_FOCUS, self.APP_FOCUS], xml=self.WAIT_XML)
+
+        with mock.patch.object(map_goldens.time, "sleep"):
+            dismissed = map_goldens.dismiss_anr_dialog(adb)
+
+        self.assertTrue(dismissed)
+        self.assertEqual(adb.taps, [("60", "120")])
 
 
 class RecordFailureTest(unittest.TestCase):

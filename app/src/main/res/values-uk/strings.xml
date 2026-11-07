@@ -11,6 +11,8 @@
     <string name="control_zoom_out_description">Віддалити</string>
     <string name="control_north_up_label">N</string>
     <string name="control_north_up_description">Повернути на північ</string>
+    <string name="control_follow_label">П</string>
+    <string name="control_follow_description">Стежити за позицією</string>
     <string name="control_edit_label">Змінити</string>
     <string name="control_edit_done_label">Готово</string>
     <string name="control_edit_description">Змінити кнопки</string>

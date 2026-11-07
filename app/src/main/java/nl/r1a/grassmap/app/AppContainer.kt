@@ -1,5 +1,8 @@
 package nl.r1a.grassmap.app
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import nl.r1a.grassmap.app.generated.GeneratedPlugins
 import nl.r1a.grassmap.app.generated.GeneratedStreams
 import nl.r1a.grassmap.core.CommandBus
@@ -7,6 +10,8 @@ import nl.r1a.grassmap.core.CommandDispatchers
 import nl.r1a.grassmap.core.PluginHost
 import nl.r1a.grassmap.core.ProviderRegistry
 import nl.r1a.grassmap.core.StreamRegistry
+import nl.r1a.grassmap.core.services.LocationSource
+import nl.r1a.grassmap.core.services.NoLocationSource
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
@@ -20,11 +25,19 @@ class AppContainer(
     val strings: Strings,
     private val dispatchers: CommandDispatchers = CommandDispatchers(),
     private val switchEnabled: (SwitchId) -> Boolean = { false },
+    private val locationSource: LocationSource = NoLocationSource,
 ) {
+    private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     /** The process-owned map binding that host commands write through. */
     val mapSession: MapSessionHolder = MapSessionHolder()
 
-    private val hostCommands: List<Command<*, *>> = mapCommands(mapSession)
+    /** The process-owned location collector; it survives Activity recreation. */
+    val locationController: LocationController by lazy {
+        LocationController(locationSource, mapSession, processScope).also { it.start() }
+    }
+
+    private val hostCommands: List<Command<*, *>> by lazy { mapCommands(mapSession, locationController) }
 
     val pluginHost: PluginHost by lazy {
         PluginHost(

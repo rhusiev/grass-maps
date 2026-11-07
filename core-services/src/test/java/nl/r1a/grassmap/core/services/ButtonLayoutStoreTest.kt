@@ -31,9 +31,43 @@ class ButtonLayoutStoreTest {
     @Test
     fun savedOrderRoundTrips() {
         val store = ButtonLayoutStore(file)
-        val layout = listOf(MapControlCommands.NORTH_UP, MapControlCommands.ZOOM_IN, MapControlCommands.ZOOM_OUT)
+        val layout =
+            listOf(
+                MapControlCommands.NORTH_UP,
+                MapControlCommands.ZOOM_IN,
+                MapControlCommands.ZOOM_OUT,
+                MapControlCommands.FOLLOW,
+            )
 
         assertEquals(Outcome.Success(Unit), store.save(ProfileId("default"), layout))
+        assertEquals(layout, store.load(ProfileId("default")))
+    }
+
+    @Test
+    fun aThreeButtonStoredLayoutFallsBackToTheFourButtonDefault() {
+        directory.mkdirs()
+        file.writeText(
+            """{"profiles":{"default":["core.map.zoom_in","core.map.zoom_out","core.map.north_up"]}}""",
+        )
+        val store = ButtonLayoutStore(file)
+
+        assertEquals(MapControlCommands.DEFAULT_ORDER, store.load(ProfileId("default")))
+        assertEquals(4, MapControlCommands.DEFAULT_ORDER.size)
+    }
+
+    @Test
+    fun aFourButtonPermutationRoundTrips() {
+        val store = ButtonLayoutStore(file)
+        val layout =
+            listOf(
+                MapControlCommands.FOLLOW,
+                MapControlCommands.NORTH_UP,
+                MapControlCommands.ZOOM_OUT,
+                MapControlCommands.ZOOM_IN,
+            )
+
+        assertEquals(Outcome.Success(Unit), store.save(ProfileId("default"), layout))
+
         assertEquals(layout, store.load(ProfileId("default")))
     }
 
@@ -50,7 +84,13 @@ class ButtonLayoutStoreTest {
     fun profilesKeepSeparateOrders() {
         val store = ButtonLayoutStore(file)
         val walking = MapControlCommands.DEFAULT_ORDER
-        val cycling = listOf(MapControlCommands.ZOOM_OUT, MapControlCommands.NORTH_UP, MapControlCommands.ZOOM_IN)
+        val cycling =
+            listOf(
+                MapControlCommands.ZOOM_OUT,
+                MapControlCommands.NORTH_UP,
+                MapControlCommands.ZOOM_IN,
+                MapControlCommands.FOLLOW,
+            )
 
         assertEquals(Outcome.Success(Unit), store.save(ProfileId("walking"), walking))
         assertEquals(Outcome.Success(Unit), store.save(ProfileId("cycling"), cycling))
@@ -63,7 +103,13 @@ class ButtonLayoutStoreTest {
     fun savingOneProfileKeepsTheOthers() {
         val store = ButtonLayoutStore(file)
         val walking = MapControlCommands.DEFAULT_ORDER
-        val cycling = listOf(MapControlCommands.NORTH_UP, MapControlCommands.ZOOM_IN, MapControlCommands.ZOOM_OUT)
+        val cycling =
+            listOf(
+                MapControlCommands.NORTH_UP,
+                MapControlCommands.ZOOM_IN,
+                MapControlCommands.ZOOM_OUT,
+                MapControlCommands.FOLLOW,
+            )
         store.save(ProfileId("walking"), walking)
 
         store.save(ProfileId("cycling"), cycling)
@@ -138,7 +184,12 @@ class ButtonLayoutStoreTest {
                 emptyList<CommandId>(),
                 listOf(MapControlCommands.NORTH_UP),
                 listOf(MapControlCommands.ZOOM_IN, MapControlCommands.ZOOM_IN, MapControlCommands.NORTH_UP),
-                listOf(MapControlCommands.ZOOM_IN, MapControlCommands.ZOOM_OUT, CommandId("core.map.other")),
+                listOf(
+                    MapControlCommands.ZOOM_IN,
+                    MapControlCommands.ZOOM_OUT,
+                    MapControlCommands.NORTH_UP,
+                    CommandId("core.map.other"),
+                ),
             )
 
         for (layout in invalid) {
@@ -150,7 +201,13 @@ class ButtonLayoutStoreTest {
     @Test
     fun aFailedWriteLeavesThePreviousOrderReadable() {
         val store = ButtonLayoutStore(file)
-        val saved = listOf(MapControlCommands.NORTH_UP, MapControlCommands.ZOOM_IN, MapControlCommands.ZOOM_OUT)
+        val saved =
+            listOf(
+                MapControlCommands.NORTH_UP,
+                MapControlCommands.ZOOM_IN,
+                MapControlCommands.ZOOM_OUT,
+                MapControlCommands.FOLLOW,
+            )
         assertEquals(Outcome.Success(Unit), store.save(ProfileId("default"), saved))
         val temporary = File(directory, "${file.name}.tmp")
         assertTrue(temporary.mkdirs())
@@ -179,6 +236,6 @@ class ButtonLayoutStoreTest {
         store.save(ProfileId("default"), MapControlCommands.DEFAULT_ORDER)
 
         assertFalse(File(directory, "button-layout.json.tmp").exists())
-        assertEquals(3, store.load(ProfileId("default")).size)
+        assertEquals(4, store.load(ProfileId("default")).size)
     }
 }

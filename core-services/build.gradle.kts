@@ -14,6 +14,8 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    sourceSets.getByName("test").resources.srcDir(rootProject.file("test-data"))
 }
 
 dependencies {

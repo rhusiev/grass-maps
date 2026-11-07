@@ -130,6 +130,11 @@ T-0020 spike checks that every layer, filter and expression in it compiles to a
 maplibre-compose layer node, and `plugins/style-standard` generates its provider
 data from the same file.
 
+`test-data/location/mock-walk.gpx` is a 60-point synthetic walk around Lviv at
+one fix per second. The debug build replays it through `MockGpxLocationSource`;
+`core-services` tests parse and replay the same file. It is authored data, not
+an OSM extract.
+
 ## Module map
 
 Each namespace is `nl.r1a.grassmap.<module>`, with dots in place of hyphens in
@@ -177,13 +182,31 @@ directory and `lviv-contours-20m.pmtiles` for the contour overlay. With no
 Lviv archive it copies the small T-0015 fixture (`fixture-mini-map.pmtiles`)
 out of its assets and starts at Ivano-Frankove.
 
+### Location puck
+
+`MapHost.setLocation(LocationFix?)` draws or clears the own-position puck. The
+puck is not a Compose overlay: `map` builds a GeoJSON point and draws it with a
+`CircleLayer` in the `Markers` slot. The exact maplibre-compose 0.20 API is
+`rememberGeoJsonSource(GeoJsonData.JsonString(featureCollectionJson))` plus
+`CircleLayer(id, source, radius, color, strokeColor, strokeWidth)`; both live in
+`map/style/ComposedMapLayers.kt` and no library type leaves `map`.
+
+The source is re-keyed when the fix changes, so each update swaps one GeoJSON
+source instead of rebuilding the composition tree. That is one swap per fix at
+1 Hz, not per frame. A null fix removes the source and layer. The puck has no
+sprite asset and no deadband yet; T-0103 owns the deadband and smooth animation.
+
+A map gesture does not stop following in T-0022. The camera-mode button and the
+free/follow/heading cycle are T-0106; until then the follow button only toggles
+`Free` and `Follow`.
+
 ## Map controls
 
-Zoom in, zoom out and north-up are ordinary commands: `core.map.zoom_in`,
-`core.map.zoom_out` and `core.map.north_up`. They run on the `Main` dispatcher,
-are not undoable and are not allowlisted for the control channel. The control
-catalog therefore lists neither them nor a control-bar entry until a later
-task adds the core host commands to it.
+Zoom in, zoom out, north-up and follow-position are ordinary commands:
+`core.map.zoom_in`, `core.map.zoom_out`, `core.map.north_up` and
+`core.map.follow`. They run on the `Main` dispatcher, are not undoable and are
+not allowlisted for the control channel. The control catalog therefore lists
+none of them.
 
 The commands are process-scoped, but the map host is not. maplibre-compose 0.20
 owns `MapState` inside the composition, so `app` keeps a `MapSessionHolder` in
@@ -193,7 +216,14 @@ goes away, returns `AppError.NotReady` instead of writing to a dead engine.
 Camera restoration across Activity recreation is deferred with the rest of the
 map session (architecture section 8.1); the holder is not a camera store.
 
-The app builds the three commands once, gives them to `PluginHost` as
+`core.map.follow` toggles a process-scoped `LocationController`. The controller
+collects a `core-services` `LocationSource` and, on every fix, calls
+`MapHost.setLocation`. While following it also calls `moveCamera(center)`; while
+free it does not move the camera. `setTrackingMode(Follow/Free)` mirrors the
+state. The controller holds the map session, not a surface, so it keeps running
+across Activity recreation and pushes the latest fix to a newly bound host.
+
+The app builds the four commands once, gives them to `PluginHost` as
 `hostCommands`, and appends matching `GeneratedCommand` entries owned by
 `PluginId("core")` to the bus catalog. `PluginHost.command` returns a host
 command directly, so dispatching one never creates or activates a plugin.
@@ -202,11 +232,18 @@ The button order is per profile and stored by `ButtonLayoutStore` in
 `filesDir/controls/button-layout.json`. The file is a JSON object keyed by
 profile id; a write goes to a temporary sibling, is flushed and moved over the
 target atomically, so a failed write leaves the old order. A stored order must
-be a permutation of the three known command IDs, and a missing, corrupt,
-partial or repeated order reads as `zoom_in, zoom_out, north_up`. The active
-profile is the fixed `default` profile until T-0601. The bar itself lives in
-`ui-shell` and only receives control IDs, labels and callbacks, so it never
-touches the command bus or the map host.
+be a permutation of the four known command IDs, and a missing, corrupt,
+partial, repeated or old three-button order reads as
+`zoom_in, zoom_out, north_up, follow`. The active profile is the fixed
+`default` profile until T-0601. The bar itself lives in `ui-shell` and only
+receives control IDs, labels and callbacks, so it never touches the command bus
+or the map host.
+
+The release build installs `NoLocationSource`, so it draws no puck. A debug
+build installs `MockGpxLocationSource` over the bundled `mock-walk.gpx` and
+replays one fix per second, looping at the end. The mock lives in
+`DebugApplication` and `LoggingLocationSource` in the debug source set; the
+release application never references them.
 
 ## Plugin boundary rule
 

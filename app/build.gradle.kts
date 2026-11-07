@@ -40,6 +40,10 @@ android {
         compose = true
     }
 
+    // The debug build replays the committed GPX fixture from assets; release
+    // builds bundle neither the fixture nor a location source.
+    sourceSets.getByName("debug").assets.srcDir(rootProject.file("test-data/location"))
+
     // MapLibre reads glyph PBFs from assets by path, so they stay uncompressed.
     androidResources {
         noCompress += "pbf"

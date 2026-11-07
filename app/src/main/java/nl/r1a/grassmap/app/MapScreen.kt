@@ -114,6 +114,9 @@ private fun MapContent(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    LaunchedEffect(container.locationController, surface.host) {
+        container.locationController.syncToHost()
+    }
     val store by
         produceState<ButtonLayoutStore?>(null) {
             value =
@@ -241,6 +244,14 @@ private fun controlButton(
                 id = id,
                 label = context.getString(R.string.control_north_up_label),
                 contentDescription = context.getString(R.string.control_north_up_description),
+            )
+        }
+
+        MapControlCommands.FOLLOW -> {
+            ControlButton(
+                id = id,
+                label = context.getString(R.string.control_follow_label),
+                contentDescription = context.getString(R.string.control_follow_description),
             )
         }
 

@@ -31,11 +31,15 @@ internal const val MAX_ZOOM: Double = 20.0
  * The process-level map commands. They hold a [MapSessionHolder], not a surface,
  * so the same instances survive a recomposition or an Activity recreation.
  */
-internal fun mapCommands(session: MapSessionHolder): List<Command<*, *>> =
+internal fun mapCommands(
+    session: MapSessionHolder,
+    location: LocationController,
+): List<Command<*, *>> =
     listOf(
         ZoomCommand(session, ZOOM_STEP),
         ZoomCommand(session, -ZOOM_STEP),
         NorthUpCommand(session),
+        FollowCommand(location),
     )
 
 /** The bus-side catalog entries for [commands], owned by the core host plugin. */
@@ -127,5 +131,22 @@ private suspend fun move(
         is Outcome.Success -> Outcome.Success(CommandResult(value))
         is Outcome.Failure -> outcome
     }
+
+/** Toggles camera follow and returns the new following state. */
+internal class FollowCommand(
+    private val location: LocationController,
+) : Command<Unit, Boolean>(
+        id = MapControlCommands.FOLLOW,
+        paramsSerializer = UnitParamsSerializer,
+        resultSerializer = Boolean.serializer(),
+        doc = "Toggles following the current position and returns the new state.",
+        policy = HOST_POLICY,
+    ) {
+    override suspend fun execute(params: Unit): Outcome<CommandResult<Boolean>> =
+        when (val outcome = location.toggleFollowing()) {
+            is Outcome.Success -> Outcome.Success(CommandResult(outcome.value))
+            is Outcome.Failure -> outcome
+        }
+}
 
 private const val NORTH_BEARING: Double = 0.0

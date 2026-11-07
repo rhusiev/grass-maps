@@ -15,6 +15,7 @@ first product asset lands.
 | Noto fonts | SIL OFL 1.1 | map labels and UI text; `app/src/main/assets/fonts` uses the Protomaps basemaps-assets Noto Sans glyph PBFs |
 | Protomaps sprites | MIT | `app/src/main/assets/sprites` (light sprite sheet, basemaps-assets) |
 | `plugins/style-standard` bench style | BSD-3-Clause | The T-0020 phase-A dense style generated from protomaps/basemaps; replaced by the authored styles in T-0603 |
+| `test-data/location/mock-walk.gpx` | Apache-2.0 (this repository) | Synthetic 60-point GPX walk authored for T-0022; no OSM data |
 | Icons | chosen per icon set | the licence is recorded in this file before the icons land |
 
 Every asset, font, style and sample data file gets its attribution in the same

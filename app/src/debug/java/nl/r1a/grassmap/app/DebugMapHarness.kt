@@ -71,7 +71,11 @@ internal class DebugMapHarness(
                 }
 
                 is MapEvent.CameraChanged -> {
-                    Log.i(TAG, "camera zoom=${event.camera.zoom} bearing=${event.camera.bearing}")
+                    Log.i(
+                        TAG,
+                        "camera zoom=${event.camera.zoom} bearing=${event.camera.bearing} " +
+                            "lat=${event.camera.center.latitude} lon=${event.camera.center.longitude}",
+                    )
                 }
 
                 else -> {

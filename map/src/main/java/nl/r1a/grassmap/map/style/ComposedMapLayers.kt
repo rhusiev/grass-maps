@@ -6,9 +6,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import nl.r1a.grassmap.map.MapHostState
 import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerType
+import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
 import nl.r1a.grassmap.plugin.api.model.SourceId
 import org.maplibre.compose.expressions.ast.Expression
@@ -34,12 +41,15 @@ import org.maplibre.compose.expressions.value.TextUnitOffsetValue
 import org.maplibre.compose.expressions.value.TextUnitValue
 import org.maplibre.compose.expressions.value.VectorValue
 import org.maplibre.compose.layers.BackgroundLayer
+import org.maplibre.compose.layers.CircleLayer
 import org.maplibre.compose.layers.FillLayer
 import org.maplibre.compose.layers.LayerDefaults
 import org.maplibre.compose.layers.LineLayer
 import org.maplibre.compose.layers.SymbolLayer
+import org.maplibre.compose.sources.GeoJsonData
 import org.maplibre.compose.sources.VectorSource
 import org.maplibre.compose.sources.getBaseSource
+import org.maplibre.compose.sources.rememberGeoJsonSource
 import org.maplibre.compose.util.DpPadding
 import org.maplibre.compose.util.MaplibreComposable
 
@@ -72,8 +82,58 @@ internal fun ComposedMapLayers(session: MapHostState) {
             val source = layer.source?.let { sources[it] }
             StyleLayerNode(layer, source)
         }
+        if (slot == LayerSlot.Markers) {
+            LocationPuck(session.location.value)
+        }
     }
 }
+
+/**
+ * The own-position puck. It is a GeoJSON point source and a circle layer, so it
+ * uses the markers slot and adds no sprite asset. The source is re-keyed when
+ * the fix changes, which maplibre-compose 0.20 accepts at the 1 Hz fix rate.
+ *
+ * A map gesture does not stop following yet; T-0106 owns the camera-mode button.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+@MaplibreComposable
+private fun LocationPuck(fix: LocationFix?) {
+    if (fix == null) return
+    val source = rememberGeoJsonSource(GeoJsonData.JsonString(fix.toFeatureCollection()))
+    CircleLayer(
+        id = PUCK_LAYER_ID,
+        source = source,
+        radius = const(PUCK_RADIUS_DP.dp),
+        color = const(PUCK_COLOR),
+        strokeColor = const(PUCK_STROKE_COLOR),
+        strokeWidth = const(PUCK_STROKE_WIDTH_DP.dp),
+    )
+}
+
+private fun LocationFix.toFeatureCollection(): String =
+    buildJsonObject {
+        put("type", "FeatureCollection")
+        putJsonArray("features") {
+            addJsonObject {
+                put("type", "Feature")
+                putJsonObject("properties") {}
+                putJsonObject("geometry") {
+                    put("type", "Point")
+                    putJsonArray("coordinates") {
+                        add(position.longitude)
+                        add(position.latitude)
+                    }
+                }
+            }
+        }
+    }.toString()
+
+private const val PUCK_LAYER_ID = "core.location.puck"
+private const val PUCK_RADIUS_DP = 7
+private const val PUCK_STROKE_WIDTH_DP = 2
+private val PUCK_COLOR = Color(0xFF1E88E5)
+private val PUCK_STROKE_COLOR = Color.White
 
 @Composable
 @MaplibreComposable

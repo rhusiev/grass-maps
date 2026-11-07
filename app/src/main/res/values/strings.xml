@@ -10,6 +10,8 @@
     <string name="control_zoom_out_description">Zoom out</string>
     <string name="control_north_up_label">N</string>
     <string name="control_north_up_description">Face north</string>
+    <string name="control_follow_label">P</string>
+    <string name="control_follow_description">Follow position</string>
     <string name="control_edit_label">Edit</string>
     <string name="control_edit_done_label">Done</string>
     <string name="control_edit_description">Edit controls</string>

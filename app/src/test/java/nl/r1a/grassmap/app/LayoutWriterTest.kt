@@ -40,6 +40,7 @@ class LayoutWriterTest {
                     MapControlCommands.ZOOM_OUT,
                     MapControlCommands.ZOOM_IN,
                     MapControlCommands.NORTH_UP,
+                    MapControlCommands.FOLLOW,
                 )
             val second = launch { writer.saveLatest() }
             runCurrent()

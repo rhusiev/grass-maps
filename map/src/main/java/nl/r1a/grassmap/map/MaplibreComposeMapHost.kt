@@ -32,6 +32,7 @@ import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.LayerId
 import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerSpec
+import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.MapSource
 import nl.r1a.grassmap.plugin.api.model.ScreenOffset
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
@@ -64,6 +65,7 @@ internal class MapHostState(
 ) {
     val style = mutableStateOf(buildBaseStyle(initialStyle, sourceResolver) ?: emptyBuiltStyle())
     val layers = mutableStateOf<List<OwnedLayer>>(emptyList())
+    val location = mutableStateOf<LocationFix?>(null)
     val camera = MutableStateFlow(initialCamera)
     var loadedStyleId: StyleId = initialStyle.id
         private set
@@ -116,6 +118,10 @@ internal class MapHostState(
 
     fun updateTrackingMode(mode: TrackingMode) {
         trackingMode = mode
+    }
+
+    fun updateLocation(fix: LocationFix?) {
+        location.value = fix
     }
 
     fun updatePositionOffset(offset: ScreenOffset) {
@@ -267,6 +273,12 @@ class MaplibreComposeMapHost internal constructor(
         session.updateTrackingMode(mode)
         return Outcome.Success(Unit)
     }
+
+    override suspend fun setLocation(fix: LocationFix?): Outcome<Unit> =
+        withContext(Dispatchers.Main.immediate) {
+            session.updateLocation(fix)
+            Outcome.Success(Unit)
+        }
 
     override suspend fun setPositionOffset(offset: ScreenOffset): Outcome<Unit> {
         session.updatePositionOffset(offset)

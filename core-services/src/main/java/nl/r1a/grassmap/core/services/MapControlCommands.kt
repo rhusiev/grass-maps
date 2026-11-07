@@ -10,7 +10,8 @@ object MapControlCommands {
     val ZOOM_IN: CommandId = CommandId("core.map.zoom_in")
     val ZOOM_OUT: CommandId = CommandId("core.map.zoom_out")
     val NORTH_UP: CommandId = CommandId("core.map.north_up")
+    val FOLLOW: CommandId = CommandId("core.map.follow")
 
     /** The order a profile uses until it saves its own. */
-    val DEFAULT_ORDER: List<CommandId> = listOf(ZOOM_IN, ZOOM_OUT, NORTH_UP)
+    val DEFAULT_ORDER: List<CommandId> = listOf(ZOOM_IN, ZOOM_OUT, NORTH_UP, FOLLOW)
 }

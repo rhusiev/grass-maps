@@ -10,6 +10,7 @@ import nl.r1a.grassmap.plugin.api.model.CameraUpdate
 import nl.r1a.grassmap.plugin.api.model.LayerId
 import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerSpec
+import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.ScreenOffset
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleSpec
@@ -56,6 +57,9 @@ interface MapHost {
     suspend fun fitBounds(bounds: BoundingBox): Outcome<Unit>
 
     suspend fun setTrackingMode(mode: TrackingMode): Outcome<Unit>
+
+    /** Draws the position puck at [fix], or removes it when [fix] is null. */
+    suspend fun setLocation(fix: LocationFix?): Outcome<Unit>
 
     suspend fun setPositionOffset(offset: ScreenOffset): Outcome<Unit>
 }

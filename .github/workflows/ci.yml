@@ -35,11 +35,11 @@ jobs:
         with:
           toolchain: 1.93.1
           targets: aarch64-linux-android,x86_64-linux-android
-      # --skip-repro keeps this job fast; the reproducibility job runs the two
-      # release builds. The emulator jobs run the device smoke, strict mode and
-      # the trend benchmarks.
-      - name: Run the local gate
-        run: ./check.sh --skip-repro
+      # --fast keeps this job to the incremental checks; the reproducibility
+      # job runs the two release builds. The emulator jobs run the device
+      # smoke, strict mode and the trend benchmarks.
+      - name: Run the local gate (fast tier)
+        run: ./check.sh --fast
       - name: Keep test and lint reports
         if: always()
         uses: actions/upload-artifact@v7

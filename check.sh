@@ -9,8 +9,9 @@
 # All steps run even when one fails, so a single run names every gap. The exit
 # code is non-zero when any step failed.
 #
-# Usage: ./check.sh [--skip-repro] [--with-device]
-#   --skip-repro   skip the two reproducible release builds (the slow part)
+# Usage: ./check.sh [--fast|--skip-repro] [--with-device]
+#   --fast         skip the two reproducible release builds (the slow part)
+#   --skip-repro   alias for --fast
 #   --with-device  also install and launch the debug APK on a connected device
 
 set -euo pipefail
@@ -22,12 +23,13 @@ failures=0
 
 for arg in "$@"; do
     case "$arg" in
-        --skip-repro) SKIP_REPRO=1 ;;
+        --fast | --skip-repro) SKIP_REPRO=1 ;;
         --with-device) WITH_DEVICE=1 ;;
         -h | --help)
             cat <<'EOF'
-Usage: ./check.sh [--skip-repro] [--with-device]
-  --skip-repro   skip the two reproducible release builds (the slow part)
+Usage: ./check.sh [--fast|--skip-repro] [--with-device]
+  --fast         skip the two reproducible release builds (the slow part)
+  --skip-repro   alias for --fast
   --with-device  also install and launch the debug APK on a connected device
 EOF
             exit 0
@@ -83,6 +85,9 @@ step "Plugin boundaries"
 step "Plugin manifests"
 ./gradlew --console=plain checkPluginManifests || fail "plugin manifests"
 
+step "Example plugin"
+./gradlew --console=plain :plugins:example:check || fail "example plugin"
+
 step "Privacy guards"
 ./gradlew --console=plain checkPrivacyGuards || fail "privacy guards"
 
@@ -93,7 +98,7 @@ if [[ $SKIP_REPRO -eq 0 ]]; then
     step "Reproducibility (two release builds in separate paths)"
     scripts/ci/reproducibility.sh || fail "reproducibility"
 else
-    step "Reproducibility: skipped by --skip-repro"
+    step "Reproducibility: skipped by --fast/--skip-repro"
     echo "CI runs this in the reproducibility job; do not treat this run as complete evidence."
 fi
 

@@ -70,9 +70,18 @@ document, section 3, plus the build and module rules of this repository.
   `local.properties`
 - Build the app:
   `JAVA_HOME=$HOME/dotfiles/local/share/jdk ./gradlew :app:assembleDebug`
-- Run the full gate before merging: `./check.sh`. It takes the `gm-build`
-  slot itself and runs format, lint, the build, unit tests, the plugin
-  boundary check and the reproducibility check
+- Iterate with `./check.sh --fast`: it runs the same steps minus the two
+  reproducible release builds, which are the slow part. Gradle re-runs only
+  tasks whose inputs changed, so do not pass `--rerun-tasks` to the iteration
+  gate; that forces a full rebuild and belongs to the full gate
+- Run the full gate `./check.sh` before merging. It takes the `gm-build` slot
+  itself and runs format, lint, the build, unit tests, the plugin boundary and
+  manifest checks, the example plugin, the privacy guards and the
+  reproducibility check
+- CI tiers the same way: the checks job runs `./check.sh --fast`, while
+  reproducibility, the API 29 smoke, the goldens and the benchmark are
+  separate jobs. A `--fast` run is not evidence for a merge on its own; the
+  reproducibility job is
 - Check the plugin boundary rule: `./gradlew checkPluginBoundaries`
 - Check plugin manifests: `./gradlew checkPluginManifests`
 - Check the privacy guards (dependency denylist and merged manifests):

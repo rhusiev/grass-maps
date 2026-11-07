@@ -159,8 +159,7 @@ one JSON document per commit to `build/benchmarks/map-pacing/<sha>.json`. The
 document holds the map-frame interval percentiles, the late-interval count and
 share over 1.5 vsync, missed vsyncs, the trace digests, the device, and the
 refresh rate. The gesture run is a four-pass pan followed by a double-tap zoom;
-pinch and rotate pacing need injected multi-touch and are covered by the map
-module's camera trace test instead.
+pinch and rotate need injected multi-touch and are not part of this run.
 
 `scripts/bench/map-frame-timeline.py` does the timing when traces already
 exist. Its rules (a counter fall is one latch, a gap over 250 ms is gesture

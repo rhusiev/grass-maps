@@ -27,3 +27,10 @@ value class SwitchId(
 ) {
     override fun toString(): String = value
 }
+
+@JvmInline
+value class WidgetId(
+    val value: String,
+) {
+    override fun toString(): String = value
+}

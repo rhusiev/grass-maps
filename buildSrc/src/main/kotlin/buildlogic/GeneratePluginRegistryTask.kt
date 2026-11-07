@@ -153,6 +153,28 @@ internal fun providerCapabilities(value: Any?): String =
 internal fun emitStringList(values: List<String>): String =
     "listOf(${values.joinToString(", ") { it.literal() }})"
 
+/** The shortest period a widget may declare, mirrored from WidgetCadence. */
+internal const val WIDGET_MIN_INTERVAL_MILLIS: Long = 100L
+
+internal fun widgetIntervalMillis(
+    value: Any?,
+    widgetId: String,
+    where: String,
+): Long {
+    val millis =
+        when (value) {
+            is Number -> value.toLong()
+            else -> throw GradleException("$where: widget '$widgetId' updateIntervalMillis must be a number")
+        }
+    if (millis < WIDGET_MIN_INTERVAL_MILLIS) {
+        throw GradleException(
+            "$where: widget '$widgetId' updateIntervalMillis must be at least " +
+                "$WIDGET_MIN_INTERVAL_MILLIS ms",
+        )
+    }
+    return millis
+}
+
 /**
  * Reads every plugin manifest and emits the static registries used by app.
  * No scanning and no reflection happen at runtime.
@@ -188,6 +210,7 @@ abstract class GeneratePluginRegistryTask : DefaultTask() {
         appendLine("import nl.r1a.grassmap.plugin.api.contract.PluginId")
         appendLine("import nl.r1a.grassmap.plugin.api.contract.StreamId")
         appendLine("import nl.r1a.grassmap.plugin.api.contract.SwitchId")
+        appendLine("import nl.r1a.grassmap.plugin.api.contract.WidgetId")
         appendLine("import nl.r1a.grassmap.plugin.api.manifest.CommandDeclaration")
         appendLine("import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand")
         appendLine("import nl.r1a.grassmap.plugin.api.manifest.GeneratedProvider")
@@ -200,6 +223,7 @@ abstract class GeneratePluginRegistryTask : DefaultTask() {
         appendLine("import nl.r1a.grassmap.plugin.api.manifest.SettingDeclaration")
         appendLine("import nl.r1a.grassmap.plugin.api.manifest.SettingScope")
         appendLine("import nl.r1a.grassmap.plugin.api.manifest.StreamDeclaration")
+        appendLine("import nl.r1a.grassmap.plugin.api.manifest.WidgetDeclaration")
         appendLine("import nl.r1a.grassmap.plugin.api.provider.ProviderContract")
         appendLine()
         appendLine("object GeneratedPlugins {")
@@ -354,6 +378,21 @@ abstract class GeneratePluginRegistryTask : DefaultTask() {
             appendLine("$indent                id = StreamId(${stream.string("id").orEmpty().literal()}),")
             appendLine("$indent                valueType = ${stream.string("valueType").orEmpty().literal()},")
             appendLine("$indent                serializer = ${stream.string("serializer").orEmpty().literal()},")
+            appendLine("$indent            ),")
+        }
+        appendLine("$indent        ),")
+        appendLine("$indent        widgets = listOf(")
+        for (widget in contributes.objectList("widgets")) {
+            val widgetId = widget.string("id").orEmpty()
+            appendLine("$indent            WidgetDeclaration(")
+            appendLine("$indent                id = WidgetId(${widgetId.literal()}),")
+            appendLine("$indent                title = ${widget.string("title").orEmpty().literal()},")
+            appendLine("$indent                valueType = ${widget.string("valueType").orEmpty().literal()},")
+            appendLine("$indent                streamId = StreamId(${widget.string("streamId").orEmpty().literal()}),")
+            appendLine(
+                "$indent                updateIntervalMillis = " +
+                    "${widgetIntervalMillis(widget["updateIntervalMillis"], widgetId, where)},",
+            )
             appendLine("$indent            ),")
         }
         appendLine("$indent        ),")

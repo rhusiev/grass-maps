@@ -227,6 +227,7 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/style-standard` | the Standard and Touring map styles as a `MapLayerProvider` | `plugin-api` |
 | `plugins/synthetic-data` | the synthetic elevation `DataSource` and its real contour overlay | `plugin-api` |
 | `plugins/gpx` | GPX 1.0/1.1 as a `FileFormat` provider | `plugin-api` |
+| `plugins/info-widgets` | the altitude, coordinates and GPS info widget data providers | `plugin-api` |
 
 ## Map seam
 
@@ -429,15 +430,28 @@ A manifest declares the plugin id, version, the `plugin-api` version, the
 implementation class, and its contributions: commands with parameter and result
 schemas, their dispatch policy (undoable, required switch, control allowlist and
 dispatcher), providers with contract versions and static capabilities, streams
-with a value type and serializer, and settings with defaults and scopes. The host
-rejects a command whose code policy disagrees with its manifest. The example
-plugin declares one command, one stream and one provider.
+with a value type and serializer, widgets over a declared stream, and settings
+with defaults and scopes. The host rejects a command whose code policy disagrees
+with its manifest. The example plugin declares one command, one stream and one
+provider.
+
+A widget contribution names a title (an i18n key), a value type, the stream its
+value comes from and the shortest period between samples. The stream must be one
+the same plugin declares and the two value types must match. Values stay streams,
+so the shell and `control.stream.subscribe` bind a widget by id without
+importing the owning module; layout and drawing are the shell's (T-0605).
+`WidgetCadence` caps widgets at 10 Hz, and the info widgets sample at 5 Hz.
+
+On activation the host passes `PluginServices` to the plugin: observable streams,
+the location source, DEM height access, the camera flow and the clock. A plugin
+has a no-argument constructor, so it reads these inputs from the host instead of
+constructing platform services itself.
 
 `checkPluginManifests` fails the build when a manifest breaks the rules above,
 including a declared command whose implementation class is missing from the
-plugin's source, a command id in the reserved `core` host namespace, or a policy
-field the generator does not understand. Each plugin module's `check` and
-`app:check` depend on it.
+plugin's source, a command id in the reserved `core` host namespace, a widget
+over an undeclared stream, or a policy field the generator does not understand.
+Each plugin module's `check` and `app:check` depend on it.
 
 ## Debug control channel
 

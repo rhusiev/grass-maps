@@ -9,9 +9,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
@@ -22,17 +24,28 @@ import nl.r1a.grassmap.plugin.api.contract.Plugin
 import nl.r1a.grassmap.plugin.api.contract.PluginContext
 import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.contract.StreamId
+import nl.r1a.grassmap.plugin.api.contract.WidgetId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.host.ElevationAccess
+import nl.r1a.grassmap.plugin.api.host.NoElevationAccess
+import nl.r1a.grassmap.plugin.api.host.PluginServices
+import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedStream
 import nl.r1a.grassmap.plugin.api.manifest.PluginFactory
 import nl.r1a.grassmap.plugin.api.manifest.PluginManifest
+import nl.r1a.grassmap.plugin.api.manifest.WidgetDeclaration
+import nl.r1a.grassmap.plugin.api.model.Camera
+import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.PluginState
 import nl.r1a.grassmap.plugin.api.model.PluginStatus
 import nl.r1a.grassmap.plugin.api.provider.Provider
 import nl.r1a.grassmap.plugin.api.provider.ProviderContract
+import nl.r1a.grassmap.plugin.api.service.Clock
+import nl.r1a.grassmap.plugin.api.service.LocationService
+import nl.r1a.grassmap.plugin.api.widget.WidgetDescriptor
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
@@ -52,10 +65,19 @@ class PluginHost(
     hostCommands: List<Command<*, *>> = emptyList(),
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val clockMillis: () -> Long = System::currentTimeMillis,
+    private val locationService: LocationService = InertLocationService,
+    private val elevationAccess: ElevationAccess = NoElevationAccess,
+    private val cameraFlow: Flow<Camera> = emptyFlow(),
 ) {
     private val factories: Map<PluginId, PluginFactory> = plugins.associateBy { it.manifest.id }
     private val streamOwners: Map<StreamId, PluginId> = streams.associate { it.id to it.pluginId }
     private val streamDeclarations: Map<StreamId, GeneratedStream> = streams.associateBy { it.id }
+    private val widgetOwners: Map<WidgetId, PluginId> =
+        factories.values
+            .flatMap { factory ->
+                factory.manifest.contributes.widgets
+                    .map { it.id to factory.manifest.id }
+            }.toMap()
     private val hostCommandById: Map<CommandId, Command<*, *>> = hostCommands.associateBy { it.id }
     private val commandOwners: Map<CommandId, PluginId> =
         commands.associate { it.id to it.pluginId } +
@@ -71,6 +93,8 @@ class PluginHost(
         )
 
     val statuses: StateFlow<List<PluginStatus>> = _statuses.asStateFlow()
+
+    private val pluginServices: PluginServices by lazy { HostPluginServices() }
 
     fun manifests(): List<PluginManifest> = factories.values.map { it.manifest }
 
@@ -161,6 +185,29 @@ class PluginHost(
         }
     }
 
+    /** Every widget declared by a manifest, readable without activating a plugin. */
+    fun declaredWidgets(): List<WidgetDeclaration> = factories.values.flatMap { it.manifest.contributes.widgets }
+
+    /**
+     * Resolves a widget, activating its owner. The value itself comes from the
+     * widget's bound stream through [stream] or [StreamAccess].
+     */
+    suspend fun widget(id: WidgetId): Outcome<WidgetDescriptor> {
+        val owner = widgetOwners[id] ?: return Outcome.Failure(AppError.NotFound)
+        val activation = ensureActive(owner)
+        if (activation is Outcome.Failure) {
+            return activation
+        }
+        return mutex.withLock {
+            val widget = active[owner]?.widgets?.get(id)
+            if (widget == null) {
+                Outcome.Failure(AppError.NotFound)
+            } else {
+                Outcome.Success(widget)
+            }
+        }
+    }
+
     internal suspend fun provider(
         pluginId: PluginId,
         contract: ProviderContract,
@@ -209,7 +256,7 @@ class PluginHost(
                 return Outcome.Failure(AppError.PluginFailed(pluginId))
             }
 
-        val session = ActivationSession(pluginId)
+        val session = ActivationSession(pluginId, pluginServices)
         val activation =
             try {
                 plugin.activate(session)
@@ -260,9 +307,11 @@ class PluginHost(
         val commands = session.commands.associateBy { it.id }
         val streams = session.streams.associateBy { it.id }
         val providers = session.providers.associateBy { it.contract }
+        val widgets = session.widgets.associateBy { it.id }
         if (commands.size != session.commands.size ||
             streams.size != session.streams.size ||
-            providers.size != session.providers.size
+            providers.size != session.providers.size ||
+            widgets.size != session.widgets.size
         ) {
             return Outcome.Failure(AppError.PluginFailed(manifest.id))
         }
@@ -305,8 +354,30 @@ class PluginHost(
             }
         }
 
+        val declaredWidgets = manifest.contributes.widgets.associateBy { it.id }
+        if (widgets.keys != declaredWidgets.keys) {
+            return Outcome.Failure(AppError.PluginFailed(manifest.id))
+        }
+        for ((id, descriptor) in widgets) {
+            val declaration = declaredWidgets[id] ?: return invalid(manifest)
+            val stream = streams[descriptor.streamId] ?: return invalid(manifest)
+            if (descriptor.title != declaration.title ||
+                descriptor.valueType != declaration.valueType ||
+                descriptor.streamId != declaration.streamId ||
+                descriptor.updateIntervalMillis != declaration.updateIntervalMillis ||
+                descriptor.valueType != stream.valueType
+            ) {
+                return invalid(manifest)
+            }
+        }
+
         return Outcome.Success(
-            ActivePlugin(commands = commands, streams = streams, providers = providers),
+            ActivePlugin(
+                commands = commands,
+                streams = streams,
+                providers = providers,
+                widgets = widgets,
+            ),
         )
     }
 
@@ -377,14 +448,17 @@ class PluginHost(
         val commands: Map<CommandId, Command<*, *>>,
         val streams: Map<StreamId, StreamDescriptor<*>>,
         val providers: Map<ProviderContract, Provider>,
+        val widgets: Map<WidgetId, WidgetDescriptor>,
     )
 
     private class ActivationSession(
         override val pluginId: PluginId,
+        override val services: PluginServices,
     ) : PluginContext {
         val commands = mutableListOf<Command<*, *>>()
         val streams = mutableListOf<StreamDescriptor<*>>()
         val providers = mutableListOf<Provider>()
+        val widgets = mutableListOf<WidgetDescriptor>()
 
         override fun addCommand(command: Command<*, *>) {
             commands += command
@@ -397,10 +471,36 @@ class PluginHost(
         override fun addProvider(provider: Provider) {
             providers += provider
         }
+
+        override fun addWidget(widget: WidgetDescriptor) {
+            widgets += widget
+        }
+    }
+
+    /** Adapts the host's own interfaces to the plugin-facing service set. */
+    private inner class HostPluginServices : PluginServices {
+        override val streams: StreamAccess by lazy { StreamRegistry(this@PluginHost) }
+
+        override val location: LocationService = locationService
+
+        override val elevation: ElevationAccess = elevationAccess
+
+        override val camera: Flow<Camera> = cameraFlow
+
+        override val clock: Clock = Clock { clockMillis() }
     }
 
     private companion object {
         /** Commands the host owns carry the core plugin id in the bus catalog. */
         val HOST_COMMAND_OWNER: PluginId = PluginId("core")
     }
+}
+
+/** The position source a host uses before the app wires a real one. */
+private object InertLocationService : LocationService {
+    override val fixes: Flow<LocationFix?> = emptyFlow()
+
+    override fun hasPermission(): Boolean = false
+
+    override fun requiresPermission(): Boolean = false
 }

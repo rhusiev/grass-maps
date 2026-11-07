@@ -20,6 +20,7 @@ import nl.r1a.grassmap.plugin.api.contract.PluginContext
 import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.contract.StreamId
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
+import nl.r1a.grassmap.plugin.api.contract.WidgetId
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
 import nl.r1a.grassmap.plugin.api.manifest.CommandDeclaration
@@ -30,8 +31,10 @@ import nl.r1a.grassmap.plugin.api.manifest.PluginFactory
 import nl.r1a.grassmap.plugin.api.manifest.PluginManifest
 import nl.r1a.grassmap.plugin.api.manifest.ProviderDeclaration
 import nl.r1a.grassmap.plugin.api.manifest.StreamDeclaration
+import nl.r1a.grassmap.plugin.api.manifest.WidgetDeclaration
 import nl.r1a.grassmap.plugin.api.provider.Provider
 import nl.r1a.grassmap.plugin.api.provider.ProviderContract
+import nl.r1a.grassmap.plugin.api.widget.WidgetDescriptor
 
 internal const val TEST_PLUGIN_ID = "test"
 
@@ -71,6 +74,7 @@ internal fun testManifest(
     commands: List<CommandDeclaration> = emptyList(),
     providers: List<ProviderDeclaration> = emptyList(),
     streams: List<StreamDeclaration> = emptyList(),
+    widgets: List<WidgetDeclaration> = emptyList(),
     pluginId: PluginId = PluginId(TEST_PLUGIN_ID),
 ): PluginManifest =
     PluginManifest(
@@ -85,6 +89,7 @@ internal fun testManifest(
                 commands = commands,
                 providers = providers,
                 streams = streams,
+                widgets = widgets,
             ),
         activation = listOf("command"),
     )
@@ -132,6 +137,7 @@ internal class TestPlugin(
     private val commands: List<Command<*, *>> = emptyList(),
     private val streams: List<StreamDescriptor<*>> = emptyList(),
     private val providers: List<Provider> = emptyList(),
+    private val widgets: List<WidgetDescriptor> = emptyList(),
     private val onActivate: suspend () -> Unit = {},
 ) : Plugin {
     override suspend fun activate(context: PluginContext): Outcome<Unit> {
@@ -139,6 +145,7 @@ internal class TestPlugin(
         commands.forEach { context.addCommand(it) }
         streams.forEach { context.addStream(it) }
         providers.forEach { context.addProvider(it) }
+        widgets.forEach { context.addWidget(it) }
         return Outcome.Success(Unit)
     }
 }
@@ -297,6 +304,42 @@ internal fun testGeneratedStream(): GeneratedStream =
         valueType = TestStream.VALUE_TYPE,
         serializer = TestStream.SERIALIZER,
     )
+
+internal fun testWidgetDeclaration(
+    id: WidgetId = TestWidget.WIDGET_ID,
+    title: String = TestWidget.TITLE,
+    valueType: String = TestStream.VALUE_TYPE,
+    streamId: StreamId = TestStream.STREAM_ID,
+    updateIntervalMillis: Long = TestWidget.UPDATE_INTERVAL_MILLIS,
+): WidgetDeclaration =
+    WidgetDeclaration(
+        id = id,
+        title = title,
+        valueType = valueType,
+        streamId = streamId,
+        updateIntervalMillis = updateIntervalMillis,
+    )
+
+internal object TestWidget {
+    val WIDGET_ID = WidgetId("$TEST_PLUGIN_ID.altitude")
+    const val TITLE = "plugin.test.altitude"
+    const val UPDATE_INTERVAL_MILLIS = 200L
+
+    fun descriptor(
+        id: WidgetId = WIDGET_ID,
+        title: String = TITLE,
+        valueType: String = TestStream.VALUE_TYPE,
+        streamId: StreamId = TestStream.STREAM_ID,
+        updateIntervalMillis: Long = UPDATE_INTERVAL_MILLIS,
+    ): WidgetDescriptor =
+        WidgetDescriptor(
+            id = id,
+            title = title,
+            valueType = valueType,
+            streamId = streamId,
+            updateIntervalMillis = updateIntervalMillis,
+        )
+}
 
 internal class ThrowingTestProvider : Provider {
     override val contract: ProviderContract =

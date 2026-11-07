@@ -36,9 +36,11 @@ abstract class LintPluginManifestsTask : DefaultTask() {
         val pluginIds = mutableMapOf<String, String>()
         val commandIds = mutableMapOf<String, String>()
         val streamIds = mutableMapOf<String, String>()
+        val widgetIds = mutableMapOf<String, String>()
         val providers = mutableSetOf<String>()
         var commandCount = 0
         var streamCount = 0
+        var widgetCount = 0
 
         for (manifest in parsed) {
             val raw = manifest.raw
@@ -141,6 +143,33 @@ abstract class LintPluginManifestsTask : DefaultTask() {
                 requiredString(stream, "serializer", where, errors)
             }
 
+            val streamsById = contributes.objectList("streams").associateBy { it.string("id").orEmpty() }
+            for (widget in contributes.objectList("widgets")) {
+                widgetCount += 1
+                val widgetId = requiredString(widget, "id", where, errors)
+                if (widgetId.isNotBlank()) {
+                    if (!NAMESPACED.matches(widgetId) || !widgetId.startsWith("$pluginId.")) {
+                        errors += "$where: widget id '$widgetId' must be namespaced under '$pluginId'"
+                    }
+                    widgetIds.put(widgetId, where)?.let { previous ->
+                        errors += "$where: duplicate widget id '$widgetId', also declared in $previous"
+                    }
+                }
+                requiredString(widget, "title", where, errors)
+                val valueType = requiredString(widget, "valueType", where, errors)
+                val streamId = requiredString(widget, "streamId", where, errors)
+                if (streamId.isNotBlank()) {
+                    val stream = streamsById[streamId]
+                    if (stream == null) {
+                        errors += "$where: widget '$widgetId' binds stream '$streamId' that this plugin does not declare"
+                    } else if (valueType.isNotBlank() && stream.string("valueType") != valueType) {
+                        errors += "$where: widget '$widgetId' value type '$valueType' does not match its stream"
+                    }
+                }
+                runCatching { widgetIntervalMillis(widget["updateIntervalMillis"], widgetId, where) }
+                    .onFailure { exception -> errors += exception.message.orEmpty() }
+            }
+
             for (setting in contributes.objectList("settings")) {
                 val key = requiredString(setting, "key", where, errors)
                 if (key.isNotBlank() && !key.startsWith("$pluginId.")) {
@@ -188,7 +217,7 @@ abstract class LintPluginManifestsTask : DefaultTask() {
         }
         println(
             "Plugin manifests OK: ${parsed.size} plugin(s), $commandCount command(s), " +
-                "$streamCount stream(s), ${providers.size} provider(s)",
+                "$streamCount stream(s), $widgetCount widget(s), ${providers.size} provider(s)",
         )
     }
 

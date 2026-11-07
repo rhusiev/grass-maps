@@ -9,6 +9,7 @@ import nl.r1a.grassmap.plugin.api.contract.Plugin
 import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.contract.StreamId
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
+import nl.r1a.grassmap.plugin.api.contract.WidgetId
 import nl.r1a.grassmap.plugin.api.provider.ProviderContract
 
 /**
@@ -31,6 +32,7 @@ data class PluginContributions(
     val commands: List<CommandDeclaration> = emptyList(),
     val providers: List<ProviderDeclaration> = emptyList(),
     val streams: List<StreamDeclaration> = emptyList(),
+    val widgets: List<WidgetDeclaration> = emptyList(),
     val settings: List<SettingDeclaration> = emptyList(),
 )
 
@@ -56,6 +58,19 @@ data class StreamDeclaration(
     val id: StreamId,
     val valueType: String,
     val serializer: String,
+)
+
+/**
+ * A widget the plugin contributes. [streamId] must be one of the plugin's own
+ * [StreamDeclaration]s, and [valueType] must equal that stream's.
+ * [updateIntervalMillis] is the smallest period between samples.
+ */
+data class WidgetDeclaration(
+    val id: WidgetId,
+    val title: String,
+    val valueType: String,
+    val streamId: StreamId,
+    val updateIntervalMillis: Long,
 )
 
 data class SettingDeclaration(

@@ -1,8 +1,11 @@
 package nl.r1a.grassmap.plugin.api.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * A geographic point in WGS84 degrees.
  */
+@Serializable
 data class GeoPoint(
     val latitude: Double,
     val longitude: Double,

@@ -91,4 +91,18 @@ class ManifestEmitTest {
         assertEquals("LocationNeed.WHILE_IN_USE", locationNeed("while_in_use", "plugin.json"))
         assertEquals("SettingScope.PROFILE", settingScope("profile", "plugin.json"))
     }
+
+    @Test
+    fun widgetIntervalNeedsANumberAtLeastTheMinimum() {
+        assertEquals(200L, widgetIntervalMillis(200, "test.widget", "plugin.json"))
+        assertThrows(GradleException::class.java) {
+            widgetIntervalMillis(99, "test.widget", "plugin.json")
+        }
+        assertThrows(GradleException::class.java) {
+            widgetIntervalMillis("200", "test.widget", "plugin.json")
+        }
+        assertThrows(GradleException::class.java) {
+            widgetIntervalMillis(null, "test.widget", "plugin.json")
+        }
+    }
 }

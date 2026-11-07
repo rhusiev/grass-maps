@@ -1,0 +1,59 @@
+{
+  "id": "info.widgets",
+  "name": "plugin.info_widgets.name",
+  "description": "plugin.info_widgets.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.info.widgets.InfoWidgetsPlugin",
+  "contributes": {
+    "streams": [
+      {
+        "id": "info.widgets.altitude",
+        "valueType": "nl.r1a.grassmap.plugin.api.widget.AltitudeWidgetValue",
+        "serializer": "nl.r1a.grassmap.plugin.api.widget.AltitudeWidgetValue.serializer"
+      },
+      {
+        "id": "info.widgets.coordinates",
+        "valueType": "nl.r1a.grassmap.plugin.api.widget.CoordinatesWidgetValue",
+        "serializer": "nl.r1a.grassmap.plugin.api.widget.CoordinatesWidgetValue.serializer"
+      },
+      {
+        "id": "info.widgets.gps",
+        "valueType": "nl.r1a.grassmap.plugin.api.widget.GpsInfoWidgetValue",
+        "serializer": "nl.r1a.grassmap.plugin.api.widget.GpsInfoWidgetValue.serializer"
+      }
+    ],
+    "widgets": [
+      {
+        "id": "info.widgets.altitude",
+        "title": "plugin.info_widgets.altitude",
+        "valueType": "nl.r1a.grassmap.plugin.api.widget.AltitudeWidgetValue",
+        "streamId": "info.widgets.altitude",
+        "updateIntervalMillis": 200
+      },
+      {
+        "id": "info.widgets.coordinates",
+        "title": "plugin.info_widgets.coordinates",
+        "valueType": "nl.r1a.grassmap.plugin.api.widget.CoordinatesWidgetValue",
+        "streamId": "info.widgets.coordinates",
+        "updateIntervalMillis": 200
+      },
+      {
+        "id": "info.widgets.gps",
+        "title": "plugin.info_widgets.gps",
+        "valueType": "nl.r1a.grassmap.plugin.api.widget.GpsInfoWidgetValue",
+        "streamId": "info.widgets.gps",
+        "updateIntervalMillis": 200
+      }
+    ]
+  },
+  "needs": {
+    "network": [],
+    "location": "while_in_use",
+    "regions": ["elevation"]
+  },
+  "activation": [
+    "stream",
+    "ui"
+  ]
+}

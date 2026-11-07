@@ -61,8 +61,12 @@ for attempt in $(seq 1 "$LOGCAT_CLEAR_ATTEMPTS"); do
         log_cleared=1
         break
     fi
-    echo "logcat clear failed (attempt $attempt), retrying" >&2
-    sleep "$LOGCAT_CLEAR_RETRY_SECONDS"
+    if [[ "$attempt" -lt "$LOGCAT_CLEAR_ATTEMPTS" ]]; then
+        echo "logcat clear failed (attempt $attempt), retrying" >&2
+        sleep "$LOGCAT_CLEAR_RETRY_SECONDS"
+    else
+        echo "logcat clear failed (attempt $attempt)" >&2
+    fi
 done
 if [[ "$log_cleared" -ne 1 ]]; then
     echo "FAIL: could not clear the logcat buffer" >&2

@@ -27,7 +27,9 @@ import nl.r1a.grassmap.plugin.api.contract.StreamId
 import nl.r1a.grassmap.plugin.api.contract.WidgetId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.host.DevToolsAccess
 import nl.r1a.grassmap.plugin.api.host.ElevationAccess
+import nl.r1a.grassmap.plugin.api.host.NoDevToolsAccess
 import nl.r1a.grassmap.plugin.api.host.NoElevationAccess
 import nl.r1a.grassmap.plugin.api.host.PluginServices
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
@@ -68,6 +70,7 @@ class PluginHost(
     private val locationService: LocationService = InertLocationService,
     private val elevationAccess: ElevationAccess = NoElevationAccess,
     private val cameraFlow: Flow<Camera> = emptyFlow(),
+    private val devToolsAccess: DevToolsAccess = NoDevToolsAccess,
 ) {
     private val factories: Map<PluginId, PluginFactory> = plugins.associateBy { it.manifest.id }
     private val streamOwners: Map<StreamId, PluginId> = streams.associate { it.id to it.pluginId }
@@ -488,6 +491,8 @@ class PluginHost(
         override val camera: Flow<Camera> = cameraFlow
 
         override val clock: Clock = Clock { clockMillis() }
+
+        override val devTools: DevToolsAccess = devToolsAccess
     }
 
     private companion object {

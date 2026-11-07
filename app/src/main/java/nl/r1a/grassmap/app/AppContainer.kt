@@ -29,6 +29,7 @@ import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
 import nl.r1a.grassmap.plugin.api.service.NetworkGate
 import nl.r1a.grassmap.plugin.api.service.PrivacySwitches
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugins.dev.tools.DevToolsContract
 import nl.r1a.grassmap.regions.GateNetworkAccess
 import nl.r1a.grassmap.regions.HttpDownloadTransport
 import nl.r1a.grassmap.regions.NetworkAccess
@@ -55,6 +56,8 @@ class AppContainer(
     private val deviceInfoProvider: () -> DeviceInfo = { DeviceInfo.UNKNOWN },
     private val debuggable: () -> Boolean = { false },
     private val extraCommands: (MapSessionHolder) -> List<Command<*, *>> = { emptyList() },
+    val devTools: DevToolsRuntime = NoDevToolsRuntime,
+    private val aiControlEnabled: () -> Boolean = { false },
 ) {
     private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -151,6 +154,13 @@ class AppContainer(
     /** The catalog entries for the host commands; the debug channel lists these. */
     val controlCommands: List<GeneratedCommand> by lazy { generatedMapCommands(hostCommands) }
 
+    /**
+     * Whether the development-tools panel and its commands are available. The
+     * architecture puts them behind the AI-control switch; until T-0610 wires
+     * that switch, this reads the predicate the build supplies.
+     */
+    val devToolsVisible: Boolean = aiControlEnabled()
+
     val pluginHost: PluginHost by lazy {
         PluginHost(
             plugins = GeneratedPlugins.plugins,
@@ -158,6 +168,7 @@ class AppContainer(
             commands = GeneratedPlugins.commands,
             hostCommands = hostCommands,
             dispatcher = dispatchers.default,
+            devToolsAccess = devTools,
         )
     }
 
@@ -166,7 +177,13 @@ class AppContainer(
             host = pluginHost,
             commands = GeneratedPlugins.commands + generatedMapCommands(hostCommands),
             dispatchers = dispatchers,
-            switchEnabled = switchEnabled,
+            switchEnabled = { switch ->
+                if (switch == DevToolsContract.aiControlSwitch) {
+                    aiControlEnabled()
+                } else {
+                    switchEnabled(switch)
+                }
+            },
         )
     }
 

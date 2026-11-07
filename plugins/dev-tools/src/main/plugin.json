@@ -1,0 +1,51 @@
+{
+  "id": "dev.tools",
+  "name": "plugin.dev_tools.name",
+  "description": "plugin.dev_tools.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.dev.tools.DevToolsPlugin",
+  "contributes": {
+    "commands": [
+      {
+        "id": "dev.tools.start_replay",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugins.dev.tools.DevToolsPanelState",
+        "doc": "Starts the GPX replay and returns the panel state.",
+        "undoable": false,
+        "requiresSwitch": "ai.control",
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.dev.tools.StartReplayCommand"
+      },
+      {
+        "id": "dev.tools.stop_replay",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugins.dev.tools.DevToolsPanelState",
+        "doc": "Stops the GPX replay and returns the panel state.",
+        "undoable": false,
+        "requiresSwitch": "ai.control",
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.dev.tools.StopReplayCommand"
+      }
+    ],
+    "streams": [
+      {
+        "id": "dev.tools.state",
+        "valueType": "nl.r1a.grassmap.plugins.dev.tools.DevToolsPanelState",
+        "serializer": "nl.r1a.grassmap.plugins.dev.tools.DevToolsPanelState.serializer"
+      }
+    ]
+  },
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": []
+  },
+  "activation": [
+    "command",
+    "stream",
+    "ui"
+  ]
+}

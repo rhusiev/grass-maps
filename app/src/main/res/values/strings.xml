@@ -7,6 +7,8 @@
     <string name="plugin.data_synthetic.description">Synthetic elevation attributes and a real contour layer for the DataSource seam.</string>
     <string name="plugin.file_gpx.name">GPX files</string>
     <string name="plugin.file_gpx.description">Imports tracks, routes and waypoints from GPX 1.0 and 1.1.</string>
+    <string name="plugin.dev_tools.name">Development tools</string>
+    <string name="plugin.dev_tools.description">Starts a GPX replay and shows frame rate and memory.</string>
 
     <string name="control_zoom_in_label">+</string>
     <string name="control_zoom_in_description">Zoom in</string>
@@ -28,4 +30,11 @@
     <string name="control_move_right_label">&#8250;</string>
     <string name="control_move_right_description">Move right</string>
     <string name="map_region_needs_redownload">Map data needs re-download</string>
+    <string name="dev_tools_title">Development tools</string>
+    <string name="dev_tools_replay_active">Replay: on</string>
+    <string name="dev_tools_replay_inactive">Replay: off</string>
+    <string name="dev_tools_fps">FPS: %1$.1f</string>
+    <string name="dev_tools_memory">Memory: %1$d MB</string>
+    <string name="dev_tools_start_replay">Start replay</string>
+    <string name="dev_tools_stop_replay">Stop replay</string>
 </resources>

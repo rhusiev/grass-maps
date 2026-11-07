@@ -37,4 +37,5 @@ include(
     ":plugins:synthetic-data",
     ":plugins:gpx",
     ":plugins:info-widgets",
+    ":plugins:dev-tools",
 )

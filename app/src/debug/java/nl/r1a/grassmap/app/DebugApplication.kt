@@ -7,7 +7,6 @@ import android.os.StrictMode
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.core.services.AndroidLocationSource
 import nl.r1a.grassmap.core.services.MockGpxLocationSource
@@ -79,6 +78,9 @@ class DebugApplication : GrassMapsApplication() {
 
     override fun extraCommands(): (MapSessionHolder) -> List<Command<*, *>> = { session -> listOf(SetCameraCommand(session)) }
 
+    /** Debug builds treat the developer as the AI-control switch holder. */
+    override fun aiControlEnabled(): Boolean = true
+
     override fun locationSource(): LocationService =
         DebugLocationSource(
             platform = AndroidLocationSource(this),
@@ -89,7 +91,7 @@ class DebugApplication : GrassMapsApplication() {
                         loop = true,
                     ),
                 ),
-            usePlatform = platformLocation.asStateFlow(),
+            usePlatform = platformLocation,
         )
 
     private suspend fun readFixture(): Outcome<String> =

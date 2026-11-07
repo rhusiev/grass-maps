@@ -47,6 +47,7 @@ import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.error.onFailure
+import nl.r1a.grassmap.plugin.api.host.MapEvent
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleId
@@ -142,6 +143,16 @@ private fun MapContent(
     LaunchedEffect(container.locationController, surface.host) {
         container.locationController.syncToHost()
     }
+    LaunchedEffect(surface.host, container.devToolsVisible) {
+        if (!container.devToolsVisible) {
+            return@LaunchedEffect
+        }
+        surface.host.events.collect { event ->
+            if (event is MapEvent.FrameRendered) {
+                container.devTools.onFrame()
+            }
+        }
+    }
     val store by
         produceState<ButtonLayoutStore?>(null) {
             value =
@@ -218,6 +229,16 @@ private fun MapContent(
                     "region-needs-redownload region=${bundle.sources.problemRegion ?: "unknown"} problem=$problem",
                 )
             }
+        }
+        if (container.devToolsVisible) {
+            DevToolsPanel(
+                container = container,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .navigationBarsPadding()
+                        .padding(BAR_PADDING_DP.dp),
+            )
         }
     }
     LaunchedEffect(surface.host, bundle) {

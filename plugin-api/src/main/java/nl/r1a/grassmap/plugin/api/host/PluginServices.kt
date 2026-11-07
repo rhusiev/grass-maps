@@ -28,4 +28,11 @@ interface PluginServices {
 
     /** Wall-clock time, for cadence checks and fix ages. */
     val clock: Clock
+
+    /**
+     * Development seams: the GPX replay and the frame-rate and memory sample.
+     * Inert unless the app wires them, so a plugin reads this without knowing
+     * whether it runs in a release or a debug build.
+     */
+    val devTools: DevToolsAccess get() = NoDevToolsAccess
 }

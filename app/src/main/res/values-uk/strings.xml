@@ -8,6 +8,8 @@
     <string name="plugin.data_synthetic.description">Синтетичні атрибути висоти та справжній шар горизонталей для інтерфейсу DataSource.</string>
     <string name="plugin.file_gpx.name">Файли GPX</string>
     <string name="plugin.file_gpx.description">Імпортує треки, маршрути та точки з GPX 1.0 і 1.1.</string>
+    <string name="plugin.dev_tools.name">Інструменти розробника</string>
+    <string name="plugin.dev_tools.description">Запускає відтворення GPX і показує частоту кадрів і пам\'ять.</string>
 
     <string name="control_zoom_in_label">+</string>
     <string name="control_zoom_in_description">Наблизити</string>
@@ -29,4 +31,11 @@
     <string name="control_move_right_label">&#8250;</string>
     <string name="control_move_right_description">Перемістити праворуч</string>
     <string name="map_region_needs_redownload">Дані карти потребують повторного завантаження</string>
+    <string name="dev_tools_title">Інструменти розробника</string>
+    <string name="dev_tools_replay_active">Відтворення: увімкнено</string>
+    <string name="dev_tools_replay_inactive">Відтворення: вимкнено</string>
+    <string name="dev_tools_fps">Частота кадрів: %1$.1f</string>
+    <string name="dev_tools_memory">Пам\'ять: %1$d МБ</string>
+    <string name="dev_tools_start_replay">Почати відтворення</string>
+    <string name="dev_tools_stop_replay">Зупинити відтворення</string>
 </resources>

@@ -42,9 +42,10 @@ android {
         compose = true
     }
 
-    // The debug build replays the committed GPX fixture from assets; release
-    // builds bundle neither the fixture nor a location source.
-    sourceSets.getByName("debug").assets.srcDir(rootProject.file("test-data/location"))
+    // The committed GPX fixture ships in every build: the debug build replays
+    // it by default and the release development-tools plugin starts it on
+    // request (T-0114). It is the same file the JVM tests read.
+    sourceSets.getByName("main").assets.srcDir(rootProject.file("test-data/location"))
 
     // JVM tests read the same committed fixtures, including mock-walk.gpx.
     sourceSets.getByName("test").resources.srcDir(rootProject.file("test-data"))
@@ -114,6 +115,7 @@ dependencies {
     implementation(project(":plugins:synthetic-data"))
     implementation(project(":plugins:gpx"))
     implementation(project(":plugins:info-widgets"))
+    implementation(project(":plugins:dev-tools"))
 
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("org.jetbrains.compose.ui:ui:1.12.1")

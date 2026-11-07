@@ -5,12 +5,19 @@ import android.app.Application
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Debug
+import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.core.services.AndroidLocationSource
 import nl.r1a.grassmap.core.services.AndroidStrings
 import nl.r1a.grassmap.core.services.DeviceInfo
 import nl.r1a.grassmap.core.services.FileLocationPermissionStore
+import nl.r1a.grassmap.core.services.MockGpxLocationSource
 import nl.r1a.grassmap.core.services.installCrashGuard
 import nl.r1a.grassmap.plugin.api.command.Command
+import nl.r1a.grassmap.plugin.api.error.AppError
+import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.service.LocationService
 import java.io.File
 import java.io.IOException
@@ -21,9 +28,10 @@ import java.io.IOException
  */
 open class GrassMapsApplication : Application() {
     val container: AppContainer by lazy {
+        val location = locationSource()
         AppContainer(
             strings = AndroidStrings(this),
-            locationSource = locationSource(),
+            locationSource = location,
             locationPermissionStore =
                 FileLocationPermissionStore {
                     File(filesDir, "$PERMISSION_DIRECTORY/$PERMISSION_FILE")
@@ -36,6 +44,8 @@ open class GrassMapsApplication : Application() {
             deviceInfoProvider = { deviceInfo() },
             debuggable = { isDebuggable() },
             extraCommands = extraCommands(),
+            devTools = devToolsAccess(location),
+            aiControlEnabled = { aiControlEnabled() },
         )
     }
 
@@ -89,16 +99,73 @@ open class GrassMapsApplication : Application() {
     internal open fun extraCommands(): (MapSessionHolder) -> List<Command<*, *>> = { emptyList() }
 
     /**
-     * The location provider for this build: the foreground-only platform
-     * source. A debug build overrides it with its GPX replay.
+     * The location provider for this build. A release build starts on the
+     * platform source and can switch to the committed GPX replay through the
+     * development-tools plugin. A debug build overrides this with the same
+     * replay, active by default.
      */
-    internal open fun locationSource(): LocationService = AndroidLocationSource(this)
+    internal open fun locationSource(): LocationService = replayLocation
+
+    /** The AI-control switch. Release stays off until T-0610 wires the switch. */
+    internal open fun aiControlEnabled(): Boolean = false
+
+    /** Development seams over whichever replay source this build installed. */
+    internal fun devToolsAccess(location: LocationService): DevToolsRuntime =
+        (location as? ReplayControl)?.let { replay ->
+            AppDevTools(replay, runtimeMetrics)
+        } ?: NoDevToolsRuntime
+
+    private val replayLocation: ReplayLocationSource by lazy {
+        ReplayLocationSource(
+            platform = AndroidLocationSource(this),
+            replay = {
+                MockGpxLocationSource.fromLoader(
+                    loadGpx = { readReplayGpx() },
+                    loop = true,
+                )
+            },
+        )
+    }
+
+    private val runtimeMetrics: RuntimeMetrics by lazy {
+        RuntimeMetrics(memoryBytes = ::appMemoryBytes)
+    }
+
+    /** Total PSS of this process, the figure the panel shows as memory. */
+    private fun appMemoryBytes(): Long {
+        val info = Debug.MemoryInfo()
+        Debug.getMemoryInfo(info)
+        return info.totalPss.toLong() * BYTES_PER_KILOBYTE
+    }
+
+    /**
+     * Reads the committed replay fixture for the release panel. It runs off
+     * Main, in the loader the replay's collector calls, and a missing asset is
+     * a null fix rather than a crash.
+     */
+    private suspend fun readReplayGpx(): Outcome<String> =
+        withContext(Dispatchers.IO) {
+            try {
+                Outcome.Success(
+                    assets.open(DEV_TOOLS_GPX_ASSET).bufferedReader().use { it.readText() },
+                )
+            } catch (exception: IOException) {
+                Log.w(TAG, "dev-tools replay missing: ${exception.message}")
+                Outcome.Failure(AppError.CorruptData)
+            } catch (exception: SecurityException) {
+                Log.w(TAG, "dev-tools replay unreadable: ${exception.message}")
+                Outcome.Failure(AppError.CorruptData)
+            }
+        }
 
     private companion object {
+        const val TAG = "GrassMapsDevTools"
         const val REGIONS_DIRECTORY = "regions"
         const val DIAGNOSTICS_DIRECTORY = "diagnostics"
         const val PERMISSION_DIRECTORY = "location"
         const val PERMISSION_FILE = "permission-asked"
+        const val DEV_TOOLS_GPX_ASSET = "mock-walk.gpx"
+        const val BYTES_PER_KILOBYTE = 1024L
         const val UNKNOWN_VERSION = "unknown"
     }
 }

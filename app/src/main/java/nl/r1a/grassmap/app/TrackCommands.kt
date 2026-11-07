@@ -82,8 +82,8 @@ internal class TrackImportTestCommand(
         if (path.startsWith("/")) {
             return try {
                 val file = File(path)
-                if (file.length() > MAX_IMPORT_BYTES) {
-                    log("path=\"$path\" rejected: larger than $MAX_IMPORT_BYTES bytes")
+                if (!file.isFile || file.length() <= 0L || file.length() > MAX_IMPORT_BYTES) {
+                    log("path=\"$path\" rejected: not a bounded regular file")
                     return Outcome.Failure(AppError.InvalidInput)
                 }
                 Outcome.Success(file.readBytes())

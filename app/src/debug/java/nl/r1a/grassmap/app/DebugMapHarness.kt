@@ -75,11 +75,8 @@ internal class DebugMapHarness(
                     }
 
                     is MapEvent.CameraChanged -> {
-                        Log.i(
-                            TAG,
-                            "camera zoom=${event.camera.zoom} bearing=${event.camera.bearing} " +
-                                "lat=${event.camera.center.latitude} lon=${event.camera.center.longitude}",
-                        )
+                        // Per-frame logging distorts the benchmark and would
+                        // record the followed position; the harness stays quiet.
                     }
 
                     else -> {

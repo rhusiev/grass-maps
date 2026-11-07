@@ -76,6 +76,9 @@ class CapturePositionTest(unittest.TestCase):
     def capture(self, answer: str) -> tuple[dict[str, object], mock.Mock]:
         adb = mock.Mock()
         adb.screencap.return_value = map_goldens.PNG_SIGNATURE + b"frame"
+        adb.shell.return_value = (
+            "mCurrentFocus=Window{1 u0 nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity}"
+        )
         client = FakeClient([answer])
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
@@ -98,6 +101,45 @@ class CapturePositionTest(unittest.TestCase):
 
         self.assertTrue(shot["idle"])
         sleep.assert_called_once_with(map_goldens.SCREENSHOT_SETTLE_S)
+
+
+class PrepareDeviceTest(unittest.TestCase):
+    def test_hides_error_dialogs_and_closes_existing_ones(self) -> None:
+        adb = mock.Mock()
+
+        commands = map_goldens.prepare_device(adb)
+
+        self.assertTrue(any("hide_error_dialogs" in command for command in commands))
+        self.assertTrue(any("CLOSE_SYSTEM_DIALOGS" in command for command in commands))
+        self.assertEqual(adb.shell.call_count, 3)
+
+
+class AppFocusTest(unittest.TestCase):
+    def test_app_focus_passes_and_returns_the_window(self) -> None:
+        adb = mock.Mock()
+        adb.shell.return_value = (
+            "mCurrentFocus=Window{1 u0 nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity}"
+        )
+
+        focus = map_goldens.require_app_focused(adb, "fixture-center-z12")
+
+        self.assertIn("nl.r1a.grassmap", focus)
+
+    def test_system_dialog_focus_fails_naming_the_window(self) -> None:
+        adb = mock.Mock()
+        adb.shell.return_value = (
+            "mCurrentFocus=Window{2 u0 com.android.systemui/com.android.systemui.recents.RecentsActivity}"
+        )
+
+        with (
+            mock.patch.object(map_goldens, "FOCUS_RETRY_TIMEOUT_S", 0.0),
+            mock.patch.object(map_goldens.time, "sleep"),
+            self.assertRaises(map_goldens.GoldenError) as raised,
+        ):
+            map_goldens.require_app_focused(adb, "fixture-center-z12")
+
+        self.assertIn("nl.r1a.grassmap", str(raised.exception))
+        self.assertIn("com.android.systemui", str(raised.exception))
 
 
 class RecordFailureTest(unittest.TestCase):

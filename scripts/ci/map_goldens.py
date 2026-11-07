@@ -60,6 +60,12 @@ SCREENSHOT_SETTLE_S = 0.8
 # camera command reports `idle=false`: base settle plus one slow software frame
 # (2.0 s), so the capture waits 2.8 s in total before reading the display.
 SLOW_FRAME_ALLOWANCE_S = 2.0
+# Software GL also trips SystemUI's ANR watchdog on the CI emulator. The error
+# dialog dims the map and would enter every golden, so ANR/crash dialogs are
+# hidden before launch and any existing dialog is closed.
+LAUNCH_SETTLE_S = 5.0
+FOCUS_RETRY_TIMEOUT_S = 10.0
+FOCUS_RETRY_PAUSE_S = 0.5
 CHANNEL_TIMEOUT_S = 60.0
 CAMERA_READY_TIMEOUT_S = 45.0
 # `core.map.set_camera` answers only after MapLibre reports idle (up to 15 s on
@@ -326,6 +332,63 @@ def record_failure(
         print(f"could not capture the failing screen: {error}", file=sys.stderr)
 
 
+def prepare_device(adb: Adb) -> list[str]:
+    """Hide system error dialogs so no ANR frame dims a golden.
+
+    Swiftshader is slow enough on the CI emulator that SystemUI can trip its
+    own ANR watchdog while the map renders. The dialog dims the map and covers
+    the comparison window, so error dialogs are hidden and any dialog already
+    showing is closed before the app is launched.
+    """
+    commands = [
+        ("settings", "put", "global", "hide_error_dialogs", "1"),
+        ("settings", "put", "global", "anr_show_background", "0"),
+        ("am", "broadcast", "-a", "android.intent.action.CLOSE_SYSTEM_DIALOGS"),
+    ]
+    for command in commands:
+        adb.shell(*command, timeout_s=20, check=False)
+    return ["adb shell " + " ".join(command) for command in commands]
+
+
+def dismiss_system_dialogs(adb: Adb) -> None:
+    """Close a dialog that appeared between two captures."""
+    adb.shell(
+        "am",
+        "broadcast",
+        "-a",
+        "android.intent.action.CLOSE_SYSTEM_DIALOGS",
+        timeout_s=20,
+        check=False,
+    )
+
+
+def focused_window(adb: Adb) -> str | None:
+    """The `mCurrentFocus` line from `dumpsys window`, or None when absent."""
+    raw = adb.shell("dumpsys", "window", timeout_s=30, check=False)
+    for line in raw.splitlines():
+        if "mCurrentFocus" in line:
+            return line.strip()
+    return None
+
+
+def require_app_focused(adb: Adb, stage: str) -> str:
+    """Fail with a named window when a system dialog owns the focus.
+
+    A dialog on top of the map dims every pixel beneath it, so a comparison
+    would fail on a real rendering mismatch that is not there. Retry for a few
+    seconds (a closing dialog hands focus back), then abort and name the window
+    instead of silently comparing the dialog.
+    """
+    deadline = time.monotonic() + FOCUS_RETRY_TIMEOUT_S
+    while True:
+        focus = focused_window(adb)
+        if focus is not None and PACKAGE in focus:
+            return focus
+        if time.monotonic() >= deadline:
+            raise GoldenError(f"{stage}: the focused window is not {PACKAGE}: {focus}")
+        time.sleep(FOCUS_RETRY_PAUSE_S)
+
+
 def capture_position(
     adb: Adb,
     client: control_client.ControlClient,
@@ -345,7 +408,9 @@ def capture_position(
     result = invoke_camera(client, params)
     idle = "idle=true" in result
     settle = SCREENSHOT_SETTLE_S if idle else SCREENSHOT_SETTLE_S + SLOW_FRAME_ALLOWANCE_S
+    dismiss_system_dialogs(adb)
     time.sleep(settle)
+    require_app_focused(adb, name)
     png = adb.screencap()
     path = output / f"{name}.png"
     path.write_bytes(png)
@@ -366,7 +431,10 @@ def capture(
 ) -> dict[str, object]:
     if profile == "oblast" and not (output / "region.json").exists():
         raise GoldenError("oblast capture needs the installed region package")
-    conditions = {"airplane_mode": airplane_mode(adb)}
+    conditions = {
+        "airplane_mode": airplane_mode(adb),
+        "system_dialogs": prepare_device(adb),
+    }
     if output.exists():
         for stale in output.glob("*.png"):
             stale.unlink()
@@ -376,6 +444,9 @@ def capture(
     try:
         launch(adb)
         client = wait_for_channel(adb)
+        # Let the first render spike finish before the first camera move; the
+        # swiftshader renderer is still catching up when `am start -W` returns.
+        time.sleep(LAUNCH_SETTLE_S)
         started = datetime.now(timezone.utc).isoformat()
         shots = []
         for name, lat, lon, zoom, bearing, tilt in POSITIONS[profile]:

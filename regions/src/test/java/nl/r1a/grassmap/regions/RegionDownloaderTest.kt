@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.regions
 
 import kotlinx.coroutines.test.runTest
+import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -95,6 +96,66 @@ class RegionDownloaderTest {
             assertTrue(Files.readAllBytes(paths.versionDirectory(REGION, VERSION).resolve("map.pmtiles").toPath()).contentEquals(oldBytes))
             assertFalse(paths.versionDirectory(REGION, NEXT_VERSION).exists())
         }
+
+    @Test
+    fun aCorruptCurrentVersionIsReplacedByAVerifiedCopy() =
+        runTest {
+            authenticatedPackageServer(token, FixturePackages.zip(FixturePackages.files())).use { server ->
+                success(download(server.baseUrl))
+                val currentMap = paths.versionDirectory(REGION, VERSION).resolve("map.pmtiles")
+                val corrupt = Files.readAllBytes(currentMap.toPath())
+                corrupt[0] = (corrupt[0].toInt() xor 0xff).toByte()
+                Files.write(currentMap.toPath(), corrupt)
+
+                val replaced = success(download(server.baseUrl))
+
+                assertFalse(replaced.reusedExisting)
+                assertEquals(VERSION, CurrentPointer.read(paths.regionDirectory(REGION)))
+                val expected = FixturePackages.files().getValue("map.pmtiles")
+                assertTrue(Files.readAllBytes(currentMap.toPath()).contentEquals(expected))
+                assertFalse(Files.list(paths.incomingDirectory().toPath()).use { it.findAny().isPresent })
+            }
+        }
+
+    @Test
+    fun aCancelledVerifyLeavesTheCorruptCurrentInPlace() {
+        val fixture = FixturePackages.loadedRegion()
+        val versionDirectory = paths.versionDirectory(REGION, VERSION)
+        assertTrue(versionDirectory.mkdirs())
+        fixture.manifest.components.forEach { component ->
+            File(versionDirectory, component.file).writeBytes(Files.readAllBytes(fixture.file(component)))
+        }
+        Files.writeString(paths.regionDirectory(REGION).resolve(RegionPaths.CURRENT_FILE).toPath(), VERSION + "\n")
+        val installedMap = versionDirectory.resolve("map.pmtiles")
+        val corrupt = Files.readAllBytes(installedMap.toPath())
+        corrupt[0] = (corrupt[0].toInt() xor 0xff).toByte()
+        Files.write(installedMap.toPath(), corrupt)
+
+        val staging = Files.createTempDirectory("grass-staging").toFile()
+        try {
+            FixturePackages.files().forEach { (name, bytes) -> File(staging, name).writeBytes(bytes) }
+            val manifestBytes = FixturePackages.files().getValue(RegionIdentifiers.MANIFEST_FILE)
+            val manifest =
+                (RegionManifestParser.parse(manifestBytes, REGION, VERSION) as Outcome.Success).value
+            val installer = RegionInstaller(paths, PackageVerifier())
+
+            val result =
+                installer.install(
+                    request = request("https://example.test/package.zip"),
+                    staging = staging,
+                    manifest = manifest,
+                    nonce = "nonce",
+                    cancellation = CancellationHandle { true },
+                )
+
+            assertEquals(Outcome.Failure(AppError.Cancelled), result)
+            assertTrue(installedMap.isFile)
+            assertTrue(Files.readAllBytes(installedMap.toPath()).contentEquals(corrupt))
+            assertEquals(VERSION, CurrentPointer.read(paths.regionDirectory(REGION)))
+        } finally {
+            staging.deleteRecursively()
+        }
+    }
 
     @Test
     fun aTruncatedZipIsRejected() =

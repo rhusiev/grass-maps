@@ -97,6 +97,10 @@ jobs:
     name: Emulator benchmarks (cold start and frame pacing, trend only)
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # Trend data only, not the g32 gate. The software-GPU emulator host
+    # sometimes loses adb services after an 8-12 minute boot; that must not
+    # block the real gate. A red job still names the missing data.
+    continue-on-error: true
     steps:
       - name: Check out
         uses: actions/checkout@v7

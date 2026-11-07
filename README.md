@@ -101,7 +101,13 @@ carry no FrameTimeline vsync id, so a map needs the SurfaceFlinger latch method
 from the bench `RESULTS.md`.
 
 These numbers are trends. They are not the Moto g32 acceptance gate and must
-not be compared across GPU modes or hosts.
+not be compared across GPU modes or hosts. A launch that exceeds the
+ActivityManager wait is recorded as `status: timeout` with its wait time, not
+treated as a failed run.
+
+The benchmark job is advisory. A failed emulator host leaves the job red and
+the data missing for that commit, but it does not fail the workflow; the gate,
+API 29 smoke and reproducibility jobs are the blocking checks.
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull
 request. Format, lint, build, unit tests, boundaries and manifest lint are one

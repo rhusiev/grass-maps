@@ -120,6 +120,20 @@ class MapHostStateTest {
     }
 
     @Test
+    fun setStyleWithTheLoadedStyleIsANoOp() {
+        val session = session()
+        session.onStyleLoaded()
+        val loaded = session.style.value
+        val generation = session.styleGeneration.value
+
+        assertEquals(Outcome.Success(Unit), session.applyStyle(style(LOADED_STYLE)))
+
+        assertEquals(loaded, session.style.value)
+        assertTrue("a redundant setStyle must not clear styleReady", session.styleReady.value)
+        assertEquals(generation, session.styleGeneration.value)
+    }
+
+    @Test
     fun setStyleRejectsABlankDocumentAndKeepsTheCurrentStyle() {
         val session = session()
         val before = session.style.value

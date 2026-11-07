@@ -103,6 +103,12 @@ internal class MapHostState(
     /** Loads [style] and makes it the style later diffs must match. */
     fun applyStyle(style: StyleSpec): Outcome<Unit> {
         val built = buildBaseStyle(style, sourceResolver) ?: return Outcome.Failure(AppError.InvalidInput)
+        // The first composition can call setStyle with the style this state was
+        // built from. Reloading it would clear styleReady and re-run the engine
+        // for nothing, so an unchanged style is a successful no-op.
+        if (style.id == loadedStyleId && built == this.style.value) {
+            return Outcome.Success(Unit)
+        }
         styleReady.value = false
         loadedStyleId = style.id
         this.style.value = built

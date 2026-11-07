@@ -67,6 +67,17 @@ class RegionManifestParserTest {
     }
 
     @Test
+    fun thePointerFileNameIsNotAValidVersion() {
+        assertFalse(RegionIdentifiers.isSafeSegment(RegionPaths.CURRENT_FILE))
+
+        val json = FixturePackages.atVersion(RegionPaths.CURRENT_FILE)
+        assertEquals(
+            Outcome.Failure(AppError.CorruptData),
+            RegionManifestParser.parse(json, "fixture-mini", RegionPaths.CURRENT_FILE),
+        )
+    }
+
+    @Test
     fun aDuplicateComponentFileIsCorrupt() {
         val json = rewritten("\"file\": \"contours.pmtiles\"", "\"file\": \"map.pmtiles\"")
 

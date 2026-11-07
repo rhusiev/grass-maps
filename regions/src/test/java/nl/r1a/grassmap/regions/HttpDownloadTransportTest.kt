@@ -5,9 +5,12 @@ import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayOutputStream
+import java.net.URI
 
 class HttpDownloadTransportTest {
     private val transport = HttpDownloadTransport()
@@ -72,9 +75,27 @@ class HttpDownloadTransportTest {
                         )
                     assertEquals(Outcome.Success(TransportResult(200)), allowed.first)
                     assertTrue(allowed.second.contentEquals(body))
+                    assertTrue(redirector.authorizations().firstOrNull() != null)
+                    assertNull("a cross-origin redirect must drop the token", target.authorizations().lastOrNull())
                 }
             }
         }
+
+    @Test
+    fun aSchemeChangeIsADifferentOrigin() {
+        assertFalse(
+            transport.sameAuthority(
+                URI("https://example.test:80/a"),
+                URI("http://example.test:80/b"),
+            ),
+        )
+        assertTrue(
+            transport.sameAuthority(
+                URI("https://example.test:443/a"),
+                URI("https://example.test/b"),
+            ),
+        )
+    }
 
     @Test
     fun aRedirectToAnotherPortOnTheSameHostIsRefused() =

@@ -28,6 +28,9 @@ object RegionManifestParser {
         val root = parseObject(bytes) ?: return Outcome.Failure(AppError.CorruptData)
         val region = root.string("region") ?: return corrupt()
         val version = root.string("version") ?: return corrupt()
+        if (!RegionIdentifiers.isSafeSegment(region) || !RegionIdentifiers.isSafeSegment(version)) {
+            return corrupt()
+        }
         if (region != expectedRegion || version != expectedVersion) {
             return corrupt()
         }

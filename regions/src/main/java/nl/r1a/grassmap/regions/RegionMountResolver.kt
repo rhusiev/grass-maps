@@ -195,6 +195,7 @@ class RegionMountResolver(
     }
 
     private fun hasPmtilesHeader(file: File): Boolean {
+        val fileLength = file.length()
         val header = ByteArray(PMTILES_HEADER_BYTES)
         try {
             DataInputStream(BufferedInputStream(file.inputStream())).use { input ->
@@ -205,16 +206,45 @@ class RegionMountResolver(
         } catch (exception: SecurityException) {
             return false
         }
-        if (header.size < PMTILES_HEADER_BYTES) {
-            return false
-        }
         for (index in PMTILES_MAGIC.indices) {
             if (header[index] != PMTILES_MAGIC[index]) {
                 return false
             }
         }
-        return header[PMTILES_VERSION_OFFSET].toInt() == PMTILES_FORMAT_VERSION
+        if (header[PMTILES_VERSION_OFFSET].toInt() != PMTILES_FORMAT_VERSION) {
+            return false
+        }
+        // The directories and the tile data must lie inside the declared file
+        // before native code opens it: a header that points past the end is a
+        // crash, not a corrupt map.
+        val rootLength = unsignedLong(header, ROOT_LENGTH_OFFSET)
+        if (rootLength == 0L) {
+            return false
+        }
+        return fits(fileLength, unsignedLong(header, ROOT_OFFSET), rootLength) &&
+            fits(fileLength, unsignedLong(header, METADATA_OFFSET), unsignedLong(header, METADATA_LENGTH_OFFSET)) &&
+            fits(fileLength, unsignedLong(header, LEAF_OFFSET), unsignedLong(header, LEAF_LENGTH_OFFSET)) &&
+            fits(fileLength, unsignedLong(header, DATA_OFFSET), unsignedLong(header, DATA_LENGTH_OFFSET)) &&
+            unsignedLong(header, ADDRESSED_TILES_OFFSET) > 0
     }
+
+    /** A little-endian u64 that does not fit a non-negative Long is rejected by [fits]. */
+    private fun unsignedLong(
+        header: ByteArray,
+        offset: Int,
+    ): Long {
+        var value = 0L
+        for (index in 0 until 8) {
+            value = value or ((header[offset + index].toLong() and 0xFF) shl (8 * index))
+        }
+        return value
+    }
+
+    private fun fits(
+        fileLength: Long,
+        offset: Long,
+        length: Long,
+    ): Boolean = offset >= 0L && length >= 0L && offset <= fileLength && length <= fileLength - offset
 
     private fun invalid(
         region: String,
@@ -228,6 +258,15 @@ class RegionMountResolver(
         const val PMTILES_FORMAT_VERSION = 3
         const val PMTILES_HEADER_BYTES = 127
         const val PMTILES_VERSION_OFFSET = 7
+        const val ROOT_OFFSET = 8
+        const val ROOT_LENGTH_OFFSET = 16
+        const val METADATA_OFFSET = 24
+        const val METADATA_LENGTH_OFFSET = 32
+        const val LEAF_OFFSET = 40
+        const val LEAF_LENGTH_OFFSET = 48
+        const val DATA_OFFSET = 56
+        const val DATA_LENGTH_OFFSET = 64
+        const val ADDRESSED_TILES_OFFSET = 72
         val PMTILES_MAGIC = "PMTiles".toByteArray(Charsets.US_ASCII)
     }
 }

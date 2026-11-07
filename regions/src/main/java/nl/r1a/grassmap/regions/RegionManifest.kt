@@ -54,12 +54,16 @@ object RegionIdentifiers {
     private const val MAX_SEGMENT_LENGTH: Int = 64
     private val SEGMENT = Regex("[a-z0-9][a-z0-9._-]*")
 
+    /** Names a version may never use: they are the region's own control files. */
+    private val RESERVED_SEGMENTS = setOf(RegionPaths.CURRENT_FILE)
+
     /** A region id or version, safe as one path segment. */
     fun isSafeSegment(value: String): Boolean =
         value.length in 1..MAX_SEGMENT_LENGTH &&
             SEGMENT.matches(value) &&
             value != "." &&
-            value != ".."
+            value != ".." &&
+            value !in RESERVED_SEGMENTS
 
     /** A component file name inside a package: one segment, not the manifest. */
     fun isSafeFileName(value: String): Boolean = isSafeSegment(value) && value != MANIFEST_FILE

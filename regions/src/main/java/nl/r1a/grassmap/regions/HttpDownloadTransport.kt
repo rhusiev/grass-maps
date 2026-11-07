@@ -164,11 +164,14 @@ class HttpDownloadTransport : DownloadTransport {
         return checked.value
     }
 
-    /** Host and effective port; a redirect across either is a different origin. */
-    private fun sameAuthority(
+    /** Scheme, host and effective port; a redirect across any of them is a different origin. */
+    internal fun sameAuthority(
         left: URI,
         right: URI,
-    ): Boolean = left.host == right.host && effectivePort(left) == effectivePort(right)
+    ): Boolean =
+        left.scheme.equals(right.scheme, ignoreCase = true) &&
+            left.host == right.host &&
+            effectivePort(left) == effectivePort(right)
 
     private fun effectivePort(uri: URI): Int =
         when {

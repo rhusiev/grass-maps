@@ -121,6 +121,24 @@ class RegionMountResolverTest {
     }
 
     @Test
+    fun aHeaderThatPointsPastTheEndIsCorrupt() {
+        install()
+        val map = versionDirectory().resolve("map.pmtiles")
+        val bytes = Files.readAllBytes(map)
+        // Root directory offset (little-endian u64 at byte 8) beyond the file.
+        val beyond = bytes.size.toLong() + 1L
+        for (index in 0 until 8) {
+            bytes[8 + index] = ((beyond shr (8 * index)) and 0xFF).toByte()
+        }
+        Files.write(map, bytes)
+
+        assertEquals(
+            RegionMount.Invalid("fixture-mini", RegionMountProblem.CorruptMap),
+            resolve(),
+        )
+    }
+
+    @Test
     fun aCorruptContoursFileIsInvalidAndNeverCrash() {
         install()
         val contours = versionDirectory().resolve("contours.pmtiles")

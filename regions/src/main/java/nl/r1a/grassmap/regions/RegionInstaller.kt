@@ -43,14 +43,20 @@ internal class RegionInstaller(
             return Outcome.Failure(AppError.Internal(INTERNAL_ID))
         }
         val target = paths.versionDirectory(request.region, request.version)
-        val reused =
+        val prepared =
             when (val current = prepareTarget(target, regionDirectory, manifest, request.version, nonce, cancellation)) {
                 is Outcome.Success -> current.value
                 is Outcome.Failure -> return current
             }
-        if (!reused) {
+        if (!prepared.reused) {
             when (val moved = moveIntoPlace(staging, target)) {
-                is Outcome.Failure -> return moved
+                is Outcome.Failure -> {
+                    // Put a quarantined current version back: the pointer still
+                    // names it, and a failed install must leave a mountable region.
+                    prepared.quarantine?.renameTo(target)
+                    return moved
+                }
+
                 is Outcome.Success -> Unit
             }
         }
@@ -60,18 +66,25 @@ internal class RegionInstaller(
             }
 
             is Outcome.Success -> {
+                prepared.quarantine?.deleteRecursively()
                 Outcome.Success(
                     InstalledRegion(
                         manifest = manifest,
                         directory = target,
                         verifiedBytes = manifest.totalBytes,
-                        reusedExisting = reused,
+                        reusedExisting = prepared.reused,
                         currentVersion = CurrentPointer.read(regionDirectory),
                     ),
                 )
             }
         }
     }
+
+    /** The target's state after verification: reuse it, or clear it for the new copy. */
+    private data class Prepared(
+        val reused: Boolean,
+        val quarantine: File?,
+    )
 
     private fun prepareTarget(
         target: File,
@@ -80,24 +93,31 @@ internal class RegionInstaller(
         version: String,
         nonce: String,
         cancellation: CancellationHandle,
-    ): Outcome<Boolean> {
+    ): Outcome<Prepared> {
         if (!target.exists()) {
-            return Outcome.Success(false)
+            return Outcome.Success(Prepared(reused = false, quarantine = null))
         }
         val valid = verifier.verify(target, manifest, cancellation)
         if (valid is Outcome.Success) {
-            return Outcome.Success(true)
+            return Outcome.Success(Prepared(reused = true, quarantine = null))
         }
-        if (CurrentPointer.read(regionDirectory) == version) {
-            return Outcome.Failure(AppError.CorruptData)
+        if (valid is Outcome.Failure && valid.error == AppError.Cancelled) {
+            return valid
         }
         val quarantine = File(paths.incomingDirectory(), "invalid-$version-$nonce")
+        quarantine.deleteRecursively()
         val moved = target.renameTo(quarantine)
         if (!moved) {
             return Outcome.Failure(AppError.Internal(INTERNAL_ID))
         }
-        quarantine.deleteRecursively()
-        return Outcome.Success(false)
+        // A corrupt non-current version is discarded now. A corrupt current
+        // version must survive until its verified replacement is in place, so
+        // its quarantine is kept for rollback and deleted after the install.
+        if (CurrentPointer.read(regionDirectory) != version) {
+            quarantine.deleteRecursively()
+            return Outcome.Success(Prepared(reused = false, quarantine = null))
+        }
+        return Outcome.Success(Prepared(reused = false, quarantine = quarantine))
     }
 
     private fun moveIntoPlace(

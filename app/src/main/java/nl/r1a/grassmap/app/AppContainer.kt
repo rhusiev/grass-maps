@@ -11,12 +11,15 @@ import nl.r1a.grassmap.core.CommandDispatchers
 import nl.r1a.grassmap.core.PluginHost
 import nl.r1a.grassmap.core.ProviderRegistry
 import nl.r1a.grassmap.core.StreamRegistry
+import nl.r1a.grassmap.core.services.DeviceInfo
+import nl.r1a.grassmap.core.services.Diagnostics
 import nl.r1a.grassmap.core.services.InMemoryLocationPermissionStore
 import nl.r1a.grassmap.core.services.LocationPermissionStore
 import nl.r1a.grassmap.core.services.LocationSource
 import nl.r1a.grassmap.core.services.NoLocationSource
 import nl.r1a.grassmap.core.services.PrivacyNetworkGate
 import nl.r1a.grassmap.core.services.PrivacySwitchSettings
+import nl.r1a.grassmap.core.services.diagnosticsCommands
 import nl.r1a.grassmap.places.PlacesAccess
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
@@ -48,6 +51,8 @@ class AppContainer(
     private val searchFilesProvider: () -> File? = { null },
     private val assetReader: (String) -> ByteArray? = { null },
     private val regionsRootProvider: () -> File? = { null },
+    private val diagnosticsRootProvider: () -> File? = { null },
+    private val deviceInfoProvider: () -> DeviceInfo = { DeviceInfo.UNKNOWN },
     private val debuggable: () -> Boolean = { false },
     private val extraCommands: (MapSessionHolder) -> List<Command<*, *>> = { emptyList() },
 ) {
@@ -116,6 +121,22 @@ class AppContainer(
         }
     }
 
+    /**
+     * The diagnostic ring, settings and bundle writer over the app-private
+     * `diagnostics/` directory. Constructing it reads the settings file, so the
+     * lazy is resolved by an IO-dispatched command or the crash handler, never
+     * by the Main thread.
+     */
+    val diagnostics: Diagnostics? by lazy {
+        diagnosticsRootProvider()?.let { root ->
+            Diagnostics(
+                directory = root,
+                deviceInfo = deviceInfoProvider,
+                defaultLoggingEnabled = debuggable(),
+            )
+        }
+    }
+
     private val hostCommands: List<Command<*, *>> by lazy {
         mapCommands(mapSession, locationController, locationPermission) +
             routeCommands(mapSession, { routingEngine }, { dataSources }) +
@@ -123,7 +144,8 @@ class AppContainer(
             searchCommands { places } +
             trackCommands({ tracks }, assetReader) +
             regionCommands({ regionDownloader }, regionNetwork, debuggable) +
-            extraCommands(mapSession)
+            extraCommands(mapSession) +
+            diagnosticsCommands { diagnostics }
     }
 
     /** The catalog entries for the host commands; the debug channel lists these. */

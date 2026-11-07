@@ -3,9 +3,13 @@ package nl.r1a.grassmap.app
 import android.app.Activity
 import android.app.Application
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
+import android.os.Build
 import nl.r1a.grassmap.core.services.AndroidLocationSource
 import nl.r1a.grassmap.core.services.AndroidStrings
+import nl.r1a.grassmap.core.services.DeviceInfo
 import nl.r1a.grassmap.core.services.FileLocationPermissionStore
+import nl.r1a.grassmap.core.services.installCrashGuard
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.service.LocationService
 import java.io.File
@@ -28,10 +32,36 @@ open class GrassMapsApplication : Application() {
             searchFilesProvider = { getExternalFilesDir(null) ?: filesDir },
             assetReader = { path -> readAsset(path) },
             regionsRootProvider = { File(filesDir, REGIONS_DIRECTORY) },
+            diagnosticsRootProvider = { File(filesDir, DIAGNOSTICS_DIRECTORY) },
+            deviceInfoProvider = { deviceInfo() },
             debuggable = { isDebuggable() },
             extraCommands = extraCommands(),
         )
     }
+
+    override fun onCreate() {
+        super.onCreate()
+        installCrashGuard { container.diagnostics?.crashGuard }
+    }
+
+    /** The device facts a bundle carries; no identifier is included. */
+    private fun deviceInfo(): DeviceInfo =
+        DeviceInfo(
+            model =
+                listOf(Build.MANUFACTURER, Build.MODEL)
+                    .filter { it.isNotBlank() }
+                    .distinct()
+                    .joinToString(" "),
+            osVersion = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
+            appVersion = packageVersionName(),
+        )
+
+    private fun packageVersionName(): String =
+        try {
+            this.packageManager.getPackageInfo(this.packageName, 0).versionName ?: UNKNOWN_VERSION
+        } catch (exception: PackageManager.NameNotFoundException) {
+            UNKNOWN_VERSION
+        }
 
     /** The debug-only seams check this flag; the manifest sets it for debug builds only. */
     private fun isDebuggable(): Boolean = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
@@ -66,7 +96,9 @@ open class GrassMapsApplication : Application() {
 
     private companion object {
         const val REGIONS_DIRECTORY = "regions"
+        const val DIAGNOSTICS_DIRECTORY = "diagnostics"
         const val PERMISSION_DIRECTORY = "location"
         const val PERMISSION_FILE = "permission-asked"
+        const val UNKNOWN_VERSION = "unknown"
     }
 }

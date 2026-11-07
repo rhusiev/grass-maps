@@ -470,6 +470,63 @@ tools/control/grassctl.py invoke core.track.import_test '{"path":"mock-walk.gpx"
 It reads a debug asset or an absolute path, imports through `file.gpx`, stores
 the track and logs the profile. No tracks UI exists yet.
 
+## Regions seam
+
+`regions` reads the T-0015 `manifest.json` (region, version, package format,
+OSM timestamp, pipeline bbox and source archives, and each component's kind,
+format, format version, bytes and sha256). A manifest the app does not
+understand is `Unsupported`; a malformed one, or one naming a different
+region or version than the requested URL, is `CorruptData`.
+
+`DownloadTransport` is the HTTP seam. `HttpDownloadTransport` performs one
+authenticated GET over `HttpURLConnection` with bounded connect and read
+timeouts. Redirects are handled explicitly: the policy caps their number, a
+redirect to another host or port is refused unless the policy allows it, and
+the bearer token is attached only while the request stays on the initial
+origin. A non-2xx status is `Server(status, retryAfter)` and its body is never
+read. The token is a `BearerToken` value type whose `toString` is redacted; a
+request without one carries no `Authorization` header, and the server answers
+401.
+
+Every download runs through `NetworkAccess`. Production wires
+`GateNetworkAccess(PrivacyNetworkGate(...))`, so a request names
+`network.region_updates` and is refused while that switch is off. The debug
+trigger can replace the gate with a logged bypass; nothing else may.
+
+The store layout is:
+
+```
+<root>/<region>/<version>/     one verified package
+<root>/<region>/current        the active version, replaced atomically
+<root>/.incoming/              downloads, staging and quarantine
+```
+
+A download writes a zip under `.incoming`, extracts it to a staging directory
+with a zip-slip guard, parses the manifest, verifies every declared file's size
+and sha256, and rejects any undeclared regular file or symbolic link. The
+version directory is then renamed into place and `current` is replaced by an
+fsynced temporary file plus an atomic rename. The pointer is the commit point:
+a crash before it leaves the previous version current and usable; a crash after
+the version-directory rename but before the pointer rename leaves an unused new
+directory, which a retry verifies and reuses. A failed verification or a crash
+during extraction leaves only a `.incoming` directory that the next attempt
+ignores.
+
+The debug trigger is `core.region.download_test`, allowlisted for the control
+channel only:
+
+```sh
+tools/control/grassctl.py invoke core.region.download_test \
+  '{"url":"http://127.0.0.1:8765/package.zip","token":"<test-token>","region":"fixture-mini","version":"2026-11-03-1","bypass":true}'
+```
+
+`bypass` is logged on every call and exists only for this debug trigger. A
+release build packages no control channel, so it has no path to the command.
+The trigger permits cleartext so it can reach `adb reverse`; the debug manifest
+allows cleartext only for `127.0.0.1` and `localhost` through
+`app/src/debug/res/xml/network_security_config.xml`, and release keeps the
+platform default of no cleartext. No downloads UI exists yet; T-0504 owns it.
+
 ## Follow-ups
 
 `plugin-api` and `plugin-ui-api` are ordinary Android libraries in this

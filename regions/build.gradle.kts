@@ -18,4 +18,8 @@ android {
 
 dependencies {
     api(project(":plugin-api"))
+
+    testImplementation(testFixtures(project(":plugin-api")))
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

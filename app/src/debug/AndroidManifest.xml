@@ -2,9 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Debug builds install the StrictMode policy checked by CI. If a main
-         Application class lands, DebugApplication must extend it. -->
+    <!-- Debug builds install the StrictMode policy checked by CI. The cleartext
+         exception is loopback only, for the local region-download server; a
+         release build has no such config and targetSdk 36 refuses cleartext. -->
     <application
         android:name="nl.r1a.grassmap.app.DebugApplication"
+        android:networkSecurityConfig="@xml/network_security_config"
         tools:replace="android:name" />
 </manifest>

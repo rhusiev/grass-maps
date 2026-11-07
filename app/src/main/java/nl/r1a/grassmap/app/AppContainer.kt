@@ -13,13 +13,22 @@ import nl.r1a.grassmap.core.ProviderRegistry
 import nl.r1a.grassmap.core.StreamRegistry
 import nl.r1a.grassmap.core.services.LocationSource
 import nl.r1a.grassmap.core.services.NoLocationSource
+import nl.r1a.grassmap.core.services.PrivacyNetworkGate
+import nl.r1a.grassmap.core.services.PrivacySwitchSettings
 import nl.r1a.grassmap.places.PlacesAccess
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
+import nl.r1a.grassmap.plugin.api.service.NetworkGate
+import nl.r1a.grassmap.plugin.api.service.PrivacySwitches
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.regions.GateNetworkAccess
+import nl.r1a.grassmap.regions.HttpDownloadTransport
+import nl.r1a.grassmap.regions.NetworkAccess
+import nl.r1a.grassmap.regions.RegionDownloader
+import nl.r1a.grassmap.regions.RegionPaths
 import nl.r1a.grassmap.routing.ValhallaRoutingEngine
 import java.io.File
 
@@ -35,6 +44,7 @@ class AppContainer(
     private val routingFilesProvider: () -> File? = { null },
     private val searchFilesProvider: () -> File? = { null },
     private val assetReader: (String) -> ByteArray? = { null },
+    private val regionsRootProvider: () -> File? = { null },
 ) {
     private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -72,12 +82,35 @@ class AppContainer(
         TrackAccess(providerRegistry, GeneratedPlugins.providers)
     }
 
+    /**
+     * The v1 privacy switches. Region downloads name
+     * [nl.r1a.grassmap.core.services.NetworkSwitches.regionUpdates]; the real
+     * gate refuses the request while the switch is off.
+     */
+    private val privacySwitches: PrivacySwitches = PrivacySwitchSettings()
+    private val networkGate: NetworkGate = PrivacyNetworkGate(privacySwitches)
+
+    /** The production network path for region downloads. */
+    val regionNetwork: NetworkAccess = GateNetworkAccess(networkGate)
+
+    /** The region downloader over the app-private region store, or null without a root. */
+    val regionDownloader: RegionDownloader? by lazy {
+        regionsRootProvider()?.let { root ->
+            RegionDownloader(
+                transport = HttpDownloadTransport(),
+                paths = RegionPaths(root),
+                log = { message -> Log.i(REGIONS_TAG, message) },
+            )
+        }
+    }
+
     private val hostCommands: List<Command<*, *>> by lazy {
         mapCommands(mapSession, locationController) +
             routeCommands(mapSession, { routingEngine }, { dataSources }) +
             navCommands(mapSession, { routingEngine }) +
             searchCommands { places } +
-            trackCommands({ tracks }, assetReader)
+            trackCommands({ tracks }, assetReader) +
+            regionCommands({ regionDownloader }, regionNetwork)
     }
 
     /** The catalog entries for the host commands; the debug channel lists these. */
@@ -118,6 +151,7 @@ class AppContainer(
     private companion object {
         const val ROUTING_TAG = "GrassMapsRouting"
         const val SEARCH_TAG = "GrassMapsSearch"
+        const val REGIONS_TAG = "GrassMapsRegions"
         const val ROUTING_PACK_DIRECTORY = "valhalla"
     }
 }

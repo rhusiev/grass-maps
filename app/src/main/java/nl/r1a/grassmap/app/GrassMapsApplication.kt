@@ -5,6 +5,7 @@ import android.app.Application
 import nl.r1a.grassmap.core.services.AndroidStrings
 import nl.r1a.grassmap.core.services.LocationSource
 import nl.r1a.grassmap.core.services.NoLocationSource
+import java.io.File
 import java.io.IOException
 
 /**
@@ -19,6 +20,7 @@ open class GrassMapsApplication : Application() {
             routingFilesProvider = { getExternalFilesDir(null) ?: filesDir },
             searchFilesProvider = { getExternalFilesDir(null) ?: filesDir },
             assetReader = { path -> readAsset(path) },
+            regionsRootProvider = { File(filesDir, REGIONS_DIRECTORY) },
         )
     }
 
@@ -43,4 +45,8 @@ open class GrassMapsApplication : Application() {
      * T-0103; a debug build installs its GPX replay.
      */
     internal open fun locationSource(): LocationSource = NoLocationSource
+
+    private companion object {
+        const val REGIONS_DIRECTORY = "regions"
+    }
 }

@@ -195,7 +195,7 @@ internal object ContourOverlay {
                             listOf(
                                 JsonPrimitive("=="),
                                 JsonPrimitive("idx"),
-                                JsonPrimitive(if (id == "contour-index") 1 else 0),
+                                JsonPrimitive(id == "contour-index"),
                             ),
                         ),
                     paint =

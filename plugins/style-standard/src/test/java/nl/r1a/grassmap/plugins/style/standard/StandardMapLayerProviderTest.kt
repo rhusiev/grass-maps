@@ -1,10 +1,16 @@
 package nl.r1a.grassmap.plugins.style.standard
 
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
 import nl.r1a.grassmap.plugin.api.model.StyleId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -42,6 +48,26 @@ class StandardMapLayerProviderTest {
 
         assertTrue(contours.isNotEmpty())
         assertTrue(contours.all { it.spec.source == MapSourceIds.CONTOURS })
+    }
+
+    @Test
+    fun contourFiltersUseTheArchivesBooleanIndex() {
+        val contours =
+            provider.layers(StyleId("standard")).filter { it.slot == LayerSlot.Overlays }
+        val filters = contours.associate { it.spec.id.value to it.spec.filter }
+
+        assertEquals(
+            JsonArray(listOf(JsonPrimitive("=="), JsonPrimitive("idx"), JsonPrimitive(true))),
+            filters["contour-index"],
+        )
+        assertEquals(
+            JsonArray(listOf(JsonPrimitive("=="), JsonPrimitive("idx"), JsonPrimitive(false))),
+            filters["contour-20"],
+        )
+        for ((id, filter) in filters) {
+            val value = requireNotNull(filter).jsonArray[2].jsonPrimitive
+            assertNotNull("$id must compare a JSON boolean, not a number", value.booleanOrNull)
+        }
     }
 
     @Test

@@ -60,15 +60,16 @@ never runs outside the slot:
 
 ```sh
 ./check.sh                 # everything below, including reproducibility
-./check.sh --skip-repro    # the fast loop; CI runs reproducibility separately
+./check.sh --fast          # the fast loop; CI runs reproducibility separately
 ```
 
-It runs Spotless with ktlint from the root, Android lint,
-`:app:assembleDebug`, the JVM unit tests, `checkTranslations`,
-`checkPluginBoundaries`, `checkPluginManifests`, `checkPrivacyGuards`, and two
-unsigned release builds at different paths compared byte for byte. The test
-count is reported; an empty suite fails the gate, so deleting the last test
-cannot pass CI.
+`--skip-repro` is an alias for `--fast`. The gate runs Spotless with ktlint from
+the root, Android lint, `:app:assembleDebug`, the JVM unit tests,
+`checkTranslations`, `checkPluginBoundaries`, `checkPluginManifests`,
+`:plugins:example:check`, `checkPrivacyGuards`, and two unsigned release builds
+at different paths compared byte for byte. The test count is reported; an empty
+suite fails the gate, so deleting the last test cannot pass CI. Every step
+prints its duration, and the total is printed at the end.
 
 `checkTranslations` checks every module with `src/main/res/values*/strings.xml`:
 each key must exist in English (`values`) and Ukrainian (`values-uk`), with a

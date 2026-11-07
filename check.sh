@@ -51,7 +51,6 @@ if [[ -z "${GRASS_MAPS_IN_BUILD_SLOT:-}" && -z "${CI:-}" ]] && command -v agent-
     exec agent-lock run gm-build --timeout 30m -- "$0" "$@"
 fi
 
-step_start=$SECONDS
 script_start=$SECONDS
 
 step() {

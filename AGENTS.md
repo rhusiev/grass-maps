@@ -79,9 +79,9 @@ document, section 3, plus the build and module rules of this repository.
   manifest checks, the example plugin, the privacy guards and the
   reproducibility check
 - CI tiers the same way: the checks job runs `./check.sh --fast`, while
-  reproducibility, the API 29 smoke, the goldens and the benchmark are
-  separate jobs. A `--fast` run is not evidence for a merge on its own; the
-  reproducibility job is
+  reproducibility, the API 29 smoke and the benchmark are separate jobs. A
+  `--fast` run is not evidence for a merge on its own; the reproducibility job
+  is
 - Check the plugin boundary rule: `./gradlew checkPluginBoundaries`
 - Check plugin manifests: `./gradlew checkPluginManifests`
 - Check the privacy guards (dependency denylist and merged manifests):

@@ -2,7 +2,10 @@ package nl.r1a.grassmap.control
 
 import android.net.LocalServerSocket
 import android.net.LocalSocket
+import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -44,7 +47,13 @@ class ControlServer(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val maxFailedAuth: Int = ControlSession.DEFAULT_MAX_FAILED_AUTH,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + dispatcher)
+    private val exceptionHandler =
+        CoroutineExceptionHandler { _, error ->
+            Log.e(TAG, "control server coroutine failed", error)
+        }
+
+    // A cancelled scope cannot accept again, so each start creates a fresh one.
+    private var scope: CoroutineScope? = null
     private var serverSocket: LocalServerSocket? = null
     private var acceptJob: Job? = null
 
@@ -59,8 +68,10 @@ class ControlServer(
                 onState(ControlServerState.BIND_FAILED)
                 return Outcome.Failure(AppError.Internal("control.bind"))
             }
+        val running = CoroutineScope(SupervisorJob() + dispatcher + exceptionHandler)
         serverSocket = socket
-        acceptJob = scope.launch { acceptLoop(socket) }
+        scope = running
+        acceptJob = running.launch { acceptLoop(socket) }
         onState(ControlServerState.LISTENING)
         return Outcome.Success(Unit)
     }
@@ -70,7 +81,8 @@ class ControlServer(
         acceptJob = null
         closeQuietly(serverSocket)
         serverSocket = null
-        scope.cancel()
+        scope?.cancel()
+        scope = null
         if (wasRunning) {
             onState(ControlServerState.STOPPED)
         }
@@ -86,6 +98,12 @@ class ControlServer(
                 } ?: break
             try {
                 serve(connection)
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                Log.e(TAG, "control session failed", exception)
+            } catch (error: LinkageError) {
+                Log.e(TAG, "control session failed to link", error)
             } finally {
                 closeQuietly(connection)
             }
@@ -156,3 +174,5 @@ class ControlServer(
         }
     }
 }
+
+private const val TAG = "GrassMapsControl"

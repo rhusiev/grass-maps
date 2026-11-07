@@ -25,6 +25,69 @@ import java.util.Base64
 
 class ControlSessionTest {
     @Test
+    fun notificationAuthFailuresCountTowardTheLimit() =
+        runTest {
+            val harness = Harness(maxFailedAuth = 2)
+            val session = backgroundScope.launch { harness.session.run() }
+
+            repeat(2) {
+                harness.send(null, ControlSession.METHOD_LIST_COMMANDS)
+            }
+
+            withTimeout(1_000) { session.join() }
+        }
+
+    @Test
+    fun answersMalformedJsonRpcFramesWithoutClosing() =
+        runTest {
+            val harness = Harness()
+            backgroundScope.launch { harness.session.run() }
+
+            val malformed =
+                listOf(
+                    """{"jsonrpc":{},"method":"x"}""",
+                    """{"jsonrpc":5,"method":"x"}""",
+                    """{"jsonrpc":"2.0","method":{}}""",
+                    """{"jsonrpc":"2.0","method":null}""",
+                    """[]""",
+                    """not json""",
+                )
+            for (frame in malformed) {
+                harness.transport.send(frame)
+                assertEquals(RpcCodes.PARSE_ERROR, harness.nextObject().errorCode())
+            }
+
+            harness.authenticate()
+            harness.send(2L, ControlSession.METHOD_LIST_COMMANDS)
+            assertNull(harness.nextObject()["error"])
+        }
+
+    @Test
+    fun endsTheSessionWhenThePeerDiesWithALiveSubscription() =
+        runTest {
+            val values = MutableSharedFlow<JsonElement>()
+            val harness = Harness(streams = FakeStreams(mapOf("test.value" to values)))
+            val session = backgroundScope.launch { harness.session.run() }
+            harness.authenticate()
+
+            harness.send(
+                2L,
+                ControlSession.METHOD_SUBSCRIBE,
+                buildJsonObject { put(ControlSession.STREAM_PARAM, "test.value") },
+            )
+            val subscription =
+                harness
+                    .nextObject()
+                    .result()["subscription"]
+                    ?.let { it as JsonPrimitive }
+                    ?.long
+            assertTrue(subscription != null)
+
+            harness.transport.close()
+            withTimeout(1_000) { session.join() }
+        }
+
+    @Test
     fun refusesEveryMethodBeforeAuthentication() =
         runTest {
             val harness = Harness()

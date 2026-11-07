@@ -9,7 +9,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import nl.r1a.grassmap.plugin.api.error.AppError
@@ -64,11 +63,11 @@ object JsonRpcCodec {
                 return Outcome.Failure(AppError.InvalidInput)
             }
         val objectValue = element as? JsonObject ?: return Outcome.Failure(AppError.InvalidInput)
-        if (objectValue["jsonrpc"]?.jsonPrimitive?.contentOrNull != VERSION) {
+        if ((objectValue["jsonrpc"] as? JsonPrimitive)?.contentOrNull != VERSION) {
             return Outcome.Failure(AppError.InvalidInput)
         }
         val method =
-            objectValue["method"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+            (objectValue["method"] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
                 ?: return Outcome.Failure(AppError.InvalidInput)
         val id = objectValue["id"]?.takeUnless { it is JsonNull }
         val params = objectValue["params"] as? JsonObject ?: JsonObject(emptyMap())

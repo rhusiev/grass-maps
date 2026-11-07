@@ -22,6 +22,7 @@ import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.contract.StreamId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import java.io.IOException
 import java.util.Base64
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
@@ -48,30 +49,36 @@ class ControlSession(
 
     suspend fun run() {
         coroutineScope {
-            while (currentCoroutineContext().isActive) {
-                val read = transport.readFrame()
-                val frame =
-                    when (read) {
-                        FrameRead.EndOfStream -> {
-                            break
-                        }
+            try {
+                while (currentCoroutineContext().isActive) {
+                    val read = transport.readFrame()
+                    val frame =
+                        when (read) {
+                            FrameRead.EndOfStream -> {
+                                break
+                            }
 
-                        is FrameRead.Oversized -> {
-                            write(errorFrame(null, oversized()))
-                            break
-                        }
+                            is FrameRead.Oversized -> {
+                                write(errorFrame(null, oversized()))
+                                break
+                            }
 
-                        is FrameRead.Frame -> {
-                            read.text
+                            is FrameRead.Frame -> {
+                                read.text
+                            }
                         }
+                    if (!handleFrame(frame, this)) {
+                        break
                     }
-                if (!handleFrame(frame, this)) {
-                    break
                 }
+            } finally {
+                // Subscriptions are children of this scope. They must be
+                // cancelled before it returns, or a live stream keeps the
+                // session (and the next client) waiting forever.
+                subscriptions.values.forEach { it.cancel() }
+                subscriptions.clear()
             }
         }
-        subscriptions.values.forEach { it.cancel() }
-        subscriptions.clear()
     }
 
     private suspend fun handleFrame(
@@ -90,13 +97,14 @@ class ControlSession(
                 }
             }
         val reply = dispatch(request, scope)
-        if (request.id == null) {
-            return true
+        if (request.id != null) {
+            when (reply) {
+                is Reply.Result -> write(JsonRpcCodec.response(request.id, reply.value))
+                is Reply.Failure -> write(errorFrame(request.id, reply.error))
+            }
         }
-        when (reply) {
-            is Reply.Result -> write(JsonRpcCodec.response(request.id, reply.value))
-            is Reply.Failure -> write(errorFrame(request.id, reply.error))
-        }
+        // A notification gets no response, but it must still close the
+        // connection when it breaks the failed-auth limit.
         return !(reply is Reply.Failure && reply.closeConnection)
     }
 
@@ -266,10 +274,16 @@ class ControlSession(
                         put(STREAM_PARAM, streamId)
                         put("value", value)
                     }
-                write(JsonRpcCodec.notification(JsonRpcCodec.NOTIFICATION_STREAM_DATA, params))
+                val sent = write(JsonRpcCodec.notification(JsonRpcCodec.NOTIFICATION_STREAM_DATA, params))
+                if (!sent) {
+                    // The peer is gone; a subscription must not keep writing.
+                    throw IOException("control write failed")
+                }
             }
         } catch (exception: CancellationException) {
             throw exception
+        } catch (exception: IOException) {
+            // A dead peer ends its subscriptions.
         } catch (exception: Exception) {
             // A stream that fails ends its subscription, not the connection.
         }

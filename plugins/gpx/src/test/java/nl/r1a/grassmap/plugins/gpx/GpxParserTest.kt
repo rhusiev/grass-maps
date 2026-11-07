@@ -87,6 +87,37 @@ class GpxParserTest {
         }
 
     @Test
+    fun aDoctypeWithAnExternalEntityIsRejectedBeforeParsing() =
+        runTest {
+            val outcome = GpxFormat().importFile(EXTERNAL_ENTITY.toByteArray(), CancellationHandle.None)
+
+            // A failure carries no entities, so the referenced file cannot
+            // surface as a track name.
+            assertEquals(Outcome.Failure(AppError.CorruptData), outcome)
+        }
+
+    @Test
+    fun anEntityDeclarationWithoutADoctypeIsRejected() =
+        runTest {
+            assertEquals(
+                Outcome.Failure(AppError.CorruptData),
+                GpxFormat().importFile(INTERNAL_ENTITY.toByteArray(), CancellationHandle.None),
+            )
+        }
+
+    @Test
+    fun aUtf16DoctypeIsAlsoRejected() =
+        runTest {
+            assertEquals(
+                Outcome.Failure(AppError.CorruptData),
+                GpxFormat().importFile(
+                    UTF16_EXTERNAL_ENTITY.toByteArray(Charsets.UTF_16LE),
+                    CancellationHandle.None,
+                ),
+            )
+        }
+
+    @Test
     fun aNonGpxRootIsATypedFailure() =
         runTest {
             assertEquals(
@@ -174,6 +205,38 @@ class GpxParserTest {
                 </g:trkseg>
               </g:trk>
             </g:gpx>
+            """.trimIndent()
+
+        val EXTERNAL_ENTITY =
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE gpx [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+            <gpx version="1.1" creator="test" xmlns="http://www.topografix.com/GPX/1/1">
+              <trk>
+                <name>&xxe;</name>
+                <trkseg>
+                  <trkpt lat="49.84" lon="24.03"><ele>296</ele></trkpt>
+                </trkseg>
+              </trk>
+            </gpx>
+            """.trimIndent()
+
+        val INTERNAL_ENTITY =
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!ENTITY xxe "expanded">
+            <gpx version="1.1" creator="test" xmlns="http://www.topografix.com/GPX/1/1">
+              <trk><name>&xxe;</name></trk>
+            </gpx>
+            """.trimIndent()
+
+        val UTF16_EXTERNAL_ENTITY =
+            """
+            <?xml version="1.0" encoding="UTF-16"?>
+            <!DOCTYPE gpx [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+            <gpx version="1.1" creator="test" xmlns="http://www.topografix.com/GPX/1/1">
+              <trk><name>&xxe;</name></trk>
+            </gpx>
             """.trimIndent()
     }
 }

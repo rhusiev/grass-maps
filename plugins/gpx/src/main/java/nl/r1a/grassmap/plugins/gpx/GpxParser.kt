@@ -38,6 +38,9 @@ internal object GpxParser {
         if (bytes.isEmpty() || cancellation.isCancelled()) {
             return Outcome.Failure(if (bytes.isEmpty()) AppError.CorruptData else AppError.Cancelled)
         }
+        if (declaresDtd(bytes)) {
+            return Outcome.Failure(AppError.CorruptData)
+        }
         val document =
             try {
                 documentBuilder().parse(ByteArrayInputStream(bytes))
@@ -267,6 +270,83 @@ internal object GpxParser {
             // The platform parser may not know every hardening feature.
         }
     }
+
+    /**
+     * A GPX document never needs a DTD, and the platform parser may ignore
+     * `disallow-doctype-decl`. Reject a doctype or entity declaration in the raw
+     * bytes before the parser sees them, so an external entity cannot be
+     * resolved even when the feature call above is unsupported. The scan also
+     * covers the UTF-16 forms, which an ASCII-only scan would miss.
+     */
+    private fun declaresDtd(bytes: ByteArray): Boolean =
+        FORBIDDEN_DECLARATIONS.any { declaration ->
+            containsAsciiIgnoreCase(bytes, declaration) ||
+                containsUtf16(bytes, declaration, littleEndian = true) ||
+                containsUtf16(bytes, declaration, littleEndian = false)
+        }
+
+    private fun containsAsciiIgnoreCase(
+        bytes: ByteArray,
+        marker: String,
+    ): Boolean {
+        for (start in 0..bytes.size - marker.length) {
+            if (matchesAscii(bytes, start, marker)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun matchesAscii(
+        bytes: ByteArray,
+        start: Int,
+        marker: String,
+    ): Boolean {
+        for (offset in marker.indices) {
+            val value = bytes[start + offset].toInt() and BYTE_MASK
+            if (asciiUpper(value) != marker[offset].code) {
+                return false
+            }
+        }
+        return true
+    }
+
+    private fun containsUtf16(
+        bytes: ByteArray,
+        marker: String,
+        littleEndian: Boolean,
+    ): Boolean {
+        for (start in 0..bytes.size - marker.length * UTF16_CODE_UNIT_BYTES) {
+            if (matchesUtf16(bytes, start, marker, littleEndian)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun matchesUtf16(
+        bytes: ByteArray,
+        start: Int,
+        marker: String,
+        littleEndian: Boolean,
+    ): Boolean {
+        for (offset in marker.indices) {
+            val first = bytes[start + offset * UTF16_CODE_UNIT_BYTES].toInt() and BYTE_MASK
+            val second = bytes[start + offset * UTF16_CODE_UNIT_BYTES + 1].toInt() and BYTE_MASK
+            val value = if (littleEndian) first or (second shl 8) else (first shl 8) or second
+            if (asciiUpper(value) != marker[offset].code) {
+                return false
+            }
+        }
+        return true
+    }
+
+    private fun asciiUpper(value: Int): Int = if (value in 'a'.code..'z'.code) value - LOWERCASE_TO_UPPERCASE else value
+
+    private val FORBIDDEN_DECLARATIONS = listOf("<!DOCTYPE", "<!ENTITY")
+    private const val BYTE_MASK = 0xff
+    private const val UTF16_CODE_UNIT_BYTES = 2
+    private const val LOWERCASE_TO_UPPERCASE = 'a'.code - 'A'.code
 
     private const val ELEMENT_GPX = "gpx"
     private const val ELEMENT_TRACK = "trk"

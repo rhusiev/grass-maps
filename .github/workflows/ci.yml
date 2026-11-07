@@ -112,7 +112,9 @@ jobs:
   emulator-map-goldens:
     name: Style and fixture map goldens (API 29, swiftshader)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Seeding or comparing 65 captures under swiftshader: about 29 s per
+    # capture plus a 20-minute boot and the one dialog-suppression reboot.
+    timeout-minutes: 90
     steps:
       - name: Check out
         uses: actions/checkout@v7

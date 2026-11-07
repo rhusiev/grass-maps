@@ -171,6 +171,8 @@ class LocationControllerTest {
         private val values = MutableSharedFlow<LocationFix?>()
         override val fixes: Flow<LocationFix?> = values
 
+        override fun hasPermission(): Boolean = true
+
         suspend fun emit(fix: LocationFix?) {
             values.emit(fix)
         }

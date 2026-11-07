@@ -19,21 +19,6 @@ import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.parsers.ParserConfigurationException
 
 /**
- * A provider of position fixes.
- *
- * A null emission means the source has no fix yet, or no source is installed.
- * The flow is cold: each collector replays from the start of the source.
- */
-interface LocationSource {
-    val fixes: Flow<LocationFix?>
-}
-
-/** The source a release build uses until a real location service lands (T-0103). */
-object NoLocationSource : LocationSource {
-    override val fixes: Flow<LocationFix?> = flow { emit(null) }
-}
-
-/**
  * Replays a GPX track as position fixes, one fix per [tickMillis].
  *
  * The source is deterministic and has no Android dependency. Fixes come out in
@@ -53,6 +38,10 @@ class MockGpxLocationSource private constructor(
     private val loop: Boolean,
     private val delayMillis: suspend (Long) -> Unit,
 ) : LocationSource {
+    override fun hasPermission(): Boolean = false
+
+    override fun requiresPermission(): Boolean = false
+
     override val fixes: Flow<LocationFix?> =
         flow {
             val points =

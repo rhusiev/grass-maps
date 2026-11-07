@@ -237,6 +237,7 @@ private fun LocationFix.toFeatureCollection(): String =
 private const val PUCK_LAYER_ID = "core.location.puck"
 private const val PUCK_AGE_LAYER_ID = "core.location.puck.age"
 private const val ACCURACY_LAYER_ID = "core.location.accuracy"
+
 // The accuracy circle radius is derived from zoom and latitude. Bucketing both
 // keeps a pan or a small move from recreating the puck layers every frame.
 private const val ZOOM_BUCKET_STEPS = 10

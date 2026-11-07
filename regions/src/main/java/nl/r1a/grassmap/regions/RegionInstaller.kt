@@ -57,7 +57,9 @@ internal class RegionInstaller(
                     return moved
                 }
 
-                is Outcome.Success -> Unit
+                is Outcome.Success -> {
+                    Unit
+                }
             }
         }
         return when (val pointer = CurrentPointer.write(regionDirectory, request.version, nonce)) {

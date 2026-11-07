@@ -43,27 +43,25 @@ class DataSourceAccess internal constructor(
 
     suspend fun mapLayer(): Outcome<SlottedLayer?> = withSource { Outcome.Success(it.mapLayer()) }
 
-    private suspend fun <T> withSource(block: suspend (DataSource) -> Outcome<T>): Outcome<T> =
-        when (val resolved = source()) {
-            is Outcome.Success -> block(resolved.value)
-            is Outcome.Failure -> resolved
-        }
-
-    private suspend fun source(): Outcome<DataSource> =
-        when (
-            val outcome =
-                registry.invoke(pluginId, DataSourceContract.REFERENCE) { provider ->
-                    provider as? DataSource
+    /**
+     * Runs every contract call behind [ProviderRegistry.invoke], not just the
+     * provider lookup. A plugin that throws from [DataSource.describe] or
+     * [DataSource.mapLayer] becomes a typed failure and counts toward its
+     * disable limit instead of escaping into the caller's coroutine.
+     */
+    private suspend fun <T> withSource(block: suspend (DataSource) -> Outcome<T>): Outcome<T> {
+        val guarded =
+            registry.invoke(pluginId, DataSourceContract.REFERENCE) { provider ->
+                when (val source = provider as? DataSource) {
+                    null -> Outcome.Failure(AppError.Unsupported)
+                    else -> block(source)
                 }
-        ) {
-            is Outcome.Success -> {
-                outcome.value?.let { Outcome.Success(it) } ?: Outcome.Failure(AppError.Unsupported)
             }
-
-            is Outcome.Failure -> {
-                outcome
-            }
+        return when (guarded) {
+            is Outcome.Success -> guarded.value
+            is Outcome.Failure -> guarded
         }
+    }
 }
 
 /**

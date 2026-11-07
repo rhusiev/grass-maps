@@ -8,17 +8,30 @@ import nl.r1a.grassmap.app.generated.GeneratedPlugins
 import nl.r1a.grassmap.core.PluginHost
 import nl.r1a.grassmap.core.ProviderRegistry
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmap.plugin.api.contract.Plugin
+import nl.r1a.grassmap.plugin.api.contract.PluginContext
 import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.manifest.PluginContributions
 import nl.r1a.grassmap.plugin.api.manifest.PluginFactory
+import nl.r1a.grassmap.plugin.api.manifest.PluginManifest
+import nl.r1a.grassmap.plugin.api.manifest.ProviderDeclaration
 import nl.r1a.grassmap.plugin.api.model.BoundingBox
 import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerType
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
+import nl.r1a.grassmap.plugin.api.model.SlottedLayer
+import nl.r1a.grassmap.plugin.api.provider.AttributePage
 import nl.r1a.grassmap.plugin.api.provider.AttributeRequest
+import nl.r1a.grassmap.plugin.api.provider.CostModifier
+import nl.r1a.grassmap.plugin.api.provider.CostModifierRequest
+import nl.r1a.grassmap.plugin.api.provider.DataSource
+import nl.r1a.grassmap.plugin.api.provider.DataSourceContract
+import nl.r1a.grassmap.plugin.api.provider.DataSourceDescription
+import nl.r1a.grassmap.plugin.api.provider.ProviderContract
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -81,6 +94,29 @@ class DataSourceAccessTest {
             )
         }
 
+    @Test
+    fun aThrowingProviderIsATypedFailureForEveryContractCall() =
+        runTest {
+            val pluginId = PluginId("data.throwing")
+            val dataSources = DataSourceAccess(registry(listOf(throwingPlugin(pluginId))), pluginId)
+            val expected = Outcome.Failure(AppError.PluginFailed(pluginId))
+
+            assertTrue(dataSources.describe() == expected)
+            assertTrue(
+                dataSources.attributes(
+                    AttributeRequest(AREA, timeMillis = 0L, limit = 2),
+                    CancellationHandle.None,
+                ) == expected,
+            )
+            assertTrue(
+                dataSources.costModifiers(
+                    CostModifierRequest(waypoints = emptyList()),
+                    CancellationHandle.None,
+                ) == expected,
+            )
+            assertTrue(dataSources.mapLayer() == expected)
+        }
+
     private fun registry(plugins: List<PluginFactory>): ProviderRegistry {
         val host =
             PluginHost(
@@ -89,7 +125,7 @@ class DataSourceAccessTest {
                 commands = emptyList(),
                 dispatcher = Dispatchers.Unconfined,
             )
-        return ProviderRegistry(host)
+        return ProviderRegistry(host, failureLimit = 10)
     }
 
     private companion object {
@@ -100,4 +136,54 @@ class DataSourceAccessTest {
                 northEast = GeoPoint(49.96, 23.96),
             )
     }
+}
+
+private fun throwingPlugin(pluginId: PluginId): PluginFactory =
+    PluginFactory(
+        manifest =
+            PluginManifest(
+                id = pluginId,
+                name = "plugin.throwing.name",
+                description = "plugin.throwing.description",
+                version = "1.0.0",
+                api = "1.0.0",
+                implementation = "test.ThrowingPlugin",
+                contributes =
+                    PluginContributions(
+                        providers =
+                            listOf(
+                                ProviderDeclaration(
+                                    contract = DataSourceContract.NAME,
+                                    version = DataSourceContract.VERSION,
+                                ),
+                            ),
+                    ),
+                activation = listOf("provider"),
+            ),
+        create = { ThrowingPlugin() },
+    )
+
+private class ThrowingPlugin : Plugin {
+    override suspend fun activate(context: PluginContext): Outcome<Unit> {
+        context.addProvider(ThrowingDataSource())
+        return Outcome.Success(Unit)
+    }
+}
+
+private class ThrowingDataSource : DataSource {
+    override val contract: ProviderContract = DataSourceContract.REFERENCE
+
+    override fun describe(): DataSourceDescription = throw IllegalStateException("describe")
+
+    override suspend fun attributes(
+        request: AttributeRequest,
+        cancellation: CancellationHandle,
+    ): Outcome<AttributePage> = throw IllegalStateException("attributes")
+
+    override suspend fun costModifiers(
+        request: CostModifierRequest,
+        cancellation: CancellationHandle,
+    ): Outcome<List<CostModifier>> = throw IllegalStateException("costModifiers")
+
+    override fun mapLayer(): SlottedLayer? = throw IllegalStateException("mapLayer")
 }

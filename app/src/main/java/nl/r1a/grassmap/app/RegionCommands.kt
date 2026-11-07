@@ -1,6 +1,8 @@
 package nl.r1a.grassmap.app
 
 import android.util.Log
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -83,6 +85,9 @@ internal class RegionDownloadTestCommand(
         val cleartext = if (debugBuild) "permitted(debug build)" else "https-only"
         log("request region=${request.region} version=${request.version} cleartext=$cleartext")
         val access = if (request.bypass) DebugNetworkAccess(log) else network
+        // The downloader moves gigabytes; a cancelled command must stop it
+        // between chunks, not only by collecting the coroutine result.
+        val commandJob = currentCoroutineContext()[Job]
         val outcome =
             downloader.download(
                 request =
@@ -94,7 +99,7 @@ internal class RegionDownloadTestCommand(
                     ),
                 policy = policy,
                 access = access,
-                cancellation = CancellationHandle.None,
+                cancellation = CancellationHandle { commandJob?.isActive == false },
             )
         return when (outcome) {
             is Outcome.Failure -> {

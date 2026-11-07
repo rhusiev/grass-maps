@@ -29,8 +29,8 @@ import javax.xml.parsers.ParserConfigurationException
  *
  * Accuracy is a fixed [DEFAULT_ACCURACY_METERS] because GPX carries no
  * horizontal accuracy. Bearing and speed stay null. Altitude comes from `ele`,
- * and the fix time from `time`; a point without `time` gets its index times
- * [tickMillis].
+ * and the fix time from `time`; a point without `time` gets a current base
+ * time plus its index times [tickMillis].
  */
 class MockGpxLocationSource private constructor(
     private val loadPoints: suspend () -> Outcome<List<LocationFix>>,
@@ -87,7 +87,7 @@ class MockGpxLocationSource private constructor(
             loop: Boolean = false,
             delayMillis: suspend (Long) -> Unit = { delay(it) },
         ): Outcome<MockGpxLocationSource> =
-            when (val parsed = GpxTrackParser.parse(gpx)) {
+            when (val parsed = GpxTrackParser.parse(gpx, tickMillis)) {
                 is Outcome.Success -> {
                     Outcome.Success(MockGpxLocationSource({ parsed }, tickMillis, loop, delayMillis))
                 }
@@ -111,7 +111,7 @@ class MockGpxLocationSource private constructor(
             MockGpxLocationSource(
                 loadPoints = {
                     when (val loaded = loadGpx()) {
-                        is Outcome.Success -> GpxTrackParser.parse(loaded.value)
+                        is Outcome.Success -> GpxTrackParser.parse(loaded.value, tickMillis)
                         is Outcome.Failure -> loaded
                     }
                 },
@@ -124,7 +124,11 @@ class MockGpxLocationSource private constructor(
 
 /** Reads the track points of a GPX 1.0/1.1 document into fixes. */
 internal object GpxTrackParser {
-    fun parse(gpx: String): Outcome<List<LocationFix>> {
+    fun parse(
+        gpx: String,
+        fallbackTickMillis: Long = MockGpxLocationSource.DEFAULT_TICK_MILLIS,
+        baseTimeMillis: Long = System.currentTimeMillis(),
+    ): Outcome<List<LocationFix>> {
         if (gpx.isBlank()) {
             return Outcome.Failure(AppError.CorruptData)
         }
@@ -147,7 +151,7 @@ internal object GpxTrackParser {
                                 altitudeMeters = childText(element, ELEVATION)?.toDoubleOrNull(),
                                 timeMillis =
                                     childText(element, TIME)?.let(::epochMillis)
-                                        ?: index * MockGpxLocationSource.DEFAULT_TICK_MILLIS,
+                                        ?: (baseTimeMillis + index * fallbackTickMillis),
                             ),
                         )
                     }

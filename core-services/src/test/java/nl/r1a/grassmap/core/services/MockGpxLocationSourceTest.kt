@@ -71,7 +71,8 @@ class MockGpxLocationSourceTest {
 
             val parsed = parsed(gpx)
 
-            assertEquals(listOf(0L, 1_000L), parsed.map { it.timeMillis })
+            assertEquals(1_000L, parsed[1].timeMillis - parsed[0].timeMillis)
+            assertTrue("fallback times must be current, not 1970", parsed[0].timeMillis > 0L)
         }
 
     @Test

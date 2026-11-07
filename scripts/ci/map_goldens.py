@@ -67,6 +67,13 @@ SLOW_FRAME_ALLOWANCE_S = 2.0
 LAUNCH_SETTLE_S = 5.0
 FOCUS_RETRY_TIMEOUT_S = 10.0
 FOCUS_RETRY_PAUSE_S = 0.5
+# A null or foreign focus can mean the app is simply not foregrounded yet.
+# Bring it forward once per focus check, then give the window time to settle.
+APP_FOREGROUND_SETTLE_S = 2.0
+# If focus still fails after the bounded check, redo the whole position once:
+# the camera move and settle are idempotent, and the second attempt sees a
+# foregrounded app. A persistent wrong focus still fails.
+POSITION_ATTEMPTS = 2
 # An ANR dialog that was already up before the suppression settings landed is
 # dismissed by its own buttons, found through a uiautomator dump rather than
 # fixed coordinates: `hide_error_dialogs` only suppresses new dialogs.
@@ -116,6 +123,10 @@ POSITIONS = {
 
 class GoldenError(RuntimeError):
     """A capture or comparison step failed."""
+
+
+class FocusError(GoldenError):
+    """The app window does not own the focus at capture time."""
 
 
 def run(
@@ -452,24 +463,50 @@ def dismiss_anr_dialog(adb: Adb) -> bool:
     return not is_anr_dialog(focused_window(adb))
 
 
-def require_app_focused(adb: Adb, stage: str) -> str:
-    """Fail with a named window when a system dialog owns the focus.
+def bring_app_to_front(adb: Adb) -> None:
+    """Start the map activity again so its window can take the focus."""
+    adb.shell(
+        "am",
+        "start",
+        "-W",
+        "-n",
+        f"{PACKAGE}/{ACTIVITY}",
+        timeout_s=120,
+        check=False,
+    )
 
-    A dialog on top of the map dims every pixel beneath it, so a comparison
-    would fail on a real rendering mismatch that is not there. An ANR dialog
-    is dismissed by its own Wait button, then focus is retried; after the
-    bounded budget the focused window is named instead of silently comparing
-    the dialog.
+
+def require_app_focused(
+    adb: Adb,
+    stage: str,
+    *,
+    foreground: bool = True,
+) -> str:
+    """Fail with a named window when the app does not own the focus.
+
+    A dialog on top of the map dims every pixel beneath it, and a null focus
+    means the app window was not foregrounded yet; both would make a golden
+    meaningless. An ANR dialog is dismissed by its own Wait button. A null or
+    foreign focus is retried after bringing the app to the front when
+    `foreground` is set; the call before the camera move uses that, while the
+    assertion after the settle does not, so a recreate can never silently
+    reset the camera under a capture. After the bounded budget a persistent
+    wrong focus is named instead of silently comparing the wrong window.
     """
     deadline = time.monotonic() + FOCUS_RETRY_TIMEOUT_S
+    brought_to_front = False
     while True:
         focus = focused_window(adb)
         if focus is not None and PACKAGE in focus:
             return focus
         if is_anr_dialog(focus):
             dismiss_anr_dialog(adb)
+        elif foreground and not brought_to_front:
+            bring_app_to_front(adb)
+            brought_to_front = True
+            time.sleep(APP_FOREGROUND_SETTLE_S)
         if time.monotonic() >= deadline:
-            raise GoldenError(f"{stage}: the focused window is not {PACKAGE}: {focus}")
+            raise FocusError(f"{stage}: the focused window is not {PACKAGE}: {focus}")
         time.sleep(FOCUS_RETRY_PAUSE_S)
 
 
@@ -480,32 +517,43 @@ def capture_position(
     name: str,
     params: dict[str, object],
 ) -> dict[str, object]:
-    """Move the camera, settle, and capture one frame.
+    """Foreground the app, move the camera, settle, assert focus, and capture.
 
     `idle=false` is not an abort. Swiftshader can render a fully settled frame
     without ever delivering MapLibre's idle event, so the shot waits the base
     settle plus one slow-frame allowance and is marked `"idle": false` in
     `capture.json`; the pixel comparison is the acceptance, not the signal.
     Transport errors and the `not_ready` budget still abort in
-    [invoke_camera].
+    [invoke_camera]. A focus failure retries the whole position once before it
+    aborts, which re-applies the camera after the app is foregrounded.
     """
-    result = invoke_camera(client, params)
-    idle = "idle=true" in result
-    settle = SCREENSHOT_SETTLE_S if idle else SCREENSHOT_SETTLE_S + SLOW_FRAME_ALLOWANCE_S
-    dismiss_system_dialogs(adb)
-    time.sleep(settle)
-    require_app_focused(adb, name)
-    png = adb.screencap()
-    path = output / f"{name}.png"
-    path.write_bytes(png)
-    return {
-        "name": name,
-        "params": params,
-        "file": str(path),
-        "capture": "adb exec-out screencap -p",
-        "idle": idle,
-        "camera_result": result,
-    }
+    for attempt in range(POSITION_ATTEMPTS):
+        require_app_focused(adb, name)
+        result = invoke_camera(client, params)
+        idle = "idle=true" in result
+        settle = SCREENSHOT_SETTLE_S if idle else SCREENSHOT_SETTLE_S + SLOW_FRAME_ALLOWANCE_S
+        dismiss_system_dialogs(adb)
+        time.sleep(settle)
+        try:
+            require_app_focused(adb, name, foreground=False)
+        except FocusError:
+            if attempt + 1 >= POSITION_ATTEMPTS:
+                raise
+            bring_app_to_front(adb)
+            time.sleep(APP_FOREGROUND_SETTLE_S)
+            continue
+        png = adb.screencap()
+        path = output / f"{name}.png"
+        path.write_bytes(png)
+        return {
+            "name": name,
+            "params": params,
+            "file": str(path),
+            "capture": "adb exec-out screencap -p",
+            "idle": idle,
+            "camera_result": result,
+        }
+    raise FocusError(f"{name}: no capture after {POSITION_ATTEMPTS} attempts")
 
 
 def wait_for_first_frame(adb: Adb, timeout_s: float = FIRST_FRAME_TIMEOUT_S) -> None:

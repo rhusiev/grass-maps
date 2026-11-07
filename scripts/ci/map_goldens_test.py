@@ -117,6 +117,10 @@ class PrepareDeviceTest(unittest.TestCase):
 
 
 class AppFocusTest(unittest.TestCase):
+    APP_FOCUS = (
+        "mCurrentFocus=Window{2 u0 nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity}"
+    )
+
     def test_app_focus_passes_and_returns_the_window(self) -> None:
         adb = mock.Mock()
         adb.shell.return_value = (
@@ -126,6 +130,27 @@ class AppFocusTest(unittest.TestCase):
         focus = map_goldens.require_app_focused(adb, "fixture-center-z12")
 
         self.assertIn("nl.r1a.grassmap", focus)
+
+    def test_null_focus_brings_the_app_front_then_passes(self) -> None:
+        adb = FakeAdb(["", self.APP_FOCUS])
+
+        with mock.patch.object(map_goldens.time, "sleep"):
+            focus = map_goldens.require_app_focused(adb, "fixture-center-z12")
+
+        self.assertIn("nl.r1a.grassmap", focus)
+        self.assertEqual(adb.fronted, 1)
+
+    def test_persistent_null_focus_fails_with_focus_error(self) -> None:
+        adb = FakeAdb([""])
+
+        with (
+            mock.patch.object(map_goldens, "FOCUS_RETRY_TIMEOUT_S", 0.0),
+            mock.patch.object(map_goldens.time, "sleep"),
+            self.assertRaises(map_goldens.FocusError) as raised,
+        ):
+            map_goldens.require_app_focused(adb, "fixture-center-z12")
+
+        self.assertIn("None", str(raised.exception))
 
     def test_system_dialog_focus_fails_naming_the_window(self) -> None:
         adb = mock.Mock()
@@ -151,16 +176,23 @@ class FakeAdb:
         self.focus = focus
         self.xml = xml
         self.taps: list[tuple[str, str]] = []
+        self.fronted = 0
 
     def shell(self, *args: str, timeout_s: float = 0, check: bool = True) -> str:
         if args[:2] == ("dumpsys", "window"):
             return self.focus.pop(0) if len(self.focus) > 1 else self.focus[0]
+        if args[:2] == ("am", "start"):
+            self.fronted += 1
+            return ""
         if args[0] == "cat":
             return self.xml
         if args[:2] == ("input", "tap"):
             self.taps.append((args[2], args[3]))
             return ""
         return ""
+
+    def screencap(self) -> bytes:
+        return map_goldens.PNG_SIGNATURE + b"frame"
 
 
 class AnrDialogTest(unittest.TestCase):
@@ -218,6 +250,55 @@ class FirstFrameTest(unittest.TestCase):
 
         self.assertEqual(adb.logcat.call_count, 2)
         sleep.assert_called_once()
+
+
+class CapturePositionRetryTest(unittest.TestCase):
+    def test_focus_failure_after_the_settle_retries_the_position_once(self) -> None:
+        # attempt 1: app, then focus lost; attempt 2: app before and after.
+        adb = FakeAdb([
+            AppFocusTest.APP_FOCUS,
+            "",
+            AppFocusTest.APP_FOCUS,
+            AppFocusTest.APP_FOCUS,
+        ])
+        client = FakeClient(["lat=1.0 idle=true", "lat=1.0 idle=true"])
+
+        with tempfile.TemporaryDirectory() as directory:
+            with (
+                mock.patch.object(map_goldens, "FOCUS_RETRY_TIMEOUT_S", 0.0),
+                mock.patch.object(map_goldens.time, "sleep"),
+            ):
+                shot = map_goldens.capture_position(adb, client, Path(directory), "p", {})
+
+        self.assertEqual(client.calls, 2)
+        self.assertTrue(shot["idle"])
+
+    def test_null_focus_before_the_camera_is_forced_foreground(self) -> None:
+        adb = FakeAdb(["", AppFocusTest.APP_FOCUS])
+        client = FakeClient(["lat=1.0 idle=true"])
+
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.object(map_goldens.time, "sleep"):
+                shot = map_goldens.capture_position(adb, client, Path(directory), "p", {})
+
+        self.assertEqual(client.calls, 1)
+        self.assertEqual(adb.fronted, 1)
+        self.assertTrue(shot["idle"])
+
+    def test_persistent_focus_failure_fails_after_the_retry(self) -> None:
+        adb = FakeAdb([AppFocusTest.APP_FOCUS, ""])
+        client = FakeClient(["lat=1.0 idle=true", "lat=1.0 idle=true"])
+
+        with tempfile.TemporaryDirectory() as directory:
+            with (
+                mock.patch.object(map_goldens, "FOCUS_RETRY_TIMEOUT_S", 0.0),
+                mock.patch.object(map_goldens.time, "sleep"),
+                self.assertRaises(map_goldens.FocusError),
+            ):
+                map_goldens.capture_position(adb, client, Path(directory), "p", {})
+
+        self.assertEqual(client.calls, 1)
+        self.assertGreaterEqual(adb.fronted, 1)
 
 
 class RecordFailureTest(unittest.TestCase):

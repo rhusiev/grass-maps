@@ -123,11 +123,16 @@ class NavigationSession(
                                 revision += 1
                                 rerouteCount += 1
                                 fixesSinceReroute = 0
-                                offRouteStreak = 0
                                 active = open(replacement)
                                 lastRerouteMillis = clockMillis() - started
                                 projection = locator.locate(fix.position)
                                 snapshot = read(active, fix)
+                                // The replacement line starts where Valhalla
+                                // snapped the off-route fix, so the fix can
+                                // still be off the new line. Do not report
+                                // on-route until the geometry says so.
+                                offRouteStreak =
+                                    if (isOffRoute(snapshot, projection?.distanceMeters)) 1 else 0
                                 log(
                                     "navigation-reroute fixes=$fixCount revision=$revision " +
                                         "duration_ms=$lastRerouteMillis " +

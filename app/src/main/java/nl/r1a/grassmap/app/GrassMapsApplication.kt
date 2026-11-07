@@ -16,6 +16,7 @@ open class GrassMapsApplication : Application() {
             strings = AndroidStrings(this),
             locationSource = locationSource(),
             routingFilesProvider = { getExternalFilesDir(null) ?: filesDir },
+            searchFilesProvider = { getExternalFilesDir(null) ?: filesDir },
         )
     }
 

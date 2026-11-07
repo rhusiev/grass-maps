@@ -31,6 +31,27 @@ targetSdk 36 and minSdk 29. The root buildscript puts Kotlin Gradle plugin
 0.20 is compiled with Kotlin 2.4 metadata. Do not apply the standalone Kotlin
 Android plugin.
 
+### Rust core
+
+`rust/grass-core` is the offline search reader behind `PlaceProvider`. Gradle
+builds it with `cargo` for the host (JVM tests) and for `arm64-v8a` and
+`x86_64`, generates the Kotlin uniffi bindings from the host library, and
+packages the stripped `.so` files from `places/build/rust-jni`. The toolchain is
+pinned by `rust/grass-core/rust-toolchain.toml` (1.93.1 with the two Android
+targets), and the NDK is found through `ANDROID_NDK_HOME` or the newest
+`$ANDROID_HOME/ndk/*`. A build without either fails at configuration with a
+message naming the missing part.
+
+The index itself is not bundled in the app. The debug build reads it from
+`<externalFilesDir>/search/<region>/`; the committed Lviv section under
+`places/src/test/resources/search` is the quality oracle for the P4a probes.
+`./gradlew :places:test` needs no device and no emulator.
+
+```sh
+rustup toolchain install 1.93.1 --profile minimal \
+    --target aarch64-linux-android,x86_64-linux-android
+```
+
 ## Checks
 
 `./check.sh` is the gate every agent and the orchestrator runs before merging.
@@ -367,6 +388,39 @@ GPX from that line with a sideways segment past the deviation threshold, parses
 it through `MockGpxLocationSource`, follows it, and draws the replacement route.
 `{"area":"fixture"}` and `{"area":"lviv"}` select the area; `tick_ms` and
 `detour_m` tune the replay.
+
+## Search seam
+
+`PlaceProvider` in `plugin-api` is the `places.search` 1.0.0 contract:
+`search(query, context, limit, cancel)`, `pois(bbox, categories, limit, cancel)`
+and `details(placeId, cancel)`. `places` implements it over `rust/grass-core`
+through uniffi. The generated Kotlin and every Rust type stay inside `places`
+(package `nl.r1a.grassmap.places.core`); no plugin imports them.
+
+The reader uses the P4a spike format unchanged: an FST of folded terms,
+delta-varint postings, a fixed 20-byte place table, context entities and a
+string pool. It mmaps read-only, validates every offset before handing the
+index out, and returns `CorruptData` for a truncated section. Ranking, typo
+budgets and neighbour collapsing are the spike's, so the osm-mapidx probe table
+stays the quality oracle: 45 of 45 in the top five, asserted by
+`RustPlaceProviderQualityTest`.
+
+The index is external data: the provider reads
+`<externalFilesDir>/search/<region>/`. The committed Lviv section under
+`places/src/test/resources/search` is 10.1 MiB and ODbL-licensed. The debug
+channel exposes `core.search.query`:
+
+```sh
+tools/control/grassctl.py invoke core.search.query \
+  '{"query":"проспект шевч","index":"lviv","position":{"lat":49.8419,"lon":24.0316}}'
+```
+
+It times every keystroke, logs the prefix, milliseconds, hit count and top hit,
+and returns p50/p99. `{"cancel":true}` runs an already-superseded keystroke and
+reports `cancelled=true hits=0`. On the API 35 emulator (`grassmaps-bench`,
+host OpenGL), a street prefix measured p50 3.7 ms and p99 5.5 ms per keystroke
+including the JNA bridge; the full string of 13 keystrokes took 111 ms. The
+Moto g32 budget is T-0203's.
 
 ## Follow-ups
 

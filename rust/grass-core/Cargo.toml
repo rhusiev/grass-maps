@@ -1,0 +1,28 @@
+[package]
+name = "grass-core"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.93"
+publish = false
+
+[lib]
+name = "grass_core"
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+fst = { version = "0.4.7", features = ["levenshtein"] }
+levenshtein_automata = "0.2.1"
+memmap2 = "0.9.12"
+thiserror = "2.0.18"
+unicode-normalization = "0.1.26"
+uniffi = { version = "0.32.2", features = ["cli"] }
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+incremental = false

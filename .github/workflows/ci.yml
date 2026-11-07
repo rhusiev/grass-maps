@@ -30,6 +30,11 @@ jobs:
           java-version: '21'
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+      - name: Set up Rust 1.93.1 with the Android targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.93.1
+          targets: aarch64-linux-android,x86_64-linux-android
       # --skip-repro keeps this job fast; the reproducibility job runs the two
       # release builds. The emulator jobs run the device smoke, strict mode and
       # the trend benchmarks.
@@ -59,6 +64,11 @@ jobs:
           java-version: '21'
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+      - name: Set up Rust 1.93.1 with the Android targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.93.1
+          targets: aarch64-linux-android,x86_64-linux-android
       - name: Build twice in separate paths and compare
         run: ./scripts/ci/reproducibility.sh
 
@@ -76,6 +86,11 @@ jobs:
           java-version: '21'
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+      - name: Set up Rust 1.93.1 with the Android targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.93.1
+          targets: aarch64-linux-android,x86_64-linux-android
       - name: Build the debug APK
         run: ./gradlew --console=plain :app:assembleDebug
       - name: Boot API 29 and run the smoke check
@@ -111,6 +126,11 @@ jobs:
           java-version: '21'
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+      - name: Set up Rust 1.93.1 with the Android targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.93.1
+          targets: aarch64-linux-android,x86_64-linux-android
       - name: Build the debug APK
         run: ./gradlew --console=plain :app:assembleDebug
       - name: Boot the emulator and run the benchmark

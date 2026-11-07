@@ -19,6 +19,9 @@ first product asset lands.
 | Valhalla routing engine | MIT | C++ engine packaged inside valhalla-mobile; routing tiles are OSM-derived data (ODbL-1.0) |
 | `plugins/style-standard` bench style | BSD-3-Clause | The T-0020 phase-A dense style generated from protomaps/basemaps; replaced by the authored styles in T-0603 |
 | `test-data/location/mock-walk.gpx` | Apache-2.0 (this repository) | Synthetic 60-point GPX walk authored for T-0022; no OSM data |
+| `places/src/test/resources/search/lviv` search index | ODbL-1.0 | © OpenStreetMap contributors; the Lviv search section built by the T-0005/P4a spike from `lviv-places.sqlite` (2026-11-04 input) |
+| Rust crates used by `rust/grass-core` | Unlicense/MIT (`fst`), MIT (`levenshtein_automata`), MIT/Apache-2.0 (`memmap2`, `uniffi`, `thiserror`), MIT OR Apache-2.0 AND Unicode-3.0 (`unicode-normalization`) | See `rust/grass-core/Cargo.lock` |
+| JNA | Apache-2.0 OR LGPL-2.1 | uniffi Kotlin bindings runtime (JVM and Android), used by `places` |
 | Icons | chosen per icon set | the licence is recorded in this file before the icons land |
 
 Every asset, font, style and sample data file gets its attribution in the same

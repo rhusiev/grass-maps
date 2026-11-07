@@ -1,0 +1,55 @@
+# query	expected primary name in the top 5 (* = any)	expected categories, | separated (optional)	source
+# Probed in research-search.md (osm-mapidx / CommuterLviv behaviour checklist)
+львів	Львів	place=city	probe
+Львів	Львів	place=city	probe
+славсько	Славсько	place=town	probe
+медов двір	Медовий двір	tourism=hotel	probe
+медовий двір славсько	Медовий двір	tourism=hotel	probe
+медовы двир славско	Медовий двір	tourism=hotel	probe
+аптека славсько	*	healthcare=pharmacy|amenity=pharmacy	probe
+проспект Шевченка	проспект Тараса Шевченка		probe
+проспект шевч	проспект Тараса Шевченка		probe
+lviv	Львів	place=city	probe
+shevchenka	проспект Тараса Шевченка		probe
+zhovkva	Жовква	place=town	probe
+jovkva	Жовква	place=town	probe
+Lwów	Львів	place=city	probe
+Złoczów	Золочів	place=town	probe
+Drohobycz	Дрогобич	place=town	probe
+61			probe
+стрийська 15			probe
+л	Львів	place=city	probe
+гро			probe
+# Own: Cyrillic
+Стрийський парк	Стрийський парк	leisure=park	own
+Трускавець	Трускавець	place=town	own
+Високий замок	Високий Замок		own
+Личаківський цвинтар	Личаківський цвинтар		own
+вулиця Городоцька	Городоцька вулиця		own
+площа ринок	площа Ринок		own
+# Own: Latin, KMU 2010 and naive
+truskavets	Трускавець	place=town	own
+briukhovychi	Брюховичі		own
+bryuhovychi	Брюховичі		own
+stryiskyi park	Стрийський парк	leisure=park	own
+striyskiy park	Стрийський парк	leisure=park	own
+skole	Сколе	place=town	own
+# Own: Polish names
+zloczow	Золочів	place=town	own
+zolkiew	Жовква	place=town	own
+Truskawiec	Трускавець	place=town	own
+Brzuchowice	Брюховичі		own
+Sambor	Самбір	place=town	own
+# Own: typos
+трускавец	Трускавець	place=town	own
+дрогобчи	Дрогобич	place=town	own
+жоква	Жовква	place=town	own
+стрийскький парк	Стрийський парк	leisure=park	own
+# Own: kind words
+аптека	*	healthcare=pharmacy|amenity=pharmacy	own
+аптека трускавець	*	healthcare=pharmacy|amenity=pharmacy	own
+банкомат	*	amenity=atm	own
+заправка	*	amenity=fuel	own
+готель славсько	*	tourism=hotel	own
+школа сколе	*	amenity=school	own
+кафе	*	amenity=cafe	own

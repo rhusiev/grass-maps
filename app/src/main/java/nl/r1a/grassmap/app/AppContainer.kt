@@ -13,6 +13,7 @@ import nl.r1a.grassmap.core.ProviderRegistry
 import nl.r1a.grassmap.core.StreamRegistry
 import nl.r1a.grassmap.core.services.LocationSource
 import nl.r1a.grassmap.core.services.NoLocationSource
+import nl.r1a.grassmap.places.PlacesAccess
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
@@ -32,6 +33,7 @@ class AppContainer(
     private val switchEnabled: (SwitchId) -> Boolean = { false },
     private val locationSource: LocationSource = NoLocationSource,
     private val routingFilesProvider: () -> File? = { null },
+    private val searchFilesProvider: () -> File? = { null },
 ) {
     private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -59,10 +61,16 @@ class AppContainer(
         }
     }
 
+    /** The offline search indexes over the app's external files directory. */
+    val places: PlacesAccess by lazy {
+        PlacesAccess(searchFilesProvider(), log = { message -> Log.i(SEARCH_TAG, message) })
+    }
+
     private val hostCommands: List<Command<*, *>> by lazy {
         mapCommands(mapSession, locationController) +
             routeCommands(mapSession, { routingEngine }, { dataSources }) +
-            navCommands(mapSession, { routingEngine })
+            navCommands(mapSession, { routingEngine }) +
+            searchCommands { places }
     }
 
     /** The catalog entries for the host commands; the debug channel lists these. */
@@ -102,6 +110,7 @@ class AppContainer(
 
     private companion object {
         const val ROUTING_TAG = "GrassMapsRouting"
+        const val SEARCH_TAG = "GrassMapsSearch"
         const val ROUTING_PACK_DIRECTORY = "valhalla"
     }
 }

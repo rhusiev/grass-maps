@@ -1,0 +1,4 @@
+[bindings.kotlin]
+package_name = "nl.r1a.grassmap.places.core"
+cdylib_name = "grass_core"
+android_cleaner = true

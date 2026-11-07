@@ -184,6 +184,10 @@ private fun MapContent(
         surface.host.applyStyleDiff(StyleDiff(bundle.style.id, bundle.layers)).onFailure { error ->
             Log.w(TAG, "style layers rejected: $error")
         }
+        when (val installed = installDataSourceLayer(container.dataSources, surface.host)) {
+            is Outcome.Success -> Log.i(TAG, "data source layer ready owner=${container.dataSources.pluginId}")
+            is Outcome.Failure -> Log.w(TAG, "data source layer not applied: ${installed.error}")
+        }
         Log.i(
             TAG,
             "map-ready region=${bundle.sources.regionName} contours=${bundle.sources.hasContours}",

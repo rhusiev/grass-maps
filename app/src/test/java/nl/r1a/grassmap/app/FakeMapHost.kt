@@ -20,6 +20,13 @@ import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleSpec
 import nl.r1a.grassmap.plugin.api.model.TrackingMode
 
+/** One layer a [FakeMapHost] accepted, with the plugin that owns it. */
+internal data class AddedLayer(
+    val slot: LayerSlot,
+    val spec: LayerSpec,
+    val owner: PluginId,
+)
+
 /** A recording [MapHost] for the app-level command and location tests. */
 internal class FakeMapHost(
     initial: Camera,
@@ -29,6 +36,7 @@ internal class FakeMapHost(
     val moves = mutableListOf<CameraUpdate>()
     val locations = mutableListOf<LocationFix?>()
     val trackingModes = mutableListOf<TrackingMode>()
+    val layers = mutableListOf<AddedLayer>()
 
     override val camera: StateFlow<Camera> = cameraState
     override val events: Flow<MapEvent> = emptyFlow()
@@ -41,7 +49,10 @@ internal class FakeMapHost(
         slot: LayerSlot,
         spec: LayerSpec,
         owner: PluginId,
-    ): Outcome<Unit> = Outcome.Success(Unit)
+    ): Outcome<Unit> {
+        layers += AddedLayer(slot, spec, owner)
+        return Outcome.Success(Unit)
+    }
 
     override suspend fun removeLayers(owner: PluginId): Outcome<Unit> = Outcome.Success(Unit)
 

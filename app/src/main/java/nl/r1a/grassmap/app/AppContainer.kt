@@ -65,4 +65,9 @@ class AppContainer(
     val providerRegistry: ProviderRegistry by lazy {
         ProviderRegistry(pluginHost)
     }
+
+    /** The synthetic DataSource; routing reads its cost modifiers in a later task. */
+    val dataSources: DataSourceAccess by lazy {
+        DataSourceAccess(providerRegistry)
+    }
 }

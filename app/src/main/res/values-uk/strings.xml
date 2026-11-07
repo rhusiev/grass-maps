@@ -4,6 +4,8 @@
     <string name="app_name">Grass Maps</string>
     <string name="plugin.style_standard.name">Стандартний стиль карти</string>
     <string name="plugin.style_standard.description">Стандартний і туристичний стилі карти.</string>
+    <string name="plugin.data_synthetic.name">Синтетичне джерело даних</string>
+    <string name="plugin.data_synthetic.description">Синтетичні атрибути висоти та справжній шар горизонталей для інтерфейсу DataSource.</string>
 
     <string name="control_zoom_in_label">+</string>
     <string name="control_zoom_in_description">Наблизити</string>

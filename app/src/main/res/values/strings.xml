@@ -3,6 +3,8 @@
     <string name="app_name">Grass Maps</string>
     <string name="plugin.style_standard.name">Standard map style</string>
     <string name="plugin.style_standard.description">The Standard and Touring map styles.</string>
+    <string name="plugin.data_synthetic.name">Synthetic data source</string>
+    <string name="plugin.data_synthetic.description">Synthetic elevation attributes and a real contour layer for the DataSource seam.</string>
 
     <string name="control_zoom_in_label">+</string>
     <string name="control_zoom_in_description">Zoom in</string>

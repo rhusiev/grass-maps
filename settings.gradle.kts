@@ -34,4 +34,5 @@ include(
     ":app",
     ":plugins:example",
     ":plugins:style-standard",
+    ":plugins:synthetic-data",
 )

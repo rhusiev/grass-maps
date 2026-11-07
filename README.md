@@ -160,6 +160,7 @@ the module name. Only `app` is an application module; its application ID is
 | `app` | composition root, Android entry points, foreground service, manifest, resources | every module |
 | `plugins/example` | example of a first-party plugin module | `plugin-api` |
 | `plugins/style-standard` | the Standard and Touring map styles as a `MapLayerProvider` | `plugin-api` |
+| `plugins/synthetic-data` | the synthetic elevation `DataSource` and its real contour overlay | `plugin-api` |
 
 ## Map seam
 
@@ -245,6 +246,28 @@ build installs `MockGpxLocationSource` over the bundled `mock-walk.gpx` and
 replays one fix per second, looping at the end. The mock lives in
 `DebugApplication` and `LoggingLocationSource` in the debug source set; the
 release application never references them.
+
+## DataSource seam
+
+`DataSource` in `plugin-api` is the capability contract `data.source` 1.0.0.
+It publishes typed way attributes (paged by limit and cursor), engine-neutral
+cost modifiers that carry way geometry, and one optional map layer. Values stay
+keyed by OSM way id and region build, so a provider from an older build is
+stale and never applied.
+
+The first-party `data.synthetic` plugin in `plugins/synthetic-data` exercises
+that seam. Its elevation attributes and its two cost modifiers are authored
+T-0023 fixtures over the fixture-mini bbox, not region data. Its map layer is
+real: a line layer on the `contours` source, source-layer `contours`, in the
+overlays slot, filtering the archive's index lines with `idx == true` (the
+archive stores a Boolean; an integer comparison matches nothing, which also
+leaves the T-0020 style contour layers blank). The drawn contours are real and
+the attributes remain synthetic.
+
+`app` resolves the provider through `ProviderRegistry` off Main and adds the
+layer under `PluginId("data.synthetic")`; a missing provider or a rejected layer
+is logged and the map keeps running. `DataSourceAccess` is the typed handle
+routing will read cost modifiers through in T-0024.
 
 ## Plugin boundary rule
 

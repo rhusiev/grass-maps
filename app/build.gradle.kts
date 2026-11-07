@@ -87,6 +87,7 @@ dependencies {
     implementation(project(":ui-shell"))
     implementation(project(":plugins:example"))
     implementation(project(":plugins:style-standard"))
+    implementation(project(":plugins:synthetic-data"))
 
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("org.jetbrains.compose.ui:ui:1.12.1")

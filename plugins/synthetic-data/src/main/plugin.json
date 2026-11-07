@@ -1,0 +1,29 @@
+{
+  "id": "data.synthetic",
+  "name": "plugin.data_synthetic.name",
+  "description": "plugin.data_synthetic.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.synthetic.data.SyntheticDataPlugin",
+  "contributes": {
+    "providers": [
+      {
+        "contract": "data.source",
+        "version": "1.0.0",
+        "capabilities": {
+          "attributeKinds": ["elevation"],
+          "regions": ["fixture-mini"],
+          "refreshPolicy": "static"
+        }
+      }
+    ]
+  },
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": ["contours"]
+  },
+  "activation": [
+    "provider"
+  ]
+}

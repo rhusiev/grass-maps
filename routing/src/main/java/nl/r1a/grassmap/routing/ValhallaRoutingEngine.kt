@@ -55,7 +55,7 @@ class ValhallaRoutingEngine internal constructor(
             maxAlternatives = 2,
             maxDistanceMeters = 250_000.0,
             attributeKeys = emptySet(),
-            hasMatchTrack = true,
+            hasMatchTrack = false,
         )
 
     override suspend fun route(

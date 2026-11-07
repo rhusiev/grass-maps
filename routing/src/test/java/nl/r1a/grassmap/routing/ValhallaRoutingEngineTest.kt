@@ -11,6 +11,7 @@ import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteRequest
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngineContract
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -142,7 +143,9 @@ class ValhallaRoutingEngineTest {
         assertEquals(RoutingEngineContract.REFERENCE, engine.contract)
         assertEquals(setOf(RouteProfile.Walk, RouteProfile.Bike, RouteProfile.Hike, RouteProfile.Car), capabilities.profiles)
         assertEquals(2, capabilities.maxAlternatives)
-        assertTrue(capabilities.hasMatchTrack)
+        // RoutingEngine 1.0.0 has no matchTrack method and the adapter never
+        // calls Valhalla's trace API, so this must stay false until T-0301.
+        assertFalse(capabilities.hasMatchTrack)
     }
 
     private fun request(): RouteRequest =

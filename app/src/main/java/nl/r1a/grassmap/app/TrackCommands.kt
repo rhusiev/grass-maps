@@ -81,7 +81,12 @@ internal class TrackImportTestCommand(
     private fun load(path: String): Outcome<ByteArray> {
         if (path.startsWith("/")) {
             return try {
-                Outcome.Success(File(path).readBytes())
+                val file = File(path)
+                if (file.length() > MAX_IMPORT_BYTES) {
+                    log("path=\"$path\" rejected: larger than $MAX_IMPORT_BYTES bytes")
+                    return Outcome.Failure(AppError.InvalidInput)
+                }
+                Outcome.Success(file.readBytes())
             } catch (exception: IOException) {
                 log("path=\"$path\" unreadable: ${exception.message}")
                 Outcome.Failure(AppError.NotFound)
@@ -110,3 +115,6 @@ internal fun trackCommands(
     tracks: () -> TrackAccess,
     assetReader: (String) -> ByteArray?,
 ): List<Command<*, *>> = listOf(TrackImportTestCommand(tracks, assetReader))
+
+/** An imported file is untrusted input; the debug path gets the same bound. */
+private const val MAX_IMPORT_BYTES: Long = 64L * 1024L * 1024L

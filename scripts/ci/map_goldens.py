@@ -55,6 +55,11 @@ SCHEMA = "grass-maps-map-goldens/1"
 PACKAGE = "nl.r1a.grassmap"
 ACTIVITY = "nl.r1a.grassmap.app.MainActivity"
 SCREENSHOT_SETTLE_S = 0.8
+# Software GL under swiftshader may not deliver MapLibre's idle event at all,
+# even for a fully settled frame. The extra allowance below is added when the
+# camera command reports `idle=false`: base settle plus one slow software frame
+# (2.0 s), so the capture waits 2.8 s in total before reading the display.
+SLOW_FRAME_ALLOWANCE_S = 2.0
 CHANNEL_TIMEOUT_S = 60.0
 CAMERA_READY_TIMEOUT_S = 45.0
 # `core.map.set_camera` answers only after MapLibre reports idle (up to 15 s on
@@ -281,18 +286,27 @@ def invoke_camera(
         time.sleep(RETRY_PAUSE_S)
 
 
-def record_failure(adb: Adb, output: Path, stage: str) -> None:
+def record_failure(
+    adb: Adb,
+    output: Path,
+    stage: str,
+    reason: str,
+    camera_result: str | None = None,
+) -> None:
     """Write the failing device state into the artifact directory.
 
     CI uploads the whole output directory with `if: always()`, so a failed run
-    names the position it stopped at, the logcat around it and the frame the
-    device showed, instead of only a traceback.
+    names the position it stopped at, the reason, the camera command result,
+    the logcat around it and the frame the device showed, instead of only a
+    traceback.
     """
     output.mkdir(parents=True, exist_ok=True)
     (output / "failure.json").write_text(
         json.dumps(
             {
                 "stage": stage,
+                "reason": reason,
+                "camera_result": camera_result,
                 "time": datetime.now(timezone.utc).isoformat(),
             },
             indent=2,
@@ -312,6 +326,39 @@ def record_failure(adb: Adb, output: Path, stage: str) -> None:
         print(f"could not capture the failing screen: {error}", file=sys.stderr)
 
 
+def capture_position(
+    adb: Adb,
+    client: control_client.ControlClient,
+    output: Path,
+    name: str,
+    params: dict[str, object],
+) -> dict[str, object]:
+    """Move the camera, settle, and capture one frame.
+
+    `idle=false` is not an abort. Swiftshader can render a fully settled frame
+    without ever delivering MapLibre's idle event, so the shot waits the base
+    settle plus one slow-frame allowance and is marked `"idle": false` in
+    `capture.json`; the pixel comparison is the acceptance, not the signal.
+    Transport errors and the `not_ready` budget still abort in
+    [invoke_camera].
+    """
+    result = invoke_camera(client, params)
+    idle = "idle=true" in result
+    settle = SCREENSHOT_SETTLE_S if idle else SCREENSHOT_SETTLE_S + SLOW_FRAME_ALLOWANCE_S
+    time.sleep(settle)
+    png = adb.screencap()
+    path = output / f"{name}.png"
+    path.write_bytes(png)
+    return {
+        "name": name,
+        "params": params,
+        "file": str(path),
+        "capture": "adb exec-out screencap -p",
+        "idle": idle,
+        "camera_result": result,
+    }
+
+
 def capture(
     adb: Adb,
     profile: str,
@@ -325,6 +372,7 @@ def capture(
             stale.unlink()
     output.mkdir(parents=True, exist_ok=True)
     stage = "launch"
+    camera_result = None
     try:
         launch(adb)
         client = wait_for_channel(adb)
@@ -339,27 +387,16 @@ def capture(
                 "bearing": bearing,
                 "tilt": tilt,
             }
-            result = invoke_camera(client, params)
-            if "idle=true" not in result:
-                raise GoldenError(f"{name}: camera command did not reach idle: {result}")
-            time.sleep(SCREENSHOT_SETTLE_S)
-            png = adb.screencap()
-            path = output / f"{name}.png"
-            path.write_bytes(png)
-            shots.append(
-                {
-                    "name": name,
-                    "params": params,
-                    "file": str(path),
-                    "capture": "adb exec-out screencap -p",
-                }
-            )
-            print(f"captured {name} -> {path}", file=sys.stderr)
-    except Exception:
+            shot = capture_position(adb, client, output, name, params)
+            camera_result = str(shot["camera_result"])
+            shots.append(shot)
+            print(f"captured {name} -> {shot['file']} idle={shot['idle']}", file=sys.stderr)
+    except Exception as error:
+        reason = f"{type(error).__name__}: {error}"
         try:
-            record_failure(adb, output, stage)
-        except (GoldenError, OSError) as error:
-            print(f"could not record the failure: {error}", file=sys.stderr)
+            record_failure(adb, output, stage, reason, camera_result)
+        except (GoldenError, OSError) as record_error:
+            print(f"could not record the failure: {record_error}", file=sys.stderr)
         raise
     (output / "capture.json").write_text(
         json.dumps(

@@ -70,17 +70,56 @@ class InvokeCameraTest(unittest.TestCase):
         self.assertEqual(client.calls, 1)
 
 
+class CapturePositionTest(unittest.TestCase):
+    """The frame, not MapLibre's idle event, is the acceptance."""
+
+    def capture(self, answer: str) -> tuple[dict[str, object], mock.Mock]:
+        adb = mock.Mock()
+        adb.screencap.return_value = map_goldens.PNG_SIGNATURE + b"frame"
+        client = FakeClient([answer])
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            with mock.patch.object(map_goldens.time, "sleep") as sleep:
+                shot = map_goldens.capture_position(adb, client, output, "p", {"zoom": 12})
+            self.assertTrue((output / "p.png").is_file())
+        return shot, sleep
+
+    def test_idle_false_still_captures_after_the_slow_frame_allowance(self) -> None:
+        shot, sleep = self.capture("lat=1.0 idle=false")
+
+        self.assertFalse(shot["idle"])
+        self.assertEqual(shot["camera_result"], "lat=1.0 idle=false")
+        sleep.assert_called_once_with(
+            map_goldens.SCREENSHOT_SETTLE_S + map_goldens.SLOW_FRAME_ALLOWANCE_S
+        )
+
+    def test_idle_true_uses_only_the_base_settle(self) -> None:
+        shot, sleep = self.capture("lat=1.0 idle=true")
+
+        self.assertTrue(shot["idle"])
+        sleep.assert_called_once_with(map_goldens.SCREENSHOT_SETTLE_S)
+
+
 class RecordFailureTest(unittest.TestCase):
-    def test_writes_stage_logcat_and_screen(self) -> None:
+    def test_writes_stage_reason_logcat_and_screen(self) -> None:
         adb = mock.Mock()
         adb.logcat.return_value = "I/Map: idle"
         adb.screencap.return_value = map_goldens.PNG_SIGNATURE + b"screen"
 
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "artifacts"
-            map_goldens.record_failure(adb, output, "fixture-center-z13")
+            map_goldens.record_failure(
+                adb,
+                output,
+                "fixture-center-z13",
+                "GoldenError: camera command did not answer",
+                "lat=1.0 idle=false",
+            )
 
-            self.assertIn("fixture-center-z13", (output / "failure.json").read_text())
+            failure = (output / "failure.json").read_text()
+            self.assertIn("fixture-center-z13", failure)
+            self.assertIn("GoldenError: camera command did not answer", failure)
+            self.assertIn("lat=1.0 idle=false", failure)
             self.assertEqual((output / "failure-logcat.txt").read_text(), "I/Map: idle")
             self.assertEqual(
                 (output / "failure-screen.png").read_bytes(),
@@ -94,7 +133,7 @@ class RecordFailureTest(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "artifacts"
-            map_goldens.record_failure(adb, output, "launch")
+            map_goldens.record_failure(adb, output, "launch", "GoldenError: launch failed")
 
             self.assertTrue((output / "failure.json").is_file())
 

@@ -18,6 +18,7 @@ import nl.r1a.grassmap.plugin.api.model.LayerType
 import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
 import nl.r1a.grassmap.plugin.api.model.SourceId
+import nl.r1a.grassmap.plugin.api.provider.Route
 import org.maplibre.compose.expressions.ast.Expression
 import org.maplibre.compose.expressions.dsl.const
 import org.maplibre.compose.expressions.dsl.textOffset
@@ -82,10 +83,32 @@ internal fun ComposedMapLayers(session: MapHostState) {
             val source = layer.source?.let { sources[it] }
             StyleLayerNode(layer, source)
         }
+        if (slot == LayerSlot.Routes) {
+            RouteLine(session.route.value)
+        }
         if (slot == LayerSlot.Markers) {
             LocationPuck(session.location.value)
         }
     }
+}
+
+/**
+ * The planned route as one GeoJSON line in the routes slot. The source is
+ * re-keyed when the route changes, matching the puck's update pattern.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+@MaplibreComposable
+private fun RouteLine(route: Route?) {
+    if (route == null || route.geometry.size < MIN_ROUTE_POINTS) return
+    val source = rememberGeoJsonSource(GeoJsonData.JsonString(route.toFeatureCollection()))
+    LineLayer(
+        id = ROUTE_LAYER_ID,
+        source = source,
+        color = const(ROUTE_COLOR),
+        opacity = const(1f),
+        width = const(ROUTE_WIDTH_DP.dp),
+    )
 }
 
 /**
@@ -134,6 +157,11 @@ private const val PUCK_RADIUS_DP = 7
 private const val PUCK_STROKE_WIDTH_DP = 2
 private val PUCK_COLOR = Color(0xFF1E88E5)
 private val PUCK_STROKE_COLOR = Color.White
+
+private const val ROUTE_LAYER_ID = "core.route.line"
+private const val ROUTE_WIDTH_DP = 5
+private const val MIN_ROUTE_POINTS = 2
+private val ROUTE_COLOR = Color(0xFF2E7D32)
 
 @Composable
 @MaplibreComposable

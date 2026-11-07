@@ -149,7 +149,7 @@ the module name. Only `app` is an application module; its application ID is
 | `core-services` | settings and profiles, storage, location, network gate, i18n, clock, logging | `core`, `plugin-api` |
 | `map` | the `MapHost` implementation, style composer, layer slots, gestures, camera, location puck | `plugin-api` |
 | `regions` | catalogue, download, verify, mount, update, source resolver, routing pack handling | `plugin-api` |
-| `routing` | engine host, request builder, route model assembly | `plugin-api` |
+| `routing` | engine host, request builder, route model assembly, the Valhalla adapter | `plugin-api`, valhalla-mobile (MIT) |
 | `navigation` | route follower, off-route detection, reroute policy, guidance | `routing`, `plugin-api` |
 | `alerts` | alert sources, scheduling, sound, vibration and banner output | `navigation`, `plugin-api` |
 | `places` | place and search provider hosts, favourites store | `plugin-api` |
@@ -320,6 +320,22 @@ configuration only.
 prints stream values and saves a screenshot. `tools/control/mcp_server.py`
 exposes the same channel over stdio MCP. See `tools/control/README.md` for the
 method list, the token handling and the CLI examples.
+
+## Routing seam
+
+`RoutingEngine` in `plugin-api` is the engine contract. `routing` binds it to
+valhalla-mobile 0.6.4 and keeps every library type inside that module. The
+engine reads a pack directory copied to the device's external files, writes a
+local `valhalla.local.json` whose paths point at that pack, and creates the
+native actor on the first route.
+
+`MapHost.setRoute(Route?)` draws the route as one GeoJSON `LineString` in the
+`Routes` slot, using the same source pattern as the location puck. The app's
+debug control channel exposes `core.route.test_walk`, which routes a short walk
+in the fixture area or in Lviv and, with `{"modifiers": true}`, asks the
+synthetic DataSource for cost modifiers and routes again. Valhalla takes a
+multiplier as `linear_cost_factors`; when the synthetic line has no graph edges
+near it, the adapter retries with `exclude_polygons` around the same line.
 
 ## Follow-ups
 

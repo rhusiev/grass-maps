@@ -12,7 +12,11 @@ import nl.r1a.grassmap.core.services.NoLocationSource
  */
 open class GrassMapsApplication : Application() {
     val container: AppContainer by lazy {
-        AppContainer(strings = AndroidStrings(this), locationSource = locationSource())
+        AppContainer(
+            strings = AndroidStrings(this),
+            locationSource = locationSource(),
+            routingFilesProvider = { getExternalFilesDir(null) ?: filesDir },
+        )
     }
 
     /** The measurement harness for this build; the release app observes nothing. */

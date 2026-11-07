@@ -60,7 +60,7 @@ internal object DebugControl {
                 ControlEndpoint(
                     catalog =
                         GeneratedControlCatalog(
-                            commands = GeneratedPlugins.commands,
+                            commands = GeneratedPlugins.commands + container.controlCommands,
                             manifests = container.pluginHost.manifests(),
                         ),
                     invoker = container.commandBus,

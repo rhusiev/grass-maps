@@ -15,6 +15,7 @@ import nl.r1a.grassmap.plugin.api.model.ScreenOffset
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleSpec
 import nl.r1a.grassmap.plugin.api.model.TrackingMode
+import nl.r1a.grassmap.plugin.api.provider.Route
 
 /**
  * The map seam. The engine binding lives in `map`; this contract has no map,
@@ -60,6 +61,12 @@ interface MapHost {
 
     /** Draws the position puck at [fix], or removes it when [fix] is null. */
     suspend fun setLocation(fix: LocationFix?): Outcome<Unit>
+
+    /**
+     * Draws [route] in the routes slot, or removes the drawn route when it is
+     * null. The line is not a Compose overlay, so it follows the map.
+     */
+    suspend fun setRoute(route: Route?): Outcome<Unit>
 
     suspend fun setPositionOffset(offset: ScreenOffset): Outcome<Unit>
 }

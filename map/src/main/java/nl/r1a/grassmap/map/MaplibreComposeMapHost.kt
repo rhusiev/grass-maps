@@ -42,6 +42,7 @@ import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleId
 import nl.r1a.grassmap.plugin.api.model.StyleSpec
 import nl.r1a.grassmap.plugin.api.model.TrackingMode
+import nl.r1a.grassmap.plugin.api.provider.Route
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.map.DefaultMapRuntime
 import org.maplibre.compose.map.MapState
@@ -66,6 +67,7 @@ internal class MapHostState(
     val style = mutableStateOf(buildBaseStyle(initialStyle, sourceResolver) ?: emptyBuiltStyle())
     val layers = mutableStateOf<List<OwnedLayer>>(emptyList())
     val location = mutableStateOf<LocationFix?>(null)
+    val route = mutableStateOf<Route?>(null)
     val camera = MutableStateFlow(initialCamera)
     var loadedStyleId: StyleId = initialStyle.id
         private set
@@ -122,6 +124,10 @@ internal class MapHostState(
 
     fun updateLocation(fix: LocationFix?) {
         location.value = fix
+    }
+
+    fun updateRoute(route: Route?) {
+        this.route.value = route
     }
 
     fun updatePositionOffset(offset: ScreenOffset) {
@@ -277,6 +283,12 @@ class MaplibreComposeMapHost internal constructor(
     override suspend fun setLocation(fix: LocationFix?): Outcome<Unit> =
         withContext(Dispatchers.Main.immediate) {
             session.updateLocation(fix)
+            Outcome.Success(Unit)
+        }
+
+    override suspend fun setRoute(route: Route?): Outcome<Unit> =
+        withContext(Dispatchers.Main.immediate) {
+            session.updateRoute(route)
             Outcome.Success(Unit)
         }
 

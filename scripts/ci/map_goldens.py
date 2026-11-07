@@ -80,6 +80,11 @@ CAMERA_READY_TIMEOUT_S = 45.0
 # renderer answers after the client has already timed out.
 INVOKE_TIMEOUT_S = 30.0
 RETRY_PAUSE_S = 0.5
+# The first install after the dialog-suppression reboot can land while the
+# package manager is still finishing its own startup and rejected the APK;
+# the same command succeeds a few seconds later.
+INSTALL_ATTEMPTS = 3
+INSTALL_RETRY_PAUSE_S = 5.0
 DEVICE_DEADLINE_S = 180.0
 BLOCK_DELTA = 32
 MAX_MISMATCH_PERCENT = 5.0
@@ -120,7 +125,9 @@ def run(
         raise GoldenError(f"timeout after {timeout_s:.0f}s: {' '.join(command)}") from exc
     if check and result.returncode != 0:
         detail = (result.stderr or result.stdout).strip()
-        raise GoldenError(f"exit {result.returncode}: {' '.join(command)}\n{detail[-600:]}")
+        raise GoldenError(
+            f"exit {result.returncode}: {' '.join(command)}\n{detail[:600]}\n...\n{detail[-600:]}"
+        )
     return result.stdout
 
 
@@ -136,9 +143,27 @@ class Adb:
         run([*self.prefix, "push", str(source), target], 600)
 
     def install(self, apk: Path) -> None:
-        result = run([*self.prefix, "install", "-r", str(apk)], 300)
-        if "Success" not in result:
-            raise GoldenError(f"adb install did not report Success:\n{result.strip()}")
+        last = ""
+        for attempt in range(INSTALL_ATTEMPTS):
+            try:
+                result = subprocess.run(
+                    [*self.prefix, "install", "-r", str(apk)],
+                    capture_output=True,
+                    text=True,
+                    timeout=300,
+                    check=False,
+                )
+            except subprocess.TimeoutExpired as exc:
+                raise GoldenError(f"adb install timed out: {apk}") from exc
+            if "Success" in result.stdout:
+                return
+            last = (result.stdout or "") + (result.stderr or "")
+            if attempt + 1 < INSTALL_ATTEMPTS:
+                time.sleep(INSTALL_RETRY_PAUSE_S)
+        raise GoldenError(
+            f"adb install did not report Success after {INSTALL_ATTEMPTS} attempts:\n"
+            f"{last[:600]}\n...\n{last[-600:]}"
+        )
 
     def screencap(self) -> bytes:
         """Capture the composited display, including the map's SurfaceView."""
@@ -813,9 +838,13 @@ def main() -> int:
             serial = args.serial or control_client.adb(["get-serialno"]).stdout.strip()
             adb = Adb(serial)
             adb.wait_for_device()
-            if args.apk:
-                adb.install(Path(args.apk))
             output = Path(args.output)
+            if args.apk:
+                try:
+                    adb.install(Path(args.apk))
+                except GoldenError as error:
+                    record_failure(adb, output, "install", str(error))
+                    raise
             if not args.keep_data:
                 clear_app_data(adb)
             if args.profile == "oblast":

@@ -176,12 +176,21 @@ if [[ "${GOLDEN_SKIP_REBOOT:-0}" != "1" ]]; then
     adb -s "$SERIAL" shell settings put global anr_show_background 0 >/dev/null 2>&1 || true
     adb -s "$SERIAL" reboot || fail "adb reboot failed"
     sleep 5
+    adb -s "$SERIAL" wait-for-device || fail "adb wait-for-device failed after the dialog-suppression reboot"
     wait_for_device 240 -s "$SERIAL" || fail "the device did not return after the dialog-suppression reboot"
+    boot_deadline=$((SECONDS + 240))
+    until [[ "$(timeout 10 adb -s "$SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == "1" ]]; do
+        ((SECONDS >= boot_deadline)) && fail "sys.boot_completed was not 1 after the dialog-suppression reboot"
+        sleep 3
+    done
     wait_for_package_manager 180 -s "$SERIAL" || fail "the package manager did not return after the dialog-suppression reboot"
     adb -s "$SERIAL" shell input keyevent 82 >/dev/null 2>&1 || true
     adb -s "$SERIAL" shell settings put global window_animation_scale 0 >/dev/null 2>&1 || true
     adb -s "$SERIAL" shell settings put global transition_animation_scale 0 >/dev/null 2>&1 || true
     adb -s "$SERIAL" shell settings put global animator_duration_scale 0 >/dev/null 2>&1 || true
+    # The package manager is still finishing its own startup right after boot;
+    # give the install path a moment before the harness runs.
+    sleep 5
     echo "== rebooted, dialogs suppressed ==" >&2
 fi
 

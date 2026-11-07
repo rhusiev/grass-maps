@@ -185,6 +185,28 @@ class AnrDialogTest(unittest.TestCase):
         self.assertEqual(adb.taps, [("60", "120")])
 
 
+class InstallTest(unittest.TestCase):
+    def test_install_retries_a_rejected_first_attempt(self) -> None:
+        adb = map_goldens.Adb("emulator-5554")
+        rejected = map_goldens.subprocess.CompletedProcess(
+            [], 1, stdout="Failure [INSTALL_FAILED_BUSY]", stderr=""
+        )
+        accepted = map_goldens.subprocess.CompletedProcess(
+            [], 0, stdout="Success", stderr=""
+        )
+
+        with (
+            mock.patch.object(
+                map_goldens.subprocess, "run", side_effect=[rejected, accepted]
+            ) as install,
+            mock.patch.object(map_goldens.time, "sleep") as sleep,
+        ):
+            adb.install(Path("app-debug.apk"))
+
+        self.assertEqual(install.call_count, 2)
+        sleep.assert_called_once_with(map_goldens.INSTALL_RETRY_PAUSE_S)
+
+
 class RecordFailureTest(unittest.TestCase):
     def test_writes_stage_reason_logcat_and_screen(self) -> None:
         adb = mock.Mock()

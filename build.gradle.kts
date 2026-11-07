@@ -67,10 +67,22 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         ":ui-shell" to setOf(":plugin-api", ":plugin-ui-api"),
         ":control" to setOf(":core", ":plugin-api"),
         ":devtools" to setOf(":core", ":control", ":plugin-api"),
+        ":plugins:dev-tools" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:example" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:gpx" to setOf(":plugin-api", ":plugin-ui-api"),
+        ":plugins:info-widgets" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:style-standard" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:synthetic-data" to setOf(":plugin-api", ":plugin-ui-api"),
+    )
+// Test-only edges are separate so a test fixture cannot quietly become a
+// production dependency. :control's info-widgets edge is the accepted T-0113
+// control-fixture exception.
+val moduleTestDependencyAllowlist: Map<String, Set<String>> =
+    mapOf(
+        ":plugin-api" to setOf(":plugin-api"),
+        ":regions" to setOf(":plugin-api"),
+        ":control" to setOf(":plugins:info-widgets"),
+        ":plugins:synthetic-data" to setOf(":plugin-api"),
     )
 val moduleBoundaryViolations = objects.listProperty(String::class.java)
 
@@ -105,8 +117,11 @@ tasks.register("checkPluginBoundaries") {
 subprojects {
     afterEvaluate {
         if (path != ":app") {
-            val allowed = moduleDependencyAllowlist[path].orEmpty()
             configurations.forEach { configuration ->
+                val isTest = configuration.name.contains("test", ignoreCase = true)
+                val allowed =
+                    (if (isTest) moduleTestDependencyAllowlist[path] else moduleDependencyAllowlist[path])
+                        .orEmpty()
                 configuration.dependencies
                     .filterIsInstance<ProjectDependency>()
                     .filterNot { it.path in allowed }

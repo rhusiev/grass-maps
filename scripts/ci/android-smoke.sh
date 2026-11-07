@@ -22,6 +22,8 @@ PKG="nl.r1a.grassmap"
 ACTIVITY="${SMOKE_ACTIVITY:-nl.r1a.grassmap.app.MainActivity}"
 SETTLE_SECONDS="${SMOKE_SETTLE_SECONDS:-8}"
 DEVICE_DEADLINE_SECONDS="${SMOKE_DEVICE_DEADLINE_SECONDS:-180}"
+LOGCAT_CLEAR_ATTEMPTS="${SMOKE_LOGCAT_CLEAR_ATTEMPTS:-5}"
+LOGCAT_CLEAR_RETRY_SECONDS="${SMOKE_LOGCAT_CLEAR_RETRY_SECONDS:-2}"
 
 if [[ ! -f "$APK" ]]; then
     echo "FAIL: APK not found: $APK" >&2
@@ -49,7 +51,24 @@ if [[ "$installed" != "package:$PKG" ]]; then
 fi
 
 timeout 30 adb shell am force-stop "$PKG" || true
-timeout 30 adb logcat -c
+
+# The emulator occasionally refuses to clear the system log right after boot
+# (seen on API 29 under swiftshader). Retry a bounded number of times; if it
+# still fails, the script exits non-zero as before, so the check is not weakened.
+log_cleared=0
+for attempt in $(seq 1 "$LOGCAT_CLEAR_ATTEMPTS"); do
+    if timeout 30 adb logcat -c; then
+        log_cleared=1
+        break
+    fi
+    echo "logcat clear failed (attempt $attempt), retrying" >&2
+    sleep "$LOGCAT_CLEAR_RETRY_SECONDS"
+done
+if [[ "$log_cleared" -ne 1 ]]; then
+    echo "FAIL: could not clear the logcat buffer" >&2
+    exit 1
+fi
+
 echo "== Launching $PKG/$ACTIVITY =="
 if ! timeout 120 adb shell am start -W -n "$PKG/$ACTIVITY"; then
     echo "FAIL: am start did not launch $PKG/$ACTIVITY" >&2

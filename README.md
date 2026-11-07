@@ -213,10 +213,62 @@ provider's layers with `applyStyleDiff`, and only `setStyle` may reload. The
 T-0020 spike uses the phase-A Protomaps-derived bench style as its reproduction
 baseline; the authored Standard and Touring palettes are T-0603.
 
-The debug app resolves `lviv-protomaps.pmtiles` from its external files
-directory and `lviv-contours-20m.pmtiles` for the contour overlay. With no
-Lviv archive it copies the small T-0015 fixture (`fixture-mini-map.pmtiles`)
-out of its assets and starts at Ivano-Frankove.
+The map resolves its sources in a fixed order:
+
+1. exactly one installed region package whose `current` pointer, manifest and
+   declared map/contours files validate, read from the app's region store;
+2. the whole-oblast archive `lviv-protomaps.pmtiles` (plus
+   `lviv-contours-20m.pmtiles`) pushed to the app's external files directory;
+3. the small T-0015 fixture (`fixture-mini-map.pmtiles`) copied out of the
+   debug assets.
+
+An installed region that fails to mount is never silently ignored. The map
+still opens on the next source, and the screen shows the slim
+"Map data needs re-download" banner. The mount validates the `current`
+pointer, the manifest and the map/contours file size and PMTiles v3 header
+only; full sha256 verification stays in the download pipeline, so a cold start
+never hashes an oblast. A package whose `map.pmtiles` is truncated or is not a
+PMTiles archive is therefore corrupt at mount time too. The mount never writes,
+downloads or quarantines; those actions belong to `RegionDownloader`.
+
+The debug-only `core.map.set_camera` command moves the camera to an exact
+latitude, longitude, zoom, bearing and tilt and returns only after MapLibre's
+idle event. It is registered only in the debug source set, so no unrestricted
+camera command is compiled into a release build. The T-0102 golden harness uses
+it before an `adb exec-out screencap -p` capture:
+
+```sh
+tools/control/grassctl.py invoke core.map.set_camera \
+  '{"lat":49.8419,"lon":24.0316,"zoom":13,"bearing":0,"tilt":0}'
+```
+
+The control channel's own `devtools.screenshot` uses `PixelCopy` on the
+activity window. On this emulator that path does not see the map's
+`SurfaceView`, so it returns a black map area and cannot carry a map golden.
+`screencap` reads the composited display instead, and the camera command still
+comes from the control channel.
+
+The fixture goldens in `test-data/map-goldens/fixture/` run in CI on the API 29
+emulator with the same image and swiftshader GPU as the smoke job. The
+whole-oblast goldens are local acceptance on the `grassmaps-bench` emulator and
+never enter CI:
+
+```sh
+./scripts/ci/android-map-goldens.sh --profile fixture --update
+./scripts/ci/android-map-goldens.sh --profile oblast --update \
+  --region-package /hdd/t-0102-evidence/region/ua-46/2026-11-05-bench
+```
+
+The first `--update` run writes the reference set; every later run compares
+against it. Each image is reduced to its centre 16:9 area, then to the central
+half of that area, which drops the status bar, scale bar, control bar and
+attribution, and then to a 108x192 grid of mean RGB blocks. At a fixed camera
+the central 540x960 window covers the same ground on any 1080-wide device, so a
+16:9 and a 20:9 phone compare directly. The test fails when more than 5 % of
+blocks differ by more than 32 on any channel. Block means absorb GPU
+anti-aliasing and label rasterisation; a blank, wrong or shifted map still
+changes most blocks. The run writes `comparison.json` and one diff image per
+position.
 
 ### Location puck
 
@@ -537,6 +589,16 @@ the version-directory rename but before the pointer rename leaves an unused new
 directory, which a retry verifies and reuses. A failed verification or a crash
 during extraction leaves only a `.incoming` directory that the next attempt
 ignores.
+
+`RegionMountResolver` is the read-only side of the store. It reads
+`<region>/current`, parses `<version>/manifest.json` with the same strict
+parser, and checks the declared map and contours files for size and a PMTiles
+v3 header. Its result is `None`, `Mounted` or `Invalid` with a typed
+`RegionMountProblem` (`MissingPointer`, `CorruptPointer`, `MissingVersion`,
+`CorruptManifest`, `UnsupportedPackage`, `MissingMap`, `CorruptMap`,
+`CorruptContours`, `MultipleRegions`). More than one installed region is
+reported, not guessed; the two-oblast resolver is T-0503. It never hashes a
+whole file, so it is safe to call while the map is starting.
 
 The debug trigger is `core.region.download_test`, allowlisted for the control
 channel only:

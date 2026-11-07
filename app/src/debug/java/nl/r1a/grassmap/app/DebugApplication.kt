@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.core.services.AndroidLocationSource
 import nl.r1a.grassmap.core.services.MockGpxLocationSource
+import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.service.LocationService
@@ -75,6 +76,8 @@ class DebugApplication : GrassMapsApplication() {
     }
 
     override fun mapHarness(activity: Activity): MapHarness = DebugMapHarness.from(activity.intent)
+
+    override fun extraCommands(): (MapSessionHolder) -> List<Command<*, *>> = { session -> listOf(SetCameraCommand(session)) }
 
     override fun locationSource(): LocationService =
         DebugLocationSource(

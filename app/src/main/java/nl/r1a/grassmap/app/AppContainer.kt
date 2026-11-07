@@ -49,6 +49,7 @@ class AppContainer(
     private val assetReader: (String) -> ByteArray? = { null },
     private val regionsRootProvider: () -> File? = { null },
     private val debuggable: () -> Boolean = { false },
+    private val extraCommands: (MapSessionHolder) -> List<Command<*, *>> = { emptyList() },
 ) {
     private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -101,9 +102,12 @@ class AppContainer(
     /** The production network path for region downloads. */
     val regionNetwork: NetworkAccess = GateNetworkAccess(networkGate)
 
+    /** The region store root, or null when the app has no files directory. */
+    val regionsRoot: File? by lazy { regionsRootProvider() }
+
     /** The region downloader over the app-private region store, or null without a root. */
     val regionDownloader: RegionDownloader? by lazy {
-        regionsRootProvider()?.let { root ->
+        regionsRoot?.let { root ->
             RegionDownloader(
                 transport = HttpDownloadTransport(),
                 paths = RegionPaths(root),
@@ -118,7 +122,8 @@ class AppContainer(
             navCommands(mapSession, { routingEngine }) +
             searchCommands { places } +
             trackCommands({ tracks }, assetReader) +
-            regionCommands({ regionDownloader }, regionNetwork, debuggable)
+            regionCommands({ regionDownloader }, regionNetwork, debuggable) +
+            extraCommands(mapSession)
     }
 
     /** The catalog entries for the host commands; the debug channel lists these. */

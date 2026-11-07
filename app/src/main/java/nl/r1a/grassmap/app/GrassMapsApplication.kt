@@ -6,6 +6,7 @@ import android.content.pm.ApplicationInfo
 import nl.r1a.grassmap.core.services.AndroidLocationSource
 import nl.r1a.grassmap.core.services.AndroidStrings
 import nl.r1a.grassmap.core.services.FileLocationPermissionStore
+import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.service.LocationService
 import java.io.File
 import java.io.IOException
@@ -28,6 +29,7 @@ open class GrassMapsApplication : Application() {
             assetReader = { path -> readAsset(path) },
             regionsRootProvider = { File(filesDir, REGIONS_DIRECTORY) },
             debuggable = { isDebuggable() },
+            extraCommands = extraCommands(),
         )
     }
 
@@ -49,6 +51,12 @@ open class GrassMapsApplication : Application() {
 
     /** The measurement harness for this build; the release app observes nothing. */
     internal open fun mapHarness(activity: Activity): MapHarness = NoMapHarness
+
+    /**
+     * Commands that exist only in a debug build. The release app contributes an
+     * empty list, so no unrestricted camera command is compiled into it.
+     */
+    internal open fun extraCommands(): (MapSessionHolder) -> List<Command<*, *>> = { emptyList() }
 
     /**
      * The location provider for this build: the foreground-only platform

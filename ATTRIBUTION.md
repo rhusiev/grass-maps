@@ -12,6 +12,7 @@ first product asset lands.
 | OpenStreetMap data | ODbL-1.0 | © OpenStreetMap contributors; region packs are derived data |
 | `test-data/regions/fixture-mini` map tiles | ODbL-1.0 | © OpenStreetMap contributors; extracted from the bench Ukraine build |
 | `test-data/regions/fixture-mini` contours | Copernicus DEM GLO-30 terms | © DLR e.V. and © Airbus Defence and Space GmbH, provided under Copernicus by the EU and ESA |
+| `test-data/map-goldens` screenshots | ODbL-1.0 / Copernicus DEM GLO-30 terms | Rendered captures of the `fixture-mini` map tiles and contours for the T-0102 golden test |
 | Noto fonts | SIL OFL 1.1 | map labels and UI text; `app/src/main/assets/fonts` uses the Protomaps basemaps-assets Noto Sans glyph PBFs |
 | Protomaps sprites | MIT | `app/src/main/assets/sprites` (light sprite sheet, basemaps-assets) |
 | valhalla-mobile | MIT | Android/iOS wrapper around the Valhalla engine, used by `routing` |

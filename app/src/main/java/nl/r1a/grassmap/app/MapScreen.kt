@@ -6,8 +6,11 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -20,9 +23,13 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -58,6 +65,11 @@ private const val TAG = "GrassMapsMap"
 private const val LAYOUT_DIRECTORY = "controls"
 private const val LAYOUT_FILE = "button-layout.json"
 private const val BAR_PADDING_DP = 16
+private const val BANNER_CORNER_DP = 8
+private const val BANNER_HORIZONTAL_DP = 16
+private const val BANNER_VERTICAL_DP = 10
+private const val BANNER_FONT_SP = 14
+private val NEEDS_REDOWNLOAD_BACKGROUND = Color(0xFFB3261E)
 
 internal data class MapBundle(
     val style: StyleSpec,
@@ -191,6 +203,22 @@ private fun MapContent(
                     .statusBarsPadding()
                     .padding(BAR_PADDING_DP.dp),
         )
+        bundle.sources.regionProblem?.let { problem ->
+            RegionProblemBanner(
+                text = stringResource(R.string.map_region_needs_redownload),
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(BAR_PADDING_DP.dp),
+            )
+            LaunchedEffect(problem) {
+                Log.w(
+                    TAG,
+                    "region-needs-redownload region=${bundle.sources.problemRegion ?: "unknown"} problem=$problem",
+                )
+            }
+        }
     }
     LaunchedEffect(surface.host, bundle) {
         launch(start = CoroutineStart.UNDISPATCHED) { harness.run(surface, bundle) }
@@ -300,6 +328,26 @@ private fun controlButton(
         }
     }
 
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun RegionProblemBanner(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(BANNER_CORNER_DP.dp))
+                .background(NEEDS_REDOWNLOAD_BACKGROUND)
+                .padding(horizontal = BANNER_HORIZONTAL_DP.dp, vertical = BANNER_VERTICAL_DP.dp),
+    ) {
+        BasicText(
+            text = text,
+            style = TextStyle(color = Color.White, fontSize = BANNER_FONT_SP.sp),
+        )
+    }
+}
+
 private fun controlBarLabels(context: Context): ControlBarLabels =
     ControlBarLabels(
         edit = context.getString(R.string.control_edit_label),
@@ -315,7 +363,7 @@ private suspend fun loadBundle(
     container: AppContainer,
     context: Context,
 ): MapBundle? {
-    val sources = MapSources.resolve(context)
+    val sources = MapSources.resolve(context, container.regionsRoot)
     val result =
         container.providerRegistry.invoke(STYLE_PLUGIN, MapLayerContract.REFERENCE) { provider ->
             val mapLayers = provider as? MapLayerProvider ?: return@invoke null

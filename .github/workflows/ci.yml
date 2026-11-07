@@ -104,6 +104,48 @@ jobs:
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: ./scripts/ci/android-smoke.sh app/build/outputs/apk/debug/app-debug.apk
 
+  # Fixture map goldens only: the committed T-0015 fixture asset, no region
+  # package and no 59 MB archive. The whole-oblast goldens are local acceptance
+  # on gm-emulator; CI must not depend on the bench archive.
+  emulator-map-goldens:
+    name: Fixture map goldens (API 29, swiftshader)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+      - name: Set up Rust 1.93.1 with the Android targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.93.1
+          targets: aarch64-linux-android,x86_64-linux-android
+      - name: Build the debug APK
+        run: ./gradlew --console=plain :app:assembleDebug
+      - name: Boot API 29 and compare the fixture goldens
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: ./scripts/ci/android-map-goldens.sh --profile fixture --output build/map-goldens/fixture app/build/outputs/apk/debug/app-debug.apk
+      - name: Keep the goldens and diff images
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: map-goldens-fixture-${{ github.sha }}
+          path: build/map-goldens/fixture/**
+          if-no-files-found: warn
+
   # Trend numbers only, not the Moto g32 acceptance gate. The JSON lands in
   # build/benchmarks/ and is uploaded keyed by commit. A commit that regresses
   # a budget does not fail this job yet; the budget gate belongs to the map and

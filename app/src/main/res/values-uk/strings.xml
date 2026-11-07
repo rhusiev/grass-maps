@@ -28,4 +28,5 @@
     <string name="control_move_left_description">Перемістити ліворуч</string>
     <string name="control_move_right_label">&#8250;</string>
     <string name="control_move_right_description">Перемістити праворуч</string>
+    <string name="map_region_needs_redownload">Дані карти потребують повторного завантаження</string>
 </resources>

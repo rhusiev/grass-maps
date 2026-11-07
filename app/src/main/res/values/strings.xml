@@ -27,4 +27,5 @@
     <string name="control_move_left_description">Move left</string>
     <string name="control_move_right_label">&#8250;</string>
     <string name="control_move_right_description">Move right</string>
+    <string name="map_region_needs_redownload">Map data needs re-download</string>
 </resources>

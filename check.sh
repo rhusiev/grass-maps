@@ -51,8 +51,15 @@ if [[ -z "${GRASS_MAPS_IN_BUILD_SLOT:-}" && -z "${CI:-}" ]] && command -v agent-
     exec agent-lock run gm-build --timeout 30m -- "$0" "$@"
 fi
 
+step_start=$SECONDS
+script_start=$SECONDS
+
 step() {
+    if [[ -n "${step_start:-}" ]]; then
+        printf '  (previous step: %ss)\n' "$((SECONDS - step_start))"
+    fi
     printf '\n== %s ==\n' "$1"
+    step_start=$SECONDS
 }
 
 fail() {
@@ -111,8 +118,8 @@ else
 fi
 
 if [[ $failures -ne 0 ]]; then
-    printf '\n%d check step(s) failed\n' "$failures"
+    printf '\n%d check step(s) failed (%ss total)\n' "$failures" "$((SECONDS - script_start))"
     exit 1
 fi
 
-printf '\nAll requested checks passed\n'
+printf '\nAll requested checks passed (%ss total)\n' "$((SECONDS - script_start))"

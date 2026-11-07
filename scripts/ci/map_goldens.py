@@ -95,7 +95,10 @@ INSTALL_RETRY_PAUSE_S = 5.0
 # The first camera command can run before the app has drawn anything under
 # swiftshader, leaving a black capture. The debug harness logs its first full
 # frame, so wait for that line before the first position.
-FIRST_FRAME_TIMEOUT_S = 60.0
+# The authored Standard style compiles more layers than the T-0020 bench style,
+# and swiftshader needs longer than a minute for the first full frame on the CI
+# emulator (T-0108: style-loaded at 46 s, first frame just after 60 s).
+FIRST_FRAME_TIMEOUT_S = 180.0
 DEVICE_DEADLINE_S = 180.0
 BLOCK_DELTA = 32
 MAX_MISMATCH_PERCENT = 5.0

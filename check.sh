@@ -71,6 +71,9 @@ step "Unit tests"
 ./gradlew --console=plain test || fail "unit tests (Gradle test task)"
 scripts/ci/test-count.sh || fail "unit tests (empty suite)"
 
+step "Script tests (map golden capture)"
+python3 scripts/ci/map_goldens_test.py || fail "script tests (map goldens)"
+
 step "Translations (English and Ukrainian)"
 ./gradlew --console=plain checkTranslations || fail "translations"
 

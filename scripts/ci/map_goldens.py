@@ -61,6 +61,7 @@ CAMERA_READY_TIMEOUT_S = 45.0
 # the device). The RPC socket must stay open longer than that, or a slow
 # renderer answers after the client has already timed out.
 INVOKE_TIMEOUT_S = 30.0
+RETRY_PAUSE_S = 0.5
 DEVICE_DEADLINE_S = 180.0
 BLOCK_DELTA = 32
 MAX_MISMATCH_PERCENT = 5.0
@@ -241,9 +242,12 @@ def wait_for_channel(adb: Adb) -> control_client.ControlClient:
             control_client.ensure_forward(serial=adb.serial)
             token = control_client.read_token(serial=adb.serial)
             client = control_client.connect(token=token, timeout=5.0)
+            # The short timeout only bounds dialling and authentication. The
+            # camera command answers after the map goes idle, so the open
+            # channel must wait longer than the command's own 15 s bound.
             client.set_timeout(INVOKE_TIMEOUT_S)
             return client
-        except control_client.ControlError as error:
+        except (control_client.ControlError, TimeoutError) as error:
             if time.monotonic() >= deadline:
                 raise GoldenError(f"control channel did not open: {error}") from error
             time.sleep(1.0)
@@ -257,7 +261,10 @@ def invoke_camera(
 
     The control channel opens before the first map host exists, so
     `core.map.set_camera` answers `not_ready` until `MapScreen` has bound its
-    surface.
+    surface. A software renderer can also exceed the socket timeout while the
+    command is still running, so a socket timeout is retried inside the same
+    budget: the outstanding reply is queued by the client and the retried
+    request moves the camera to the same position again.
     """
     deadline = time.monotonic() + CAMERA_READY_TIMEOUT_S
     while True:
@@ -266,7 +273,43 @@ def invoke_camera(
         except control_client.ControlError as error:
             if error.kind != "not_ready" or time.monotonic() >= deadline:
                 raise
-            time.sleep(0.5)
+        except TimeoutError as error:
+            if time.monotonic() >= deadline:
+                raise GoldenError(
+                    f"camera command did not answer within {CAMERA_READY_TIMEOUT_S:.0f}s"
+                ) from error
+        time.sleep(RETRY_PAUSE_S)
+
+
+def record_failure(adb: Adb, output: Path, stage: str) -> None:
+    """Write the failing device state into the artifact directory.
+
+    CI uploads the whole output directory with `if: always()`, so a failed run
+    names the position it stopped at, the logcat around it and the frame the
+    device showed, instead of only a traceback.
+    """
+    output.mkdir(parents=True, exist_ok=True)
+    (output / "failure.json").write_text(
+        json.dumps(
+            {
+                "stage": stage,
+                "time": datetime.now(timezone.utc).isoformat(),
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    try:
+        (output / "failure-logcat.txt").write_text(
+            adb.logcat("-d", "-v", "threadtime"), encoding="utf-8"
+        )
+    except (GoldenError, OSError) as error:
+        print(f"could not capture logcat after failure: {error}", file=sys.stderr)
+    try:
+        (output / "failure-screen.png").write_bytes(adb.screencap())
+    except (GoldenError, OSError) as error:
+        print(f"could not capture the failing screen: {error}", file=sys.stderr)
 
 
 def capture(
@@ -281,27 +324,43 @@ def capture(
         for stale in output.glob("*.png"):
             stale.unlink()
     output.mkdir(parents=True, exist_ok=True)
-    launch(adb)
-    client = wait_for_channel(adb)
-    started = datetime.now(timezone.utc).isoformat()
-    shots = []
-    for name, lat, lon, zoom, bearing, tilt in POSITIONS[profile]:
-        params = {
-            "lat": lat,
-            "lon": lon,
-            "zoom": zoom,
-            "bearing": bearing,
-            "tilt": tilt,
-        }
-        result = invoke_camera(client, params)
-        if "idle=true" not in result:
-            raise GoldenError(f"{name}: camera command did not reach idle: {result}")
-        time.sleep(SCREENSHOT_SETTLE_S)
-        png = adb.screencap()
-        path = output / f"{name}.png"
-        path.write_bytes(png)
-        shots.append({"name": name, "params": params, "file": str(path), "capture": "adb exec-out screencap -p"})
-        print(f"captured {name} -> {path}", file=sys.stderr)
+    stage = "launch"
+    try:
+        launch(adb)
+        client = wait_for_channel(adb)
+        started = datetime.now(timezone.utc).isoformat()
+        shots = []
+        for name, lat, lon, zoom, bearing, tilt in POSITIONS[profile]:
+            stage = name
+            params = {
+                "lat": lat,
+                "lon": lon,
+                "zoom": zoom,
+                "bearing": bearing,
+                "tilt": tilt,
+            }
+            result = invoke_camera(client, params)
+            if "idle=true" not in result:
+                raise GoldenError(f"{name}: camera command did not reach idle: {result}")
+            time.sleep(SCREENSHOT_SETTLE_S)
+            png = adb.screencap()
+            path = output / f"{name}.png"
+            path.write_bytes(png)
+            shots.append(
+                {
+                    "name": name,
+                    "params": params,
+                    "file": str(path),
+                    "capture": "adb exec-out screencap -p",
+                }
+            )
+            print(f"captured {name} -> {path}", file=sys.stderr)
+    except Exception:
+        try:
+            record_failure(adb, output, stage)
+        except (GoldenError, OSError) as error:
+            print(f"could not record the failure: {error}", file=sys.stderr)
+        raise
     (output / "capture.json").write_text(
         json.dumps(
             {

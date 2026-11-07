@@ -8,6 +8,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -92,17 +93,59 @@ internal fun ComposedMapLayers(session: MapHostState) {
             val source = layer.source?.let { sources[it] }
             StyleLayerNode(layer, source)
         }
-        if (slot == LayerSlot.Routes) {
-            RouteLine(session.route.value)
+        when (slot) {
+            LayerSlot.Routes -> RouteLayerSlot(session)
+            LayerSlot.Markers -> MarkerLayerSlot(session, styleReady)
+            else -> Unit
         }
-        if (slot == LayerSlot.Markers) {
-            val puck = session.puck.value
-            val camera by session.camera.collectAsState()
-            val density = LocalDensity.current.density
-            key(session.styleGeneration.value, styleReady) {
-                LocationPuckLayer(puck, camera.zoom, density, session.ageLabel)
+    }
+}
+
+/**
+ * The route slot. Kept out of [ComposedMapLayers] so a new route re-runs only
+ * this small composable, not every style layer.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+@MaplibreComposable
+private fun RouteLayerSlot(session: MapHostState) {
+    RouteLine(session.route.value)
+}
+
+/**
+ * The marker slot. The camera and puck are per-frame state: reading them here
+ * keeps every pan or puck frame from re-running the whole style layer tree.
+ * The accuracy radius is bucketed by zoom and latitude, so a pan at a fixed
+ * zoom keeps the puck layers out of recomposition.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+@MaplibreComposable
+private fun MarkerLayerSlot(
+    session: MapHostState,
+    styleReady: Boolean,
+) {
+    val puck = session.puck.value
+    val camera by session.camera.collectAsState()
+    val density = LocalDensity.current.density
+    val zoomBucket = (camera.zoom * ZOOM_BUCKET_STEPS).toInt() / ZOOM_BUCKET_STEPS.toDouble()
+    val latitudeBucket = ((puck?.fix?.position?.latitude ?: 0.0) * LATITUDE_BUCKET_STEPS).toInt()
+    val accuracyRadius =
+        remember(zoomBucket, latitudeBucket, puck?.fix?.accuracyMeters, puck?.showAccuracy, density) {
+            if (puck?.showAccuracy == true) {
+                PuckGeometry
+                    .accuracyRadiusDp(
+                        accuracyMeters = puck.fix.accuracyMeters,
+                        latitude = puck.fix.position.latitude,
+                        zoom = zoomBucket,
+                        density = density,
+                    ).dp
+            } else {
+                0.dp
             }
         }
+    key(session.styleGeneration.value, styleReady) {
+        LocationPuckLayer(puck, accuracyRadius, session.ageLabel)
     }
 }
 
@@ -139,24 +182,11 @@ private fun RouteLine(route: Route?) {
 @MaplibreComposable
 private fun LocationPuckLayer(
     display: PuckDisplay?,
-    zoom: Double,
-    density: Float,
+    accuracyRadius: Dp,
     ageLabel: PuckAgeFormatter,
 ) {
     if (display == null) return
     val source = rememberGeoJsonSource(GeoJsonData.JsonString(display.fix.toFeatureCollection()))
-    val accuracyRadius =
-        if (display.showAccuracy) {
-            PuckGeometry
-                .accuracyRadiusDp(
-                    accuracyMeters = display.fix.accuracyMeters,
-                    latitude = display.fix.position.latitude,
-                    zoom = zoom,
-                    density = density,
-                ).dp
-        } else {
-            0.dp
-        }
     CircleLayer(
         id = ACCURACY_LAYER_ID,
         source = source,
@@ -207,6 +237,10 @@ private fun LocationFix.toFeatureCollection(): String =
 private const val PUCK_LAYER_ID = "core.location.puck"
 private const val PUCK_AGE_LAYER_ID = "core.location.puck.age"
 private const val ACCURACY_LAYER_ID = "core.location.accuracy"
+// The accuracy circle radius is derived from zoom and latitude. Bucketing both
+// keeps a pan or a small move from recreating the puck layers every frame.
+private const val ZOOM_BUCKET_STEPS = 10
+private const val LATITUDE_BUCKET_STEPS = 100.0
 private const val PUCK_FONT = "Noto Sans Regular"
 private const val PUCK_RADIUS_DP = 7
 private const val PUCK_STALE_RADIUS_DP = 9

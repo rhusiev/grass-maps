@@ -16,6 +16,11 @@ import java.io.File
 /** The directory under the app's external files root that holds region indexes. */
 const val SEARCH_DIRECTORY: String = "search"
 
+/** One directory name under [SEARCH_DIRECTORY]; no separators or traversal. */
+private val INDEX_NAME = Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,63}")
+
+private fun isSafeIndexName(value: String): Boolean = INDEX_NAME.matches(value) && value != "." && value != ".."
+
 /**
  * The app's handle on the offline search indexes. One [RustPlaceProvider] per
  * mounted region build, opened on first use and kept afterwards.
@@ -32,10 +37,19 @@ class PlacesAccess(
     private val providers = mutableMapOf<String, Outcome<RustPlaceProvider>>()
 
     /** The directory the debug command and the region installer agree on. */
-    fun indexDirectory(indexName: String): File? = externalFilesRoot?.let { File(File(it, SEARCH_DIRECTORY), indexName) }
+    fun indexDirectory(indexName: String): File? {
+        if (!isSafeIndexName(indexName)) {
+            return null
+        }
+        return externalFilesRoot?.let { File(File(it, SEARCH_DIRECTORY), indexName) }
+    }
 
     suspend fun provider(indexName: String): Outcome<RustPlaceProvider> =
         mutex.withLock {
+            if (!isSafeIndexName(indexName)) {
+                log("search: unsafe index name rejected")
+                return@withLock Outcome.Failure(AppError.InvalidInput)
+            }
             providers[indexName]?.let { return@withLock it }
             val opened =
                 withContext(Dispatchers.IO) {

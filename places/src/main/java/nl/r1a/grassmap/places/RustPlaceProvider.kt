@@ -31,7 +31,7 @@ const val MAX_SEARCH_RESULTS: Int = 50
 
 /** How often the cancellation watcher checks the caller's handle. */
 private const val CANCEL_POLL_MILLIS: Long = 2L
-
+private const val NATIVE_LINKAGE_ERROR: String = "places.native"
 private const val ID_SEPARATOR: Char = ':'
 private const val MAX_LATITUDE: Double = 90.0
 private const val MAX_LONGITUDE: Double = 180.0
@@ -150,6 +150,8 @@ class RustPlaceProvider private constructor(
                 Outcome.Success(call(token))
             } catch (error: CoreException) {
                 Outcome.Failure(error.toAppError())
+            } catch (error: LinkageError) {
+                Outcome.Failure(AppError.Internal(NATIVE_LINKAGE_ERROR))
             } finally {
                 watcher.cancel()
                 token.close()
@@ -162,6 +164,8 @@ class RustPlaceProvider private constructor(
             Outcome.Success(call())
         } catch (error: CoreException) {
             Outcome.Failure(error.toAppError())
+        } catch (error: LinkageError) {
+            Outcome.Failure(AppError.Internal(NATIVE_LINKAGE_ERROR))
         }
 
     private fun toHit(hit: CorePlaceHit): PlaceHit =
@@ -233,6 +237,9 @@ class RustPlaceProvider private constructor(
                 } catch (error: CoreException) {
                     log("search index $regionBuild failed: ${error.message}")
                     Outcome.Failure(error.toAppError())
+                } catch (error: LinkageError) {
+                    log("search index $regionBuild failed to link: ${error.message}")
+                    Outcome.Failure(AppError.Internal(NATIVE_LINKAGE_ERROR))
                 }
             }
     }

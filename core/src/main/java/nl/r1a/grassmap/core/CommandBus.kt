@@ -196,6 +196,10 @@ class CommandBus(
             } catch (exception: Exception) {
                 host.recordFailure(owner)
                 return Execution(outcome = Outcome.Failure(AppError.PluginFailed(owner)), inverse = null)
+            } catch (error: LinkageError) {
+                // A missing or broken native library is a plugin failure, not a crash.
+                host.recordFailure(owner)
+                return Execution(outcome = Outcome.Failure(AppError.PluginFailed(owner)), inverse = null)
             }
 
         return when (outcome) {

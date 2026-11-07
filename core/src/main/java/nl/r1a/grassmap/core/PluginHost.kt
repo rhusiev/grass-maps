@@ -257,6 +257,9 @@ class PluginHost(
             } catch (exception: Exception) {
                 markFailed(pluginId)
                 return Outcome.Failure(AppError.PluginFailed(pluginId))
+            } catch (error: LinkageError) {
+                markFailed(pluginId)
+                return Outcome.Failure(AppError.PluginFailed(pluginId))
             }
 
         val session = ActivationSession(pluginId, pluginServices)
@@ -270,6 +273,8 @@ class PluginHost(
                 markFailed(pluginId, plugin)
                 return Outcome.Failure(AppError.PluginFailed(pluginId))
             } catch (exception: Exception) {
+                Outcome.Failure(AppError.PluginFailed(pluginId))
+            } catch (error: LinkageError) {
                 Outcome.Failure(AppError.PluginFailed(pluginId))
             }
 

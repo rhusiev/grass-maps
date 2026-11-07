@@ -62,14 +62,25 @@ class ProviderRegistry(
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: Exception) {
-            val count = failures.merge(key, 1, Int::plus) ?: 1
-            if (count >= failureLimit) {
-                disabled += key
-                publish(key, ProviderState.DISABLED, failureLimit)
-            } else {
-                publish(key, ProviderState.ACTIVE, count)
-            }
+            recordFailure(key, pluginId)
             Outcome.Failure(AppError.PluginFailed(pluginId))
+        } catch (error: LinkageError) {
+            // Native linkage failures take the same disable path as exceptions.
+            recordFailure(key, pluginId)
+            Outcome.Failure(AppError.PluginFailed(pluginId))
+        }
+    }
+
+    private fun recordFailure(
+        key: ProviderKey,
+        pluginId: PluginId,
+    ) {
+        val count = failures.merge(key, 1, Int::plus) ?: 1
+        if (count >= failureLimit) {
+            disabled += key
+            publish(key, ProviderState.DISABLED, failureLimit)
+        } else {
+            publish(key, ProviderState.ACTIVE, count)
         }
     }
 

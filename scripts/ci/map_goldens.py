@@ -85,6 +85,10 @@ RETRY_PAUSE_S = 0.5
 # the same command succeeds a few seconds later.
 INSTALL_ATTEMPTS = 3
 INSTALL_RETRY_PAUSE_S = 5.0
+# The first camera command can run before the app has drawn anything under
+# swiftshader, leaving a black capture. The debug harness logs its first full
+# frame, so wait for that line before the first position.
+FIRST_FRAME_TIMEOUT_S = 60.0
 DEVICE_DEADLINE_S = 180.0
 BLOCK_DELTA = 32
 MAX_MISMATCH_PERCENT = 5.0
@@ -365,17 +369,21 @@ def record_failure(
 
 
 def prepare_device(adb: Adb) -> list[str]:
-    """Hide system error dialogs so no ANR frame dims a golden.
+    """Hide system error dialogs and wake the screen before a golden run.
 
     Swiftshader is slow enough on the CI emulator that SystemUI can trip its
     own ANR watchdog while the map renders. The dialog dims the map and covers
     the comparison window, so error dialogs are hidden and any dialog already
-    showing is closed before the app is launched.
+    showing is closed before the app is launched. The screen is also woken and
+    the keyguard dismissed: a sleeping display captures as a black frame.
     """
     commands = [
         ("settings", "put", "global", "hide_error_dialogs", "1"),
         ("settings", "put", "global", "anr_show_background", "0"),
         ("am", "broadcast", "-a", "android.intent.action.CLOSE_SYSTEM_DIALOGS"),
+        ("input", "keyevent", "224"),
+        ("wm", "dismiss-keyguard"),
+        ("svc", "power", "stayon", "true"),
     ]
     for command in commands:
         adb.shell(*command, timeout_s=20, check=False)
@@ -500,6 +508,17 @@ def capture_position(
     }
 
 
+def wait_for_first_frame(adb: Adb, timeout_s: float = FIRST_FRAME_TIMEOUT_S) -> None:
+    """Wait until the debug harness logs its first full map frame."""
+    deadline = time.monotonic() + timeout_s
+    while True:
+        if "first-full-frame-ms=" in adb.logcat("-d", "-v", "brief", timeout_s=30):
+            return
+        if time.monotonic() >= deadline:
+            raise GoldenError("the map did not report its first full frame")
+        time.sleep(1.0)
+
+
 def capture(
     adb: Adb,
     profile: str,
@@ -518,11 +537,13 @@ def capture(
     stage = "launch"
     camera_result = None
     try:
+        adb.logcat("-c", timeout_s=15)
         launch(adb)
         client = wait_for_channel(adb)
         # Let the first render spike finish before the first camera move; the
         # swiftshader renderer is still catching up when `am start -W` returns.
         time.sleep(LAUNCH_SETTLE_S)
+        wait_for_first_frame(adb)
         started = datetime.now(timezone.utc).isoformat()
         shots = []
         for name, lat, lon, zoom, bearing, tilt in POSITIONS[profile]:

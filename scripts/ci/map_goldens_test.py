@@ -112,7 +112,8 @@ class PrepareDeviceTest(unittest.TestCase):
 
         self.assertTrue(any("hide_error_dialogs" in command for command in commands))
         self.assertTrue(any("CLOSE_SYSTEM_DIALOGS" in command for command in commands))
-        self.assertEqual(adb.shell.call_count, 4)
+        self.assertTrue(any("keyevent 224" in command for command in commands))
+        self.assertEqual(adb.shell.call_count, 7)
 
 
 class AppFocusTest(unittest.TestCase):
@@ -205,6 +206,18 @@ class InstallTest(unittest.TestCase):
 
         self.assertEqual(install.call_count, 2)
         sleep.assert_called_once_with(map_goldens.INSTALL_RETRY_PAUSE_S)
+
+
+class FirstFrameTest(unittest.TestCase):
+    def test_waits_for_the_harness_first_frame_line(self) -> None:
+        adb = mock.Mock()
+        adb.logcat.side_effect = ["I/Map: starting", "I/T0020: first-full-frame-ms=2000"]
+
+        with mock.patch.object(map_goldens.time, "sleep") as sleep:
+            map_goldens.wait_for_first_frame(adb)
+
+        self.assertEqual(adb.logcat.call_count, 2)
+        sleep.assert_called_once()
 
 
 class RecordFailureTest(unittest.TestCase):

@@ -185,6 +185,8 @@ if [[ "${GOLDEN_SKIP_REBOOT:-0}" != "1" ]]; then
     done
     wait_for_package_manager 180 -s "$SERIAL" || fail "the package manager did not return after the dialog-suppression reboot"
     adb -s "$SERIAL" shell input keyevent 82 >/dev/null 2>&1 || true
+    adb -s "$SERIAL" shell settings put system screen_off_timeout 2147483647 >/dev/null 2>&1 || true
+    adb -s "$SERIAL" shell svc power stayon true >/dev/null 2>&1 || true
     adb -s "$SERIAL" shell settings put global window_animation_scale 0 >/dev/null 2>&1 || true
     adb -s "$SERIAL" shell settings put global transition_animation_scale 0 >/dev/null 2>&1 || true
     adb -s "$SERIAL" shell settings put global animator_duration_scale 0 >/dev/null 2>&1 || true

@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.navigation
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,7 +54,12 @@ class NavigationSession(
         val destination = initialRoute.geometry.last()
         var activeRoute = initialRoute
         var locator = PolylineLocator(activeRoute.geometry)
-        var active = open(activeRoute)
+        var active =
+            try {
+                open(activeRoute)
+            } catch (error: Exception) {
+                return Outcome.Failure(AppError.Internal(SESSION_ID, error.message))
+            }
         var revision = 0L
         var rerouteCount = 0
         var fixCount = 0
@@ -179,6 +185,24 @@ class NavigationSession(
                     )
                 }
             }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            log("navigation-session-failed error=${error.javaClass.simpleName}: ${error.message}")
+            publish(
+                stateOf(
+                    phase = NavigationPhase.Stopped,
+                    fix = mutableState.value.fix,
+                    snapshot = null,
+                    projection = null,
+                    relation = mutableState.value.relation,
+                    route = activeRoute,
+                    revision = revision,
+                    rerouteCount = rerouteCount,
+                    lastRerouteMillis = lastRerouteMillis,
+                ),
+            )
+            return Outcome.Failure(AppError.Internal(SESSION_ID, error.message))
         } finally {
             active.close()
         }
@@ -355,6 +379,7 @@ class NavigationSession(
     }
 
     private companion object {
+        const val SESSION_ID = "navigation.session"
         const val MIN_ROUTE_POINTS = 2
         const val INSTRUCTION_LOOKAHEAD_METERS = 1.0
     }

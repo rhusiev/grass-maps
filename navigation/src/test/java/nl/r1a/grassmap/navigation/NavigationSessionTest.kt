@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.navigation
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -137,6 +138,43 @@ class NavigationSessionTest {
         }
 
     @Test
+    fun aThrowingFixSourceBecomesATypedFailure() =
+        runTest {
+            val clock = AtomicLong(1_000L)
+            val follower = FakeFollowerEngine()
+            val session = session(follower, FakeRouter(clock, REPLACEMENT), clock)
+            val fixes =
+                flow {
+                    emit(FIXES[0])
+                    throw IllegalStateException("source broke")
+                }
+
+            val outcome = session.run(ORIGINAL, fixes)
+
+            val error = (outcome as Outcome.Failure).error as AppError.Internal
+            assertEquals("navigation.session", error.id)
+            assertEquals("source broke", error.detail)
+            assertEquals(NavigationPhase.Stopped, session.state.value.phase)
+            assertEquals(1, follower.closes)
+        }
+
+    @Test
+    fun aThrowingRoutingEngineBecomesATypedFailure() =
+        runTest {
+            val clock = AtomicLong(1_000L)
+            val follower = FakeFollowerEngine()
+            val session = session(follower, ThrowingRouter(), clock)
+
+            val outcome = session.run(ORIGINAL, flowOf(FIXES[0], FIXES[2], FIXES[3]))
+
+            val error = (outcome as Outcome.Failure).error as AppError.Internal
+            assertEquals("navigation.session", error.id)
+            assertEquals("router broke", error.detail)
+            assertEquals(NavigationPhase.Stopped, session.state.value.phase)
+            assertEquals(1, follower.closes)
+        }
+
+    @Test
     fun aDegenerateRouteIsInvalidInput() =
         runTest {
             val outcome =
@@ -165,25 +203,29 @@ class NavigationSessionTest {
         private val deviationMeters: Double? = null,
     ) : RouteFollowerEngine {
         var begins = 0
+        var closes = 0
 
         override fun begin(route: Route): Outcome<RouteFollowerHandle> {
             begins += 1
             return if (unavailable) {
                 Outcome.Failure(AppError.Unsupported)
             } else {
-                Outcome.Success(Handle(deviation, deviationMeters))
+                Outcome.Success(Handle(deviation, deviationMeters) { closes += 1 })
             }
         }
 
         private class Handle(
             private val deviation: FollowerDeviation,
             private val deviationMeters: Double?,
+            private val onClose: () -> Unit,
         ) : RouteFollowerHandle {
             override fun initialFix(fix: LocationFix): Outcome<FollowerSnapshot> = Outcome.Success(snapshotOf(fix))
 
             override fun update(fix: LocationFix): Outcome<FollowerSnapshot> = Outcome.Success(snapshotOf(fix))
 
-            override fun close() = Unit
+            override fun close() {
+                onClose()
+            }
 
             private fun snapshotOf(fix: LocationFix): FollowerSnapshot =
                 FollowerSnapshot(
@@ -225,6 +267,23 @@ class NavigationSessionTest {
             is Outcome.Success -> value
             is Outcome.Failure -> throw AssertionError("expected success, got $error")
         }
+
+    private class ThrowingRouter : RoutingEngine {
+        override val contract: ProviderContract = RoutingEngineContract.REFERENCE
+
+        override fun capabilities(): RoutingCapabilities =
+            RoutingCapabilities(
+                profiles = setOf(RouteProfile.Walk),
+                modifierKinds = emptySet(),
+                maxAlternatives = 0,
+                maxDistanceMeters = 250_000.0,
+            )
+
+        override suspend fun route(
+            request: RouteRequest,
+            cancellation: CancellationHandle,
+        ): Outcome<List<Route>> = throw IllegalStateException("router broke")
+    }
 
     private companion object {
         val SOURCE = GeoPoint(0.0, 0.0)

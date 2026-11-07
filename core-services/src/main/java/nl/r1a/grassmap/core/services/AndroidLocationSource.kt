@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.conflate
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.LocationFix
+import java.util.concurrent.ConcurrentHashMap
 
 private const val DEFAULT_UPDATE_INTERVAL_MILLIS: Long = 1_000L
 private const val DEFAULT_UPDATE_DISTANCE_METERS: Float = 0f
@@ -95,7 +96,9 @@ class AndroidLocationSource(
         private val updateDistanceMeters: Float,
         private val onFix: (LocationFix) -> Unit,
     ) : LocationListener {
-        private val registered = linkedSetOf<String>()
+        // Requested from the main looper and from the collection coroutine
+        // (start/stop), so the set is concurrent rather than a plain LinkedHashSet.
+        private val registered: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
         override fun onLocationChanged(location: Location) {
             onFix(location.toFix())

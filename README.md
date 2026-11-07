@@ -420,7 +420,9 @@ and returns p50/p99. `{"cancel":true}` runs an already-superseded keystroke and
 reports `cancelled=true hits=0`. On the API 35 emulator (`grassmaps-bench`,
 host OpenGL), a street prefix measured p50 3.7 ms and p99 5.5 ms per keystroke
 including the JNA bridge; the full string of 13 keystrokes took 111 ms. The
-Moto g32 budget is T-0203's.
+first single-letter keystroke after opening the index cost 63.6 ms (cold FST
+walk); later single-letter keystrokes stayed under 11 ms. The Moto g32 budget is
+T-0203's.
 
 ## Follow-ups
 

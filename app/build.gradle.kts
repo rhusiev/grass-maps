@@ -44,6 +44,9 @@ android {
     // builds bundle neither the fixture nor a location source.
     sourceSets.getByName("debug").assets.srcDir(rootProject.file("test-data/location"))
 
+    // JVM tests read the same committed fixtures, including mock-walk.gpx.
+    sourceSets.getByName("test").resources.srcDir(rootProject.file("test-data"))
+
     // MapLibre reads glyph PBFs from assets by path, so they stay uncompressed.
     androidResources {
         noCompress += "pbf"
@@ -91,6 +94,7 @@ dependencies {
     implementation(project(":plugins:example"))
     implementation(project(":plugins:style-standard"))
     implementation(project(":plugins:synthetic-data"))
+    implementation(project(":plugins:gpx"))
 
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("org.jetbrains.compose.ui:ui:1.12.1")

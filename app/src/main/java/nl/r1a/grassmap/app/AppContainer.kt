@@ -34,6 +34,7 @@ class AppContainer(
     private val locationSource: LocationSource = NoLocationSource,
     private val routingFilesProvider: () -> File? = { null },
     private val searchFilesProvider: () -> File? = { null },
+    private val assetReader: (String) -> ByteArray? = { null },
 ) {
     private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -66,11 +67,17 @@ class AppContainer(
         PlacesAccess(searchFilesProvider(), log = { message -> Log.i(SEARCH_TAG, message) })
     }
 
+    /** The track import path over the generated `file.gpx` provider. */
+    val tracks: TrackAccess by lazy {
+        TrackAccess(providerRegistry, GeneratedPlugins.providers)
+    }
+
     private val hostCommands: List<Command<*, *>> by lazy {
         mapCommands(mapSession, locationController) +
             routeCommands(mapSession, { routingEngine }, { dataSources }) +
             navCommands(mapSession, { routingEngine }) +
-            searchCommands { places }
+            searchCommands { places } +
+            trackCommands({ tracks }, assetReader)
     }
 
     /** The catalog entries for the host commands; the debug channel lists these. */

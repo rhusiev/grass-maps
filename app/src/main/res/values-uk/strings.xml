@@ -6,6 +6,8 @@
     <string name="plugin.style_standard.description">Стандартний і туристичний стилі карти.</string>
     <string name="plugin.data_synthetic.name">Синтетичне джерело даних</string>
     <string name="plugin.data_synthetic.description">Синтетичні атрибути висоти та справжній шар горизонталей для інтерфейсу DataSource.</string>
+    <string name="plugin.file_gpx.name">Файли GPX</string>
+    <string name="plugin.file_gpx.description">Імпортує треки, маршрути та точки з GPX 1.0 і 1.1.</string>
 
     <string name="control_zoom_in_label">+</string>
     <string name="control_zoom_in_description">Наблизити</string>

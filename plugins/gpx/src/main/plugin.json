@@ -1,0 +1,30 @@
+{
+  "id": "file.gpx",
+  "name": "plugin.file_gpx.name",
+  "description": "plugin.file_gpx.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.gpx.GpxPlugin",
+  "contributes": {
+    "providers": [
+      {
+        "contract": "file.format",
+        "version": "1.0.0",
+        "capabilities": {
+          "extensions": ["gpx"],
+          "mimeTypes": ["application/gpx+xml", "application/xml"],
+          "entityKinds": ["track", "route", "waypoint"],
+          "export": false
+        }
+      }
+    ]
+  },
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": []
+  },
+  "activation": [
+    "provider"
+  ]
+}

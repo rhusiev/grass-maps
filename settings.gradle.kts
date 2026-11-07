@@ -35,4 +35,5 @@ include(
     ":plugins:example",
     ":plugins:style-standard",
     ":plugins:synthetic-data",
+    ":plugins:gpx",
 )

@@ -182,6 +182,7 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/example` | example of a first-party plugin module | `plugin-api` |
 | `plugins/style-standard` | the Standard and Touring map styles as a `MapLayerProvider` | `plugin-api` |
 | `plugins/synthetic-data` | the synthetic elevation `DataSource` and its real contour overlay | `plugin-api` |
+| `plugins/gpx` | GPX 1.0/1.1 as a `FileFormat` provider | `plugin-api` |
 
 ## Map seam
 
@@ -423,6 +424,51 @@ including the JNA bridge; the full string of 13 keystrokes took 111 ms. The
 first single-letter keystroke after opening the index cost 63.6 ms (cold FST
 walk); later single-letter keystrokes stayed under 11 ms. The Moto g32 budget is
 T-0203's.
+
+## Tracks seam
+
+`FileFormat` in `plugin-api` is the `file.format` 1.0.0 contract. Its static
+members (extensions, MIME types, entity kinds) let the host choose a provider
+without activating it. `importFile(bytes, cancel)` returns the tracks, routes
+and waypoints it could read plus one warning per skipped part, so a partly
+broken file still imports. `export` is a typed `Unsupported` until T-0410.
+
+`plugins/gpx` (`file.gpx`) implements GPX 1.0 and 1.1 for tracks, routes and
+waypoints. It reads element names without a namespace or prefix assumption and
+hardens the XML parser against doctypes and external entities. A point with
+missing or out-of-range coordinates is skipped with a structural locator such
+as `trk[0]/trkseg[1]/trkpt[4]`; a broken elevation or time only clears that
+field. A document that is not well-formed XML at all is `CorruptData`.
+
+`tracks` owns the import path: resolve the provider through `ProviderRegistry`
+in `app`, read the document, store the first track keyed by the SHA-256 of its
+bytes, and compute the profile. T-0027 stores in memory; the file store,
+folders and undo are T-0401/T-0414.
+
+The profile is Kotlin in `tracks` for T-0027, not the Rust core. `tracks` may
+depend only on `:plugin-api` (module map and plugin boundary rule), the only
+uniffi build lives in `places`, and a second module packaging `libgrass_core.so`
+would collide at APK merge. Moving analysis behind uniffi needs a shared Rust
+wrapper module and a design decision; T-0402 (statistics) and T-0403
+(elevation correction) own that move.
+
+`TrackAnalyzer` sums every raw elevation delta between consecutive points of a
+segment as ascent or descent, with no smoothing and no noise threshold, and
+measures ground distance with the haversine formula on the IUGG mean radius
+6 371 008.8 m. A segment boundary is not a sample. The oracle is a standalone
+Python one-off over `test-data/location/mock-walk.gpx`, recorded in
+`TrackImportOracleTest`: ascent 19.2 m, descent 17.6 m, minimum 296.0 m,
+maximum 297.6 m and distance 82.5866 m, within 0.01 m on elevation sums and
+0.1 m on distance.
+
+The debug channel exposes `core.track.import_test`:
+
+```sh
+tools/control/grassctl.py invoke core.track.import_test '{"path":"mock-walk.gpx"}'
+```
+
+It reads a debug asset or an absolute path, imports through `file.gpx`, stores
+the track and logs the profile. No tracks UI exists yet.
 
 ## Follow-ups
 

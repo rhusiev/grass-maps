@@ -139,15 +139,7 @@ jobs:
           profile: pixel_2
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: |
-            # Run both sets even when one compare fails: a failed run still
-            # uploads the captures, which is how the references are promoted.
-            set +e
-            ./scripts/ci/android-map-goldens.sh --profile fixture --output build/map-goldens/fixture app/build/outputs/apk/debug/app-debug.apk
-            fixture_status=$?
-            GOLDEN_SKIP_REBOOT=1 ./scripts/ci/android-map-goldens.sh --profile standard --style both app/build/outputs/apk/debug/app-debug.apk
-            style_status=$?
-            [[ $fixture_status -eq 0 && $style_status -eq 0 ]]
+          script: ./scripts/ci/android-goldens-ci.sh app/build/outputs/apk/debug/app-debug.apk
       - name: Keep the goldens and diff images
         if: always()
         uses: actions/upload-artifact@v7

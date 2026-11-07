@@ -1,5 +1,7 @@
 package nl.r1a.grassmap.routing
 
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
@@ -14,6 +16,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 class ValhallaRoutingEngineTest {
     @Test
@@ -31,6 +36,27 @@ class ValhallaRoutingEngineTest {
             assertEquals(1_009.0, routes.single().distanceMeters, 0.5)
             assertEquals(1, transport.requests.size)
             assertTrue(transport.requests.single().contains("\"pedestrian\""))
+        }
+
+    @Test
+    fun routeCallsAreSerialisedOnTheSharedNativeEngine() =
+        runTest {
+            val transport = GatedTransport(response(shape()))
+            val engine = ValhallaRoutingEngine({ transport })
+            val first = async(start = CoroutineStart.UNDISPATCHED) { engine.route(request(), CancellationHandle.None) }
+            assertTrue(transport.awaitEntered())
+            val second = async(start = CoroutineStart.UNDISPATCHED) { engine.route(request(), CancellationHandle.None) }
+
+            var waited = 0
+            while (transport.entered.get() <= 1 && waited < 20) {
+                Thread.sleep(10)
+                waited += 1
+            }
+            assertEquals(1, transport.entered.get())
+
+            transport.release()
+            assertTrue(first.await() is Outcome.Success)
+            assertTrue(second.await() is Outcome.Success)
         }
 
     @Test
@@ -162,6 +188,27 @@ class ValhallaRoutingEngineTest {
           {"summary":{"length":1.009,"time":716.27},"shape":"$shape","maneuvers":[]}
         ]}}
         """.trimIndent()
+
+    private class GatedTransport(
+        private val success: String,
+    ) : ValhallaTransport {
+        private val enteredLatch = CountDownLatch(1)
+        private val releaseLatch = CountDownLatch(1)
+        val entered = AtomicInteger(0)
+
+        override fun route(requestJson: String): String {
+            entered.incrementAndGet()
+            enteredLatch.countDown()
+            releaseLatch.await(5, TimeUnit.SECONDS)
+            return success
+        }
+
+        fun awaitEntered(): Boolean = enteredLatch.await(5, TimeUnit.SECONDS)
+
+        fun release() {
+            releaseLatch.countDown()
+        }
+    }
 
     private class RecordingTransport(
         private val success: String = "{}",

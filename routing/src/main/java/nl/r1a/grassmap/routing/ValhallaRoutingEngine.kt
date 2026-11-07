@@ -2,6 +2,8 @@ package nl.r1a.grassmap.routing
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
@@ -40,6 +42,11 @@ class ValhallaRoutingEngine internal constructor(
     private val lock = Any()
     private var transport: ValhallaTransport? = null
     private var closed = false
+
+    // valhalla-mobile does not document thread safety for route(), and one
+    // native engine serves the process. Calls are serialised rather than
+    // risking native state corruption under concurrent reroutes.
+    private val routeMutex = Mutex()
 
     override val contract: ProviderContract = RoutingEngineContract.REFERENCE
 
@@ -83,29 +90,31 @@ class ValhallaRoutingEngine internal constructor(
                 }
 
             val raw =
-                try {
-                    active.route(ValhallaRequest.build(request))
-                } catch (exception: CancellationException) {
-                    throw exception
-                } catch (exception: Exception) {
-                    log.info("route failed: ${exception.message}")
-                    if (!hasCostOverlay(request) || !isOffGraphOverlay(exception)) {
-                        return@withContext Outcome.Failure(
-                            AppError.Internal("routing.valhalla.route", exception.message),
-                        )
-                    }
-                    log.info("cost line has no edges near it; using exclusion polygons")
+                routeMutex.withLock {
                     try {
-                        active.route(
-                            ValhallaRequest.build(request, useExclusionForModifiers = true),
-                        )
-                    } catch (retry: CancellationException) {
-                        throw retry
-                    } catch (retry: Exception) {
-                        log.info("exclusion fallback failed: ${retry.message}")
-                        return@withContext Outcome.Failure(
-                            AppError.Internal("routing.valhalla.route", retry.message),
-                        )
+                        active.route(ValhallaRequest.build(request))
+                    } catch (exception: CancellationException) {
+                        throw exception
+                    } catch (exception: Exception) {
+                        log.info("route failed: ${exception.message}")
+                        if (!hasCostOverlay(request) || !isOffGraphOverlay(exception)) {
+                            return@withContext Outcome.Failure(
+                                AppError.Internal("routing.valhalla.route", exception.message),
+                            )
+                        }
+                        log.info("cost line has no edges near it; using exclusion polygons")
+                        try {
+                            active.route(
+                                ValhallaRequest.build(request, useExclusionForModifiers = true),
+                            )
+                        } catch (retry: CancellationException) {
+                            throw retry
+                        } catch (retry: Exception) {
+                            log.info("exclusion fallback failed: ${retry.message}")
+                            return@withContext Outcome.Failure(
+                                AppError.Internal("routing.valhalla.route", retry.message),
+                            )
+                        }
                     }
                 }
             if (cancellation.isCancelled()) {

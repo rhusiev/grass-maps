@@ -57,6 +57,10 @@ ACTIVITY = "nl.r1a.grassmap.app.MainActivity"
 SCREENSHOT_SETTLE_S = 0.8
 CHANNEL_TIMEOUT_S = 60.0
 CAMERA_READY_TIMEOUT_S = 45.0
+# `core.map.set_camera` answers only after MapLibre reports idle (up to 15 s on
+# the device). The RPC socket must stay open longer than that, or a slow
+# renderer answers after the client has already timed out.
+INVOKE_TIMEOUT_S = 30.0
 DEVICE_DEADLINE_S = 180.0
 BLOCK_DELTA = 32
 MAX_MISMATCH_PERCENT = 5.0
@@ -236,7 +240,9 @@ def wait_for_channel(adb: Adb) -> control_client.ControlClient:
         try:
             control_client.ensure_forward(serial=adb.serial)
             token = control_client.read_token(serial=adb.serial)
-            return control_client.connect(token=token, timeout=5.0)
+            client = control_client.connect(token=token, timeout=5.0)
+            client.set_timeout(INVOKE_TIMEOUT_S)
+            return client
         except control_client.ControlError as error:
             if time.monotonic() >= deadline:
                 raise GoldenError(f"control channel did not open: {error}") from error

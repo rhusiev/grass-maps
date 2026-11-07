@@ -63,6 +63,7 @@ class NavigationSession(
         var detectionMillis: Long? = null
         var lastRerouteMillis: Long? = null
         var arrived = false
+        var previousRelation = RouteRelation.Unknown
         val sessionStartedMillis = clockMillis()
 
         try {
@@ -144,6 +145,14 @@ class NavigationSession(
                         offRouteStreak > 0 -> RouteRelation.OffStepOnRoute
                         else -> RouteRelation.OnRoute
                     }
+                if (relation == RouteRelation.OnRoute && previousRelation != RouteRelation.OnRoute) {
+                    log(
+                        "navigation-on-route fixes=$fixCount " +
+                            "after_ms=${clockMillis() - sessionStartedMillis} " +
+                            "distance_m=${format(projection?.distanceMeters)}",
+                    )
+                }
+                previousRelation = relation
                 arrived = arrivalOf(snapshot, projection)
                 publish(
                     stateOf(

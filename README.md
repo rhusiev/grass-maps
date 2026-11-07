@@ -191,10 +191,11 @@ puck is not a Compose overlay: `map` builds a GeoJSON point and draws it with a
 `CircleLayer(id, source, radius, color, strokeColor, strokeWidth)`; both live in
 `map/style/ComposedMapLayers.kt` and no library type leaves `map`.
 
-The source is re-keyed when the fix changes, so each update swaps one GeoJSON
-source instead of rebuilding the composition tree. That is one swap per fix at
-1 Hz, not per frame. A null fix removes the source and layer. The puck has no
-sprite asset and no deadband yet; T-0103 owns the deadband and smooth animation.
+The source is keyed on the GeoJSON data value, so each fix produces a new
+definition that the library reconciles into the same source. That is one update
+per fix at 1 Hz, not a rebuild per frame. A null fix removes the source and
+layer. The puck has no sprite asset and no deadband yet; T-0103 owns the
+deadband and smooth animation.
 
 A map gesture does not stop following in T-0022. The camera-mode button and the
 free/follow/heading cycle are T-0106; until then the follow button only toggles

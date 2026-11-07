@@ -53,12 +53,14 @@ object DataSourceContract {
 
 /**
  * What a source declares before it is asked for data, so the host can choose
- * between sources without activating them.
+ * between sources without activating them. [maxPageSize] is the largest
+ * [AttributeRequest.limit] the source accepts.
  */
 data class DataSourceDescription(
     val attributeKinds: Set<String>,
     val regions: List<String>,
     val refreshPolicy: String,
+    val maxPageSize: Int,
 )
 
 /**

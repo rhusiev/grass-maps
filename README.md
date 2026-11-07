@@ -250,10 +250,10 @@ release application never references them.
 ## DataSource seam
 
 `DataSource` in `plugin-api` is the capability contract `data.source` 1.0.0.
-It publishes typed way attributes (paged by limit and cursor), engine-neutral
-cost modifiers that carry way geometry, and one optional map layer. Values stay
-keyed by OSM way id and region build, so a provider from an older build is
-stale and never applied.
+It publishes typed way attributes (paged by limit and cursor, with a declared
+maximum), engine-neutral cost modifiers that carry way geometry, and one
+optional map layer. Values stay keyed by OSM way id and region build, so a
+provider from an older build is stale and never applied.
 
 The first-party `data.synthetic` plugin in `plugins/synthetic-data` exercises
 that seam. Its elevation attributes and its two cost modifiers are authored

@@ -43,6 +43,7 @@ internal class SyntheticElevationDataSource : DataSource {
             attributeKinds = setOf(SyntheticFixture.ELEVATION_KIND),
             regions = listOf(SyntheticFixture.REGION),
             refreshPolicy = SyntheticFixture.REFRESH_POLICY,
+            maxPageSize = MAX_PAGE_SIZE,
         )
 
     override suspend fun attributes(
@@ -52,7 +53,7 @@ internal class SyntheticElevationDataSource : DataSource {
         if (cancellation.isCancelled()) {
             return Outcome.Failure(AppError.Cancelled)
         }
-        if (request.limit !in 1..MAX_PAGE_SIZE) {
+        if (request.limit !in 1..describe().maxPageSize) {
             return Outcome.Failure(AppError.InvalidInput)
         }
         val available = SyntheticFixture.ways.filter { request.area.contains(it.position) }

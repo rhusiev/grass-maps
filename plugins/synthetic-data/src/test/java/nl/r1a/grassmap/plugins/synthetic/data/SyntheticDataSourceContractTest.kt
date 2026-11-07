@@ -36,7 +36,7 @@ private class AttributePageSource(
 ) : PageSource<WayAttribute> {
     override val contract: ProviderContract = source.contract
 
-    override val maxPageSize: Int = SyntheticElevationDataSource.MAX_PAGE_SIZE
+    override val maxPageSize: Int = source.describe().maxPageSize
 
     override suspend fun page(
         request: PageRequest,

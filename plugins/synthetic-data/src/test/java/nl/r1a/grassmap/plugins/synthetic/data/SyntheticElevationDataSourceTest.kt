@@ -33,6 +33,7 @@ class SyntheticElevationDataSourceTest {
         assertEquals(setOf("elevation"), description.attributeKinds)
         assertEquals(listOf("fixture-mini"), description.regions)
         assertEquals("static", description.refreshPolicy)
+        assertEquals(SyntheticElevationDataSource.MAX_PAGE_SIZE, description.maxPageSize)
     }
 
     @Test

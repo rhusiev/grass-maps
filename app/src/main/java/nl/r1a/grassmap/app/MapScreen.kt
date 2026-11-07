@@ -2,6 +2,7 @@ package nl.r1a.grassmap.app
 
 import android.content.Context
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,10 +32,12 @@ import nl.r1a.grassmap.core.services.DEFAULT_PROFILE
 import nl.r1a.grassmap.core.services.MapControlCommands
 import nl.r1a.grassmap.map.MapSurface
 import nl.r1a.grassmap.map.MapSurfaceView
+import nl.r1a.grassmap.map.PuckAgeFormatter
 import nl.r1a.grassmap.map.prepareMapEngine
 import nl.r1a.grassmap.map.rememberMapSurface
 import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.contract.PluginId
+import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.error.onFailure
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
@@ -87,7 +90,17 @@ internal fun MapScreen(
         Box(Modifier.fillMaxSize().background(Color(0xFF202020)))
         return
     }
-    val surface = rememberMapSurface(loaded.style, loaded.sources.camera) { loaded.sources.uri(it) }
+    val ageLabel =
+        remember(context) {
+            PuckAgeFormatter { ageMillis -> formatPuckAge(context, ageMillis) }
+        }
+    val surface =
+        rememberMapSurface(
+            initialStyle = loaded.style,
+            initialCamera = loaded.sources.camera,
+            sourceResolver = { loaded.sources.uri(it) },
+            ageLabel = ageLabel,
+        )
     BindMapSession(container.mapSession, surface)
     MapContent(container, surface, loaded, harness)
 }
@@ -152,6 +165,9 @@ private fun MapContent(
                 scope.launch {
                     container.commandBus.invoke(id).onFailure { error ->
                         Log.w(TAG, "control $id failed: $error")
+                        if (error == AppError.PermissionDenied) {
+                            Toast.makeText(context, R.string.location_permission_denied, Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
             },
@@ -194,6 +210,26 @@ private fun MapContent(
         )
     }
 }
+
+/**
+ * The age shown next to the grey ring. Seconds under a minute, minutes after
+ * that; "just now" covers a fix that is only a few seconds old.
+ */
+internal fun formatPuckAge(
+    context: Context,
+    ageMillis: Long,
+): String {
+    val seconds = ageMillis / MILLIS_PER_SECOND
+    return when {
+        seconds < AGE_NOW_SECONDS -> context.getString(R.string.location_age_now)
+        seconds < SECONDS_PER_MINUTE -> context.getString(R.string.location_age_seconds, seconds)
+        else -> context.getString(R.string.location_age_minutes, seconds / SECONDS_PER_MINUTE)
+    }
+}
+
+private const val MILLIS_PER_SECOND = 1_000L
+private const val AGE_NOW_SECONDS = 10L
+private const val SECONDS_PER_MINUTE = 60L
 
 /** Moves one control by [delta] positions; an out-of-range move keeps the order. */
 internal fun moveControl(

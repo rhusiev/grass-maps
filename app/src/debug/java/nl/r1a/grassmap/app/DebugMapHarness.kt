@@ -4,7 +4,9 @@ import android.content.Intent
 import android.os.Process
 import android.os.SystemClock
 import android.util.Log
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import nl.r1a.grassmap.map.MapSurface
 import nl.r1a.grassmap.plugin.api.error.onFailure
 import nl.r1a.grassmap.plugin.api.host.MapEvent
@@ -30,58 +32,71 @@ internal class DebugMapHarness(
         var sawFullFrame = false
         var loggedFirstFrame = false
         var switchesDone = false
-        surface.host.events.collect { event ->
-            when (event) {
-                MapEvent.StyleLoaded -> {
-                    Log.i(TAG, "style-loaded total=${surface.host.styleLoadCount}")
-                }
-
-                is MapEvent.FrameRendered -> {
-                    if (event.full && !loggedFirstFrame) {
-                        loggedFirstFrame = true
-                        sawFullFrame = true
-                        val elapsed = SystemClock.uptimeMillis() - Process.getStartUptimeMillis()
-                        Log.i(TAG, "first-full-frame-ms=$elapsed")
+        coroutineScope {
+            launch { logPuckWrites(surface) }
+            surface.host.events.collect { event ->
+                when (event) {
+                    MapEvent.StyleLoaded -> {
+                        Log.i(TAG, "style-loaded total=${surface.host.styleLoadCount}")
                     }
-                }
 
-                MapEvent.Idle -> {
-                    if (sawFullFrame && !switchesDone && styleSwitches > 0) {
-                        switchesDone = true
-                        Log.i(TAG, "switch-start")
-                        repeat(styleSwitches) { index ->
-                            val touring = index % 2 == 0
-                            val style = if (touring) bundle.touring else bundle.style
-                            val layers = if (touring) bundle.touringLayers else bundle.layers
-                            surface.host.setStyle(style).onFailure { error ->
-                                Log.w(TAG, "style rejected: $error")
-                            }
-                            surface.host
-                                .applyStyleDiff(StyleDiff(style.id, layers))
-                                .onFailure { error ->
-                                    Log.w(TAG, "style diff rejected: $error")
-                                }
+                    is MapEvent.FrameRendered -> {
+                        if (event.full && !loggedFirstFrame) {
+                            loggedFirstFrame = true
+                            sawFullFrame = true
+                            val elapsed = SystemClock.uptimeMillis() - Process.getStartUptimeMillis()
+                            Log.i(TAG, "first-full-frame-ms=$elapsed")
                         }
-                        delay(SWITCH_SETTLE_MS)
+                    }
+
+                    MapEvent.Idle -> {
+                        if (sawFullFrame && !switchesDone && styleSwitches > 0) {
+                            switchesDone = true
+                            Log.i(TAG, "switch-start")
+                            repeat(styleSwitches) { index ->
+                                val touring = index % 2 == 0
+                                val style = if (touring) bundle.touring else bundle.style
+                                val layers = if (touring) bundle.touringLayers else bundle.layers
+                                surface.host.setStyle(style).onFailure { error ->
+                                    Log.w(TAG, "style rejected: $error")
+                                }
+                                surface.host
+                                    .applyStyleDiff(StyleDiff(style.id, layers))
+                                    .onFailure { error ->
+                                        Log.w(TAG, "style diff rejected: $error")
+                                    }
+                            }
+                            delay(SWITCH_SETTLE_MS)
+                            Log.i(
+                                TAG,
+                                "style-switches=$styleSwitches total-style-loads=${surface.host.styleLoadCount}",
+                            )
+                        }
+                    }
+
+                    is MapEvent.CameraChanged -> {
                         Log.i(
                             TAG,
-                            "style-switches=$styleSwitches total-style-loads=${surface.host.styleLoadCount}",
+                            "camera zoom=${event.camera.zoom} bearing=${event.camera.bearing} " +
+                                "lat=${event.camera.center.latitude} lon=${event.camera.center.longitude}",
                         )
                     }
-                }
 
-                is MapEvent.CameraChanged -> {
-                    Log.i(
-                        TAG,
-                        "camera zoom=${event.camera.zoom} bearing=${event.camera.bearing} " +
-                            "lat=${event.camera.center.latitude} lon=${event.camera.center.longitude}",
-                    )
-                }
-
-                else -> {
-                    Unit
+                    else -> {
+                        Unit
+                    }
                 }
             }
+        }
+    }
+
+    private suspend fun logPuckWrites(surface: MapSurface) {
+        var written = surface.host.puckWriteCount
+        while (true) {
+            delay(PUCK_LOG_INTERVAL_MS)
+            val count = surface.host.puckWriteCount
+            Log.i(PUCK_TAG, "puck-writes=$count delta=${count - written}")
+            written = count
         }
     }
 
@@ -89,7 +104,9 @@ internal class DebugMapHarness(
         private const val EXTRA_STYLE_SWITCHES = "t0020_style_switches"
         private const val EXTRA_INITIAL_BEARING = "t0021_initial_bearing"
         private const val SWITCH_SETTLE_MS = 3_000L
+        private const val PUCK_LOG_INTERVAL_MS = 1_000L
         private const val TAG = "T0020"
+        private const val PUCK_TAG = "T0103Puck"
 
         fun from(intent: Intent): DebugMapHarness =
             DebugMapHarness(

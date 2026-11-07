@@ -16,6 +16,10 @@
     <string name="control_north_up_description">Face north</string>
     <string name="control_follow_label">P</string>
     <string name="control_follow_description">Follow position</string>
+    <string name="location_permission_denied">Location is off. Grass Maps needs it only to show where you are. You can turn it on for Grass Maps in Android settings.</string>
+    <string name="location_age_now">just now</string>
+    <string name="location_age_seconds">%1$d s ago</string>
+    <string name="location_age_minutes">%1$d min ago</string>
     <string name="control_edit_label">Edit</string>
     <string name="control_edit_done_label">Done</string>
     <string name="control_edit_description">Edit controls</string>

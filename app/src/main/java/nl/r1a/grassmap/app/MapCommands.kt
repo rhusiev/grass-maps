@@ -34,12 +34,13 @@ internal const val MAX_ZOOM: Double = 20.0
 internal fun mapCommands(
     session: MapSessionHolder,
     location: LocationController,
+    permission: LocationPermissionCoordinator,
 ): List<Command<*, *>> =
     listOf(
         ZoomCommand(session, ZOOM_STEP),
         ZoomCommand(session, -ZOOM_STEP),
         NorthUpCommand(session),
-        FollowCommand(location),
+        FollowCommand(location, permission),
     )
 
 /** The bus-side catalog entries for [commands], owned by the core host plugin. */
@@ -132,9 +133,15 @@ private suspend fun move(
         is Outcome.Failure -> outcome
     }
 
-/** Toggles camera follow and returns the new following state. */
+/**
+ * Asks for the location permission when the user first taps the position
+ * control, then toggles camera follow. A denied answer is
+ * [AppError.PermissionDenied]: the map keeps working and the screen explains
+ * why location helps.
+ */
 internal class FollowCommand(
     private val location: LocationController,
+    private val permission: LocationPermissionCoordinator,
 ) : Command<Unit, Boolean>(
         id = MapControlCommands.FOLLOW,
         paramsSerializer = UnitParamsSerializer,
@@ -143,9 +150,22 @@ internal class FollowCommand(
         policy = HOST_POLICY,
     ) {
     override suspend fun execute(params: Unit): Outcome<CommandResult<Boolean>> =
-        when (val outcome = location.toggleFollowing()) {
-            is Outcome.Success -> Outcome.Success(CommandResult(outcome.value))
-            is Outcome.Failure -> outcome
+        when (val allowed = permission.ensureAllowed()) {
+            is Outcome.Failure -> {
+                allowed
+            }
+
+            is Outcome.Success -> {
+                if (!allowed.value) {
+                    Outcome.Failure(AppError.PermissionDenied)
+                } else {
+                    location.onPermissionGranted()
+                    when (val outcome = location.toggleFollowing()) {
+                        is Outcome.Success -> Outcome.Success(CommandResult(outcome.value))
+                        is Outcome.Failure -> outcome
+                    }
+                }
+            }
         }
 }
 

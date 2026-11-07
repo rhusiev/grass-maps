@@ -2,10 +2,15 @@ package nl.r1a.grassmap.map.style
 
 import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -13,6 +18,9 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import nl.r1a.grassmap.map.MapHostState
+import nl.r1a.grassmap.map.PuckAgeFormatter
+import nl.r1a.grassmap.map.PuckDisplay
+import nl.r1a.grassmap.map.PuckGeometry
 import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerType
 import nl.r1a.grassmap.plugin.api.model.LocationFix
@@ -64,6 +72,7 @@ private const val TAG = "GrassMapsMap"
 @Composable
 @MaplibreComposable
 internal fun ComposedMapLayers(session: MapHostState) {
+    val styleReady = session.styleReady.value
     val owned = session.layers.value
     val compiled =
         remember(owned) {
@@ -87,7 +96,12 @@ internal fun ComposedMapLayers(session: MapHostState) {
             RouteLine(session.route.value)
         }
         if (slot == LayerSlot.Markers) {
-            LocationPuck(session.location.value)
+            val puck = session.puck.value
+            val camera by session.camera.collectAsState()
+            val density = LocalDensity.current.density
+            key(session.styleGeneration.value, styleReady) {
+                LocationPuckLayer(puck, camera.zoom, density, session.ageLabel)
+            }
         }
     }
 }
@@ -112,25 +126,63 @@ private fun RouteLine(route: Route?) {
 }
 
 /**
- * The own-position puck. It is a GeoJSON point source and a circle layer, so it
- * uses the markers slot and adds no sprite asset. The source is re-keyed when
- * the fix changes, which maplibre-compose 0.20 accepts at the 1 Hz fix rate.
+ * The own-position puck. It is a GeoJSON point source with three layers: an
+ * accuracy circle when the fix is poor, a filled dot for a fresh fix, and a
+ * grey ring with age text for a stale one. The source is re-keyed each frame
+ * while the puck animates, which is the pattern maplibre-compose 0.20 supports
+ * for a moving feature.
  *
  * A map gesture does not stop following yet; T-0106 owns the camera-mode button.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 @MaplibreComposable
-private fun LocationPuck(fix: LocationFix?) {
-    if (fix == null) return
-    val source = rememberGeoJsonSource(GeoJsonData.JsonString(fix.toFeatureCollection()))
+private fun LocationPuckLayer(
+    display: PuckDisplay?,
+    zoom: Double,
+    density: Float,
+    ageLabel: PuckAgeFormatter,
+) {
+    if (display == null) return
+    val source = rememberGeoJsonSource(GeoJsonData.JsonString(display.fix.toFeatureCollection()))
+    val accuracyRadius =
+        if (display.showAccuracy) {
+            PuckGeometry
+                .accuracyRadiusDp(
+                    accuracyMeters = display.fix.accuracyMeters,
+                    latitude = display.fix.position.latitude,
+                    zoom = zoom,
+                    density = density,
+                ).dp
+        } else {
+            0.dp
+        }
+    CircleLayer(
+        id = ACCURACY_LAYER_ID,
+        source = source,
+        radius = const(accuracyRadius),
+        color = const(if (display.showAccuracy) ACCURACY_COLOR else Color.Transparent),
+        strokeColor = const(if (display.showAccuracy) ACCURACY_STROKE_COLOR else Color.Transparent),
+        strokeWidth = const(if (display.showAccuracy) ACCURACY_STROKE_WIDTH_DP.dp else 0.dp),
+    )
     CircleLayer(
         id = PUCK_LAYER_ID,
         source = source,
-        radius = const(PUCK_RADIUS_DP.dp),
-        color = const(PUCK_COLOR),
-        strokeColor = const(PUCK_STROKE_COLOR),
+        radius = const(if (display.isStale) PUCK_STALE_RADIUS_DP.dp else PUCK_RADIUS_DP.dp),
+        color = const(if (display.isStale) Color.Transparent else PUCK_COLOR),
+        strokeColor = const(if (display.isStale) PUCK_STALE_COLOR else PUCK_STROKE_COLOR),
         strokeWidth = const(PUCK_STROKE_WIDTH_DP.dp),
+    )
+    SymbolLayer(
+        id = PUCK_AGE_LAYER_ID,
+        source = source,
+        textField = const(if (display.isStale) ageLabel.format(display.ageMillis) else "").cast(),
+        textFont = const(listOf(PUCK_FONT)),
+        textSize = const(PUCK_AGE_TEXT_SIZE.sp),
+        textAnchor = const(SymbolAnchor.Bottom),
+        textColor = const(PUCK_AGE_TEXT_COLOR),
+        textHaloColor = const(PUCK_AGE_HALO_COLOR),
+        textHaloWidth = const(PUCK_AGE_HALO_WIDTH_DP.dp),
     )
 }
 
@@ -153,10 +205,22 @@ private fun LocationFix.toFeatureCollection(): String =
     }.toString()
 
 private const val PUCK_LAYER_ID = "core.location.puck"
+private const val PUCK_AGE_LAYER_ID = "core.location.puck.age"
+private const val ACCURACY_LAYER_ID = "core.location.accuracy"
+private const val PUCK_FONT = "Noto Sans Regular"
 private const val PUCK_RADIUS_DP = 7
+private const val PUCK_STALE_RADIUS_DP = 9
 private const val PUCK_STROKE_WIDTH_DP = 2
+private const val PUCK_AGE_TEXT_SIZE = 11
+private const val PUCK_AGE_HALO_WIDTH_DP = 2
+private const val ACCURACY_STROKE_WIDTH_DP = 1
 private val PUCK_COLOR = Color(0xFF1E88E5)
 private val PUCK_STROKE_COLOR = Color.White
+private val PUCK_STALE_COLOR = Color(0xFF9E9E9E)
+private val PUCK_AGE_TEXT_COLOR = Color(0xFF424242)
+private val PUCK_AGE_HALO_COLOR = Color.White
+private val ACCURACY_COLOR = Color(0x221E88E5)
+private val ACCURACY_STROKE_COLOR = Color(0x551E88E5)
 
 private const val ROUTE_LAYER_ID = "core.route.line"
 private const val ROUTE_WIDTH_DP = 5

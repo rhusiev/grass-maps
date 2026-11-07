@@ -2,10 +2,14 @@ package nl.r1a.grassmap.map
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,13 +66,26 @@ import org.maplibre.compose.map.MapEvent as EngineEvent
 internal class MapHostState(
     initialStyle: StyleSpec,
     initialCamera: Camera,
+    val ageLabel: PuckAgeFormatter = PuckAgeFormatter.None,
     val sourceResolver: (SourceId) -> String?,
 ) {
     val style = mutableStateOf(buildBaseStyle(initialStyle, sourceResolver) ?: emptyBuiltStyle())
     val layers = mutableStateOf<List<OwnedLayer>>(emptyList())
-    val location = mutableStateOf<LocationFix?>(null)
+    val puck = mutableStateOf<PuckDisplay?>(null)
+    val puckAnimating = mutableStateOf(false)
+
+    /** True once the engine reports the base style loaded. */
+    val styleReady = mutableStateOf(false)
+
+    /** Incremented on every engine style load, so the puck is re-created above the style. */
+    val styleGeneration = mutableStateOf(0)
+
+    /** Diagnostics for the debug harness: accepted puck writes since start. */
+    var puckWriteCount: Long = 0
+        private set
     val route = mutableStateOf<Route?>(null)
     val camera = MutableStateFlow(initialCamera)
+    private val motion = PuckMotion()
     var loadedStyleId: StyleId = initialStyle.id
         private set
     var trackingMode: TrackingMode = TrackingMode.Free
@@ -79,6 +96,7 @@ internal class MapHostState(
     /** Loads [style] and makes it the style later diffs must match. */
     fun applyStyle(style: StyleSpec): Outcome<Unit> {
         val built = buildBaseStyle(style, sourceResolver) ?: return Outcome.Failure(AppError.InvalidInput)
+        styleReady.value = false
         loadedStyleId = style.id
         this.style.value = built
         return Outcome.Success(Unit)
@@ -123,7 +141,40 @@ internal class MapHostState(
     }
 
     fun updateLocation(fix: LocationFix?) {
-        location.value = fix
+        val display = motion.onFix(fix, elapsedMillis(), System.currentTimeMillis())
+        puck.value = display
+        if (display != null) {
+            puckWriteCount += 1
+        }
+        puckAnimating.value = motion.isAnimating
+    }
+
+    /** Advances the puck animation by one display frame at [zoom]. */
+    fun framePuck(zoom: Double) {
+        val next =
+            motion.frame(elapsedMillis(), System.currentTimeMillis(), zoom) ?: run {
+                puckAnimating.value = motion.isAnimating
+                return
+            }
+        puck.value = next
+        puckWriteCount += 1
+        puckAnimating.value = motion.isAnimating
+    }
+
+    fun onStyleLoaded() {
+        styleReady.value = true
+        styleGeneration.value += 1
+    }
+
+    /** Refreshes the age of a puck that has not moved, for the stale label. */
+    fun tickPuckAge(nowWallMillis: Long) {
+        val current = puck.value ?: return
+        val age = (nowWallMillis - current.fix.timeMillis).coerceAtLeast(0L)
+        puck.value =
+            current.copy(
+                ageMillis = age,
+                isStale = age >= PuckTuning.STALE_AFTER_MILLIS,
+            )
     }
 
     fun updateRoute(route: Route?) {
@@ -188,8 +239,9 @@ fun rememberMapSurface(
     initialStyle: StyleSpec,
     initialCamera: Camera,
     sourceResolver: (SourceId) -> String?,
+    ageLabel: PuckAgeFormatter = PuckAgeFormatter.None,
 ): MapSurface {
-    val session = remember(initialStyle.id) { MapHostState(initialStyle, initialCamera, sourceResolver) }
+    val session = remember(initialStyle.id) { MapHostState(initialStyle, initialCamera, ageLabel, sourceResolver) }
     val state =
         rememberMapState(
             baseStyle = session.style.value.json,
@@ -199,7 +251,36 @@ fun rememberMapSurface(
         }
     val host = remember(state, session) { MaplibreComposeMapHost(state, session) }
     LaunchedEffect(host) { host.observeEngine() }
+    PuckFrameLoop(host, session)
     return MapSurface(host = host, state = state)
+}
+
+/**
+ * Drives the puck at display-frame rate only while a fix is animating, and at
+ * 1 Hz for the age label. A stationary map with no fix runs no timer.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun PuckFrameLoop(
+    host: MaplibreComposeMapHost,
+    session: MapHostState,
+) {
+    val animating by session.puckAnimating
+    LaunchedEffect(animating) {
+        if (!animating) return@LaunchedEffect
+        while (true) {
+            withFrameNanos { }
+            host.pumpPuckFrame()
+        }
+    }
+    val hasPuck by remember(session) { derivedStateOf { session.puck.value != null } }
+    LaunchedEffect(hasPuck) {
+        if (!hasPuck) return@LaunchedEffect
+        while (true) {
+            delay(PUCK_AGE_TICK_MILLIS)
+            host.tickPuckAge()
+        }
+    }
 }
 
 /**
@@ -218,6 +299,10 @@ class MaplibreComposeMapHost internal constructor(
     /** Number of base-style loads the engine reported in this process. */
     var styleLoadCount: Int = 0
         private set
+
+    /** Diagnostics for the debug harness: accepted puck writes since start. */
+    val puckWriteCount: Long
+        get() = session.puckWriteCount
 
     override suspend fun setStyle(style: StyleSpec): Outcome<Unit> =
         withContext(Dispatchers.Main.immediate) {
@@ -297,11 +382,20 @@ class MaplibreComposeMapHost internal constructor(
         return Outcome.Success(Unit)
     }
 
+    internal fun pumpPuckFrame() {
+        session.framePuck(state.cameraPosition.zoom)
+    }
+
+    internal fun tickPuckAge() {
+        session.tickPuckAge(System.currentTimeMillis())
+    }
+
     internal suspend fun observeEngine() {
         state.events.collect { event ->
             when (event) {
                 EngineEvent.StyleLoaded -> {
                     styleLoadCount += 1
+                    session.onStyleLoaded()
                     eventSink.emit(MapEvent.StyleLoaded)
                 }
 
@@ -375,6 +469,12 @@ private fun buildBaseStyle(
 }
 
 private fun emptyBuiltStyle(): BuiltStyle = BuiltStyle(BaseStyle.Empty, emptyMap())
+
+/** A monotonic millisecond clock for the frame-driven puck animation. */
+private fun elapsedMillis(): Long = System.nanoTime() / NANOS_PER_MILLI
+
+private const val NANOS_PER_MILLI = 1_000_000L
+private const val PUCK_AGE_TICK_MILLIS = 1_000L
 
 private fun MapSource.toJson(uri: String): JsonObject =
     buildJsonObject {

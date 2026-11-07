@@ -2,6 +2,7 @@ package nl.r1a.grassmap.app
 
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,6 +27,10 @@ import nl.r1a.grassmap.plugin.api.model.TrackingMode
  *
  * The controller holds the map session, not a surface, so it survives Activity
  * recreation and rebinds with [syncToHost].
+ *
+ * Collection starts without a permission prompt. The source reports null while
+ * it has no permission; after the user grants it, [onPermissionGranted]
+ * restarts the collector so the cold flow registers provider updates.
  */
 class LocationController(
     private val source: LocationSource,
@@ -40,23 +45,38 @@ class LocationController(
     @Volatile
     private var latestFix: LocationFix? = null
 
-    private var started = false
+    private var job: Job? = null
 
     /** Starts collection once; later calls do nothing. */
     @Synchronized
     fun start() {
-        if (started) {
+        if (job != null) {
             return
         }
-        started = true
-        scope.launch {
-            source.fixes
-                .catch { error ->
-                    Log.w(TAG, "location source stopped: ${error.message}")
-                }.collect { fix ->
-                    apply(fix)
-                }
+        job =
+            scope.launch {
+                source.fixes
+                    .catch { error ->
+                        Log.w(TAG, "location source stopped: ${error.message}")
+                    }.collect { fix ->
+                        apply(fix)
+                    }
+            }
+    }
+
+    /**
+     * Re-collects the source after the user granted the permission, so the
+     * cold flow can register provider updates. A source that needs no
+     * permission, such as the replay, keeps running.
+     */
+    @Synchronized
+    fun onPermissionGranted() {
+        if (!source.requiresPermission()) {
+            return
         }
+        job?.cancel()
+        job = null
+        start()
     }
 
     /**

@@ -223,15 +223,18 @@ out of its assets and starts at Ivano-Frankove.
 `MapHost.setLocation(LocationFix?)` draws or clears the own-position puck. The
 puck is not a Compose overlay: `map` builds a GeoJSON point and draws it with a
 `CircleLayer` in the `Markers` slot. The exact maplibre-compose 0.20 API is
-`rememberGeoJsonSource(GeoJsonData.JsonString(featureCollectionJson))` plus
-`CircleLayer(id, source, radius, color, strokeColor, strokeWidth)`; both live in
-`map/style/ComposedMapLayers.kt` and no library type leaves `map`.
+`rememberGeoJsonSource(GeoJsonData.JsonString(featureCollectionJson))` with
+`CircleLayer` nodes for the dot and accuracy circle and a `SymbolLayer` for the
+stale age text; all of them live in `map/style/ComposedMapLayers.kt`, and no
+library type leaves `map`.
 
-The source is keyed on the GeoJSON data value, so each fix produces a new
-definition that the library reconciles into the same source. That is one update
-per fix at 1 Hz, not a rebuild per frame. A null fix removes the source and
-layer. The puck has no sprite asset and no deadband yet; T-0103 owns the
-deadband and smooth animation.
+The source is keyed on the displayed position. Between 1 Hz fixes the puck
+interpolates from the previous fix to the current one over the interval the fix
+timestamps declare, at display-frame rate. An update is suppressed when the fix
+reports under 0.5 m/s and the position moved under 1 screen pixel, which keeps
+MapLibre issue #4821 away from a stationary fix. Before the first live fix the
+puck is a grey ring at the last known place with its age, and a poor-accuracy
+fix adds an accuracy circle. A null fix removes the source and every layer.
 
 A map gesture does not stop following in T-0022. The camera-mode button and the
 free/follow/heading cycle are T-0106; until then the follow button only toggles
@@ -276,9 +279,19 @@ partial, repeated or old three-button order reads as
 receives control IDs, labels and callbacks, so it never touches the command bus
 or the map host.
 
-The release build installs `NoLocationSource`, so it draws no puck. A debug
-build installs `MockGpxLocationSource` over the bundled `mock-walk.gpx` and
-replays one fix per second, looping at the end. The mock lives in
+The release build installs `AndroidLocationSource`, which reads the platform
+`LocationManager` GPS and network providers; there is no Play Services and no
+fused provider. Location is foreground-only: the manifest declares
+`ACCESS_FINE_LOCATION` and `ACCESS_COARSE_LOCATION`, never a background
+permission, and the system dialog opens only when the user taps the position
+control. The asked flag lives in `filesDir/location/permission-asked`, so a
+denied answer never prompts again on its own; the control then explains why
+location helps.
+
+A debug build replays `MockGpxLocationSource` over the bundled `mock-walk.gpx`
+one fix per second, looping at the end. Launching the activity with
+`--ez t0103_platform_location true` uses the real platform source instead, which
+is how the permission flow is exercised on the emulator. The mock lives in
 `DebugApplication` and `LoggingLocationSource` in the debug source set; the
 release application never references them.
 

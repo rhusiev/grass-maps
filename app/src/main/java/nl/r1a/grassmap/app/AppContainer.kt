@@ -11,6 +11,8 @@ import nl.r1a.grassmap.core.CommandDispatchers
 import nl.r1a.grassmap.core.PluginHost
 import nl.r1a.grassmap.core.ProviderRegistry
 import nl.r1a.grassmap.core.StreamRegistry
+import nl.r1a.grassmap.core.services.InMemoryLocationPermissionStore
+import nl.r1a.grassmap.core.services.LocationPermissionStore
 import nl.r1a.grassmap.core.services.LocationSource
 import nl.r1a.grassmap.core.services.NoLocationSource
 import nl.r1a.grassmap.core.services.PrivacyNetworkGate
@@ -41,6 +43,7 @@ class AppContainer(
     private val dispatchers: CommandDispatchers = CommandDispatchers(),
     private val switchEnabled: (SwitchId) -> Boolean = { false },
     private val locationSource: LocationSource = NoLocationSource,
+    private val locationPermissionStore: LocationPermissionStore = InMemoryLocationPermissionStore(),
     private val routingFilesProvider: () -> File? = { null },
     private val searchFilesProvider: () -> File? = { null },
     private val assetReader: (String) -> ByteArray? = { null },
@@ -56,6 +59,10 @@ class AppContainer(
     val locationController: LocationController by lazy {
         LocationController(locationSource, mapSession, processScope).also { it.start() }
     }
+
+    /** The permission decision for the position control, bound by the activity. */
+    val locationPermission: LocationPermissionCoordinator =
+        LocationPermissionCoordinator(locationSource, locationPermissionStore)
 
     /**
      * The Valhalla engine over the pack copied to the device. The file lookup
@@ -106,7 +113,7 @@ class AppContainer(
     }
 
     private val hostCommands: List<Command<*, *>> by lazy {
-        mapCommands(mapSession, locationController) +
+        mapCommands(mapSession, locationController, locationPermission) +
             routeCommands(mapSession, { routingEngine }, { dataSources }) +
             navCommands(mapSession, { routingEngine }) +
             searchCommands { places } +

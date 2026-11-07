@@ -3,9 +3,10 @@ package nl.r1a.grassmap.app
 import android.app.Activity
 import android.app.Application
 import android.content.pm.ApplicationInfo
+import nl.r1a.grassmap.core.services.AndroidLocationSource
 import nl.r1a.grassmap.core.services.AndroidStrings
-import nl.r1a.grassmap.core.services.LocationSource
-import nl.r1a.grassmap.core.services.NoLocationSource
+import nl.r1a.grassmap.core.services.FileLocationPermissionStore
+import nl.r1a.grassmap.plugin.api.service.LocationService
 import java.io.File
 import java.io.IOException
 
@@ -18,6 +19,10 @@ open class GrassMapsApplication : Application() {
         AppContainer(
             strings = AndroidStrings(this),
             locationSource = locationSource(),
+            locationPermissionStore =
+                FileLocationPermissionStore {
+                    File(filesDir, "$PERMISSION_DIRECTORY/$PERMISSION_FILE")
+                },
             routingFilesProvider = { getExternalFilesDir(null) ?: filesDir },
             searchFilesProvider = { getExternalFilesDir(null) ?: filesDir },
             assetReader = { path -> readAsset(path) },
@@ -46,12 +51,14 @@ open class GrassMapsApplication : Application() {
     internal open fun mapHarness(activity: Activity): MapHarness = NoMapHarness
 
     /**
-     * The location provider for this build. The release app has none until
-     * T-0103; a debug build installs its GPX replay.
+     * The location provider for this build: the foreground-only platform
+     * source. A debug build overrides it with its GPX replay.
      */
-    internal open fun locationSource(): LocationSource = NoLocationSource
+    internal open fun locationSource(): LocationService = AndroidLocationSource(this)
 
     private companion object {
         const val REGIONS_DIRECTORY = "regions"
+        const val PERMISSION_DIRECTORY = "location"
+        const val PERMISSION_FILE = "permission-asked"
     }
 }

@@ -1,18 +1,23 @@
 package nl.r1a.grassmap.app
 
 import android.app.Activity
+import android.app.Application
+import android.os.Bundle
 import android.os.StrictMode
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
-import nl.r1a.grassmap.core.services.LocationSource
+import nl.r1a.grassmap.core.services.AndroidLocationSource
 import nl.r1a.grassmap.core.services.MockGpxLocationSource
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.service.LocationService
 import java.io.IOException
 
 /**
- * Debug-only StrictMode policy and mock location.
+ * Debug-only StrictMode policy and the GPX replay.
  *
  * The CI emulator job fails when the app logs a `StrictMode policy violation`
  * while starting. `Log.i` below is the marker the job checks for, so an APK
@@ -20,12 +25,42 @@ import java.io.IOException
  *
  * The debug manifest replaces the main application name, so this class extends
  * [GrassMapsApplication] to keep the process-scoped container and its startup
- * path. The GPX replay is installed here only: a release build has no mock
- * location source and the fixture asset is not packaged.
+ * path. The GPX replay is the default location source; launching the activity
+ * with `--ez t0103_platform_location true` installs the real platform source
+ * instead, which is how the permission flow is exercised on the emulator. A
+ * release build has no replay and the fixture asset is not packaged.
  */
 class DebugApplication : GrassMapsApplication() {
+    private val platformLocation = MutableStateFlow(false)
+
     override fun onCreate() {
         super.onCreate()
+        registerActivityLifecycleCallbacks(
+            object : Application.ActivityLifecycleCallbacks {
+                override fun onActivityCreated(
+                    activity: Activity,
+                    savedInstanceState: Bundle?,
+                ) {
+                    platformLocation.value =
+                        activity.intent?.getBooleanExtra(EXTRA_PLATFORM_LOCATION, false) == true
+                }
+
+                override fun onActivityStarted(activity: Activity) = Unit
+
+                override fun onActivityResumed(activity: Activity) = Unit
+
+                override fun onActivityPaused(activity: Activity) = Unit
+
+                override fun onActivityStopped(activity: Activity) = Unit
+
+                override fun onActivitySaveInstanceState(
+                    activity: Activity,
+                    outState: Bundle,
+                ) = Unit
+
+                override fun onActivityDestroyed(activity: Activity) = Unit
+            },
+        )
         StrictMode.setThreadPolicy(
             StrictMode.ThreadPolicy
                 .Builder()
@@ -41,12 +76,17 @@ class DebugApplication : GrassMapsApplication() {
 
     override fun mapHarness(activity: Activity): MapHarness = DebugMapHarness.from(activity.intent)
 
-    override fun locationSource(): LocationSource =
-        LoggingLocationSource(
-            MockGpxLocationSource.fromLoader(
-                loadGpx = { readFixture() },
-                loop = true,
-            ),
+    override fun locationSource(): LocationService =
+        DebugLocationSource(
+            platform = AndroidLocationSource(this),
+            replay =
+                LoggingLocationSource(
+                    MockGpxLocationSource.fromLoader(
+                        loadGpx = { readFixture() },
+                        loop = true,
+                    ),
+                ),
+            usePlatform = platformLocation.asStateFlow(),
         )
 
     private suspend fun readFixture(): Outcome<String> =
@@ -67,5 +107,6 @@ class DebugApplication : GrassMapsApplication() {
     private companion object {
         const val TAG = "GrassMapsStrictMode"
         const val MOCK_WALK_ASSET = "mock-walk.gpx"
+        const val EXTRA_PLATFORM_LOCATION = "t0103_platform_location"
     }
 }

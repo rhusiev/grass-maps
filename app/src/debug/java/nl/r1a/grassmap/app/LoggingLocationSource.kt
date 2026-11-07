@@ -14,6 +14,10 @@ import nl.r1a.grassmap.plugin.api.model.LocationFix
 internal class LoggingLocationSource(
     private val delegate: LocationSource,
 ) : LocationSource {
+    override fun hasPermission(): Boolean = delegate.hasPermission()
+
+    override fun requiresPermission(): Boolean = delegate.requiresPermission()
+
     override val fixes: Flow<LocationFix?> =
         delegate.fixes.onEach { fix ->
             if (fix == null) {

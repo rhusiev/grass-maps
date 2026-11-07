@@ -1,11 +1,15 @@
 package nl.r1a.grassmap.app
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import nl.r1a.grassmap.core.CommandDispatchers
+import nl.r1a.grassmap.core.services.InMemoryLocationPermissionStore
 import nl.r1a.grassmap.core.services.MapControlCommands
 import nl.r1a.grassmap.core.services.NoLocationSource
 import nl.r1a.grassmap.plugin.api.command.Command
@@ -18,7 +22,9 @@ import nl.r1a.grassmap.plugin.api.host.CommandInvoker
 import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.model.CameraUpdate
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.TrackingMode
+import nl.r1a.grassmap.plugin.api.service.LocationService
 import nl.r1a.grassmap.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -102,7 +108,7 @@ class MapCommandsTest {
             val host = FakeMapHost(Camera(center = ORIGIN, zoom = 10.0))
             session.bind(host)
             val controller = LocationController(NoLocationSource, session, this)
-            val command = FollowCommand(controller)
+            val command = FollowCommand(controller, permission())
 
             assertEquals(Outcome.Success(CommandResult(true)), command.execute(Unit))
             assertEquals(Outcome.Success(CommandResult(false)), command.execute(Unit))
@@ -114,9 +120,25 @@ class MapCommandsTest {
     fun followWithoutABoundHostIsNotReady() =
         runTest {
             val session = MapSessionHolder()
-            val command = FollowCommand(LocationController(NoLocationSource, session, this))
+            val command = FollowCommand(LocationController(NoLocationSource, session, this), permission())
 
             assertEquals(Outcome.Failure(AppError.NotReady), command.execute(Unit))
+        }
+
+    @Test
+    fun aDeniedPermissionKeepsTheMapAndReportsTheReason() =
+        runTest {
+            val session = MapSessionHolder()
+            val host = FakeMapHost(Camera(center = ORIGIN, zoom = 10.0))
+            session.bind(host)
+            val controller = LocationController(NoLocationSource, session, this)
+            val permission = permission(PermissionService())
+            permission.bind(this) { false }
+            val command = FollowCommand(controller, permission)
+
+            assertEquals(Outcome.Failure(AppError.PermissionDenied), command.execute(Unit))
+
+            assertEquals(emptyList<TrackingMode>(), host.trackingModes)
         }
 
     @Test
@@ -218,11 +240,24 @@ class MapCommandsTest {
     }
 
     private fun TestScope.commands(session: MapSessionHolder): List<Command<*, *>> =
-        mapCommands(session, LocationController(NoLocationSource, session, backgroundScope))
+        mapCommands(session, LocationController(NoLocationSource, session, backgroundScope), permission())
+
+    private fun permission(service: LocationService = NoLocationSource): LocationPermissionCoordinator =
+        LocationPermissionCoordinator(
+            service,
+            InMemoryLocationPermissionStore(),
+            Dispatchers.Unconfined,
+        )
 
     private fun zoomIn(session: MapSessionHolder): Command<Unit, Double> = ZoomCommand(session, ZOOM_STEP)
 
     private fun zoomOut(session: MapSessionHolder): Command<Unit, Double> = ZoomCommand(session, -ZOOM_STEP)
+
+    private class PermissionService : LocationService {
+        override val fixes: Flow<LocationFix?> = emptyFlow()
+
+        override fun hasPermission(): Boolean = false
+    }
 
     private object KeyOnlyStrings : Strings {
         override fun resolve(

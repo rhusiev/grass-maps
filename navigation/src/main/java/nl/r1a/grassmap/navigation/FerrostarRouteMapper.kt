@@ -109,11 +109,12 @@ internal object FerrostarRouteMapper {
                 0.0
             }
         val text = instruction?.text.orEmpty()
+        val maneuver = maneuverOf(instruction?.maneuver, index)
         val content =
             VisualInstructionContent(
                 text = text,
-                maneuverType = maneuverTypeOf(instruction?.maneuver, index),
-                maneuverModifier = maneuverModifierOf(instruction?.maneuver),
+                maneuverType = maneuver.type,
+                maneuverModifier = maneuver.modifier,
                 roundaboutExitDegrees = null,
                 laneInfo = null,
                 exitNumbers = emptyList(),
@@ -166,33 +167,57 @@ internal object FerrostarRouteMapper {
      * Valhalla's numeric maneuver codes, reduced to what guidance needs now.
      * T-0310 owns the full mapping and the visual instruction details.
      */
-    private fun maneuverTypeOf(
+    /**
+     * Valhalla's documented maneuver-type codes, mapped to Ferrostar's guidance
+     * vocabulary. Ferrostar has no keep-left/right or ramp-straight types, so
+     * those become the closest fork or ramp type; the modifier carries the side.
+     *
+     * Codes: 0 none, 1-3 start, 4-6 destination, 7 becomes, 8 continue,
+     * 9-16 turns (right to left), 17-19 ramps, 20-21 exits, 22-24 stay,
+     * 25 merge, 26-27 roundabout, 28-29 ferry, 30-37 transit, 38-39 building.
+     */
+    internal fun maneuverOf(
         maneuver: String?,
         index: Int,
-    ): ManeuverType {
+    ): Maneuver {
         if (index == 0 && maneuver == null) {
-            return ManeuverType.DEPART
+            return Maneuver(ManeuverType.DEPART, ManeuverModifier.STRAIGHT)
         }
         return when (maneuver?.toIntOrNull()) {
-            null -> ManeuverType.CONTINUE
-            1, 2, 3 -> ManeuverType.DEPART
-            4, 5, 6 -> ManeuverType.ARRIVE
-            10, 24, 25, 26 -> ManeuverType.CONTINUE
-            11, 12, 13, 16, 17, 18 -> ManeuverType.TURN
-            19, 20, 21, 22, 23 -> ManeuverType.FORK
-            27 -> ManeuverType.MERGE
-            28, 29, 30, 31 -> ManeuverType.ROUNDABOUT
-            else -> ManeuverType.CONTINUE
+            1 -> Maneuver(ManeuverType.DEPART, ManeuverModifier.STRAIGHT)
+            2 -> Maneuver(ManeuverType.DEPART, ManeuverModifier.RIGHT)
+            3 -> Maneuver(ManeuverType.DEPART, ManeuverModifier.LEFT)
+            4 -> Maneuver(ManeuverType.ARRIVE, ManeuverModifier.STRAIGHT)
+            5 -> Maneuver(ManeuverType.ARRIVE, ManeuverModifier.RIGHT)
+            6 -> Maneuver(ManeuverType.ARRIVE, ManeuverModifier.LEFT)
+            7 -> Maneuver(ManeuverType.NEW_NAME, ManeuverModifier.STRAIGHT)
+            8, 22 -> Maneuver(ManeuverType.CONTINUE, ManeuverModifier.STRAIGHT)
+            9 -> Maneuver(ManeuverType.TURN, ManeuverModifier.SLIGHT_RIGHT)
+            10 -> Maneuver(ManeuverType.TURN, ManeuverModifier.RIGHT)
+            11 -> Maneuver(ManeuverType.TURN, ManeuverModifier.SHARP_RIGHT)
+            12, 13 -> Maneuver(ManeuverType.TURN, ManeuverModifier.U_TURN)
+            14 -> Maneuver(ManeuverType.TURN, ManeuverModifier.SHARP_LEFT)
+            15 -> Maneuver(ManeuverType.TURN, ManeuverModifier.LEFT)
+            16 -> Maneuver(ManeuverType.TURN, ManeuverModifier.SLIGHT_LEFT)
+            17 -> Maneuver(ManeuverType.ON_RAMP, ManeuverModifier.STRAIGHT)
+            18 -> Maneuver(ManeuverType.ON_RAMP, ManeuverModifier.SLIGHT_RIGHT)
+            19 -> Maneuver(ManeuverType.ON_RAMP, ManeuverModifier.SLIGHT_LEFT)
+            20 -> Maneuver(ManeuverType.OFF_RAMP, ManeuverModifier.RIGHT)
+            21 -> Maneuver(ManeuverType.OFF_RAMP, ManeuverModifier.LEFT)
+            23 -> Maneuver(ManeuverType.FORK, ManeuverModifier.SLIGHT_RIGHT)
+            24 -> Maneuver(ManeuverType.FORK, ManeuverModifier.SLIGHT_LEFT)
+            25 -> Maneuver(ManeuverType.MERGE, ManeuverModifier.STRAIGHT)
+            26 -> Maneuver(ManeuverType.ROUNDABOUT, ManeuverModifier.STRAIGHT)
+            27 -> Maneuver(ManeuverType.EXIT_ROUNDABOUT, ManeuverModifier.STRAIGHT)
+            28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39 ->
+                Maneuver(ManeuverType.NOTIFICATION, ManeuverModifier.STRAIGHT)
+            else -> Maneuver(ManeuverType.CONTINUE, ManeuverModifier.STRAIGHT)
         }
     }
-
-    private fun maneuverModifierOf(maneuver: String?): ManeuverModifier =
-        when (maneuver?.toIntOrNull()) {
-            2, 5, 11, 20, 25 -> ManeuverModifier.SLIGHT_RIGHT
-            3, 6, 18, 21, 26 -> ManeuverModifier.SLIGHT_LEFT
-            12, 16 -> ManeuverModifier.RIGHT
-            17, 13 -> ManeuverModifier.LEFT
-            14, 15 -> ManeuverModifier.U_TURN
-            else -> ManeuverModifier.STRAIGHT
-        }
 }
+
+/** One Valhalla maneuver code reduced to the type and side guidance needs. */
+internal data class Maneuver(
+    val type: ManeuverType,
+    val modifier: ManeuverModifier,
+)

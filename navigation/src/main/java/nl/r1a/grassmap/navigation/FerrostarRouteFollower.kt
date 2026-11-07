@@ -57,9 +57,9 @@ class FerrostarRouteFollower(
             stepAdvanceDistanceEntryAndExit(
                 STEP_ADVANCE_ENTRY_METERS,
                 STEP_ADVANCE_EXIT_METERS,
-                STEP_ADVANCE_MIN_DURATION_SECONDS,
+                STEP_ADVANCE_MIN_ACCURACY_METERS,
             ),
-            stepAdvanceDistanceToEndOfStep(ARRIVAL_STEP_ADVANCE_METERS, STEP_ADVANCE_MIN_DURATION_SECONDS),
+            stepAdvanceDistanceToEndOfStep(ARRIVAL_STEP_ADVANCE_METERS, STEP_ADVANCE_MIN_ACCURACY_METERS),
             RouteDeviationTracking.StaticThreshold(
                 config.minimumHorizontalAccuracyMeters.toUShort(),
                 config.maxDeviationMeters,
@@ -192,7 +192,7 @@ class FerrostarRouteFollower(
     private companion object {
         const val STEP_ADVANCE_ENTRY_METERS: UShort = 30u
         const val STEP_ADVANCE_EXIT_METERS: UShort = 5u
-        const val STEP_ADVANCE_MIN_DURATION_SECONDS: UShort = 32u
+        const val STEP_ADVANCE_MIN_ACCURACY_METERS: UShort = 32u
         const val ARRIVAL_STEP_ADVANCE_METERS: UShort = 10u
     }
 }

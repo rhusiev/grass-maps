@@ -8,6 +8,8 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import uniffi.ferrostar.ManeuverModifier
+import uniffi.ferrostar.ManeuverType
 import kotlin.math.abs
 
 class FerrostarRouteMapperTest {
@@ -90,6 +92,58 @@ class FerrostarRouteMapperTest {
                 route().copy(geometry = listOf(GeoPoint(49.84, 24.03))),
             ),
         )
+    }
+
+    @Test
+    fun everyValhallaManeuverCodeMapsToTheDocumentedGuidance() {
+        val expected =
+            mapOf(
+                0 to Maneuver(ManeuverType.CONTINUE, ManeuverModifier.STRAIGHT),
+                1 to Maneuver(ManeuverType.DEPART, ManeuverModifier.STRAIGHT),
+                2 to Maneuver(ManeuverType.DEPART, ManeuverModifier.RIGHT),
+                3 to Maneuver(ManeuverType.DEPART, ManeuverModifier.LEFT),
+                4 to Maneuver(ManeuverType.ARRIVE, ManeuverModifier.STRAIGHT),
+                5 to Maneuver(ManeuverType.ARRIVE, ManeuverModifier.RIGHT),
+                6 to Maneuver(ManeuverType.ARRIVE, ManeuverModifier.LEFT),
+                7 to Maneuver(ManeuverType.NEW_NAME, ManeuverModifier.STRAIGHT),
+                8 to Maneuver(ManeuverType.CONTINUE, ManeuverModifier.STRAIGHT),
+                9 to Maneuver(ManeuverType.TURN, ManeuverModifier.SLIGHT_RIGHT),
+                10 to Maneuver(ManeuverType.TURN, ManeuverModifier.RIGHT),
+                11 to Maneuver(ManeuverType.TURN, ManeuverModifier.SHARP_RIGHT),
+                12 to Maneuver(ManeuverType.TURN, ManeuverModifier.U_TURN),
+                13 to Maneuver(ManeuverType.TURN, ManeuverModifier.U_TURN),
+                14 to Maneuver(ManeuverType.TURN, ManeuverModifier.SHARP_LEFT),
+                15 to Maneuver(ManeuverType.TURN, ManeuverModifier.LEFT),
+                16 to Maneuver(ManeuverType.TURN, ManeuverModifier.SLIGHT_LEFT),
+                17 to Maneuver(ManeuverType.ON_RAMP, ManeuverModifier.STRAIGHT),
+                18 to Maneuver(ManeuverType.ON_RAMP, ManeuverModifier.SLIGHT_RIGHT),
+                19 to Maneuver(ManeuverType.ON_RAMP, ManeuverModifier.SLIGHT_LEFT),
+                20 to Maneuver(ManeuverType.OFF_RAMP, ManeuverModifier.RIGHT),
+                21 to Maneuver(ManeuverType.OFF_RAMP, ManeuverModifier.LEFT),
+                22 to Maneuver(ManeuverType.CONTINUE, ManeuverModifier.STRAIGHT),
+                23 to Maneuver(ManeuverType.FORK, ManeuverModifier.SLIGHT_RIGHT),
+                24 to Maneuver(ManeuverType.FORK, ManeuverModifier.SLIGHT_LEFT),
+                25 to Maneuver(ManeuverType.MERGE, ManeuverModifier.STRAIGHT),
+                26 to Maneuver(ManeuverType.ROUNDABOUT, ManeuverModifier.STRAIGHT),
+                27 to Maneuver(ManeuverType.EXIT_ROUNDABOUT, ManeuverModifier.STRAIGHT),
+            ) +
+                (28..39).associateWith {
+                    Maneuver(ManeuverType.NOTIFICATION, ManeuverModifier.STRAIGHT)
+                }
+
+        for ((code, guidance) in expected) {
+            assertEquals("code $code", guidance, FerrostarRouteMapper.maneuverOf(code.toString(), index = 1))
+        }
+    }
+
+    @Test
+    fun unknownOrMissingManeuverCodesContinueStraight() {
+        val continueStraight = Maneuver(ManeuverType.CONTINUE, ManeuverModifier.STRAIGHT)
+
+        assertEquals(Maneuver(ManeuverType.DEPART, ManeuverModifier.STRAIGHT), FerrostarRouteMapper.maneuverOf(null, index = 0))
+        assertEquals(continueStraight, FerrostarRouteMapper.maneuverOf(null, index = 1))
+        assertEquals(continueStraight, FerrostarRouteMapper.maneuverOf("99", index = 1))
+        assertEquals(continueStraight, FerrostarRouteMapper.maneuverOf("not-a-code", index = 1))
     }
 
     private fun route(): Route {

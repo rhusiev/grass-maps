@@ -1,4 +1,5 @@
 import buildlogic.GenerateTextAssetTask
+import buildlogic.LintStyleRulesTask
 
 plugins {
     alias(libs.plugins.android.library)
@@ -6,9 +7,9 @@ plugins {
 
 val generateStyleAsset =
     tasks.register<GenerateTextAssetTask>("generateStyleAsset") {
-        source.set(rootProject.layout.projectDirectory.file("test-data/styles/bench-light.json"))
+        source.set(layout.projectDirectory.file("src/main/styles/standard.json"))
         packageName.set("nl.r1a.grassmap.plugins.style.standard.generated")
-        objectName.set("BenchStyleAsset")
+        objectName.set("StandardStyleAsset")
         outputDirectory.set(layout.buildDirectory.dir("generated/style-asset"))
     }
 
@@ -39,4 +40,13 @@ dependencies {
     implementation(project(":plugin-api"))
 
     testImplementation(libs.junit)
+}
+
+val lintStandardStyle =
+    tasks.register<LintStyleRulesTask>("lintStandardStyle") {
+        styles.from(layout.projectDirectory.file("src/main/styles/standard.json"))
+    }
+
+tasks.named("check") {
+    dependsOn(lintStandardStyle)
 }

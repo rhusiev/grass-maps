@@ -6,7 +6,7 @@ import nl.r1a.grassmap.plugin.api.model.StyleSpec
 import nl.r1a.grassmap.plugin.api.provider.MapLayerContract
 import nl.r1a.grassmap.plugin.api.provider.MapLayerProvider
 import nl.r1a.grassmap.plugin.api.provider.ProviderContract
-import nl.r1a.grassmap.plugins.style.standard.generated.BenchStyleAsset
+import nl.r1a.grassmap.plugins.style.standard.generated.StandardStyleAsset
 
 /**
  * Supplies the Standard and Touring base style and its layers. Both variants
@@ -15,19 +15,16 @@ import nl.r1a.grassmap.plugins.style.standard.generated.BenchStyleAsset
 internal class StandardMapLayerProvider : MapLayerProvider {
     override val contract: ProviderContract = MapLayerContract.REFERENCE
 
-    private val style: BenchStyle by lazy { BenchStyle.parse(BenchStyleAsset.TEXT) }
+    private val style: StandardStyle by lazy { StandardStyle.parse(StandardStyleAsset.TEXT) }
 
     override fun styles(): List<StyleSpec> =
-        StyleVariant.entries.map { variant ->
+        style.variants().map { id ->
             StyleSpec(
-                id = variant.id,
+                id = id,
                 baseStyleJson = style.baseStyle(),
-                sources = BenchStyle.sources,
+                sources = StandardStyle.sources,
             )
         }
 
-    override fun layers(styleId: StyleId): List<SlottedLayer> {
-        val variant = StyleVariant.entries.firstOrNull { it.id == styleId } ?: return emptyList()
-        return style.layersFor(variant)
-    }
+    override fun layers(styleId: StyleId): List<SlottedLayer> = style.layersFor(styleId)
 }

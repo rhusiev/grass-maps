@@ -11,7 +11,7 @@
         "contract": "map.layers",
         "version": "1.0.0",
         "capabilities": {
-          "styles": ["standard", "touring"]
+          "styles": ["standard", "standard-dark"]
         }
       }
     ]

@@ -102,8 +102,34 @@ MAX_MISMATCH_PERCENT = 5.0
 GRID_WIDTH = 108
 GRID_HEIGHT = 192
 DEVICE_REGION_STAGE = "/data/local/tmp/grass-map-golden-region"
+# The app's Standard style ids. `light` is the default id the app loads.
+STYLE_IDS = {
+    "light": "standard",
+    "dark": "standard-dark",
+}
+
+# Ten fixture places at three zooms. The fixture is the CI map (T-0015), so the
+# style goldens stay small and need no region archive.
+STANDARD_PLACES = (
+    ("place-a", 49.9420, 23.9440),
+    ("place-b", 49.9420, 23.9560),
+    ("place-c", 49.9460, 23.9440),
+    ("place-d", 49.9460, 23.9560),
+    ("place-e", 49.9500, 23.9440),
+    ("place-f", 49.9500, 23.9560),
+    ("place-g", 49.9540, 23.9440),
+    ("place-h", 49.9540, 23.9560),
+    ("place-i", 49.9580, 23.9440),
+    ("place-j", 49.9580, 23.9560),
+)
+STANDARD_ZOOMS = (12.0, 13.0, 14.0)
 
 POSITIONS = {
+    "standard": tuple(
+        (f"{name}-z{int(zoom)}", lat, lon, zoom, 0.0, 0.0)
+        for name, lat, lon in STANDARD_PLACES
+        for zoom in STANDARD_ZOOMS
+    ),
     "fixture": (
         ("fixture-center-z12", 49.9500, 23.9500, 12.0, 0.0, 0.0),
         ("fixture-center-z13", 49.9500, 23.9500, 13.0, 0.0, 0.0),
@@ -571,6 +597,7 @@ def capture(
     adb: Adb,
     profile: str,
     output: Path,
+    style: str | None,
 ) -> dict[str, object]:
     if profile == "oblast" and not (output / "region.json").exists():
         raise GoldenError("oblast capture needs the installed region package")
@@ -592,6 +619,11 @@ def capture(
         # swiftshader renderer is still catching up when `am start -W` returns.
         time.sleep(LAUNCH_SETTLE_S)
         wait_for_first_frame(adb)
+        if style is not None:
+            selected = client.invoke("core.map.set_style", {"style": STYLE_IDS[style]})
+            if f"style={STYLE_IDS[style]}" not in str(selected):
+                raise GoldenError(f"style {style} was not selected: {selected}")
+            print(f"selected style {style} -> {selected}", file=sys.stderr)
         started = datetime.now(timezone.utc).isoformat()
         shots = []
         for name, lat, lon, zoom, bearing, tilt in POSITIONS[profile]:
@@ -619,6 +651,7 @@ def capture(
             {
                 "schema": SCHEMA,
                 "profile": profile,
+                "style": style,
                 "device_serial": adb.serial,
                 "started": started,
                 "captured": datetime.now(timezone.utc).isoformat(),
@@ -831,6 +864,7 @@ def compare(
     captured: Path,
     reference: Path,
     output: Path,
+    style: str | None,
 ) -> dict[str, object]:
     positions = []
     for name, *_ in POSITIONS[profile]:
@@ -854,6 +888,7 @@ def compare(
     document = {
         "schema": SCHEMA,
         "profile": profile,
+        "style": style,
         "tolerance": {
             "block_delta": BLOCK_DELTA,
             "max_mismatch_percent": MAX_MISMATCH_PERCENT,
@@ -878,6 +913,11 @@ def update_reference(profile: str, captured: Path, reference: Path) -> None:
         print(f"reference {name} <- {source}", file=sys.stderr)
 
 
+def default_reference(profile: str, style: str | None) -> Path:
+    path = ROOT / "test-data" / "map-goldens" / profile
+    return path / style if style else path
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Capture and compare map goldens.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -888,11 +928,13 @@ def build_parser() -> argparse.ArgumentParser:
     capture_parser.add_argument("--apk", default=None)
     capture_parser.add_argument("--output", required=True)
     capture_parser.add_argument("--region-package", default=None)
+    capture_parser.add_argument("--style", choices=sorted(STYLE_IDS), default=None)
     capture_parser.add_argument("--keep-data", action="store_true")
 
     compare_parser = subparsers.add_parser("compare")
     compare_parser.add_argument("--profile", choices=sorted(POSITIONS), required=True)
     compare_parser.add_argument("--captured", required=True)
+    compare_parser.add_argument("--style", choices=sorted(STYLE_IDS), default=None)
     compare_parser.add_argument("--reference", default=None)
     compare_parser.add_argument("--output", default=None)
     compare_parser.add_argument("--update", action="store_true")
@@ -923,18 +965,18 @@ def main() -> int:
                 metadata = install_region_package(adb, package)
                 (output / "region.json").parent.mkdir(parents=True, exist_ok=True)
                 (output / "region.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
-            capture(adb, args.profile, output)
+            capture(adb, args.profile, output, args.style)
             return 0
         reference = (
             Path(args.reference)
             if args.reference
-            else ROOT / "test-data" / "map-goldens" / args.profile
+            else default_reference(args.profile, args.style)
         )
         output = Path(args.output) if args.output else Path(args.captured)
         if args.update:
             update_reference(args.profile, Path(args.captured), reference)
             return 0
-        document = compare(args.profile, Path(args.captured), reference, output)
+        document = compare(args.profile, Path(args.captured), reference, output, args.style)
         return 0 if document["result"] == "pass" else 1
     except GoldenError as error:
         print(f"FAIL: {error}", file=sys.stderr)

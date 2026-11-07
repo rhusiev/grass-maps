@@ -12,6 +12,7 @@
 #
 # Usage:
 #   ./scripts/ci/android-map-goldens.sh --profile fixture [--update] [APK]
+#   ./scripts/ci/android-map-goldens.sh --profile standard [--style light|dark|both] [--update] [APK]
 #   ./scripts/ci/android-map-goldens.sh --profile oblast \
 #       --region-package /hdd/t-0102-evidence/region/ua-46/2026-11-05-bench \
 #       --output /hdd/t-0102-evidence/oblast [APK]
@@ -40,6 +41,7 @@ PROFILE=""
 OUTPUT=""
 REFERENCE=""
 REGION_PACKAGE=""
+STYLE=""
 UPDATE=0
 APK=""
 
@@ -49,6 +51,7 @@ while [[ $# -gt 0 ]]; do
         --output) OUTPUT="$2"; shift 2 ;;
         --reference) REFERENCE="$2"; shift 2 ;;
         --region-package) REGION_PACKAGE="$2"; shift 2 ;;
+        --style) STYLE="$2"; shift 2 ;;
         --update) UPDATE=1; shift ;;
         -h | --help)
             sed -n '2,/^$/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
@@ -69,14 +72,25 @@ done
     echo "android-map-goldens.sh: --profile fixture|oblast is required" >&2
     exit 2
 }
+if [[ "$PROFILE" == "standard" ]]; then
+    STYLE="${STYLE:-both}"
+fi
+if [[ -n "$STYLE" && "$PROFILE" != "standard" ]]; then
+    echo "android-map-goldens.sh: --style applies to --profile standard" >&2
+    exit 2
+fi
+case "$STYLE" in
+    ""|light|dark|both) ;;
+    *)
+        echo "android-map-goldens.sh: --style must be light, dark or both" >&2
+        exit 2
+        ;;
+esac
 if [[ "$PROFILE" == "oblast" && -z "$REGION_PACKAGE" ]]; then
     echo "android-map-goldens.sh: oblast capture needs --region-package DIR" >&2
     exit 2
 fi
-if [[ "$PROFILE" == "fixture" ]]; then
-    OUTPUT="${OUTPUT:-$ROOT/build/map-goldens/fixture}"
-    REFERENCE="${REFERENCE:-$ROOT/test-data/map-goldens/fixture}"
-else
+if [[ "$PROFILE" == "oblast" ]]; then
     OUTPUT="${OUTPUT:-/hdd/t-0102-evidence/oblast}"
     REFERENCE="${REFERENCE:-/hdd/t-0102-evidence/oblast-reference}"
 fi
@@ -196,18 +210,49 @@ if [[ "${GOLDEN_SKIP_REBOOT:-0}" != "1" ]]; then
     echo "== rebooted, dialogs suppressed ==" >&2
 fi
 
-COMMAND=(python3 "$SCRIPT_DIR/map_goldens.py" capture --serial "$SERIAL" --profile "$PROFILE" --apk "$APK" --output "$OUTPUT")
-if [[ -n "$REGION_PACKAGE" ]]; then
-    COMMAND+=(--region-package "$REGION_PACKAGE")
-fi
-"${COMMAND[@]}"
+styles=()
+case "$STYLE" in
+    "") styles=("") ;;
+    both) styles=(light dark) ;;
+    *) styles=("$STYLE") ;;
+esac
 
-if [[ $UPDATE -eq 1 ]]; then
-    python3 "$SCRIPT_DIR/map_goldens.py" compare --profile "$PROFILE" --captured "$OUTPUT" \
-        --reference "$REFERENCE" --update
-    echo "Updated references in $REFERENCE"
-    exit 0
-fi
+compare_failed=0
+for style in "${styles[@]}"; do
+    if [[ -n "$style" ]]; then
+        run_output="${OUTPUT:+$OUTPUT/}${OUTPUT:+$style}"
+        run_output="${run_output:-$ROOT/build/map-goldens/$PROFILE/$style}"
+        run_reference="${REFERENCE:+$REFERENCE/}${REFERENCE:+$style}"
+        run_reference="${run_reference:-$ROOT/test-data/map-goldens/$PROFILE/$style}"
+    else
+        run_output="${OUTPUT:-$ROOT/build/map-goldens/$PROFILE}"
+        run_reference="${REFERENCE:-$ROOT/test-data/map-goldens/$PROFILE}"
+    fi
+    COMMAND=(python3 "$SCRIPT_DIR/map_goldens.py" capture --serial "$SERIAL" --profile "$PROFILE" --apk "$APK" --output "$run_output")
+    if [[ -n "$REGION_PACKAGE" ]]; then
+        COMMAND+=(--region-package "$REGION_PACKAGE")
+    fi
+    if [[ -n "$style" ]]; then
+        COMMAND+=(--style "$style")
+    fi
+    "${COMMAND[@]}"
 
-python3 "$SCRIPT_DIR/map_goldens.py" compare --profile "$PROFILE" --captured "$OUTPUT" \
-    --reference "$REFERENCE" --output "$OUTPUT"
+    if [[ $UPDATE -eq 1 ]]; then
+        COMPARE=(python3 "$SCRIPT_DIR/map_goldens.py" compare --profile "$PROFILE" --captured "$run_output" --reference "$run_reference" --update)
+        if [[ -n "$style" ]]; then
+            COMPARE+=(--style "$style")
+        fi
+        "${COMPARE[@]}"
+        echo "Updated references in $run_reference"
+        continue
+    fi
+
+    COMPARE=(python3 "$SCRIPT_DIR/map_goldens.py" compare --profile "$PROFILE" --captured "$run_output" --reference "$run_reference" --output "$run_output")
+    if [[ -n "$style" ]]; then
+        COMPARE+=(--style "$style")
+    fi
+    if ! "${COMPARE[@]}"; then
+        compare_failed=1
+    fi
+done
+exit "$compare_failed"

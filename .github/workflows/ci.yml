@@ -106,9 +106,11 @@ jobs:
 
   # Fixture map goldens only: the committed T-0015 fixture asset, no region
   # package and no 59 MB archive. The whole-oblast goldens are local acceptance
-  # on gm-emulator; CI must not depend on the bench archive.
+  # on gm-emulator; CI must not depend on the bench archive. The Standard style
+  # is captured light and dark over ten places at three zooms, then the T-0102
+  # fixture set is compared on the same booted emulator.
   emulator-map-goldens:
-    name: Fixture map goldens (API 29, swiftshader)
+    name: Style and fixture map goldens (API 29, swiftshader)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -128,7 +130,7 @@ jobs:
           targets: aarch64-linux-android,x86_64-linux-android
       - name: Build the debug APK
         run: ./gradlew --console=plain :app:assembleDebug
-      - name: Boot API 29 and compare the fixture goldens
+      - name: Boot API 29 and compare the style goldens
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 29
@@ -137,13 +139,21 @@ jobs:
           profile: pixel_2
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: ./scripts/ci/android-map-goldens.sh --profile fixture --output build/map-goldens/fixture app/build/outputs/apk/debug/app-debug.apk
+          script: |
+            # Run both sets even when one compare fails: a failed run still
+            # uploads the captures, which is how the references are promoted.
+            set +e
+            ./scripts/ci/android-map-goldens.sh --profile fixture --output build/map-goldens/fixture app/build/outputs/apk/debug/app-debug.apk
+            fixture_status=$?
+            GOLDEN_SKIP_REBOOT=1 ./scripts/ci/android-map-goldens.sh --profile standard --style both app/build/outputs/apk/debug/app-debug.apk
+            style_status=$?
+            [[ $fixture_status -eq 0 && $style_status -eq 0 ]]
       - name: Keep the goldens and diff images
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: map-goldens-fixture-${{ github.sha }}
-          path: build/map-goldens/fixture/**
+          name: map-goldens-${{ github.sha }}
+          path: build/map-goldens/**
           if-no-files-found: warn
 
   # Trend numbers only, not the Moto g32 acceptance gate. The JSON lands in

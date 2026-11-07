@@ -106,6 +106,9 @@ step "Plugin manifests"
 step "Example plugin"
 ./gradlew --console=plain :plugins:example:check || fail "example plugin"
 
+step "Map style rules"
+./gradlew --console=plain lintStyleRules || fail "map style rules"
+
 step "Privacy guards"
 ./gradlew --console=plain checkPrivacyGuards || fail "privacy guards"
 

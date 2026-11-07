@@ -69,10 +69,11 @@ which is the next slowest step; lint runs at pre-push and in CI, so a `--micro`
 run is iteration evidence only. The gate runs Spotless with ktlint from
 the root, Android lint, `:app:assembleDebug`, the JVM unit tests,
 `checkTranslations`, `checkPluginBoundaries`, `checkPluginManifests`,
-`:plugins:example:check`, `checkPrivacyGuards`, and two unsigned release builds
-at different paths compared byte for byte. The test count is reported; an empty
-suite fails the gate, so deleting the last test cannot pass CI. Every step
-prints its duration, and the total is printed at the end.
+`lintStyleRules`, `:plugins:example:check`, `checkPrivacyGuards`, and two
+unsigned release builds at different paths compared byte for byte. The test
+count is reported; an empty suite fails the gate, so deleting the last test
+cannot pass CI. Every step prints its duration, and the total is printed at the
+end.
 
 `checkTranslations` checks every module with `src/main/res/values*/strings.xml`:
 each key must exist in English (`values`) and Ukrainian (`values-uk`), with a
@@ -197,8 +198,9 @@ concurrency and cancellation. See `tools/pipeline/README.md`.
 
 `test-data/styles/bench-light.json` is the phase-A dense bench style. The
 T-0020 spike checks that every layer, filter and expression in it compiles to a
-maplibre-compose layer node, and `plugins/style-standard` generates its provider
-data from the same file.
+maplibre-compose layer node. The Standard style keeps that layer list as its
+reproduction baseline but owns its authored document in
+`plugins/style-standard/src/main/styles/standard.json`.
 
 `test-data/location/mock-walk.gpx` is a 60-point synthetic walk around Lviv at
 one fix per second. The debug build replays it through `MockGpxLocationSource`;
@@ -229,7 +231,7 @@ the module name. Only `app` is an application module; its application ID is
 | `devtools` | debug harness: benchmark hooks, GPX replay, screenshot and state probes | `core`, `control`, `plugin-api` |
 | `app` | composition root, Android entry points, foreground service, manifest, resources | every module |
 | `plugins/example` | example of a first-party plugin module | `plugin-api` |
-| `plugins/style-standard` | the Standard and Touring map styles as a `MapLayerProvider` | `plugin-api` |
+| `plugins/style-standard` | the Standard light and dark map styles as a `MapLayerProvider` | `plugin-api` |
 | `plugins/synthetic-data` | the synthetic elevation `DataSource` and its real contour overlay | `plugin-api` |
 | `plugins/gpx` | GPX 1.0/1.1 as a `FileFormat` provider | `plugin-api` |
 | `plugins/info-widgets` | the altitude, coordinates and GPS info widget data providers | `plugin-api` |
@@ -245,12 +247,14 @@ Compose layer nodes and draws the layers in fixed slots. The logical source IDs
 are `world` (z0-z7), `region` (z8-z14) and `contours` (z9-z14). The host
 resolves each ID to a mounted archive and skips layers whose source is absent.
 
-The Standard and Touring variants share one `BaseStyle.Json` document, so a
+The Standard light and dark variants share one `BaseStyle.Json` document, so a
 variant switch updates layers in place instead of reloading the style. A base
 style carries sources and glyphs but no layers; the consumer applies the
-provider's layers with `applyStyleDiff`, and only `setStyle` may reload. The
-T-0020 spike uses the phase-A Protomaps-derived bench style as its reproduction
-baseline; the authored Standard and Touring palettes are T-0603.
+provider's layers with `applyStyleDiff`, and only `setStyle` may reload.
+`plugins/style-standard/src/main/styles/standard.json` holds one layer list and
+a palette per variant; the provider resolves the palette tokens and returns
+`standard` (light) and `standard-dark`. The authored Touring style and the
+style switch are T-0109.
 
 The map resolves its sources in a fixed order:
 
@@ -270,11 +274,14 @@ never hashes an oblast. A package whose `map.pmtiles` is truncated or is not a
 PMTiles archive is therefore corrupt at mount time too. The mount never writes,
 downloads or quarantines; those actions belong to `RegionDownloader`.
 
-The debug-only `core.map.set_camera` command moves the camera to an exact
-latitude, longitude, zoom, bearing and tilt and returns only after MapLibre's
-idle event. It is registered only in the debug source set, so no unrestricted
-camera command is compiled into a release build. The T-0102 golden harness uses
-it before an `adb exec-out screencap -p` capture:
+The debug-only `core.map.set_style` command selects a style id and applies its
+layers in place; the golden harness uses it to capture the light and dark
+Standard variants from one install. The debug-only `core.map.set_camera`
+command moves the camera to an exact latitude, longitude, zoom, bearing and
+tilt and returns only after MapLibre's idle event. Both are registered only in
+the debug source set, so no style or camera command is compiled into a release
+build. The T-0102 golden harness uses the camera command before an
+`adb exec-out screencap -p` capture:
 
 ```sh
 tools/control/grassctl.py invoke core.map.set_camera \
@@ -287,13 +294,22 @@ activity window. On this emulator that path does not see the map's
 `screencap` reads the composited display instead, and the camera command still
 comes from the control channel.
 
-The fixture goldens in `test-data/map-goldens/fixture/` run in CI on the API 29
-emulator with the same image and swiftshader GPU as the smoke job. The
-committed set is that renderer's own output: a 1080x1920 API 29 swiftshader
-capture, which matches an API 29 host-GPU capture of the same cameras within
-0.03-1.05 % of blocks. Recapture with `--update` on the same emulator, never
-from a different device size. The whole-oblast goldens are local acceptance on
-the `grassmaps-bench` emulator and never enter CI:
+The Standard goldens in `test-data/map-goldens/standard/light/` and
+`standard/dark/` are ten fixture places at z12, z13 and z14, captured in both
+variants. They run in CI on the API 29 emulator with the same image and
+swiftshader GPU as the smoke job. The committed set is that renderer's own
+output: 1080x1920 API 29 swiftshader captures, promoted from the CI artifact
+rather than by raising the 5 % tolerance. Recapture with `--update` on the same
+emulator, never from a different device size:
+
+```sh
+./scripts/ci/android-map-goldens.sh --profile standard --style both --update
+```
+
+The T-0015 fixture goldens in `test-data/map-goldens/fixture/` keep the T-0102
+coverage and run on the same emulator after the style set. The whole-oblast
+goldens are local acceptance on the `grassmaps-bench` emulator and never enter
+CI:
 
 ```sh
 ./scripts/ci/android-map-goldens.sh --profile fixture --update

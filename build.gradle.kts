@@ -1,6 +1,7 @@
 import buildlogic.CheckPrivacyDependenciesTask
 import buildlogic.CheckTranslationsTask
 import buildlogic.LintPluginManifestsTask
+import buildlogic.LintStyleRulesTask
 
 buildscript {
     repositories {
@@ -216,3 +217,18 @@ tasks.register<CheckTranslationsTask>("checkTranslations") {
         },
     )
 }
+
+// Map style rules (T-0108, design/map-style.md section 4): every authored style
+// document is checked against the layer budget and the fill and symbol rules.
+// The glob covers every plugin, so a new style module needs no edit here.
+val lintStyleRules =
+    tasks.register<LintStyleRulesTask>("lintStyleRules") {
+        group = "verification"
+        description = "Checks authored map style documents against the style rules."
+        styles.from(
+            fileTree(rootDir) {
+                include("plugins/*/src/main/styles/*.json")
+                exclude("**/build/**")
+            },
+        )
+    }

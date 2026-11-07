@@ -28,6 +28,26 @@ class FakeClient:
         return answer
 
 
+class StandardPositionsTest(unittest.TestCase):
+    def test_ten_places_at_three_zooms(self) -> None:
+        positions = map_goldens.POSITIONS["standard"]
+
+        self.assertEqual(30, len(positions))
+        self.assertEqual(10, len({name.rsplit("-z", 1)[0] for name, *_ in positions}))
+        self.assertEqual({12.0, 13.0, 14.0}, {position[3] for position in positions})
+        self.assertEqual(30, len({position[0] for position in positions}))
+
+    def test_style_reference_paths_are_separate(self) -> None:
+        self.assertEqual(
+            map_goldens.default_reference("standard", "dark"),
+            map_goldens.ROOT / "test-data" / "map-goldens" / "standard" / "dark",
+        )
+        self.assertEqual(
+            map_goldens.default_reference("fixture", None),
+            map_goldens.ROOT / "test-data" / "map-goldens" / "fixture",
+        )
+
+
 class InvokeCameraTest(unittest.TestCase):
     def test_socket_timeout_is_retried(self) -> None:
         client = FakeClient([TimeoutError("timed out"), "lat=1.0 idle=true"])

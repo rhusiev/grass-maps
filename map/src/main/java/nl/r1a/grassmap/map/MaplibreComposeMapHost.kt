@@ -384,6 +384,21 @@ class MaplibreComposeMapHost internal constructor(
 
     internal fun pumpPuckFrame() {
         session.framePuck(state.cameraPosition.zoom)
+        val display = session.puck.value ?: return
+        if (session.trackingMode != TrackingMode.Follow) {
+            return
+        }
+        // Following moves the camera to the same smoothed position the puck
+        // draws, so the puck stays under the finger instead of jumping at 1 Hz.
+        state.setCameraPosition(
+            state.cameraPosition.copy(
+                center =
+                    Position(
+                        longitude = display.fix.position.longitude,
+                        latitude = display.fix.position.latitude,
+                    ),
+            ),
+        )
     }
 
     internal fun tickPuckAge() {

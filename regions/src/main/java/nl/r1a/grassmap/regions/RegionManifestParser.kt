@@ -81,6 +81,17 @@ object RegionManifestParser {
         if (present.map { it.file }.toSet().size != present.size) {
             return null
         }
+        // The reader refuses a search section without its feature component, so
+        // a package that omits it must not install and then fail search and
+        // details for a region the app reports as installed.
+        val features = present.filter { it.kind == FEATURES_KIND }
+        if (features.size != 1) {
+            return null
+        }
+        val required = features.single()
+        if (required.format != FEATURES_FORMAT || required.formatVersion != FEATURES_FORMAT_VERSION) {
+            return null
+        }
         return present
     }
 
@@ -181,4 +192,8 @@ object RegionManifestParser {
     private fun JsonObject.boolean(key: String): Boolean? = (this[key] as? JsonPrimitive)?.booleanOrNull
 
     private fun corrupt(): Outcome<RegionManifest> = Outcome.Failure(AppError.CorruptData)
+
+    private const val FEATURES_KIND = "features"
+    private const val FEATURES_FORMAT = "place-features"
+    private const val FEATURES_FORMAT_VERSION = 1
 }

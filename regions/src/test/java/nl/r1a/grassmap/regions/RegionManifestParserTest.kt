@@ -1,5 +1,12 @@
 package nl.r1a.grassmap.regions
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import org.junit.Assert.assertEquals
@@ -34,6 +41,32 @@ class RegionManifestParserTest {
         assertEquals(90141, map.bytes)
         assertEquals("c29ca3203c4d4c7e4c52e5a505fbc56f365d1c4a980a80c280273ce82fdd722c", map.sha256)
         assertEquals(listOf(12, 14), map.zoomLevels)
+        val features = manifest.components.single { it.kind == "features" }
+        assertEquals("place-features", features.format)
+        assertEquals(1, features.formatVersion)
+    }
+
+    @Test
+    fun aManifestWithoutFeaturesIsCorrupt() {
+        val json = rewrittenComponents { components -> components.filterNot { kindOf(it) == "features" } }
+
+        assertEquals(Outcome.Failure(AppError.CorruptData), parse(json))
+    }
+
+    @Test
+    fun aFeaturesComponentWithAnotherFormatVersionIsCorrupt() {
+        val json =
+            rewrittenComponents { components ->
+                components.map { component ->
+                    if (kindOf(component) == "features") {
+                        JsonObject(component + ("formatVersion" to JsonPrimitive(2)))
+                    } else {
+                        component
+                    }
+                }
+            }
+
+        assertEquals(Outcome.Failure(AppError.CorruptData), parse(json))
     }
 
     @Test
@@ -105,6 +138,16 @@ class RegionManifestParserTest {
         from: String,
         to: String,
     ): ByteArray = String(fixture, Charsets.UTF_8).replace(from, to).toByteArray(Charsets.UTF_8)
+
+    /** The fixture manifest with its component array passed through [transform]. */
+    private fun rewrittenComponents(transform: (List<JsonObject>) -> List<JsonObject>): ByteArray {
+        val root = Json.parseToJsonElement(String(fixture, Charsets.UTF_8)).jsonObject
+        val components = root.getValue("components").jsonArray.map { it.jsonObject }
+        val rewritten = JsonObject(root + ("components" to JsonArray(transform(components))))
+        return rewritten.toString().toByteArray(Charsets.UTF_8)
+    }
+
+    private fun kindOf(component: JsonObject): String = component.getValue("kind").jsonPrimitive.content
 
     private fun parse(bytes: ByteArray): Outcome<RegionManifest> =
         RegionManifestParser.parse(bytes, "fixture-mini", FixturePackages.FIXTURE_VERSION)

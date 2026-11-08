@@ -72,6 +72,7 @@ class AppContainer(
     private val headingSource: HeadingSource = NoHeadingSource,
     private val positionOffsetProvider: PositionOffsetProvider = PositionOffsetProvider.CENTERED,
     private val unitSettingsFileProvider: () -> File? = { null },
+    private val favouritesRootProvider: () -> File? = { null },
 ) {
     private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -138,6 +139,11 @@ class AppContainer(
         TrackAccess(providerRegistry, GeneratedPlugins.providers)
     }
 
+    /** The favourites library under the app's private files root (T-0201). */
+    val favourites: FavouritesAccess by lazy {
+        FavouritesAccess(favouritesRootProvider())
+    }
+
     /**
      * The v1 privacy switches. Region downloads name
      * [nl.r1a.grassmap.core.services.NetworkSwitches.regionUpdates]; the real
@@ -185,6 +191,7 @@ class AppContainer(
             navCommands(mapSession, { routingEngine }) +
             searchCommands { places } +
             trackCommands({ tracks }, assetReader) +
+            favouriteCommands({ favourites }, assetReader) +
             regionCommands({ regionDownloader }, regionNetwork, debuggable) +
             UnitsCommand({ unitSettings }) +
             extraCommands(mapSession) +

@@ -53,6 +53,7 @@ open class GrassMapsApplication : Application() {
             distanceByTap = distanceByTap(),
             headingSource = AndroidHeadingSource(this, compassScope),
             unitSettingsFileProvider = { File(filesDir, UNIT_SETTINGS_PATH) },
+            favouritesRootProvider = { filesDir },
         )
     }
 

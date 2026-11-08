@@ -91,6 +91,6 @@ internal class SetStyleCommand(
 
     private companion object {
         val STYLE_PLUGIN = PluginId("style.standard")
-        const val DEFAULT_IDLE_TIMEOUT_MS = 15_000L
+        const val DEFAULT_IDLE_TIMEOUT_MS = 10_000L
     }
 }

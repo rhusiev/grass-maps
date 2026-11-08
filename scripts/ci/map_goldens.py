@@ -87,10 +87,11 @@ ANR_DISMISS_SETTLE_S = 1.0
 UI_DUMP_PATH = "/data/local/tmp/grass-map-golden-window.xml"
 CHANNEL_TIMEOUT_S = 60.0
 CAMERA_READY_TIMEOUT_S = 45.0
+STYLE_READY_TIMEOUT_S = 90.0
 # `core.map.set_camera` answers only after MapLibre reports idle (up to 15 s on
 # the device). The RPC socket must stay open longer than that, or a slow
 # renderer answers after the client has already timed out.
-INVOKE_TIMEOUT_S = 30.0
+INVOKE_TIMEOUT_S = 60.0
 RETRY_PAUSE_S = 0.5
 # The first install after the dialog-suppression reboot can land while the
 # package manager is still finishing its own startup and rejected the APK;
@@ -376,6 +377,31 @@ def invoke_camera(
                 raise GoldenError(
                     f"camera command did not answer within {CAMERA_READY_TIMEOUT_S:.0f}s"
                 ) from error
+        time.sleep(RETRY_PAUSE_S)
+
+
+def invoke_style(
+    client: control_client.ControlClient,
+    style: str,
+) -> str:
+    """Select a style, retrying a socket timeout.
+
+    The command applies the style first and then waits for the engine's load
+    events, so an answer that outlives the socket timeout has still done its
+    work; the retry is idempotent and the next camera command waits for the
+    settled frame.
+    """
+    style_id = STYLE_IDS[style]
+    deadline = time.monotonic() + STYLE_READY_TIMEOUT_S
+    while True:
+        try:
+            selected = str(client.invoke("core.map.set_style", {"style": style_id}))
+            if f"style={style_id}" not in selected:
+                raise GoldenError(f"style {style} was not selected: {selected}")
+            return selected
+        except TimeoutError as error:
+            if time.monotonic() >= deadline:
+                raise GoldenError(f"style {style} did not answer in {STYLE_READY_TIMEOUT_S:.0f}s") from error
         time.sleep(RETRY_PAUSE_S)
 
 
@@ -667,9 +693,7 @@ def capture(
         time.sleep(LAUNCH_SETTLE_S)
         wait_for_first_frame(adb)
         if style is not None:
-            selected = client.invoke("core.map.set_style", {"style": STYLE_IDS[style]})
-            if f"style={STYLE_IDS[style]}" not in str(selected):
-                raise GoldenError(f"style {style} was not selected: {selected}")
+            selected = invoke_style(client, style)
             print(f"selected style {style} -> {selected}", file=sys.stderr)
         started = datetime.now(timezone.utc).isoformat()
         shots = []

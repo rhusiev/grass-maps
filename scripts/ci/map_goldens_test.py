@@ -76,6 +76,23 @@ class AirplaneModeTest(unittest.TestCase):
         self.assertTrue(any("svc wifi disable" in command for command in commands))
 
 
+class InvokeStyleTest(unittest.TestCase):
+    def test_socket_timeout_is_retried(self) -> None:
+        client = FakeClient([TimeoutError("timed out"), "style=standard-dark loaded=true idle=true"])
+
+        with mock.patch.object(map_goldens.time, "sleep"):
+            result = map_goldens.invoke_style(client, "dark")
+
+        self.assertIn("style=standard-dark", result)
+        self.assertEqual(client.calls, 2)
+
+    def test_a_wrong_style_answer_fails(self) -> None:
+        client = FakeClient(["style=standard loaded=true idle=true"])
+
+        with self.assertRaises(map_goldens.GoldenError):
+            map_goldens.invoke_style(client, "dark")
+
+
 class StandardPositionsTest(unittest.TestCase):
     def test_ten_places_at_three_zooms(self) -> None:
         positions = map_goldens.POSITIONS["standard"]

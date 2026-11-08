@@ -12,18 +12,19 @@ import nl.r1a.grassmap.plugin.api.model.CameraUpdate
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.TrackingMode
+import nl.r1a.grassmap.plugins.map.controls.CameraModeController
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LocationControllerTest {
     @Test
-    fun followingSetsThePuckAndRecentersOnEveryFix() =
+    fun followingRecentersOnceAndLeavesInterpolationToTheFrameLoop() =
         runTest {
             val host = FakeMapHost(camera())
             val session = MapSessionHolder().apply { bind(host) }
             val source = FakeLocationSource()
-            val controller = LocationController(source, session, backgroundScope)
+            val controller = LocationController(source, backgroundScope, CameraModeController(session::hostOrNull))
             controller.start()
             runCurrent()
             assertEquals(Outcome.Success(true), controller.toggleFollowing())
@@ -36,10 +37,7 @@ class LocationControllerTest {
             runCurrent()
 
             assertEquals(listOf(FIX_ONE, FIX_TWO), host.locations)
-            assertEquals(
-                listOf(CameraUpdate(center = FIX_ONE.position), CameraUpdate(center = FIX_TWO.position)),
-                host.moves,
-            )
+            assertEquals(listOf(CameraUpdate(center = FIX_ONE.position)), host.moves)
             assertEquals(listOf(TrackingMode.Follow), host.trackingModes)
         }
 
@@ -49,7 +47,7 @@ class LocationControllerTest {
             val host = FakeMapHost(camera())
             val session = MapSessionHolder().apply { bind(host) }
             val source = FakeLocationSource()
-            val controller = LocationController(source, session, backgroundScope)
+            val controller = LocationController(source, backgroundScope, CameraModeController(session::hostOrNull))
             controller.start()
             runCurrent()
 
@@ -67,7 +65,7 @@ class LocationControllerTest {
             val host = FakeMapHost(camera())
             val session = MapSessionHolder().apply { bind(host) }
             val source = FakeLocationSource()
-            val controller = LocationController(source, session, backgroundScope)
+            val controller = LocationController(source, backgroundScope, CameraModeController(session::hostOrNull))
             controller.start()
             runCurrent()
             controller.toggleFollowing()
@@ -88,7 +86,7 @@ class LocationControllerTest {
             val host = FakeMapHost(camera())
             val session = MapSessionHolder().apply { bind(host) }
             val source = FakeLocationSource()
-            val controller = LocationController(source, session, backgroundScope)
+            val controller = LocationController(source, backgroundScope, CameraModeController(session::hostOrNull))
             controller.start()
             runCurrent()
             source.emit(FIX_ONE)
@@ -106,7 +104,7 @@ class LocationControllerTest {
             val host = FakeMapHost(camera())
             val session = MapSessionHolder().apply { bind(host) }
             val source = FakeLocationSource()
-            val controller = LocationController(source, session, backgroundScope)
+            val controller = LocationController(source, backgroundScope, CameraModeController(session::hostOrNull))
             controller.start()
             runCurrent()
             source.emit(FIX_ONE)
@@ -123,7 +121,12 @@ class LocationControllerTest {
     @Test
     fun togglingWithoutABoundHostIsNotReady() =
         runTest {
-            val controller = LocationController(FakeLocationSource(), MapSessionHolder(), backgroundScope)
+            val controller =
+                LocationController(
+                    FakeLocationSource(),
+                    backgroundScope,
+                    CameraModeController({ null }),
+                )
 
             assertEquals(Outcome.Failure(AppError.NotReady), controller.toggleFollowing())
         }
@@ -133,7 +136,7 @@ class LocationControllerTest {
         runTest {
             val source = FakeLocationSource()
             val session = MapSessionHolder()
-            val controller = LocationController(source, session, backgroundScope)
+            val controller = LocationController(source, backgroundScope, CameraModeController(session::hostOrNull))
             controller.start()
             runCurrent()
             source.emit(FIX_ONE)
@@ -154,7 +157,7 @@ class LocationControllerTest {
             val host = FakeMapHost(camera())
             val session = MapSessionHolder().apply { bind(host) }
             val source = FakeLocationSource()
-            val controller = LocationController(source, session, backgroundScope)
+            val controller = LocationController(source, backgroundScope, CameraModeController(session::hostOrNull))
             controller.start()
             runCurrent()
             controller.start()

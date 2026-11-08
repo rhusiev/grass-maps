@@ -7,8 +7,11 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Debug
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.withContext
+import nl.r1a.grassmap.core.services.AndroidHeadingSource
 import nl.r1a.grassmap.core.services.AndroidLocationSource
 import nl.r1a.grassmap.core.services.AndroidStrings
 import nl.r1a.grassmap.core.services.DeviceInfo
@@ -48,6 +51,7 @@ open class GrassMapsApplication : Application() {
             devTools = devToolsAccess(location),
             aiControlEnabled = { aiControlEnabled() },
             distanceByTap = distanceByTap(),
+            headingSource = AndroidHeadingSource(this, compassScope),
         )
     }
 
@@ -139,6 +143,9 @@ open class GrassMapsApplication : Application() {
     private val runtimeMetrics: RuntimeMetrics by lazy {
         RuntimeMetrics(memoryBytes = ::appMemoryBytes)
     }
+
+    /** The compass outlives an Activity; the map only subscribes while visible. */
+    private val compassScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     /** Total PSS of this process, the figure the panel shows as memory. */
     private fun appMemoryBytes(): Long {

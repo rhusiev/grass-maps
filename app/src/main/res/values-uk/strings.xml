@@ -10,15 +10,21 @@
     <string name="plugin.file_gpx.description">Імпортує треки, маршрути та точки з GPX 1.0 і 1.1.</string>
     <string name="plugin.dev_tools.name">Інструменти розробника</string>
     <string name="plugin.dev_tools.description">Запускає відтворення GPX і показує частоту кадрів і пам\'ять.</string>
+    <string name="plugin.map_controls.name">Керування картою</string>
+    <string name="plugin.map_controls.description">Режими камери, компас і зсув позначки позиції.</string>
 
     <string name="control_zoom_in_label">+</string>
     <string name="control_zoom_in_description">Наблизити</string>
     <string name="control_zoom_out_label">-</string>
     <string name="control_zoom_out_description">Віддалити</string>
-    <string name="control_north_up_label">N</string>
-    <string name="control_north_up_description">Повернути на північ</string>
-    <string name="control_follow_label">П</string>
-    <string name="control_follow_description">Стежити за позицією</string>
+    <string name="control_compass_label">N</string>
+    <string name="control_compass_description">Компас. Натисніть, щоб повернути на північ.</string>
+    <string name="control_follow_label_free">П</string>
+    <string name="control_follow_description_free">Стежити за позицією</string>
+    <string name="control_follow_label_follow">С</string>
+    <string name="control_follow_description_follow">Стеження за позицією. Натисніть для орієнтації за курсом.</string>
+    <string name="control_follow_label_heading">К</string>
+    <string name="control_follow_description_heading">Орієнтація за курсом. Натисніть, щоб припинити стеження.</string>
     <string name="location_permission_denied">Місцеположення вимкнено. Grass Maps потрібне воно лише для того, щоб показати, де ви. Увімкніть його для Grass Maps у налаштуваннях Android.</string>
     <string name="location_age_now">щойно</string>
     <string name="location_age_seconds">%1$d с тому</string>

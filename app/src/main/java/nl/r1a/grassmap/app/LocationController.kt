@@ -3,27 +3,20 @@ package nl.r1a.grassmap.app
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import nl.r1a.grassmap.core.services.LocationSource
-import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.error.onFailure
-import nl.r1a.grassmap.plugin.api.host.MapHost
-import nl.r1a.grassmap.plugin.api.model.CameraUpdate
-import nl.r1a.grassmap.plugin.api.model.LocationFix
-import nl.r1a.grassmap.plugin.api.model.TrackingMode
+import nl.r1a.grassmap.plugins.map.controls.CameraMode
+import nl.r1a.grassmap.plugins.map.controls.CameraModeController
 
 /**
  * Process-scoped collector for the active [LocationSource].
  *
- * Every fix, including a null one, goes to the bound [MapHost] so the puck stays
- * current. While following, a fix also recenters the camera. While free, the
- * camera never moves. A map gesture does not stop following yet; the
- * camera-mode button that owns that is T-0106.
+ * Every fix, including a null one, goes to the bound map host through
+ * [CameraModeController] so the puck stays current and the camera follows or
+ * points along the direction of travel according to the current camera mode.
  *
  * The controller holds the map session, not a surface, so it survives Activity
  * recreation and rebinds with [syncToHost].
@@ -34,16 +27,11 @@ import nl.r1a.grassmap.plugin.api.model.TrackingMode
  */
 class LocationController(
     private val source: LocationSource,
-    private val session: MapSessionHolder,
     private val scope: CoroutineScope,
+    private val modes: CameraModeController,
 ) {
-    private val _isFollowing = MutableStateFlow(false)
-
-    /** Whether the camera follows each fix. */
-    val isFollowing: StateFlow<Boolean> = _isFollowing.asStateFlow()
-
-    @Volatile
-    private var latestFix: LocationFix? = null
+    /** The free, follow or heading camera mode. */
+    val mode: StateFlow<CameraMode> = modes.mode
 
     private var job: Job? = null
 
@@ -59,7 +47,7 @@ class LocationController(
                     .catch { error ->
                         Log.w(TAG, "location source stopped: ${error.message}")
                     }.collect { fix ->
-                        apply(fix)
+                        modes.onFix(fix)
                     }
             }
     }
@@ -80,48 +68,20 @@ class LocationController(
     }
 
     /**
-     * Toggles following, applies the matching tracking mode and returns the new
-     * state. A command before the map binds is [AppError.NotReady].
+     * Toggles between following and free and returns whether the camera now
+     * follows. The my-position button uses the full free, follow and heading
+     * cycle through [CameraModeController]; this keeps the plain two-state
+     * toggle for callers that only need following.
      */
-    suspend fun toggleFollowing(): Outcome<Boolean> {
-        val host = session.hostOrNull() ?: return Outcome.Failure(AppError.NotReady)
-        val following = !_isFollowing.value
-        _isFollowing.value = following
-        host
-            .setTrackingMode(if (following) TrackingMode.Follow else TrackingMode.Free)
-            .onFailure { error -> Log.w(TAG, "tracking mode rejected: $error") }
-        if (following) {
-            latestFix?.let { center(host, it) }
+    suspend fun toggleFollowing(): Outcome<Boolean> =
+        when (val outcome = modes.toggle()) {
+            is Outcome.Success -> Outcome.Success(outcome.value != CameraMode.Free)
+            is Outcome.Failure -> outcome
         }
-        return Outcome.Success(following)
-    }
 
-    /** Pushes the latest fix and follow state to a newly bound host. */
+    /** Pushes the latest fix and camera mode to a newly bound host. */
     suspend fun syncToHost() {
-        val host = session.hostOrNull() ?: return
-        val fix = latestFix
-        host.setLocation(fix).onFailure { error -> Log.w(TAG, "puck rejected: $error") }
-        if (_isFollowing.value && fix != null) {
-            center(host, fix)
-        }
-    }
-
-    private suspend fun apply(fix: LocationFix?) {
-        latestFix = fix
-        val host = session.hostOrNull() ?: return
-        host.setLocation(fix).onFailure { error -> Log.w(TAG, "puck rejected: $error") }
-        if (_isFollowing.value && fix != null) {
-            center(host, fix)
-        }
-    }
-
-    private suspend fun center(
-        host: MapHost,
-        fix: LocationFix,
-    ) {
-        host
-            .moveCamera(CameraUpdate(center = fix.position))
-            .onFailure { error -> Log.w(TAG, "recenter rejected: $error") }
+        modes.syncToHost()
     }
 
     private companion object {

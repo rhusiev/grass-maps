@@ -234,6 +234,7 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/gpx` | GPX 1.0/1.1 as a `FileFormat` provider | `plugin-api` |
 | `plugins/info-widgets` | the altitude, coordinates and GPS info widget data providers | `plugin-api` |
 | `plugins/dev-tools` | the release development-tools panel and its GPX replay start/stop commands | `plugin-api` |
+| `plugins/map-controls` | the free, follow and heading camera mode, the compass reset and the position-marker offset seam | `plugin-api` |
 
 ## Map seam
 
@@ -329,9 +330,9 @@ MapLibre issue #4821 away from a stationary fix. Before the first live fix the
 puck is a grey ring at the last known place with its age, and a poor-accuracy
 fix adds an accuracy circle. A null fix removes the source and every layer.
 
-A map gesture does not stop following in T-0022. The camera-mode button and the
-free/follow/heading cycle are T-0106; until then the follow button only toggles
-`Free` and `Follow`.
+A map gesture does not stop following in T-0022. The my-position button cycles
+`Free`, `Follow` and `Heading` (T-0106). Heading uses the fix bearing while the
+fix moves, else the device compass, and degrades to `Follow` when neither exists.
 
 A two-finger tap zooms out one level. When the distance-by-tap setting is on,
 the same gesture measures instead: the two touch points are projected to the
@@ -361,12 +362,27 @@ goes away, returns `AppError.NotReady` instead of writing to a dead engine.
 Camera restoration across Activity recreation is deferred with the rest of the
 map session (architecture section 8.1); the holder is not a camera store.
 
-`core.map.follow` toggles a process-scoped `LocationController`. The controller
-collects a `core-services` `LocationSource` and, on every fix, calls
-`MapHost.setLocation`. While following it also calls `moveCamera(center)`; while
-free it does not move the camera. `setTrackingMode(Follow/Free)` mirrors the
-state. The controller holds the map session, not a surface, so it keeps running
-across Activity recreation and pushes the latest fix to a newly bound host.
+`core.map.follow` cycles a process-scoped `LocationController` through the free,
+follow and heading camera modes; `map` and `plugins/map-controls` own the state
+behind it. The controller collects a `core-services` `LocationSource` and, on
+every fix, calls `MapHost.setLocation`. It recenters once when follow or heading
+starts and after a host bind; after that the map host's frame loop owns the
+centre and interpolates the puck. In heading mode the controller adds the travel
+bearing, or the compass bearing, and leaves the centre to the frame loop. It
+drops to follow when neither bearing exists. In free mode it does not move the
+camera. `setTrackingMode` mirrors the state. `core.map.north_up` is the compass
+button: it sets the bearing to 0 and leaves heading mode for follow, so the map
+does not rotate away from north on the next fix. The controller holds the map
+session, not a surface, so it keeps running across Activity recreation and
+pushes the latest fix to a newly bound host.
+
+The position-marker offset is a `PositionOffsetFraction` resolved against the
+viewport the map currently occupies, then passed to `MapHost.setPositionOffset`.
+The host turns it into camera padding, so the map centre and the puck sit at
+that screen point. The offset is supplied per profile through
+`PositionOffsetProvider`; until T-0601 the app uses the centred provider and the
+`map-controls` plugin declares the profile-scoped
+`map.controls.position_offset_y` setting with a default of 0.
 
 The app builds the four commands once, gives them to `PluginHost` as
 `hostCommands`, and appends matching `GeneratedCommand` entries owned by

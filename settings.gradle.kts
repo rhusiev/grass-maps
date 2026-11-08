@@ -38,4 +38,5 @@ include(
     ":plugins:gpx",
     ":plugins:info-widgets",
     ":plugins:dev-tools",
+    ":plugins:map-controls",
 )

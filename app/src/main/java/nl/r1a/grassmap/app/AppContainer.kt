@@ -4,6 +4,7 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.StateFlow
 import nl.r1a.grassmap.app.generated.GeneratedPlugins
 import nl.r1a.grassmap.app.generated.GeneratedStreams
 import nl.r1a.grassmap.core.CommandBus
@@ -11,11 +12,13 @@ import nl.r1a.grassmap.core.CommandDispatchers
 import nl.r1a.grassmap.core.PluginHost
 import nl.r1a.grassmap.core.ProviderRegistry
 import nl.r1a.grassmap.core.StreamRegistry
+import nl.r1a.grassmap.core.services.DEFAULT_PROFILE
 import nl.r1a.grassmap.core.services.DeviceInfo
 import nl.r1a.grassmap.core.services.Diagnostics
 import nl.r1a.grassmap.core.services.InMemoryLocationPermissionStore
 import nl.r1a.grassmap.core.services.LocationPermissionStore
 import nl.r1a.grassmap.core.services.LocationSource
+import nl.r1a.grassmap.core.services.NoHeadingSource
 import nl.r1a.grassmap.core.services.NoLocationSource
 import nl.r1a.grassmap.core.services.PrivacyNetworkGate
 import nl.r1a.grassmap.core.services.PrivacySwitchSettings
@@ -27,10 +30,15 @@ import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
+import nl.r1a.grassmap.plugin.api.service.HeadingSource
 import nl.r1a.grassmap.plugin.api.service.NetworkGate
 import nl.r1a.grassmap.plugin.api.service.PrivacySwitches
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugins.dev.tools.DevToolsContract
+import nl.r1a.grassmap.plugins.map.controls.CameraModeController
+import nl.r1a.grassmap.plugins.map.controls.MapControls
+import nl.r1a.grassmap.plugins.map.controls.PositionOffsetFraction
+import nl.r1a.grassmap.plugins.map.controls.PositionOffsetProvider
 import nl.r1a.grassmap.regions.GateNetworkAccess
 import nl.r1a.grassmap.regions.HttpDownloadTransport
 import nl.r1a.grassmap.regions.NetworkAccess
@@ -60,15 +68,35 @@ class AppContainer(
     val devTools: DevToolsRuntime = NoDevToolsRuntime,
     private val aiControlEnabled: () -> Boolean = { false },
     val distanceByTap: DistanceByTapSetting = DistanceByTapSetting { false },
+    private val headingSource: HeadingSource = NoHeadingSource,
+    private val positionOffsetProvider: PositionOffsetProvider = PositionOffsetProvider.CENTERED,
 ) {
     private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     /** The process-owned map binding that host commands write through. */
     val mapSession: MapSessionHolder = MapSessionHolder()
 
+    /** Owns the free, follow and heading cycle across Activity recreation. */
+    val cameraModes: CameraModeController by lazy {
+        CameraModeController(
+            host = mapSession::hostOrNull,
+            heading = headingSource.headingDegrees,
+            store = MapControls.modes,
+            log = { message -> Log.w(MAP_CONTROLS_TAG, message) },
+        )
+    }
+
+    /** The marker offset for the active profile; T-0601 reads it per profile. */
+    val positionOffset: PositionOffsetFraction
+        get() = positionOffsetProvider.offsetForProfile(DEFAULT_PROFILE.value)
+
+    /** The compass; the map subscribes while it is visible. */
+    val heading: StateFlow<Double?>
+        get() = headingSource.headingDegrees
+
     /** The process-owned location collector; it survives Activity recreation. */
     val locationController: LocationController by lazy {
-        LocationController(locationSource, mapSession, processScope).also { it.start() }
+        LocationController(locationSource, processScope, cameraModes).also { it.start() }
     }
 
     /** The permission decision for the position control, bound by the activity. */
@@ -143,7 +171,7 @@ class AppContainer(
     }
 
     private val hostCommands: List<Command<*, *>> by lazy {
-        mapCommands(mapSession, locationController, locationPermission) +
+        mapCommands(mapSession, locationController, locationPermission, cameraModes) +
             routeCommands(mapSession, { routingEngine }, { dataSources }) +
             navCommands(mapSession, { routingEngine }) +
             searchCommands { places } +
@@ -206,6 +234,7 @@ class AppContainer(
         const val ROUTING_TAG = "GrassMapsRouting"
         const val SEARCH_TAG = "GrassMapsSearch"
         const val REGIONS_TAG = "GrassMapsRegions"
+        const val MAP_CONTROLS_TAG = "GrassMapsMapControls"
         const val ROUTING_PACK_DIRECTORY = "valhalla"
     }
 }

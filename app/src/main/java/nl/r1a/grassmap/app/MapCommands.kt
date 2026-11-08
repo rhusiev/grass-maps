@@ -19,6 +19,8 @@ import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.MapHost
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
 import nl.r1a.grassmap.plugin.api.model.CameraUpdate
+import nl.r1a.grassmap.plugins.map.controls.CameraMode
+import nl.r1a.grassmap.plugins.map.controls.CameraModeController
 
 /** The owner of host commands that have no plugin behind them. */
 internal val CORE_PLUGIN: PluginId = PluginId("core")
@@ -35,12 +37,13 @@ internal fun mapCommands(
     session: MapSessionHolder,
     location: LocationController,
     permission: LocationPermissionCoordinator,
+    modes: CameraModeController,
 ): List<Command<*, *>> =
     listOf(
         ZoomCommand(session, ZOOM_STEP),
         ZoomCommand(session, -ZOOM_STEP),
-        NorthUpCommand(session),
-        FollowCommand(location, permission),
+        NorthUpCommand(modes),
+        FollowCommand(location, permission, modes),
     )
 
 /** The bus-side catalog entries for [commands], owned by the core host plugin. */
@@ -106,7 +109,7 @@ internal class ZoomCommand(
 
 /** Points the camera north and returns the new bearing. */
 internal class NorthUpCommand(
-    private val session: MapSessionHolder,
+    private val modes: CameraModeController,
 ) : Command<Unit, Double>(
         id = MapControlCommands.NORTH_UP,
         paramsSerializer = UnitParamsSerializer,
@@ -114,13 +117,11 @@ internal class NorthUpCommand(
         doc = "Sets the map bearing to north and returns it.",
         policy = HOST_POLICY,
     ) {
-    override suspend fun execute(params: Unit): Outcome<CommandResult<Double>> {
-        val host = session.hostOrNull() ?: return Outcome.Failure(AppError.NotReady)
-        return when (val outcome = host.moveCamera(CameraUpdate(bearing = NORTH_BEARING))) {
-            is Outcome.Success -> Outcome.Success(CommandResult(NORTH_BEARING))
+    override suspend fun execute(params: Unit): Outcome<CommandResult<Double>> =
+        when (val outcome = modes.resetNorth()) {
+            is Outcome.Success -> Outcome.Success(CommandResult(outcome.value))
             is Outcome.Failure -> outcome
         }
-    }
 }
 
 private suspend fun move(
@@ -135,18 +136,19 @@ private suspend fun move(
 
 /**
  * Asks for the location permission when the user first taps the position
- * control, then toggles camera follow. A denied answer is
+ * control, then advances free, follow and heading. A denied answer is
  * [AppError.PermissionDenied]: the map keeps working and the screen explains
- * why location helps.
+ * why location helps. The result is whether the camera follows after the tap.
  */
 internal class FollowCommand(
     private val location: LocationController,
     private val permission: LocationPermissionCoordinator,
+    private val modes: CameraModeController,
 ) : Command<Unit, Boolean>(
         id = MapControlCommands.FOLLOW,
         paramsSerializer = UnitParamsSerializer,
         resultSerializer = Boolean.serializer(),
-        doc = "Toggles following the current position and returns the new state.",
+        doc = "Cycles free, follow and heading and returns whether the camera follows.",
         policy = HOST_POLICY,
     ) {
     override suspend fun execute(params: Unit): Outcome<CommandResult<Boolean>> =
@@ -160,13 +162,16 @@ internal class FollowCommand(
                     Outcome.Failure(AppError.PermissionDenied)
                 } else {
                     location.onPermissionGranted()
-                    when (val outcome = location.toggleFollowing()) {
-                        is Outcome.Success -> Outcome.Success(CommandResult(outcome.value))
-                        is Outcome.Failure -> outcome
+                    when (val outcome = modes.cycle()) {
+                        is Outcome.Success -> {
+                            Outcome.Success(CommandResult(outcome.value != CameraMode.Free))
+                        }
+
+                        is Outcome.Failure -> {
+                            outcome
+                        }
                     }
                 }
             }
         }
 }
-
-private const val NORTH_BEARING: Double = 0.0

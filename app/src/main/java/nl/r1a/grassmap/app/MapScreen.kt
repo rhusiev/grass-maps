@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -25,9 +26,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineStart
@@ -58,6 +62,7 @@ import nl.r1a.grassmap.plugin.api.model.StyleId
 import nl.r1a.grassmap.plugin.api.model.StyleSpec
 import nl.r1a.grassmap.plugin.api.provider.MapLayerContract
 import nl.r1a.grassmap.plugin.api.provider.MapLayerProvider
+import nl.r1a.grassmap.plugins.map.controls.CameraMode
 import nl.r1a.grassmap.ui.shell.ControlBarLabels
 import nl.r1a.grassmap.ui.shell.ControlButton
 import nl.r1a.grassmap.ui.shell.MapControlBar
@@ -149,6 +154,33 @@ private fun MapContent(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val cameraMode by container.locationController.mode.collectAsState()
+    val density = LocalDensity.current
+    var viewport by remember { mutableStateOf(IntSize.Zero) }
+    val markerOffset = container.positionOffset
+    val screenOffset =
+        remember(markerOffset, viewport, density) {
+            markerOffset.resolve(
+                viewportWidthDp = with(density) { viewport.width.toDp().value },
+                viewportHeightDp = with(density) { viewport.height.toDp().value },
+            )
+        }
+    LaunchedEffect(surface.host, screenOffset) {
+        if (screenOffset.x == 0f && screenOffset.y == 0f) {
+            return@LaunchedEffect
+        }
+        surface.host.setPositionOffset(screenOffset).onFailure { error ->
+            Log.w(TAG, "position offset rejected: $error")
+        }
+    }
+    LaunchedEffect(cameraMode, container) {
+        if (cameraMode != CameraMode.Heading) {
+            return@LaunchedEffect
+        }
+        // Collecting is what starts the cold compass flow; heading mode is its
+        // only consumer, so free and follow keep the rotation-vector sensor off.
+        container.heading.collect { }
+    }
     LaunchedEffect(container.locationController, surface.host) {
         container.locationController.syncToHost()
     }
@@ -188,7 +220,7 @@ private fun MapContent(
         val active = store ?: return@LaunchedEffect
         layout = withContext(Dispatchers.IO) { active.load(DEFAULT_PROFILE) }
     }
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().onSizeChanged { viewport = it }) {
         MapSurfaceView(
             surface = surface,
             modifier = Modifier.fillMaxSize(),
@@ -196,7 +228,7 @@ private fun MapContent(
             onDistanceMeasured = { meters -> distance = MapDistance.readout(meters) },
         )
         MapControlBar(
-            layout = controlButtons(layout, context),
+            layout = controlButtons(layout, context, cameraMode),
             labels = controlBarLabels(context),
             isEditing = isEditing,
             onInvoke = { id ->
@@ -331,14 +363,18 @@ internal fun moveControl(
 private fun controlButtons(
     layout: List<CommandId>,
     context: Context,
+    mode: CameraMode,
 ): List<ControlButton> {
-    val buttons = layout.mapNotNull { id -> controlButton(id, context) }
-    return buttons.ifEmpty { MapControlCommands.DEFAULT_ORDER.mapNotNull { controlButton(it, context) } }
+    val buttons = layout.mapNotNull { id -> controlButton(id, context, mode) }
+    return buttons.ifEmpty {
+        MapControlCommands.DEFAULT_ORDER.mapNotNull { controlButton(it, context, mode) }
+    }
 }
 
 private fun controlButton(
     id: CommandId,
     context: Context,
+    mode: CameraMode,
 ): ControlButton? =
     when (id) {
         MapControlCommands.ZOOM_IN -> {
@@ -360,21 +396,48 @@ private fun controlButton(
         MapControlCommands.NORTH_UP -> {
             ControlButton(
                 id = id,
-                label = context.getString(R.string.control_north_up_label),
-                contentDescription = context.getString(R.string.control_north_up_description),
+                label = context.getString(R.string.control_compass_label),
+                contentDescription = context.getString(R.string.control_compass_description),
             )
         }
 
         MapControlCommands.FOLLOW -> {
-            ControlButton(
-                id = id,
-                label = context.getString(R.string.control_follow_label),
-                contentDescription = context.getString(R.string.control_follow_description),
-            )
+            followButton(id, context, mode)
         }
 
         else -> {
             null
+        }
+    }
+
+private fun followButton(
+    id: CommandId,
+    context: Context,
+    mode: CameraMode,
+): ControlButton =
+    when (mode) {
+        CameraMode.Free -> {
+            ControlButton(
+                id = id,
+                label = context.getString(R.string.control_follow_label_free),
+                contentDescription = context.getString(R.string.control_follow_description_free),
+            )
+        }
+
+        CameraMode.Follow -> {
+            ControlButton(
+                id = id,
+                label = context.getString(R.string.control_follow_label_follow),
+                contentDescription = context.getString(R.string.control_follow_description_follow),
+            )
+        }
+
+        CameraMode.Heading -> {
+            ControlButton(
+                id = id,
+                label = context.getString(R.string.control_follow_label_heading),
+                contentDescription = context.getString(R.string.control_follow_description_heading),
+            )
         }
     }
 

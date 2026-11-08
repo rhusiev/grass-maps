@@ -60,6 +60,7 @@ import org.maplibre.compose.map.MaplibreMap
 import org.maplibre.compose.map.RenderStats
 import org.maplibre.compose.map.rememberMapState
 import org.maplibre.compose.style.BaseStyle
+import org.maplibre.compose.util.DpPadding
 import org.maplibre.nativeffi.MaplibreAndroid
 import org.maplibre.spatialk.geojson.Position
 import org.maplibre.compose.camera.CameraUpdate as EngineCameraUpdate
@@ -426,15 +427,21 @@ class MaplibreComposeMapHost internal constructor(
             Outcome.Success(Unit)
         }
 
-    override suspend fun setPositionOffset(offset: ScreenOffset): Outcome<Unit> {
-        session.updatePositionOffset(offset)
-        return Outcome.Success(Unit)
-    }
+    override suspend fun setPositionOffset(offset: ScreenOffset): Outcome<Unit> =
+        withContext(Dispatchers.Main.immediate) {
+            session.updatePositionOffset(offset)
+            state.setCameraPosition(
+                state.cameraPosition.copy(padding = positionPadding(offset)),
+            )
+            Outcome.Success(Unit)
+        }
 
     internal fun pumpPuckFrame() {
         session.framePuck(state.cameraPosition.zoom)
         val display = session.puck.value ?: return
-        if (session.trackingMode != TrackingMode.Follow) {
+        if (session.trackingMode != TrackingMode.Follow &&
+            session.trackingMode != TrackingMode.FollowWithHeading
+        ) {
             return
         }
         // Following moves the camera to the same smoothed position the puck
@@ -586,3 +593,30 @@ private fun CameraPosition.toEngineUpdate(): EngineCameraUpdate =
         pitch = pitch,
         padding = padding,
     )
+
+/**
+ * The camera padding that shows the map centre [offset] dp from the viewport
+ * centre. A top padding `t` moves the centre to `(height + t) / 2`, so the
+ * inset is twice the wanted displacement. A negative offset uses the opposite
+ * edge.
+ */
+internal fun positionPadding(offset: ScreenOffset): DpPadding {
+    val horizontal = offset.x * DOUBLE_DISPLACEMENT
+    val vertical = offset.y * DOUBLE_DISPLACEMENT
+    return DpPadding(
+        horizontal.coerceAtLeast(0f).dp,
+        vertical.coerceAtLeast(0f).dp,
+        (-horizontal).coerceAtLeast(0f).dp,
+        (-vertical).coerceAtLeast(0f).dp,
+    )
+}
+
+/** The dp height at which the camera centre, and so the puck, is drawn. */
+internal fun puckScreenYDp(
+    viewportHeightDp: Float,
+    padding: DpPadding,
+): Float =
+    (viewportHeightDp + padding.calculateTopPadding().value - padding.calculateBottomPadding().value) /
+        DOUBLE_DISPLACEMENT
+
+private const val DOUBLE_DISPLACEMENT = 2f

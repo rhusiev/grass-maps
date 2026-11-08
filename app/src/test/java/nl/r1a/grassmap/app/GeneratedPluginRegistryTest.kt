@@ -42,6 +42,16 @@ class GeneratedPluginRegistryTest {
     }
 
     @Test
+    fun generatedRegistryContainsTheMapControlsPlugin() {
+        assertTrue(
+            GeneratedPlugins.plugins.any { it.manifest.id == PluginId("map.controls") },
+        )
+        assertTrue(
+            GeneratedStreams.streams.any { it.id == StreamId("map.controls.mode") },
+        )
+    }
+
+    @Test
     fun generatedRegistryExposesTheControlAllowlistWithoutActivation() {
         val command = GeneratedPlugins.commands.single { it.id == CommandId("example.set_value") }
 

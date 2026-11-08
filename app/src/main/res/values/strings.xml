@@ -9,15 +9,21 @@
     <string name="plugin.file_gpx.description">Imports tracks, routes and waypoints from GPX 1.0 and 1.1.</string>
     <string name="plugin.dev_tools.name">Development tools</string>
     <string name="plugin.dev_tools.description">Starts a GPX replay and shows frame rate and memory.</string>
+    <string name="plugin.map_controls.name">Map controls</string>
+    <string name="plugin.map_controls.description">Camera modes, the compass and the position-marker offset.</string>
 
     <string name="control_zoom_in_label">+</string>
     <string name="control_zoom_in_description">Zoom in</string>
     <string name="control_zoom_out_label">-</string>
     <string name="control_zoom_out_description">Zoom out</string>
-    <string name="control_north_up_label">N</string>
-    <string name="control_north_up_description">Face north</string>
-    <string name="control_follow_label">P</string>
-    <string name="control_follow_description">Follow position</string>
+    <string name="control_compass_label">N</string>
+    <string name="control_compass_description">Compass. Tap to reset north.</string>
+    <string name="control_follow_label_free">P</string>
+    <string name="control_follow_description_free">Follow position</string>
+    <string name="control_follow_label_follow">F</string>
+    <string name="control_follow_description_follow">Following your position. Tap for heading up.</string>
+    <string name="control_follow_label_heading">H</string>
+    <string name="control_follow_description_heading">Heading up. Tap to stop following.</string>
     <string name="location_permission_denied">Location is off. Grass Maps needs it only to show where you are. You can turn it on for Grass Maps in Android settings.</string>
     <string name="location_age_now">just now</string>
     <string name="location_age_seconds">%1$d s ago</string>

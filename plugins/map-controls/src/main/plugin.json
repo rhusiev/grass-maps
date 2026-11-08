@@ -1,0 +1,34 @@
+{
+  "id": "map.controls",
+  "name": "plugin.map_controls.name",
+  "description": "plugin.map_controls.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.map.controls.MapControlsPlugin",
+  "contributes": {
+    "streams": [
+      {
+        "id": "map.controls.mode",
+        "valueType": "nl.r1a.grassmap.plugins.map.controls.CameraMode",
+        "serializer": "nl.r1a.grassmap.plugins.map.controls.CameraMode.serializer"
+      }
+    ],
+    "settings": [
+      {
+        "key": "map.controls.position_offset_y",
+        "type": "double",
+        "default": 0.0,
+        "scope": "profile"
+      }
+    ]
+  },
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": []
+  },
+  "activation": [
+    "stream",
+    "ui"
+  ]
+}

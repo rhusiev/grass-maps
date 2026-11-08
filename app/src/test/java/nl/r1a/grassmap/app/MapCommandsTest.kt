@@ -26,6 +26,8 @@ import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.TrackingMode
 import nl.r1a.grassmap.plugin.api.service.LocationService
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugins.map.controls.CameraModeController
+import nl.r1a.grassmap.plugins.map.controls.CameraModeStore
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -95,32 +97,45 @@ class MapCommandsTest {
                 )
             session.bind(host)
 
-            val result = NorthUpCommand(session).execute(Unit)
+            val result =
+                NorthUpCommand(CameraModeController(session::hostOrNull, store = CameraModeStore()))
+                    .execute(Unit)
 
             assertEquals(Outcome.Success(CommandResult(0.0)), result)
             assertEquals(listOf(CameraUpdate(bearing = 0.0)), host.moves)
         }
 
     @Test
-    fun followTogglesTrackingModeAndReturnsTheNewState() =
+    fun followCyclesTrackingModeAndReturnsWhetherTheCameraFollows() =
         runTest {
             val session = MapSessionHolder()
             val host = FakeMapHost(Camera(center = ORIGIN, zoom = 10.0))
             session.bind(host)
-            val controller = LocationController(NoLocationSource, session, this)
-            val command = FollowCommand(controller, permission())
+            val modes = CameraModeController(session::hostOrNull, store = CameraModeStore())
+            val controller = LocationController(NoLocationSource, this, modes)
+            val command = FollowCommand(controller, permission(), modes)
 
+            assertEquals(Outcome.Success(CommandResult(true)), command.execute(Unit))
             assertEquals(Outcome.Success(CommandResult(true)), command.execute(Unit))
             assertEquals(Outcome.Success(CommandResult(false)), command.execute(Unit))
 
-            assertEquals(listOf(TrackingMode.Follow, TrackingMode.Free), host.trackingModes)
+            assertEquals(
+                listOf(TrackingMode.Follow, TrackingMode.FollowWithHeading, TrackingMode.Free),
+                host.trackingModes,
+            )
         }
 
     @Test
     fun followWithoutABoundHostIsNotReady() =
         runTest {
             val session = MapSessionHolder()
-            val command = FollowCommand(LocationController(NoLocationSource, session, this), permission())
+            val modes = CameraModeController(session::hostOrNull, store = CameraModeStore())
+            val command =
+                FollowCommand(
+                    LocationController(NoLocationSource, this, modes),
+                    permission(),
+                    modes,
+                )
 
             assertEquals(Outcome.Failure(AppError.NotReady), command.execute(Unit))
         }
@@ -131,10 +146,11 @@ class MapCommandsTest {
             val session = MapSessionHolder()
             val host = FakeMapHost(Camera(center = ORIGIN, zoom = 10.0))
             session.bind(host)
-            val controller = LocationController(NoLocationSource, session, this)
+            val modes = CameraModeController(session::hostOrNull, store = CameraModeStore())
+            val controller = LocationController(NoLocationSource, this, modes)
             val permission = permission(PermissionService())
             permission.bind(this) { false }
-            val command = FollowCommand(controller, permission)
+            val command = FollowCommand(controller, permission, modes)
 
             assertEquals(Outcome.Failure(AppError.PermissionDenied), command.execute(Unit))
 
@@ -239,8 +255,15 @@ class MapCommandsTest {
         assertEquals(layout, moveControl(layout, CommandId("core.map.missing"), 1))
     }
 
-    private fun TestScope.commands(session: MapSessionHolder): List<Command<*, *>> =
-        mapCommands(session, LocationController(NoLocationSource, session, backgroundScope), permission())
+    private fun TestScope.commands(session: MapSessionHolder): List<Command<*, *>> {
+        val modes = CameraModeController(session::hostOrNull, store = CameraModeStore())
+        return mapCommands(
+            session,
+            LocationController(NoLocationSource, backgroundScope, modes),
+            permission(),
+            modes,
+        )
+    }
 
     private fun permission(service: LocationService = NoLocationSource): LocationPermissionCoordinator =
         LocationPermissionCoordinator(

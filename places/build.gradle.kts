@@ -139,13 +139,48 @@ val cargoAndroid =
     }
 
 val hostLibrary = rustTargets.resolve(hostTriple).resolve("release/libgrass_core.so")
-val hostBindgen = rustTargets.resolve(hostTriple).resolve("release/uniffi-bindgen")
+
+// The bindgen binary needs uniffi's CLI feature, which brings uniffi_bindgen
+// into the crate graph. Building it in its own target directory keeps that
+// feature out of the shipped library, whose uniffi_bindgen codegen is not
+// byte-reproducible and is not used at runtime.
+val bindgenTargets = rustBuild.get().dir("target-bindgen").asFile
+val hostBindgen = bindgenTargets.resolve(hostTriple).resolve("release/uniffi-bindgen")
+
+val cargoBindgen =
+    tasks.register<Exec>("cargoBuildBindgen") {
+        group = "rust"
+        description = "Builds the host uniffi-bindgen with its CLI feature."
+        workingDir(rustCrate)
+        environment("CARGO_HOME", cargoHome.absolutePath)
+        environment("CARGO_TARGET_DIR", bindgenTargets.absolutePath)
+        environment("RUSTFLAGS", remapFlags())
+        commandLine(
+            cargoCommand,
+            "build",
+            "--release",
+            "--locked",
+            "--target",
+            hostTriple,
+            "--features",
+            "cli",
+            "--bin",
+            "uniffi-bindgen",
+        )
+        inputs.files(
+            rustCrate.asFileTree.matching {
+                include("src/**", "Cargo.toml", "Cargo.lock", "uniffi.toml", "rust-toolchain.toml")
+            },
+        )
+        inputs.property("remap", remapFlags())
+        outputs.file(hostBindgen)
+    }
 
 val generateRustBindings =
     tasks.register<Exec>("generateRustBindings") {
         group = "rust"
         description = "Generates the Kotlin bindings from the host grass-core library."
-        dependsOn(cargoHost)
+        dependsOn(cargoHost, cargoBindgen)
         workingDir(rustCrate)
         environment("CARGO_HOME", cargoHome.absolutePath)
         commandLine(
@@ -160,6 +195,7 @@ val generateRustBindings =
             "--no-format",
         )
         inputs.file(hostLibrary)
+        inputs.file(hostBindgen)
         inputs.file(rustCrate.file("uniffi.toml"))
         outputs.dir(bindingsDirectory)
     }

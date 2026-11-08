@@ -15,4 +15,6 @@ pub enum CoreError {
     Cancelled,
     #[error("the search index is not open")]
     NotReady,
+    #[error("the data format version is not supported")]
+    Unsupported,
 }

@@ -11,6 +11,7 @@ import nl.r1a.grassmap.plugin.api.provider.PlaceHit
 import nl.r1a.grassmap.plugin.api.provider.SearchContext
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.BeforeClass
 import org.junit.Test
@@ -56,11 +57,16 @@ class RustPlaceProviderContractTest {
         val hits = (search("площа ринок") as Outcome.Success).value
         assertTrue("no hit for площа ринок", hits.isNotEmpty())
         val top = hits.first()
-        val place = (runBlocking { provider.details(top.id, CancellationHandle.None) } as Outcome.Success).value
-        assertEquals(top.name, place.name)
-        assertEquals(top.kind, place.kind)
-        assertEquals(top.position, place.position)
-        assertEquals("lviv-test", place.regionBuild)
+        val details = (runBlocking { provider.details(top.id, CancellationHandle.None) } as Outcome.Success).value
+        assertEquals(top.name, details.place.name)
+        assertEquals(top.kind, details.place.kind)
+        assertEquals(top.position, details.place.position)
+        assertEquals("lviv-test", details.place.regionBuild)
+        // The committed P4a section predates the features component, so the
+        // empty placeholder carries no identity and no tags for any place.
+        assertNull(details.osmType)
+        assertNull(details.osmId)
+        assertTrue(details.tags.isEmpty())
     }
 
     @Test

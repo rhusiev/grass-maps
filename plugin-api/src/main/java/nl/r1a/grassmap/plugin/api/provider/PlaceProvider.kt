@@ -5,6 +5,7 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.BoundingBox
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.OsmType
 
 /**
  * Offline and online place search behind the `places.search` contract.
@@ -38,16 +39,24 @@ interface PlaceProvider : Provider {
         cancellation: CancellationHandle,
     ): Outcome<List<Place>>
 
-    /** The full record behind a [PlaceHit.id] this provider issued. */
+    /**
+     * The full record behind a [PlaceHit.id] this provider issued, with the
+     * canonical OpenStreetMap identity and tag map from the region's features
+     * component.
+     *
+     * A place the component does not carry still returns its [PlaceDetails],
+     * with a null identity and an empty tag map. A missing, truncated or
+     * unknown-version component is a typed failure, never an empty map.
+     */
     suspend fun details(
         placeId: String,
         cancellation: CancellationHandle,
-    ): Outcome<Place>
+    ): Outcome<PlaceDetails>
 }
 
 object PlaceProviderContract {
     const val NAME: String = "places.search"
-    const val VERSION: String = "1.0.0"
+    const val VERSION: String = "2.0.0"
 
     val REFERENCE: ProviderContract = ProviderContract(NAME, VERSION)
 }
@@ -91,4 +100,19 @@ data class Place(
     val address: String?,
     val regionBuild: String,
     val names: Map<String, String> = emptyMap(),
+)
+
+/**
+ * The full record behind a [PlaceHit.id]: the place itself, its canonical
+ * OpenStreetMap identity and its raw OSM tag map.
+ *
+ * [osmType] and [osmId] are both null when the region build has no feature
+ * entry for the place. [tags] is empty when the place carries no tags; it is
+ * never null, and its absence is not an error.
+ */
+data class PlaceDetails(
+    val place: Place,
+    val osmType: OsmType?,
+    val osmId: Long?,
+    val tags: Map<String, String>,
 )

@@ -9,6 +9,7 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.BoundingBox
 import nl.r1a.grassmap.plugin.api.provider.Place
+import nl.r1a.grassmap.plugin.api.provider.PlaceDetails
 import nl.r1a.grassmap.plugin.api.provider.PlaceHit
 import nl.r1a.grassmap.plugin.api.provider.SearchContext
 import java.io.File
@@ -96,7 +97,7 @@ class PlacesAccess(
         indexName: String,
         placeId: String,
         cancellation: CancellationHandle,
-    ): Outcome<Place> = withProvider(indexName) { it.details(placeId, cancellation) }
+    ): Outcome<PlaceDetails> = withProvider(indexName) { it.details(placeId, cancellation) }
 
     private suspend fun <T> withProvider(
         indexName: String,

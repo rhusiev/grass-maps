@@ -21,6 +21,7 @@ internal object TestSearchIndex {
             "entities.bin",
             "kinds.bin",
             "strings.bin",
+            "features.bin",
         )
 
     val directory: Path by lazy {

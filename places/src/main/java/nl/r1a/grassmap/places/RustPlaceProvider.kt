@@ -10,6 +10,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.places.core.CancelToken
 import nl.r1a.grassmap.places.core.CoreException
+import nl.r1a.grassmap.places.core.OsmElementType
 import nl.r1a.grassmap.places.core.PlaceDetail
 import nl.r1a.grassmap.places.core.SearchIndex
 import nl.r1a.grassmap.places.core.SearchSession
@@ -18,7 +19,9 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.BoundingBox
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.OsmType
 import nl.r1a.grassmap.plugin.api.provider.Place
+import nl.r1a.grassmap.plugin.api.provider.PlaceDetails
 import nl.r1a.grassmap.plugin.api.provider.PlaceHit
 import nl.r1a.grassmap.plugin.api.provider.PlaceProvider
 import nl.r1a.grassmap.plugin.api.provider.PlaceProviderContract
@@ -113,13 +116,13 @@ class RustPlaceProvider private constructor(
     override suspend fun details(
         placeId: String,
         cancellation: CancellationHandle,
-    ): Outcome<Place> {
+    ): Outcome<PlaceDetails> {
         if (cancellation.isCancelled()) {
             return Outcome.Failure(AppError.Cancelled)
         }
         val id = parseId(placeId) ?: return Outcome.Failure(AppError.NotFound)
         return withContext(Dispatchers.Default) {
-            runCatchingCore { toPlace(index.details(id)) }
+            runCatchingCore { toDetails(index.details(id)) }
         }
     }
 
@@ -177,6 +180,14 @@ class RustPlaceProvider private constructor(
             address = hit.context.ifBlank { null },
             regionBuild = regionBuild,
             score = hit.score,
+        )
+
+    private fun toDetails(detail: PlaceDetail): PlaceDetails =
+        PlaceDetails(
+            place = toPlace(detail),
+            osmType = detail.osmType?.toOsmType(),
+            osmId = detail.osmId,
+            tags = detail.tags,
         )
 
     private fun toPlace(place: PlaceDetail): Place =
@@ -253,4 +264,12 @@ private fun CoreException.toAppError(): AppError =
         is CoreException.NotFound -> AppError.NotFound
         is CoreException.Cancelled -> AppError.Cancelled
         is CoreException.NotReady -> AppError.NotReady
+        is CoreException.Unsupported -> AppError.Unsupported
+    }
+
+private fun OsmElementType.toOsmType(): OsmType =
+    when (this) {
+        OsmElementType.NODE -> OsmType.NODE
+        OsmElementType.WAY -> OsmType.WAY
+        OsmElementType.RELATION -> OsmType.RELATION
     }

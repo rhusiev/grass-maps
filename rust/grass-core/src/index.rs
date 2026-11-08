@@ -11,6 +11,7 @@ use fst::Map;
 use memmap2::Mmap;
 
 use crate::error::CoreError;
+use crate::features::{Features, PlaceFeature};
 use crate::format::{self, PlaceRecord, FLAG_AREA};
 
 pub struct Index {
@@ -21,6 +22,7 @@ pub struct Index {
     entities: Mmap,
     kinds: Mmap,
     strings: Mmap,
+    features: Features,
     place_count: u32,
     kind_count: u32,
 }
@@ -46,6 +48,7 @@ impl Index {
         let context = map_file(dir, format::CONTEXT_FILE)?;
         let postings = map_file(dir, format::POSTINGS_FILE)?;
         let terms = Map::new(map_file(dir, format::TERMS_FILE)?).map_err(|_| CoreError::CorruptData)?;
+        let features = Features::open(&dir.join(crate::features::FEATURES_FILE))?;
 
         if places.len() % format::PLACE_RECORD_BYTES != 0
             || entities.len() % format::OFFSET_BYTES != 0
@@ -63,6 +66,7 @@ impl Index {
             entities,
             kinds,
             strings,
+            features,
             place_count,
             kind_count,
         };
@@ -97,6 +101,11 @@ impl Index {
         }
         for kind in 0..self.kind_count {
             format::get_string(&self.strings, format::u32_at(&self.kinds, kind as usize)?)?;
+        }
+        for index in 0..self.features.len() {
+            if self.features.place_id_at(index)? >= self.place_count {
+                return Err(CoreError::CorruptData);
+            }
         }
         Ok(())
     }
@@ -151,6 +160,16 @@ impl Index {
 
     pub fn is_area(&self, record: &PlaceRecord) -> bool {
         record.flags & FLAG_AREA != 0
+    }
+
+    /// The canonical identity and tags for [place_id], or null when the
+    /// component has no entry. An entry whose row id is outside the place
+    /// table was rejected at open.
+    pub fn feature(&self, place_id: u32) -> Result<Option<PlaceFeature>, CoreError> {
+        if place_id >= self.place_count {
+            return Err(CoreError::NotFound);
+        }
+        self.features.lookup(place_id)
     }
 
     pub fn search(&self) -> &Map<Mmap> {

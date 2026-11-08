@@ -1,11 +1,13 @@
 //! The uniffi surface: one index object, one session per search box, one
 //! cancellation token. Nothing else crosses into Kotlin.
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use crate::error::CoreError;
+use crate::features::{OsmElementType, PlaceFeature};
 use crate::index::Index;
 use crate::search::{Cancel, Session, TypoAutomata};
 
@@ -39,6 +41,12 @@ pub struct PlaceHit {
 
 /// One place with everything the reader knows. `context` is the joined entity
 /// list, which the Kotlin side exposes as the address line.
+///
+/// `osm_type` and `osm_id` are the canonical OpenStreetMap identity from the
+/// region's features component. Both are null when the component has no entry
+/// for this place. `tags` is the raw OSM tag map for the place, empty when it
+/// carries none; a place with an entry and no tags returns an empty map, never
+/// null and never an error.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct PlaceDetail {
     pub id: u32,
@@ -48,6 +56,9 @@ pub struct PlaceDetail {
     pub latitude: f64,
     pub longitude: f64,
     pub is_area: bool,
+    pub osm_type: Option<OsmElementType>,
+    pub osm_id: Option<i64>,
+    pub tags: HashMap<String, String>,
 }
 
 /// A token the caller sets when the keystroke is superseded. It carries no
@@ -87,6 +98,12 @@ impl SearchIndex {
 
     fn detail(&self, id: u32) -> Result<PlaceDetail, CoreError> {
         let record = self.source().place(id)?;
+        let (osm_type, osm_id, tags) = match self.source().feature(id)? {
+            Some(PlaceFeature { osm_type, osm_id, tags }) => {
+                (Some(osm_type), Some(osm_id), tags.into_iter().collect())
+            }
+            None => (None, None, HashMap::new()),
+        };
         Ok(PlaceDetail {
             id,
             name: self.source().place_name(&record)?.to_owned(),
@@ -101,6 +118,9 @@ impl SearchIndex {
             latitude: f64::from(record.lat_e7) / crate::format::COORD_SCALE,
             longitude: f64::from(record.lon_e7) / crate::format::COORD_SCALE,
             is_area: self.source().is_area(&record),
+            osm_type,
+            osm_id,
+            tags,
         })
     }
 }

@@ -62,6 +62,17 @@ pub struct PlaceRecord {
 }
 
 impl PlaceRecord {
+    /// Appends this record to [out] in the fixed-width layout.
+    pub fn encode(&self, out: &mut Vec<u8>) {
+        out.extend_from_slice(&(self.lat_e7 as u32).to_le_bytes());
+        out.extend_from_slice(&(self.lon_e7 as u32).to_le_bytes());
+        out.extend_from_slice(&self.name_offset.to_le_bytes());
+        out.extend_from_slice(&self.context_offset.to_le_bytes());
+        out.extend_from_slice(&self.kind.to_le_bytes());
+        out.push(self.importance);
+        out.push(self.flags);
+    }
+
     pub fn decode(bytes: &[u8]) -> Result<Self, CoreError> {
         if bytes.len() < PLACE_RECORD_BYTES {
             return Err(CoreError::CorruptData);
@@ -81,6 +92,24 @@ impl PlaceRecord {
             flags: bytes[19],
         })
     }
+}
+
+/// Writes one LEB128 varint. The section builder is the only writer.
+pub fn put_varint(out: &mut Vec<u8>, mut value: u64) {
+    while value >= 0x80 {
+        out.push((value as u8) | 0x80);
+        value >>= 7;
+    }
+    out.push(value as u8);
+}
+
+/// Appends a length-prefixed string and returns its offset. A section larger
+/// than the u32 offsets it stores is invalid input, not a silent truncation.
+pub fn put_string(out: &mut Vec<u8>, text: &str) -> Result<u32, CoreError> {
+    let offset = u32::try_from(out.len()).map_err(|_| CoreError::InvalidInput)?;
+    put_varint(out, text.len() as u64);
+    out.extend_from_slice(text.as_bytes());
+    Ok(offset)
 }
 
 /// Reads a LEB128 varint at `*pos`, advancing it. A varint longer than 10

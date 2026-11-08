@@ -298,11 +298,14 @@ comes from the control channel.
 
 The Standard goldens in `test-data/map-goldens/standard/light/` and
 `standard/dark/` are ten fixture places at z12, z13 and z14, captured in both
-variants. They run in CI on the API 29 emulator with the same image and
-swiftshader GPU as the smoke job. The committed set is that renderer's own
-output: 1080x1920 API 29 swiftshader captures, promoted from the CI artifact
-rather than by raising the 5 % tolerance. Recapture with `--update` on the same
-emulator, never from a different device size:
+variants. They run in CI on the API 29 emulator with the `swangle` software
+renderer. `swiftshader_indirect` zeroes the green channel of every text colour,
+which turns light labels on the dark style magenta; `swangle` renders them
+correctly, and the comparator and its 5 % tolerance are unchanged. The
+committed set is that renderer's own output: 1080x1920 API 29 `swangle`
+captures, promoted from the CI artifact rather than by raising the tolerance.
+Recapture with `--update` on the same emulator, never from a different device
+size:
 
 ```sh
 ./scripts/ci/android-map-goldens.sh --profile standard --style both --update

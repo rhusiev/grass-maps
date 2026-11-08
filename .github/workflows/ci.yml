@@ -110,11 +110,11 @@ jobs:
   # is captured light and dark over ten places at three zooms, then the T-0102
   # fixture set is compared on the same booted emulator.
   emulator-map-goldens:
-    name: Style and fixture map goldens (API 29, swiftshader)
+    name: Style and fixture map goldens (API 29, swangle)
     runs-on: ubuntu-latest
-    # Seeding or comparing 65 captures under swiftshader: about 29 s per
+    # Seeding or comparing 65 captures under software GL: about 29 s per
     # capture plus a 20-minute boot and the one dialog-suppression reboot.
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - name: Check out
         uses: actions/checkout@v7
@@ -140,7 +140,10 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          # swangle renders text colours correctly; swiftshader_indirect drops
+          # the green channel of every text colour, which turns light labels on
+          # the dark style magenta (T-0108). The comparator is unchanged.
+          emulator-options: -no-snapshot -no-window -gpu swangle -noaudio -no-boot-anim -camera-back none
           script: ./scripts/ci/android-goldens-ci.sh app/build/outputs/apk/debug/app-debug.apk
       - name: Keep the goldens and diff images
         if: always()

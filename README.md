@@ -229,6 +229,7 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/synthetic-data` | the synthetic elevation `DataSource` and its real contour overlay | `plugin-api` |
 | `plugins/gpx` | GPX 1.0/1.1 as a `FileFormat` provider | `plugin-api` |
 | `plugins/info-widgets` | the altitude, coordinates and GPS info widget data providers | `plugin-api` |
+| `plugins/dev-tools` | the release development-tools panel and its GPX replay start/stop commands | `plugin-api` |
 
 ## Map seam
 
@@ -379,9 +380,14 @@ location helps.
 A debug build replays `MockGpxLocationSource` over the bundled `mock-walk.gpx`
 one fix per second, looping at the end. Launching the activity with
 `--ez t0103_platform_location true` uses the real platform source instead, which
-is how the permission flow is exercised on the emulator. The mock lives in
-`DebugApplication` and `LoggingLocationSource` in the debug source set; the
-release application never references them.
+is how the permission flow is exercised on the emulator.
+
+A release build starts on the platform source and can switch to the same
+committed replay through the development-tools panel. That panel is behind the
+AI-control switch and stays invisible and unusable until T-0610 supplies the
+switch; `LoggingLocationSource` remains debug-only. The fixture is the same
+`test-data/location/mock-walk.gpx` and now ships in the main assets, so the
+release panel can parse it.
 
 ## DataSource seam
 

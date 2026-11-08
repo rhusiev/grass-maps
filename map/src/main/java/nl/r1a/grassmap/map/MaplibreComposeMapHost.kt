@@ -227,35 +227,42 @@ fun MapSurfaceView(
     modifier: Modifier = Modifier,
     distanceByTap: DistanceByTapSetting = DistanceByTapSetting { false },
     onDistanceMeasured: (Double) -> Unit = {},
+    onPointSelected: (GeoPoint) -> Unit = {},
 ) {
     val interactions = remember { MapGestures.interactions() }
     val uiOptions = remember { MapGestures.uiOptions() }
     val scope = rememberCoroutineScope()
     val setting = rememberUpdatedState(distanceByTap)
     val distanceSink = rememberUpdatedState(onDistanceMeasured)
+    val selectionSink = rememberUpdatedState(onPointSelected)
     val projector = remember(surface) { surface.screenProjector() }
     MaplibreMap(
         modifier =
-            modifier.pointerInput(surface) {
-                detectTwoFingerTap { from, to ->
-                    val camera = cameraModel(surface.state.cameraPosition)
-                    when (val action = twoFingerTapAction(setting.value.isEnabled(), camera.zoom, from, to, projector)) {
-                        is TwoFingerTapAction.ZoomOut -> {
-                            scope.launch {
-                                surface.host.moveCamera(CameraUpdate(zoom = action.zoom))
+            modifier
+                .pointerInput(surface) {
+                    detectTwoFingerTap { from, to ->
+                        val camera = cameraModel(surface.state.cameraPosition)
+                        when (val action = twoFingerTapAction(setting.value.isEnabled(), camera.zoom, from, to, projector)) {
+                            is TwoFingerTapAction.ZoomOut -> {
+                                scope.launch {
+                                    surface.host.moveCamera(CameraUpdate(zoom = action.zoom))
+                                }
+                            }
+
+                            is TwoFingerTapAction.Distance -> {
+                                distanceSink.value(action.meters)
+                            }
+
+                            TwoFingerTapAction.Ignored -> {
+                                Unit
                             }
                         }
-
-                        is TwoFingerTapAction.Distance -> {
-                            distanceSink.value(action.meters)
-                        }
-
-                        TwoFingerTapAction.Ignored -> {
-                            Unit
-                        }
                     }
-                }
-            },
+                }.pointerInput(surface) {
+                    detectLongPress { point ->
+                        projector.geoPointAt(point)?.let { selected -> selectionSink.value(selected) }
+                    }
+                },
         state = surface.state,
         interactions = interactions,
         uiOptions = uiOptions,

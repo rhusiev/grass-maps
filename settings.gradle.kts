@@ -39,4 +39,5 @@ include(
     ":plugins:info-widgets",
     ":plugins:dev-tools",
     ":plugins:map-controls",
+    ":plugins:point-info",
 )

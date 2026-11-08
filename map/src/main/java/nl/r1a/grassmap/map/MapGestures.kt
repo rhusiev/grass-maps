@@ -16,6 +16,7 @@ import org.maplibre.compose.map.MapUiOptions
  * | double-tap zoom in | tap, exactly one zoom level |
  * | one-finger zoom | tap-drag after a double tap |
  * | two-finger tap | one zoom level out, or distance by tap (T-0105) |
+ * | long press | select the map point under the finger (T-0112) |
  */
 internal object MapGestures {
     /** One double tap changes the zoom by exactly this many levels. */
@@ -29,6 +30,12 @@ internal object MapGestures {
 
     /** The furthest either finger may travel, in dp, and still count as a tap. */
     const val TWO_FINGER_TAP_MAX_TRAVEL_DP: Float = 12f
+
+    /** The shortest a still one-finger press may stay down to select a point. */
+    const val LONG_PRESS_MIN_MILLIS: Long = 500L
+
+    /** The furthest the finger may travel, in dp, and still count as a long press. */
+    const val LONG_PRESS_MAX_TRAVEL_DP: Float = 12f
 
     /** A two-pointer span ratio maps to the same zoom ratio. */
     const val PINCH_ZOOM_SCALE: Double = 1.0
@@ -78,6 +85,11 @@ internal object MapGestures {
                 // The two-finger tap is ours (T-0105), so the engine must not
                 // also zoom on it; the detector in MapSurfaceView owns it.
                 twoFingerTap {
+                    enabled = false
+                }
+                // The long press is ours too (T-0112), so the selection
+                // detector in MapSurfaceView is its only owner.
+                longPress {
                     enabled = false
                 }
                 tapDrag {

@@ -4,7 +4,11 @@ import android.content.Context
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -30,6 +34,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -69,6 +75,9 @@ import nl.r1a.grassmap.plugins.map.controls.CameraMode
 import nl.r1a.grassmap.plugins.map.controls.ScaleBar
 import nl.r1a.grassmap.plugins.map.controls.ScaleBarReading
 import nl.r1a.grassmap.plugins.map.controls.ScaleBarUnit
+import nl.r1a.grassmap.plugins.point.info.PointInfoContract
+import nl.r1a.grassmap.plugins.point.info.PointInfoLabel
+import nl.r1a.grassmap.plugins.point.info.SelectedPointValue
 import nl.r1a.grassmap.ui.shell.ControlBarLabels
 import nl.r1a.grassmap.ui.shell.ControlButton
 import nl.r1a.grassmap.ui.shell.MapControlBar
@@ -87,6 +96,11 @@ private const val BANNER_CORNER_DP = 8
 private const val BANNER_HORIZONTAL_DP = 16
 private const val BANNER_VERTICAL_DP = 10
 private const val BANNER_FONT_SP = 14
+private const val LABEL_GAP_DP = 8
+private const val LABEL_ROW_GAP_DP = 2
+private const val LABEL_CLEAR_FONT_SP = 18
+private const val LABEL_CLEAR_PADDING_DP = 4
+private const val CLEAR_GLYPH = "×"
 private const val DISTANCE_BADGE_MILLIS = 4_000L
 private const val METRE_DECIMALS = 1
 private const val KILOMETRE_DECIMALS = 2
@@ -149,6 +163,9 @@ private fun BindMapSession(
     DisposableEffect(session, surface.host) {
         session.bind(surface.host)
         onDispose { session.unbind(surface.host) }
+    }
+    LaunchedEffect(session, surface.host) {
+        surface.host.camera.collect { camera -> session.recordCamera(camera) }
     }
 }
 
@@ -214,6 +231,12 @@ private fun MapContent(
     var layout by remember { mutableStateOf(MapControlCommands.DEFAULT_ORDER) }
     var isEditing by remember { mutableStateOf(false) }
     var distance by remember { mutableStateOf<DistanceReadout?>(null) }
+    val selectionFlow =
+        remember(container) {
+            container.streamAccess.subscribe<SelectedPointValue>(PointInfoContract.selectionStream)
+        }
+    val selectedPoint by selectionFlow.collectAsState(initial = SelectedPointValue())
+    val selectedRows = PointInfoLabel.rows(selectedPoint, container.strings)
     val unitStore by
         produceState<UnitSettings?>(null) {
             value = withContext(Dispatchers.IO) { container.unitSettings }
@@ -238,7 +261,20 @@ private fun MapContent(
             modifier = Modifier.fillMaxSize(),
             distanceByTap = container.distanceByTap,
             onDistanceMeasured = { meters -> distance = MapDistance.readout(meters) },
+            onPointSelected = { point -> container.selectedPoint.select(point) },
         )
+        if (selectedRows.isNotEmpty()) {
+            SelectedPointLabel(
+                rows = selectedRows,
+                clearDescription = stringResource(R.string.point_info_clear_description),
+                onClear = { container.selectedPoint.clear() },
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .statusBarsPadding()
+                        .padding(BAR_PADDING_DP.dp),
+            )
+        }
         MapScaleOverlay(
             surface = surface,
             settings = unitStore,
@@ -559,6 +595,44 @@ private fun formatDistanceValue(
     value: Double,
     decimals: Int,
 ): String = String.format(Locale.getDefault(), "%.${decimals}f", value)
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun SelectedPointLabel(
+    rows: List<String>,
+    clearDescription: String,
+    onClear: () -> Unit,
+    modifier: Modifier,
+) {
+    Row(
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(BANNER_CORNER_DP.dp))
+                .background(DISTANCE_BADGE_BACKGROUND)
+                .padding(horizontal = BANNER_HORIZONTAL_DP.dp, vertical = BANNER_VERTICAL_DP.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(LABEL_GAP_DP.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(LABEL_ROW_GAP_DP.dp)) {
+            rows.forEach { row ->
+                BasicText(
+                    text = row,
+                    style = TextStyle(color = Color.White, fontSize = BANNER_FONT_SP.sp),
+                )
+            }
+        }
+        BasicText(
+            text = CLEAR_GLYPH,
+            style = TextStyle(color = Color.White, fontSize = LABEL_CLEAR_FONT_SP.sp),
+            modifier =
+                Modifier
+                    .clip(RoundedCornerShape(BANNER_CORNER_DP.dp))
+                    .clickable(onClick = onClear)
+                    .semantics { contentDescription = clearDescription }
+                    .padding(horizontal = LABEL_CLEAR_PADDING_DP.dp),
+        )
+    }
+}
 
 @Suppress("ktlint:standard:function-naming")
 @Composable

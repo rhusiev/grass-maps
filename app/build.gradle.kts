@@ -117,6 +117,7 @@ dependencies {
     implementation(project(":plugins:info-widgets"))
     implementation(project(":plugins:dev-tools"))
     implementation(project(":plugins:map-controls"))
+    implementation(project(":plugins:point-info"))
 
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("org.jetbrains.compose.ui:ui:1.12.1")

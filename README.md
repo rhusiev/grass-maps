@@ -237,6 +237,7 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/info-widgets` | the altitude, coordinates and GPS info widget data providers | `plugin-api` |
 | `plugins/dev-tools` | the release development-tools panel and its GPX replay start/stop commands | `plugin-api` |
 | `plugins/map-controls` | the free, follow and heading camera mode, the compass reset, the position-marker offset seam and the scale-bar layout | `plugin-api` |
+| `plugins/point-info` | the distance and azimuth from the fix or map centre to a long-pressed point | `plugin-api` |
 
 ## Map seam
 
@@ -366,6 +367,18 @@ contract lives in `MapGestures`, which disables the library's own two-finger tap
 binding so one gesture has one owner. The emulator cannot inject a second
 pointer, so the recogniser decision and the projection-to-haversine maths are
 unit tests and the pointer loop is unexercised on a device.
+
+A one-finger long press selects the map point under the finger (T-0112): the
+finger must stay within the 12 dp touch slop for 500 ms, and a second finger or
+an early move produces no selection. `MapGestures` disables the library's own
+long-press binding for the same one-owner reason. The selection is
+process-scoped, so a recomposition or a rebuilt surface keeps it. The
+`point.info` plugin publishes the distance and the initial bearing (azimuth)
+from the current fix, or the map centre when there is no fix, to the selected
+point, computed with Vincenty's WGS84 inverse formula; the label shows the two
+rows and clears the selection. The device hold cannot be injected by the
+emulator harness used in CI, so the recogniser is a unit test and the pointer
+loop is unexercised on a device.
 
 ## Map controls
 

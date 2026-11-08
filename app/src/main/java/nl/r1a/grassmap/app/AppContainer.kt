@@ -40,6 +40,8 @@ import nl.r1a.grassmap.plugins.map.controls.CameraModeController
 import nl.r1a.grassmap.plugins.map.controls.MapControls
 import nl.r1a.grassmap.plugins.map.controls.PositionOffsetFraction
 import nl.r1a.grassmap.plugins.map.controls.PositionOffsetProvider
+import nl.r1a.grassmap.plugins.point.info.PointInfo
+import nl.r1a.grassmap.plugins.point.info.SelectedPointStore
 import nl.r1a.grassmap.regions.GateNetworkAccess
 import nl.r1a.grassmap.regions.HttpDownloadTransport
 import nl.r1a.grassmap.regions.NetworkAccess
@@ -78,6 +80,13 @@ class AppContainer(
 
     /** The process-owned map binding that host commands write through. */
     val mapSession: MapSessionHolder = MapSessionHolder()
+
+    /**
+     * The point the map long press selected (T-0112). The gesture writes it
+     * and `plugins/point-info` reads it; both share the process-wide store, so
+     * a recomposition or a rebuilt surface keeps the selection.
+     */
+    val selectedPoint: SelectedPointStore = PointInfo.selection
 
     /** Owns the free, follow and heading cycle across Activity recreation. */
     val cameraModes: CameraModeController by lazy {
@@ -215,6 +224,8 @@ class AppContainer(
             commands = GeneratedPlugins.commands,
             hostCommands = hostCommands,
             dispatcher = dispatchers.default,
+            locationService = locationSource,
+            cameraFlow = mapSession.camera,
             devToolsAccess = devTools,
         )
     }

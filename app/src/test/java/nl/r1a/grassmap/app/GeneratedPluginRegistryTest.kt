@@ -53,6 +53,24 @@ class GeneratedPluginRegistryTest {
     }
 
     @Test
+    fun generatedRegistryContainsThePointInfoPluginAndItsSelectionStream() {
+        assertTrue(
+            GeneratedPlugins.plugins.any { it.manifest.id == PluginId("point.info") },
+        )
+        assertTrue(
+            GeneratedStreams.streams.any { it.id == StreamId("point.info.selection") },
+        )
+        assertTrue(
+            GeneratedPlugins.plugins
+                .single { it.manifest.id == PluginId("point.info") }
+                .manifest
+                .contributes
+                .widgets
+                .any { it.id.value == "point.info.selection" },
+        )
+    }
+
+    @Test
     fun theReleaseControlCatalogRegistersTheMapControlsAndTheUnitSetting() {
         val ids = AppContainer(strings = KeyOnlyStrings).controlCommands.map { it.id }.toSet()
 

@@ -12,6 +12,9 @@
     <string name="plugin.dev_tools.description">Запускає відтворення GPX і показує частоту кадрів і пам\'ять.</string>
     <string name="plugin.map_controls.name">Керування картою</string>
     <string name="plugin.map_controls.description">Режими камери, компас, зсув позначки позиції та масштабна лінійка.</string>
+    <string name="plugin.point_info.name">Інформація про точку</string>
+    <string name="plugin.point_info.description">Відстань і азимут від вашого місця до точки, яку ви натиснули й утримали.</string>
+    <string name="plugin.point_info.selection">Вибрана точка</string>
 
     <string name="control_zoom_in_label">+</string>
     <string name="control_zoom_in_description">Наблизити</string>
@@ -46,6 +49,12 @@
     <string name="dev_tools_stop_replay">Зупинити відтворення</string>
     <string name="map_distance_metres">%1$s м</string>
     <string name="map_distance_kilometres">%1$s км</string>
+    <string name="point_info_distance_row">Відстань %1$s</string>
+    <string name="point_info_azimuth_row">Азимут %1$s</string>
+    <string name="point_info_distance_metres">%1$s м</string>
+    <string name="point_info_distance_kilometres">%1$s км</string>
+    <string name="point_info_azimuth_degrees">%1$s°</string>
+    <string name="point_info_clear_description">Очистити вибрану точку</string>
     <string name="map_scale_description">Масштабна лінійка</string>
     <string name="map_scale_metres">%1$s м</string>
     <string name="map_scale_kilometres">%1$s км</string>

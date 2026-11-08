@@ -48,6 +48,14 @@ class MapGesturesTest {
     }
 
     @Test
+    fun theLongPressSelectionIsPinnedAndItsEngineBindingIsOff() {
+        assertEquals(500L, MapGestures.LONG_PRESS_MIN_MILLIS)
+        assertEquals(12f, MapGestures.LONG_PRESS_MAX_TRAVEL_DP, 0f)
+        val options = MapGestures.uiOptions().toString()
+        assertTrue(options, options.contains("longPress=TapBinding(enabled=false"))
+    }
+
+    @Test
     fun theCameraAllowsOnlyTheGesturesWeShip() {
         val interactions = MapGestures.interactions().toString()
         assertTrue(interactions, interactions.contains("PanCameraConfiguration(enabled=true"))

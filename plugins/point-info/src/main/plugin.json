@@ -1,0 +1,35 @@
+{
+  "id": "point.info",
+  "name": "plugin.point_info.name",
+  "description": "plugin.point_info.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.point.info.PointInfoPlugin",
+  "contributes": {
+    "streams": [
+      {
+        "id": "point.info.selection",
+        "valueType": "nl.r1a.grassmap.plugins.point.info.SelectedPointValue",
+        "serializer": "nl.r1a.grassmap.plugins.point.info.SelectedPointValue.serializer"
+      }
+    ],
+    "widgets": [
+      {
+        "id": "point.info.selection",
+        "title": "plugin.point_info.selection",
+        "valueType": "nl.r1a.grassmap.plugins.point.info.SelectedPointValue",
+        "streamId": "point.info.selection",
+        "updateIntervalMillis": 200
+      }
+    ]
+  },
+  "needs": {
+    "network": [],
+    "location": "while_in_use",
+    "regions": []
+  },
+  "activation": [
+    "stream",
+    "ui"
+  ]
+}

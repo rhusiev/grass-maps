@@ -28,6 +28,43 @@ class FakeClient:
         return answer
 
 
+class StableFrameTest(unittest.TestCase):
+    def _png(self, left_black: bool) -> bytes:
+        width, height = 216, 384
+        rgb = bytearray(width * height * 3)
+        for y in range(height):
+            for x in range(width):
+                value = 0 if left_black and x < width // 2 else 255
+                base = (y * width + x) * 3
+                rgb[base : base + 3] = bytes((value, value, value))
+        with tempfile.NamedTemporaryFile(suffix=".png") as handle:
+            path = Path(handle.name)
+            map_goldens.write_png(path, width, height, bytes(rgb))
+            return path.read_bytes()
+
+    def test_two_matching_frames_are_accepted(self) -> None:
+        adb = mock.Mock()
+        adb.screencap.return_value = self._png(False)
+
+        with mock.patch.object(map_goldens.time, "sleep"):
+            frame, stability = map_goldens.stable_frame(adb)
+
+        self.assertEqual(2, stability["frames"])
+        self.assertTrue(stability["stable"])
+        self.assertEqual(2, adb.screencap.call_count)
+
+    def test_a_partial_frame_is_retried(self) -> None:
+        adb = mock.Mock()
+        adb.screencap.side_effect = [self._png(True), self._png(False), self._png(False)]
+
+        with mock.patch.object(map_goldens.time, "sleep"):
+            frame, stability = map_goldens.stable_frame(adb)
+
+        self.assertEqual(3, stability["frames"])
+        self.assertTrue(stability["stable"])
+        self.assertEqual(3, adb.screencap.call_count)
+
+
 class AirplaneModeTest(unittest.TestCase):
     def test_a_slow_radio_command_does_not_abort_the_capture(self) -> None:
         adb = mock.Mock()
@@ -113,7 +150,14 @@ class CapturePositionTest(unittest.TestCase):
         client = FakeClient([answer])
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
-            with mock.patch.object(map_goldens.time, "sleep") as sleep:
+            with (
+                mock.patch.object(map_goldens.time, "sleep") as sleep,
+                mock.patch.object(
+                    map_goldens,
+                    "stable_frame",
+                    return_value=(b"frame", {"frames": 2, "last_mismatch_percent": 0.0, "stable": True}),
+                ),
+            ):
                 shot = map_goldens.capture_position(adb, client, output, "p", {"zoom": 12})
             self.assertTrue((output / "p.png").is_file())
         return shot, sleep
@@ -298,6 +342,11 @@ class CapturePositionRetryTest(unittest.TestCase):
             with (
                 mock.patch.object(map_goldens, "FOCUS_RETRY_TIMEOUT_S", 0.0),
                 mock.patch.object(map_goldens.time, "sleep"),
+                mock.patch.object(
+                    map_goldens,
+                    "stable_frame",
+                    return_value=(b"frame", {"frames": 2, "last_mismatch_percent": 0.0, "stable": True}),
+                ),
             ):
                 shot = map_goldens.capture_position(adb, client, Path(directory), "p", {})
 
@@ -309,7 +358,14 @@ class CapturePositionRetryTest(unittest.TestCase):
         client = FakeClient(["lat=1.0 idle=true"])
 
         with tempfile.TemporaryDirectory() as directory:
-            with mock.patch.object(map_goldens.time, "sleep"):
+            with (
+                mock.patch.object(map_goldens.time, "sleep"),
+                mock.patch.object(
+                    map_goldens,
+                    "stable_frame",
+                    return_value=(b"frame", {"frames": 2, "last_mismatch_percent": 0.0, "stable": True}),
+                ),
+            ):
                 shot = map_goldens.capture_position(adb, client, Path(directory), "p", {})
 
         self.assertEqual(client.calls, 1)

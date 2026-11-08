@@ -56,6 +56,11 @@ SCHEMA = "grass-maps-map-goldens/1"
 PACKAGE = "nl.r1a.grassmap"
 ACTIVITY = "nl.r1a.grassmap.app.MainActivity"
 SCREENSHOT_SETTLE_S = 0.8
+# A partial or mid-flight frame can be composited after MapLibre reports idle.
+# Two frames must agree before the capture is accepted, up to three frames.
+STABILITY_GAP_S = 0.7
+STABILITY_MAX_FRAMES = 3
+STABILITY_MAX_MISMATCH_PERCENT = 0.5
 # Software GL under swiftshader may not deliver MapLibre's idle event at all,
 # even for a fully settled frame. The extra allowance below is added when the
 # camera command reports `idle=false`: base settle plus one slow software frame
@@ -577,7 +582,7 @@ def capture_position(
             bring_app_to_front(adb)
             time.sleep(APP_FOREGROUND_SETTLE_S)
             continue
-        png = adb.screencap()
+        png, stability = stable_frame(adb)
         path = output / f"{name}.png"
         path.write_bytes(png)
         return {
@@ -586,9 +591,42 @@ def capture_position(
             "file": str(path),
             "capture": "adb exec-out screencap -p",
             "idle": idle,
+            "stability": stability,
             "camera_result": result,
         }
     raise FocusError(f"{name}: no capture after {POSITION_ATTEMPTS} attempts")
+
+
+def stable_frame(adb: Adb) -> tuple[bytes, dict[str, object]]:
+    """Capture until two consecutive composited frames agree.
+
+    A partial frame can appear after idle on the software renderer; comparing
+    two live frames catches it without touching the golden metric.
+    """
+    frames = [adb.screencap()]
+    mismatch = 0.0
+    for _ in range(1, STABILITY_MAX_FRAMES):
+        time.sleep(STABILITY_GAP_S)
+        frames.append(adb.screencap())
+        mismatch = frame_mismatch(frames[-2], frames[-1])
+        if mismatch <= STABILITY_MAX_MISMATCH_PERCENT:
+            break
+    return frames[-1], {
+        "frames": len(frames),
+        "last_mismatch_percent": mismatch,
+        "stable": mismatch <= STABILITY_MAX_MISMATCH_PERCENT,
+    }
+
+
+def frame_mismatch(before: bytes, after: bytes) -> float:
+    with tempfile.NamedTemporaryFile(suffix=".png") as first, tempfile.NamedTemporaryFile(
+        suffix=".png"
+    ) as second:
+        first.write(before)
+        first.flush()
+        second.write(after)
+        second.flush()
+        return float(compare_images(Path(first.name), Path(second.name))["mismatch_percent"])
 
 
 def wait_for_first_frame(adb: Adb, timeout_s: float = FIRST_FRAME_TIMEOUT_S) -> None:

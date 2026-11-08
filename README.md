@@ -234,7 +234,7 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/gpx` | GPX 1.0/1.1 as a `FileFormat` provider | `plugin-api` |
 | `plugins/info-widgets` | the altitude, coordinates and GPS info widget data providers | `plugin-api` |
 | `plugins/dev-tools` | the release development-tools panel and its GPX replay start/stop commands | `plugin-api` |
-| `plugins/map-controls` | the free, follow and heading camera mode, the compass reset and the position-marker offset seam | `plugin-api` |
+| `plugins/map-controls` | the free, follow and heading camera mode, the compass reset, the position-marker offset seam and the scale-bar layout | `plugin-api` |
 
 ## Map seam
 
@@ -399,6 +399,32 @@ partial, repeated or old three-button order reads as
 `default` profile until T-0601. The bar itself lives in `ui-shell` and only
 receives control IDs, labels and callbacks, so it never touches the command bus
 or the map host.
+
+## Scale bar and units
+
+The scale bar is a Compose overlay in `ui-shell`; the round distance it spans
+comes from `ScaleBar.reading` in `plugins/map-controls`. Round distances step 1,
+2 and 5 per decade, and the chosen step is the largest one that fits 96 dp. The
+bar width is the distance divided by the map's ground scale, so the label and
+the drawn line describe the same span. The bar reads metres below a kilometre
+and kilometres from one, or feet below a mile and miles from one.
+
+The ground scale is `WebMercator.metersPerPixel` in `plugin-api`: the sphere of
+6378137 m projected onto 512 px tiles, `2 * PI * R * cos(latitude) / (512 *
+2^zoom)`. maplibre-compose lays a map out in dp, so one map pixel is one dp and
+the value is metres per dp; the scale bar uses it directly, with no density
+factor, and `MapLibre`'s `metersPerDpAtLatitude` returns the same formula.
+`map`'s `PuckGeometry` delegates to the same helper, so the puck's accuracy
+circle, the deadband and the scale bar share one definition. The bar collects
+the camera itself, so a pan or zoom recomposes the bar alone.
+
+The unit system is `UnitSystem` in `plugin-api`, and `core-services`
+`UnitSettings` stores it as `filesDir/settings/units.json` with metric as the
+default; a missing or corrupt file reads as metric. `MapScreen` resolves the
+settings object off Main and collects its flow, so a change redraws the bar.
+Until a settings screen exists, the control-channel command
+`core.settings.units` sets it: `{"units":"imperial"}` or the bare string. The
+command is allowlisted for control and runs on the IO dispatcher.
 
 The release build installs `AndroidLocationSource`, which reads the platform
 `LocationManager` GPS and network providers; there is no Play Services and no

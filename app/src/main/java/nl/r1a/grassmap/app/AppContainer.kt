@@ -22,6 +22,7 @@ import nl.r1a.grassmap.core.services.NoHeadingSource
 import nl.r1a.grassmap.core.services.NoLocationSource
 import nl.r1a.grassmap.core.services.PrivacyNetworkGate
 import nl.r1a.grassmap.core.services.PrivacySwitchSettings
+import nl.r1a.grassmap.core.services.UnitSettings
 import nl.r1a.grassmap.core.services.diagnosticsCommands
 import nl.r1a.grassmap.map.DistanceByTapSetting
 import nl.r1a.grassmap.places.PlacesAccess
@@ -70,6 +71,7 @@ class AppContainer(
     val distanceByTap: DistanceByTapSetting = DistanceByTapSetting { false },
     private val headingSource: HeadingSource = NoHeadingSource,
     private val positionOffsetProvider: PositionOffsetProvider = PositionOffsetProvider.CENTERED,
+    private val unitSettingsFileProvider: () -> File? = { null },
 ) {
     private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -89,6 +91,13 @@ class AppContainer(
     /** The marker offset for the active profile; T-0601 reads it per profile. */
     val positionOffset: PositionOffsetFraction
         get() = positionOffsetProvider.offsetForProfile(DEFAULT_PROFILE.value)
+
+    /**
+     * The global length unit setting. Resolving it reads the settings file, so
+     * the first access is always from an IO-dispatched command or the map's
+     * IO-loaded state, never Main.
+     */
+    val unitSettings: UnitSettings by lazy { UnitSettings(unitSettingsFileProvider()) }
 
     /** The compass; the map subscribes while it is visible. */
     val heading: StateFlow<Double?>
@@ -177,6 +186,7 @@ class AppContainer(
             searchCommands { places } +
             trackCommands({ tracks }, assetReader) +
             regionCommands({ regionDownloader }, regionNetwork, debuggable) +
+            UnitsCommand({ unitSettings }) +
             extraCommands(mapSession) +
             diagnosticsCommands { diagnostics }
     }

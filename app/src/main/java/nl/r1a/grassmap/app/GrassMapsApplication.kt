@@ -52,6 +52,7 @@ open class GrassMapsApplication : Application() {
             aiControlEnabled = { aiControlEnabled() },
             distanceByTap = distanceByTap(),
             headingSource = AndroidHeadingSource(this, compassScope),
+            unitSettingsFileProvider = { File(filesDir, UNIT_SETTINGS_PATH) },
         )
     }
 
@@ -180,6 +181,7 @@ open class GrassMapsApplication : Application() {
         const val DIAGNOSTICS_DIRECTORY = "diagnostics"
         const val PERMISSION_DIRECTORY = "location"
         const val PERMISSION_FILE = "permission-asked"
+        const val UNIT_SETTINGS_PATH = "settings/units.json"
         const val DEV_TOOLS_GPX_ASSET = "mock-walk.gpx"
         const val BYTES_PER_KILOBYTE = 1024L
         const val UNKNOWN_VERSION = "unknown"

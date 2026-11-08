@@ -42,6 +42,7 @@ import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.core.services.ButtonLayoutStore
 import nl.r1a.grassmap.core.services.DEFAULT_PROFILE
 import nl.r1a.grassmap.core.services.MapControlCommands
+import nl.r1a.grassmap.core.services.UnitSettings
 import nl.r1a.grassmap.map.DistanceReadout
 import nl.r1a.grassmap.map.DistanceUnit
 import nl.r1a.grassmap.map.MapDistance
@@ -60,12 +61,18 @@ import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleId
 import nl.r1a.grassmap.plugin.api.model.StyleSpec
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
+import nl.r1a.grassmap.plugin.api.model.WebMercator
 import nl.r1a.grassmap.plugin.api.provider.MapLayerContract
 import nl.r1a.grassmap.plugin.api.provider.MapLayerProvider
 import nl.r1a.grassmap.plugins.map.controls.CameraMode
+import nl.r1a.grassmap.plugins.map.controls.ScaleBar
+import nl.r1a.grassmap.plugins.map.controls.ScaleBarReading
+import nl.r1a.grassmap.plugins.map.controls.ScaleBarUnit
 import nl.r1a.grassmap.ui.shell.ControlBarLabels
 import nl.r1a.grassmap.ui.shell.ControlButton
 import nl.r1a.grassmap.ui.shell.MapControlBar
+import nl.r1a.grassmap.ui.shell.MapScaleBar
 import java.io.File
 import java.util.Locale
 
@@ -83,6 +90,7 @@ private const val BANNER_FONT_SP = 14
 private const val DISTANCE_BADGE_MILLIS = 4_000L
 private const val METRE_DECIMALS = 1
 private const val KILOMETRE_DECIMALS = 2
+private const val WHOLE_VALUE_MIN = 1.0
 private val NEEDS_REDOWNLOAD_BACKGROUND = Color(0xFFB3261E)
 private val DISTANCE_BADGE_BACKGROUND = Color(0xCC202020)
 
@@ -206,6 +214,10 @@ private fun MapContent(
     var layout by remember { mutableStateOf(MapControlCommands.DEFAULT_ORDER) }
     var isEditing by remember { mutableStateOf(false) }
     var distance by remember { mutableStateOf<DistanceReadout?>(null) }
+    val unitStore by
+        produceState<UnitSettings?>(null) {
+            value = withContext(Dispatchers.IO) { container.unitSettings }
+        }
     val currentLayout = rememberUpdatedState(layout)
     val writer =
         remember(store) {
@@ -226,6 +238,15 @@ private fun MapContent(
             modifier = Modifier.fillMaxSize(),
             distanceByTap = container.distanceByTap,
             onDistanceMeasured = { meters -> distance = MapDistance.readout(meters) },
+        )
+        MapScaleOverlay(
+            surface = surface,
+            settings = unitStore,
+            modifier =
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .navigationBarsPadding()
+                    .padding(BAR_PADDING_DP.dp),
         )
         MapControlBar(
             layout = controlButtons(layout, context, cameraMode),
@@ -320,6 +341,58 @@ private fun MapContent(
         )
     }
 }
+
+/**
+ * The scale bar over the map. It collects the camera itself, so a pan or a
+ * zoom recomposes the bar alone and not the map screen around it.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun MapScaleOverlay(
+    surface: MapSurface,
+    settings: UnitSettings?,
+    modifier: Modifier,
+) {
+    val camera by surface.host.camera.collectAsState()
+    val units = settings?.units?.collectAsState()?.value ?: UnitSystem.Metric
+    val reading =
+        remember(camera, units) {
+            // maplibre-compose lays the map out in dp, so the ground scale is
+            // already metres per dp and needs no density conversion.
+            ScaleBar.reading(
+                metersPerDp = WebMercator.metersPerPixel(camera.center.latitude, camera.zoom),
+                units = units,
+            )
+        }
+    val shown = reading ?: return
+    MapScaleBar(
+        label = scaleBarLabel(LocalContext.current, shown),
+        widthDp = shown.widthDp.toFloat(),
+        description = stringResource(R.string.map_scale_description),
+        modifier = modifier,
+    )
+}
+
+/** The round distance and its unit, in the strings the current locale supplies. */
+private fun scaleBarLabel(
+    context: Context,
+    reading: ScaleBarReading,
+): String {
+    val value = formatScaleBarValue(reading.value)
+    return when (reading.unit) {
+        ScaleBarUnit.Metres -> context.getString(R.string.map_scale_metres, value)
+        ScaleBarUnit.Kilometres -> context.getString(R.string.map_scale_kilometres, value)
+        ScaleBarUnit.Feet -> context.getString(R.string.map_scale_feet, value)
+        ScaleBarUnit.Miles -> context.getString(R.string.map_scale_miles, value)
+    }
+}
+
+private fun formatScaleBarValue(value: Double): String =
+    if (value >= WHOLE_VALUE_MIN) {
+        String.format(Locale.getDefault(), "%.0f", value)
+    } else {
+        String.format(Locale.getDefault(), "%.1f", value)
+    }
 
 /**
  * The age shown next to the grey ring. Seconds under a minute, minutes after

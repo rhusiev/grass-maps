@@ -2,6 +2,7 @@ package nl.r1a.grassmap.map
 
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmap.plugin.api.model.WebMercator
 import kotlin.math.PI
 import kotlin.math.asin
 import kotlin.math.cos
@@ -32,8 +33,8 @@ internal object PuckTuning {
     /** Above this radius the accuracy circle is drawn. */
     const val POOR_ACCURACY_METERS: Double = 30.0
 
+    /** The mean radius the haversine ground distance uses; the map scale does not. */
     const val EARTH_RADIUS_METERS: Double = 6_371_008.8
-    const val EQUATOR_METERS_PER_PIXEL: Double = 156_543.033_92
 }
 
 /** What the puck draws: the smoothed position, its age and its visual state. */
@@ -83,18 +84,17 @@ internal object PuckGeometry {
         return 2.0 * PuckTuning.EARTH_RADIUS_METERS * asin(sqrt(haversine.coerceIn(0.0, 1.0)))
     }
 
-    /** Web-Mercator ground scale at [latitude] and [zoom], metres per screen pixel. */
+    /**
+     * Web-Mercator ground scale at [latitude] and [zoom], metres per map pixel
+     * (one dp in maplibre-compose). The definition is [WebMercator], the same
+     * one the scale bar uses.
+     */
     fun metersPerPixel(
         latitude: Double,
         zoom: Double,
-    ): Double =
-        (
-            PuckTuning.EQUATOR_METERS_PER_PIXEL *
-                cos(latitude.toRadians()).coerceAtLeast(MIN_LATITUDE_COSINE) /
-                2.0.pow(zoom)
-        ).coerceAtLeast(MIN_METERS_PER_PIXEL)
+    ): Double = WebMercator.metersPerPixel(latitude, zoom)
 
-    /** Screen movement between two points at [zoom], in logical pixels. */
+    /** Screen movement between two points at [zoom], in dp. */
     fun screenDeltaPx(
         from: GeoPoint,
         to: GeoPoint,
@@ -108,19 +108,16 @@ internal object PuckGeometry {
         return metres / metersPerPixel(latitude, zoom)
     }
 
-    /** The accuracy circle radius in density-independent pixels at [zoom]. */
+    /** The accuracy circle radius in dp at [zoom]. */
     fun accuracyRadiusDp(
         accuracyMeters: Double,
         latitude: Double,
         zoom: Double,
-        density: Float,
     ): Float =
-        (accuracyMeters / metersPerPixel(latitude, zoom) / density)
+        (accuracyMeters / metersPerPixel(latitude, zoom))
             .coerceAtLeast(MIN_ACCURACY_RADIUS_DP.toDouble())
             .toFloat()
 
-    private const val MIN_LATITUDE_COSINE = 1e-6
-    private const val MIN_METERS_PER_PIXEL = 1e-6
     private const val MIN_ACCURACY_RADIUS_DP = 0.5
 }
 

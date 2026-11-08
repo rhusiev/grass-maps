@@ -7,7 +7,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -127,18 +126,16 @@ private fun MarkerLayerSlot(
 ) {
     val puck = session.puck.value
     val camera by session.camera.collectAsState()
-    val density = LocalDensity.current.density
     val zoomBucket = (camera.zoom * ZOOM_BUCKET_STEPS).toInt() / ZOOM_BUCKET_STEPS.toDouble()
     val latitudeBucket = ((puck?.fix?.position?.latitude ?: 0.0) * LATITUDE_BUCKET_STEPS).toInt()
     val accuracyRadius =
-        remember(zoomBucket, latitudeBucket, puck?.fix?.accuracyMeters, puck?.showAccuracy, density) {
+        remember(zoomBucket, latitudeBucket, puck?.fix?.accuracyMeters, puck?.showAccuracy) {
             if (puck?.showAccuracy == true) {
                 PuckGeometry
                     .accuracyRadiusDp(
                         accuracyMeters = puck.fix.accuracyMeters,
                         latitude = puck.fix.position.latitude,
                         zoom = zoomBucket,
-                        density = density,
                     ).dp
             } else {
                 0.dp

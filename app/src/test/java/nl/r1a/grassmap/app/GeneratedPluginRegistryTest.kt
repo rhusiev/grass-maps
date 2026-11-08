@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import nl.r1a.grassmap.app.generated.GeneratedPlugins
 import nl.r1a.grassmap.app.generated.GeneratedStreams
 import nl.r1a.grassmap.core.CommandDispatchers
+import nl.r1a.grassmap.core.services.MapControlCommands
 import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
 import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.contract.PluginId
@@ -49,6 +50,17 @@ class GeneratedPluginRegistryTest {
         assertTrue(
             GeneratedStreams.streams.any { it.id == StreamId("map.controls.mode") },
         )
+    }
+
+    @Test
+    fun theReleaseControlCatalogRegistersTheMapControlsAndTheUnitSetting() {
+        val ids = AppContainer(strings = KeyOnlyStrings).controlCommands.map { it.id }.toSet()
+
+        assertTrue(MapControlCommands.ZOOM_IN in ids)
+        assertTrue(MapControlCommands.ZOOM_OUT in ids)
+        assertTrue(MapControlCommands.NORTH_UP in ids)
+        assertTrue(MapControlCommands.FOLLOW in ids)
+        assertTrue(UNIT_SETTINGS_COMMAND in ids)
     }
 
     @Test

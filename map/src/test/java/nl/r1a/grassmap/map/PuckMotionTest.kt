@@ -52,7 +52,7 @@ class PuckMotionTest {
     fun belowBothDeadbandThresholdsNoFrameUpdates() {
         val motion = PuckMotion()
         val start = fix(latitude = LATITUDE, timeMillis = 0L)
-        val end = fix(latitude = LATITUDE + metresForPixels(0.9) / METRES_PER_DEGREE_LATITUDE, timeMillis = 1_000L, speed = 0.4)
+        val end = fix(latitude = LATITUDE + metresForDp(0.9) / METRES_PER_DEGREE_LATITUDE, timeMillis = 1_000L, speed = 0.4)
         motion.onFix(start, nowElapsedMillis = 0L, nowWallMillis = 0L)
         motion.onFix(end, nowElapsedMillis = 0L, nowWallMillis = 0L)
 
@@ -65,7 +65,7 @@ class PuckMotionTest {
     fun speedJustAboveTheThresholdUpdatesEvenUnderOnePixel() {
         val motion = PuckMotion()
         val start = fix(latitude = LATITUDE, timeMillis = 0L)
-        val end = fix(latitude = LATITUDE + metresForPixels(0.9) / METRES_PER_DEGREE_LATITUDE, timeMillis = 1_000L, speed = 0.51)
+        val end = fix(latitude = LATITUDE + metresForDp(0.9) / METRES_PER_DEGREE_LATITUDE, timeMillis = 1_000L, speed = 0.51)
         motion.onFix(start, nowElapsedMillis = 0L, nowWallMillis = 0L)
         motion.onFix(end, nowElapsedMillis = 0L, nowWallMillis = 0L)
 
@@ -78,7 +78,7 @@ class PuckMotionTest {
     fun screenDeltaJustAboveOnePixelUpdatesAtZeroSpeed() {
         val motion = PuckMotion()
         val start = fix(latitude = LATITUDE, timeMillis = 0L)
-        val end = fix(latitude = LATITUDE + metresForPixels(1.2) / METRES_PER_DEGREE_LATITUDE, timeMillis = 1_000L, speed = 0.0)
+        val end = fix(latitude = LATITUDE + metresForDp(1.2) / METRES_PER_DEGREE_LATITUDE, timeMillis = 1_000L, speed = 0.0)
         motion.onFix(start, nowElapsedMillis = 0L, nowWallMillis = 0L)
         motion.onFix(end, nowElapsedMillis = 0L, nowWallMillis = 0L)
 
@@ -156,8 +156,8 @@ class PuckMotionTest {
 
     @Test
     fun theAccuracyRadiusGrowsWithPoorAccuracyAndShrinksWithZoom() {
-        val wide = PuckGeometry.accuracyRadiusDp(100.0, LATITUDE, ZOOM, DENSITY)
-        val narrow = PuckGeometry.accuracyRadiusDp(100.0, LATITUDE, ZOOM + 2.0, DENSITY)
+        val wide = PuckGeometry.accuracyRadiusDp(100.0, LATITUDE, ZOOM)
+        val narrow = PuckGeometry.accuracyRadiusDp(100.0, LATITUDE, ZOOM + 2.0)
 
         assertTrue(narrow > wide)
         assertTrue(wide > 0f)
@@ -165,7 +165,7 @@ class PuckMotionTest {
 
     private fun frameMillis(step: Int): Long = step * 1_000L / FRAMES_PER_SECOND
 
-    private fun metresForPixels(pixels: Double): Double = pixels * PuckGeometry.metersPerPixel(LATITUDE, ZOOM)
+    private fun metresForDp(dp: Double): Double = dp * PuckGeometry.metersPerPixel(LATITUDE, ZOOM)
 
     private fun fix(
         latitude: Double,
@@ -184,7 +184,6 @@ class PuckMotionTest {
         const val LATITUDE = 49.84
         const val LONGITUDE = 24.03
         const val ZOOM = 16.0
-        const val DENSITY = 2.75f
         const val EPSILON = 1e-9
         const val FRAMES_PER_SECOND = 60
         const val METRES_PER_DEGREE_LATITUDE = 111_194.93

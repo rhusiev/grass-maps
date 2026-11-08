@@ -10,7 +10,7 @@
     <string name="plugin.dev_tools.name">Development tools</string>
     <string name="plugin.dev_tools.description">Starts a GPX replay and shows frame rate and memory.</string>
     <string name="plugin.map_controls.name">Map controls</string>
-    <string name="plugin.map_controls.description">Camera modes, the compass and the position-marker offset.</string>
+    <string name="plugin.map_controls.description">Camera modes, the compass, the position offset and the scale bar.</string>
 
     <string name="control_zoom_in_label">+</string>
     <string name="control_zoom_in_description">Zoom in</string>
@@ -45,4 +45,9 @@
     <string name="dev_tools_stop_replay">Stop replay</string>
     <string name="map_distance_metres">%1$s m</string>
     <string name="map_distance_kilometres">%1$s km</string>
+    <string name="map_scale_description">Scale bar</string>
+    <string name="map_scale_metres">%1$s m</string>
+    <string name="map_scale_kilometres">%1$s km</string>
+    <string name="map_scale_feet">%1$s ft</string>
+    <string name="map_scale_miles">%1$s mi</string>
 </resources>

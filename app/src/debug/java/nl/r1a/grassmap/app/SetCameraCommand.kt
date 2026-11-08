@@ -4,7 +4,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.builtins.serializer
@@ -49,11 +49,31 @@ internal class SetCameraCommand(
         val request = parse(params) ?: return Outcome.Failure(AppError.InvalidInput)
         val host = session.hostOrNull() ?: return Outcome.Failure(AppError.NotReady)
         return coroutineScope {
-            val signal = CompletableDeferred<Unit>()
+            // A stale Idle from the previous position can complete before the
+            // engine has applied this move; T-0108 caught one frame mid-flight
+            // that way. Accept an Idle only after a CameraChanged carrying the
+            // requested camera.
+            val settled = CompletableDeferred<Unit>()
             val watcher =
                 launch(start = CoroutineStart.UNDISPATCHED) {
-                    host.events.first { event -> event is MapEvent.Idle }
-                    signal.complete(Unit)
+                    var reached = false
+                    host.events.collect { event ->
+                        when (event) {
+                            is MapEvent.CameraChanged -> {
+                                reached = reached || request.matches(event.camera)
+                            }
+
+                            MapEvent.Idle -> {
+                                if (reached) {
+                                    settled.complete(Unit)
+                                }
+                            }
+
+                            else -> {
+                                Unit
+                            }
+                        }
+                    }
                 }
             when (
                 val moved =
@@ -72,9 +92,9 @@ internal class SetCameraCommand(
                 }
 
                 is Outcome.Success -> {
-                    val settled = withTimeoutOrNull(idleTimeoutMillis) { signal.await() } != null
+                    val idle = withTimeoutOrNull(idleTimeoutMillis) { settled.await() } != null
                     watcher.cancelAndJoin()
-                    Outcome.Success(CommandResult(request.summary(settled)))
+                    Outcome.Success(CommandResult(request.summary(idle)))
                 }
             }
         }
@@ -104,6 +124,13 @@ internal class SetCameraCommand(
         val bearing: Double,
         val tilt: Double,
     ) {
+        fun matches(camera: nl.r1a.grassmap.plugin.api.model.Camera): Boolean =
+            kotlin.math.abs(camera.center.latitude - latitude) < POSITION_EPSILON &&
+                kotlin.math.abs(camera.center.longitude - longitude) < POSITION_EPSILON &&
+                kotlin.math.abs(camera.zoom - zoom) < ZOOM_EPSILON &&
+                kotlin.math.abs(camera.bearing - bearing) < ANGLE_EPSILON &&
+                kotlin.math.abs(camera.tilt - tilt) < ANGLE_EPSILON
+
         fun summary(idle: Boolean): String = "lat=$latitude lon=$longitude zoom=$zoom bearing=$bearing tilt=$tilt idle=$idle"
     }
 
@@ -113,5 +140,8 @@ internal class SetCameraCommand(
         const val MAX_BEARING = 360.0
         const val MAX_TILT = 60.0
         const val DEFAULT_IDLE_TIMEOUT_MS = 15_000L
+        const val POSITION_EPSILON = 1e-6
+        const val ZOOM_EPSILON = 1e-3
+        const val ANGLE_EPSILON = 1e-3
     }
 }

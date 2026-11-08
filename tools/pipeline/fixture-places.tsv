@@ -1,0 +1,10 @@
+# The authored place list for the committed fixture search section.
+#
+# Columns: osm_type, osm_id, latitude, longitude, name, kind, context, tags.
+# `tags` is key=value pairs separated by `|`; an empty column means the place
+# carries no tags. This is authored data, not an OSM extract: the fixture needs
+# fixed rows whose canonical ids and tag maps a test can assert.
+node	4815162342	49.9419	23.9419	Кав'ярня Левада	amenity=cafe	смт Івано-Франкове, вул. Стрийська 45	amenity=cafe|name=Кав'ярня Левада|phone=+380322970545|website=https://levada.example|opening_hours=Mo-Su 08:00-22:00|wheelchair=yes
+node	4815162343	49.9424	23.9427	АТБ	shop=supermarket	смт Івано-Франкове, вул. Стрийська 48	shop=supermarket|brand=АТБ|name=АТБ
+node	4815162344	49.9431	23.9435	Лавочка	amenity=bench	смт Івано-Франкове, парк	
+node	4815162345	49.9442	23.9449	Парк Івана Франка	leisure=park	смт Івано-Франкове	leisure=park|name=Парк Івана Франка

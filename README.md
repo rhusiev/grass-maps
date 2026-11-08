@@ -192,9 +192,13 @@ exists, and its summary says that it verified nothing.
 `test-data/regions/fixture-mini/` is a small region package for JVM tests. It is
 built by `tools/pipeline/build-test-region.sh` with the same `pmtiles extract`
 stage real oblast packs use, and its manifest records each file's size and
-sha256. `plugin-api` publishes the shared paged-provider contract suite as test
-fixtures; `PagedProviderContractSuite` covers limits, paging, ordering,
-concurrency and cancellation. See `tools/pipeline/README.md`.
+sha256. Its search section is the seven files the reader maps plus the
+`features` component, built in one pass from the authored
+`tools/pipeline/fixture-places.tsv`, so the four fixture places carry canonical
+OSM ids and tag maps instead of a stand-in marker. `plugin-api` publishes the
+shared paged-provider contract suite as test fixtures; `PagedProviderContractSuite`
+covers limits, paging, ordering, concurrency and cancellation. See
+`tools/pipeline/README.md`.
 
 `test-data/styles/bench-light.json` is the phase-A dense bench style. The
 T-0020 spike checks that every layer, filter and expression in it compiles to a
@@ -617,24 +621,36 @@ it through `MockGpxLocationSource`, follows it, and draws the replacement route.
 
 ## Search seam
 
-`PlaceProvider` in `plugin-api` is the `places.search` 1.0.0 contract:
+`PlaceProvider` in `plugin-api` is the `places.search` 2.0.0 contract:
 `search(query, context, limit, cancel)`, `pois(bbox, categories, limit, cancel)`
 and `details(placeId, cancel)`. `places` implements it over `rust/grass-core`
 through uniffi. The generated Kotlin and every Rust type stay inside `places`
 (package `nl.r1a.grassmap.places.core`); no plugin imports them.
 
+`details` returns `PlaceDetails`: the place record plus its canonical OSM
+`osmType` and `osmId` and its raw `tags` map. Those come from the region
+package's `features` component, which is keyed by the same place row id the
+search table issued (`regionBuild:rowIndex`). The search record therefore keeps
+its fixed 20-byte row and needs no OSM id column. A place the component does not
+name still returns details, with a null identity and an empty tag map; a place
+with a feature entry and no tags returns the same empty map. A missing,
+truncated or unknown-version features file is `NotReady`, `CorruptData` or
+`Unsupported` respectively, never an empty map.
+
 The reader uses the P4a spike format unchanged: an FST of folded terms,
-delta-varint postings, a fixed 20-byte place table, context entities and a
-string pool. It mmaps read-only, validates every offset before handing the
-index out, and returns `CorruptData` for a truncated section. Ranking, typo
-budgets and neighbour collapsing are the spike's, so the osm-mapidx probe table
-stays the quality oracle: 45 of 45 in the top five, asserted by
-`RustPlaceProviderQualityTest`.
+delta-varint postings, a fixed 20-byte place table, context entities, a string
+pool and the feature component. It mmaps read-only, validates every offset
+before handing the index out, and returns `CorruptData` for a truncated section.
+Ranking, typo budgets and neighbour collapsing are the spike's, so the
+osm-mapidx probe table stays the quality oracle: 45 of 45 in the top five,
+asserted by `RustPlaceProviderQualityTest`.
 
 The index is external data: the provider reads
 `<externalFilesDir>/search/<region>/`. The committed Lviv section under
-`places/src/test/resources/search` is 10.1 MiB and ODbL-licensed. The debug
-channel exposes `core.search.query`:
+`places/src/test/resources/search` is 10.1 MiB and ODbL-licensed; its
+`features.bin` is an empty placeholder because the P4a spike predates the
+component, so those places have no identity or tags. The debug channel exposes
+`core.search.query`:
 
 ```sh
 tools/control/grassctl.py invoke core.search.query \

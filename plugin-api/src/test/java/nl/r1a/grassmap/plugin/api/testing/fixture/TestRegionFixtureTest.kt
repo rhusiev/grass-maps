@@ -52,11 +52,50 @@ class TestRegionFixtureTest {
     }
 
     @Test
-    fun elevationAndSearchAreMarkedStandIns() {
-        for (kind in listOf("elevation", "search")) {
+    fun elevationIsMarkedAsAStandIn() {
+        val component = requireNotNull(region.manifest.component("elevation")) { "elevation component missing" }
+        assertTrue("elevation must be marked as a stand-in until its real format lands", component.standIn)
+        assertTrue("elevation placeholder is empty", Files.size(region.file(component)) > 0)
+    }
+
+    @Test
+    fun theSearchSectionAndFeaturesAreRealComponents() {
+        val kinds =
+            listOf(
+                "search-terms",
+                "search-postings",
+                "search-places",
+                "search-context",
+                "search-entities",
+                "search-kinds",
+                "search-strings",
+                "features",
+            )
+        for (kind in kinds) {
             val component = requireNotNull(region.manifest.component(kind)) { "$kind component missing" }
-            assertTrue("$kind must be marked as a stand-in until its real format lands", component.standIn)
-            assertTrue("$kind placeholder is empty", Files.size(region.file(component)) > 0)
+            assertFalse("$kind must come from the real builder", component.standIn)
+            assertTrue("$kind component is empty", Files.size(region.file(component)) > 0)
+        }
+        val features = requireNotNull(region.manifest.component("features"))
+        assertEquals("place-features", features.format)
+        assertEquals(1, features.formatVersion)
+    }
+
+    @Test
+    fun corruptedFeaturesAreDetected() {
+        val copy = Files.createTempDirectory("test-region-features-")
+        try {
+            copyComponents(region.root, copy)
+            val features = copy.resolve("features.bin")
+            val bytes = Files.readAllBytes(features)
+            bytes[bytes.lastIndex] = (bytes[bytes.lastIndex].toInt() xor 0xff).toByte()
+            Files.write(features, bytes)
+
+            val problems = TestRegion(copy, region.manifest).problems()
+
+            assertTrue("a corrupted features component must not validate", problems.any { it.contains("sha256") })
+        } finally {
+            deleteRecursively(copy)
         }
     }
 

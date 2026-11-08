@@ -20,7 +20,7 @@ class RegionManifestParserTest {
         assertEquals(FixturePackages.FIXTURE_VERSION, manifest.version)
         assertEquals(RegionIdentifiers.SUPPORTED_PACKAGE_FORMAT, manifest.packageFormat)
         assertEquals("2026-11-03T21:24:23Z", manifest.osmTimestamp)
-        assertEquals(4, manifest.components.size)
+        assertEquals(11, manifest.components.size)
         assertEquals(listOf(23.94, 49.94, 23.96, 49.96), manifest.pipeline?.bbox)
         assertEquals(
             setOf("ukraine-final.pmtiles", "lviv-90m-20m.pmtiles"),

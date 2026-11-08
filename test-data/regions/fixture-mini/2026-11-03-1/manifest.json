@@ -60,14 +60,84 @@
       "standIn": true
     },
     {
-      "kind": "search",
-      "file": "search.idx",
-      "format": "stand-in",
+      "kind": "search-terms",
+      "file": "terms.fst",
+      "format": "search-section",
       "formatVersion": 1,
       "version": "2026-11-03-1",
-      "bytes": 94,
-      "sha256": "03d56de2d7c5a0e6aa0a8342083505e3874bfdd036f566cf797842cfa9d3df60",
-      "standIn": true
+      "bytes": 368,
+      "sha256": "ebdfc700f2057b82b4388ad5fa20591a4db3566ceda8b9db96b38c9132a55812",
+      "standIn": false
+    },
+    {
+      "kind": "search-postings",
+      "file": "postings.bin",
+      "format": "search-section",
+      "formatVersion": 1,
+      "version": "2026-11-03-1",
+      "bytes": 67,
+      "sha256": "73687a56ecfc7f4b81875bd5af0e3c8379d354dfe58c0ae652fbede3b9c3cc34",
+      "standIn": false
+    },
+    {
+      "kind": "search-places",
+      "file": "places.bin",
+      "format": "search-section",
+      "formatVersion": 1,
+      "version": "2026-11-03-1",
+      "bytes": 80,
+      "sha256": "52599d51ab902aa058b0f15836ca260709b64bbd2f76a1791f19ef3ea11b83b1",
+      "standIn": false
+    },
+    {
+      "kind": "search-context",
+      "file": "context.bin",
+      "format": "search-section",
+      "formatVersion": 1,
+      "version": "2026-11-03-1",
+      "bytes": 11,
+      "sha256": "97acdf0d5667ade9752ffb70a320889ea8ca0c35bfae87a00709f80c3440d70b",
+      "standIn": false
+    },
+    {
+      "kind": "search-entities",
+      "file": "entities.bin",
+      "format": "search-section",
+      "formatVersion": 1,
+      "version": "2026-11-03-1",
+      "bytes": 16,
+      "sha256": "c7021fe66827cf060914af214c953ea3476073152080a248d0cb0b6c745e0942",
+      "standIn": false
+    },
+    {
+      "kind": "search-kinds",
+      "file": "kinds.bin",
+      "format": "search-section",
+      "formatVersion": 1,
+      "version": "2026-11-03-1",
+      "bytes": 16,
+      "sha256": "7abf6b419d7e44d17d9ab495c8eae1737321be755967ee60952d7f3b4f21dda7",
+      "standIn": false
+    },
+    {
+      "kind": "search-strings",
+      "file": "strings.bin",
+      "format": "search-section",
+      "formatVersion": 1,
+      "version": "2026-11-03-1",
+      "bytes": 245,
+      "sha256": "849b8f55341a356bb5b2ec035e0705bac26c0cb9943f59ebc261d31d0facafff",
+      "standIn": false
+    },
+    {
+      "kind": "features",
+      "file": "features.bin",
+      "format": "place-features",
+      "formatVersion": 1,
+      "version": "2026-11-03-1",
+      "bytes": 345,
+      "sha256": "ae6049b473f43333bc6f949e13ba753b3ca9ccfd41159ef06930f79589f73a45",
+      "standIn": false
     }
   ]
 }

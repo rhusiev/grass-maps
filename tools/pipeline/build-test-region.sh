@@ -28,6 +28,7 @@ readonly MAP_MIN_ZOOM=12
 readonly MAP_MAX_ZOOM=14
 readonly CONTOURS_MIN_ZOOM=9
 readonly CONTOURS_MAX_ZOOM=14
+readonly SEARCH_SOURCE="$ROOT/tools/pipeline/fixture-places.tsv"
 
 BENCH="${GRASS_MAPS_BENCH:-/hdd/drive/Projects/Life/grass-maps-bench}"
 PMTILES=""
@@ -58,6 +59,18 @@ for tool in python3 sha256sum; do
     }
 done
 
+# The crate sources resolve uniffi templates relative to the cargo home, so a
+# home reached through a symlink fails to build. Canonicalise it, as Gradle does.
+if [[ -n "${CARGO_HOME:-}" ]]; then
+    CARGO_HOME="$(cd "$CARGO_HOME" && pwd -P)"
+    export CARGO_HOME
+fi
+CARGO="${CARGO:-$(command -v cargo || true)}"
+[[ -n "$CARGO" ]] || {
+    echo "build-test-region.sh: cargo is required" >&2
+    exit 1
+}
+
 require_file() {
     [[ -f "$1" ]] || {
         echo "build-test-region.sh: missing $2: $1" >&2
@@ -68,6 +81,7 @@ require_file() {
 require_file "$PMTILES" "pmtiles CLI"
 require_file "$MAP_SOURCE" "map source archive"
 require_file "$CONTOURS_SOURCE" "contours source archive"
+require_file "$SEARCH_SOURCE" "fixture place list"
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -92,10 +106,11 @@ printf '%s\n' \
     "Grass Maps test region stand-in: elevation.bin" \
     "Not a GLO-30 int16 grid. See tools/pipeline/README.md." \
     >"$work/elevation.bin"
-printf '%s\n' \
-    "Grass Maps test region stand-in: search.idx" \
-    "Not a search index. See tools/pipeline/README.md." \
-    >"$work/search.idx"
+
+echo "Building the search section and feature component: $SEARCH_SOURCE"
+"$CARGO" run --quiet --release --locked \
+    --manifest-path "$ROOT/rust/grass-core/Cargo.toml" \
+    --bin build-section -- "$SEARCH_SOURCE" "$work"
 
 osm_timestamp="$("$PMTILES" show "$MAP_SOURCE" |
     awk '/^planetiler:osm:osmosisreplicationtime/ {print $2}')"
@@ -171,7 +186,16 @@ manifest = {
         component("map", "map.pmtiles", "pmtiles", 3, [int(map_min_zoom), int(map_max_zoom)], False),
         component("contours", "contours.pmtiles", "pmtiles", 3, [int(contours_min_zoom), int(contours_max_zoom)], False),
         component("elevation", "elevation.bin", "stand-in", 1, None, True),
-        component("search", "search.idx", "stand-in", 1, None, True),
+        # The search segment is the seven files the reader maps, stored
+        # unpacked until the single-file search.idx container lands.
+        component("search-terms", "terms.fst", "search-section", 1, None, False),
+        component("search-postings", "postings.bin", "search-section", 1, None, False),
+        component("search-places", "places.bin", "search-section", 1, None, False),
+        component("search-context", "context.bin", "search-section", 1, None, False),
+        component("search-entities", "entities.bin", "search-section", 1, None, False),
+        component("search-kinds", "kinds.bin", "search-section", 1, None, False),
+        component("search-strings", "strings.bin", "search-section", 1, None, False),
+        component("features", "features.bin", "place-features", 1, None, False),
     ],
 }
 

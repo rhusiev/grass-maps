@@ -15,6 +15,7 @@ import nl.r1a.grassmap.core.StreamRegistry
 import nl.r1a.grassmap.core.services.DEFAULT_PROFILE
 import nl.r1a.grassmap.core.services.DeviceInfo
 import nl.r1a.grassmap.core.services.Diagnostics
+import nl.r1a.grassmap.core.services.FavouritesBackupRecorder
 import nl.r1a.grassmap.core.services.InMemoryLocationPermissionStore
 import nl.r1a.grassmap.core.services.LocationPermissionStore
 import nl.r1a.grassmap.core.services.LocationSource
@@ -28,13 +29,16 @@ import nl.r1a.grassmap.map.DistanceByTapSetting
 import nl.r1a.grassmap.places.PlacesAccess
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
+import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
+import nl.r1a.grassmap.plugin.api.service.Clock
 import nl.r1a.grassmap.plugin.api.service.HeadingSource
 import nl.r1a.grassmap.plugin.api.service.NetworkGate
 import nl.r1a.grassmap.plugin.api.service.PrivacySwitches
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.api.service.SystemClock
 import nl.r1a.grassmap.plugins.dev.tools.DevToolsContract
 import nl.r1a.grassmap.plugins.map.controls.CameraModeController
 import nl.r1a.grassmap.plugins.map.controls.MapControls
@@ -75,8 +79,12 @@ class AppContainer(
     private val positionOffsetProvider: PositionOffsetProvider = PositionOffsetProvider.CENTERED,
     private val unitSettingsFileProvider: () -> File? = { null },
     private val favouritesRootProvider: () -> File? = { null },
+    private val favouritesBackupClock: Clock = SystemClock,
+    private val favouritesBackupScope: CoroutineScope? = null,
+    private val favouritesBackupDebounceMillis: Long = FavouritesBackupRecorder.DEFAULT_DEBOUNCE_MILLIS,
 ) {
     private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val backupScope: CoroutineScope = favouritesBackupScope ?: processScope
 
     /** The process-owned map binding that host commands write through. */
     val mapSession: MapSessionHolder = MapSessionHolder()
@@ -148,9 +156,48 @@ class AppContainer(
         TrackAccess(providerRegistry, GeneratedPlugins.providers)
     }
 
-    /** The favourites library under the app's private files root (T-0201). */
-    val favourites: FavouritesAccess by lazy {
-        FavouritesAccess(favouritesRootProvider())
+    /**
+     * The favourites library under the app's private files root (T-0201).
+     *
+     * The access caches the parsed library, so [forgetFavourites] drops it after
+     * a backup restore replaces the file on disk.
+     */
+    val favourites: FavouritesAccess
+        get() =
+            cachedFavourites ?: synchronized(favouritesLock) {
+                cachedFavourites ?: FavouritesAccess(favouritesRootProvider()).also { access -> cachedFavourites = access }
+            }
+
+    /**
+     * The automatic local backup of the favourites library (T-0216), or null
+     * when the build has no files root.
+     */
+    val favouritesBackup: LocalFavouritesBackup? by lazy {
+        favouritesRootProvider()?.let { root ->
+            LocalFavouritesBackup(
+                root = root,
+                favourites = { favourites },
+                scope = backupScope,
+                clock = favouritesBackupClock,
+                debounceMillis = favouritesBackupDebounceMillis,
+                onRestored = ::forgetFavourites,
+                onResult = { result ->
+                    if (result is Outcome.Failure) {
+                        Log.w(FAVOURITES_TAG, "favourites backup failed: ${result.error}")
+                    }
+                },
+            )
+        }
+    }
+
+    private val favouritesLock = Any()
+
+    @Volatile
+    private var cachedFavourites: FavouritesAccess? = null
+
+    /** Drops the parsed library after a restore replaced its file. */
+    internal fun forgetFavourites() {
+        synchronized(favouritesLock) { cachedFavourites = null }
     }
 
     /**
@@ -200,7 +247,9 @@ class AppContainer(
             navCommands(mapSession, { routingEngine }) +
             searchCommands { places } +
             trackCommands({ tracks }, assetReader) +
-            favouriteCommands({ favourites }, assetReader) +
+            favouriteCommands({ favourites }, assetReader).map { command ->
+                observedFavouriteCommand(command) { favouritesBackup?.onMutation() }
+            } +
             regionCommands({ regionDownloader }, regionNetwork, debuggable) +
             UnitsCommand({ unitSettings }) +
             extraCommands(mapSession) +
@@ -263,6 +312,7 @@ class AppContainer(
         const val SEARCH_TAG = "GrassMapsSearch"
         const val REGIONS_TAG = "GrassMapsRegions"
         const val MAP_CONTROLS_TAG = "GrassMapsMapControls"
+        const val FAVOURITES_TAG = "GrassMapsFavourites"
         const val ROUTING_PACK_DIRECTORY = "valhalla"
     }
 }

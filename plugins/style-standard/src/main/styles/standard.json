@@ -43,13 +43,43 @@
       "road_track": "#7a8a4a",
       "road_cycleway": "#2f86d6",
       "road_rail": "#a7b1b3",
-      "label_text": "#222222",
-      "label_halo": "#eeeae4",
-      "water_label": "#2d6a8e",
-      "poi_label": "#5a4a3a",
+      "label_text": [
+        "rgb",
+        34,
+        34,
+        34
+      ],
+      "label_halo": [
+        "rgb",
+        238,
+        234,
+        228
+      ],
+      "water_label": [
+        "rgb",
+        45,
+        106,
+        142
+      ],
+      "poi_label": [
+        "rgb",
+        90,
+        74,
+        58
+      ],
       "poi_icon": "#5a4a3a",
-      "address_label": "#91888b",
-      "shield_label": "#333333",
+      "address_label": [
+        "rgb",
+        145,
+        136,
+        139
+      ],
+      "shield_label": [
+        "rgb",
+        51,
+        51,
+        51
+      ],
       "contour_minor": "#dcc2a6",
       "contour_index": "#c9a27c"
     },
@@ -89,13 +119,43 @@
       "road_track": "#7f9470",
       "road_cycleway": "#5f8fe0",
       "road_rail": "#4a5058",
-      "label_text": "#e3e6ea",
-      "label_halo": "#161c26",
-      "water_label": "#8fc3e6",
-      "poi_label": "#c9b9a3",
+      "label_text": [
+        "rgb",
+        227,
+        230,
+        234
+      ],
+      "label_halo": [
+        "rgb",
+        22,
+        28,
+        38
+      ],
+      "water_label": [
+        "rgb",
+        143,
+        195,
+        230
+      ],
+      "poi_label": [
+        "rgb",
+        201,
+        185,
+        163
+      ],
       "poi_icon": "#c9b9a3",
-      "address_label": "#9aa4b0",
-      "shield_label": "#e3e6ea",
+      "address_label": [
+        "rgb",
+        154,
+        164,
+        176
+      ],
+      "shield_label": [
+        "rgb",
+        227,
+        230,
+        234
+      ],
       "contour_minor": "#2e343c",
       "contour_index": "#3e4650"
     }

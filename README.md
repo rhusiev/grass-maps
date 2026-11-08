@@ -253,8 +253,10 @@ style carries sources and glyphs but no layers; the consumer applies the
 provider's layers with `applyStyleDiff`, and only `setStyle` may reload.
 `plugins/style-standard/src/main/styles/standard.json` holds one layer list and
 a palette per variant; the provider resolves the palette tokens and returns
-`standard` (light) and `standard-dark`. The authored Touring style and the
-style switch are T-0109.
+`standard` (light) and `standard-dark`. Symbol text and halo colours in that
+palette are `rgb()` arrays: the current text path drops the green channel from
+a hex text colour, so the style avoids that form until the render path is
+fixed. The authored Touring style and the style switch are T-0109.
 
 The map resolves its sources in a fixed order:
 

@@ -27,6 +27,11 @@ import nl.r1a.grassmap.plugin.api.model.StyleId
  *
  * Layers are split across the logical sources by zoom: `world` for z0-z7 and
  * `region` for z8-z14. Contour overlays are added to every variant.
+ *
+ * Symbol text and halo colours are palette values written as `rgb()` arrays.
+ * The current text path renders a hex text colour with its green channel
+ * zeroed, which turns light dark-theme labels magenta; the render-path fix is
+ * reported separately, so the style data avoids the broken form.
  */
 internal class StandardStyle private constructor(
     private val baseStyleJson: String,

@@ -9,27 +9,34 @@
 # All steps run even when one fails, so a single run names every gap. The exit
 # code is non-zero when any step failed.
 #
-# Usage: ./check.sh [--fast|--skip-repro] [--with-device]
+# Usage: ./check.sh [--fast|--skip-repro] [--micro|--skip-lint] [--with-device]
 #   --fast         skip the two reproducible release builds (the slow part)
 #   --skip-repro   alias for --fast
+#   --micro        --fast and skip Android lint, the iteration loop
+#   --skip-lint    skip Android lint only
 #   --with-device  also install and launch the debug APK on a connected device
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKIP_REPRO=0
+SKIP_LINT=0
 WITH_DEVICE=0
 failures=0
 
 for arg in "$@"; do
     case "$arg" in
         --fast | --skip-repro) SKIP_REPRO=1 ;;
+        --micro) SKIP_REPRO=1; SKIP_LINT=1 ;;
+        --skip-lint) SKIP_LINT=1 ;;
         --with-device) WITH_DEVICE=1 ;;
         -h | --help)
             cat <<'EOF'
-Usage: ./check.sh [--fast|--skip-repro] [--with-device]
+Usage: ./check.sh [--fast|--skip-repro] [--micro|--skip-lint] [--with-device]
   --fast         skip the two reproducible release builds (the slow part)
   --skip-repro   alias for --fast
+  --micro        --fast and skip Android lint, the iteration loop
+  --skip-lint    skip Android lint only
   --with-device  also install and launch the debug APK on a connected device
 EOF
             exit 0
@@ -69,8 +76,13 @@ fail() {
 step "Format (Spotless with ktlint)"
 ./gradlew --console=plain spotlessCheck || fail "format"
 
-step "Android lint"
-./gradlew --console=plain lint || fail "lint"
+if [[ $SKIP_LINT -eq 0 ]]; then
+    step "Android lint"
+    ./gradlew --console=plain lint || fail "lint"
+else
+    step "Android lint: skipped by --micro/--skip-lint"
+    echo "Lint runs at pre-push and in CI; do not treat this run as merge evidence."
+fi
 
 step "Build :app:assembleDebug"
 ./gradlew --console=plain :app:assembleDebug || fail "build"

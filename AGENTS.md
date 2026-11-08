@@ -71,9 +71,11 @@ document, section 3, plus the build and module rules of this repository.
 - Build the app:
   `JAVA_HOME=$HOME/dotfiles/local/share/jdk ./gradlew :app:assembleDebug`
 - Iterate with `./check.sh --fast`: it runs the same steps minus the two
-  reproducible release builds, which are the slow part. Gradle re-runs only
-  tasks whose inputs changed, so do not pass `--rerun-tasks` to the iteration
-  gate; that forces a full rebuild and belongs to the full gate
+  reproducible release builds, which are the slow part. For the tightest loop
+  use `./check.sh --micro`, which also skips Android lint (the next slowest
+  step, about 9 minutes cold). Gradle re-runs only tasks whose inputs changed,
+  so do not pass `--rerun-tasks` to the iteration gate; that forces a full
+  rebuild and belongs to the full gate
 - Run the full gate `./check.sh` before merging. It takes the `gm-build` slot
   itself and runs format, lint, the build, unit tests, the plugin boundary and
   manifest checks, the example plugin, the privacy guards and the

@@ -61,9 +61,12 @@ never runs outside the slot:
 ```sh
 ./check.sh                 # everything below, including reproducibility
 ./check.sh --fast          # the fast loop; CI runs reproducibility separately
+./check.sh --micro         # the tight loop: fast minus Android lint
 ```
 
-`--skip-repro` is an alias for `--fast`. The gate runs Spotless with ktlint from
+`--skip-repro` is an alias for `--fast`. `--micro` also skips Android lint,
+which is the next slowest step; lint runs at pre-push and in CI, so a `--micro`
+run is iteration evidence only. The gate runs Spotless with ktlint from
 the root, Android lint, `:app:assembleDebug`, the JVM unit tests,
 `checkTranslations`, `checkPluginBoundaries`, `checkPluginManifests`,
 `:plugins:example:check`, `checkPrivacyGuards`, and two unsigned release builds

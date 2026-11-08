@@ -178,7 +178,8 @@ class LocationControllerTest {
             val host = FakeMapHost(camera())
             val session = MapSessionHolder().apply { bind(host) }
             val source = ReplayingLocationSource()
-            val controller = LocationController(source, session, backgroundScope)
+            val controller =
+                LocationController(source, backgroundScope, CameraModeController(session::hostOrNull))
             controller.start()
             runCurrent()
 

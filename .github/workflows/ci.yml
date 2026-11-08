@@ -112,9 +112,11 @@ jobs:
   emulator-map-goldens:
     name: Style and fixture map goldens (API 29, swangle)
     runs-on: ubuntu-latest
-    # Seeding or comparing 65 captures under software GL: about 29 s per
-    # capture plus a 20-minute boot and the one dialog-suppression reboot.
-    timeout-minutes: 120
+    # Measured on run 42456896336: all 60 style comparisons passed by 08:49:34Z,
+    # fixtures 1-4 were captured 08:54:32-08:58:15Z, and the 120-minute bound
+    # cancelled the job at 08:59:07Z during fixture 5. The job needed about
+    # 2-3 more minutes, not another 30, so 150 minutes keeps a real margin.
+    timeout-minutes: 150
     steps:
       - name: Check out
         uses: actions/checkout@v7

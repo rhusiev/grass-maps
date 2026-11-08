@@ -28,6 +28,17 @@ class FakeClient:
         return answer
 
 
+class AirplaneModeTest(unittest.TestCase):
+    def test_a_slow_radio_command_does_not_abort_the_capture(self) -> None:
+        adb = mock.Mock()
+        adb.shell.side_effect = map_goldens.GoldenError("timeout after 20s")
+
+        commands = map_goldens.airplane_mode(adb)
+
+        self.assertEqual(5, len(commands))
+        self.assertTrue(any("svc wifi disable" in command for command in commands))
+
+
 class StandardPositionsTest(unittest.TestCase):
     def test_ten_places_at_three_zooms(self) -> None:
         positions = map_goldens.POSITIONS["standard"]

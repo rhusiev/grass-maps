@@ -75,6 +75,11 @@ internal object MapGestures {
                     enabled = true
                     zoomStepLevels = DOUBLE_TAP_ZOOM_STEP_LEVELS
                 }
+                // The two-finger tap is ours (T-0105), so the engine must not
+                // also zoom on it; the detector in MapSurfaceView owns it.
+                twoFingerTap {
+                    enabled = false
+                }
                 tapDrag {
                     enabled = true
                     zoomLevelsPerViewport = ONE_FINGER_ZOOM_LEVELS_PER_VIEWPORT

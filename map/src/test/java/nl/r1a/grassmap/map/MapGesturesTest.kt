@@ -42,6 +42,12 @@ class MapGesturesTest {
     }
 
     @Test
+    fun theEngineTwoFingerTapIsOffSoTheGestureHasOneOwner() {
+        val options = MapGestures.uiOptions().toString()
+        assertTrue(options, options.contains("twoFingerTap=TapBinding(enabled=false"))
+    }
+
+    @Test
     fun theCameraAllowsOnlyTheGesturesWeShip() {
         val interactions = MapGestures.interactions().toString()
         assertTrue(interactions, interactions.contains("PanCameraConfiguration(enabled=true"))

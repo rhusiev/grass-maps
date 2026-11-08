@@ -340,9 +340,10 @@ The setting is a typed seam, `DistanceByTapSetting` on `AppContainer`, off by
 default until T-0016 binds it to the shared settings service; a debug build
 turns it on with `--ez t0105_distance_by_tap true`. The recogniser
 accepts exactly two pointers held at most 300 ms that travel at most 12 dp; the
-contract lives in `MapGestures`. The emulator cannot inject a second pointer, so
-the recogniser decision and the projection-to-haversine maths are unit tests and
-the pointer loop is unexercised on a device.
+contract lives in `MapGestures`, which disables the library's own two-finger tap
+binding so one gesture has one owner. The emulator cannot inject a second
+pointer, so the recogniser decision and the projection-to-haversine maths are
+unit tests and the pointer loop is unexercised on a device.
 
 ## Map controls
 

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="OsmAnd~ 4.9.0"
+     xmlns="http://www.topografix.com/GPX/1/1"
+     xmlns:osmand="https://osmand.net"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xmlns:test="https://test.net"
+     xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+    <metadata>
+        <name>favourites</name>
+    </metadata>
+    <wpt lat="49.8419000" lon="24.0316000">
+        <time>2026-10-01T09:00:00Z</time>
+        <name>Rynok Square</name>
+        <desc>Town hall corner</desc>
+        <sym>Special_star</sym>
+        <type>Lviv</type>
+    </wpt>
+    <wpt lat="49.8383000" lon="24.0329000">
+        <name>Vysoky Zamok</name>
+        <type>Lviv</type>
+        <extensions>
+            <osmand:color>#ff4e4eff</osmand:color>
+            <osmand:icon>historic_castle</osmand:icon>
+            <osmand:background>square</osmand:background>
+            <test:country>Ukraine</test:country>
+        </extensions>
+    </wpt>
+    <wpt lat="49.8356000" lon="24.0350000">
+        <name>Aqueduct</name>
+        <type>Parks</type>
+        <extensions>
+            <osmand:color>#0000FF</osmand:color>
+        </extensions>
+    </wpt>
+    <wpt lat="49.8440000" lon="24.0290000">
+        <name>No group</name>
+        <extensions>
+            <test:country>Ukraine</test:country>
+        </extensions>
+    </wpt>
+    <extensions>
+        <osmand:points_groups>
+            <group name="Lviv" color="#FF0000" icon="historic_castle" background="circle"/>
+            <group name="Parks" color="#0000FF" icon="bridge_structure_arch" background="octagon"/>
+        </osmand:points_groups>
+    </extensions>
+</gpx>

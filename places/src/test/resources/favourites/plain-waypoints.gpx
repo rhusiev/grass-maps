@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Other App" xmlns="http://www.topografix.com/GPX/1/1">
+    <wpt lat="49.8420000" lon="24.0300000">
+        <name>Alpha</name>
+        <desc>No extensions here</desc>
+    </wpt>
+    <wpt lat="49.8430000" lon="24.0310000">
+        <name>Beta</name>
+    </wpt>
+</gpx>

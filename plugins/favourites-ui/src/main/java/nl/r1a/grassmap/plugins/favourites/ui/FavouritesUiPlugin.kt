@@ -9,9 +9,9 @@ import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
 /**
  * The first-party favourites lists plugin (T-0213).
  *
- * It owns the lists state and the six action commands, and it publishes the
- * state as one stream so the shell and the control channel bind the same id.
- * Every mutation goes through the host's [nl.r1a.grassmap.plugin.api.host.FavouritesListsAccess],
+ * It owns the lists state and the action commands, the two browsing controls of
+ * T-0214, and it publishes the state as one stream so the shell and the control
+ * channel bind the same id. Every mutation goes through the host's [nl.r1a.grassmap.plugin.api.host.FavouritesListsAccess],
  * which writes the merged favourites library; the plugin never parses GPX and
  * keeps no second store.
  *

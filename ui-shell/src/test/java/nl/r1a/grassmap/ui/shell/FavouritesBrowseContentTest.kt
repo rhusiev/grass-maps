@@ -99,10 +99,11 @@ class FavouritesBrowseContentTest {
     }
 
     @Test
-    fun everySortHasItsOwnNonBlankKey() {
-        val keys = FavouriteSort.entries.map { sort -> favouriteSortKey(sort) }
-        assertEquals(keys.size, keys.toSet().size)
-        assertTrue(keys.all { key -> key.isNotBlank() })
+    fun everySortHasItsOwnKey() {
+        assertEquals(SORT_INSERTION_KEY, favouriteSortKey(FavouriteSort.INSERTION))
+        assertEquals(SORT_NAME_ASCENDING_KEY, favouriteSortKey(FavouriteSort.NAME_ASCENDING))
+        assertEquals(SORT_NAME_DESCENDING_KEY, favouriteSortKey(FavouriteSort.NAME_DESCENDING))
+        assertEquals(SORT_LIST_THEN_NAME_KEY, favouriteSortKey(FavouriteSort.LIST_THEN_NAME))
     }
 
     private class MapStrings(

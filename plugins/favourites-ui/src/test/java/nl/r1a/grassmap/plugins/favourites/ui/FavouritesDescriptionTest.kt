@@ -32,6 +32,14 @@ class FavouritesDescriptionTest {
     }
 
     @Test
+    fun suppressedContentDropsEntitiesAndComparisonsAsWell() {
+        assertNull(render("<script>&lt;img src=x onerror=alert(1)&gt;</script>"))
+        assertNull(render("<script>a < b</script>"))
+        assertNull(render("<style>a > b</style>"))
+        assertEquals("kept", render("<script>x</script>kept<script>y</script>"))
+    }
+
+    @Test
     fun aStyleDropsItsContent() {
         assertEquals("ok", render("<style>body{color:red}</style>ok"))
         assertNull(render("<style>body{color:red}"))
@@ -87,6 +95,13 @@ class FavouritesDescriptionTest {
     fun aVeryLongDescriptionIsBounded() {
         val rendered = render("a".repeat(50_000))
         assertEquals(FavouritesBrowser.MAX_DESCRIPTION_LENGTH, rendered?.length)
+    }
+
+    @Test
+    fun aVeryLongInputIsCappedBeforeTheScan() {
+        val rendered = render("&amp;".repeat(50_000))
+        assertEquals(FavouritesBrowser.MAX_DESCRIPTION_LENGTH, rendered?.length)
+        assertEquals('&', rendered?.first())
     }
 
     @Test

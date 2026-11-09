@@ -10,8 +10,9 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Keeps `plugin.json` in step with [FavouritesUiContract]: six non-undoable
- * commands, one stream, and the ids the plugin registers at activation.
+ * Keeps `plugin.json` in step with [FavouritesUiContract]: the action and
+ * browsing commands, one stream, and the ids the plugin registers at
+ * activation.
  */
 class FavouritesUiManifestTest {
     @Test

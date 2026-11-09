@@ -87,6 +87,28 @@ class FavouritesBrowseTest {
     }
 
     @Test
+    fun cyrillicNamesAndDescriptionsFoldCaseToo() {
+        val points =
+            listOf(
+                FavouritePointSummary("lviv", "Львівська площа", description = "Площа Ринок"),
+                FavouritePointSummary("office", "Офіс", description = "Робоче місце"),
+            )
+
+        assertEquals(
+            listOf("lviv"),
+            FavouritesBrowser.browse(points, "ЛЬВІВ", FavouriteSort.INSERTION).rows.map { row -> row.id },
+        )
+        assertEquals(
+            listOf("lviv"),
+            FavouritesBrowser.browse(points, "ринок", FavouriteSort.INSERTION).rows.map { row -> row.id },
+        )
+        assertEquals(
+            listOf("office"),
+            FavouritesBrowser.browse(points, "офіс", FavouriteSort.INSERTION).rows.map { row -> row.id },
+        )
+    }
+
+    @Test
     fun searchThenSortAppliesBothControls() {
         val state = FavouritesBrowser.browse(SEARCH_FIXTURE, "cafe", FavouriteSort.NAME_DESCENDING)
         assertEquals(listOf("p0", "p1", "p3"), state.rows.map { it.id })

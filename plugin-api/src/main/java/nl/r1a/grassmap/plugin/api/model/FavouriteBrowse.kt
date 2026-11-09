@@ -1,16 +1,15 @@
 package nl.r1a.grassmap.plugin.api.model
 
 import kotlinx.serialization.Serializable
-import java.util.Locale
 
 /**
  * The four point orders the favourites screen offers (T-0214).
  *
  * The order is fixed and locale-independent so one library draws the same rows
  * on every device. [NAME_ASCENDING], [NAME_DESCENDING] and [LIST_THEN_NAME]
- * compare names after lowercasing with [Locale.ROOT] and then by the JVM's
- * ordinary string order (UTF-16 code units); no locale collator takes part.
- * Equal names keep the library's file order, so a sort is stable.
+ * compare names after lowercasing and then by the JVM's ordinary string order
+ * (UTF-16 code units); no locale collator takes part. Equal names keep the
+ * library's file order, so a sort is stable.
  *
  * [INSERTION] is the order the merged favourites file stores the points in.
  * [LIST_THEN_NAME] puts points with no list first, then compares list name,
@@ -28,7 +27,7 @@ enum class FavouriteSort(
 
     companion object {
         /** Parses the command wire name; an unknown value returns null. */
-        fun fromWire(value: String): FavouriteSort? = entries.firstOrNull { sort -> sort.wireName == value.trim().lowercase(Locale.ROOT) }
+        fun fromWire(value: String): FavouriteSort? = entries.firstOrNull { sort -> sort.wireName == value.trim().lowercase() }
     }
 }
 

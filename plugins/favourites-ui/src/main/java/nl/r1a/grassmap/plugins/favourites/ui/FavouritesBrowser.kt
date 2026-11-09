@@ -84,47 +84,63 @@ internal object FavouritesBrowser {
      * returns null.
      *
      * The result is capped at [MAX_DESCRIPTION_LENGTH] characters so one
-     * pathological note cannot grow the screen's state without bound.
+     * pathological note cannot grow the screen's state without bound. The
+     * untrusted input is capped before any tag or entity scan, so a very large
+     * stored value cannot make the scan itself expensive.
      */
     internal fun renderDescription(raw: String?): String? {
         if (raw.isNullOrEmpty()) {
             return null
         }
+        val input = raw.take(MAX_DESCRIPTION_INPUT_LENGTH)
         val rendered = StringBuilder()
         var index = 0
         var suppressed: String? = null
         var full = false
-        while (index < raw.length && !full) {
-            when (val character = raw[index]) {
+        while (index < input.length && !full) {
+            val character = input[index]
+            if (suppressed != null) {
+                // Inside script or style only the closing tag matters; its
+                // words, entities and comparisons are all dropped.
+                if (character == '<') {
+                    val tag = readTag(input, index)
+                    if (tag == null) {
+                        index = input.length
+                    } else {
+                        index = tag.end
+                        if (tag.closing && tag.name == suppressed) {
+                            suppressed = null
+                        }
+                    }
+                } else {
+                    index += 1
+                }
+                continue
+            }
+            when (character) {
                 '<' -> {
-                    if (!isTagStart(raw, index)) {
+                    if (!isTagStart(input, index)) {
                         full = append(rendered, character)
                         index += 1
                     } else {
-                        val tag = readTag(raw, index)
+                        val tag = readTag(input, index)
                         if (tag == null) {
-                            index = raw.length
+                            index = input.length
                         } else {
                             index = tag.end
-                            if (suppressed != null) {
-                                if (tag.closing && tag.name == suppressed) {
-                                    suppressed = null
+                            when (tag.name) {
+                                SCRIPT_TAG, STYLE_TAG -> {
+                                    if (!tag.closing && !tag.selfClosing) {
+                                        suppressed = tag.name
+                                    }
                                 }
-                            } else {
-                                when (tag.name) {
-                                    SCRIPT_TAG, STYLE_TAG -> {
-                                        if (!tag.closing && !tag.selfClosing) {
-                                            suppressed = tag.name
-                                        }
-                                    }
 
-                                    BREAK_TAG, PARAGRAPH_TAG -> {
-                                        full = breakLine(rendered)
-                                    }
+                                BREAK_TAG, PARAGRAPH_TAG -> {
+                                    full = breakLine(rendered)
+                                }
 
-                                    else -> {
-                                        Unit
-                                    }
+                                else -> {
+                                    Unit
                                 }
                             }
                         }
@@ -132,7 +148,7 @@ internal object FavouritesBrowser {
                 }
 
                 '&' -> {
-                    val entity = readEntity(raw, index)
+                    val entity = readEntity(input, index)
                     if (entity == null) {
                         full = append(rendered, character)
                         index += 1
@@ -143,13 +159,9 @@ internal object FavouritesBrowser {
                 }
 
                 else -> {
-                    if (suppressed == null) {
-                        val codePoint = raw.codePointAt(index)
-                        full = appendCodePoint(rendered, codePoint)
-                        index += Character.charCount(codePoint)
-                    } else {
-                        index += 1
-                    }
+                    val codePoint = input.codePointAt(index)
+                    full = appendCodePoint(rendered, codePoint)
+                    index += Character.charCount(codePoint)
                 }
             }
         }
@@ -406,6 +418,7 @@ internal object FavouritesBrowser {
     )
 
     internal const val MAX_DESCRIPTION_LENGTH: Int = 2000
+    private const val MAX_DESCRIPTION_INPUT_LENGTH: Int = 20_000
 
     private const val SCRIPT_TAG = "script"
     private const val STYLE_TAG = "style"

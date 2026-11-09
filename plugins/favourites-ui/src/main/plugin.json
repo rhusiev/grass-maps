@@ -71,7 +71,7 @@
         "id": "favourites.ui.set_query",
         "params": "kotlinx.serialization.json.JsonElement",
         "result": "nl.r1a.grassmap.plugin.api.model.FavouriteListsState",
-        "doc": "Filters the favourites screen by name and description. Parameter: query.",
+        "doc": "Filters the favourites screen by name and description. Parameters: query, and optionally sequence.",
         "undoable": false,
         "allowlistedForControl": false,
         "dispatcher": "io",

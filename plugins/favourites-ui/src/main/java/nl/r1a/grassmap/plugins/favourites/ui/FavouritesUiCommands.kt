@@ -4,6 +4,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import nl.r1a.grassmap.plugin.api.command.CancellationKey
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
 import nl.r1a.grassmap.plugin.api.command.CommandPolicy
@@ -33,8 +34,20 @@ private val LISTS_POLICY: CommandPolicy =
 /**
  * The two browsing controls of T-0214 change only the derived screen view, so
  * they are not exposed on the control channel.
+ *
+ * A search keystroke is cancellable: a newer keystroke stops the one still
+ * running. The session also drops a result whose sequence is stale, which
+ * covers the race where both reach the mutex in the wrong order.
  */
-private val BROWSE_POLICY: CommandPolicy =
+private val QUERY_POLICY: CommandPolicy =
+    CommandPolicy(
+        cancellableBy = CancellationKey(QUERY_CANCELLATION_KEY),
+        undoable = false,
+        allowlistedForControl = false,
+        dispatcher = CommandDispatcher.IO,
+    )
+
+private val SORT_POLICY: CommandPolicy =
     CommandPolicy(
         undoable = false,
         allowlistedForControl = false,
@@ -166,7 +179,8 @@ class UndoFavouriteListCommand(
 
 /**
  * Applies a search query to the favourites screen (T-0214). The query is
- * trimmed; a blank query restores every point.
+ * trimmed; a blank query restores every point. [PARAM_SEQUENCE] orders the
+ * keystrokes so an older one cannot win.
  */
 class SearchFavouritesCommand(
     private val session: FavouritesUiSession,
@@ -174,16 +188,18 @@ class SearchFavouritesCommand(
         id = FavouritesUiContract.setQuery,
         paramsSerializer = JsonElement.serializer(),
         resultSerializer = FavouriteListsState.serializer(),
-        doc = "Filters the favourites screen by name and description. Parameter: query.",
-        policy = BROWSE_POLICY,
+        doc = "Filters the favourites screen by name and description. Parameters: query, and optionally sequence.",
+        policy = QUERY_POLICY,
     ) {
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<FavouriteListsState>> {
         val query = params.rawText(PARAM_QUERY) ?: return Outcome.Failure(AppError.InvalidInput)
-        return session.result(session.setQuery(query))
+        val sequence = params.long(PARAM_SEQUENCE) ?: 0L
+        return session.result(session.setQuery(query, sequence))
     }
 
     private companion object {
         const val PARAM_QUERY = "query"
+        const val PARAM_SEQUENCE = "sequence"
     }
 }
 
@@ -195,7 +211,7 @@ class SortFavouritesCommand(
         paramsSerializer = JsonElement.serializer(),
         resultSerializer = FavouriteListsState.serializer(),
         doc = "Sorts the favourites screen. Parameter: sort, one of insertion, name_ascending, name_descending or list_then_name.",
-        policy = BROWSE_POLICY,
+        policy = SORT_POLICY,
     ) {
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<FavouriteListsState>> {
         val sort = params.text(PARAM_SORT)?.let(FavouriteSort::fromWire) ?: return Outcome.Failure(AppError.InvalidInput)
@@ -229,3 +245,11 @@ private fun JsonElement.rawText(key: String): String? {
         ?.takeIf { primitive -> primitive.isString }
         ?.contentOrNull
 }
+
+/** A numeric parameter; the JSON may carry it as a string or a number. */
+private fun JsonElement.long(key: String): Long? {
+    val json = this as? JsonObject ?: return null
+    return (json[key] as? JsonPrimitive)?.contentOrNull?.toLongOrNull()
+}
+
+private const val QUERY_CANCELLATION_KEY = "favourites.ui.query"

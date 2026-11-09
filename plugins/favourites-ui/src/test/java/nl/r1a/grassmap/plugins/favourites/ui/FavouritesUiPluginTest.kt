@@ -7,10 +7,12 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import nl.r1a.grassmap.plugin.api.command.CancellationKey
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.model.FavouriteListSummary
 import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
 import nl.r1a.grassmap.plugin.api.model.FavouritePointSummary
 import nl.r1a.grassmap.plugin.api.model.FavouriteSort
@@ -38,6 +40,10 @@ class FavouritesUiPluginTest {
             assertTrue(context.providers.isEmpty())
             assertTrue(context.widgets.isEmpty())
             assertTrue(context.commands.none { it.policy.undoable })
+            assertEquals(
+                CancellationKey("favourites.ui.query"),
+                context.command(FavouritesUiContract.setQuery).policy.cancellableBy,
+            )
         }
 
     @Test
@@ -183,6 +189,52 @@ class FavouritesUiPluginTest {
                     .first()
                     .browse.rows
                     .map { it.id },
+            )
+        }
+
+    @Test
+    fun aListActionKeepsTheBrowseRowsQueryAndSort() =
+        runTest {
+            val access = FakeListsAccess()
+            access.current =
+                FavouriteListsState(
+                    lists = listOf(FavouriteListSummary("Food", "#FF0000")),
+                    points =
+                        listOf(
+                            FavouritePointSummary("one", "Rynok Square", description = "Market"),
+                            FavouritePointSummary("two", "Office", description = "The office"),
+                            FavouritePointSummary("three", "Cafe", description = "Coffee"),
+                        ),
+                )
+            val context = context(access)
+            FavouritesUiPlugin().activate(context)
+
+            context.command(FavouritesUiContract.setQuery).invokeRaw(listParams("query" to "OFFICE", "sequence" to "1"))
+            context.command(FavouritesUiContract.setSort).invokeRaw(listParams("sort" to "name_descending"))
+            context.command(FavouritesUiContract.movePoint).invokeRaw(listParams("pointId" to "one", "list" to "Food"))
+
+            val state = context.lists().first()
+            assertEquals("OFFICE", state.browse.query)
+            assertEquals(FavouriteSort.NAME_DESCENDING, state.browse.sort)
+            assertEquals(listOf("two"), state.browse.rows.map { it.id })
+            assertEquals(3, state.points.size)
+        }
+
+    @Test
+    fun aStaleQuerySequenceCannotOverwriteANewerOne() =
+        runTest {
+            val context = context()
+            FavouritesUiPlugin().activate(context)
+
+            context.command(FavouritesUiContract.setQuery).invokeRaw(listParams("query" to "abc", "sequence" to "2"))
+            context.command(FavouritesUiContract.setQuery).invokeRaw(listParams("query" to "ab", "sequence" to "1"))
+
+            assertEquals(
+                "abc",
+                context
+                    .lists()
+                    .first()
+                    .browse.query,
             )
         }
 

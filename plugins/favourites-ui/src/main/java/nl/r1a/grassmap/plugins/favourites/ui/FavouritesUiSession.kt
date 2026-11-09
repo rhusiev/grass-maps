@@ -36,6 +36,7 @@ class FavouritesUiSession(
     private val receipts = ArrayDeque<String>()
     private val current = MutableStateFlow(FavouriteListsState())
     private var query: String = ""
+    private var lastQuerySequence: Long = 0
     private var sort: FavouriteSort = FavouriteSort.INSERTION
 
     val state: StateFlow<FavouriteListsState> = current.asStateFlow()
@@ -76,9 +77,24 @@ class FavouritesUiSession(
         special: FavouriteSpecial,
     ): Outcome<FavouriteListsState> = mutate { access.setSpecial(pointId, special) }
 
-    /** Applies a search query to the derived browse view; the library is untouched. */
-    suspend fun setQuery(text: String): Outcome<FavouriteListsState> =
+    /**
+     * Applies a search query to the derived browse view; the library is untouched.
+     *
+     * [sequence] orders keystrokes. A result whose sequence is not newer than
+     * the last applied query is dropped, so a slow earlier keystroke cannot
+     * overwrite a later one.
+     */
+    suspend fun setQuery(
+        text: String,
+        sequence: Long = 0,
+    ): Outcome<FavouriteListsState> =
         mutex.withLock {
+            if (sequence in 1..lastQuerySequence) {
+                return@withLock Outcome.Success(current.value)
+            }
+            if (sequence > lastQuerySequence) {
+                lastQuerySequence = sequence
+            }
             query = text.trim()
             republishBrowse()
             Outcome.Success(current.value)
@@ -131,7 +147,9 @@ class FavouritesUiSession(
 
                 is Outcome.Success -> {
                     receipts.addLast(outcome.value.receipt)
-                    current.value = outcome.value.state.copy(undoAvailable = true)
+                    // Every publish path goes through here, so the derived browse
+                    // view can never be left empty by a list action.
+                    publish(outcome.value.state)
                     Outcome.Success(current.value)
                 }
             }

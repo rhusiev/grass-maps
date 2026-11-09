@@ -248,6 +248,7 @@ private fun MapContent(
     val selectedRows = PointInfoLabel.rows(selectedPoint, container.strings)
     val placeCard by PlaceCardSession.card.collectAsState()
     val listsVisible by FavouritesListsSession.visible.collectAsState()
+    val listsQuerySequence = remember { longArrayOf(0L) }
     val unitStore by
         produceState<UnitSettings?>(null) {
             value = withContext(Dispatchers.IO) { container.unitSettings }
@@ -419,8 +420,14 @@ private fun MapContent(
                     }
                 },
                 onQueryChange = { query ->
+                    listsQuerySequence[0] += 1
+                    val sequence = listsQuerySequence[0]
                     scope.launch {
-                        invokeListsCommand(container, FavouritesUiContract.setQuery, listParams("query" to query))
+                        invokeListsCommand(
+                            container,
+                            FavouritesUiContract.setQuery,
+                            listParams("query" to query, "sequence" to sequence.toString()),
+                        )
                     }
                 },
                 onSortChange = { sort ->

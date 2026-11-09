@@ -243,7 +243,7 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/map-controls` | the free, follow and heading camera mode, the compass reset, the position-marker offset seam and the scale-bar layout | `plugin-api` |
 | `plugins/point-info` | the distance and azimuth from the fix or map centre to a long-pressed point | `plugin-api` |
 | `plugins/osm-places` | the `places.card` provider that maps OSM tags to place-card rows and evaluates `opening_hours` | `plugin-api` |
-| `plugins/favourites-ui` | the favourites lists state and the create, move, recolour, Home and Work commands | `plugin-api` |
+| `plugins/favourites-ui` | the favourites lists state, the create, move, recolour, Home and Work commands, and the browsing search, sorts and description rendering | `plugin-api` |
 | `plugins/share` | the decimal, DMS and DDM coordinate notations, the osm.org and `geo:` link builders, and the copy, share and open-in commands | `plugin-api` |
 
 ## Place card
@@ -753,14 +753,26 @@ T-0203's.
 
 ## Favourites lists seam
 
-`plugins/favourites-ui` (T-0213) owns the lists screen state and six commands:
-create a list, move a point, recolour a list, set Home, set Work and undo. The
-plugin depends on `:plugin-api` only. It writes through
-`FavouritesListsAccess` in `plugin-api.host`, which `app` implements as
-`StoreFavouritesLists` over the merged favourites store, so every action writes
-`favourites/favourites.gpx` and its `<osmand:points_groups>` definitions before
-the plugin publishes a new state. The plugin never parses GPX and there is no
-second store.
+`plugins/favourites-ui` (T-0213) owns the lists screen state and its commands:
+create a list, move a point, recolour a list, set Home, set Work and undo, plus
+the two browsing controls of T-0214, `set_query` and `set_sort`. The plugin
+depends on `:plugin-api` only. It writes through `FavouritesListsAccess` in
+`plugin-api.host`, which `app` implements as `StoreFavouritesLists` over the
+merged favourites store, so every action writes `favourites/favourites.gpx` and
+its `<osmand:points_groups>` definitions before the plugin publishes a new
+state. The plugin never parses GPX and there is no second store.
+
+The published `FavouriteListsState` keeps the library's file-order `points` and
+adds a derived `browse` view: the trimmed query, one of four fixed sorts and the
+rows the sheet draws. The sorts are file order, name A-Z, name Z-A and list then
+name; names compare after lowercasing by UTF-16 code units, never through a
+locale collator, and equal names keep file order. Search folds case and accents
+over a point's name and its rendered description, so `cafe` finds `Café`; a
+blank query restores every point and no match is an empty row list. A stored
+description is untrusted text: the plugin renders simple markup to plain text,
+decodes known entities, drops every tag with its attributes, drops `script` and
+`style` content whole, and caps both the scanned input and the rendered output.
+The sheet never sees markup.
 
 A list is an OsmAnd group. Moving a point changes its `<type>`; if the point's
 appearance matched its old list's, it adopts the destination's appearance.

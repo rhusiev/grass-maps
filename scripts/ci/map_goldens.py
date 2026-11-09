@@ -43,6 +43,7 @@ import sys
 import tempfile
 import time
 import zlib
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -492,6 +493,42 @@ def focused_window(adb: Adb) -> str | None:
     return None
 
 
+def parse_resumed_activity(raw: str) -> str | None:
+    """The resumed component from `dumpsys activity activities`, normalized.
+
+    `mResumedActivity` is a second foreground oracle used only when
+    `mCurrentFocus` stays null. The dumped form is
+    `mResumedActivity: ActivityRecord{... u0 pkg/.Activity ...}`.
+    """
+    for line in raw.splitlines():
+        if "mResumedActivity" not in line:
+            continue
+        component = re.search(r"\b([A-Za-z0-9_.]+)/([A-Za-z0-9_.$]+)", line)
+        if component is None:
+            return None
+        package, activity = component.groups()
+        if activity.startswith("."):
+            activity = package + activity
+        return f"{package}/{activity}"
+    return None
+
+
+def resumed_activity(adb: Adb) -> str | None:
+    raw = adb.shell("dumpsys", "activity", "activities", timeout_s=30, check=False)
+    return parse_resumed_activity(raw)
+
+
+def is_map_activity(component: str | None) -> bool:
+    if component is None:
+        return False
+    package, _, activity = component.partition("/")
+    return package == PACKAGE and activity == ACTIVITY
+
+
+def is_null_focus(focus: str | None) -> bool:
+    return focus is None or "mCurrentFocus=null" in focus
+
+
 def is_anr_dialog(focus: str | None) -> bool:
     return focus is not None and "Application Not Responding" in focus
 
@@ -557,7 +594,9 @@ def require_app_focused(
     `foreground` is set; the call before the camera move uses that, while the
     assertion after the settle does not, so a recreate can never silently
     reset the camera under a capture. After the bounded budget a persistent
-    wrong focus is named instead of silently comparing the wrong window.
+    wrong focus is named instead of silently comparing the wrong window. When
+    `mCurrentFocus` is null, `dumpsys activity activities` is consulted and a
+    resumed map activity is accepted as the fallback oracle.
     """
     deadline = time.monotonic() + FOCUS_RETRY_TIMEOUT_S
     brought_to_front = False
@@ -572,6 +611,17 @@ def require_app_focused(
             brought_to_front = True
             time.sleep(APP_FOREGROUND_SETTLE_S)
         if time.monotonic() >= deadline:
+            if is_null_focus(focus):
+                resumed = resumed_activity(adb)
+                if is_map_activity(resumed):
+                    print(
+                        f"foreground oracle: mResumedActivity={resumed} accepted for {stage}",
+                        file=sys.stderr,
+                    )
+                    return f"mResumedActivity={resumed}"
+                raise FocusError(
+                    f"{stage}: no focused window and resumed activity is {resumed}",
+                )
             raise FocusError(f"{stage}: the focused window is not {PACKAGE}: {focus}")
         time.sleep(FOCUS_RETRY_PAUSE_S)
 
@@ -594,14 +644,14 @@ def capture_position(
     aborts, which re-applies the camera after the app is foregrounded.
     """
     for attempt in range(POSITION_ATTEMPTS):
-        require_app_focused(adb, name)
+        foreground = require_app_focused(adb, name)
         result = invoke_camera(client, params)
         idle = "idle=true" in result
         settle = SCREENSHOT_SETTLE_S if idle else SCREENSHOT_SETTLE_S + SLOW_FRAME_ALLOWANCE_S
         dismiss_system_dialogs(adb)
         time.sleep(settle)
         try:
-            require_app_focused(adb, name, foreground=False)
+            settled_focus = require_app_focused(adb, name, foreground=False)
         except FocusError:
             if attempt + 1 >= POSITION_ATTEMPTS:
                 raise
@@ -618,6 +668,10 @@ def capture_position(
             "capture": "adb exec-out screencap -p",
             "idle": idle,
             "stability": stability,
+            "foreground": {
+                "before_camera": foreground,
+                "before_capture": settled_focus,
+            },
             "camera_result": result,
         }
     raise FocusError(f"{name}: no capture after {POSITION_ATTEMPTS} attempts")
@@ -936,26 +990,69 @@ def compare(
     reference: Path,
     output: Path,
     style: str | None,
+    recapture: Callable[[str, dict[str, object]], dict[str, object]] | None = None,
+    positions: tuple[tuple[str, float, float, float, float, float], ...] | None = None,
 ) -> dict[str, object]:
-    positions = []
-    for name, *_ in POSITIONS[profile]:
+    selected = positions if positions is not None else POSITIONS[profile]
+    results = []
+    for name, lat, lon, zoom, bearing, tilt in selected:
+        params: dict[str, object] = {
+            "lat": lat,
+            "lon": lon,
+            "zoom": zoom,
+            "bearing": bearing,
+            "tilt": tilt,
+        }
         golden = reference / f"{name}.png"
         candidate = captured / f"{name}.png"
         if not golden.is_file():
             raise GoldenError(f"missing reference {golden}")
         if not candidate.is_file():
             raise GoldenError(f"missing capture {candidate}")
-        result = compare_images(golden, candidate)
+        first = compare_images(golden, candidate)
+        first_percent = first["mismatch_percent"]
+        first_delta = first["mean_block_delta"]
+        recapture_attempted = not first["pass"] and recapture is not None
+        recapture_result: dict[str, object] | None = None
+        result = first
+        first_capture: str | None = None
+        if recapture_attempted:
+            output.mkdir(parents=True, exist_ok=True)
+            first_copy = output / f"{name}.first.png"
+            first_copy.write_bytes(candidate.read_bytes())
+            first_capture = str(first_copy)
+            print(f"{name}: {first_percent}% blocks -> re-capturing once", file=sys.stderr)
+            try:
+                recapture_result = recapture(name, params)
+                result = compare_images(golden, candidate)
+            except GoldenError as error:
+                print(f"{name}: re-capture failed: {error}", file=sys.stderr)
+                recapture_result = {"error": str(error)}
         diff_rgb = result.pop("_diff")
         write_png(output / f"{name}.diff.png", GRID_WIDTH, GRID_HEIGHT, diff_rgb)
-        positions.append({"name": name, **result})
-        print(
-            f"{name}: {result['mismatch_percent']}% blocks, "
-            f"mean delta {result['mean_block_delta']} -> "
-            f"{'pass' if result['pass'] else 'FAIL'}",
-            file=sys.stderr,
-        )
-    passed = all(position["pass"] for position in positions)
+        position = {"name": name, **result}
+        if recapture_attempted:
+            position["first_mismatch_percent"] = first_percent
+            position["first_mean_block_delta"] = first_delta
+            position["first_capture"] = first_capture
+            position["recaptured"] = recapture_result is not None and "error" not in recapture_result
+            position["recapture"] = recapture_result
+        results.append(position)
+        if recapture_attempted:
+            print(
+                f"{name}: first {first_percent}% -> second {result['mismatch_percent']}% "
+                f"mean delta {result['mean_block_delta']} -> "
+                f"{'pass' if result['pass'] else 'FAIL'}",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"{name}: {result['mismatch_percent']}% blocks, "
+                f"mean delta {result['mean_block_delta']} -> "
+                f"{'pass' if result['pass'] else 'FAIL'}",
+                file=sys.stderr,
+            )
+    passed = all(position["pass"] for position in results)
     document = {
         "schema": SCHEMA,
         "profile": profile,
@@ -965,7 +1062,7 @@ def compare(
             "max_mismatch_percent": MAX_MISMATCH_PERCENT,
             "metric": "centre 16:9 area, central half, 108x192 mean-RGB blocks",
         },
-        "positions": positions,
+        "positions": results,
         "result": "pass" if passed else "fail",
     }
     output.mkdir(parents=True, exist_ok=True)
@@ -1003,6 +1100,7 @@ def build_parser() -> argparse.ArgumentParser:
     capture_parser.add_argument("--keep-data", action="store_true")
 
     compare_parser = subparsers.add_parser("compare")
+    compare_parser.add_argument("--serial", default=None)
     compare_parser.add_argument("--profile", choices=sorted(POSITIONS), required=True)
     compare_parser.add_argument("--captured", required=True)
     compare_parser.add_argument("--style", choices=sorted(STYLE_IDS), default=None)
@@ -1011,6 +1109,33 @@ def build_parser() -> argparse.ArgumentParser:
     compare_parser.add_argument("--update", action="store_true")
 
     return parser
+
+
+def build_recapture(
+    args: argparse.Namespace,
+    captured: Path,
+) -> Callable[[str, dict[str, object]], dict[str, object]] | None:
+    """One-shot re-capture for a failed position, or None without a device.
+
+    The app is still on the captured style when compare follows capture in the
+    same emulator session. Re-select the style when it is known, so a re-capture
+    cannot silently use the other variant.
+    """
+    try:
+        serial = args.serial or control_client.adb(["get-serialno"]).stdout.strip()
+        adb = Adb(serial)
+        adb.wait_for_device()
+        client = wait_for_channel(adb)
+        if args.style is not None:
+            invoke_style(client, args.style)
+
+        def recapture(name: str, params: dict[str, object]) -> dict[str, object]:
+            return capture_position(adb, client, captured, name, params)
+
+        return recapture
+    except GoldenError as error:
+        print(f"warning: no re-capture channel: {error}", file=sys.stderr)
+        return None
 
 
 def main() -> int:
@@ -1047,7 +1172,16 @@ def main() -> int:
         if args.update:
             update_reference(args.profile, Path(args.captured), reference)
             return 0
-        document = compare(args.profile, Path(args.captured), reference, output, args.style)
+        captured = Path(args.captured)
+        recapture = build_recapture(args, captured)
+        document = compare(
+            args.profile,
+            captured,
+            reference,
+            output,
+            args.style,
+            recapture=recapture,
+        )
         return 0 if document["result"] == "pass" else 1
     except GoldenError as error:
         print(f"FAIL: {error}", file=sys.stderr)

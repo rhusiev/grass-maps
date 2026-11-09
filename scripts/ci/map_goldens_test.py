@@ -264,15 +264,18 @@ class AppFocusTest(unittest.TestCase):
 class FakeAdb:
     """An adb whose focus moves through a scripted list and which records taps."""
 
-    def __init__(self, focus: list[str], xml: str = "") -> None:
+    def __init__(self, focus: list[str], xml: str = "", resumed: str = "") -> None:
         self.focus = focus
         self.xml = xml
+        self.resumed = resumed
         self.taps: list[tuple[str, str]] = []
         self.fronted = 0
 
     def shell(self, *args: str, timeout_s: float = 0, check: bool = True) -> str:
         if args[:2] == ("dumpsys", "window"):
             return self.focus.pop(0) if len(self.focus) > 1 else self.focus[0]
+        if args[:3] == ("dumpsys", "activity", "activities"):
+            return self.resumed
         if args[:2] == ("am", "start"):
             self.fronted += 1
             return ""
@@ -285,6 +288,175 @@ class FakeAdb:
 
     def screencap(self) -> bytes:
         return map_goldens.PNG_SIGNATURE + b"frame"
+
+
+class ResumedActivityTest(unittest.TestCase):
+    APP_RESUMED = (
+        "  mResumedActivity: ActivityRecord{123 u0 "
+        "nl.r1a.grassmap/.app.MainActivity t42}"
+    )
+    FOREIGN_RESUMED = (
+        "  mResumedActivity: ActivityRecord{124 u0 "
+        "com.android.launcher3/.Launcher t42}"
+    )
+
+    def test_parses_the_app_component(self) -> None:
+        self.assertEqual(
+            "nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity",
+            map_goldens.parse_resumed_activity(self.APP_RESUMED),
+        )
+
+    def test_parses_a_foreign_component(self) -> None:
+        component = map_goldens.parse_resumed_activity(self.FOREIGN_RESUMED)
+
+        self.assertEqual("com.android.launcher3/com.android.launcher3.Launcher", component)
+        self.assertFalse(map_goldens.is_map_activity(component))
+
+    def test_absent_resumed_line_is_none(self) -> None:
+        self.assertIsNone(map_goldens.parse_resumed_activity("no activity lines"))
+
+    def test_map_activity_accepts_the_app(self) -> None:
+        component = map_goldens.parse_resumed_activity(self.APP_RESUMED)
+
+        self.assertTrue(map_goldens.is_map_activity(component))
+
+    def test_null_focus_falls_back_to_the_resumed_map_activity(self) -> None:
+        adb = FakeAdb(["mCurrentFocus=null"], resumed=ResumedActivityTest.APP_RESUMED)
+
+        with (
+            mock.patch.object(map_goldens, "FOCUS_RETRY_TIMEOUT_S", 0.0),
+            mock.patch.object(map_goldens.time, "sleep"),
+        ):
+            focus = map_goldens.require_app_focused(adb, "place-a-z12")
+
+        self.assertIn("mResumedActivity=", focus)
+        self.assertIn("nl.r1a.grassmap.app.MainActivity", focus)
+        self.assertEqual(adb.fronted, 1)
+
+    def test_null_focus_with_a_foreign_resumed_activity_fails(self) -> None:
+        adb = FakeAdb(
+            ["mCurrentFocus=null"],
+            resumed=ResumedActivityTest.FOREIGN_RESUMED,
+        )
+
+        with (
+            mock.patch.object(map_goldens, "FOCUS_RETRY_TIMEOUT_S", 0.0),
+            mock.patch.object(map_goldens.time, "sleep"),
+            self.assertRaises(map_goldens.FocusError) as raised,
+        ):
+            map_goldens.require_app_focused(adb, "place-a-z12")
+
+        self.assertIn("com.android.launcher3", str(raised.exception))
+
+    def test_a_foreign_focus_does_not_use_the_resumed_fallback(self) -> None:
+        adb = FakeAdb(
+            ["mCurrentFocus=Window{9 u0 com.android.launcher3/com.android.launcher3.Launcher}"],
+            resumed=ResumedActivityTest.APP_RESUMED,
+        )
+
+        with (
+            mock.patch.object(map_goldens, "FOCUS_RETRY_TIMEOUT_S", 0.0),
+            mock.patch.object(map_goldens.time, "sleep"),
+            self.assertRaises(map_goldens.FocusError),
+        ):
+            map_goldens.require_app_focused(adb, "place-a-z12")
+
+
+class CompareRecaptureTest(unittest.TestCase):
+    POSITION = ("p", 49.95, 23.95, 13.0, 0.0, 0.0)
+
+    def _solid(self, path: Path, value: int) -> None:
+        width, height = 216, 384
+        map_goldens.write_png(path, width, height, bytes((value, value, value)) * width * height)
+
+    def _dirs(self, directory: str) -> tuple[Path, Path, Path]:
+        root = Path(directory)
+        captured = root / "captured"
+        reference = root / "reference"
+        output = root / "output"
+        captured.mkdir()
+        reference.mkdir()
+        return captured, reference, output
+
+    def test_a_single_re_capture_can_recover_a_position(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            captured, reference, output = self._dirs(directory)
+            self._solid(reference / "p.png", 255)
+            self._solid(captured / "p.png", 0)
+            calls: list[str] = []
+
+            def recapture(name: str, params: dict[str, object]) -> dict[str, object]:
+                calls.append(name)
+                self._solid(captured / f"{name}.png", 255)
+                return {"name": name, "idle": True, "stability": {"stable": True}}
+
+            document = map_goldens.compare(
+                "standard",
+                captured,
+                reference,
+                output,
+                "light",
+                recapture=recapture,
+                positions=(self.POSITION,),
+            )
+
+            position = document["positions"][0]
+            self.assertEqual("pass", document["result"])
+            self.assertEqual(["p"], calls)
+            self.assertTrue(position["pass"])
+            self.assertTrue(position["recaptured"])
+            self.assertGreater(position["first_mismatch_percent"], 5)
+            self.assertEqual(0.0, position["mismatch_percent"])
+            self.assertTrue((output / "p.first.png").is_file())
+            self.assertIn("first_mismatch_percent", (output / "comparison.json").read_text())
+
+    def test_a_second_failed_capture_still_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            captured, reference, output = self._dirs(directory)
+            self._solid(reference / "p.png", 255)
+            self._solid(captured / "p.png", 0)
+
+            def recapture(name: str, params: dict[str, object]) -> dict[str, object]:
+                self._solid(captured / f"{name}.png", 0)
+                return {"name": name, "idle": True, "stability": {"stable": True}}
+
+            document = map_goldens.compare(
+                "standard",
+                captured,
+                reference,
+                output,
+                "light",
+                recapture=recapture,
+                positions=(self.POSITION,),
+            )
+
+            position = document["positions"][0]
+            self.assertEqual("fail", document["result"])
+            self.assertTrue(position["recaptured"])
+            self.assertGreater(position["first_mismatch_percent"], 5)
+            self.assertGreater(position["mismatch_percent"], 5)
+
+    def test_a_passing_position_is_not_re_captured(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            captured, reference, output = self._dirs(directory)
+            self._solid(reference / "p.png", 255)
+            self._solid(captured / "p.png", 255)
+
+            def recapture(name: str, params: dict[str, object]) -> dict[str, object]:
+                raise AssertionError("a passing position must not be re-captured")
+
+            document = map_goldens.compare(
+                "standard",
+                captured,
+                reference,
+                output,
+                "light",
+                recapture=recapture,
+                positions=(self.POSITION,),
+            )
+
+            self.assertEqual("pass", document["result"])
+            self.assertNotIn("recaptured", document["positions"][0])
 
 
 class AnrDialogTest(unittest.TestCase):

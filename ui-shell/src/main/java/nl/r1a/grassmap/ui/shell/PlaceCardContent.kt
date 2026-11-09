@@ -3,6 +3,7 @@ package nl.r1a.grassmap.ui.shell
 import nl.r1a.grassmap.plugin.api.model.PlaceCard
 import nl.r1a.grassmap.plugin.api.model.PlaceCardEntry
 import nl.r1a.grassmap.plugin.api.model.PlaceCardValue
+import nl.r1a.grassmap.plugin.api.model.PlaceOpeningState
 import nl.r1a.grassmap.plugin.api.service.Strings
 
 /** One drawn row: the label and the value the active language resolved. */
@@ -20,6 +21,7 @@ data class PlaceCardContent(
     val kind: String?,
     val address: String?,
     val openingHours: PlaceCardRow?,
+    val openingState: PlaceCardRow?,
     val contacts: List<PlaceCardRow>,
     val accessibility: List<PlaceCardRow>,
     val attributes: List<PlaceCardRow>,
@@ -30,6 +32,7 @@ data class PlaceCardContent(
                 kind == null &&
                 address == null &&
                 openingHours == null &&
+                openingState == null &&
                 contacts.isEmpty() &&
                 accessibility.isEmpty() &&
                 attributes.isEmpty()
@@ -53,6 +56,12 @@ fun placeCardContent(
         openingHours =
             card.openingHours.nonBlank()?.let { hours ->
                 PlaceCardRow(label = strings.resolve(OPENING_HOURS_LABEL), value = hours)
+            },
+        openingState =
+            card.openingState?.let { state ->
+                val label = strings.resolve(OPENING_STATE_LABEL).nonBlank()
+                val value = strings.resolve(openingStateKey(state)).nonBlank()
+                if (label == null || value == null) null else PlaceCardRow(label = label, value = value)
             },
         contacts = card.contacts.rows(strings),
         accessibility = card.accessibility.rows(strings),
@@ -80,3 +89,14 @@ private fun String?.nonBlank(): String? = this?.trim()?.takeIf { it.isNotEmpty()
 
 /** The shell-owned chrome label for the raw opening-hours string. */
 internal const val OPENING_HOURS_LABEL = "place_card_opening_hours"
+
+/** The shell-owned chrome label for the open state. */
+internal const val OPENING_STATE_LABEL = "place_card_opening_state"
+
+/** The i18n key for one open state. */
+internal fun openingStateKey(state: PlaceOpeningState): String =
+    when (state) {
+        PlaceOpeningState.OPEN -> "place_card_open"
+        PlaceOpeningState.CLOSED -> "place_card_closed"
+        PlaceOpeningState.UNKNOWN -> "place_card_unknown"
+    }

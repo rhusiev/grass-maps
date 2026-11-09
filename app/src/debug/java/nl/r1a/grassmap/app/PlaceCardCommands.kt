@@ -104,12 +104,14 @@ private fun describe(content: PlaceCardContent): String =
         content.kind?.let { appendLine("kind=$it") }
         content.address?.let { appendLine("address=$it") }
         content.openingHours?.let { appendLine("${it.label}=${it.value}") }
+        content.openingState?.let { appendLine("${it.label}=${it.value}") }
         content.contacts.forEach { appendLine("contact: ${it.label}=${it.value}") }
         content.accessibility.forEach { appendLine("accessibility: ${it.label}=${it.value}") }
         content.attributes.forEach { appendLine("details: ${it.label}=${it.value}") }
         append("rows=")
         append(
             listOf(content.contacts, content.accessibility, content.attributes).sumOf { it.size } +
-                (if (content.openingHours != null) 1 else 0),
+                (if (content.openingHours != null) 1 else 0) +
+                (if (content.openingState != null) 1 else 0),
         )
     }

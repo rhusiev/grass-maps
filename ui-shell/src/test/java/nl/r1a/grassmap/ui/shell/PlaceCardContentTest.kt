@@ -3,6 +3,7 @@ package nl.r1a.grassmap.ui.shell
 import nl.r1a.grassmap.plugin.api.model.PlaceCard
 import nl.r1a.grassmap.plugin.api.model.PlaceCardEntry
 import nl.r1a.grassmap.plugin.api.model.PlaceCardValue
+import nl.r1a.grassmap.plugin.api.model.PlaceOpeningState
 import nl.r1a.grassmap.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -22,6 +23,7 @@ class PlaceCardContentTest {
                 kind = "cafe",
                 address = "вул. Стрийська 45",
                 openingHours = "Mo-Su 08:00-22:00",
+                openingState = PlaceOpeningState.OPEN,
                 contacts =
                     listOf(
                         entry(Keys.PHONE, PlaceCardValue.Text("+380322970545")),
@@ -43,6 +45,7 @@ class PlaceCardContentTest {
         assertEquals("cafe", content.kind)
         assertEquals("вул. Стрийська 45", content.address)
         assertEquals(PlaceCardRow("Opening hours", "Mo-Su 08:00-22:00"), content.openingHours)
+        assertEquals(PlaceCardRow("Status", "Open now"), content.openingState)
         assertEquals(
             listOf(
                 PlaceCardRow("Phone", "+380322970545"),
@@ -62,6 +65,7 @@ class PlaceCardContentTest {
                 kind = null,
                 address = "",
                 openingHours = "   ",
+                openingState = null,
                 contacts =
                     listOf(
                         entry(Keys.PHONE, PlaceCardValue.Text("  ")),
@@ -77,6 +81,7 @@ class PlaceCardContentTest {
         assertNull(content.kind)
         assertNull(content.address)
         assertNull(content.openingHours)
+        assertNull(content.openingState)
         assertTrue(content.contacts.isEmpty())
         assertTrue(content.accessibility.isEmpty())
         assertTrue(content.attributes.isEmpty())
@@ -88,6 +93,39 @@ class PlaceCardContentTest {
         val content = placeCardContent(PlaceCard(), MapStrings(RESOLVED))
 
         assertTrue(content.isEmpty)
+    }
+
+    @Test
+    fun everyOpenStateBecomesALocalisedStatusRow() {
+        val expected =
+            mapOf(
+                PlaceOpeningState.OPEN to "Open now",
+                PlaceOpeningState.CLOSED to "Closed now",
+                PlaceOpeningState.UNKNOWN to "Hours unknown",
+            )
+
+        for ((state, label) in expected) {
+            val content =
+                placeCardContent(
+                    PlaceCard(openingHours = "Mo-Fr 09:00-18:00", openingState = state),
+                    MapStrings(RESOLVED),
+                )
+
+            assertEquals(PlaceCardRow("Status", label), content.openingState)
+            assertEquals(PlaceCardRow("Opening hours", "Mo-Fr 09:00-18:00"), content.openingHours)
+        }
+    }
+
+    @Test
+    fun hoursWithoutAStateAddNoStatusRow() {
+        val content =
+            placeCardContent(
+                PlaceCard(openingHours = "Mo-Fr 09:00-18:00"),
+                MapStrings(RESOLVED),
+            )
+
+        assertEquals(PlaceCardRow("Opening hours", "Mo-Fr 09:00-18:00"), content.openingHours)
+        assertNull(content.openingState)
     }
 
     private fun entry(
@@ -119,6 +157,10 @@ class PlaceCardContentTest {
         val RESOLVED =
             mapOf(
                 "place_card_opening_hours" to "Opening hours",
+                "place_card_opening_state" to "Status",
+                "place_card_open" to "Open now",
+                "place_card_closed" to "Closed now",
+                "place_card_unknown" to "Hours unknown",
                 Keys.PHONE to "Phone",
                 Keys.EMAIL to "Email",
                 Keys.WHEELCHAIR_ACCESS to "Wheelchair access",

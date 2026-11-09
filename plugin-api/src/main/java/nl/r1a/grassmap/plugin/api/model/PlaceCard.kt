@@ -13,6 +13,7 @@ data class PlaceCard(
     val kind: String? = null,
     val address: String? = null,
     val openingHours: String? = null,
+    val openingState: PlaceOpeningState? = null,
     val contacts: List<PlaceCardEntry> = emptyList(),
     val accessibility: List<PlaceCardEntry> = emptyList(),
     val attributes: List<PlaceCardEntry> = emptyList(),
@@ -24,9 +25,23 @@ data class PlaceCard(
                 kind == null &&
                 address == null &&
                 openingHours == null &&
+                openingState == null &&
                 contacts.isEmpty() &&
                 accessibility.isEmpty() &&
                 attributes.isEmpty()
+}
+
+/**
+ * The open state at the moment the card was built (T-0209).
+ *
+ * The provider evaluates the raw `opening_hours` value; a value it cannot
+ * parse is [UNKNOWN], never an error. [PlaceCard.openingHours] keeps the raw
+ * string, so a reader can still see the source text.
+ */
+enum class PlaceOpeningState {
+    OPEN,
+    CLOSED,
+    UNKNOWN,
 }
 
 /**

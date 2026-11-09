@@ -242,6 +242,34 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/dev-tools` | the release development-tools panel and its GPX replay start/stop commands | `plugin-api` |
 | `plugins/map-controls` | the free, follow and heading camera mode, the compass reset, the position-marker offset seam and the scale-bar layout | `plugin-api` |
 | `plugins/point-info` | the distance and azimuth from the fix or map centre to a long-pressed point | `plugin-api` |
+| `plugins/osm-places` | the `places.card` provider that maps OSM tags to place-card rows and evaluates `opening_hours` | `plugin-api` |
+
+## Place card
+
+The `places.card` contract (`PlaceCardContract`, version 1.1.0) maps one
+place's already-loaded `PlaceDetails` onto a `PlaceCard`. The provider gets no
+index, file or network handle, so the tags it draws can only be the tags the
+`places.search` contract returned. `plugins/osm-places` is the first provider;
+`ui-shell`'s `PlaceCardHost` resolves its label keys through `Strings` and drops
+an absent field instead of drawing an empty row. The debug command
+`core.place.card_show` opens a card for an index place id; the search screen is
+T-0203.
+
+`PlaceCard.openingHours` keeps the raw OSM string. `PlaceCard.openingState` is
+`OPEN`, `CLOSED` or `UNKNOWN` at the moment the card was built, evaluated on
+the Europe/Kyiv wall clock by the `opening_hours` parser in
+`plugins/osm-places`. The parser covers `24/7`, `;` and `||` rule lists,
+weekday and date ranges, several time ranges, `PH`, month ranges, `off` and
+comments after `"`; a value it does not understand is `UNKNOWN`, never a crash.
+`ui-shell` draws the state as its own row and keeps the raw hours beside it.
+
+The JVM parity test reads
+`test-data/places/opening-hours/lviv-oracle.tsv`: 500 distinct Lviv values at
+ten fixed instants, with the expected state computed once by
+`opening_hours.js` 3.15.0 and committed. npm is not needed at build or CI time.
+The oracle records its source query, the package version and the one candidate
+value excluded because the library reports an inconsistent unknown window for
+it.
 
 ## Map seam
 

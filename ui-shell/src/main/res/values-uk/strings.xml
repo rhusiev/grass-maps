@@ -4,5 +4,9 @@
     <string name="place_card_accessibility">Доступність</string>
     <string name="place_card_details">Подробиці</string>
     <string name="place_card_opening_hours">Години роботи</string>
+    <string name="place_card_opening_state">Стан</string>
+    <string name="place_card_open">Зараз відчинено</string>
+    <string name="place_card_closed">Зараз зачинено</string>
+    <string name="place_card_unknown">Години невідомі</string>
     <string name="place_card_close">Закрити картку місця</string>
 </resources>

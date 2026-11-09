@@ -9,6 +9,7 @@ import nl.r1a.grassmap.plugin.api.model.PlaceCardValue
 import nl.r1a.grassmap.plugin.api.provider.PlaceCardContract
 import nl.r1a.grassmap.plugin.api.provider.PlaceCardProvider
 import nl.r1a.grassmap.plugin.api.provider.PlaceDetails
+import java.time.ZonedDateTime
 import java.util.Locale
 
 /**
@@ -18,8 +19,13 @@ import java.util.Locale
  * the `places.search` provider returned, so the card cannot read an index or a
  * tag map of its own. Absent, blank and repeated values are dropped rather than
  * drawn as empty or doubled rows.
+ *
+ * [now] is the moment the open state is evaluated at (T-0209). It defaults to
+ * the current Kyiv time; a test passes a fixed instant.
  */
-class OsmPlaceCard : PlaceCardProvider {
+class OsmPlaceCard(
+    private val now: () -> ZonedDateTime = { ZonedDateTime.now(OpeningHoursValue.KYIV) },
+) : PlaceCardProvider {
     override val contract = PlaceCardContract.REFERENCE
 
     override fun card(details: PlaceDetails): Outcome<PlaceCard> {
@@ -80,7 +86,7 @@ class OsmPlaceCard : PlaceCardProvider {
                 }
 
                 is PlaceCardField.Ignored -> {
-                    Unit
+                    continue
                 }
             }
         }
@@ -101,6 +107,8 @@ class OsmPlaceCard : PlaceCardProvider {
                         ?.trim()
                         ?.takeIf { it.isNotEmpty() },
                 openingHours = openingHours,
+                openingState =
+                    openingHours?.let { OpeningHoursValue.stateAt(it, now()) },
                 contacts = contacts.values.toList(),
                 accessibility = accessibility.values.toList(),
                 attributes = attributes.values.toList(),

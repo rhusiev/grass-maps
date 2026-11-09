@@ -6,11 +6,13 @@ import nl.r1a.grassmap.plugin.api.model.OsmType
 import nl.r1a.grassmap.plugin.api.model.PlaceCard
 import nl.r1a.grassmap.plugin.api.model.PlaceCardEntry
 import nl.r1a.grassmap.plugin.api.model.PlaceCardValue
+import nl.r1a.grassmap.plugin.api.model.PlaceOpeningState
 import nl.r1a.grassmap.plugin.api.provider.Place
 import nl.r1a.grassmap.plugin.api.provider.PlaceCardContract
 import nl.r1a.grassmap.plugin.api.provider.PlaceCardProvider
 import nl.r1a.grassmap.plugin.api.provider.PlaceDetails
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -18,7 +20,7 @@ class PlaceCardContractTest {
     @Test
     fun placeCardContractIsNamedAndVersioned() {
         assertEquals("places.card", PlaceCardContract.NAME)
-        assertEquals("1.0.0", PlaceCardContract.VERSION)
+        assertEquals("1.1.0", PlaceCardContract.VERSION)
         assertEquals(PlaceCardContract.NAME, PlaceCardContract.REFERENCE.name)
         assertEquals(PlaceCardContract.VERSION, PlaceCardContract.REFERENCE.version)
     }
@@ -39,9 +41,31 @@ class PlaceCardContractTest {
         val card = (FakePlaceCardProvider().card(details(tags = emptyMap())) as Outcome.Success).value
 
         assertEquals("Кав'ярня Левада", card.name)
+        assertNull(card.openingHours)
+        assertNull(card.openingState)
         assertTrue(card.contacts.isEmpty())
         assertTrue(card.accessibility.isEmpty())
         assertTrue(card.attributes.isEmpty())
+    }
+
+    @Test
+    fun theCardCarriesTheOpenStateBesideTheRawHours() {
+        val card =
+            PlaceCard(
+                openingHours = "Mo-Fr 09:00-18:00",
+                openingState = PlaceOpeningState.OPEN,
+            )
+
+        assertEquals("Mo-Fr 09:00-18:00", card.openingHours)
+        assertEquals(PlaceOpeningState.OPEN, card.openingState)
+        assertEquals(
+            setOf(
+                PlaceOpeningState.OPEN,
+                PlaceOpeningState.CLOSED,
+                PlaceOpeningState.UNKNOWN,
+            ),
+            PlaceOpeningState.entries.toSet(),
+        )
     }
 
     private fun details(tags: Map<String, String>): PlaceDetails =

@@ -35,8 +35,8 @@ import nl.r1a.grassmap.plugin.api.service.Strings
  *
  * It draws only what [placeCardContent] resolved: absent fields are missing
  * rows, never empty ones. Nothing is drawn while [card] is null, so the map
- * screen can keep it composed. The search screen is T-0203 and the
- * opening-hours logic is T-0209; this card shows the raw hours string it gets.
+ * screen can keep it composed. The search screen is T-0203. The open state and
+ * the raw opening-hours string are separate rows (T-0209).
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -69,6 +69,9 @@ fun PlaceCardHost(
             content.kind?.let { Line(text = it, style = secondaryStyle()) }
             content.address?.let { Line(text = it, style = secondaryStyle()) }
             content.openingHours?.let { row ->
+                LabeledRow(label = row.label, value = row.value)
+            }
+            content.openingState?.let { row ->
                 LabeledRow(label = row.label, value = row.value)
             }
             Section(title = strings.resolve(CONTACT_TITLE), rows = content.contacts)

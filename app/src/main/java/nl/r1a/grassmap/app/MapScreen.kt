@@ -217,6 +217,9 @@ private fun MapContent(
     }
     LaunchedEffect(container.locationController, surface.host) {
         container.locationController.syncToHost()
+        // A link that arrived before this surface bound is applied after the
+        // follow recentre, so it wins the first frame (T-0211).
+        container.links.applyPending(surface.host)
     }
     LaunchedEffect(surface.host, container.devToolsVisible) {
         if (!container.devToolsVisible) {

@@ -46,6 +46,20 @@ class CameraModeController(
         }
 
     /**
+     * Leaves follow and heading for [CameraMode.Free] without moving the camera.
+     * A link that centres elsewhere calls this first, so the next fix does not
+     * pull the map back to the user.
+     */
+    suspend fun free(): Outcome<CameraMode> {
+        val map = host() ?: return Outcome.Failure(AppError.NotReady)
+        store.set(CameraMode.Free)
+        map
+            .setTrackingMode(CameraMode.Free.trackingMode)
+            .onFailure { error -> log("tracking mode rejected: $error") }
+        return Outcome.Success(CameraMode.Free)
+    }
+
+    /**
      * Points the map north. A heading-up camera cannot stay heading-up at north,
      * so it becomes [CameraMode.Follow] and keeps following.
      */

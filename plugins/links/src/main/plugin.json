@@ -1,0 +1,15 @@
+{
+  "id": "links",
+  "name": "plugin.links.name",
+  "description": "plugin.links.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.links.LinksPlugin",
+  "contributes": {},
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": []
+  },
+  "activation": []
+}

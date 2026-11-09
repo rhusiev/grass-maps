@@ -42,5 +42,6 @@ include(
     ":plugins:point-info",
     ":plugins:osm-places",
     ":plugins:favourites-ui",
+    ":plugins:links",
     ":plugins:share",
 )

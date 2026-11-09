@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.links.name">Посилання</string>
+    <string name="plugin.links.description">Відкриває посилання geo: та посилання osm.org з інших програм на карті.</string>
+</resources>

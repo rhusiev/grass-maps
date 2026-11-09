@@ -48,6 +48,30 @@ class CameraModeControllerTest {
         }
 
     @Test
+    fun freeLeavesFollowWithoutMovingToTheFix() =
+        runTest {
+            val host = RecordingMapHost()
+            val controller = controller(host)
+            controller.cycle()
+            controller.onFix(fix(bearingDegrees = null, speedMetersPerSecond = 1.0))
+            val movesBeforeFree = host.moves.size
+
+            assertEquals(Outcome.Success(CameraMode.Free), controller.free())
+
+            assertEquals(CameraMode.Free, controller.mode.value)
+            assertEquals(TrackingMode.Free, host.trackingModes.last())
+            assertEquals(movesBeforeFree, host.moves.size)
+        }
+
+    @Test
+    fun freeWithoutABoundHostIsNotReady() =
+        runTest {
+            val controller = CameraModeController(host = { null }, store = CameraModeStore())
+
+            assertEquals(Outcome.Failure(AppError.NotReady), controller.free())
+        }
+
+    @Test
     fun headingUsesTheLocationBearingWhileMoving() =
         runTest {
             val host = RecordingMapHost()

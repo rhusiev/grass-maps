@@ -244,6 +244,7 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/point-info` | the distance and azimuth from the fix or map centre to a long-pressed point | `plugin-api` |
 | `plugins/osm-places` | the `places.card` provider that maps OSM tags to place-card rows and evaluates `opening_hours` | `plugin-api` |
 | `plugins/favourites-ui` | the favourites lists state, the create, move, recolour, Home and Work commands, and the browsing search, sorts and description rendering | `plugin-api` |
+| `plugins/links` | the pure `geo:` and osm.org link parsers, including the osm.org short-link decoder | `plugin-api` |
 | `plugins/share` | the decimal, DMS and DDM coordinate notations, the osm.org and `geo:` link builders, and the copy, share and open-in commands | `plugin-api` |
 
 ## Place card
@@ -327,6 +328,46 @@ the same built values, and the copy button writes the decimal pair.
 The emulator harness cannot observe the clipboard or a chooser, so the clipboard
 over `adb` and the intents themselves remain device checks; the unit tests prove
 the value through a recording `PlatformActions` instead.
+
+## Links in
+
+`plugins/links` owns the pure parsers for links another app sends (T-0211). A
+`geo:` URI follows RFC 5870: `lat,lon`, an optional altitude, `;` parameters and
+an optional `?q=` query whose `lat,lon(label)` or free text supplies a label. An
+osm.org page link is `/node/<id>`, `/way/<id>` or `/relation/<id>`, and `/go/<code>`
+is a short link. `http` and `https` are both accepted, with or without `www.`,
+for `openstreetmap.org` and `osm.org`.
+
+A `geo:` link centres the map at zoom 16, a short link at the zoom its code
+encodes, and an osm.org permalink at the zoom in its `#map=zoom/lat/lon`
+fragment. An element URL carries a position only when it also carries that
+fragment. A bare element URL has no coordinates, and this app has no offline
+element lookup, so it opens the map without a pin and without a guessed point;
+the route is a typed `LinkTarget.Element`.
+
+The short-link decoder is osm.org's own algorithm: each character carries three
+bits of longitude and three of latitude in an interleaved Morton code, and
+trailing `-` characters name the zoom's remainder. It needs no network. The
+vectors in `OsmShortLinkTest` are the worked examples from the OSM wiki's
+Shortlink page (`0EEQjE--` is `#map=9/51.5110/0.0550`, `0EEQjE--?m` adds a
+marker) and the cases in the reference test suite `test/lib/short_link_test.rb`,
+whose expected points come from `lib/short_link.rb`. The deprecated `@` form
+decodes exactly like `~`.
+
+MainActivity declares `ACTION_VIEW` filters with `DEFAULT` and `BROWSABLE` for
+`geo:` and for the four osm.org hosts over both schemes, so the app is a
+candidate for the default maps app. `app` reads the launch intent before a map
+surface exists, so `MapLinks` parks the move until the screen binds the host,
+then leaves follow or heading mode and moves the camera once. A move after a
+follow recentre wins the first frame.
+
+`buildSrc` runs `ManifestLinkRules` over every merged manifest in the same
+`checkPrivacyManifest` task as the privacy guards, so a merge that drops a
+filter fails the offline gate. The command that answers the same question on
+hardware is
+`adb shell cmd package query-activities -a android.intent.action.VIEW -d geo:49.8,24.0`.
+This change ships no device run, so that command stays unexercised until one is
+made.
 
 ## Map seam
 

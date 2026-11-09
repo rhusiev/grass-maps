@@ -137,6 +137,7 @@ dependencies {
     implementation(project(":plugins:point-info"))
     implementation(project(":plugins:osm-places"))
     implementation(project(":plugins:favourites-ui"))
+    implementation(project(":plugins:links"))
     implementation(project(":plugins:share"))
 
     implementation("androidx.activity:activity-compose:1.13.0")

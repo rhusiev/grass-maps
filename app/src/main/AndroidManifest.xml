@@ -18,6 +18,27 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- T-0211: geo: links and osm.org pages from other apps. The app
+                 offers itself as the default maps app through this filter. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="geo" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="www.openstreetmap.org" />
+                <data android:scheme="http" android:host="www.openstreetmap.org" />
+                <data android:scheme="https" android:host="openstreetmap.org" />
+                <data android:scheme="http" android:host="openstreetmap.org" />
+                <data android:scheme="https" android:host="osm.org" />
+                <data android:scheme="http" android:host="osm.org" />
+                <data android:scheme="https" android:host="www.osm.org" />
+                <data android:scheme="http" android:host="www.osm.org" />
+            </intent-filter>
         </activity>
     </application>
 </manifest>

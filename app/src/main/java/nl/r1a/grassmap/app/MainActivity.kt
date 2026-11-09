@@ -31,6 +31,10 @@ class MainActivity : ComponentActivity() {
         val application = application as GrassMapsApplication
         val harness = application.mapHarness(this)
         container.locationPermission.bind(this) { requestLocationPermission() }
+        if (savedInstanceState == null) {
+            // T-0211: the map surface binds later, so the router parks the move.
+            container.links.submit(intent?.dataString)
+        }
         setContent {
             MapScreen(container = container, harness = harness)
         }

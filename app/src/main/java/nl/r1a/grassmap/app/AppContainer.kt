@@ -110,6 +110,14 @@ class AppContainer(
         )
     }
 
+    /**
+     * The link-in router (T-0211). The Activity submits the intent URI before
+     * a map surface binds, so the move waits here until the screen drains it.
+     */
+    val links: MapLinks by lazy {
+        MapLinks(mapSession, cameraModes) { message -> Log.i(LINKS_TAG, message) }
+    }
+
     /** The marker offset for the active profile; T-0601 reads it per profile. */
     val positionOffset: PositionOffsetFraction
         get() = positionOffsetProvider.offsetForProfile(DEFAULT_PROFILE.value)
@@ -326,6 +334,7 @@ class AppContainer(
         const val SEARCH_TAG = "GrassMapsSearch"
         const val REGIONS_TAG = "GrassMapsRegions"
         const val MAP_CONTROLS_TAG = "GrassMapsMapControls"
+        const val LINKS_TAG = "GrassMapsLinks"
         const val FAVOURITES_TAG = "GrassMapsFavourites"
         const val ROUTING_PACK_DIRECTORY = "valhalla"
     }

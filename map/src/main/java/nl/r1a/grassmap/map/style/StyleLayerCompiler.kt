@@ -25,6 +25,7 @@ internal object StyleLayerCompiler {
 
     private val SYMBOL_PROPERTIES =
         setOf(
+            "icon-color",
             "icon-image",
             "icon-padding",
             "icon-rotate",

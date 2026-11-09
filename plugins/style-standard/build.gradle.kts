@@ -1,5 +1,7 @@
 import buildlogic.GenerateTextAssetTask
 import buildlogic.LintStyleRulesTask
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.testing.Test
 
 plugins {
     alias(libs.plugins.android.library)
@@ -49,4 +51,21 @@ val lintStandardStyle =
 
 tasks.named("check") {
     dependsOn(lintStandardStyle)
+}
+
+// SpriteCoverageTest reads the authored style and the app sprite by path, so
+// declare them as inputs or a changed sheet would leave the test up to date.
+val spriteFiles =
+    files(
+        layout.projectDirectory.file("src/main/styles/standard.json"),
+        rootProject.file("app/src/main/assets/sprites/standard.json"),
+        rootProject.file("app/src/main/assets/sprites/standard.png"),
+        rootProject.file("app/src/main/assets/sprites/standard@2x.png"),
+    )
+
+tasks.withType<Test>().configureEach {
+    inputs
+        .files(spriteFiles)
+        .withPropertyName("standardStyleAndSprite")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
 }

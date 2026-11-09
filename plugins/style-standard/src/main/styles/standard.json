@@ -1,7 +1,7 @@
 {
   "version": 8,
   "glyphs": "asset://fonts/{fontstack}/{range}.pbf",
-  "sprite": "asset://sprites/light",
+  "sprite": "asset://sprites/standard",
   "styles": {
     "standard": "light",
     "standard-dark": "dark"
@@ -3786,7 +3786,9 @@
         "symbol-z-order": "source"
       },
       "maxzoom": 24,
-      "paint": {}
+      "paint": {
+        "icon-color": "@label_text"
+      }
     },
     {
       "id": "roads_labels_minor",
@@ -7645,6 +7647,7 @@
         "symbol-z-order": "source"
       },
       "paint": {
+        "icon-color": "@shield_label",
         "text-color": "@shield_label"
       },
       "minzoom": 0,
@@ -9602,6 +9605,7 @@
         "symbol-z-order": "source"
       },
       "paint": {
+        "icon-color": "@poi_icon",
         "text-color": "@poi_label"
       },
       "minzoom": 0,
@@ -12708,6 +12712,7 @@
         "symbol-z-order": "source"
       },
       "paint": {
+        "icon-color": "@label_text",
         "text-color": "@label_text",
         "text-halo-color": "@label_halo",
         "text-halo-width": 1

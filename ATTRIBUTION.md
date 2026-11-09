@@ -14,7 +14,7 @@ first product asset lands.
 | `test-data/regions/fixture-mini` contours | Copernicus DEM GLO-30 terms | © DLR e.V. and © Airbus Defence and Space GmbH, provided under Copernicus by the EU and ESA |
 | `test-data/map-goldens` screenshots | ODbL-1.0 / Copernicus DEM GLO-30 terms | Rendered captures of the `fixture-mini` map tiles and contours for the T-0102 fixture and T-0108 Standard style golden tests |
 | Noto fonts | SIL OFL 1.1 | map labels and UI text; `app/src/main/assets/fonts` uses the Protomaps basemaps-assets Noto Sans glyph PBFs |
-| Protomaps sprites | MIT | `app/src/main/assets/sprites` (light sprite sheet, basemaps-assets) |
+| `app/src/main/assets/sprites` Standard sprite | CC0-1.0 / Apache-2.0 | one single-colour SDF sheet shared by the light and dark Standard variants; glyphs from Osmic, OSM Carto, Temaki and Maki, shield frames authored here. The per-icon source, licence and commit are listed below |
 | valhalla-mobile | MIT | Android/iOS wrapper around the Valhalla engine, used by `routing` |
 | Ferrostar core | BSD-3-Clause | Rust route-following core with UniFFI Kotlin bindings, used by `navigation`; the `core` artifact only, no UI or map binding |
 | Valhalla routing engine | MIT | C++ engine packaged inside valhalla-mobile; routing tiles are OSM-derived data (ODbL-1.0) |
@@ -26,7 +26,72 @@ first product asset lands.
 | `osm-extract` (pipeline tool) | this repository; `osmpbf` MIT OR Apache-2.0 | `tools/pipeline/osm-extract`; OSM-derived output is ODbL-1.0 |
 | Rust crates used by `rust/grass-core` | Unlicense/MIT (`fst`), MIT (`levenshtein_automata`), MIT/Apache-2.0 (`memmap2`, `uniffi`, `thiserror`), MIT OR Apache-2.0 AND Unicode-3.0 (`unicode-normalization`) | See `rust/grass-core/Cargo.lock` |
 | JNA | Apache-2.0 OR LGPL-2.1 | uniffi Kotlin bindings runtime (JVM and Android), used by `places` |
-| Icons | chosen per icon set | the licence is recorded in this file before the icons land |
+| Icons | per-icon table below | the Standard map sprite glyphs and their licences |
+
+## Standard sprite icons
+
+`app/src/main/assets/sprites/standard.json` names every icon in the single SDF
+sheet. `tools/sprites/build_sdf_sprite.py` builds the sheet from the SVGs under
+`tools/sprites/`; `tools/sprites/sources.json` is the machine-readable copy of
+this table. The arrow is the OSM Carto oneway arrow rotated 90 degrees so the
+glyph points up, because the style's line placement adds `icon-rotate: 90`.
+
+| Icon | Source | Source path | Licence | Commit |
+|---|---|---|---|---|
+| `aerodrome` | Osmic | `transport/airport-14.svg` | CC0-1.0 | `94b418619c72` |
+| `animal` | Osmic | `shop/pet-14.svg` | CC0-1.0 | `94b418619c72` |
+| `arrow` | OSM Carto | `symbols/oneway.svg` | CC0-1.0 | `003cefdd6791` |
+| `artwork` | Maki | `icons/art-gallery.svg` | CC0-1.0 | `28e2a3602e4b` |
+| `attraction` | Maki | `icons/star.svg` | CC0-1.0 | `28e2a3602e4b` |
+| `bar` | Osmic | `eat-drink/bar-14.svg` | CC0-1.0 | `94b418619c72` |
+| `beach` | Maki | `icons/beach.svg` | CC0-1.0 | `28e2a3602e4b` |
+| `beauty` | Osmic | `shop/beauty-14.svg` | CC0-1.0 | `94b418619c72` |
+| `bench` | Osmic | `outdoor/bench-14.svg` | CC0-1.0 | `94b418619c72` |
+| `books` | Osmic | `shop/books-14.svg` | CC0-1.0 | `94b418619c72` |
+| `building` | Maki | `icons/building.svg` | CC0-1.0 | `28e2a3602e4b` |
+| `bus_stop` | Osmic | `transport/bus-stop-14.svg` | CC0-1.0 | `94b418619c72` |
+| `cafe` | Osmic | `eat-drink/cafe-14.svg` | CC0-1.0 | `94b418619c72` |
+| `capital` | Maki | `icons/circle.svg` | CC0-1.0 | `28e2a3602e4b` |
+| `clothes` | Osmic | `shop/clothes-14.svg` | CC0-1.0 | `94b418619c72` |
+| `convenience` | Osmic | `shop/convenience-14.svg` | CC0-1.0 | `94b418619c72` |
+| `drinking_water` | Osmic | `outdoor/drinking-water-14.svg` | CC0-1.0 | `94b418619c72` |
+| `electronics` | Osmic | `shop/electronics-14.svg` | CC0-1.0 | `94b418619c72` |
+| `fast_food` | Osmic | `eat-drink/fast-food-14.svg` | CC0-1.0 | `94b418619c72` |
+| `ferry_terminal` | Osmic | `transport/ferry-14.svg` | CC0-1.0 | `94b418619c72` |
+| `forest` | Osmic | `nature/tree-coniferous-14.svg` | CC0-1.0 | `94b418619c72` |
+| `garden` | Temaki | `icons/garden_bed.svg` | CC0-1.0 | `6d9ac860d1d6` |
+| `library` | Osmic | `amenity/library-14.svg` | CC0-1.0 | `94b418619c72` |
+| `marina` | Maki | `icons/harbor.svg` | CC0-1.0 | `28e2a3602e4b` |
+| `museum` | Osmic | `tourism/museum-14.svg` | CC0-1.0 | `94b418619c72` |
+| `park` | Maki | `icons/park.svg` | CC0-1.0 | `28e2a3602e4b` |
+| `peak` | Osmic | `nature/peak-14.svg` | CC0-1.0 | `94b418619c72` |
+| `post_office` | Osmic | `amenity/post-office-14.svg` | CC0-1.0 | `94b418619c72` |
+| `restaurant` | Osmic | `eat-drink/restaurant-14.svg` | CC0-1.0 | `94b418619c72` |
+| `school` | Maki | `icons/school.svg` | CC0-1.0 | `28e2a3602e4b` |
+| `stadium` | Maki | `icons/stadium.svg` | CC0-1.0 | `28e2a3602e4b` |
+| `supermarket` | Osmic | `shop/supermarket-14.svg` | CC0-1.0 | `94b418619c72` |
+| `theatre` | Osmic | `tourism/theatre-14.svg` | CC0-1.0 | `94b418619c72` |
+| `toilets` | Osmic | `amenity/toilets-14.svg` | CC0-1.0 | `94b418619c72` |
+| `townhall` | Osmic | `administration/town-hall-14.svg` | CC0-1.0 | `94b418619c72` |
+| `townspot` | Maki | `icons/square.svg` | CC0-1.0 | `28e2a3602e4b` |
+| `train_station` | Osmic | `transport/railway-station-14.svg` | CC0-1.0 | `94b418619c72` |
+| `university` | Maki | `icons/college.svg` | CC0-1.0 | `28e2a3602e4b` |
+| `zoo` | Temaki | `icons/zoo.svg` | CC0-1.0 | `6d9ac860d1d6` |
+| `NL:S-road-1char` | this repository | `tools/sprites/shields/NL:S-road-1char.svg` | Apache-2.0 | - |
+| `NL:S-road-2char` | this repository | `tools/sprites/shields/NL:S-road-2char.svg` | Apache-2.0 | - |
+| `NL:S-road-3char` | this repository | `tools/sprites/shields/NL:S-road-3char.svg` | Apache-2.0 | - |
+| `NL:S-road-4char` | this repository | `tools/sprites/shields/NL:S-road-4char.svg` | Apache-2.0 | - |
+| `NL:S-road-5char` | this repository | `tools/sprites/shields/NL:S-road-5char.svg` | Apache-2.0 | - |
+| `US:I-1char` | this repository | `tools/sprites/shields/US:I-1char.svg` | Apache-2.0 | - |
+| `US:I-2char` | this repository | `tools/sprites/shields/US:I-2char.svg` | Apache-2.0 | - |
+| `US:I-3char` | this repository | `tools/sprites/shields/US:I-3char.svg` | Apache-2.0 | - |
+| `US:I-4char` | this repository | `tools/sprites/shields/US:I-4char.svg` | Apache-2.0 | - |
+| `US:I-5char` | this repository | `tools/sprites/shields/US:I-5char.svg` | Apache-2.0 | - |
+| `generic_shield-1char` | this repository | `tools/sprites/shields/generic_shield-1char.svg` | Apache-2.0 | - |
+| `generic_shield-2char` | this repository | `tools/sprites/shields/generic_shield-2char.svg` | Apache-2.0 | - |
+| `generic_shield-3char` | this repository | `tools/sprites/shields/generic_shield-3char.svg` | Apache-2.0 | - |
+| `generic_shield-4char` | this repository | `tools/sprites/shields/generic_shield-4char.svg` | Apache-2.0 | - |
+| `generic_shield-5char` | this repository | `tools/sprites/shields/generic_shield-5char.svg` | Apache-2.0 | - |
 
 Every asset, font, style and sample data file gets its attribution in the same
 change that adds it. The code dependency allowlist is in `AGENTS.md`.

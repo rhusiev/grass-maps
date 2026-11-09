@@ -12420,5 +12420,5 @@
     }
   ],
   "glyphs": "asset://fonts/{fontstack}/{range}.pbf",
-  "sprite": "asset://sprites/light"
+  "sprite": "asset://sprites/standard"
 }

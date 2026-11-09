@@ -1,0 +1,442 @@
+{
+  "comment": "Source SVGs for app/src/main/assets/sprites. \"icons\" are vendored from the named upstream repository at the named commit; \"shields\" are authored in this repository. Build with build_sdf_sprite.py.",
+  "icons": {
+    "aerodrome": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "transport/airport-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "165fbbd0048ba003ab0e5a8b8d4b1c7f5e645fa160886110486096532ef4720b",
+      "size": 19
+    },
+    "animal": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "shop/pet-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "d7a1014b983f149806f779c2a9f4ac6655d946ad9d005232b1dc8e3d2d46146d",
+      "size": 19
+    },
+    "arrow": {
+      "commit": "003cefdd67918e8317e9753312ec3327d78f5d1f",
+      "licence": "CC0-1.0",
+      "note": "derived from the upstream oneway arrow, rotated -90 degrees so the glyph points up; the style adds icon-rotate 90 on line placement",
+      "path": "symbols/oneway.svg",
+      "repository": "https://github.com/gravitystorm/openstreetmap-carto",
+      "sha256": "7c4d89ece420ad4bfcadd2c309e83496b85ac72fb4553f3c0bee5eabb3b600a6",
+      "size": 19,
+      "upstream_path": "symbols/oneway.svg",
+      "upstream_sha256": "63593ee0f18a662329644393e75f5dbe64159e6995e39457688086f5ff7960f5"
+    },
+    "artwork": {
+      "commit": "28e2a3602e4bde033a1dd388e86e9c117b425e34",
+      "licence": "CC0-1.0",
+      "path": "icons/art-gallery.svg",
+      "repository": "https://github.com/mapbox/maki",
+      "sha256": "c052df2067c721655fdeb363a9c6c5bf8c50df8f898fa48f55535010a47c8c9b",
+      "size": 19
+    },
+    "attraction": {
+      "commit": "28e2a3602e4bde033a1dd388e86e9c117b425e34",
+      "licence": "CC0-1.0",
+      "path": "icons/star.svg",
+      "repository": "https://github.com/mapbox/maki",
+      "sha256": "cc88be8f5e8bd45cf1b6acf6ad5d8d0c39b53431c15907cce4ee8c21ea318045",
+      "size": 19
+    },
+    "bar": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "eat-drink/bar-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "00beb68944da7c28498723070f7094a48af826408d47ac51a748e90ace63a0ba",
+      "size": 19
+    },
+    "beach": {
+      "commit": "28e2a3602e4bde033a1dd388e86e9c117b425e34",
+      "licence": "CC0-1.0",
+      "path": "icons/beach.svg",
+      "repository": "https://github.com/mapbox/maki",
+      "sha256": "4b6031f66798babb694a5cb76b25488fad2da85a496f41ddee8a53a2d7885427",
+      "size": 19
+    },
+    "beauty": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "shop/beauty-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "caa6937fcedc3d26321d03ecee2f082da550038f86c3e9cde087498a27ed71ad",
+      "size": 19
+    },
+    "bench": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "outdoor/bench-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "535be45fb80bf0f4d36d3e86a5a87239201a6b75e36ff595813d09d627a00fea",
+      "size": 19
+    },
+    "books": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "shop/books-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "91ae554e4cc98f1e41f2c0a248e6227596fb72b06b33a7c415248fe8d95e122c",
+      "size": 19
+    },
+    "building": {
+      "commit": "28e2a3602e4bde033a1dd388e86e9c117b425e34",
+      "licence": "CC0-1.0",
+      "path": "icons/building.svg",
+      "repository": "https://github.com/mapbox/maki",
+      "sha256": "3df257069de01fd3e67cd7b52ff284ebec557ab156cb3068e02de4c775c6f7c5",
+      "size": 19
+    },
+    "bus_stop": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "transport/bus-stop-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "038dd9da97e773af8a8807e7b30e6eabce02bd15f88894d1f7d2de53237fdb69",
+      "size": 19
+    },
+    "cafe": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "eat-drink/cafe-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "eb72f71a02437579f578182849f2381f49d380efedf074ab2af8b86ed04b5c63",
+      "size": 19
+    },
+    "capital": {
+      "commit": "28e2a3602e4bde033a1dd388e86e9c117b425e34",
+      "licence": "CC0-1.0",
+      "path": "icons/circle.svg",
+      "repository": "https://github.com/mapbox/maki",
+      "sha256": "3f7eef5763e114f79c02d63ca91dd5951b81efdff015a31ea8a9b6b57fb6b640",
+      "size": 10
+    },
+    "clothes": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "shop/clothes-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "bab83935054c3556577ef2da6e63ac35d7a83865c1e1251a446c8f7134bbc79e",
+      "size": 19
+    },
+    "convenience": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "shop/convenience-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "681bcec5d8f9d232b601a06ce05dcf7227b8319c84247515386bd83744fd87af",
+      "size": 19
+    },
+    "drinking_water": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "outdoor/drinking-water-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "a68309a2ffdd9d04a6290349803e1b7f0624658a4862f87862c57a580b3a7dd9",
+      "size": 19
+    },
+    "electronics": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "shop/electronics-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "d20c9d44b69b3e1434fbc5ca436fa0aba2e0bf1dc0e1ef1d27e8967ce764a0de",
+      "size": 19
+    },
+    "fast_food": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "eat-drink/fast-food-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "e37e89063ae69eff50cf171bbe410467ebd4a0dada8c0f703778871f356da8cc",
+      "size": 19
+    },
+    "ferry_terminal": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "transport/ferry-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "31cfa988a4821c98a36046019fbb5a673cf8bad23f47d8eb7240bd8c425ff742",
+      "size": 19
+    },
+    "forest": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "nature/tree-coniferous-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "28146839f3331c10ab5f531cef884ed5b2cf5df4446fcdb1687090082c714e26",
+      "size": 19
+    },
+    "garden": {
+      "commit": "6d9ac860d1d615d4449aab049f630d25d036c19e",
+      "licence": "CC0-1.0",
+      "path": "icons/garden_bed.svg",
+      "repository": "https://github.com/rapideditor/temaki",
+      "sha256": "af05b6628f4a739ee7bca94e2b1e91b7089d713c27b51c5b01a408bbdbe6b5b4",
+      "size": 19
+    },
+    "library": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "amenity/library-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "57f122f899b6d288fa5153ccb466be4f3848b40214a14950f4a0685f7aff1ea1",
+      "size": 19
+    },
+    "marina": {
+      "commit": "28e2a3602e4bde033a1dd388e86e9c117b425e34",
+      "licence": "CC0-1.0",
+      "path": "icons/harbor.svg",
+      "repository": "https://github.com/mapbox/maki",
+      "sha256": "52c40a9eb2d36c65ce939a57ee929fdce54698926d5a785ab70533ed170498ca",
+      "size": 19
+    },
+    "museum": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "tourism/museum-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "aed373f6479d875e67afa677ddd484ec83f5c499b4e6036cf13b5a26085c1d56",
+      "size": 19
+    },
+    "park": {
+      "commit": "28e2a3602e4bde033a1dd388e86e9c117b425e34",
+      "licence": "CC0-1.0",
+      "path": "icons/park.svg",
+      "repository": "https://github.com/mapbox/maki",
+      "sha256": "9f25e71f59ea90b3ffd974005cb94b704911526832dd157776e36f18ccc9085a",
+      "size": 19
+    },
+    "peak": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "nature/peak-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "66e341a7ae15dd6a5983a4bcb4f2adb9e39db4f65fb27c6d0d549967cbfcc780",
+      "size": 19
+    },
+    "post_office": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "amenity/post-office-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "518ae75e173b5fcd59a73218357d1a9a03940b6c4f8c9f7e68d3e3de20f69fdd",
+      "size": 19
+    },
+    "restaurant": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "eat-drink/restaurant-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "177ef11fc68efb6f8f643717527dcb103ef87e886759ca73579b3dd877b97c78",
+      "size": 19
+    },
+    "school": {
+      "commit": "28e2a3602e4bde033a1dd388e86e9c117b425e34",
+      "licence": "CC0-1.0",
+      "path": "icons/school.svg",
+      "repository": "https://github.com/mapbox/maki",
+      "sha256": "d6ac77a39471c0aed307926c7aad7f12a0039ffa01a053c1cdc87f35a4553bda",
+      "size": 19
+    },
+    "stadium": {
+      "commit": "28e2a3602e4bde033a1dd388e86e9c117b425e34",
+      "licence": "CC0-1.0",
+      "path": "icons/stadium.svg",
+      "repository": "https://github.com/mapbox/maki",
+      "sha256": "3c23cc188ec00016ca179f6eba3701655dc8de500420cdfca9ea1844686f9311",
+      "size": 19
+    },
+    "supermarket": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "shop/supermarket-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "d26f08963979b6f5529757bcde154c2f38b2b90fedcf1900bd6e92df5c85c9b2",
+      "size": 19
+    },
+    "theatre": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "tourism/theatre-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "0a1969d80d66bdba72fcf07f88e991764b30c70e457e1a7123035df7f08dfd92",
+      "size": 19
+    },
+    "toilets": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "amenity/toilets-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "8a18806d206f39f955648f0e15b6d6b4dce10fd36d4598968f011a731446da27",
+      "size": 19
+    },
+    "townhall": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "administration/town-hall-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "bd3d67df484a8e66f9e5d678b672a2a29e1803268f886bfd6ecc0864cc39083a",
+      "size": 19
+    },
+    "townspot": {
+      "commit": "28e2a3602e4bde033a1dd388e86e9c117b425e34",
+      "licence": "CC0-1.0",
+      "path": "icons/square.svg",
+      "repository": "https://github.com/mapbox/maki",
+      "sha256": "f52b4043db286b188d976ff8ca2ec283388a89de2131839305984dcddbfeb5c4",
+      "size": 10
+    },
+    "train_station": {
+      "commit": "94b418619c72fd2caa0edfa08c7a959ac3f48b2a",
+      "licence": "CC0-1.0",
+      "path": "transport/railway-station-14.svg",
+      "repository": "https://github.com/gmgeo/osmic",
+      "sha256": "53adfa33aca45d4db723544d736cb56c8162477fe702f9bd4c7f4887d3d6ea5b",
+      "size": 19
+    },
+    "university": {
+      "commit": "28e2a3602e4bde033a1dd388e86e9c117b425e34",
+      "licence": "CC0-1.0",
+      "path": "icons/college.svg",
+      "repository": "https://github.com/mapbox/maki",
+      "sha256": "7aa84a0a3c9851669af2220217511d6577611a8e860c2d52d279ad2af2ae404e",
+      "size": 19
+    },
+    "zoo": {
+      "commit": "6d9ac860d1d615d4449aab049f630d25d036c19e",
+      "licence": "CC0-1.0",
+      "path": "icons/zoo.svg",
+      "repository": "https://github.com/rapideditor/temaki",
+      "sha256": "8e5d078c59db08d443ec7aa8fec59ad210309499d7b85466de8e1f5c55dfaa07",
+      "size": 19
+    }
+  },
+  "shields": {
+    "NL:S-road-1char": {
+      "author": "this repository",
+      "height": 21,
+      "licence": "Apache-2.0",
+      "path": "shields/NL:S-road-1char.svg",
+      "sha256": "e3cb5018f0dfe3aa29aa8739bab4aa7bc05162ea69501aad660d6a19c9df828f",
+      "width": 21
+    },
+    "NL:S-road-2char": {
+      "author": "this repository",
+      "height": 21,
+      "licence": "Apache-2.0",
+      "path": "shields/NL:S-road-2char.svg",
+      "sha256": "00713b4048dadaaf6fe95a1801b840bbb034ce07cc75b3a837a97892e91afad8",
+      "width": 22
+    },
+    "NL:S-road-3char": {
+      "author": "this repository",
+      "height": 21,
+      "licence": "Apache-2.0",
+      "path": "shields/NL:S-road-3char.svg",
+      "sha256": "2c055e5c4194c3df8fee0c8f949d675dea09e8a3e887f05e6c3f40d503af0614",
+      "width": 25
+    },
+    "NL:S-road-4char": {
+      "author": "this repository",
+      "height": 21,
+      "licence": "Apache-2.0",
+      "path": "shields/NL:S-road-4char.svg",
+      "sha256": "5ac0cd7069164b76c13d0cd0283542fe2fd0bb8e21b479cd07bb20311b26d7a8",
+      "width": 29
+    },
+    "NL:S-road-5char": {
+      "author": "this repository",
+      "height": 21,
+      "licence": "Apache-2.0",
+      "path": "shields/NL:S-road-5char.svg",
+      "sha256": "3ea48d3a249f1bdc2534f4cd9efd20afd85a76be2a3fdcf6afcfae52e716bf2b",
+      "width": 32
+    },
+    "US:I-1char": {
+      "author": "this repository",
+      "height": 21,
+      "licence": "Apache-2.0",
+      "path": "shields/US:I-1char.svg",
+      "sha256": "8a529b4bb5e17879fe4d41ce87ce309574377c363749180ef4fd54307cef1f1b",
+      "width": 20
+    },
+    "US:I-2char": {
+      "author": "this repository",
+      "height": 21,
+      "licence": "Apache-2.0",
+      "path": "shields/US:I-2char.svg",
+      "sha256": "60fa4b9637dd0d7e929b058de84857e6b9ded84ead13201430f214d359196f22",
+      "width": 23
+    },
+    "US:I-3char": {
+      "author": "this repository",
+      "height": 21,
+      "licence": "Apache-2.0",
+      "path": "shields/US:I-3char.svg",
+      "sha256": "65ba1fc7349555fcddcb80a64525479a29b85ecdfeb97dace2fea96791f543c4",
+      "width": 30
+    },
+    "US:I-4char": {
+      "author": "this repository",
+      "height": 21,
+      "licence": "Apache-2.0",
+      "path": "shields/US:I-4char.svg",
+      "sha256": "e45a28e547384782b27b7b58578b073942d493dd0c824dc89e57d60b9d825c22",
+      "width": 32
+    },
+    "US:I-5char": {
+      "author": "this repository",
+      "height": 21,
+      "licence": "Apache-2.0",
+      "path": "shields/US:I-5char.svg",
+      "sha256": "59157f6ec50813dd32f9cfc9f0d680ca548dfdaee5008ab857adfab43e5e8056",
+      "width": 34
+    },
+    "generic_shield-1char": {
+      "author": "this repository",
+      "height": 18,
+      "licence": "Apache-2.0",
+      "path": "shields/generic_shield-1char.svg",
+      "sha256": "c851bcca148cde52d0030465694610c6bb160d764faec39d032a58c6472d9c9e",
+      "width": 19
+    },
+    "generic_shield-2char": {
+      "author": "this repository",
+      "height": 18,
+      "licence": "Apache-2.0",
+      "path": "shields/generic_shield-2char.svg",
+      "sha256": "23c5cf1fa92cd428493745722346cc707888c56b26e91dc79812432707272427",
+      "width": 24
+    },
+    "generic_shield-3char": {
+      "author": "this repository",
+      "height": 18,
+      "licence": "Apache-2.0",
+      "path": "shields/generic_shield-3char.svg",
+      "sha256": "4219a7874748c476f43e9b3101698a3368a4eb03d0e596cf267306e0627bec34",
+      "width": 33
+    },
+    "generic_shield-4char": {
+      "author": "this repository",
+      "height": 18,
+      "licence": "Apache-2.0",
+      "path": "shields/generic_shield-4char.svg",
+      "sha256": "516bfcd3f6ce73371ac6943956c044b5066913ea40d4d2f486f37c97b6cf59d7",
+      "width": 38
+    },
+    "generic_shield-5char": {
+      "author": "this repository",
+      "height": 18,
+      "licence": "Apache-2.0",
+      "path": "shields/generic_shield-5char.svg",
+      "sha256": "405d9954feb67e2d2a205fe62b1cacf4a4e6845e393b587cfa9826625edcce45",
+      "width": 45
+    }
+  }
+}

@@ -338,6 +338,7 @@ private fun StyleLayerNode(
                     layer.expression<SymbolZOrder>("symbol-z-order")
                         ?: const(SymbolZOrder.Auto),
                 iconImage = layer.expression<ImageValue?>("icon-image"),
+                iconColor = layer.expression<ColorValue>("icon-color") ?: const(Color.Black),
                 iconSize = layer.expression<FloatValue>("icon-size") ?: const(1f),
                 iconRotate = layer.expression<FloatValue>("icon-rotate") ?: const(0f),
                 iconRotationAlignment =

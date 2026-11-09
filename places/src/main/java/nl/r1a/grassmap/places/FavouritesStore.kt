@@ -237,6 +237,8 @@ class FavouritesStore(
                                         ListReceipt.Moved(
                                             before = before,
                                             after = written.value.favourites[index],
+                                            sourceGroup = source,
+                                            inherited = inherited,
                                         ),
                                     ),
                                 ),
@@ -249,9 +251,9 @@ class FavouritesStore(
 
     /**
      * Recolours a whole list and every point in it (T-0213). The group default
-     * and each member's effective colour change together, so a point that
-     * inherited the list's look changes with it. An unknown list is
-     * [AppError.NotFound].
+     * and every member's effective colour get [color], whether the point
+     * inherited the list's look or carried its own. Other lists and points are
+     * untouched. An unknown list is [AppError.NotFound].
      */
     suspend fun recolourGroup(
         name: String,
@@ -367,14 +369,18 @@ class FavouritesStore(
      * Consumes one lists receipt. When the action can no longer apply - the
      * point or list was deleted, or another action changed it - the result is
      * [FavouriteUndo.NOT_APPLICABLE] and the library is unchanged. That is a
-     * typed no-op, not an error. The receipt is consumed either way.
+     * typed no-op, not an error.
+     *
+     * The receipt is consumed on success and on [FavouriteUndo.NOT_APPLICABLE].
+     * A write failure keeps it under the caller's own token, so the same token
+     * can retry once the failure is gone.
      */
     suspend fun undoListAction(token: FavouriteUndoToken): Outcome<FavouriteUndo> =
         mutex.withLock {
             val receipt = listReceipts.remove(token.value) ?: return@withLock Outcome.Success(FavouriteUndo.NOT_APPLICABLE)
             when (val loaded = snapshot()) {
                 is Outcome.Failure -> {
-                    rememberList(receipt)
+                    rememberList(receipt, token.value)
                     loaded
                 }
 
@@ -385,7 +391,7 @@ class FavouritesStore(
                     }
                     when (val written = persist(updated)) {
                         is Outcome.Failure -> {
-                            rememberList(receipt)
+                            rememberList(receipt, token.value)
                             written
                         }
 
@@ -532,9 +538,21 @@ class FavouritesStore(
         }
     }
 
-    private fun rememberList(receipt: ListReceipt): FavouriteUndoToken {
-        listSequence += 1
-        val token = FavouriteUndoToken("lists-$listSequence")
+    /**
+     * Remembers a receipt and returns its token. [key] re-uses the caller's
+     * original token after a failed write, so a retry cannot strand the action.
+     */
+    private fun rememberList(
+        receipt: ListReceipt,
+        key: String? = null,
+    ): FavouriteUndoToken {
+        val token =
+            if (key != null) {
+                FavouriteUndoToken(key)
+            } else {
+                listSequence += 1
+                FavouriteUndoToken("lists-$listSequence")
+            }
         listReceipts[token.value] = receipt
         while (listReceipts.size > MAX_RECEIPTS) {
             listReceipts.remove(listReceipts.keys.first())
@@ -565,7 +583,16 @@ class FavouritesStore(
                 if (index < 0) {
                     null
                 } else {
-                    snapshot.copy(favourites = snapshot.favourites.toMutableList().also { it[index] = receipt.before })
+                    val source =
+                        receipt.before.group?.let { name -> snapshot.groups.firstOrNull { it.name == name } }
+                            ?: receipt.sourceGroup
+                    val restored =
+                        if (receipt.inherited && source != null) {
+                            receipt.before.copy(color = source.color, icon = source.icon, shape = source.shape)
+                        } else {
+                            receipt.before
+                        }
+                    snapshot.copy(favourites = snapshot.favourites.toMutableList().also { it[index] = restored })
                 }
             }
 
@@ -611,7 +638,16 @@ class FavouritesStore(
         if (target.special != receipt.after) {
             return null
         }
+        val holder = receipt.holder?.let { id -> snapshot.favourites.firstOrNull { it.id == id } }
+        if (receipt.holder != null && holder == null) {
+            // The previous holder is gone. Restoring only the target would
+            // report APPLIED while Home or Work is lost, so this cannot apply.
+            return null
+        }
         if (receipt.before != null && snapshot.favourites.any { it.id != target.id && it.special == receipt.before }) {
+            return null
+        }
+        if (holder != null && holder.special != null && holder.special != receipt.after) {
             return null
         }
         val restored = target.copy(special = receipt.before)
@@ -619,7 +655,7 @@ class FavouritesStore(
             snapshot.favourites.map { favourite ->
                 when {
                     favourite.id == target.id -> restored
-                    favourite.id == receipt.holder && favourite.special == null -> favourite.copy(special = receipt.after)
+                    holder != null && favourite.id == holder.id -> favourite.copy(special = receipt.after)
                     else -> favourite
                 }
             }
@@ -701,6 +737,8 @@ class FavouritesStore(
         data class Moved(
             val before: Favourite,
             val after: Favourite,
+            val sourceGroup: FavouriteGroup?,
+            val inherited: Boolean,
         ) : ListReceipt
 
         data class Recoloured(

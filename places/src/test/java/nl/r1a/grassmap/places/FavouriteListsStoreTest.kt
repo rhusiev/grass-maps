@@ -5,6 +5,7 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -214,6 +215,139 @@ class FavouriteListsStoreTest {
                 store.setSpecial(FavouriteId("missing"), FavouriteSpecial.Home),
             )
         }
+
+    @Test
+    fun aFailedUndoKeepsTheOriginalToken() =
+        runTest {
+            val store = FavouritesStore(file)
+            store.save(snapshot())
+            val home = value(store.setSpecial(favouriteNamed(store, "Rynok Square").id, FavouriteSpecial.Home))
+            val parent = requireNotNull(file.parentFile)
+            val backup = File(directory, "favourites-backup")
+            assertTrue(parent.renameTo(backup))
+            assertTrue(parent.createNewFile())
+            try {
+                assertTrue(store.undoListAction(home.undo) is Outcome.Failure)
+            } finally {
+                assertTrue(parent.delete())
+                assertTrue(backup.renameTo(parent))
+            }
+
+            assertEquals(Outcome.Success(FavouriteUndo.APPLIED), store.undoListAction(home.undo))
+            assertNull(favouriteNamed(store, "Rynok Square").special)
+            assertNull(favouriteNamed(FavouritesStore(file), "Rynok Square").special)
+        }
+
+    @Test
+    fun undoingHomeAfterThePreviousHolderWasDeletedIsATypedNoOp() =
+        runTest {
+            val store = FavouritesStore(file)
+            store.save(snapshot())
+            val first = favouriteNamed(store, "Rynok Square")
+            val second = favouriteNamed(store, "Vysoky Zamok")
+            store.setSpecial(first.id, FavouriteSpecial.Home)
+            val secondHome = value(store.setSpecial(second.id, FavouriteSpecial.Home))
+            store.delete(first.id)
+
+            assertEquals(Outcome.Success(FavouriteUndo.NOT_APPLICABLE), store.undoListAction(secondHome.undo))
+            assertEquals(FavouriteSpecial.Home, favouriteNamed(store, "Vysoky Zamok").special)
+            assertTrue(loaded(store).favourites.none { it.name == "Rynok Square" })
+        }
+
+    @Test
+    fun undoingAMoveUsesTheSourceListsCurrentAppearance() =
+        runTest {
+            val store = FavouritesStore(file)
+            store.save(snapshot())
+            val rynok = favouriteNamed(store, "Rynok Square")
+            assertEquals("Lviv", rynok.group)
+
+            val moved = value(store.moveFavourite(rynok.id, "Parks"))
+            store.recolourGroup("Lviv", "#00FF00")
+            assertEquals(Outcome.Success(FavouriteUndo.APPLIED), store.undoListAction(moved.undo))
+
+            val restored = favouriteNamed(store, "Rynok Square")
+            assertEquals("Lviv", restored.group)
+            assertEquals("#00FF00", restored.color)
+            assertEquals("historic_castle", restored.icon)
+            assertEquals(FavouriteShape.Circle, restored.shape)
+        }
+
+    @Test
+    fun everyActionAndItsUndoAreVisibleToASecondStore() =
+        runTest {
+            val store = FavouritesStore(file)
+            store.save(snapshot())
+
+            val created = value(store.createGroup("Cafes", "#00FF00", "cafe"))
+            assertReloadedGroup("Cafes", "#00FF00", present = true)
+            assertEquals(Outcome.Success(FavouriteUndo.APPLIED), store.undoListAction(created.undo))
+            assertReloadedGroup("Cafes", "#00FF00", present = false)
+
+            value(store.createGroup("Cafes", "#00FF00", "cafe"))
+            val moved = value(store.moveFavourite(favouriteNamed(store, "Rynok Square").id, "Cafes"))
+            assertReloadedPoint("Rynok Square", group = "Cafes")
+            assertEquals(Outcome.Success(FavouriteUndo.APPLIED), store.undoListAction(moved.undo))
+            assertReloadedPoint("Rynok Square", group = "Lviv")
+
+            value(store.moveFavourite(favouriteNamed(store, "Rynok Square").id, "Cafes"))
+            val recoloured = value(store.recolourGroup("Cafes", "#1E88E5"))
+            assertReloadedPoint("Rynok Square", group = "Cafes", color = "#1E88E5")
+            assertEquals(Outcome.Success(FavouriteUndo.APPLIED), store.undoListAction(recoloured.undo))
+            assertReloadedPoint("Rynok Square", group = "Cafes", color = "#00FF00")
+
+            val home = value(store.setSpecial(favouriteNamed(store, "Rynok Square").id, FavouriteSpecial.Home))
+            assertReloadedSpecial("Rynok Square", FavouriteSpecial.Home, present = true)
+            assertEquals(Outcome.Success(FavouriteUndo.APPLIED), store.undoListAction(home.undo))
+            assertReloadedSpecial("Rynok Square", FavouriteSpecial.Home, present = false)
+        }
+
+    private suspend fun assertReloadedGroup(
+        name: String,
+        color: String,
+        present: Boolean,
+    ) {
+        val reloaded = FavouritesStore(file)
+        val snapshot = loaded(reloaded)
+        val text = exportText(reloaded)
+        if (present) {
+            assertEquals(color, snapshot.groups.single { it.name == name }.color)
+            assertTrue(text.contains("<group name=\"$name\" color=\"$color\""))
+        } else {
+            assertTrue(snapshot.groups.none { it.name == name })
+            assertFalse(text.contains("name=\"$name\""))
+        }
+    }
+
+    private suspend fun assertReloadedPoint(
+        name: String,
+        group: String,
+        color: String? = null,
+    ) {
+        val reloaded = FavouritesStore(file)
+        val point = loaded(reloaded).favourites.single { it.name == name }
+        val text = exportText(reloaded)
+        assertEquals(group, point.group)
+        color?.let { expected -> assertEquals(expected, point.color) }
+        assertTrue(text.contains("<type>$group</type>"))
+    }
+
+    private suspend fun assertReloadedSpecial(
+        name: String,
+        special: FavouriteSpecial,
+        present: Boolean,
+    ) {
+        val reloaded = FavouritesStore(file)
+        val point = loaded(reloaded).favourites.single { it.name == name }
+        val text = exportText(reloaded)
+        if (present) {
+            assertEquals(special, point.special)
+            assertTrue(text.contains("<grassmap:special>${special.wireName}</grassmap:special>"))
+        } else {
+            assertNull(point.special)
+            assertFalse(text.contains("<grassmap:special>${special.wireName}</grassmap:special>"))
+        }
+    }
 
     private suspend fun favouriteNamed(
         store: FavouritesStore,

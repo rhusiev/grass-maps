@@ -2,8 +2,13 @@ package nl.r1a.grassmap.app
 
 import nl.r1a.grassmap.places.DeletedFavourite
 import nl.r1a.grassmap.places.Favourite
+import nl.r1a.grassmap.places.FavouriteGroup
 import nl.r1a.grassmap.places.FavouriteId
 import nl.r1a.grassmap.places.FavouriteImport
+import nl.r1a.grassmap.places.FavouriteMutation
+import nl.r1a.grassmap.places.FavouriteSpecial
+import nl.r1a.grassmap.places.FavouriteUndo
+import nl.r1a.grassmap.places.FavouriteUndoToken
 import nl.r1a.grassmap.places.FavouritesSnapshot
 import nl.r1a.grassmap.places.FavouritesStore
 import nl.r1a.grassmap.plugin.api.error.AppError
@@ -27,6 +32,29 @@ class FavouritesAccess internal constructor(
     suspend fun delete(id: FavouriteId): Outcome<DeletedFavourite> = access { store -> store.delete(id) }
 
     suspend fun undoDelete(id: FavouriteId): Outcome<Favourite> = access { store -> store.undoDelete(id) }
+
+    suspend fun createGroup(
+        name: String,
+        color: String,
+        icon: String?,
+    ): Outcome<FavouriteMutation<FavouriteGroup>> = access { store -> store.createGroup(name, color, icon) }
+
+    suspend fun moveFavourite(
+        id: FavouriteId,
+        group: String,
+    ): Outcome<FavouriteMutation<Favourite>> = access { store -> store.moveFavourite(id, group) }
+
+    suspend fun recolourGroup(
+        name: String,
+        color: String,
+    ): Outcome<FavouriteMutation<FavouriteGroup>> = access { store -> store.recolourGroup(name, color) }
+
+    suspend fun setSpecial(
+        id: FavouriteId,
+        special: FavouriteSpecial,
+    ): Outcome<FavouriteMutation<Favourite>> = access { store -> store.setSpecial(id, special) }
+
+    suspend fun undoListAction(token: FavouriteUndoToken): Outcome<FavouriteUndo> = access { store -> store.undoListAction(token) }
 
     suspend fun import(bytes: ByteArray): Outcome<FavouriteImport> = access { store -> store.import(bytes) }
 

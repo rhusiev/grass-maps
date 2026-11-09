@@ -192,6 +192,14 @@ class AppContainer(
 
     private val favouritesLock = Any()
 
+    /**
+     * The lists screen access over the favourites library (T-0213). It is the
+     * only writer the `favourites.ui` plugin gets, and it writes through the
+     * same store, so the GPX file and its group definitions always match the
+     * screen state.
+     */
+    val favouritesLists: StoreFavouritesLists by lazy { StoreFavouritesLists { favourites } }
+
     @Volatile
     private var cachedFavourites: FavouritesAccess? = null
 
@@ -276,6 +284,7 @@ class AppContainer(
             locationService = locationSource,
             cameraFlow = mapSession.camera,
             devToolsAccess = devTools,
+            favouritesListsAccess = favouritesLists,
         )
     }
 

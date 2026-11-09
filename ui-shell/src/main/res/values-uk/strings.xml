@@ -9,4 +9,15 @@
     <string name="place_card_closed">Зараз зачинено</string>
     <string name="place_card_unknown">Години невідомі</string>
     <string name="place_card_close">Закрити картку місця</string>
+
+    <string name="favourites_lists_title">Списки</string>
+    <string name="favourites_lists_undo">Скасувати</string>
+    <string name="favourites_lists_empty">Списків ще немає</string>
+    <string name="favourites_lists_no_list">Без списку</string>
+    <string name="favourites_lists_home">Дім</string>
+    <string name="favourites_lists_work">Робота</string>
+    <string name="favourites_lists_new_list">Новий список</string>
+    <string name="favourites_lists_create">Створити список</string>
+    <string name="favourites_lists_points">Точки</string>
+    <string name="favourites_lists_move_here">Перемістити вибрану точку сюди</string>
 </resources>

@@ -41,4 +41,5 @@ include(
     ":plugins:map-controls",
     ":plugins:point-info",
     ":plugins:osm-places",
+    ":plugins:favourites-ui",
 )

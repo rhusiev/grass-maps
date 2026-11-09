@@ -45,6 +45,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import nl.r1a.grassmap.core.services.ButtonLayoutStore
 import nl.r1a.grassmap.core.services.DEFAULT_PROFILE
 import nl.r1a.grassmap.core.services.MapControlCommands
@@ -63,6 +66,8 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.error.onFailure
 import nl.r1a.grassmap.plugin.api.host.MapEvent
+import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
+import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleId
@@ -71,6 +76,7 @@ import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.model.WebMercator
 import nl.r1a.grassmap.plugin.api.provider.MapLayerContract
 import nl.r1a.grassmap.plugin.api.provider.MapLayerProvider
+import nl.r1a.grassmap.plugins.favourites.ui.FavouritesUiContract
 import nl.r1a.grassmap.plugins.map.controls.CameraMode
 import nl.r1a.grassmap.plugins.map.controls.ScaleBar
 import nl.r1a.grassmap.plugins.map.controls.ScaleBarReading
@@ -80,6 +86,7 @@ import nl.r1a.grassmap.plugins.point.info.PointInfoLabel
 import nl.r1a.grassmap.plugins.point.info.SelectedPointValue
 import nl.r1a.grassmap.ui.shell.ControlBarLabels
 import nl.r1a.grassmap.ui.shell.ControlButton
+import nl.r1a.grassmap.ui.shell.FavouritesListsHost
 import nl.r1a.grassmap.ui.shell.MapControlBar
 import nl.r1a.grassmap.ui.shell.MapScaleBar
 import nl.r1a.grassmap.ui.shell.PlaceCardHost
@@ -239,6 +246,7 @@ private fun MapContent(
     val selectedPoint by selectionFlow.collectAsState(initial = SelectedPointValue())
     val selectedRows = PointInfoLabel.rows(selectedPoint, container.strings)
     val placeCard by PlaceCardSession.card.collectAsState()
+    val listsVisible by FavouritesListsSession.visible.collectAsState()
     val unitStore by
         produceState<UnitSettings?>(null) {
             value = withContext(Dispatchers.IO) { container.unitSettings }
@@ -365,6 +373,48 @@ private fun MapContent(
             strings = container.strings,
             onClose = { PlaceCardSession.hide() },
         )
+        if (listsVisible) {
+            val listsFlow =
+                remember(container) {
+                    container.streamAccess.subscribe<FavouriteListsState>(FavouritesUiContract.listsStream)
+                }
+            val listsState by listsFlow.collectAsState(initial = FavouriteListsState())
+            FavouritesListsHost(
+                state = listsState,
+                strings = container.strings,
+                onCreateList = { name, color ->
+                    scope.launch {
+                        invokeListsCommand(container, FavouritesUiContract.createList, listParams("name" to name, "color" to color))
+                    }
+                },
+                onMovePoint = { pointId, list ->
+                    scope.launch {
+                        invokeListsCommand(container, FavouritesUiContract.movePoint, listParams("pointId" to pointId, "list" to list))
+                    }
+                },
+                onRecolourList = { list, color ->
+                    scope.launch {
+                        invokeListsCommand(container, FavouritesUiContract.recolourList, listParams("list" to list, "color" to color))
+                    }
+                },
+                onSetSpecial = { pointId, special ->
+                    val command =
+                        when (special) {
+                            FavouriteSpecial.HOME -> FavouritesUiContract.setHome
+                            FavouriteSpecial.WORK -> FavouritesUiContract.setWork
+                        }
+                    scope.launch {
+                        invokeListsCommand(container, command, listParams("pointId" to pointId))
+                    }
+                },
+                onUndo = {
+                    scope.launch {
+                        invokeListsCommand(container, FavouritesUiContract.undo, JsonObject(emptyMap()))
+                    }
+                },
+                onClose = { FavouritesListsSession.hide() },
+            )
+        }
     }
     LaunchedEffect(surface.host, bundle) {
         launch(start = CoroutineStart.UNDISPATCHED) { harness.run(surface, bundle) }
@@ -671,6 +721,22 @@ private fun controlBarLabels(context: Context): ControlBarLabels =
         moveRight = context.getString(R.string.control_move_right_label),
         moveRightDescription = context.getString(R.string.control_move_right_description),
     )
+
+/** Runs one lists command and logs a typed failure; the sheet keeps its state. */
+private suspend fun invokeListsCommand(
+    container: AppContainer,
+    id: CommandId,
+    params: JsonObject,
+) {
+    container.commandBus.invoke(id, params).onFailure { error ->
+        Log.w(TAG, "lists command $id failed: $error")
+    }
+}
+
+private fun listParams(vararg pairs: Pair<String, String>): JsonObject =
+    buildJsonObject {
+        pairs.forEach { (key, value) -> put(key, value) }
+    }
 
 private suspend fun loadBundle(
     container: AppContainer,

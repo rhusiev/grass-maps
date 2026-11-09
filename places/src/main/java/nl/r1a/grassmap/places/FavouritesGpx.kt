@@ -56,7 +56,7 @@ internal object FavouritesGpx {
         }
         val groups = readGroups(root)
         val skipped = mutableListOf<SkippedFavourite>()
-        val favourites = readFavourites(root, groups, skipped)
+        val favourites = uniqueSpecials(readFavourites(root, groups, skipped))
         return Outcome.Success(
             FavouriteDocument(
                 snapshot =
@@ -75,6 +75,7 @@ internal object FavouritesGpx {
             append("<gpx version=\"1.1\" creator=\"").append(CREATOR).append('"')
             append(" xmlns=\"").append(GPX_NAMESPACE).append('"')
             append(" xmlns:osmand=\"").append(OSMAND_NAMESPACE).append('"')
+            append(" xmlns:grassmap=\"").append(GRASSMAP_NAMESPACE).append('"')
             append(" xmlns:xsi=\"").append(XSI_NAMESPACE).append('"')
             append(" xsi:schemaLocation=\"").append(GPX_NAMESPACE).append(' ')
             append(GPX_SCHEMA).append("\">\n")
@@ -136,6 +137,11 @@ internal object FavouritesGpx {
         append("      <osmand:background>")
         appendText(favourite.shape.wireName)
         append("</osmand:background>\n")
+        if (favourite.special != null) {
+            append("      <grassmap:special>")
+            appendText(favourite.special.wireName)
+            append("</grassmap:special>\n")
+        }
         append("    </extensions>\n")
         append("  </wpt>\n")
     }
@@ -233,6 +239,7 @@ internal object FavouritesGpx {
                     color = appearance.color ?: defaults?.color ?: Favourite.DEFAULT_COLOR,
                     icon = appearance.icon ?: defaults?.icon,
                     shape = appearance.shape ?: defaults?.shape ?: FavouriteShape.Circle,
+                    special = readSpecial(element),
                 )
         }
         return favourites
@@ -276,6 +283,29 @@ internal object FavouritesGpx {
             }
         }
         return Appearance(color = color, icon = icon, shape = pointShape)
+    }
+
+    /** The Home or Work marker, written in our own namespace beside OsmAnd's. */
+    private fun readSpecial(element: Element): FavouriteSpecial? {
+        for (extensions in childElements(element, ELEMENT_EXTENSIONS)) {
+            for (child in elementChildren(extensions)) {
+                if (prefix(child.tagName) != GRASSMAP_PREFIX || localName(child.tagName) != ELEMENT_SPECIAL) {
+                    continue
+                }
+                val name = child.textContent?.trim()?.lowercase(Locale.ROOT) ?: continue
+                return FavouriteSpecial.entries.firstOrNull { it.wireName == name }
+            }
+        }
+        return null
+    }
+
+    /** A file can name the same special twice; the first record keeps it. */
+    private fun uniqueSpecials(favourites: List<Favourite>): List<Favourite> {
+        val seen = mutableSetOf<FavouriteSpecial>()
+        return favourites.map { favourite ->
+            val special = favourite.special
+            if (special == null || seen.add(special)) favourite else favourite.copy(special = null)
+        }
     }
 
     private fun shapeOf(text: String?): FavouriteShape {
@@ -438,6 +468,8 @@ internal object FavouritesGpx {
     private const val GPX_SCHEMA = "http://www.topografix.com/GPX/1/1/gpx.xsd"
     private const val OSMAND_NAMESPACE = "https://osmand.net"
     private const val OSMAND_PREFIX = "osmand"
+    private const val GRASSMAP_NAMESPACE = "https://grassmaps.app/gpx/1"
+    private const val GRASSMAP_PREFIX = "grassmap"
     private const val XSI_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance"
 
     private const val ELEMENT_GPX = "gpx"
@@ -451,6 +483,7 @@ internal object FavouritesGpx {
     private const val ELEMENT_COLOR = "color"
     private const val ELEMENT_ICON = "icon"
     private const val ELEMENT_BACKGROUND = "background"
+    private const val ELEMENT_SPECIAL = "special"
     private const val ATTRIBUTE_LATITUDE = "lat"
     private const val ATTRIBUTE_LONGITUDE = "lon"
     private const val ATTRIBUTE_NAME = "name"

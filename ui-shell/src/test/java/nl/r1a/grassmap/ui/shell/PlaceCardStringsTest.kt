@@ -39,6 +39,16 @@ class PlaceCardStringsTest {
                 "place_card_closed",
                 "place_card_unknown",
                 "place_card_close",
+                "favourites_lists_title",
+                "favourites_lists_undo",
+                "favourites_lists_empty",
+                "favourites_lists_no_list",
+                "favourites_lists_home",
+                "favourites_lists_work",
+                "favourites_lists_new_list",
+                "favourites_lists_create",
+                "favourites_lists_points",
+                "favourites_lists_move_here",
             )
     }
 }

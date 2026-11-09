@@ -243,6 +243,7 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/map-controls` | the free, follow and heading camera mode, the compass reset, the position-marker offset seam and the scale-bar layout | `plugin-api` |
 | `plugins/point-info` | the distance and azimuth from the fix or map centre to a long-pressed point | `plugin-api` |
 | `plugins/osm-places` | the `places.card` provider that maps OSM tags to place-card rows and evaluates `opening_hours` | `plugin-api` |
+| `plugins/favourites-ui` | the favourites lists state and the create, move, recolour, Home and Work commands | `plugin-api` |
 
 ## Place card
 
@@ -693,6 +694,35 @@ including the JNA bridge; the full string of 13 keystrokes took 111 ms. The
 first single-letter keystroke after opening the index cost 63.6 ms (cold FST
 walk); later single-letter keystrokes stayed under 11 ms. The Moto g32 budget is
 T-0203's.
+
+## Favourites lists seam
+
+`plugins/favourites-ui` (T-0213) owns the lists screen state and six commands:
+create a list, move a point, recolour a list, set Home, set Work and undo. The
+plugin depends on `:plugin-api` only. It writes through
+`FavouritesListsAccess` in `plugin-api.host`, which `app` implements as
+`StoreFavouritesLists` over the merged favourites store, so every action writes
+`favourites/favourites.gpx` and its `<osmand:points_groups>` definitions before
+the plugin publishes a new state. The plugin never parses GPX and there is no
+second store.
+
+A list is an OsmAnd group. Moving a point changes its `<type>`; if the point's
+appearance matched its old list's, it adopts the destination's appearance.
+Recolouring a list changes the group colour and every member's
+`osmand:color`, including points that inherited the list's look. Home and Work
+are written as `<grassmap:special>` in our own GPX namespace inside
+`<extensions>`, which OsmAnd and plain GPX readers ignore. A file that names
+the same special twice keeps the first, so the library holds one Home and one
+Work at most.
+
+Undo is scoped per action, like the favourites delete receipt, and is not the
+T-0304 history: each action returns one receipt and the plugin keeps them on a
+small stack. An undo whose point or list no longer matches is a typed no-op
+(`FavouriteUndo.NOT_APPLICABLE`), never an error and never a partial write.
+The state is published as `favourites.ui.lists`; `ui-shell` draws the sheet and
+`app` wires the callbacks. The debug-only commands
+`core.favourites.lists_show` and `core.favourites.lists_hide` open it until the
+main UI has a favourites entry point.
 
 ## Tracks seam
 

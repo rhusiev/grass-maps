@@ -29,8 +29,10 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.DevToolsAccess
 import nl.r1a.grassmap.plugin.api.host.ElevationAccess
+import nl.r1a.grassmap.plugin.api.host.FavouritesListsAccess
 import nl.r1a.grassmap.plugin.api.host.NoDevToolsAccess
 import nl.r1a.grassmap.plugin.api.host.NoElevationAccess
+import nl.r1a.grassmap.plugin.api.host.NoFavouritesListsAccess
 import nl.r1a.grassmap.plugin.api.host.PluginServices
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
@@ -71,6 +73,7 @@ class PluginHost(
     private val elevationAccess: ElevationAccess = NoElevationAccess,
     private val cameraFlow: Flow<Camera> = emptyFlow(),
     private val devToolsAccess: DevToolsAccess = NoDevToolsAccess,
+    private val favouritesListsAccess: FavouritesListsAccess = NoFavouritesListsAccess,
 ) {
     private val factories: Map<PluginId, PluginFactory> = plugins.associateBy { it.manifest.id }
     private val streamOwners: Map<StreamId, PluginId> = streams.associate { it.id to it.pluginId }
@@ -498,6 +501,8 @@ class PluginHost(
         override val clock: Clock = Clock { clockMillis() }
 
         override val devTools: DevToolsAccess = devToolsAccess
+
+        override val favouritesLists: FavouritesListsAccess = favouritesListsAccess
     }
 
     private companion object {

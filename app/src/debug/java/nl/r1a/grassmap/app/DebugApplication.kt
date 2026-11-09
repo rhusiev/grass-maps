@@ -85,7 +85,7 @@ class DebugApplication : GrassMapsApplication() {
             listOf(
                 SetCameraCommand(session),
                 SetStyleCommand(session, providers = { container.providerRegistry }),
-            ) + placeCardCommands { container }
+            ) + placeCardCommands { container } + favouritesListsCommands()
         }
 
     /** Debug builds treat the developer as the AI-control switch holder. */

@@ -75,6 +75,7 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         ":plugins:map-controls" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:point-info" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:osm-places" to setOf(":plugin-api", ":plugin-ui-api"),
+        ":plugins:favourites-ui" to setOf(":plugin-api"),
         ":plugins:style-standard" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:synthetic-data" to setOf(":plugin-api", ":plugin-ui-api"),
     )

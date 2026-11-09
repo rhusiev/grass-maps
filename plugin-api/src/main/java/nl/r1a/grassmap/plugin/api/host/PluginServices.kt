@@ -35,4 +35,10 @@ interface PluginServices {
      * whether it runs in a release or a debug build.
      */
     val devTools: DevToolsAccess get() = NoDevToolsAccess
+
+    /**
+     * The favourites list actions behind `plugins/favourites-ui` (T-0213).
+     * Inert until `app` wires the merged favourites library.
+     */
+    val favouritesLists: FavouritesListsAccess get() = NoFavouritesListsAccess
 }

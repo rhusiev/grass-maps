@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.favourites_ui.name">Favourites lists</string>
+    <string name="plugin.favourites_ui.description">Creates lists, moves points, recolours a list and sets Home and Work.</string>
+</resources>

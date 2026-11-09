@@ -21,10 +21,11 @@ import java.nio.file.StandardCopyOption
  * is never overwritten by a later mutation.
  *
  * The constructor does no I/O. [load], [save] and every mutation are the
- * lifecycle. Undo is scoped to deletion: [delete] returns a receipt and
- * [undoDelete] consumes it. That is deliberately not a general undo stack,
- * which is T-0304's, and no command in `app` marks a favourites command as
- * undoable.
+ * lifecycle. Undo is scoped per action: [delete] returns a receipt that
+ * [undoDelete] consumes, and the lists actions return [FavouriteMutation.undo]
+ * tokens that [undoListAction] consumes. That is deliberately not a general
+ * undo stack, which is T-0304's, and no command in `app` marks a favourites
+ * command as undoable.
  */
 class FavouritesStore(
     private val file: File,
@@ -32,6 +33,8 @@ class FavouritesStore(
     private val mutex = Mutex()
     private var cached: FavouritesSnapshot? = null
     private val receipts = LinkedHashMap<FavouriteId, DeletedFavourite>()
+    private val listReceipts = LinkedHashMap<String, ListReceipt>()
+    private var listSequence = 0
 
     /** Reads the file once; later calls return the cached snapshot. */
     suspend fun load(): Outcome<FavouritesSnapshot> = mutex.withLock { snapshot() }
@@ -118,6 +121,276 @@ class FavouritesStore(
 
                         is Outcome.Success -> {
                             Outcome.Success(written.value.favourites[index])
+                        }
+                    }
+                }
+            }
+        }
+
+    /**
+     * Creates one list (group) with its colour and optional icon (T-0213).
+     * A blank name or colour, or a duplicate name, is [AppError.InvalidInput].
+     *
+     * The returned [FavouriteMutation.undo] receipt removes the list again. It
+     * is scoped to this action and is not the T-0304 undo history.
+     */
+    suspend fun createGroup(
+        name: String,
+        color: String,
+        icon: String? = null,
+    ): Outcome<FavouriteMutation<FavouriteGroup>> =
+        mutex.withLock {
+            val cleanName = name.trim()
+            val cleanColor = color.trim()
+            val cleanIcon = icon?.trim()?.takeIf { it.isNotEmpty() }
+            if (cleanName.isEmpty() || cleanColor.isEmpty()) {
+                return@withLock Outcome.Failure(AppError.InvalidInput)
+            }
+            when (val loaded = snapshot()) {
+                is Outcome.Failure -> {
+                    loaded
+                }
+
+                is Outcome.Success -> {
+                    if (loaded.value.groups.any { group -> group.name == cleanName }) {
+                        return@withLock Outcome.Failure(AppError.InvalidInput)
+                    }
+                    val group = FavouriteGroup(name = cleanName, color = cleanColor, icon = cleanIcon)
+                    val updated = loaded.value.copy(groups = loaded.value.groups + group)
+                    when (val written = persist(updated)) {
+                        is Outcome.Failure -> {
+                            written
+                        }
+
+                        is Outcome.Success -> {
+                            val index = written.value.groups.lastIndex
+                            Outcome.Success(
+                                FavouriteMutation(
+                                    written.value.groups[index],
+                                    rememberList(ListReceipt.Created(group)),
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+    /**
+     * Moves one favourite to another list and persists it. A point whose
+     * appearance matched its old list inherits the destination's appearance;
+     * a point with its own look keeps it. A missing point or list is
+     * [AppError.NotFound].
+     */
+    suspend fun moveFavourite(
+        id: FavouriteId,
+        group: String,
+    ): Outcome<FavouriteMutation<Favourite>> =
+        mutex.withLock {
+            val target = group.trim()
+            if (target.isEmpty()) {
+                return@withLock Outcome.Failure(AppError.InvalidInput)
+            }
+            when (val loaded = snapshot()) {
+                is Outcome.Failure -> {
+                    loaded
+                }
+
+                is Outcome.Success -> {
+                    val snapshot = loaded.value
+                    val index = snapshot.favourites.indexOfFirst { favourite -> favourite.id == id }
+                    if (index < 0) {
+                        return@withLock Outcome.Failure(AppError.NotFound)
+                    }
+                    val destination =
+                        snapshot.groups.firstOrNull { it.name == target }
+                            ?: return@withLock Outcome.Failure(AppError.NotFound)
+                    val before = snapshot.favourites[index]
+                    val source = before.group?.let { name -> snapshot.groups.firstOrNull { it.name == name } }
+                    val inherited =
+                        source != null &&
+                            before.color == source.color &&
+                            before.icon == source.icon &&
+                            before.shape == source.shape
+                    val after =
+                        if (inherited) {
+                            before.copy(
+                                group = target,
+                                color = destination.color,
+                                icon = destination.icon,
+                                shape = destination.shape,
+                            )
+                        } else {
+                            before.copy(group = target)
+                        }
+                    val favourites = snapshot.favourites.toMutableList().also { it[index] = after }
+                    when (val written = persist(snapshot.copy(favourites = favourites))) {
+                        is Outcome.Failure -> {
+                            written
+                        }
+
+                        is Outcome.Success -> {
+                            Outcome.Success(
+                                FavouriteMutation(
+                                    written.value.favourites[index],
+                                    rememberList(
+                                        ListReceipt.Moved(
+                                            before = before,
+                                            after = written.value.favourites[index],
+                                        ),
+                                    ),
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+    /**
+     * Recolours a whole list and every point in it (T-0213). The group default
+     * and each member's effective colour change together, so a point that
+     * inherited the list's look changes with it. An unknown list is
+     * [AppError.NotFound].
+     */
+    suspend fun recolourGroup(
+        name: String,
+        color: String,
+    ): Outcome<FavouriteMutation<FavouriteGroup>> =
+        mutex.withLock {
+            val target = name.trim()
+            val cleanColor = color.trim()
+            if (target.isEmpty() || cleanColor.isEmpty()) {
+                return@withLock Outcome.Failure(AppError.InvalidInput)
+            }
+            when (val loaded = snapshot()) {
+                is Outcome.Failure -> {
+                    loaded
+                }
+
+                is Outcome.Success -> {
+                    val snapshot = loaded.value
+                    val index = snapshot.groups.indexOfFirst { group -> group.name == target }
+                    if (index < 0) {
+                        return@withLock Outcome.Failure(AppError.NotFound)
+                    }
+                    val before = snapshot.groups[index]
+                    val members =
+                        snapshot.favourites.mapNotNull { favourite ->
+                            if (favourite.group == target) {
+                                MemberColor(favourite.name, favourite.latitude, favourite.longitude, favourite.color)
+                            } else {
+                                null
+                            }
+                        }
+                    val favourites =
+                        snapshot.favourites.map { favourite ->
+                            if (favourite.group == target) favourite.copy(color = cleanColor) else favourite
+                        }
+                    val groups = snapshot.groups.toMutableList().also { it[index] = before.copy(color = cleanColor) }
+                    when (val written = persist(snapshot.copy(groups = groups, favourites = favourites))) {
+                        is Outcome.Failure -> {
+                            written
+                        }
+
+                        is Outcome.Success -> {
+                            Outcome.Success(
+                                FavouriteMutation(
+                                    written.value.groups[index],
+                                    rememberList(ListReceipt.Recoloured(target, before.color, cleanColor, members)),
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+    /**
+     * Sets one favourite as the Home or Work special place (T-0213). The
+     * previous holder of that special, if any, is cleared, so a library holds
+     * exactly one Home and one Work at most. A missing point is
+     * [AppError.NotFound].
+     */
+    suspend fun setSpecial(
+        id: FavouriteId,
+        special: FavouriteSpecial,
+    ): Outcome<FavouriteMutation<Favourite>> =
+        mutex.withLock {
+            when (val loaded = snapshot()) {
+                is Outcome.Failure -> {
+                    loaded
+                }
+
+                is Outcome.Success -> {
+                    val snapshot = loaded.value
+                    val index = snapshot.favourites.indexOfFirst { favourite -> favourite.id == id }
+                    if (index < 0) {
+                        return@withLock Outcome.Failure(AppError.NotFound)
+                    }
+                    val before = snapshot.favourites[index]
+                    val holder = snapshot.favourites.firstOrNull { it.id != id && it.special == special }
+                    val favourites =
+                        snapshot.favourites.map { favourite ->
+                            when {
+                                favourite.id == id -> favourite.copy(special = special)
+                                favourite.id == holder?.id -> favourite.copy(special = null)
+                                else -> favourite
+                            }
+                        }
+                    when (val written = persist(snapshot.copy(favourites = favourites))) {
+                        is Outcome.Failure -> {
+                            written
+                        }
+
+                        is Outcome.Success -> {
+                            Outcome.Success(
+                                FavouriteMutation(
+                                    written.value.favourites[index],
+                                    rememberList(
+                                        ListReceipt.SpecialSet(
+                                            target = id,
+                                            before = before.special,
+                                            after = special,
+                                            holder = holder?.id,
+                                        ),
+                                    ),
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+    /**
+     * Consumes one lists receipt. When the action can no longer apply - the
+     * point or list was deleted, or another action changed it - the result is
+     * [FavouriteUndo.NOT_APPLICABLE] and the library is unchanged. That is a
+     * typed no-op, not an error. The receipt is consumed either way.
+     */
+    suspend fun undoListAction(token: FavouriteUndoToken): Outcome<FavouriteUndo> =
+        mutex.withLock {
+            val receipt = listReceipts.remove(token.value) ?: return@withLock Outcome.Success(FavouriteUndo.NOT_APPLICABLE)
+            when (val loaded = snapshot()) {
+                is Outcome.Failure -> {
+                    rememberList(receipt)
+                    loaded
+                }
+
+                is Outcome.Success -> {
+                    val updated = applyUndo(loaded.value, receipt)
+                    if (updated == null) {
+                        return@withLock Outcome.Success(FavouriteUndo.NOT_APPLICABLE)
+                    }
+                    when (val written = persist(updated)) {
+                        is Outcome.Failure -> {
+                            rememberList(receipt)
+                            written
+                        }
+
+                        is Outcome.Success -> {
+                            Outcome.Success(FavouriteUndo.APPLIED)
                         }
                     }
                 }
@@ -243,7 +516,13 @@ class FavouritesStore(
                     favourite.copy(icon = favourite.group?.let(groupIcons::get))
                 }
             }
-        return snapshot.copy(favourites = deriveIds(resolved))
+        val seen = mutableSetOf<FavouriteSpecial>()
+        val unique =
+            resolved.map { favourite ->
+                val special = favourite.special
+                if (special == null || seen.add(special)) favourite else favourite.copy(special = null)
+            }
+        return snapshot.copy(favourites = deriveIds(unique))
     }
 
     private fun remember(receipt: DeletedFavourite) {
@@ -252,6 +531,115 @@ class FavouritesStore(
             receipts.remove(receipts.keys.first())
         }
     }
+
+    private fun rememberList(receipt: ListReceipt): FavouriteUndoToken {
+        listSequence += 1
+        val token = FavouriteUndoToken("lists-$listSequence")
+        listReceipts[token.value] = receipt
+        while (listReceipts.size > MAX_RECEIPTS) {
+            listReceipts.remove(listReceipts.keys.first())
+        }
+        return token
+    }
+
+    /** The snapshot with one lists action reversed, or null when it cannot apply. */
+    private fun applyUndo(
+        snapshot: FavouritesSnapshot,
+        receipt: ListReceipt,
+    ): FavouritesSnapshot? =
+        when (receipt) {
+            is ListReceipt.Created -> {
+                if (snapshot.groups.none { it.name == receipt.group.name }) {
+                    null
+                } else if (snapshot.favourites.any { it.group == receipt.group.name }) {
+                    // The list has members, so removing it would silently
+                    // ungroup points this receipt never moved.
+                    null
+                } else {
+                    snapshot.copy(groups = snapshot.groups.filterNot { it.name == receipt.group.name })
+                }
+            }
+
+            is ListReceipt.Moved -> {
+                val index = snapshot.favourites.indexOfFirst { sameValues(it, receipt.after) }
+                if (index < 0) {
+                    null
+                } else {
+                    snapshot.copy(favourites = snapshot.favourites.toMutableList().also { it[index] = receipt.before })
+                }
+            }
+
+            is ListReceipt.Recoloured -> {
+                val group = snapshot.groups.firstOrNull { it.name == receipt.group }
+                if (group == null || group.color != receipt.afterColor) {
+                    null
+                } else {
+                    val favourites =
+                        snapshot.favourites.map { favourite ->
+                            if (favourite.group != receipt.group || favourite.color != receipt.afterColor) {
+                                favourite
+                            } else {
+                                val member =
+                                    receipt.members.firstOrNull { member ->
+                                        member.name == favourite.name &&
+                                            member.latitude == favourite.latitude &&
+                                            member.longitude == favourite.longitude
+                                    }
+                                if (member == null) favourite else favourite.copy(color = member.color)
+                            }
+                        }
+                    snapshot.copy(
+                        groups =
+                            snapshot.groups.map { existing ->
+                                if (existing.name == receipt.group) existing.copy(color = receipt.beforeColor) else existing
+                            },
+                        favourites = favourites,
+                    )
+                }
+            }
+
+            is ListReceipt.SpecialSet -> {
+                applySpecialUndo(snapshot, receipt)
+            }
+        }
+
+    private fun applySpecialUndo(
+        snapshot: FavouritesSnapshot,
+        receipt: ListReceipt.SpecialSet,
+    ): FavouritesSnapshot? {
+        val target = snapshot.favourites.firstOrNull { it.id == receipt.target } ?: return null
+        if (target.special != receipt.after) {
+            return null
+        }
+        if (receipt.before != null && snapshot.favourites.any { it.id != target.id && it.special == receipt.before }) {
+            return null
+        }
+        val restored = target.copy(special = receipt.before)
+        val favourites =
+            snapshot.favourites.map { favourite ->
+                when {
+                    favourite.id == target.id -> restored
+                    favourite.id == receipt.holder && favourite.special == null -> favourite.copy(special = receipt.after)
+                    else -> favourite
+                }
+            }
+        return snapshot.copy(favourites = favourites)
+    }
+
+    /** Equality of every stored value except the derived id. */
+    private fun sameValues(
+        first: Favourite,
+        second: Favourite,
+    ): Boolean =
+        first.latitude == second.latitude &&
+            first.longitude == second.longitude &&
+            first.name == second.name &&
+            first.description == second.description &&
+            first.group == second.group &&
+            first.color == second.color &&
+            first.icon == second.icon &&
+            first.shape == second.shape &&
+            first.special == second.special
 
     /**
      * Existing definitions win: an import never silently changes how an
@@ -304,6 +692,39 @@ class FavouritesStore(
 
     private fun Char.isPortable(): Boolean =
         this == '\t' || this == '\n' || this == '\r' || (this >= ' ' && this != '\uFFFE' && this != '\uFFFF')
+
+    private sealed interface ListReceipt {
+        data class Created(
+            val group: FavouriteGroup,
+        ) : ListReceipt
+
+        data class Moved(
+            val before: Favourite,
+            val after: Favourite,
+        ) : ListReceipt
+
+        data class Recoloured(
+            val group: String,
+            val beforeColor: String,
+            val afterColor: String,
+            val members: List<MemberColor>,
+        ) : ListReceipt
+
+        data class SpecialSet(
+            val target: FavouriteId,
+            val before: FavouriteSpecial?,
+            val after: FavouriteSpecial,
+            val holder: FavouriteId?,
+        ) : ListReceipt
+    }
+
+    /** One recoloured point, matched by its stable GPX values across a reorder. */
+    private data class MemberColor(
+        val name: String,
+        val latitude: Double,
+        val longitude: Double,
+        val color: String,
+    )
 
     private companion object {
         const val TEMPORARY_SUFFIX = ".tmp"

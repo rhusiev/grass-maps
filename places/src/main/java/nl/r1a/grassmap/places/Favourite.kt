@@ -22,6 +22,17 @@ enum class FavouriteShape(
 }
 
 /**
+ * The Home or Work special place (T-0213). At most one favourite holds each,
+ * and a favourite holds at most one of them.
+ */
+enum class FavouriteSpecial(
+    val wireName: String,
+) {
+    Home("home"),
+    Work("work"),
+}
+
+/**
  * One favourite as OsmAnd's favourites GPX 1.1 dialect stores it.
  *
  * [group] is the `<type>` element, [color] and [icon] are the `osmand:` colour
@@ -29,6 +40,10 @@ enum class FavouriteShape(
  * are effective values: a waypoint without its own appearance inherits the
  * group's defaults, and a waypoint in a group without a default inherits the
  * documented defaults ([DEFAULT_COLOR] and [FavouriteShape.Circle]).
+ *
+ * [special] is not part of OsmAnd's dialect. The store writes it as
+ * `<grassmap:special>` inside `<extensions>`, which OsmAnd and plain GPX
+ * readers ignore.
  */
 data class Favourite(
     val id: FavouriteId,
@@ -40,6 +55,7 @@ data class Favourite(
     val color: String = DEFAULT_COLOR,
     val icon: String? = null,
     val shape: FavouriteShape = FavouriteShape.Circle,
+    val special: FavouriteSpecial? = null,
 ) {
     companion object {
         /** OsmAnd's documented default icon colour. */

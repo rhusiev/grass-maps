@@ -9,4 +9,15 @@
     <string name="place_card_closed">Closed now</string>
     <string name="place_card_unknown">Hours unknown</string>
     <string name="place_card_close">Close the place card</string>
+
+    <string name="favourites_lists_title">Lists</string>
+    <string name="favourites_lists_undo">Undo</string>
+    <string name="favourites_lists_empty">No lists yet</string>
+    <string name="favourites_lists_no_list">No list</string>
+    <string name="favourites_lists_home">Home</string>
+    <string name="favourites_lists_work">Work</string>
+    <string name="favourites_lists_new_list">New list</string>
+    <string name="favourites_lists_create">Create list</string>
+    <string name="favourites_lists_points">Points</string>
+    <string name="favourites_lists_move_here">Move the selected point here</string>
 </resources>

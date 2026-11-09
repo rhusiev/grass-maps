@@ -69,6 +69,58 @@ class LvivAddressSearchTest {
         }
     }
 
+    @Test
+    fun `a letter suffix matches with a hyphen and with either alphabet`() {
+        val probe =
+            readProbes().firstOrNull { probe ->
+                val number = probe.query.split(' ').last()
+                Regex("\\d+-[а-яА-Я]").matches(number)
+            } ?: error("the probe set no longer carries a hyphenated letter suffix")
+        val number = probe.query.split(' ').last()
+        val digits = number.takeWhile { it.isDigit() }
+        val suffix = number.drop(digits.length).removePrefix("-")
+        val expected = GeoPoint(probe.latitude, probe.longitude)
+        val forms =
+            listOf(
+                "$digits-$suffix",
+                "$digits$suffix",
+                "$digits${latinLookalike(suffix)}",
+            )
+        for (form in forms) {
+            val query = probe.query.dropLast(number.length) + form
+            val first = search(query).firstOrNull()
+            assertTrue(
+                "'$query' found ${first?.name} at ${first?.position}",
+                first != null && distanceM(first.position, expected) <= MAX_METRES,
+            )
+        }
+    }
+
+    @Test
+    fun `the fixture carries street rows so a house has to beat its street`() {
+        val hits = search("Личаківська", limit = MAX_SEARCH_RESULTS)
+        assertTrue(
+            "no street row in the fixture: ${hits.map { "${it.name} [${it.kind}]" }}",
+            hits.any { it.kind.startsWith("highway=") },
+        )
+    }
+
+    private fun latinLookalike(suffix: String): String =
+        suffix
+            .map { letter ->
+                when (letter.lowercaseChar()) {
+                    'а' -> 'a'
+                    'е' -> 'e'
+                    'і' -> 'i'
+                    'о' -> 'o'
+                    'р' -> 'p'
+                    'с' -> 'c'
+                    'у' -> 'y'
+                    'х' -> 'x'
+                    else -> letter
+                }
+            }.joinToString("")
+
     private fun search(
         query: String,
         limit: Int = RESULT_LIMIT,

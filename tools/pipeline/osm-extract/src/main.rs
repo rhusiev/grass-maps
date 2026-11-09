@@ -48,6 +48,19 @@ const POI_KEYS: [&str; 22] = [
     "building",
 ];
 
+/// Named roads a person looks a street up by. Paths, tracks and service roads
+/// seldom carry a name worth finding, so they stay out, as in osm-mapidx.
+const STREET_KINDS: [&str; 8] = [
+    "trunk",
+    "primary",
+    "secondary",
+    "tertiary",
+    "unclassified",
+    "residential",
+    "living_street",
+    "pedestrian",
+];
+
 /// Ranks that give an address its locality, nearest one wins. A settlement
 /// (city, town, village, hamlet, borough) outranks a subdivision (suburb,
 /// quarter, neighbourhood, locality) even when the subdivision is closer.
@@ -109,6 +122,23 @@ struct WayCandidate {
     feature_tags: Vec<(String, String)>,
 }
 
+/// A settlement mapped as a way, whose coordinate is known only after the
+/// node pass. villages mapped as areas would otherwise lose their houses to a
+/// neighbouring settlement's name.
+struct SettlementWay {
+    name: String,
+    refs: Vec<i64>,
+    tier: u8,
+}
+
+/// A tagged node kept until the settlement grid is complete.
+struct NodeCandidate {
+    id: i64,
+    lon: f64,
+    lat: f64,
+    tags: Vec<(String, String)>,
+}
+
 struct BoundingBox {
     west: f64,
     south: f64,
@@ -136,7 +166,10 @@ struct Stats {
     addresses: u64,
     addresses_deduped: u64,
     settlements: u64,
+    settlement_ways: u64,
     relations_skipped: u64,
+    relations_with_address: u64,
+    relations_with_place: u64,
     ways_without_coordinates: u64,
 }
 
@@ -151,13 +184,18 @@ fn main() -> ExitCode {
     match run(&options) {
         Ok(stats) => {
             eprintln!(
-                "osm-extract: {} places, {} addresses ({} duplicates), {} localities, \
-                 {} relations not indexed, {} ways without coordinates",
+                "osm-extract: {} places, {} addresses ({} duplicates), \
+                 {} locality nodes and {} locality ways, \
+                 {} of {} relations carry addr ({} carry place) and are not indexed, \
+                 {} ways without coordinates",
                 stats.places,
                 stats.addresses,
                 stats.addresses_deduped,
                 stats.settlements,
+                stats.settlement_ways,
+                stats.relations_with_address,
                 stats.relations_skipped,
+                stats.relations_with_place,
                 stats.ways_without_coordinates,
             );
             ExitCode::SUCCESS
@@ -236,6 +274,7 @@ fn parse_bbox(value: &str) -> Result<BoundingBox, String> {
 fn run(options: &Options) -> Result<Stats, String> {
     let mut stats = Stats::default();
     let mut settlements: Vec<Settlement> = Vec::new();
+    let mut settlement_ways: Vec<SettlementWay> = Vec::new();
     let mut ways: Vec<WayCandidate> = Vec::new();
     let mut needed: HashSet<i64> = HashSet::new();
 
@@ -250,82 +289,96 @@ fn run(options: &Options) -> Result<Stats, String> {
         }
         Element::Way(way) => {
             let tags = collect_tags(way.tags());
-            if let Some(candidate) = make_way(way.id(), &tags, way.refs().collect()) {
+            let refs: Vec<i64> = way.refs().collect();
+            if let Some((name, tier)) = settlement_tags(&tags) {
+                for reference in &refs {
+                    needed.insert(*reference);
+                }
+                settlement_ways.push(SettlementWay {
+                    name,
+                    refs: refs.clone(),
+                    tier,
+                });
+            }
+            if let Some(candidate) = make_way(way.id(), &tags, refs) {
                 for reference in &candidate.refs {
                     needed.insert(*reference);
                 }
                 ways.push(candidate);
             }
         }
-        Element::Relation(_) => stats.relations_skipped += 1,
+        Element::Relation(relation) => {
+            let tags = collect_tags(relation.tags());
+            stats.relations_skipped += 1;
+            if tag(&tags, "addr:housenumber").is_some()
+                || tag(&tags, "addr:street").is_some()
+                || tag(&tags, "addr:place").is_some()
+            {
+                stats.relations_with_address += 1;
+            }
+            if tag(&tags, "place").is_some() {
+                stats.relations_with_place += 1;
+            }
+        }
     })?;
     stats.settlements = settlements.len() as u64;
-    let grid = SettlementGrid::new(&settlements);
+    stats.settlement_ways = settlement_ways.len() as u64;
+
+    // The second pass resolves the ways' node coordinates and keeps the
+    // tagged nodes. Nothing is written yet: a node house needs the locality,
+    // and a village mapped as a way only has a coordinate once this pass ends.
+    let mut coordinates: HashMap<i64, (f64, f64)> = HashMap::with_capacity(needed.len());
+    let mut nodes: Vec<NodeCandidate> = Vec::new();
+    read_elements(&options.pbf, |element| match element {
+        Element::Node(node) => collect_node(
+            node.id(),
+            node.lon(),
+            node.lat(),
+            node.tags(),
+            options,
+            &needed,
+            &mut coordinates,
+            &mut nodes,
+        ),
+        Element::DenseNode(node) => collect_node(
+            node.id(),
+            node.lon(),
+            node.lat(),
+            node.tags(),
+            options,
+            &needed,
+            &mut coordinates,
+            &mut nodes,
+        ),
+        _ => {}
+    })?;
+
+    let mut grid = SettlementGrid::new(&settlements);
+    for settlement in &settlement_ways {
+        match centroid(&settlement.refs, &coordinates) {
+            Some((lon, lat)) => grid.add(&settlement.name, lon, lat, settlement.tier),
+            None => stats.ways_without_coordinates += 1,
+        }
+    }
 
     let mut writer = BufWriter::new(
         File::create(&options.out)
             .map_err(|error| format!("{}: {error}", options.out.display()))?,
     );
-    let mut coordinates: HashMap<i64, (f64, f64)> = HashMap::with_capacity(needed.len());
     let mut seen_addresses: HashSet<String> = HashSet::new();
-    let mut write_error: Option<String> = None;
-
-    read_elements(&options.pbf, |element| {
-        if write_error.is_some() {
-            return;
-        }
-        match element {
-            Element::Node(node) => {
-                let (id, lon, lat) = (node.id(), node.lon(), node.lat());
-                if needed.contains(&id) {
-                    coordinates.insert(id, (lon, lat));
-                }
-                if !contains(&options.bbox, lon, lat) {
-                    return;
-                }
-                let tags = collect_tags(node.tags());
-                if let Err(error) = write_node(
-                    &mut writer,
-                    id,
-                    lon,
-                    lat,
-                    &tags,
-                    options,
-                    &grid,
-                    &mut seen_addresses,
-                    &mut stats,
-                ) {
-                    write_error = Some(error.to_string());
-                }
-            }
-            Element::DenseNode(node) => {
-                let (id, lon, lat) = (node.id(), node.lon(), node.lat());
-                if needed.contains(&id) {
-                    coordinates.insert(id, (lon, lat));
-                }
-                if !contains(&options.bbox, lon, lat) {
-                    return;
-                }
-                let tags = collect_tags(node.tags());
-                if let Err(error) = write_node(
-                    &mut writer,
-                    id,
-                    lon,
-                    lat,
-                    &tags,
-                    options,
-                    &grid,
-                    &mut seen_addresses,
-                    &mut stats,
-                ) {
-                    write_error = Some(error.to_string());
-                }
-            }
-            _ => {}
-        }
-    })?;
-    if let Some(error) = write_error {
-        return Err(error);
+    for node in &nodes {
+        write_node(
+            &mut writer,
+            node.id,
+            node.lon,
+            node.lat,
+            &node.tags,
+            options,
+            &grid,
+            &mut seen_addresses,
+            &mut stats,
+        )
+        .map_err(|error| error.to_string())?;
     }
 
     ways.sort_unstable_by_key(|way| way.osm_id);
@@ -361,21 +414,8 @@ fn run(options: &Options) -> Result<Stats, String> {
         }
         if let (Some(name), Some(kind)) = (&way.name, &way.kind) {
             if options.places {
-                let centroid = way
-                    .refs
-                    .iter()
-                    .filter_map(|id| coordinates.get(id))
-                    .fold((0.0, 0.0, 0usize), |(lon, lat, count), (x, y)| {
-                        (lon + x, lat + y, count + 1)
-                    });
-                let (lon, lat) = if centroid.2 == 0 {
-                    (first_lon, first_lat)
-                } else {
-                    (
-                        centroid.0 / centroid.2 as f64,
-                        centroid.1 / centroid.2 as f64,
-                    )
-                };
+                let (lon, lat) =
+                    centroid(&way.refs, &coordinates).unwrap_or((first_lon, first_lat));
                 write_place(
                     &mut writer,
                     "way",
@@ -421,26 +461,75 @@ fn tag<'a>(tags: &'a [(String, String)], key: &str) -> Option<&'a str> {
         .map(|(_, value)| value.as_str())
 }
 
-fn collect_settlement(tags: &[(String, String)], lon: f64, lat: f64, out: &mut Vec<Settlement>) {
-    let Some(rank) = tag(tags, "place") else {
-        return;
-    };
-    let Some(position) = SETTLEMENT_RANKS
+/// A settlement's name and tier, or None when the element is not one.
+fn settlement_tags(tags: &[(String, String)]) -> Option<(String, u8)> {
+    let rank = tag(tags, "place")?;
+    let position = SETTLEMENT_RANKS
         .iter()
-        .position(|candidate| candidate == &rank)
-    else {
-        return;
-    };
-    let Some(name) = tag(tags, "name").filter(|name| !name.trim().is_empty()) else {
-        return;
-    };
+        .position(|candidate| candidate == &rank)?;
+    let name = tag(tags, "name").filter(|name| !name.trim().is_empty())?;
     let tier = if position < SETTLEMENT_TIER { 0 } else { 1 };
-    out.push(Settlement {
-        name: name.to_owned(),
-        lon,
-        lat,
-        tier,
-    });
+    Some((name.to_owned(), tier))
+}
+
+fn collect_settlement(tags: &[(String, String)], lon: f64, lat: f64, out: &mut Vec<Settlement>) {
+    if let Some((name, tier)) = settlement_tags(tags) {
+        out.push(Settlement {
+            name,
+            lon,
+            lat,
+            tier,
+        });
+    }
+}
+
+/// The mean of a way's known node coordinates: good enough for a village area.
+fn centroid(refs: &[i64], coordinates: &HashMap<i64, (f64, f64)>) -> Option<(f64, f64)> {
+    let mut lon = 0.0;
+    let mut lat = 0.0;
+    let mut count = 0usize;
+    for id in refs {
+        if let Some(&(x, y)) = coordinates.get(id) {
+            lon += x;
+            lat += y;
+            count += 1;
+        }
+    }
+    (count > 0).then(|| (lon / count as f64, lat / count as f64))
+}
+
+/// Keeps a tagged node for emission once the locality grid exists.
+#[allow(clippy::too_many_arguments)]
+fn collect_node<'a>(
+    id: i64,
+    lon: f64,
+    lat: f64,
+    tags: impl Iterator<Item = (&'a str, &'a str)>,
+    options: &Options,
+    needed: &HashSet<i64>,
+    coordinates: &mut HashMap<i64, (f64, f64)>,
+    nodes: &mut Vec<NodeCandidate>,
+) {
+    if needed.contains(&id) {
+        coordinates.insert(id, (lon, lat));
+    }
+    if !contains(&options.bbox, lon, lat) {
+        return;
+    }
+    let tags = collect_tags(tags);
+    let address = tag(&tags, "addr:housenumber")
+        .filter(|value| !value.trim().is_empty())
+        .zip(
+            tag(&tags, "addr:street")
+                .or_else(|| tag(&tags, "addr:place"))
+                .filter(|value| !value.trim().is_empty()),
+        )
+        .is_some();
+    let keep_address = options.addresses && address;
+    let keep_place = options.places && poi_name_and_kind(&tags).is_some();
+    if keep_address || keep_place {
+        nodes.push(NodeCandidate { id, lon, lat, tags });
+    }
 }
 
 fn make_way(osm_id: i64, tags: &[(String, String)], refs: Vec<i64>) -> Option<WayCandidate> {
@@ -486,7 +575,13 @@ fn poi_name_and_kind(tags: &[(String, String)]) -> Option<(String, String)> {
     let name = tag(tags, "name").filter(|name| !name.trim().is_empty())?;
     let kind = POI_KEYS
         .iter()
-        .find_map(|key| tag(tags, key).map(|value| format!("{key}={value}")))?;
+        .find_map(|key| tag(tags, key).map(|value| format!("{key}={value}")))
+        .or_else(|| {
+            let road = tag(tags, "highway")?;
+            STREET_KINDS
+                .contains(&road)
+                .then(|| format!("highway={road}"))
+        })?;
     if is_number_name(name) && kind.starts_with("building=") {
         return None;
     }
@@ -575,8 +670,8 @@ fn write_address(
     }
     let key = format!(
         "{}|{}|{}",
-        street.to_lowercase(),
-        house_number_key(&number),
+        street_key(&street),
+        number_identity(&number),
         locality.unwrap_or_default(),
     );
     if !seen_addresses.insert(key) {
@@ -691,6 +786,54 @@ fn clean(value: &str) -> String {
         .to_owned()
 }
 
+/// The words that identify a street, independent of the type word and of word
+/// order, so "Миргородська вулиця" and "вулиця Миргородська" are one key.
+fn street_key(street: &str) -> String {
+    let mut words: Vec<String> = street
+        .split(|character: char| !character.is_alphanumeric())
+        .filter(|word| !word.is_empty())
+        .map(str::to_lowercase)
+        .filter(|word| !STREET_TYPE_WORDS.contains(&word.as_str()))
+        .collect();
+    words.sort();
+    words.dedup();
+    words.join(" ")
+}
+
+/// What makes two spellings the same house: letters folded, a hyphen before a
+/// letter dropped ("15-А" is "15а"), but a separator between numbers kept as
+/// "/" so "12/2" is not "122".
+fn number_identity(number: &str) -> String {
+    let mut key = String::new();
+    let mut pending_separator = false;
+    for character in number
+        .chars()
+        .flat_map(|character| character.to_lowercase())
+    {
+        let folded = match character {
+            'а' => 'a',
+            'е' => 'e',
+            'і' => 'i',
+            'о' => 'o',
+            'р' => 'p',
+            'с' => 'c',
+            'у' => 'y',
+            'х' => 'x',
+            other => other,
+        };
+        if folded.is_alphanumeric() {
+            if pending_separator && folded.is_ascii_digit() && !key.is_empty() {
+                key.push('/');
+            }
+            key.push(folded);
+            pending_separator = false;
+        } else {
+            pending_separator = true;
+        }
+    }
+    key
+}
+
 /// A house number reduced to what makes two spellings the same house: keep
 /// letters and digits, drop separators, and fold the Cyrillic letters that
 /// share a glyph with Latin ones. "1-А", "1а" and "1A" all key as "1a".
@@ -739,22 +882,28 @@ impl SettlementGrid {
             settlements: Vec::new(),
             cells: HashMap::new(),
         };
-        // The caller's vector is moved in by copying names once; the list is a
-        // few tens of thousands of entries, far below the place rows.
+        // The list is a few tens of thousands of entries, far below the place
+        // rows, so copying the names once is cheap.
         for settlement in settlements {
-            let index = grid.settlements.len();
-            grid.settlements.push(Settlement {
-                name: settlement.name.clone(),
-                lon: settlement.lon,
-                lat: settlement.lat,
-                tier: settlement.tier,
-            });
-            grid.cells
-                .entry(cell_of(settlement.lon, settlement.lat))
-                .or_default()
-                .push(index);
+            grid.add(
+                &settlement.name,
+                settlement.lon,
+                settlement.lat,
+                settlement.tier,
+            );
         }
         grid
+    }
+
+    fn add(&mut self, name: &str, lon: f64, lat: f64, tier: u8) {
+        let index = self.settlements.len();
+        self.settlements.push(Settlement {
+            name: name.to_owned(),
+            lon,
+            lat,
+            tier,
+        });
+        self.cells.entry(cell_of(lon, lat)).or_default().push(index);
     }
 
     fn nearest(&self, lon: f64, lat: f64) -> Option<&str> {
@@ -813,6 +962,26 @@ mod tests {
         assert_eq!(house_number_key("15а"), "15a");
         assert_eq!(house_number_key("15A"), "15a");
         assert_eq!(house_number_key("12/2б"), "122б");
+    }
+
+    #[test]
+    fn a_street_key_ignores_type_words_and_word_order() {
+        assert_eq!(
+            street_key("Миргородська вулиця"),
+            street_key("вулиця Миргородська")
+        );
+        assert_ne!(
+            street_key("Миргородська вулиця"),
+            street_key("Стрийська вулиця")
+        );
+    }
+
+    #[test]
+    fn a_number_identity_drops_a_suffix_hyphen_but_keeps_a_slash() {
+        assert_eq!(number_identity("15-А"), "15a");
+        assert_eq!(number_identity("15а"), "15a");
+        assert_ne!(number_identity("12/2"), number_identity("122"));
+        assert_eq!(number_identity("12/2"), "12/2");
     }
 
     #[test]

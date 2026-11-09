@@ -19,10 +19,11 @@ The defaults read `/hdd/drive/Projects/Life/grass-maps-bench`; set
 `--pmtiles` when the bench repository lives elsewhere. The search section and
 its feature component come from `cargo run --bin build-section`, so the script
 also needs the Rust toolchain; set `CARGO_HOME` to its real path when it is
-reached through a symlink. The output is
-deterministic: the same source archives produce the same bytes and the same
-manifest, so re-running the command on the same bench build reproduces the
-committed package.
+reached through a symlink. The output is deterministic: the same source
+archives and the same builder produce the same bytes and the same manifest.
+The committed package predates the version-2 search section, so re-running the
+script now writes `format.bin` and a version-2 manifest and does not reproduce
+the committed bytes until the package is regenerated and committed.
 
 The package is committed because tests must run without the bench repository or
 a multi-gigabyte download. The manifest records each file's size and sha256;
@@ -35,7 +36,7 @@ a multi-gigabyte download. The manifest records each file's size and sha256;
 | `map.pmtiles` | `ukraine-final.pmtiles`, Protomaps basemap profile, z12-14 | no |
 | `contours.pmtiles` | `lviv-90m-20m.pmtiles`, Copernicus GLO-30 contours, z9-14 | no |
 | `elevation.bin` | generated marker file | yes |
-| `terms.fst`, `postings.bin`, `places.bin`, `context.bin`, `entities.bin`, `kinds.bin`, `strings.bin` | the search section, built by `rust/grass-core` from `fixture-places.tsv` | no |
+| `format.bin`, `terms.fst`, `postings.bin`, `places.bin`, `context.bin`, `entities.bin`, `kinds.bin`, `strings.bin` | the search section, built by `rust/grass-core` from `fixture-places.tsv`; a version-2 build writes `format.bin`, the committed version-1 package has no such file | no |
 | `features.bin` | the feature component, built in the same pass | no |
 
 The bounding box is `23.940,49.940,23.960,49.960` (about 1.5 km around
@@ -55,8 +56,9 @@ The search section is real data. `tools/pipeline/fixture-places.tsv` is the
 authored place list: four places inside the fixture bbox, one with a phone,
 website, `opening_hours` and `wheelchair`, one with a brand, one with no tags and
 one with a non-ASCII name. `build-test-region.sh` runs the `build-section` binary
-in `rust/grass-core`, which writes the seven search files and `features.bin` in
-one pass. The feature component carries, per place row, the canonical OSM type
+in `rust/grass-core`, which writes the search files and `features.bin` in one
+pass: eight files for a version-2 build (including `format.bin`) and seven in
+the committed version-1 package. The feature component carries, per place row, the canonical OSM type
 and id and the raw tag map; the search table itself keeps its 20-byte row and no
 OSM id.
 
@@ -87,78 +89,106 @@ not reproducible from a command here. Its `addresses` table was read to confirm
 the shape of the data (about 35,000 houses in Lviv city), and the extractor
 reproduces that count from the PBF.
 
-Build it once:
-
 ```sh
+export CARGO_TARGET_DIR="$PWD/build/rust-test-target"
 cargo build --release --locked --manifest-path tools/pipeline/osm-extract/Cargo.toml
 ```
 
-Input is a Geofabrik OSM extract, `ukraine-latest.osm.pbf` (883,214,645 bytes,
-2026-11-04). `--bbox` clips to one region; without it the whole file is
-processed. `--no-places` keeps only house numbers, `--no-addresses` keeps only
-places.
+The binary lands at `$CARGO_TARGET_DIR/release/osm-extract`; the commands below
+use that path, so the export above is part of the recipe. `check.sh` sets the
+same directory for its Rust test step.
+
+The input is the Geofabrik Ukraine extract downloaded on 2026-11-04:
+`ukraine-latest.osm.pbf`, 883,214,645 bytes, sha256
+`ff46165a08b21fc4271aa6d5f199e55d0c9b786bcfd8f50e0f7c31f82248347f`. The
+`-latest` name rolls, so the digest is what identifies the snapshot. `--bbox`
+clips to one region; without it the whole file is processed. `--no-places`
+keeps only house numbers, `--no-addresses` keeps only places.
 
 ```sh
-# Lviv city house-number slice: the committed test fixture.
-build/rust-test-target/release/osm-extract \
+# The committed Lviv city search section: places and houses, the fixture
+# LvivAddressSearchTest reads (places/src/test/resources/search/lviv-addresses).
+"$CARGO_TARGET_DIR/release/osm-extract" \
   --pbf ukraine-latest.osm.pbf --bbox 23.90,49.75,24.15,49.95 \
-  --no-places --out lviv-addresses.tsv
+  --out build/data/lviv-city.tsv
+cargo run --release --locked --manifest-path rust/grass-core/Cargo.toml \
+  --bin build-section -- build/data/lviv-city.tsv \
+  places/src/test/resources/search/lviv-addresses
 
 # Lviv-bbox index, the size comparison with the P4a spike.
-build/rust-test-target/release/osm-extract \
-  --pbf ukraine-latest.osm.pbf --bbox 22.5,48.6,26.3,50.7 --out lviv-bbox.tsv
+"$CARGO_TARGET_DIR/release/osm-extract" \
+  --pbf ukraine-latest.osm.pbf --bbox 22.5,48.6,26.3,50.7 --out build/data/lviv-bbox.tsv
 
 # Whole-country index.
-build/rust-test-target/release/osm-extract \
-  --pbf ukraine-latest.osm.pbf --out ukraine.tsv
+"$CARGO_TARGET_DIR/release/osm-extract" \
+  --pbf ukraine-latest.osm.pbf --out build/data/ukraine.tsv
 
 cargo run --release --locked --manifest-path rust/grass-core/Cargo.toml \
-  --bin build-section -- lviv-bbox.tsv <out-dir>
+  --bin build-section -- build/data/lviv-bbox.tsv <out-dir>
 ```
 
 The output is the builder's nine-column TSV: `osm_type, osm_id, lat, lon, name,
 kind, context, tags, aliases`. A house row has `kind=addr=house`, its name is
 `<addr:street> <addr:housenumber>`, its context is the locality, and its aliases
-carry the folded number (`1-А` also as `1a`) and the street with the type word
-(`Стрийська` also as `вулиця Стрийська`).
+carry a folded number and a street with its type word.
+
+A letter suffix is one house however it is typed. The builder and the query
+side both run `fold::canonical_words`: a digit-led token absorbs the short
+letter token after it and folds the Cyrillic lookalikes, so `2-А`, `2а` and
+`2a` all become the term `2a`. The same function is covered by the Rust tests
+and by nine of the 50 committed probes.
 
 Selection rules, rewritten from osm-mapidx:
 
-- a named element with one of the 22 POI keys becomes a place; a building whose
-  name is only a house number is dropped because its address row says it better
+- a named element with one of the 22 POI keys, or a named road in `trunk` to
+  `pedestrian`, becomes a place; a building whose name is only a house number is
+  dropped because its address row says it better
 - an element with `addr:housenumber` and `addr:street` (or `addr:place`) becomes
-  a house; rows are deduplicated by street, folded number and locality
-- the locality is the nearest settlement node within 15 km; a city, town,
-  village, hamlet or borough outranks a closer suburb or neighbourhood
-- ways use the mean of their node coordinates; a house way uses its first node,
-  as osm-mapidx does; relations are not indexed (347,618 of them in this file)
+  a house; rows are deduplicated by the street's words (independent of the type
+  word and of word order), the number identity (a hyphen before a letter is
+  dropped, a separator between numbers is kept, so `12/2` is not `122`) and the
+  locality
+- the locality is the nearest settlement within 15 km, from a `place=*` node or
+  way; a city, town, village, hamlet or borough outranks a closer suburb or
+  neighbourhood. In the Lviv bbox run there are 43,368 locality nodes and 10,673
+  locality ways
+- ways use the mean of their node coordinates for a place; a house way uses its
+  first node, as osm-mapidx does
+- relations are not indexed, and the run counts the ones that matter: 5,941 of
+  347,618 relations carry `addr:housenumber`, `addr:street` or `addr:place`, and
+  14,511 carry `place`. Multipolygon buildings and `type=associatedStreet`
+  relations are therefore not sources of houses or street names
 
-Measured on 2026-11-09, `--release`, one thread, files in page cache, Intel
+Measured on 2026-11-09/10, `--release`, one thread, files in page cache, Intel
 i5-9300H, 31 GB RAM, Rust 1.93.1:
 
 | Run | Rows | TSV | Extract wall | Extract peak RSS | Index build | Build peak RSS |
 |---|---|---|---|---|---|---|
-| Lviv city, houses only | 35,098 | 6.12 MiB | 57.1 s | 1.40 GiB | 0.5 s | 69 MiB |
-| Lviv bbox (22.5-26.3 E, 48.6-50.7 N) | 205,021 (90,572 places + 114,449 houses) | 31.65 MiB | 60.8 s | 1.40 GiB | 1.5 s | 358 MiB |
-| Ukraine | 1,745,675 (533,197 places + 1,212,478 houses) | 289.2 MiB | 81.7 s | 1.54 GiB | 14.6 s | 2.98 GiB |
+| Lviv city bbox, the fixture (23.90-24.15 E, 49.75-49.95 N) | 58,160 (23,086 places + 35,074 houses) | 9.29 MiB | 2:12 | 1.64 GiB | 1.2 s | 108 MiB |
+| Lviv bbox (22.5-26.3 E, 48.6-50.7 N) | 251,304 (137,126 places + 114,178 houses) | 38.25 MiB | 2:23 | 1.68 GiB | 4.4 s | 428 MiB |
+| Ukraine | 2,134,952 (928,666 places + 1,206,286 houses) | 344.3 MiB | 3:28 | 2.07 GiB | 40.6 s | 3.55 GiB |
 
-Search-section sizes (the seven mapped files plus `format.bin`; `features.bin`
+The Lviv city bbox is not the city: it contains about twenty surrounding
+settlements, and only 15,665 of its 35,074 house rows carry the context
+`Львів`; the rest are Скнилів (3,147), Брюховичі (2,072), Винники (1,859) and
+others. Every number in this section is for the bbox as stated.
+
+Search-section sizes (the mapped files including `format.bin`; `features.bin`
 is reported separately because the P4a estimate did not include it):
 
 | Run | Search section | Per row | `features.bin` |
 |---|---|---|---|
-| Lviv city, houses only | 2.38 MiB | 71 B | 3.14 MiB |
-| Lviv bbox | 12.90 MiB | 66 B | 15.36 MiB |
-| Lviv bbox, places only (90,572) | 5.34 MiB | 62 B | 5.31 MiB |
-| Ukraine | 109.67 MiB (115.0 MB) | 66 B | 137.32 MiB |
-| Ukraine, places only (533,197) | 30.62 MiB | 60 B | 32.22 MiB |
+| Lviv city bbox, the fixture | 3.79 MiB | 68 B | 4.60 MiB |
+| Lviv bbox | 15.76 MiB | 66 B | 18.07 MiB |
+| Lviv bbox, places only (137,126) | 8.24 MiB | 63 B | 8.04 MiB |
+| Ukraine | 133.36 MiB (139.8 MB) | 66 B | 159.56 MiB |
+| Ukraine, places only (928,666) | 54.85 MiB | 62 B | 55.03 MiB |
 
-The P4a estimate for Ukraine was 100-160 MB for 1.2-1.8 M places. The measured
-whole-country search section is 115.0 MB, inside that band, but the composition
-differs: this extractor indexes 533,197 places (nodes and ways; relations are
-skipped) and 1,212,478 house rows. The places alone are 30.62 MiB; the houses
-add 79.05 MiB. A place set closer to the spike's count would add about 60 bytes
-per place on top of this measurement.
+The P4a estimate for Ukraine was 100-160 MB. The measured whole-country search
+section is 139.8 MB, inside that band near its top. The composition differs
+from the estimate: this extractor indexes 928,666 places (named POIs and named
+streets; relations are skipped) and 1,206,286 house rows, 2.13 M rows in all.
+The places alone are 54.85 MiB; the houses add 78.51 MiB.
 
 Licence: the output is derived from OpenStreetMap data, ODbL-1.0, ©
 OpenStreetMap contributors. `ATTRIBUTION.md` records the committed fixtures.

@@ -476,7 +476,7 @@ impl Session {
         limit: usize,
         cancel: &Cancel,
     ) -> Result<Vec<Hit>, CoreError> {
-        let mut words = fold::words(text);
+        let mut words = fold::canonical_words(text);
         // A house-number query names a street type every address on that kind
         // of street shares; the type word adds no discrimination and, as the
         // Lviv run measured, saturates the postings budget. Drop it only when

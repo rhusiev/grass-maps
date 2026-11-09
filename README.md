@@ -730,9 +730,12 @@ Street-type words ("вулиця", "проспект", ...) are not indexed for 
 are dropped from a query that also carries a number: every address on such a
 street shares them, and in the Lviv run they saturated the postings budget, so
 an exact house lost to a nearer address that merely shared the type word. A
-query with no letter at all returns nothing, so a bare house number cannot
-flood the list. A section without `format.bin` is version 1 and still opens; a
-version newer than 2 is `Unsupported`. `build-section` now writes version 2.
+letter suffix is one house however it is typed: the builder and the query both
+fold a digit-led token to one canonical term, so `2-А`, `2а` and `2a` match the
+same row. A query with no letter at all returns nothing, so a bare house number
+cannot flood the list. A section without `format.bin` is version 1 and still
+opens; a version newer than 2 is `Unsupported`. `build-section` now writes
+version 2.
 
 The reader is an FST of folded terms, delta-varint postings, a fixed 20-byte
 place table, context entities, a string pool and the feature component. It
@@ -748,11 +751,11 @@ The index is external data: the provider reads
 `places/src/test/resources/search` is 10.1 MiB and ODbL-licensed; its
 `features.bin` is an empty placeholder because the P4a spike predates the
 component, so those places have no identity or tags. The house-number fixture
-`places/src/test/resources/search/lviv-addresses` is 5.52 MiB, built by
-`tools/pipeline/osm-extract` from the 2026-11-04 Ukraine extract over the Lviv
-city bbox. The extraction stage, its commands, the Lviv-bbox and whole-country
-size measurements, and their conditions are in `tools/pipeline/README.md`. The
-debug channel exposes `core.search.query`:
+`places/src/test/resources/search/lviv-addresses` is 8.39 MiB: places and house
+rows, built by `tools/pipeline/osm-extract` from the 2026-11-04 Ukraine extract
+over the Lviv city bbox. The extraction stage, its commands, the Lviv-bbox and
+whole-country size measurements, and their conditions are in
+`tools/pipeline/README.md`. The debug channel exposes `core.search.query`:
 
 ```sh
 tools/control/grassctl.py invoke core.search.query \

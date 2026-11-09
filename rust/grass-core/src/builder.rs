@@ -326,7 +326,7 @@ fn add_name_terms(
     kind: &str,
 ) {
     let is_address = kind.starts_with(KIND_ADDRESS_PREFIX);
-    for word in fold::words(text) {
+    for word in fold::canonical_words(text) {
         if is_address && fold::is_street_type_word(&word) {
             continue;
         }
@@ -339,7 +339,7 @@ fn add_name_terms(
 }
 
 fn add_entity_term(terms: &mut BTreeMap<String, TermPostings>, text: &str, entity: u32) {
-    for word in fold::words(text) {
+    for word in fold::canonical_words(text) {
         terms.entry(word).or_default().entities.push(entity);
     }
 }
@@ -420,8 +420,9 @@ mod tests {
         fs::remove_dir_all(directory).ok();
     }
 
-    /// A street, a cafe on it, and two houses. The second house is written
-    /// without the "вулиця" prefix and carries the prefixed form as an alias.
+    /// A street, a cafe on it, two houses and a second street with one house
+    /// whose number carries a letter suffix. The last house is written without
+    /// the "вулиця" prefix and carries the prefixed form as an alias.
     const ADDRESS_SOURCE: &str = concat!(
         "# osm_type\tosm_id\tlat\tlon\tname\tkind\tcontext\ttags\taliases\n",
         "node\t10\t49.8400\t24.0300\tвулиця Стрийська\thighway=residential\t",
@@ -431,7 +432,11 @@ mod tests {
         "way\t12\t49.8402\t24.0302\tвулиця Стрийська 45\taddr=house\tЛьвів\t",
         "addr:housenumber=45|addr:street=вулиця Стрийська\n",
         "way\t13\t49.8403\t24.0303\tСтрийська 1-А\taddr=house\tЛьвів\t",
-        "addr:housenumber=1-А|addr:street=Стрийська\tвулиця Стрийська 1-А|Стрийська 1а\n",
+        "addr:housenumber=1-А|addr:street=Стрийська\tвулиця Стрийська 1-А\n",
+        "node\t14\t49.8404\t24.0304\tСербська\thighway=residential\t",
+        "Львів\thighway=residential\n",
+        "way\t15\t49.8405\t24.0305\tСербська 2-А\taddr=house\tЛьвів\t",
+        "addr:housenumber=2-А|addr:street=Сербська\n",
     );
 
     fn query(section: &Path, text: &str, limit: usize) -> Vec<crate::search::Hit> {
@@ -463,6 +468,19 @@ mod tests {
         }
         let hits = query(&section, "вулиця стрийська 1а", 5);
         assert_eq!(hits.first().map(|hit| hit.id), Some(3), "{hits:?}");
+
+        // The letter suffix typed with a Cyrillic letter, a Latin letter or a
+        // hyphen is one house, and it beats the street row of the same name.
+        for text in [
+            "Сербська 2а",
+            "Сербська 2a",
+            "Сербська 2-А",
+            "Сербська 2-а",
+            "вулиця Сербська 2А",
+        ] {
+            let hits = query(&section, text, 5);
+            assert_eq!(hits.first().map(|hit| hit.id), Some(5), "{text}: {hits:?}");
+        }
 
         fs::remove_dir_all(directory).ok();
     }

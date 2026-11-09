@@ -22,4 +22,12 @@
     <string name="favourites_lists_create">Створити список</string>
     <string name="favourites_lists_points">Точки</string>
     <string name="favourites_lists_move_here">Перемістити вибрану точку сюди</string>
+    <string name="favourites_lists_search">Пошук в обраному</string>
+    <string name="favourites_lists_search_hint">Назва або опис</string>
+    <string name="favourites_lists_sort">Сортування</string>
+    <string name="favourites_lists_sort_insertion">Порядок файлу</string>
+    <string name="favourites_lists_sort_name_ascending">Назва А-Я</string>
+    <string name="favourites_lists_sort_name_descending">Назва Я-А</string>
+    <string name="favourites_lists_sort_list_then_name">Список, потім назва</string>
+    <string name="favourites_lists_no_matches">Немає збігів</string>
 </resources>

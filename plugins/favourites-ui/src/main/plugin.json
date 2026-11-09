@@ -66,6 +66,26 @@
         "allowlistedForControl": true,
         "dispatcher": "io",
         "implementation": "nl.r1a.grassmap.plugins.favourites.ui.UndoFavouriteListCommand"
+      },
+      {
+        "id": "favourites.ui.set_query",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.FavouriteListsState",
+        "doc": "Filters the favourites screen by name and description. Parameter: query.",
+        "undoable": false,
+        "allowlistedForControl": false,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.favourites.ui.SearchFavouritesCommand"
+      },
+      {
+        "id": "favourites.ui.set_sort",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.FavouriteListsState",
+        "doc": "Sorts the favourites screen. Parameter: sort, one of insertion, name_ascending, name_descending or list_then_name.",
+        "undoable": false,
+        "allowlistedForControl": false,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.favourites.ui.SortFavouritesCommand"
       }
     ],
     "streams": [

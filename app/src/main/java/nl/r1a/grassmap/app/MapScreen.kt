@@ -67,6 +67,7 @@ import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.error.onFailure
 import nl.r1a.grassmap.plugin.api.host.MapEvent
 import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
+import nl.r1a.grassmap.plugin.api.model.FavouriteSort
 import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
@@ -415,6 +416,16 @@ private fun MapContent(
                 onUndo = {
                     scope.launch {
                         invokeListsCommand(container, FavouritesUiContract.undo, JsonObject(emptyMap()))
+                    }
+                },
+                onQueryChange = { query ->
+                    scope.launch {
+                        invokeListsCommand(container, FavouritesUiContract.setQuery, listParams("query" to query))
+                    }
+                },
+                onSortChange = { sort ->
+                    scope.launch {
+                        invokeListsCommand(container, FavouritesUiContract.setSort, listParams("sort" to sort.wireName))
                     }
                 },
                 onClose = { FavouritesListsSession.hide() },

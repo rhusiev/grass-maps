@@ -33,6 +33,8 @@ class FavouritesUiPlugin : Plugin {
         context.addCommand(SetHomeFavouriteCommand(session))
         context.addCommand(SetWorkFavouriteCommand(session))
         context.addCommand(UndoFavouriteListCommand(session))
+        context.addCommand(SearchFavouritesCommand(session))
+        context.addCommand(SortFavouritesCommand(session))
         context.addStream(
             StreamDescriptor(
                 id = FavouritesUiContract.listsStream,

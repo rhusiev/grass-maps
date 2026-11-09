@@ -24,6 +24,10 @@ data class FavouriteListSummary(
 /**
  * One favourite as the lists screen draws it. [list] is null for a point that
  * is not in a list, and [special] marks a Home or Work point.
+ *
+ * [description] is the stored text, untrusted region data or a user's own
+ * note. It may contain simple HTML, so a renderer must sanitise it before the
+ * screen draws it; see `plugins/favourites-ui` (T-0214).
  */
 @Serializable
 data class FavouritePointSummary(
@@ -31,6 +35,7 @@ data class FavouritePointSummary(
     val name: String,
     val list: String? = null,
     val special: FavouriteSpecial? = null,
+    val description: String? = null,
 )
 
 /**
@@ -38,10 +43,15 @@ data class FavouritePointSummary(
  *
  * [undoAvailable] is owned by the plugin's scoped receipt stack; the library's
  * own state does not know how many actions the screen has left to undo.
+ *
+ * [points] is the library's file order. [browse] is the filtered, sorted and
+ * rendered view the screen draws (T-0214); it is derived on every publish and
+ * never persisted.
  */
 @Serializable
 data class FavouriteListsState(
     val lists: List<FavouriteListSummary> = emptyList(),
     val points: List<FavouritePointSummary> = emptyList(),
     val undoAvailable: Boolean = false,
+    val browse: FavouriteBrowseState = FavouriteBrowseState(),
 )

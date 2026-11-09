@@ -21,6 +21,8 @@ object FavouritesUiContract {
     const val SET_HOME: String = "favourites.ui.set_home"
     const val SET_WORK: String = "favourites.ui.set_work"
     const val UNDO: String = "favourites.ui.undo"
+    const val SET_QUERY: String = "favourites.ui.set_query"
+    const val SET_SORT: String = "favourites.ui.set_sort"
 
     val listsStream: StreamId = StreamId(LISTS_STREAM_ID)
 
@@ -30,7 +32,9 @@ object FavouritesUiContract {
     val setHome: CommandId = CommandId(SET_HOME)
     val setWork: CommandId = CommandId(SET_WORK)
     val undo: CommandId = CommandId(UNDO)
+    val setQuery: CommandId = CommandId(SET_QUERY)
+    val setSort: CommandId = CommandId(SET_SORT)
 
     val commands: List<CommandId> =
-        listOf(createList, movePoint, recolourList, setHome, setWork, undo)
+        listOf(createList, movePoint, recolourList, setHome, setWork, undo, setQuery, setSort)
 }

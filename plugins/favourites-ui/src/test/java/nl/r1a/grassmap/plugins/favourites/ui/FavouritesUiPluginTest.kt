@@ -12,6 +12,8 @@ import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
+import nl.r1a.grassmap.plugin.api.model.FavouritePointSummary
+import nl.r1a.grassmap.plugin.api.model.FavouriteSort
 import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -21,7 +23,7 @@ import org.junit.Test
 /** The lists plugin (T-0213): registration, actions, state and scoped undo. */
 class FavouritesUiPluginTest {
     @Test
-    fun activationDeclaresSixCommandsAndOneListsStream() =
+    fun activationDeclaresEightCommandsAndOneListsStream() =
         runTest {
             val context = context()
             val plugin = FavouritesUiPlugin()
@@ -136,6 +138,64 @@ class FavouritesUiPluginTest {
                 context.command(FavouritesUiContract.setHome).invokeRaw(JsonObject(emptyMap())),
             )
             assertTrue(access.calls.isEmpty())
+        }
+
+    @Test
+    fun searchingAndSortingRepublishTheDerivedBrowseView() =
+        runTest {
+            val access = FakeListsAccess()
+            access.current =
+                FavouriteListsState(
+                    points =
+                        listOf(
+                            FavouritePointSummary("one", "Rynok Square", description = "Market"),
+                            FavouritePointSummary("two", "Office", description = "The office"),
+                            FavouritePointSummary("three", "Cafe", description = "Coffee"),
+                        ),
+                )
+            val context = context(access)
+            FavouritesUiPlugin().activate(context)
+
+            assertEquals(
+                listOf("one", "two", "three"),
+                context
+                    .lists()
+                    .first()
+                    .browse.rows
+                    .map { it.id },
+            )
+
+            context.command(FavouritesUiContract.setQuery).invokeRaw(listParams("query" to "OFFICE"))
+            val filtered = context.lists().first().browse
+            assertEquals("OFFICE", filtered.query)
+            assertEquals(listOf("two"), filtered.rows.map { it.id })
+
+            context.command(FavouritesUiContract.setSort).invokeRaw(listParams("sort" to "name_descending"))
+            val sorted = context.lists().first().browse
+            assertEquals(FavouriteSort.NAME_DESCENDING, sorted.sort)
+            assertEquals(listOf("two"), sorted.rows.map { it.id })
+
+            context.command(FavouritesUiContract.setQuery).invokeRaw(listParams("query" to ""))
+            assertEquals(
+                listOf("one", "two", "three"),
+                context
+                    .lists()
+                    .first()
+                    .browse.rows
+                    .map { it.id },
+            )
+        }
+
+    @Test
+    fun anUnknownSortIsInvalidInput() =
+        runTest {
+            val context = context()
+            FavouritesUiPlugin().activate(context)
+
+            assertEquals(
+                Outcome.Failure(AppError.InvalidInput),
+                context.command(FavouritesUiContract.setSort).invokeRaw(listParams("sort" to "colour")),
+            )
         }
 
     private fun context(access: FakeListsAccess = FakeListsAccess()): RecordingContext = RecordingContext(FakeServices(access))

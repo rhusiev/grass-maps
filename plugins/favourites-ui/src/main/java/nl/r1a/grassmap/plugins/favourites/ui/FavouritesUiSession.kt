@@ -9,6 +9,7 @@ import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.FavouriteListChange
 import nl.r1a.grassmap.plugin.api.host.FavouritesListsAccess
 import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
+import nl.r1a.grassmap.plugin.api.model.FavouriteSort
 import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
 
 /**
@@ -21,6 +22,12 @@ import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
  *
  * Actions are serialised: one library mutation is in flight at a time, so the
  * published state always matches the persisted file.
+ *
+ * The screen controls of T-0214 live here too. [setQuery] and [setSort] do not
+ * touch the library; they recompute the derived [FavouriteListsState.browse]
+ * view from the last published points. That keeps the search and the sort in
+ * the plugin, where their fixed rules are tested, instead of duplicating them
+ * in the shell.
  */
 class FavouritesUiSession(
     private val access: FavouritesListsAccess,
@@ -28,6 +35,8 @@ class FavouritesUiSession(
     private val mutex = Mutex()
     private val receipts = ArrayDeque<String>()
     private val current = MutableStateFlow(FavouriteListsState())
+    private var query: String = ""
+    private var sort: FavouriteSort = FavouriteSort.INSERTION
 
     val state: StateFlow<FavouriteListsState> = current.asStateFlow()
 
@@ -66,6 +75,22 @@ class FavouritesUiSession(
         pointId: String,
         special: FavouriteSpecial,
     ): Outcome<FavouriteListsState> = mutate { access.setSpecial(pointId, special) }
+
+    /** Applies a search query to the derived browse view; the library is untouched. */
+    suspend fun setQuery(text: String): Outcome<FavouriteListsState> =
+        mutex.withLock {
+            query = text.trim()
+            republishBrowse()
+            Outcome.Success(current.value)
+        }
+
+    /** Applies one of the four fixed orders; the library is untouched. */
+    suspend fun setSort(sort: FavouriteSort): Outcome<FavouriteListsState> =
+        mutex.withLock {
+            this.sort = sort
+            republishBrowse()
+            Outcome.Success(current.value)
+        }
 
     /**
      * Undoes the latest action. With no receipt it returns the current state
@@ -113,6 +138,16 @@ class FavouritesUiSession(
         }
 
     private fun publish(state: FavouriteListsState) {
-        current.value = state.copy(undoAvailable = receipts.isNotEmpty())
+        current.value =
+            state.copy(
+                undoAvailable = receipts.isNotEmpty(),
+                browse = FavouritesBrowser.browse(state.points, query, sort),
+            )
+    }
+
+    /** Recomputes the derived browse view without changing the library state. */
+    private fun republishBrowse() {
+        val state = current.value
+        current.value = state.copy(browse = FavouritesBrowser.browse(state.points, query, sort))
     }
 }

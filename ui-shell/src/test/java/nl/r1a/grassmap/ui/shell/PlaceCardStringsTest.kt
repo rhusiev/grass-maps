@@ -51,6 +51,14 @@ class PlaceCardStringsTest {
                 "favourites_lists_create",
                 "favourites_lists_points",
                 "favourites_lists_move_here",
+                "favourites_lists_search",
+                "favourites_lists_search_hint",
+                "favourites_lists_sort",
+                "favourites_lists_sort_insertion",
+                "favourites_lists_sort_name_ascending",
+                "favourites_lists_sort_name_descending",
+                "favourites_lists_sort_list_then_name",
+                "favourites_lists_no_matches",
             )
     }
 }

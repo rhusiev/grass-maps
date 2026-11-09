@@ -3,6 +3,7 @@ package nl.r1a.grassmap.ui.shell
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
+import nl.r1a.grassmap.plugin.api.model.FavouriteSort
 import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
 import nl.r1a.grassmap.plugin.api.service.Strings
 
@@ -44,6 +46,10 @@ import nl.r1a.grassmap.plugin.api.service.Strings
  * point. Recolour chips recolour the whole list at once, and Home and Work are
  * set from the point row. Sheet interactions are unexercised on a device in
  * CI; the content resolver and the action wiring are JVM-tested.
+ *
+ * T-0214 adds the search field and the four-way sort control. Both ask the
+ * plugin for a new derived view; this shell draws the rows it is given, so the
+ * matching, ordering and description rendering stay in one place.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -55,13 +61,17 @@ fun FavouritesListsHost(
     onRecolourList: (list: String, color: String) -> Unit,
     onSetSpecial: (pointId: String, special: FavouriteSpecial) -> Unit,
     onUndo: () -> Unit,
+    onQueryChange: (String) -> Unit,
+    onSortChange: (FavouriteSort) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val content = favouritesListsContent(state, strings)
+    val browse = favouritesBrowseContent(state, strings)
     var selectedPoint by remember { mutableStateOf<String?>(null) }
     var newName by remember { mutableStateOf("") }
     var newColor by remember { mutableStateOf(PRESET_COLOURS.first()) }
+    var query by remember { mutableStateOf(state.browse.query) }
 
     Box(
         modifier = modifier.fillMaxSize().background(SCRIM_COLOR).clickable(onClick = onClose),
@@ -103,9 +113,23 @@ fun FavouritesListsHost(
                     onMove = { selectedPoint?.let { pointId -> onMovePoint(pointId, list.name) } },
                 )
             }
-            if (content.points.isNotEmpty()) {
+            if (content.points.isNotEmpty() || state.browse.query.isNotBlank()) {
                 SectionTitle(text = strings.resolve(POINTS_KEY))
-                content.points.forEach { point ->
+                SearchField(
+                    label = browse.search,
+                    hint = browse.searchHint,
+                    query = query,
+                    onQueryChange = {
+                        query = it
+                        onQueryChange(it)
+                    },
+                )
+                SortChooser(
+                    title = browse.sort,
+                    sorts = browse.sorts,
+                    onChoose = onSortChange,
+                )
+                browse.points.forEach { point ->
                     PointRow(
                         row = point,
                         selected = point.id == selectedPoint,
@@ -114,6 +138,7 @@ fun FavouritesListsHost(
                         strings = strings,
                     )
                 }
+                browse.noMatches?.let { message -> Line(text = message, style = secondaryStyle()) }
             }
         }
     }
@@ -208,6 +233,64 @@ private fun ListRow(
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
+private fun SearchField(
+    label: String,
+    hint: String,
+    query: String,
+    onQueryChange: (String) -> Unit,
+) {
+    Line(text = label, style = secondaryStyle())
+    BasicTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        singleLine = true,
+        textStyle = TextStyle(color = TEXT_PRIMARY, fontSize = ROW_FONT_SP.sp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(FIELD_BACKGROUND, RoundedCornerShape(FIELD_CORNER_DP.dp))
+                .padding(FIELD_PADDING_DP.dp),
+    )
+    if (query.isEmpty()) {
+        Line(text = hint, style = secondaryStyle())
+    }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun SortChooser(
+    title: String,
+    sorts: List<FavouritesSortRow>,
+    onChoose: (FavouriteSort) -> Unit,
+) {
+    Line(text = title, style = secondaryStyle())
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
+    ) {
+        sorts.forEach { row ->
+            BasicText(
+                text = row.label,
+                style =
+                    TextStyle(
+                        color = if (row.selected) TEXT_PRIMARY else TEXT_SECONDARY,
+                        fontSize = ROW_FONT_SP.sp,
+                        fontWeight = if (row.selected) FontWeight.SemiBold else FontWeight.Normal,
+                    ),
+                modifier =
+                    Modifier
+                        .background(
+                            if (row.selected) SELECTED_BACKGROUND else FIELD_BACKGROUND,
+                            RoundedCornerShape(FIELD_CORNER_DP.dp),
+                        ).clickable { onChoose(row.sort) }
+                        .padding(FIELD_PADDING_DP.dp),
+            )
+        }
+    }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
 private fun PointRow(
     row: FavouritesPointRow,
     selected: Boolean,
@@ -228,6 +311,7 @@ private fun PointRow(
         Column(modifier = Modifier.weight(WEIGHT_ONE)) {
             Line(text = row.name, style = TextStyle(color = TEXT_PRIMARY, fontSize = ROW_FONT_SP.sp))
             Line(text = row.list, style = secondaryStyle())
+            row.description?.let { description -> Line(text = description, style = secondaryStyle()) }
         }
         row.special?.let { label -> Line(text = label, style = secondaryStyle()) }
         ActionButton(text = strings.resolve(HOME_KEY), onClick = { onSetSpecial(FavouriteSpecial.HOME) })

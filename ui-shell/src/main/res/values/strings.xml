@@ -22,4 +22,12 @@
     <string name="favourites_lists_create">Create list</string>
     <string name="favourites_lists_points">Points</string>
     <string name="favourites_lists_move_here">Move the selected point here</string>
+    <string name="favourites_lists_search">Search favourites</string>
+    <string name="favourites_lists_search_hint">Name or description</string>
+    <string name="favourites_lists_sort">Sort</string>
+    <string name="favourites_lists_sort_insertion">File order</string>
+    <string name="favourites_lists_sort_name_ascending">Name A-Z</string>
+    <string name="favourites_lists_sort_name_descending">Name Z-A</string>
+    <string name="favourites_lists_sort_list_then_name">List, then name</string>
+    <string name="favourites_lists_no_matches">No matches</string>
 </resources>

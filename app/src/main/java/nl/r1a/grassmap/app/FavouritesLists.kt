@@ -123,6 +123,7 @@ internal fun FavouritesSnapshot.toListsState(): FavouriteListsState {
                     name = favourite.name,
                     list = favourite.group,
                     special = favourite.special?.toApi(),
+                    description = favourite.description,
                 )
             },
     )

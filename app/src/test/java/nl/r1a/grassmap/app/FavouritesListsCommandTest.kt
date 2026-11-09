@@ -177,6 +177,32 @@ class FavouritesListsCommandTest {
             assertTrue(gpx().contains("name=\"Cafes\""))
         }
 
+    @Test
+    fun aStoredDescriptionReachesTheBrowseRowsAsPlainText() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val container = container(dispatcher)
+            container.commandBus.invoke(
+                FavouriteCommandIds.ADD,
+                buildJsonObject {
+                    put("lat", 49.8419)
+                    put("lon", 24.0316)
+                    put("name", "Cafe")
+                    put("description", "<b>Coffee</b><script>alert(1)</script>")
+                },
+            )
+
+            val state = container.lists()
+
+            assertEquals("<b>Coffee</b><script>alert(1)</script>", state.points.single().description)
+            assertEquals(
+                "Coffee",
+                state.browse.rows
+                    .single()
+                    .description,
+            )
+        }
+
     private fun container(dispatcher: CoroutineDispatcher): AppContainer =
         AppContainer(
             strings = KeyOnlyStrings,

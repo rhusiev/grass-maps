@@ -12,6 +12,7 @@ import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
+import nl.r1a.grassmap.plugin.api.model.FavouriteSort
 import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
 
 /**
@@ -26,6 +27,17 @@ private val LISTS_POLICY: CommandPolicy =
     CommandPolicy(
         undoable = false,
         allowlistedForControl = true,
+        dispatcher = CommandDispatcher.IO,
+    )
+
+/**
+ * The two browsing controls of T-0214 change only the derived screen view, so
+ * they are not exposed on the control channel.
+ */
+private val BROWSE_POLICY: CommandPolicy =
+    CommandPolicy(
+        undoable = false,
+        allowlistedForControl = false,
         dispatcher = CommandDispatcher.IO,
     )
 
@@ -152,6 +164,49 @@ class UndoFavouriteListCommand(
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<FavouriteListsState>> = session.result(session.undo())
 }
 
+/**
+ * Applies a search query to the favourites screen (T-0214). The query is
+ * trimmed; a blank query restores every point.
+ */
+class SearchFavouritesCommand(
+    private val session: FavouritesUiSession,
+) : Command<JsonElement, FavouriteListsState>(
+        id = FavouritesUiContract.setQuery,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = FavouriteListsState.serializer(),
+        doc = "Filters the favourites screen by name and description. Parameter: query.",
+        policy = BROWSE_POLICY,
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<FavouriteListsState>> {
+        val query = params.rawText(PARAM_QUERY) ?: return Outcome.Failure(AppError.InvalidInput)
+        return session.result(session.setQuery(query))
+    }
+
+    private companion object {
+        const val PARAM_QUERY = "query"
+    }
+}
+
+/** Selects one of the four fixed favourites orders (T-0214). */
+class SortFavouritesCommand(
+    private val session: FavouritesUiSession,
+) : Command<JsonElement, FavouriteListsState>(
+        id = FavouritesUiContract.setSort,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = FavouriteListsState.serializer(),
+        doc = "Sorts the favourites screen. Parameter: sort, one of insertion, name_ascending, name_descending or list_then_name.",
+        policy = BROWSE_POLICY,
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<FavouriteListsState>> {
+        val sort = params.text(PARAM_SORT)?.let(FavouriteSort::fromWire) ?: return Outcome.Failure(AppError.InvalidInput)
+        return session.result(session.setSort(sort))
+    }
+
+    private companion object {
+        const val PARAM_SORT = "sort"
+    }
+}
+
 private fun FavouritesUiSession.result(outcome: Outcome<FavouriteListsState>): Outcome<CommandResult<FavouriteListsState>> =
     when (outcome) {
         is Outcome.Success -> Outcome.Success(CommandResult(outcome.value))
@@ -165,4 +220,12 @@ private fun JsonElement.text(key: String): String? {
         ?.contentOrNull
         ?.trim()
         ?.takeIf { value -> value.isNotEmpty() }
+}
+
+/** A string parameter that may be empty, such as a cleared search query. */
+private fun JsonElement.rawText(key: String): String? {
+    val json = this as? JsonObject ?: return null
+    return (json[key] as? JsonPrimitive)
+        ?.takeIf { primitive -> primitive.isString }
+        ?.contentOrNull
 }

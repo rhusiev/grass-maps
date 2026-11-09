@@ -37,7 +37,10 @@ class FavouritesUiManifestTest {
                     .jsonPrimitive.content
                     .toBoolean(),
             )
-            assertTrue(
+            val id = command.getValue("id").jsonPrimitive.content
+            assertEquals(
+                "$id control allowlist",
+                id in CONTROL_ALLOWED,
                 command
                     .getValue("allowlistedForControl")
                     .jsonPrimitive.content
@@ -77,5 +80,16 @@ class FavouritesUiManifestTest {
 
     private companion object {
         const val MANIFEST = "src/main/plugin.json"
+
+        /** The action commands are control-allowlisted; the two browse controls are not. */
+        val CONTROL_ALLOWED =
+            setOf(
+                FavouritesUiContract.CREATE_LIST,
+                FavouritesUiContract.MOVE_POINT,
+                FavouritesUiContract.RECOLOUR_LIST,
+                FavouritesUiContract.SET_HOME,
+                FavouritesUiContract.SET_WORK,
+                FavouritesUiContract.UNDO,
+            )
     }
 }

@@ -10,6 +10,7 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.OsmType
+import nl.r1a.grassmap.plugin.api.model.PlaceCardAction
 import nl.r1a.grassmap.plugin.api.model.PlaceCardValue
 import nl.r1a.grassmap.plugin.api.provider.Place
 import nl.r1a.grassmap.plugin.api.provider.PlaceCardContract
@@ -71,6 +72,21 @@ class PlaceCardAccessTest {
             assertEquals(
                 listOf(PlaceCardValue.Text("ukrainian")),
                 card.attributes.map { it.value },
+            )
+            assertEquals(3, card.coordinates.size)
+            assertEquals(
+                listOf(
+                    PlaceCardAction.COPY_COORDINATES,
+                    PlaceCardAction.SHARE,
+                    PlaceCardAction.OPEN_IN,
+                ),
+                card.shortcuts.map { it.link.action },
+            )
+            assertTrue(
+                card.shortcuts
+                    .first { it.link.action == PlaceCardAction.SHARE }
+                    .link.target
+                    .contains("https://www.openstreetmap.org/node/4815162342"),
             )
             assertFalse(
                 "a value the details did not carry reached the card",

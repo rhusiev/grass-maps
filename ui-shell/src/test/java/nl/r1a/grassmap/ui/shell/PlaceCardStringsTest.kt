@@ -33,6 +33,7 @@ class PlaceCardStringsTest {
                 "place_card_contact",
                 "place_card_accessibility",
                 "place_card_details",
+                "place_card_coordinates",
                 "place_card_opening_hours",
                 "place_card_opening_state",
                 "place_card_open",

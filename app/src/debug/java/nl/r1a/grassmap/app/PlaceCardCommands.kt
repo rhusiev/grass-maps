@@ -108,10 +108,13 @@ private fun describe(content: PlaceCardContent): String =
         content.contacts.forEach { appendLine("contact: ${it.label}=${it.value}") }
         content.accessibility.forEach { appendLine("accessibility: ${it.label}=${it.value}") }
         content.attributes.forEach { appendLine("details: ${it.label}=${it.value}") }
+        content.coordinates.forEach { appendLine("coordinates: ${it.label}=${it.value}") }
+        content.shortcuts.forEach { appendLine("action: ${it.label}=${it.link.action}") }
         append("rows=")
         append(
-            listOf(content.contacts, content.accessibility, content.attributes).sumOf { it.size } +
+            listOf(content.contacts, content.accessibility, content.attributes, content.coordinates).sumOf { it.size } +
                 (if (content.openingHours != null) 1 else 0) +
-                (if (content.openingState != null) 1 else 0),
+                (if (content.openingState != null) 1 else 0) +
+                content.shortcuts.size,
         )
     }

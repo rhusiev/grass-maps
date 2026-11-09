@@ -1,0 +1,60 @@
+{
+  "id": "share",
+  "name": "plugin.share.name",
+  "description": "plugin.share.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.share.SharePlugin",
+  "contributes": {
+    "commands": [
+      {
+        "id": "share.copy_coordinates",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "kotlin.String",
+        "doc": "Copies a point's coordinates. Parameters: latitude, longitude, and format (decimal, dms or ddm).",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "main",
+        "implementation": "nl.r1a.grassmap.plugins.share.CopyCoordinatesCommand"
+      },
+      {
+        "id": "share.share_place",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "kotlin.String",
+        "doc": "Shares a place. Parameters: name, latitude, longitude, and the optional osmType and osmId.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "main",
+        "implementation": "nl.r1a.grassmap.plugins.share.SharePlaceCommand"
+      },
+      {
+        "id": "share.share_location",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "kotlin.String",
+        "doc": "Shares the current location or an explicit point. Parameters: optional latitude and longitude.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "main",
+        "implementation": "nl.r1a.grassmap.plugins.share.ShareLocationCommand"
+      },
+      {
+        "id": "share.open_point",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "kotlin.String",
+        "doc": "Opens a point in another app. Parameters: latitude, longitude, and an optional label.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "main",
+        "implementation": "nl.r1a.grassmap.plugins.share.OpenPointCommand"
+      }
+    ]
+  },
+  "needs": {
+    "network": [],
+    "location": "while_in_use",
+    "regions": []
+  },
+  "activation": [
+    "command"
+  ]
+}

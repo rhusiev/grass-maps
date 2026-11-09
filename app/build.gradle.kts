@@ -120,6 +120,7 @@ dependencies {
     implementation(project(":plugins:point-info"))
     implementation(project(":plugins:osm-places"))
     implementation(project(":plugins:favourites-ui"))
+    implementation(project(":plugins:share"))
 
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("org.jetbrains.compose.ui:ui:1.12.1")

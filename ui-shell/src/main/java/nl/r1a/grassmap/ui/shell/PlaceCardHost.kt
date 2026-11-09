@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmap.plugin.api.model.PlaceCard
+import nl.r1a.grassmap.plugin.api.model.PlaceCardLink
 import nl.r1a.grassmap.plugin.api.service.Strings
 
 /**
@@ -36,7 +37,9 @@ import nl.r1a.grassmap.plugin.api.service.Strings
  * It draws only what [placeCardContent] resolved: absent fields are missing
  * rows, never empty ones. Nothing is drawn while [card] is null, so the map
  * screen can keep it composed. The search screen is T-0203. The open state and
- * the raw opening-hours string are separate rows (T-0209).
+ * the raw opening-hours string are separate rows (T-0209). Coordinate rows and
+ * the share, copy and open-in buttons arrive on the card model (T-0210), and a
+ * row whose entry carried a link launches it through [onAction].
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -45,6 +48,7 @@ fun PlaceCardHost(
     strings: Strings,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    onAction: (PlaceCardLink) -> Unit = {},
 ) {
     val content = card?.let { placeCardContent(it, strings) } ?: return
     if (content.isEmpty) {
@@ -69,14 +73,24 @@ fun PlaceCardHost(
             content.kind?.let { Line(text = it, style = secondaryStyle()) }
             content.address?.let { Line(text = it, style = secondaryStyle()) }
             content.openingHours?.let { row ->
-                LabeledRow(label = row.label, value = row.value)
+                LabeledRow(label = row.label, value = row.value, onAction = onAction)
             }
             content.openingState?.let { row ->
-                LabeledRow(label = row.label, value = row.value)
+                LabeledRow(label = row.label, value = row.value, onAction = onAction)
             }
-            Section(title = strings.resolve(CONTACT_TITLE), rows = content.contacts)
-            Section(title = strings.resolve(ACCESSIBILITY_TITLE), rows = content.accessibility)
-            Section(title = strings.resolve(DETAILS_TITLE), rows = content.attributes)
+            Section(
+                title = strings.resolve(COORDINATES_TITLE),
+                rows = content.coordinates,
+                onAction = onAction,
+            )
+            Section(title = strings.resolve(CONTACT_TITLE), rows = content.contacts, onAction = onAction)
+            Section(
+                title = strings.resolve(ACCESSIBILITY_TITLE),
+                rows = content.accessibility,
+                onAction = onAction,
+            )
+            Section(title = strings.resolve(DETAILS_TITLE), rows = content.attributes, onAction = onAction)
+            Shortcuts(shortcuts = content.shortcuts, onAction = onAction)
         }
     }
 }
@@ -124,6 +138,7 @@ private fun CardHeader(
 private fun Section(
     title: String,
     rows: List<PlaceCardRow>,
+    onAction: (PlaceCardLink) -> Unit,
 ) {
     if (rows.isEmpty()) {
         return
@@ -132,7 +147,9 @@ private fun Section(
         text = title,
         style = TextStyle(color = TEXT_SECONDARY, fontSize = SECTION_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
     )
-    rows.forEach { row -> LabeledRow(label = row.label, value = row.value) }
+    rows.forEach { row ->
+        LabeledRow(label = row.label, value = row.value, link = row.link, onAction = onAction)
+    }
 }
 
 @Suppress("ktlint:standard:function-naming")
@@ -140,8 +157,15 @@ private fun Section(
 private fun LabeledRow(
     label: String,
     value: String,
+    link: PlaceCardLink? = null,
+    onAction: (PlaceCardLink) -> Unit = {},
 ) {
-    Row(modifier = Modifier.fillMaxWidth()) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .then(if (link == null) Modifier else Modifier.clickable { onAction(link) }),
+    ) {
         BasicText(
             text = label,
             modifier = Modifier.width(ROW_LABEL_WIDTH_DP.dp),
@@ -151,6 +175,35 @@ private fun LabeledRow(
             text = value,
             style = TextStyle(color = TEXT_PRIMARY, fontSize = ROW_FONT_SP.sp),
         )
+    }
+}
+
+/** The copy, share and open-in buttons below the rows (T-0210). */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun Shortcuts(
+    shortcuts: List<PlaceCardShortcutRow>,
+    onAction: (PlaceCardLink) -> Unit,
+) {
+    shortcuts.forEach { shortcut ->
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(ACTION_BACKGROUND, RoundedCornerShape(ACTION_CORNER_DP.dp))
+                    .clickable { onAction(shortcut.link) }
+                    .padding(ACTION_PADDING_DP.dp),
+        ) {
+            BasicText(
+                text = shortcut.label,
+                style =
+                    TextStyle(
+                        color = TEXT_PRIMARY,
+                        fontSize = ROW_FONT_SP.sp,
+                        fontWeight = FontWeight.Medium,
+                    ),
+            )
+        }
     }
 }
 
@@ -178,6 +231,8 @@ private const val CARD_PADDING_DP = 16
 private const val SECTION_GAP_DP = 10
 private const val ROW_LABEL_WIDTH_DP = 132
 private const val CLOSE_PADDING_DP = 4
+private const val ACTION_CORNER_DP = 8
+private const val ACTION_PADDING_DP = 10
 private const val TITLE_FONT_SP = 20
 private const val SECTION_FONT_SP = 13
 private const val ROW_FONT_SP = 15
@@ -185,5 +240,6 @@ private const val CLOSE_FONT_SP = 20
 
 private val SCRIM_COLOR = Color(0x66000000)
 private val CARD_BACKGROUND = Color(0xF21B1B1B)
+private val ACTION_BACKGROUND = Color(0xFF2A2A2A)
 private val TEXT_PRIMARY = Color.White
 private val TEXT_SECONDARY = Color(0xFFB8B8B8)

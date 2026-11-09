@@ -41,4 +41,10 @@ interface PluginServices {
      * Inert until `app` wires the merged favourites library.
      */
     val favouritesLists: FavouritesListsAccess get() = NoFavouritesListsAccess
+
+    /**
+     * Clipboard, share-sheet and `ACTION_VIEW` effects behind `plugins/share`
+     * (T-0210). Inert until `app` wires the Android implementation.
+     */
+    val platformActions: PlatformActions get() = NoPlatformActions
 }

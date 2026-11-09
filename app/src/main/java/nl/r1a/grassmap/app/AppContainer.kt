@@ -30,6 +30,8 @@ import nl.r1a.grassmap.places.PlacesAccess
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.host.NoPlatformActions
+import nl.r1a.grassmap.plugin.api.host.PlatformActions
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
@@ -82,6 +84,8 @@ class AppContainer(
     private val favouritesBackupClock: Clock = SystemClock,
     private val favouritesBackupScope: CoroutineScope? = null,
     private val favouritesBackupDebounceMillis: Long = FavouritesBackupRecorder.DEFAULT_DEBOUNCE_MILLIS,
+    /** Clipboard, share-sheet and `ACTION_VIEW` effects (T-0210). */
+    val platformActions: PlatformActions = NoPlatformActions,
 ) {
     private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val backupScope: CoroutineScope = favouritesBackupScope ?: processScope
@@ -285,6 +289,7 @@ class AppContainer(
             cameraFlow = mapSession.camera,
             devToolsAccess = devTools,
             favouritesListsAccess = favouritesLists,
+            platformActions = platformActions,
         )
     }
 

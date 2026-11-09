@@ -244,10 +244,11 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/point-info` | the distance and azimuth from the fix or map centre to a long-pressed point | `plugin-api` |
 | `plugins/osm-places` | the `places.card` provider that maps OSM tags to place-card rows and evaluates `opening_hours` | `plugin-api` |
 | `plugins/favourites-ui` | the favourites lists state and the create, move, recolour, Home and Work commands | `plugin-api` |
+| `plugins/share` | the decimal, DMS and DDM coordinate notations, the osm.org and `geo:` link builders, and the copy, share and open-in commands | `plugin-api` |
 
 ## Place card
 
-The `places.card` contract (`PlaceCardContract`, version 1.1.0) maps one
+The `places.card` contract (`PlaceCardContract`, version 1.2.0) maps one
 place's already-loaded `PlaceDetails` onto a `PlaceCard`. The provider gets no
 index, file or network handle, so the tags it draws can only be the tags the
 `places.search` contract returned. `plugins/osm-places` is the first provider;
@@ -255,6 +256,16 @@ index, file or network handle, so the tags it draws can only be the tags the
 an absent field instead of drawing an empty row. The debug command
 `core.place.card_show` opens a card for an index place id; the search screen is
 T-0203.
+
+Version 1.2.0 adds two optional parts (T-0210): `PlaceCard.coordinates`, three
+`PlaceCardEntry` rows in decimal, DMS and DDM, and `PlaceCard.shortcuts`, the
+copy, share and open-in actions. A provider that leaves both empty is still
+valid. `plugins/osm-places` maps the tags; `app` adds the two parts through
+`plugins/share`, which owns every format and link rule, so the provider stays a
+tag mapper and `ui-shell` draws rows it was given. A contact row that carries a
+`PlaceCardLink` is clickable: the shell hands the link to the platform seam,
+which opens `tel:`, `mailto:` or the web address (`https:` is added when the tag
+omits a scheme).
 
 `PlaceCard.openingHours` keeps the raw OSM string. `PlaceCard.openingState` is
 `OPEN`, `CLOSED` or `UNKNOWN` at the moment the card was built, evaluated on
@@ -271,6 +282,46 @@ ten fixed instants, with the expected state computed once by
 The oracle records its source query, the package version and the one candidate
 value excluded because the library reports an inconsistent unknown window for
 it.
+
+## Sharing seam
+
+`PlatformActions` in `plugin-api` is the platform seam for sharing (T-0210).
+It has three calls: copy text to the clipboard, share text, and open a URI. The
+contract carries no Android type, so `plugins/share` asks for the effect and
+`app` performs it. `AndroidPlatformActions` is the only file that names a
+`ClipboardManager` or an `Intent`. It starts the system chooser for share and
+`ACTION_VIEW` for a URI. A URI that no app handles is `Unsupported`. The text of
+a share is never logged.
+
+`plugins/share` owns the three coordinate notations and the link builders as
+pure functions:
+
+- decimal keeps six places and the sign, for example `49.821740, 24.023910`;
+- DMS prints whole degrees and minutes and seconds to two places, with a
+  hemisphere, for example `49°49'18.26"N, 24°01'26.08"E`;
+- DDM prints whole degrees and minutes to four places, with a hemisphere, for
+  example `49°49.3044'N, 24°01.4346'E`.
+
+Rounding is half up on the absolute value, in integer units of the last printed
+digit, so a boundary carries into the minute or the degree instead of printing
+`60`. The formatters use `Locale.ROOT`, so the decimal point stays a dot in
+Ukrainian. An osm.org link is `https://www.openstreetmap.org/<type>/<id>` over
+the `OsmType` and `osmId` from `PlaceDetails`. A `geo:` URI is
+`geo:lat,lon?q=lat,lon(label)`, with the label percent-encoded. A place with no
+identity has no element to link, so the choice is a typed `PlaceLink.Geo` for
+the same point and never a guessed osm.org URL.
+
+The plugin declares four control-allowlisted commands on the main dispatcher:
+`share.copy_coordinates`, `share.share_place`, `share.share_location` and
+`share.open_point`. Each returns the exact text or URI it handed to
+`PlatformActions`. The location command takes the newest fix and falls back to
+the map centre; both flows emit their newest value immediately, so the
+collection stops at one value. The card's copy, share and open-in buttons carry
+the same built values, and the copy button writes the decimal pair.
+
+The emulator harness cannot observe the clipboard or a chooser, so the clipboard
+over `adb` and the intents themselves remain device checks; the unit tests prove
+the value through a recording `PlatformActions` instead.
 
 ## Map seam
 

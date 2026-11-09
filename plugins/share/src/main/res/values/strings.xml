@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.share.name">Sharing</string>
+    <string name="plugin.share.description">Coordinates in three notations, copying, sharing a place or the current location, and opening a point in another app.</string>
+
+    <string name="share.coordinate_decimal">Decimal degrees</string>
+    <string name="share.coordinate_dms">DMS</string>
+    <string name="share.coordinate_ddm">DDM</string>
+
+    <string name="share.copy_coordinates">Copy coordinates</string>
+    <string name="share.share_place">Share place</string>
+    <string name="share.open_in">Open in another app</string>
+    <string name="share.share_location">Share current location</string>
+</resources>

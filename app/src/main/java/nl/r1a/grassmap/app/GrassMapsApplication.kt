@@ -54,6 +54,7 @@ open class GrassMapsApplication : Application() {
             headingSource = AndroidHeadingSource(this, compassScope),
             unitSettingsFileProvider = { File(filesDir, UNIT_SETTINGS_PATH) },
             favouritesRootProvider = { filesDir },
+            platformActions = AndroidPlatformActions(this),
         )
     }
 

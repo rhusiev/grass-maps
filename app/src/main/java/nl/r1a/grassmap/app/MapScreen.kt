@@ -372,6 +372,11 @@ private fun MapContent(
             card = placeCard,
             strings = container.strings,
             onClose = { PlaceCardSession.hide() },
+            onAction = { link ->
+                container.platformActions.launch(link).onFailure { error ->
+                    Log.w(TAG, "place card action ${link.action} failed: $error")
+                }
+            },
         )
         if (listsVisible) {
             val listsFlow =

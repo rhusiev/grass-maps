@@ -9,6 +9,7 @@ import nl.r1a.grassmap.plugin.api.model.PlaceCard
 import nl.r1a.grassmap.plugin.api.provider.PlaceCardContract
 import nl.r1a.grassmap.plugin.api.provider.PlaceCardProvider
 import nl.r1a.grassmap.plugin.api.provider.PlaceDetails
+import nl.r1a.grassmap.plugins.share.ShareCard
 
 private val OSM_PLACES = PluginId("osm.places")
 private const val MISSING_CARD_PROVIDER = "places.card"
@@ -19,7 +20,9 @@ private const val MISSING_CARD_PROVIDER = "places.card"
  *
  * Details are an injected call rather than a search index handle, so the card
  * reads tags only through the provider seam. A details failure is returned as
- * it is, and the card provider is never asked.
+ * it is, and the card provider is never asked. The provider maps tags; the
+ * coordinate rows and the share, copy and open-in buttons need the point and
+ * the identity the same details carry, so [ShareCard] adds them here (T-0210).
  */
 class PlaceCardAccess(
     private val details: suspend (indexName: String, placeId: String, cancellation: CancellationHandle) -> Outcome<PlaceDetails>,
@@ -44,8 +47,16 @@ class PlaceCardAccess(
                         cardProvider.card(found.value)
                     }
                 when (outcome) {
-                    is Outcome.Failure -> outcome
-                    is Outcome.Success -> outcome.value
+                    is Outcome.Failure -> {
+                        outcome
+                    }
+
+                    is Outcome.Success -> {
+                        when (val card = outcome.value) {
+                            is Outcome.Failure -> card
+                            is Outcome.Success -> Outcome.Success(ShareCard.decorate(card.value, found.value))
+                        }
+                    }
                 }
             }
         }

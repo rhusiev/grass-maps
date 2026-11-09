@@ -22,7 +22,13 @@ interface PlaceCardProvider : Provider {
 
 object PlaceCardContract {
     const val NAME: String = "places.card"
-    const val VERSION: String = "1.1.0"
+
+    /**
+     * 1.2.0 adds the optional [PlaceCard.coordinates] rows and
+     * [PlaceCard.shortcuts] actions (T-0210); a provider that leaves both empty
+     * is still valid.
+     */
+    const val VERSION: String = "1.2.0"
 
     val REFERENCE: ProviderContract = ProviderContract(NAME, VERSION)
 }

@@ -17,8 +17,10 @@ data class PlaceCard(
     val contacts: List<PlaceCardEntry> = emptyList(),
     val accessibility: List<PlaceCardEntry> = emptyList(),
     val attributes: List<PlaceCardEntry> = emptyList(),
+    val coordinates: List<PlaceCardEntry> = emptyList(),
+    val shortcuts: List<PlaceCardShortcut> = emptyList(),
 ) {
-    /** True when the card has no field to draw at all. */
+    /** True when the card has no field or action to draw at all. */
     val isEmpty: Boolean
         get() =
             name == null &&
@@ -28,7 +30,9 @@ data class PlaceCard(
                 openingState == null &&
                 contacts.isEmpty() &&
                 accessibility.isEmpty() &&
-                attributes.isEmpty()
+                attributes.isEmpty() &&
+                coordinates.isEmpty() &&
+                shortcuts.isEmpty()
 }
 
 /**
@@ -67,13 +71,28 @@ sealed interface PlaceCardValue {
 }
 
 /**
- * What a row would open when the shell can launch it. [target] is the raw value
- * the tag carried; a `tel:` or `mailto:` scheme is added by the mapper, so the
- * model never guesses at a site the source did not state.
+ * What a row or a shortcut would do when the shell can launch it. [target] is
+ * the value the platform receives: a URI for the `OPEN_*` actions, the text for
+ * [PlaceCardAction.COPY_COORDINATES] and [PlaceCardAction.SHARE]. A `tel:` or
+ * `mailto:` scheme is added by the mapper, so the model never guesses at a site
+ * the source did not state.
  */
 data class PlaceCardLink(
     val action: PlaceCardAction,
     val target: String,
+)
+
+/**
+ * One action button the card shows below its rows (T-0210).
+ *
+ * The formatting and the link building belong to `plugins/share`; this model
+ * only carries the resolved i18n label key and the effect the host launches, so
+ * `ui-shell` draws the button without knowing how a coordinate or an osm.org
+ * link is built.
+ */
+data class PlaceCardShortcut(
+    val labelKey: String,
+    val link: PlaceCardLink,
 )
 
 enum class PlaceCardAction {
@@ -81,4 +100,7 @@ enum class PlaceCardAction {
     OPEN_WEBSITE,
     SEND_EMAIL,
     OPEN_SOCIAL,
+    COPY_COORDINATES,
+    SHARE,
+    OPEN_IN,
 }

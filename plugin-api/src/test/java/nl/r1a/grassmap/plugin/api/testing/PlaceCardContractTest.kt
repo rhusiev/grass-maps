@@ -20,7 +20,7 @@ class PlaceCardContractTest {
     @Test
     fun placeCardContractIsNamedAndVersioned() {
         assertEquals("places.card", PlaceCardContract.NAME)
-        assertEquals("1.1.0", PlaceCardContract.VERSION)
+        assertEquals("1.2.0", PlaceCardContract.VERSION)
         assertEquals(PlaceCardContract.NAME, PlaceCardContract.REFERENCE.name)
         assertEquals(PlaceCardContract.VERSION, PlaceCardContract.REFERENCE.version)
     }

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.osm_places.name">OSM place card</string>
+    <string name="plugin.osm_places.description">Maps OSM tags to the rows a place card shows.</string>
+
+    <string name="osm_places.phone">Phone</string>
+    <string name="osm_places.website">Website</string>
+    <string name="osm_places.email">Email</string>
+
+    <string name="osm_places.social_facebook">Facebook</string>
+    <string name="osm_places.social_instagram">Instagram</string>
+    <string name="osm_places.social_telegram">Telegram</string>
+    <string name="osm_places.social_twitter">Twitter</string>
+    <string name="osm_places.social_viber">Viber</string>
+    <string name="osm_places.social_whatsapp">WhatsApp</string>
+
+    <string name="osm_places.wheelchair_access">Wheelchair access</string>
+    <string name="osm_places.wheelchair_description">Wheelchair notes</string>
+    <string name="osm_places.wheelchair_toilets">Wheelchair toilet</string>
+    <string name="osm_places.wheelchair_yes">Yes</string>
+    <string name="osm_places.wheelchair_no">No</string>
+    <string name="osm_places.wheelchair_limited">Limited</string>
+    <string name="osm_places.wheelchair_designated">Designated</string>
+
+    <string name="osm_places.yes">Yes</string>
+    <string name="osm_places.no">No</string>
+
+    <string name="osm_places.attribute_brand">Brand</string>
+    <string name="osm_places.attribute_cuisine">Cuisine</string>
+    <string name="osm_places.attribute_outdoor_seating">Outdoor seating</string>
+    <string name="osm_places.attribute_takeaway">Takeaway</string>
+    <string name="osm_places.attribute_delivery">Delivery</string>
+    <string name="osm_places.attribute_internet_access">Internet access</string>
+    <string name="osm_places.attribute_smoking">Smoking</string>
+    <string name="osm_places.attribute_operator">Operator</string>
+</resources>

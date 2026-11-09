@@ -81,7 +81,12 @@ class DebugApplication : GrassMapsApplication() {
     override fun mapHarness(activity: Activity): MapHarness = DebugMapHarness.from(activity.intent)
 
     override fun extraCommands(): (MapSessionHolder) -> List<Command<*, *>> =
-        { session -> listOf(SetCameraCommand(session), SetStyleCommand(session, providers = { container.providerRegistry })) }
+        { session ->
+            listOf(
+                SetCameraCommand(session),
+                SetStyleCommand(session, providers = { container.providerRegistry }),
+            ) + placeCardCommands { container }
+        }
 
     /** Debug builds treat the developer as the AI-control switch holder. */
     override fun aiControlEnabled(): Boolean = true

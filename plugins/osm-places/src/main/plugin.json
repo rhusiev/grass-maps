@@ -1,0 +1,24 @@
+{
+  "id": "osm.places",
+  "name": "plugin.osm_places.name",
+  "description": "plugin.osm_places.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.osm.places.OsmPlacesPlugin",
+  "contributes": {
+    "providers": [
+      {
+        "contract": "places.card",
+        "version": "1.0.0"
+      }
+    ]
+  },
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": []
+  },
+  "activation": [
+    "provider"
+  ]
+}

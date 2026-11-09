@@ -40,4 +40,5 @@ include(
     ":plugins:dev-tools",
     ":plugins:map-controls",
     ":plugins:point-info",
+    ":plugins:osm-places",
 )

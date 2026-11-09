@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.osm_places.name">Картка місця OSM</string>
+    <string name="plugin.osm_places.description">Перетворює теги OSM на рядки картки місця.</string>
+
+    <string name="osm_places.phone">Телефон</string>
+    <string name="osm_places.website">Вебсайт</string>
+    <string name="osm_places.email">Ел. пошта</string>
+
+    <string name="osm_places.social_facebook">Facebook</string>
+    <string name="osm_places.social_instagram">Instagram</string>
+    <string name="osm_places.social_telegram">Telegram</string>
+    <string name="osm_places.social_twitter">Twitter</string>
+    <string name="osm_places.social_viber">Viber</string>
+    <string name="osm_places.social_whatsapp">WhatsApp</string>
+
+    <string name="osm_places.wheelchair_access">Доступність для візка</string>
+    <string name="osm_places.wheelchair_description">Примітки щодо візка</string>
+    <string name="osm_places.wheelchair_toilets">Туалет для візка</string>
+    <string name="osm_places.wheelchair_yes">Так</string>
+    <string name="osm_places.wheelchair_no">Ні</string>
+    <string name="osm_places.wheelchair_limited">Обмежено</string>
+    <string name="osm_places.wheelchair_designated">Пристосовано</string>
+
+    <string name="osm_places.yes">Так</string>
+    <string name="osm_places.no">Ні</string>
+
+    <string name="osm_places.attribute_brand">Бренд</string>
+    <string name="osm_places.attribute_cuisine">Кухня</string>
+    <string name="osm_places.attribute_outdoor_seating">Місця надворі</string>
+    <string name="osm_places.attribute_takeaway">З собою</string>
+    <string name="osm_places.attribute_delivery">Доставка</string>
+    <string name="osm_places.attribute_internet_access">Інтернет</string>
+    <string name="osm_places.attribute_smoking">Куріння</string>
+    <string name="osm_places.attribute_operator">Оператор</string>
+</resources>

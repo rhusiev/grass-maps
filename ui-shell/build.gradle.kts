@@ -28,4 +28,6 @@ dependencies {
     implementation("org.jetbrains.compose.ui:ui:1.12.1")
     implementation("org.jetbrains.compose.foundation:foundation:1.12.1")
     implementation("org.jetbrains.compose.runtime:runtime:1.12.1")
+
+    testImplementation(libs.junit)
 }

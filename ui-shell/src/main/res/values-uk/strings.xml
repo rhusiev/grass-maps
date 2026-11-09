@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="place_card_contact">Контакти</string>
+    <string name="place_card_accessibility">Доступність</string>
+    <string name="place_card_details">Подробиці</string>
+    <string name="place_card_opening_hours">Години роботи</string>
+    <string name="place_card_close">Закрити картку місця</string>
+</resources>

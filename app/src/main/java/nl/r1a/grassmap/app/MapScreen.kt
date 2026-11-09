@@ -82,6 +82,7 @@ import nl.r1a.grassmap.ui.shell.ControlBarLabels
 import nl.r1a.grassmap.ui.shell.ControlButton
 import nl.r1a.grassmap.ui.shell.MapControlBar
 import nl.r1a.grassmap.ui.shell.MapScaleBar
+import nl.r1a.grassmap.ui.shell.PlaceCardHost
 import java.io.File
 import java.util.Locale
 
@@ -237,6 +238,7 @@ private fun MapContent(
         }
     val selectedPoint by selectionFlow.collectAsState(initial = SelectedPointValue())
     val selectedRows = PointInfoLabel.rows(selectedPoint, container.strings)
+    val placeCard by PlaceCardSession.card.collectAsState()
     val unitStore by
         produceState<UnitSettings?>(null) {
             value = withContext(Dispatchers.IO) { container.unitSettings }
@@ -358,6 +360,11 @@ private fun MapContent(
                         .padding(BAR_PADDING_DP.dp),
             )
         }
+        PlaceCardHost(
+            card = placeCard,
+            strings = container.strings,
+            onClose = { PlaceCardSession.hide() },
+        )
     }
     LaunchedEffect(surface.host, bundle) {
         launch(start = CoroutineStart.UNDISPATCHED) { harness.run(surface, bundle) }

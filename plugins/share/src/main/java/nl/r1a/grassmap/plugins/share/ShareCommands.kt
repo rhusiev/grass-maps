@@ -22,16 +22,17 @@ import java.util.Locale
 /**
  * The share commands (T-0210).
  *
- * They run on Main because all three effects touch the platform UI: the
- * clipboard, the chooser and the `ACTION_VIEW` resolution. Each returns the
- * exact text or URI it handed to [PlatformActions], so the control channel can
- * report what was copied or shared without reading the clipboard itself.
+ * They run on the default dispatcher because the location read is a platform
+ * call and must not block the map's main thread; the clipboard, the chooser and
+ * `ACTION_VIEW` are safe off Main. Each returns the exact text or URI it handed
+ * to [PlatformActions], so the control channel can report what was copied or
+ * shared without reading the clipboard itself.
  */
 private val SHARE_POLICY: CommandPolicy =
     CommandPolicy(
         undoable = false,
         allowlistedForControl = true,
-        dispatcher = CommandDispatcher.MAIN,
+        dispatcher = CommandDispatcher.DEFAULT,
     )
 
 /** Copies one coordinate notation of a point. Parameter: `format` (decimal|dms|ddm). */

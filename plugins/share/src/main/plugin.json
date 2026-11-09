@@ -14,7 +14,7 @@
         "doc": "Copies a point's coordinates. Parameters: latitude, longitude, and format (decimal, dms or ddm).",
         "undoable": false,
         "allowlistedForControl": true,
-        "dispatcher": "main",
+        "dispatcher": "default",
         "implementation": "nl.r1a.grassmap.plugins.share.CopyCoordinatesCommand"
       },
       {
@@ -24,7 +24,7 @@
         "doc": "Shares a place. Parameters: name, latitude, longitude, and the optional osmType and osmId.",
         "undoable": false,
         "allowlistedForControl": true,
-        "dispatcher": "main",
+        "dispatcher": "default",
         "implementation": "nl.r1a.grassmap.plugins.share.SharePlaceCommand"
       },
       {
@@ -34,7 +34,7 @@
         "doc": "Shares the current location or an explicit point. Parameters: optional latitude and longitude.",
         "undoable": false,
         "allowlistedForControl": true,
-        "dispatcher": "main",
+        "dispatcher": "default",
         "implementation": "nl.r1a.grassmap.plugins.share.ShareLocationCommand"
       },
       {
@@ -44,7 +44,7 @@
         "doc": "Opens a point in another app. Parameters: latitude, longitude, and an optional label.",
         "undoable": false,
         "allowlistedForControl": true,
-        "dispatcher": "main",
+        "dispatcher": "default",
         "implementation": "nl.r1a.grassmap.plugins.share.OpenPointCommand"
       }
     ]

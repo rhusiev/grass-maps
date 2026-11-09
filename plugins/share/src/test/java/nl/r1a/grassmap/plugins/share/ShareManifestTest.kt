@@ -11,7 +11,7 @@ import java.io.File
 
 /**
  * Keeps `plugin.json` in step with [ShareContract]: four non-undoable,
- * control-allowlisted commands on the main dispatcher, and nothing else.
+ * control-allowlisted commands on the default dispatcher, and nothing else.
  */
 class ShareManifestTest {
     @Test
@@ -43,7 +43,7 @@ class ShareManifestTest {
                     .jsonPrimitive.content
                     .toBoolean(),
             )
-            assertEquals("main", command.getValue("dispatcher").jsonPrimitive.content)
+            assertEquals("default", command.getValue("dispatcher").jsonPrimitive.content)
             assertTrue(
                 command
                     .getValue("implementation")

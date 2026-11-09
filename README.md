@@ -311,7 +311,7 @@ the `OsmType` and `osmId` from `PlaceDetails`. A `geo:` URI is
 identity has no element to link, so the choice is a typed `PlaceLink.Geo` for
 the same point and never a guessed osm.org URL.
 
-The plugin declares four control-allowlisted commands on the main dispatcher:
+The plugin declares four control-allowlisted commands on the default dispatcher:
 `share.copy_coordinates`, `share.share_place`, `share.share_location` and
 `share.open_point`. Each returns the exact text or URI it handed to
 `PlatformActions`. The location command takes the newest fix and falls back to

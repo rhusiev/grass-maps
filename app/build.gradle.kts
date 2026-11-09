@@ -36,6 +36,23 @@ android {
         release {
             isMinifyEnabled = false
         }
+        // A measurement-only variant for the g32 gates (T-0020/T-0102): the
+        // release manifest and optimisations with the debug key so it installs,
+        // and debug info so a profile can name frames and methods. It keeps the
+        // same application id so it installs over the debug build and reuses
+        // its private region store. Not shipped.
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            // Release behaviour with a symbol-rich build: not debuggable, so ART
+            // does not take the debug path, and the debug key only makes it
+            // installable until T-0614 supplies the release key.
+            isDebuggable = false
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
+            matchingFallbacks += listOf("release")
+        }
     }
 
     buildFeatures {

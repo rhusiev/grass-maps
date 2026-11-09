@@ -14,9 +14,9 @@ import nl.r1a.grassmap.plugin.api.model.CameraUpdate
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 
 /**
- * The T-0020 measurement harness. It lives in the debug source set and is only
- * installed by [DebugApplication], so the release build has no launch-extra
- * branch and no first-frame logging.
+ * The T-0020 measurement harness. Debug and benchmark install it through their
+ * application classes ([DebugApplication], [BenchmarkApplication]); the shipped
+ * release never instantiates it, so it has no first-frame logging in practice.
  */
 internal class DebugMapHarness(
     private val styleSwitches: Int,

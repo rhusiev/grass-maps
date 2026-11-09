@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Measurement-only: release code with the T-0020 harness so the g32
+         gates can read the first full frame. Not shipped. -->
+    <application
+        android:name="nl.r1a.grassmap.app.BenchmarkApplication"
+        tools:replace="android:name" />
+</manifest>

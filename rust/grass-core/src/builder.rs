@@ -5,12 +5,16 @@
 //! the search index and its feature component always come from the same pass.
 //! The source is a tab-separated line per place:
 //!
-//! `osm_type  osm_id  lat  lon  name  kind  context  tags`
+//! `osm_type  osm_id  lat  lon  name  kind  context  tags  [aliases]`
 //!
 //! `osm_type` is `node`, `way` or `relation`; `kind` is an OSM category such as
-//! `amenity=cafe`; `context` is a comma-separated address; `tags` is
-//! `key=value` pairs separated by `|`, empty for a place with no tags. Blank
-//! lines and lines starting with `#` are ignored.
+//! `amenity=cafe` or `addr=house`; `context` is a comma-separated address;
+//! `tags` is `key=value` pairs separated by `|`, empty for a place with no
+//! tags; `aliases` is optional and holds `|`-separated alternative names,
+//! indexed one field weaker than the primary name. A house number is a place
+//! whose name is the street and number ("вулиця Стрийська 45"); its kind
+//! starts with `addr=` and the row carries [format::FLAG_ADDRESS]. Blank lines
+//! and lines starting with `#` are ignored.
 
 use std::collections::{BTreeMap, HashMap};
 use std::fs::{self, File};
@@ -23,14 +27,17 @@ use crate::format::{self, Field, PlaceRecord};
 use crate::index::Index;
 
 const COLUMNS: usize = 8;
+const COLUMNS_WITH_ALIASES: usize = 9;
 const TAG_PAIR_SEPARATOR: char = '|';
 const TAG_VALUE_SEPARATOR: char = '=';
+const ALIAS_SEPARATOR: char = '|';
 const CONTEXT_SEPARATOR: char = ',';
 const COORDINATE_SCALE: f64 = format::COORD_SCALE;
 const MAX_LATITUDE: f64 = 90.0;
 const MAX_LONGITUDE: f64 = 180.0;
 const KIND_AREA_PREFIXES: [&str; 2] = ["place=", "boundary="];
 const KIND_STREET_PREFIX: &str = "highway=";
+const KIND_ADDRESS_PREFIX: &str = "addr=";
 const IMPORTANCE: u8 = 0;
 
 /// What one build wrote.
@@ -47,6 +54,7 @@ struct SourcePlace {
     latitude: f64,
     longitude: f64,
     name: String,
+    aliases: Vec<String>,
     kind: String,
     context: Vec<String>,
     tags: BTreeMap<String, String>,
@@ -98,7 +106,7 @@ fn parse_source(text: &str) -> Result<Vec<SourcePlace>, CoreError> {
             continue;
         }
         let columns: Vec<&str> = line.split('\t').collect();
-        if columns.len() != COLUMNS {
+        if !(COLUMNS..=COLUMNS_WITH_ALIASES).contains(&columns.len()) {
             return Err(CoreError::InvalidInput);
         }
         places.push(parse_place(&columns)?);
@@ -129,16 +137,32 @@ fn parse_place(columns: &[&str]) -> Result<SourcePlace, CoreError> {
         .map(str::to_owned)
         .collect();
     let tags = parse_tags(columns[7])?;
+    let aliases = columns
+        .get(COLUMNS)
+        .map(|value| parse_aliases(value, name))
+        .unwrap_or_default();
     Ok(SourcePlace {
         osm_type,
         osm_id,
         latitude,
         longitude,
         name: name.to_owned(),
+        aliases,
         kind: kind.to_owned(),
         context,
         tags,
     })
+}
+
+/// The alternative names in column nine. An alias identical to the primary
+/// name adds nothing, so it is dropped rather than indexed twice.
+fn parse_aliases(value: &str, primary: &str) -> Vec<String> {
+    value
+        .split(ALIAS_SEPARATOR)
+        .map(str::trim)
+        .filter(|alias| !alias.is_empty() && *alias != primary)
+        .map(str::to_owned)
+        .collect()
 }
 
 fn parse_osm_type(value: &str) -> Result<OsmElementType, CoreError> {
@@ -187,7 +211,10 @@ fn write_section(places: &[SourcePlace], out_dir: &Path) -> Result<BuildStats, C
 
     for (index, place) in places.iter().enumerate() {
         let place_id = u32::try_from(index).map_err(|_| CoreError::InvalidInput)?;
-        add_term(&mut terms, &place.name, place_id, Field::PrimaryName);
+        add_name_terms(&mut terms, &place.name, place_id, Field::PrimaryName, &place.kind);
+        for alias in &place.aliases {
+            add_name_terms(&mut terms, alias, place_id, Field::OtherName, &place.kind);
+        }
         add_term(&mut terms, &place.kind, place_id, Field::KindWord);
 
         let kind_id = kinds.id(&place.kind);
@@ -253,6 +280,9 @@ fn write_section(places: &[SourcePlace], out_dir: &Path) -> Result<BuildStats, C
     write_file(out_dir, format::ENTITIES_FILE, &entities_bin)?;
     write_file(out_dir, format::KINDS_FILE, &kinds_bin)?;
     write_file(out_dir, format::STRINGS_FILE, &strings)?;
+    let mut header = Vec::with_capacity(format::FORMAT_HEADER_BYTES);
+    format::encode_format_header(&mut header);
+    write_file(out_dir, format::FORMAT_FILE, &header)?;
     fs::write(out_dir.join(features::FEATURES_FILE), features::encode(&mut records)?)
         .map_err(|_| CoreError::Io)?;
 
@@ -286,6 +316,28 @@ fn add_term(
     }
 }
 
+/// A name's terms. An address drops the street-type words, which every address
+/// on that kind of street shares and the query also drops.
+fn add_name_terms(
+    terms: &mut BTreeMap<String, TermPostings>,
+    text: &str,
+    place_id: u32,
+    field: Field,
+    kind: &str,
+) {
+    let is_address = kind.starts_with(KIND_ADDRESS_PREFIX);
+    for word in fold::words(text) {
+        if is_address && fold::is_street_type_word(&word) {
+            continue;
+        }
+        terms
+            .entry(word)
+            .or_default()
+            .places
+            .push(place_id << format::FIELD_BITS | field as u32);
+    }
+}
+
 fn add_entity_term(terms: &mut BTreeMap<String, TermPostings>, text: &str, entity: u32) {
     for word in fold::words(text) {
         terms.entry(word).or_default().entities.push(entity);
@@ -310,7 +362,9 @@ fn encode_postings(postings: &mut TermPostings, out: &mut Vec<u8>) {
 }
 
 fn flags_for(kind: &str) -> u8 {
-    if KIND_AREA_PREFIXES.iter().any(|prefix| kind.starts_with(prefix)) {
+    if kind.starts_with(KIND_ADDRESS_PREFIX) {
+        format::FLAG_ADDRESS
+    } else if KIND_AREA_PREFIXES.iter().any(|prefix| kind.starts_with(prefix)) {
         format::FLAG_AREA
     } else if kind.starts_with(KIND_STREET_PREFIX) {
         format::FLAG_STREET
@@ -364,6 +418,76 @@ mod tests {
         let bench = index.feature(1).expect("feature").expect("entry");
         assert!(bench.tags.is_empty());
         fs::remove_dir_all(directory).ok();
+    }
+
+    /// A street, a cafe on it, and two houses. The second house is written
+    /// without the "вулиця" prefix and carries the prefixed form as an alias.
+    const ADDRESS_SOURCE: &str = concat!(
+        "# osm_type\tosm_id\tlat\tlon\tname\tkind\tcontext\ttags\taliases\n",
+        "node\t10\t49.8400\t24.0300\tвулиця Стрийська\thighway=residential\t",
+        "Львів\thighway=residential\n",
+        "node\t11\t49.8401\t24.0301\tКав'ярня\tamenity=cafe\tЛьвів\t",
+        "amenity=cafe|name=Кав'ярня\n",
+        "way\t12\t49.8402\t24.0302\tвулиця Стрийська 45\taddr=house\tЛьвів\t",
+        "addr:housenumber=45|addr:street=вулиця Стрийська\n",
+        "way\t13\t49.8403\t24.0303\tСтрийська 1-А\taddr=house\tЛьвів\t",
+        "addr:housenumber=1-А|addr:street=Стрийська\tвулиця Стрийська 1-А|Стрийська 1а\n",
+    );
+
+    fn query(section: &Path, text: &str, limit: usize) -> Vec<crate::search::Hit> {
+        let index = std::sync::Arc::new(Index::open(section).expect("open"));
+        let typos = std::sync::Arc::new(crate::search::TypoAutomata::new());
+        let mut session = crate::search::Session::new(index, typos, None);
+        let flag = std::sync::atomic::AtomicBool::new(false);
+        let cancel = crate::search::Cancel { flag: &flag };
+        session.query(text, limit, &cancel).expect("query")
+    }
+
+    #[test]
+    fn a_house_number_is_found_by_street_and_by_street_with_its_type_word() {
+        let directory = temp_directory();
+        let source = directory.join("places.tsv");
+        fs::write(&source, ADDRESS_SOURCE).expect("write source");
+        let section = directory.join("section");
+        build(&source, &section).expect("build");
+
+        let index = Index::open(&section).expect("open");
+        assert_eq!(index.format_version(), format::FORMAT_VERSION);
+        let house = index.place(2).expect("place");
+        assert!(index.is_address(&house));
+        assert!(!index.is_address(&index.place(0).expect("street")));
+
+        for text in ["Стрийська 45", "вулиця стрийська 45", "стрийська 45"] {
+            let hits = query(&section, text, 5);
+            assert_eq!(hits.first().map(|hit| hit.id), Some(2), "{text}: {hits:?}");
+        }
+        let hits = query(&section, "вулиця стрийська 1а", 5);
+        assert_eq!(hits.first().map(|hit| hit.id), Some(3), "{hits:?}");
+
+        fs::remove_dir_all(directory).ok();
+    }
+
+    #[test]
+    fn a_bare_house_number_returns_nothing() {
+        let directory = temp_directory();
+        let source = directory.join("places.tsv");
+        fs::write(&source, ADDRESS_SOURCE).expect("write source");
+        let section = directory.join("section");
+        build(&source, &section).expect("build");
+
+        assert!(query(&section, "45", 50).is_empty());
+        assert!(query(&section, "1", 50).is_empty());
+
+        fs::remove_dir_all(directory).ok();
+    }
+
+    #[test]
+    fn the_committed_version_one_fixture_still_opens() {
+        let fixture = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../test-data/regions/fixture-mini/2026-11-03-1");
+        let index = Index::open(&fixture).expect("open the committed fixture");
+        assert_eq!(index.format_version(), format::LEGACY_FORMAT_VERSION);
+        assert!(index.place_count() > 0);
     }
 
     #[test]

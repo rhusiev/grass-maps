@@ -49,6 +49,10 @@ const W_AREA: f32 = 0.25;
 const W_STREET: f32 = 0.15;
 const W_IMPORTANCE: f32 = 0.2;
 const W_LOG_DISTANCE: f32 = 0.04;
+/// Between two address rows that matched the same words, the shorter name is
+/// the more specific match: "Білоцерківська вулиця 1" beats the "1-А" two
+/// doors away, which the query's number also prefixes. Chosen, not derived.
+const W_ADDRESS_LENGTH: f32 = 0.01;
 
 /// Ranked places considered for collapsing same-name neighbours.
 const COLLAPSE_POOL: usize = 50;
@@ -381,6 +385,9 @@ fn score_place(
     } else if record.flags & format::FLAG_STREET != 0 {
         score += W_STREET;
     }
+    if record.flags & format::FLAG_ADDRESS != 0 {
+        score -= W_ADDRESS_LENGTH * index.place_name(&record)?.chars().count() as f32;
+    }
     score += W_IMPORTANCE * f32::from(record.importance) / f32::from(u8::MAX);
     if let Some(origin) = origin {
         score -= W_LOG_DISTANCE
@@ -469,8 +476,24 @@ impl Session {
         limit: usize,
         cancel: &Cancel,
     ) -> Result<Vec<Hit>, CoreError> {
-        let words = fold::words(text);
+        let mut words = fold::words(text);
+        // A house-number query names a street type every address on that kind
+        // of street shares; the type word adds no discrimination and, as the
+        // Lviv run measured, saturates the postings budget. Drop it only when
+        // the query also carries a number, so "проспект Шевченка" still means
+        // the avenue and not every "Шевченківський" place.
+        let has_number = words.iter().any(|word| word.chars().any(|character| character.is_ascii_digit()));
+        if has_number {
+            words.retain(|word| !fold::is_street_type_word(word));
+        }
         if words.is_empty() {
+            return Ok(Vec::new());
+        }
+        // A bare house number names hundreds of houses and no street. Treat a
+        // query with no letter as no search at all rather than walk number
+        // postings that can only score an address row. A place whose whole
+        // name is a number ("36", an allotment) therefore needs a word.
+        if !words.iter().any(|word| word.chars().any(char::is_alphabetic)) {
             return Ok(Vec::new());
         }
         let mut resolved = Vec::with_capacity(words.len());

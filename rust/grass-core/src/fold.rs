@@ -9,6 +9,37 @@ use unicode_normalization::char::is_combining_mark;
 
 const APOSTROPHES: [char; 4] = ['\'', '’', 'ʼ', '`'];
 
+/// Street-type words carry no discrimination: every address on "вулиця X" has
+/// "вулиця", and the token saturates the postings budget, so an exact
+/// street-and-number match loses to a nearer row that merely shares the type
+/// word. The builder leaves them out of an address's indexed terms and the
+/// query drops them, which keeps "вулиця Стрийська 45" and "Стрийська 45" the
+/// same query.
+pub const STREET_TYPE_WORDS: [&str; 18] = [
+    "вулиця",
+    "вул",
+    "проспект",
+    "пр",
+    "площа",
+    "пл",
+    "провулок",
+    "пров",
+    "набережна",
+    "наб",
+    "шосе",
+    "бульвар",
+    "бр",
+    "майдан",
+    "узвіз",
+    "тупик",
+    "дорога",
+    "алея",
+];
+
+pub fn is_street_type_word(word: &str) -> bool {
+    STREET_TYPE_WORDS.contains(&word)
+}
+
 /// Folds case and accents so that й, ї, ё compare as и, і, е and Ł as l.
 pub fn normalise(text: &str) -> String {
     let lowered: String = text
@@ -52,5 +83,12 @@ mod tests {
     #[test]
     fn drops_apostrophes_inside_words() {
         assert_eq!(words("Кав'ярня 5"), vec!["кавярня", "5"]);
+    }
+
+    #[test]
+    fn street_type_words_are_recognised_after_folding() {
+        assert!(is_street_type_word("вулиця"));
+        assert!(is_street_type_word("площа"));
+        assert!(!is_street_type_word("стрийська"));
     }
 }

@@ -51,6 +51,21 @@ done
 export JAVA_HOME="${JAVA_HOME:-$HOME/dotfiles/local/share/jdk}"
 export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/.local/share/android-sdk}}"
 
+# The Rust reader and the OSM extractor have their own tests. Keep their build
+# directory under the repository so a check run does not fill the home
+# partition, and resolve the cargo home physically: the crate's uniffi
+# templates fail when it is reached through a symlink.
+CARGO="${CARGO:-$(command -v cargo || true)}"
+if [[ -z "$CARGO" ]]; then
+    echo "check.sh: cargo is required" >&2
+    exit 1
+fi
+if [[ -n "${CARGO_HOME:-}" ]]; then
+    CARGO_HOME="$(cd "$CARGO_HOME" && pwd -P)"
+    export CARGO_HOME
+fi
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/build/rust-test-target}"
+
 cd "$ROOT"
 
 if [[ -z "${GRASS_MAPS_IN_BUILD_SLOT:-}" && -z "${CI:-}" ]] && command -v agent-lock >/dev/null 2>&1; then
@@ -90,6 +105,10 @@ step "Build :app:assembleDebug"
 step "Unit tests"
 ./gradlew --console=plain test || fail "unit tests (Gradle test task)"
 scripts/ci/test-count.sh || fail "unit tests (empty suite)"
+
+step "Rust tests"
+( cd "$ROOT/rust/grass-core" && "$CARGO" test --locked ) || fail "rust tests (grass-core)"
+( cd "$ROOT/tools/pipeline/osm-extract" && "$CARGO" test --locked ) || fail "rust tests (osm-extract)"
 
 step "Script tests (map golden capture)"
 python3 scripts/ci/map_goldens_test.py || fail "script tests (map goldens)"

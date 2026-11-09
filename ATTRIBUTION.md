@@ -22,6 +22,8 @@ first product asset lands.
 | `test-data/location/mock-walk.gpx` | Apache-2.0 (this repository) | Synthetic 60-point GPX walk authored for T-0022; no OSM data |
 | `test-data/places/opening-hours/lviv-oracle.tsv` | ODbL-1.0 | © OpenStreetMap contributors; `opening_hours` values from the Lviv bench extract and their expected states, computed once with opening_hours.js 3.15.0 (LGPL-3.0, used only as a local generator and not distributed) |
 | `places/src/test/resources/search/lviv` search index | ODbL-1.0 | © OpenStreetMap contributors; the Lviv search section built by the T-0005/P4a spike from `lviv-places.sqlite` (2026-11-04 input) |
+| `places/src/test/resources/search/lviv-addresses` search index and `search/addresses.tsv` | ODbL-1.0 | © OpenStreetMap contributors; the Lviv city house-number section and its 50-address query set, built by `tools/pipeline/osm-extract` from the 2026-11-04 Geofabrik Ukraine extract |
+| `osm-extract` (pipeline tool) | this repository; `osmpbf` MIT OR Apache-2.0 | `tools/pipeline/osm-extract`; OSM-derived output is ODbL-1.0 |
 | Rust crates used by `rust/grass-core` | Unlicense/MIT (`fst`), MIT (`levenshtein_automata`), MIT/Apache-2.0 (`memmap2`, `uniffi`, `thiserror`), MIT OR Apache-2.0 AND Unicode-3.0 (`unicode-normalization`) | See `rust/grass-core/Cargo.lock` |
 | JNA | Apache-2.0 OR LGPL-2.1 | uniffi Kotlin bindings runtime (JVM and Android), used by `places` |
 | Icons | chosen per icon set | the licence is recorded in this file before the icons land |

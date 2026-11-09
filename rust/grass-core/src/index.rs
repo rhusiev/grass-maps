@@ -12,7 +12,7 @@ use memmap2::Mmap;
 
 use crate::error::CoreError;
 use crate::features::{Features, PlaceFeature};
-use crate::format::{self, PlaceRecord, FLAG_AREA};
+use crate::format::{self, PlaceRecord, FLAG_ADDRESS, FLAG_AREA};
 
 pub struct Index {
     terms: Map<Mmap>,
@@ -23,6 +23,7 @@ pub struct Index {
     kinds: Mmap,
     strings: Mmap,
     features: Features,
+    format_version: u16,
     place_count: u32,
     kind_count: u32,
 }
@@ -39,8 +40,19 @@ fn map_file(dir: &Path, name: &str) -> Result<Mmap, CoreError> {
     unsafe { Mmap::map(&file) }.map_err(|_| CoreError::CorruptData)
 }
 
+fn read_format_version(dir: &Path) -> Result<u16, CoreError> {
+    match std::fs::read(dir.join(format::FORMAT_FILE)) {
+        Ok(bytes) => format::decode_format_header(Some(&bytes)),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            format::decode_format_header(None)
+        }
+        Err(_) => Err(CoreError::Io),
+    }
+}
+
 impl Index {
     pub fn open(dir: &Path) -> Result<Self, CoreError> {
+        let format_version = read_format_version(dir)?;
         let places = map_file(dir, format::PLACES_FILE)?;
         let entities = map_file(dir, format::ENTITIES_FILE)?;
         let kinds = map_file(dir, format::KINDS_FILE)?;
@@ -67,6 +79,7 @@ impl Index {
             kinds,
             strings,
             features,
+            format_version,
             place_count,
             kind_count,
         };
@@ -112,6 +125,12 @@ impl Index {
 
     pub fn place_count(&self) -> u32 {
         self.place_count
+    }
+
+    /// The section's on-disk version. A section built before `format.bin`
+    /// existed is version 1.
+    pub fn format_version(&self) -> u16 {
+        self.format_version
     }
 
     fn entity_count(&self) -> u32 {
@@ -160,6 +179,11 @@ impl Index {
 
     pub fn is_area(&self, record: &PlaceRecord) -> bool {
         record.flags & FLAG_AREA != 0
+    }
+
+    /// True for a house-number row: its name carries the street and number.
+    pub fn is_address(&self, record: &PlaceRecord) -> bool {
+        record.flags & FLAG_ADDRESS != 0
     }
 
     /// The canonical identity and tags for [place_id], or null when the

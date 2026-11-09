@@ -1,5 +1,7 @@
 //! On-disk layout of one region's search section. All integers little-endian.
 //!
+//! - `format.bin`: the section version: eight bytes `GRASSSEC`, then a u16
+//!   version. A section without this file is version 1
 //! - `terms.fst`: folded token -> byte offset into `postings.bin`
 //! - `postings.bin`: per token, `varint n_entities` and ascending delta-varints
 //!   of entity ids, then `varint n_places` and that many ascending delta-varints
@@ -10,8 +12,21 @@
 //! - `entities.bin`: one u32 offset into `strings.bin` per entity
 //! - `kinds.bin`: one u32 offset into `strings.bin` per category ("amenity=cafe")
 //! - `strings.bin`: varint byte length then UTF-8, for names and categories
+//!
+//! Version 1 has no `format.bin`. Version 2 adds it and defines
+//! [FLAG_ADDRESS] on a place row: a house number, whose name carries the
+//! street and number. A version-2 reader still opens a version-1 section; a
+//! section newer than [FORMAT_VERSION] is [CoreError::Unsupported].
 
 use crate::error::CoreError;
+
+pub const FORMAT_FILE: &str = "format.bin";
+pub const FORMAT_MAGIC: [u8; 8] = *b"GRASSSEC";
+pub const FORMAT_VERSION: u16 = 2;
+pub const LEGACY_FORMAT_VERSION: u16 = 1;
+pub const FORMAT_MAGIC_BYTES: usize = 8;
+pub const FORMAT_VERSION_BYTES: usize = 2;
+pub const FORMAT_HEADER_BYTES: usize = FORMAT_MAGIC_BYTES + FORMAT_VERSION_BYTES;
 
 pub const TERMS_FILE: &str = "terms.fst";
 pub const POSTINGS_FILE: &str = "postings.bin";
@@ -48,6 +63,29 @@ pub const OFFSET_BYTES: usize = 4;
 
 pub const FLAG_AREA: u8 = 1;
 pub const FLAG_STREET: u8 = 2;
+pub const FLAG_ADDRESS: u8 = 4;
+
+/// The header of a version-2 section.
+pub fn encode_format_header(out: &mut Vec<u8>) {
+    out.extend_from_slice(&FORMAT_MAGIC);
+    out.extend_from_slice(&FORMAT_VERSION.to_le_bytes());
+}
+
+/// The version in [bytes]: [LEGACY_FORMAT_VERSION] for an absent file, and
+/// [CoreError::Unsupported] for a version this reader does not know.
+pub fn decode_format_header(bytes: Option<&[u8]>) -> Result<u16, CoreError> {
+    let Some(bytes) = bytes else {
+        return Ok(LEGACY_FORMAT_VERSION);
+    };
+    if bytes.len() != FORMAT_HEADER_BYTES || bytes[..FORMAT_MAGIC_BYTES] != FORMAT_MAGIC {
+        return Err(CoreError::CorruptData);
+    }
+    let version = u16::from_le_bytes([bytes[FORMAT_MAGIC_BYTES], bytes[FORMAT_MAGIC_BYTES + 1]]);
+    if !(LEGACY_FORMAT_VERSION..=FORMAT_VERSION).contains(&version) {
+        return Err(CoreError::Unsupported);
+    }
+    Ok(version)
+}
 
 /// One fixed-width row of `places.bin`.
 #[derive(Clone, Copy, Debug)]
@@ -179,5 +217,35 @@ mod tests {
     fn truncated_strings_are_corrupt() {
         assert_eq!(get_string(&[3, b'a'], 0), Err(CoreError::CorruptData));
         assert_eq!(u32_at(&[1, 2], 0), Err(CoreError::CorruptData));
+    }
+
+    #[test]
+    fn a_missing_header_is_version_one() {
+        assert_eq!(decode_format_header(None), Ok(LEGACY_FORMAT_VERSION));
+    }
+
+    #[test]
+    fn headers_round_trip_and_reject_unknown_versions() {
+        let mut bytes = Vec::new();
+        encode_format_header(&mut bytes);
+        assert_eq!(decode_format_header(Some(&bytes)), Ok(FORMAT_VERSION));
+
+        let mut newer = bytes.clone();
+        newer[FORMAT_MAGIC_BYTES..].copy_from_slice(&u16::MAX.to_le_bytes());
+        assert_eq!(
+            decode_format_header(Some(&newer)),
+            Err(CoreError::Unsupported)
+        );
+
+        let mut mangled = bytes;
+        mangled[0] = b'X';
+        assert_eq!(
+            decode_format_header(Some(&mangled)),
+            Err(CoreError::CorruptData)
+        );
+        assert_eq!(
+            decode_format_header(Some(&[0, 1, 2])),
+            Err(CoreError::CorruptData)
+        );
     }
 }

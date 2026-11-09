@@ -226,8 +226,7 @@ class RustPlaceProvider private constructor(
         /**
          * Opens [indexDirectory] off Main. A missing or corrupt section is a
          * typed failure, never a crash. [regionBuild] is the identity the caller
-         * wants on every hit; T-0202 replaces the directory name with a real
-         * build id.
+         * wants on every hit.
          */
         suspend fun open(
             indexDirectory: File,

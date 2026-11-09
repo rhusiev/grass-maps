@@ -722,20 +722,37 @@ with a feature entry and no tags returns the same empty map. A missing,
 truncated or unknown-version features file is `NotReady`, `CorruptData` or
 `Unsupported` respectively, never an empty map.
 
-The reader uses the P4a spike format unchanged: an FST of folded terms,
-delta-varint postings, a fixed 20-byte place table, context entities, a string
-pool and the feature component. It mmaps read-only, validates every offset
-before handing the index out, and returns `CorruptData` for a truncated section.
-Ranking, typo budgets and neighbour collapsing are the spike's, so the
-osm-mapidx probe table stays the quality oracle: 45 of 45 in the top five,
-asserted by `RustPlaceProviderQualityTest`.
+The reader is format version 2: the P4a spike layout plus `format.bin` (magic
+`GRASSSEC`, then a u16 version) and a house-number row flagged `FLAG_ADDRESS`.
+A house is a place row whose name is the street and number and whose context is
+the locality, so "Стрийська 45" and "вулиця Стрийська 45" are the same query.
+Street-type words ("вулиця", "проспект", ...) are not indexed for a house and
+are dropped from a query that also carries a number: every address on such a
+street shares them, and in the Lviv run they saturated the postings budget, so
+an exact house lost to a nearer address that merely shared the type word. A
+query with no letter at all returns nothing, so a bare house number cannot
+flood the list. A section without `format.bin` is version 1 and still opens; a
+version newer than 2 is `Unsupported`. `build-section` now writes version 2.
+
+The reader is an FST of folded terms, delta-varint postings, a fixed 20-byte
+place table, context entities, a string pool and the feature component. It
+mmaps read-only, validates every offset before handing the index out, and
+returns `CorruptData` for a truncated section. Ranking and typo budgets are the
+spike's, so the osm-mapidx probe table stays a quality oracle: 45 of 45 in the
+top five, asserted by `RustPlaceProviderQualityTest`. The house-number oracle is
+50 fixed Lviv addresses, top one, asserted by `LvivAddressSearchTest` with a
+45/50 floor; the test prints every miss by name.
 
 The index is external data: the provider reads
 `<externalFilesDir>/search/<region>/`. The committed Lviv section under
 `places/src/test/resources/search` is 10.1 MiB and ODbL-licensed; its
 `features.bin` is an empty placeholder because the P4a spike predates the
-component, so those places have no identity or tags. The debug channel exposes
-`core.search.query`:
+component, so those places have no identity or tags. The house-number fixture
+`places/src/test/resources/search/lviv-addresses` is 5.52 MiB, built by
+`tools/pipeline/osm-extract` from the 2026-11-04 Ukraine extract over the Lviv
+city bbox. The extraction stage, its commands, the Lviv-bbox and whole-country
+size measurements, and their conditions are in `tools/pipeline/README.md`. The
+debug channel exposes `core.search.query`:
 
 ```sh
 tools/control/grassctl.py invoke core.search.query \

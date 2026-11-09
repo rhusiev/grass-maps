@@ -186,15 +186,18 @@ manifest = {
         component("map", "map.pmtiles", "pmtiles", 3, [int(map_min_zoom), int(map_max_zoom)], False),
         component("contours", "contours.pmtiles", "pmtiles", 3, [int(contours_min_zoom), int(contours_max_zoom)], False),
         component("elevation", "elevation.bin", "stand-in", 1, None, True),
-        # The search segment is the seven files the reader maps, stored
-        # unpacked until the single-file search.idx container lands.
-        component("search-terms", "terms.fst", "search-section", 1, None, False),
-        component("search-postings", "postings.bin", "search-section", 1, None, False),
-        component("search-places", "places.bin", "search-section", 1, None, False),
-        component("search-context", "context.bin", "search-section", 1, None, False),
-        component("search-entities", "entities.bin", "search-section", 1, None, False),
-        component("search-kinds", "kinds.bin", "search-section", 1, None, False),
-        component("search-strings", "strings.bin", "search-section", 1, None, False),
+        # The search segment is the eight files a version-2 reader maps, stored
+        # unpacked until the single-file search.idx container lands. `format.bin`
+        # declares the section version; the committed package predates it and is
+        # still version 1, which the reader opens without the header.
+        component("search-format", "format.bin", "search-section", 2, None, False),
+        component("search-terms", "terms.fst", "search-section", 2, None, False),
+        component("search-postings", "postings.bin", "search-section", 2, None, False),
+        component("search-places", "places.bin", "search-section", 2, None, False),
+        component("search-context", "context.bin", "search-section", 2, None, False),
+        component("search-entities", "entities.bin", "search-section", 2, None, False),
+        component("search-kinds", "kinds.bin", "search-section", 2, None, False),
+        component("search-strings", "strings.bin", "search-section", 2, None, False),
         component("features", "features.bin", "place-features", 1, None, False),
     ],
 }

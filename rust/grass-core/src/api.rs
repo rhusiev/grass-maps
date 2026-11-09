@@ -142,6 +142,12 @@ impl SearchIndex {
         self.source().place_count()
     }
 
+    /// The section's on-disk version. A section built before `format.bin`
+    /// existed is version 1; a section with house-number rows is version 2.
+    pub fn format_version(&self) -> u16 {
+        self.source().format_version()
+    }
+
     pub fn details(&self, place_id: u32) -> Result<PlaceDetail, CoreError> {
         self.detail(place_id)
     }
@@ -200,6 +206,9 @@ impl SearchIndex {
                 return Err(CoreError::Cancelled);
             }
             let record = self.source().place(id)?;
+            if self.source().is_address(&record) {
+                continue;
+            }
             let latitude = f64::from(record.lat_e7) / crate::format::COORD_SCALE;
             let longitude = f64::from(record.lon_e7) / crate::format::COORD_SCALE;
             if latitude < south || latitude > north || longitude < west || longitude > east {

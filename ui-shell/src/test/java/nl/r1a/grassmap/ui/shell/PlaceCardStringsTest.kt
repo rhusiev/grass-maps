@@ -40,6 +40,7 @@ class PlaceCardStringsTest {
                 "place_card_unknown",
                 "place_card_close",
                 "favourites_lists_title",
+                "favourites_lists_close",
                 "favourites_lists_undo",
                 "favourites_lists_empty",
                 "favourites_lists_no_list",

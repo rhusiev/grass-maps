@@ -33,6 +33,7 @@ class FavouritesListsContentTest {
         val content = favouritesListsContent(state, MapStrings(UKRAINIAN))
 
         assertEquals("Списки", content.title)
+        assertEquals("Закрити списки", content.close)
         assertEquals("Скасувати", content.undo)
         assertTrue(content.undoAvailable)
         assertNull(content.empty)
@@ -95,6 +96,7 @@ class FavouritesListsContentTest {
         val ENGLISH =
             mapOf(
                 TITLE_KEY to "Lists",
+                CLOSE_KEY to "Close the lists",
                 UNDO_KEY to "Undo",
                 EMPTY_KEY to "No lists yet",
                 NO_LIST_KEY to "No list",
@@ -105,6 +107,7 @@ class FavouritesListsContentTest {
         val UKRAINIAN =
             mapOf(
                 TITLE_KEY to "Списки",
+                CLOSE_KEY to "Закрити списки",
                 UNDO_KEY to "Скасувати",
                 EMPTY_KEY to "Списків ще немає",
                 NO_LIST_KEY to "Без списку",

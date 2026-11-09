@@ -29,6 +29,7 @@ data class FavouritesPointRow(
  */
 data class FavouritesListsContent(
     val title: String,
+    val close: String,
     val undo: String,
     val undoAvailable: Boolean,
     val empty: String?,
@@ -42,6 +43,7 @@ fun favouritesListsContent(
 ): FavouritesListsContent =
     FavouritesListsContent(
         title = strings.resolve(TITLE_KEY),
+        close = strings.resolve(CLOSE_KEY),
         undo = strings.resolve(UNDO_KEY),
         undoAvailable = state.undoAvailable,
         empty = if (state.lists.isEmpty()) strings.resolve(EMPTY_KEY) else null,
@@ -88,6 +90,7 @@ internal fun favouriteColour(value: String): Long? {
 }
 
 internal const val TITLE_KEY = "favourites_lists_title"
+internal const val CLOSE_KEY = "favourites_lists_close"
 internal const val UNDO_KEY = "favourites_lists_undo"
 internal const val EMPTY_KEY = "favourites_lists_empty"
 internal const val NO_LIST_KEY = "favourites_lists_no_list"

@@ -149,7 +149,7 @@ private fun Header(
                 modifier =
                     Modifier
                         .clickable(onClick = onClose)
-                        .semantics { contentDescription = content.title }
+                        .semantics { contentDescription = content.close }
                         .padding(CLOSE_PADDING_DP.dp),
             )
         }

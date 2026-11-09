@@ -11,6 +11,7 @@
     <string name="place_card_close">Close the place card</string>
 
     <string name="favourites_lists_title">Lists</string>
+    <string name="favourites_lists_close">Close the lists</string>
     <string name="favourites_lists_undo">Undo</string>
     <string name="favourites_lists_empty">No lists yet</string>
     <string name="favourites_lists_no_list">No list</string>

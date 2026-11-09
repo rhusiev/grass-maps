@@ -11,6 +11,7 @@
     <string name="place_card_close">Закрити картку місця</string>
 
     <string name="favourites_lists_title">Списки</string>
+    <string name="favourites_lists_close">Закрити списки</string>
     <string name="favourites_lists_undo">Скасувати</string>
     <string name="favourites_lists_empty">Списків ще немає</string>
     <string name="favourites_lists_no_list">Без списку</string>

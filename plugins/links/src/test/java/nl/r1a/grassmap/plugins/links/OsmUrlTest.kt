@@ -94,6 +94,44 @@ class OsmUrlTest {
     }
 
     @Test
+    fun aCurrentPermalinkMayNameALayerCodeAfterTheView() {
+        assertEquals(
+            LinkResult.Success(LinkTarget.Point(GeoPoint(56.8139, -5.0650), 14.0)),
+            LinkRouter.route("https://www.openstreetmap.org/#map=14/56.8139/-5.0650&layers=C"),
+        )
+    }
+
+    @Test
+    fun thePre2013PermalinkQueryIsAPosition() {
+        assertEquals(
+            LinkResult.Success(LinkTarget.Point(GeoPoint(51.457142, -0.20971), 18.0)),
+            LinkRouter.route("https://www.openstreetmap.org/?lat=51.457142&lon=-0.20971&zoom=18&layers=M"),
+        )
+    }
+
+    @Test
+    fun aLegacyQueryWithoutAZoomIsUnsupported() {
+        assertEquals(
+            LinkResult.Failure(LinkFailure.UNSUPPORTED),
+            LinkRouter.route("https://www.openstreetmap.org/?lat=51.45&lon=-0.2"),
+        )
+    }
+
+    @Test
+    fun aLegacyQueryWithABadValueIsMalformed() {
+        for (
+        uri in
+        listOf(
+            "https://www.openstreetmap.org/?lat=abc&lon=-0.2&zoom=18",
+            "https://www.openstreetmap.org/?lat=95&lon=-0.2&zoom=18",
+            "https://www.openstreetmap.org/?lat=51.45&lon=-0.2&zoom=99",
+        )
+        ) {
+            assertEquals(uri, LinkResult.Failure(LinkFailure.MALFORMED), LinkRouter.route(uri))
+        }
+    }
+
+    @Test
     fun aRootUrlWithoutAViewIsUnsupported() {
         assertEquals(
             LinkResult.Failure(LinkFailure.UNSUPPORTED),

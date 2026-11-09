@@ -50,17 +50,28 @@ class MapLinks(
         }
     }
 
-    /** Hands the parked move to [host]; with no parked move this does nothing. */
-    suspend fun applyPending(host: MapHost) {
-        val update = pending ?: return
+    /**
+     * Hands the parked move to [host] and reports the move, or null when
+     * nothing was parked. The screen shows a failed move to the user; a failure
+     * here would otherwise leave the map at its old position with no answer.
+     */
+    suspend fun applyPending(host: MapHost): Outcome<Unit>? {
+        val update = pending ?: return null
         pending = null
         when (val outcome = modes.free()) {
             is Outcome.Success -> Unit
             is Outcome.Failure -> log("link kept the camera mode: ${outcome.error}")
         }
-        when (val outcome = host.moveCamera(update)) {
-            is Outcome.Success -> log("link centred the map on ${update.center}")
-            is Outcome.Failure -> log("link camera move failed: ${outcome.error}")
+        return when (val outcome = host.moveCamera(update)) {
+            is Outcome.Success -> {
+                log("link centred the map on ${update.center}")
+                outcome
+            }
+
+            is Outcome.Failure -> {
+                log("link camera move failed: ${outcome.error}")
+                outcome
+            }
         }
     }
 

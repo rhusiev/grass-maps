@@ -11,10 +11,10 @@ import org.junit.Test
  *
  * The vectors come from two published sources. `0EEQjE--` and `0EEQjEEb` are
  * the worked examples on the OSM wiki's Shortlink page, which gives the first
- * one's expected view as `#map=9/51.5110/0.0550`. The `@`/`~` pairs and the
- * remaining codes are the cases in the reference test suite,
- * `test/lib/short_link_test.rb` of `openstreetmap/openstreetmap-website`; their
- * expected points are what the reference `lib/short_link.rb` decodes them to.
+ * one's expected view as `#map=9/51.5110/0.0550`. The `@`/`~` pairs are the
+ * exact cases in the reference test suite `test/lib/short_link_test.rb` of
+ * `openstreetmap/openstreetmap-website`, and their expected points are what
+ * the reference `lib/short_link.rb` decodes them to.
  */
 class OsmShortLinkTest {
     @Test
@@ -37,15 +37,17 @@ class OsmShortLinkTest {
 
     @Test
     fun theReferenceSuiteVectorsDecodeToTheirPoints() {
-        assertEquals(GeoPoint(-5.171985626220703, 167.29190826416016), decode("v2juONc--"))
+        assertEquals(GeoPoint(78.10350179672241, 178.41148853302002), decode("~v2juONc--"))
         assertEquals(GeoPoint(8.125879615545273, -7.501218616962433), decode("as3I3GpG~-"))
         assertEquals(GeoPoint(-47.1533203125, -92.8125), decode("D~hV--"))
+        assertEquals(GeoPoint(-82.13739395141602, -114.96402740478516), decode("CO0O~m8--"))
     }
 
     @Test
     fun theDeprecatedAtSignDecodesExactlyLikeTheTilde() {
-        assertEquals(decode("as3I3GpG~-"), decode("as3I3GpG@-"))
-        assertEquals(decode("D~hV--"), decode("D@hV--"))
+        for (pair in REFERENCE_PAIRS) {
+            assertEquals(pair, decode(pair.replace(TILDE, AT_SIGN)), decode(pair))
+        }
     }
 
     @Test
@@ -66,6 +68,12 @@ class OsmShortLinkTest {
     }
 
     @Test
+    fun aCodeLongerThanTheFormatNeedsIsRefusedInsteadOfOverflowing() {
+        assertNull(OsmShortLink.decode(TILDE.toString().repeat(OsmShortLink.MAX_CODE_LENGTH + 1)))
+        assertEquals(OsmShortLink.MAX_CODE_LENGTH, TILDE.toString().repeat(OsmShortLink.MAX_CODE_LENGTH).length)
+    }
+
+    @Test
     fun everyDecodedPointIsOnEarth() {
         for (code in listOf("9q8yyK8--", "8FVC--", "CO0O~m8--")) {
             val decoded = OsmShortLink.decode(code) ?: error("$code must decode")
@@ -82,5 +90,10 @@ class OsmShortLinkTest {
         const val TOLERANCE = 1e-9
         const val WIKI_WIDE_VIEW = "0EEQjE--"
         const val WIKI_ZOOMED_VIEW = "0EEQjEEb"
+        const val TILDE = '~'
+        const val AT_SIGN = '@'
+
+        /** The `~` forms of the four pairs in the reference test suite. */
+        val REFERENCE_PAIRS = listOf("~v2juONc--", "as3I3GpG~-", "D~hV--", "CO0O~m8--")
     }
 }

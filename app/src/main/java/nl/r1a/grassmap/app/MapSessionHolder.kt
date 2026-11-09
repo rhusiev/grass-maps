@@ -5,39 +5,45 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import nl.r1a.grassmap.plugin.api.host.MapHost
 import nl.r1a.grassmap.plugin.api.model.Camera
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Gives process-scoped commands and plugins the map host of the current
  * Activity.
  *
- * The host is bound while a map surface is composed and cleared when that same
- * instance is disposed, so a command never writes to a dead engine. Commands
- * return [nl.r1a.grassmap.plugin.api.error.AppError.NotReady] before the first
- * bind and after the surface goes away.
+ * A host is bound while a map surface is composed and removed when that same
+ * instance is disposed, so a command never writes to a dead engine. Two
+ * Activity instances can be alive at once - a link opened from another app
+ * starts a second one - and each composes its own surface, so the holder keeps
+ * every bound host and reports the newest. When the newer instance finishes,
+ * its unbind leaves the older host in place and commands keep working instead
+ * of failing with [nl.r1a.grassmap.plugin.api.error.AppError.NotReady].
  *
- * [camera] keeps the last camera the bound host published, so a plugin that
+ * Commands return NotReady only before the first bind and after the last
+ * unbind.
+ *
+ * [camera] keeps the last camera a bound host published, so a plugin that
  * needs a map centre still has one after the surface goes away and gets the
  * new surface's camera as soon as it binds.
  */
 class MapSessionHolder {
-    @Volatile
-    private var host: MapHost? = null
+    private val hosts = CopyOnWriteArrayList<MapHost>()
 
     private val latestCamera = MutableStateFlow<Camera?>(null)
 
     /** The camera of the last bound host; empty until a map surface binds. */
     val camera: Flow<Camera> = latestCamera.filterNotNull()
 
+    /** Adds [host]; binding the same instance twice keeps one entry. */
     fun bind(host: MapHost) {
-        this.host = host
+        if (hosts.none { it === host }) {
+            hosts += host
+        }
     }
 
-    /** Clears the binding only when [host] is still the bound instance. */
-    @Synchronized
+    /** Removes only [host]; a host bound by another surface stays current. */
     fun unbind(host: MapHost) {
-        if (this.host === host) {
-            this.host = null
-        }
+        hosts.removeAll { it === host }
     }
 
     /** Records the camera a bound host published. */
@@ -45,5 +51,6 @@ class MapSessionHolder {
         latestCamera.value = camera
     }
 
-    fun hostOrNull(): MapHost? = host
+    /** The newest bound host, or null when no surface is composed. */
+    fun hostOrNull(): MapHost? = hosts.lastOrNull()
 }

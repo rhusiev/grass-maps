@@ -333,33 +333,53 @@ the value through a recording `PlatformActions` instead.
 
 `plugins/links` owns the pure parsers for links another app sends (T-0211). A
 `geo:` URI follows RFC 5870: `lat,lon`, an optional altitude, `;` parameters and
-an optional `?q=` query whose `lat,lon(label)` or free text supplies a label. An
-osm.org page link is `/node/<id>`, `/way/<id>` or `/relation/<id>`, and `/go/<code>`
-is a short link. `http` and `https` are both accepted, with or without `www.`,
-for `openstreetmap.org` and `osm.org`.
+a query. The query form Android documents for sharing a place is
+`?q=lat,lon(label)`, where the body pair is only a fallback (`geo:0,0?q=` is
+standard); a `q` that is a coordinate pair therefore wins over the pair in the
+body, and its parenthesised suffix is the label. A `q` that is not a pair is a
+name this app cannot look up offline, so the body pair is used and the text is a
+label. `?z=` sets the zoom when it is in the map's 1..20 range; any other value
+is ignored rather than obeyed. An osm.org page link is `/node/<id>`, `/way/<id>`
+or `/relation/<id>`, and `/go/<code>` is a short link. `http` and `https` are
+both accepted, with or without `www.`, for `openstreetmap.org` and `osm.org`.
 
-A `geo:` link centres the map at zoom 16, a short link at the zoom its code
-encodes, and an osm.org permalink at the zoom in its `#map=zoom/lat/lon`
-fragment. An element URL carries a position only when it also carries that
-fragment. A bare element URL has no coordinates, and this app has no offline
-element lookup, so it opens the map without a pin and without a guessed point;
-the route is a typed `LinkTarget.Element`.
+A `geo:` link without `z` centres the map at zoom 16, a short link at the zoom
+its code encodes, and an osm.org permalink at the zoom it names. Both permalink
+forms are read: the current `#map=zoom/lat/lon` fragment, including a layer code
+after `&`, and the pre-2013 `?lat=&lon=&zoom=` query. An element URL carries a
+position only when it also carries the `#map=` fragment. A bare element URL has
+no coordinates, and this app has no offline element lookup, so it opens the map
+without a pin and without a guessed point; the route is a typed
+`LinkTarget.Element` and the user is told the place has no coordinates.
 
 The short-link decoder is osm.org's own algorithm: each character carries three
 bits of longitude and three of latitude in an interleaved Morton code, and
-trailing `-` characters name the zoom's remainder. It needs no network. The
-vectors in `OsmShortLinkTest` are the worked examples from the OSM wiki's
-Shortlink page (`0EEQjE--` is `#map=9/51.5110/0.0550`, `0EEQjE--?m` adds a
-marker) and the cases in the reference test suite `test/lib/short_link_test.rb`,
-whose expected points come from `lib/short_link.rb`. The deprecated `@` form
-decodes exactly like `~`.
+trailing `-` characters name the zoom's remainder. It needs no network. Upstream
+Ruby uses arbitrary-precision integers, so this port rejects a code longer than
+21 characters instead of overflowing: 21 characters, 63 bits, is more than the
+11 a zoom-25 link needs. The vectors in `OsmShortLinkTest` are the worked
+examples from the OSM wiki's Shortlink page (`0EEQjE--` is
+`#map=9/51.5110/0.0550`, `0EEQjE--?m` adds a marker) and the four `@`/`~` pairs
+of the reference test suite `test/lib/short_link_test.rb`, whose expected points
+come from `lib/short_link.rb`. The deprecated `@` form decodes exactly like `~`.
 
-MainActivity declares `ACTION_VIEW` filters with `DEFAULT` and `BROWSABLE` for
-`geo:` and for the four osm.org hosts over both schemes, so the app is a
-candidate for the default maps app. `app` reads the launch intent before a map
-surface exists, so `MapLinks` parks the move until the screen binds the host,
-then leaves follow or heading mode and moves the camera once. A move after a
-follow recentre wins the first frame.
+MainActivity is `singleTop` and handles `onNewIntent`, so a link that arrives
+while the app is alive reaches the running instance instead of stacking a second
+one. Its `ACTION_VIEW` filters declare `DEFAULT` and `BROWSABLE` for `geo:` and
+for the four osm.org hosts over both schemes, restricted to the paths the parser
+opens: the root permalink, `/node/`, `/way/`, `/relation/` and `/go/`. Android
+flattens the data lists of one filter, so the paths apply to every host. That
+makes the app a candidate for the default maps app without offering itself for
+`/search` or `/changeset`.
+
+`app` reads the intent before a map surface exists, so `MapLinks` parks the move
+until the screen binds the host, then leaves follow or heading mode and moves the
+camera once. A move after a follow recentre wins the first frame. The holder
+keeps every bound surface, not only the newest, because two Activity instances
+can be alive while a second one opens a link; when the newer one finishes, the
+older surface's host stays current and its commands keep working. A link the
+router refuses, and a failed camera move, show a message instead of leaving the
+map silently unchanged.
 
 `buildSrc` runs `ManifestLinkRules` over every merged manifest in the same
 `checkPrivacyManifest` task as the privacy guards, so a merge that drops a

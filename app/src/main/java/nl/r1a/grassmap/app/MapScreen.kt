@@ -218,8 +218,12 @@ private fun MapContent(
     LaunchedEffect(container.locationController, surface.host) {
         container.locationController.syncToHost()
         // A link that arrived before this surface bound is applied after the
-        // follow recentre, so it wins the first frame (T-0211).
-        container.links.applyPending(surface.host)
+        // follow recentre, so it wins the first frame (T-0211). A move the host
+        // refuses is visible: the link would otherwise leave the map unmoved.
+        val linkOutcome = container.links.applyPending(surface.host)
+        if (linkOutcome is Outcome.Failure) {
+            Toast.makeText(context, R.string.link_not_opened, Toast.LENGTH_LONG).show()
+        }
     }
     LaunchedEffect(surface.host, container.devToolsVisible) {
         if (!container.devToolsVisible) {

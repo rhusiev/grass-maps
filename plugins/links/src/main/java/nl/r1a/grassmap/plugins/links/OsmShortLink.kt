@@ -33,14 +33,24 @@ internal object OsmShortLink {
 
     private const val ONE = 1
 
+    /**
+     * The longest code the format needs. A zoom of 25 takes eleven characters,
+     * and this leaves room for codes from other encoders. Upstream Ruby uses
+     * arbitrary-precision integers, so a longer code would overflow this port.
+     */
+    const val MAX_CODE_LENGTH = 21
+
     /** One decoded link: a position and the zoom the code carries. */
     data class Decoded(
         val point: GeoPoint,
         val zoom: Double,
     )
 
-    /** Decodes [code], or returns null when a character is not osm.org's. */
+    /** Decodes [code], or returns null when it is too long or has a foreign character. */
     fun decode(code: String): Decoded? {
+        if (code.isEmpty() || code.length > MAX_CODE_LENGTH) {
+            return null
+        }
         var x = 0L
         var y = 0L
         var bits = 0
@@ -75,6 +85,9 @@ internal object OsmShortLink {
         val latitude = packedY * LATITUDE_SPAN / WORLD_SPAN - LATITUDE_OFFSET
         // Ruby's % is a floor modulo: a negative filler count still names a
         // real zoom, so Kotlin must floor as well.
+        if (latitude !in -LATITUDE_OFFSET..LATITUDE_OFFSET || longitude !in -LONGITUDE_OFFSET..LONGITUDE_OFFSET) {
+            return null
+        }
         val zoom = bits - ZOOM_BASE - Math.floorMod(fillers, ZOOM_STEP)
         return Decoded(GeoPoint(latitude, longitude), zoom.toDouble())
     }

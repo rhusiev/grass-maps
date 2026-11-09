@@ -47,6 +47,7 @@ class ManifestLinkRulesTest {
                 <data android:scheme="geo" />
                 ${SCHEMES.joinToString("") { "<data android:scheme=\"$it\" />" }}
                 ${OSM_HOSTS.joinToString("") { "<data android:host=\"$it\" />" }}
+                ${PATHS.joinToString("") { pathData(it) }}
             </intent-filter>
             """.trimIndent()
 
@@ -88,6 +89,30 @@ class ManifestLinkRulesTest {
     }
 
     @Test
+    fun aFilterWithUnrelatedPathsDoesNotOfferTheOpenedPages() {
+        val findings =
+            ManifestLinkRules.check(
+                manifest(extraFilters = geoFilter() + webFilters(paths = listOf(UNRELATED_PATH))),
+                MAIN_ACTIVITY,
+            )
+
+        assertEquals(OSM_HOSTS.size * SCHEMES.size, findings.size)
+        assertTrue(findings.all { it.contains("/node/1") })
+    }
+
+    @Test
+    fun aPrefixCoversTheElementPagesAndAnExactPathTheRoot() {
+        val findings =
+            ManifestLinkRules.check(
+                manifest(extraFilters = geoFilter() + webFilters(paths = listOf("/", "/go/"))),
+                MAIN_ACTIVITY,
+            )
+
+        assertTrue(findings.all { it.contains("/node/1") || it.contains("/way/1") || it.contains("/relation/1") })
+        assertTrue(findings.none { it.contains("/go/") })
+    }
+
+    @Test
     fun aHostThatIsOnlyASuffixDoesNotMatch() {
         val findings =
             ManifestLinkRules.check(
@@ -97,6 +122,14 @@ class ManifestLinkRulesTest {
 
         assertTrue(findings.any { it.contains("openstreetmap.org") })
     }
+
+    /** A root path is exact; every other accepted path is a directory prefix. */
+    private fun pathData(path: String): String =
+        if (path.endsWith("/") && path != "/") {
+            "<data android:pathPrefix=\"$path\" />"
+        } else {
+            "<data android:path=\"$path\" />"
+        }
 
     private fun geoFilter(
         categories: List<String> = CATEGORIES,
@@ -113,6 +146,7 @@ class ManifestLinkRulesTest {
     private fun webFilters(
         hosts: List<String> = OSM_HOSTS,
         categories: List<String> = CATEGORIES,
+        paths: List<String> = PATHS,
     ): String =
         hosts.joinToString("\n") { host ->
             """
@@ -120,6 +154,7 @@ class ManifestLinkRulesTest {
                 <action android:name="android.intent.action.VIEW" />
                 ${categories.joinToString("") { "<category android:name=\"$it\" />" }}
                 ${SCHEMES.joinToString("") { "<data android:scheme=\"$it\" android:host=\"$host\" />" }}
+                ${paths.joinToString("") { pathData(it) }}
             </intent-filter>
             """.trimIndent()
         }
@@ -146,5 +181,9 @@ class ManifestLinkRulesTest {
                 "android.intent.category.DEFAULT",
                 "android.intent.category.BROWSABLE",
             )
+
+        val PATHS = listOf("/", "/node/", "/way/", "/relation/", "/go/")
+
+        const val UNRELATED_PATH = "/search/"
     }
 }

@@ -13,6 +13,7 @@
         <activity
             android:name="nl.r1a.grassmap.app.MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -38,6 +39,14 @@
                 <data android:scheme="http" android:host="osm.org" />
                 <data android:scheme="https" android:host="www.osm.org" />
                 <data android:scheme="http" android:host="www.osm.org" />
+                <!-- Only the paths the router opens. Android flattens the data
+                     lists of one filter, so these paths apply to every host
+                     above; the root path is the permalink form. -->
+                <data android:path="/" />
+                <data android:pathPrefix="/node/" />
+                <data android:pathPrefix="/way/" />
+                <data android:pathPrefix="/relation/" />
+                <data android:pathPrefix="/go/" />
             </intent-filter>
         </activity>
     </application>

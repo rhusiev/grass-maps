@@ -11,11 +11,13 @@ import java.util.Locale
  *
  * - `/node/<id>`, `/way/<id>` and `/relation/<id>` name an element;
  * - `/go/<code>` is a short link, decoded by [OsmShortLink];
- * - `/#map=zoom/lat/lon` is the permalink to a position.
+ * - `/#map=zoom/lat/lon` is the current permalink to a position;
+ * - `/?lat=&lon=&zoom=` is the pre-2013 permalink, still linked widely.
  *
  * An element URL can also carry the `#map=` fragment, which osm.org adds when
  * the page is shared at a view; that fragment supplies the position, and a bare
- * element URL has none.
+ * element URL has none. The page query (`?m`, `?layers=T`) changes the view,
+ * never the position, so it is accepted and not read.
  */
 internal object OsmUrl {
     private val HOSTS =
@@ -28,12 +30,17 @@ internal object OsmUrl {
 
     private const val SHORT_LINK_SEGMENT = "go"
     private const val MAP_FRAGMENT_PREFIX = "map="
+    private const val FRAGMENT_SEPARATOR = '&'
     private const val MAP_FRAGMENT_FIELDS = 3
     private const val ZOOM_FIELD = 0
     private const val LATITUDE_FIELD = 1
     private const val LONGITUDE_FIELD = 2
     private const val SECOND_SEGMENT = 1
     private const val ELEMENT_SEGMENT_COUNT = 2
+
+    private const val LATITUDE_KEY = "lat"
+    private const val LONGITUDE_KEY = "lon"
+    private const val ZOOM_KEY = "zoom"
 
     private const val MIN_LINK_ZOOM = 0.0
 
@@ -68,12 +75,12 @@ internal object OsmUrl {
         }
         val tail = if (authorityEnd < 0) "" else rest.substring(authorityEnd)
         val fragment = tail.substringAfter('#', "")
-        // The page query (`?m`, `?layers=T`) changes the view, never the
-        // position, so it is accepted and not read.
-        val path = tail.substringBefore('#').substringBefore('?')
+        val withoutFragment = tail.substringBefore('#')
+        val query = withoutFragment.substringAfter('?', "")
+        val path = withoutFragment.substringBefore('?')
         val segments = path.split('/').filter { it.isNotEmpty() }
         return when (val first = segments.firstOrNull()) {
-            null -> permalink(fragment)
+            null -> permalink(fragment, query)
             SHORT_LINK_SEGMENT -> shortLink(segments.getOrNull(SECOND_SEGMENT))
             in ELEMENT_SEGMENTS.keys -> element(ELEMENT_SEGMENTS.getValue(first), segments, fragment)
             else -> LinkResult.Failure(LinkFailure.UNSUPPORTED)
@@ -104,26 +111,57 @@ internal object OsmUrl {
         return LinkResult.Success(LinkTarget.Element(type, id, view?.point, view?.zoom))
     }
 
-    private fun permalink(fragment: String): LinkResult {
-        if (!fragment.startsWith(MAP_FRAGMENT_PREFIX)) {
-            return LinkResult.Failure(LinkFailure.UNSUPPORTED)
+    /** A root URL: the `#map=` fragment first, then the legacy query form. */
+    private fun permalink(
+        fragment: String,
+        query: String,
+    ): LinkResult {
+        if (fragment.startsWith(MAP_FRAGMENT_PREFIX)) {
+            val view = mapView(fragment) ?: return LinkResult.Failure(LinkFailure.MALFORMED)
+            return LinkResult.Success(LinkTarget.Point(view.point, view.zoom))
         }
-        val view = mapView(fragment) ?: return LinkResult.Failure(LinkFailure.MALFORMED)
-        return LinkResult.Success(LinkTarget.Point(view.point, view.zoom))
+        return queryPermalink(query) ?: LinkResult.Failure(LinkFailure.UNSUPPORTED)
     }
 
-    /** The `#map=zoom/lat/lon` view, or null when the fragment is absent or unusable. */
+    /**
+     * The `#map=zoom/lat/lon` view, or null when the fragment is absent or
+     * unusable. A layer code after `&` belongs to the view, not the position.
+     */
     private fun mapView(fragment: String): MapView? {
         if (!fragment.startsWith(MAP_FRAGMENT_PREFIX)) {
             return null
         }
-        val fields = fragment.removePrefix(MAP_FRAGMENT_PREFIX).split('/')
+        val fields =
+            fragment
+                .removePrefix(MAP_FRAGMENT_PREFIX)
+                .substringBefore(FRAGMENT_SEPARATOR)
+                .split('/')
         if (fields.size != MAP_FRAGMENT_FIELDS) {
             return null
         }
         val zoom = LinkParsing.double(fields[ZOOM_FIELD]) ?: return null
         val latitude = LinkParsing.double(fields[LATITUDE_FIELD]) ?: return null
         val longitude = LinkParsing.double(fields[LONGITUDE_FIELD]) ?: return null
+        return viewOrNull(latitude, longitude, zoom)
+    }
+
+    /** The pre-2013 `?lat=&lon=&zoom=` permalink, or null when the query is not one. */
+    private fun queryPermalink(query: String): LinkResult? {
+        val latitudeText = LinkParsing.queryValue(query, LATITUDE_KEY) ?: return null
+        val longitudeText = LinkParsing.queryValue(query, LONGITUDE_KEY) ?: return null
+        val zoomText = LinkParsing.queryValue(query, ZOOM_KEY) ?: return null
+        val latitude = LinkParsing.double(latitudeText) ?: return LinkResult.Failure(LinkFailure.MALFORMED)
+        val longitude = LinkParsing.double(longitudeText) ?: return LinkResult.Failure(LinkFailure.MALFORMED)
+        val zoom = LinkParsing.double(zoomText) ?: return LinkResult.Failure(LinkFailure.MALFORMED)
+        val view = viewOrNull(latitude, longitude, zoom) ?: return LinkResult.Failure(LinkFailure.MALFORMED)
+        return LinkResult.Success(LinkTarget.Point(view.point, view.zoom))
+    }
+
+    private fun viewOrNull(
+        latitude: Double,
+        longitude: Double,
+        zoom: Double,
+    ): MapView? {
         if (zoom !in MIN_LINK_ZOOM..MAX_LINK_ZOOM) {
             return null
         }

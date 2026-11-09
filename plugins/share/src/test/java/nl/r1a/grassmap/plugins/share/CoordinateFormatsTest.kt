@@ -76,6 +76,13 @@ class CoordinateFormatsTest {
     }
 
     @Test
+    fun aTinyNegativeThatRoundsToZeroKeepsNoSign() {
+        assertEquals("0.000000, 0.000000", CoordinateFormats.decimal(GeoPoint(-0.0000004, -0.00000049)))
+        assertEquals("0.000000, 0.000000", CoordinateFormats.decimal(GeoPoint(-0.0, 0.0)))
+        assertEquals("-0.000001, 0.000000", CoordinateFormats.decimal(GeoPoint(-0.0000006, 0.0000004)))
+    }
+
+    @Test
     fun formatSelectsTheNotation() {
         val point = GeoPoint(49.821740, 24.023910)
 

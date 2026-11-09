@@ -265,7 +265,10 @@ valid. `plugins/osm-places` maps the tags; `app` adds the two parts through
 tag mapper and `ui-shell` draws rows it was given. A contact row that carries a
 `PlaceCardLink` is clickable: the shell hands the link to the platform seam,
 which opens `tel:`, `mailto:` or the web address (`https:` is added when the tag
-omits a scheme).
+omits a scheme). A `website` or `contact:*` tag is untrusted region data, so a
+web target must be `http` or `https` in any letter case; any other scheme,
+including `intent:`, `file:`, `content:` and `javascript:`, is a typed
+`Unsupported` failure and never reaches `ACTION_VIEW`.
 
 `PlaceCard.openingHours` keeps the raw OSM string. `PlaceCard.openingState` is
 `OPEN`, `CLOSED` or `UNKNOWN` at the moment the card was built, evaluated on
@@ -291,7 +294,9 @@ contract carries no Android type, so `plugins/share` asks for the effect and
 `app` performs it. `AndroidPlatformActions` is the only file that names a
 `ClipboardManager` or an `Intent`. It starts the system chooser for share and
 `ACTION_VIEW` for a URI. A URI that no app handles is `Unsupported`. The text of
-a share is never logged.
+a share is never logged. `openUri` also parses the scheme itself and builds an
+intent only for `http`, `https`, `tel`, `mailto` and `geo`; every other scheme
+is `Unsupported` before an intent exists.
 
 `plugins/share` owns the three coordinate notations and the link builders as
 pure functions:

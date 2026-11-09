@@ -108,7 +108,7 @@ object CoordinateFormats {
         val scale = POWERS_OF_TEN[decimals]
         val scaled = (abs(safe) * scale).roundToLong()
         val digits = BigDecimal(scaled).movePointLeft(decimals).toPlainString()
-        return if (safe < 0.0) "-$digits" else digits
+        return if (safe < 0.0 && scaled != 0L) "-$digits" else digits
     }
 
     private fun dmsPart(

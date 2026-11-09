@@ -9,6 +9,7 @@ import android.net.Uri
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.PlatformActions
+import java.util.Locale
 
 /**
  * The Android side of the share seam (T-0210).
@@ -52,8 +53,11 @@ class AndroidPlatformActions(
     }
 
     override fun openUri(uri: String): Outcome<Unit> {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
-        return launch(intent)
+        val parsed = Uri.parse(uri)
+        if (!isAllowedScheme(parsed.scheme)) {
+            return Outcome.Failure(AppError.Unsupported)
+        }
+        return launch(Intent(Intent.ACTION_VIEW, parsed))
     }
 
     private fun launch(intent: Intent): Outcome<Unit> =
@@ -73,3 +77,15 @@ class AndroidPlatformActions(
         const val COPY_FAILED = "platform.copy"
     }
 }
+
+/**
+ * The schemes an `ACTION_VIEW` intent may carry (T-0210).
+ *
+ * This is the second line of defence behind [webUri]: a caller that reaches the
+ * seam with an `intent:`, `file:`, `content:` or `javascript:` URI is refused
+ * before an intent is built. `http`, `https`, `tel`, `mailto` and `geo` are the
+ * only schemes the card and the share commands produce.
+ */
+internal fun isAllowedScheme(scheme: String?): Boolean = scheme?.lowercase(Locale.ROOT) in ALLOWED_OPEN_SCHEMES
+
+private val ALLOWED_OPEN_SCHEMES = setOf("http", "https", "tel", "mailto", "geo")

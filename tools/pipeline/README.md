@@ -243,6 +243,11 @@ ratio expect about 1.9 MB of names and 13 MB of variants. Lviv city is densely
 mapped, so that ratio probably overstates both; only the Lviv city bbox was
 built.
 
+The committed `lviv-addresses` section keeps the bytes T-0204 built, so its
+probe sets stay comparable across tasks. Those bytes do not include this layer;
+rebuild with the command above to add it. The difference is a few hundred
+kilobytes of terms and no change to a Cyrillic query, as the row above shows.
+
 The same 58,160 rows build in 1.60 s instead of 0.75 s (three runs each, peak
 RSS 118 MB instead of 114 MB), and two builds of one input are byte-identical.
 

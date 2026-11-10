@@ -10,7 +10,7 @@ use crate::error::CoreError;
 use crate::features::{OsmElementType, PlaceFeature};
 use crate::fold;
 use crate::index::Index;
-use crate::search::{Cancel, Session, TypoAutomata};
+use crate::search::{Cancel, Session, TypoAutomata, Viewport};
 
 /// The largest result count a caller may ask for.
 const MAX_LIMIT: u32 = 50;
@@ -308,6 +308,56 @@ impl SearchSession {
             Ok(())
         })
     }
+
+    /// Restricts this search box to a north-up viewport (T-0206). The edges are
+    /// inclusive, so a place on the screen edge is a result.
+    pub fn set_viewport(
+        &self,
+        south: f64,
+        west: f64,
+        north: f64,
+        east: f64,
+    ) -> Result<(), CoreError> {
+        let viewport = validate_viewport(south, west, north, east)?;
+        self.with_session(|session| {
+            session.set_viewport(Some(viewport));
+            Ok(())
+        })
+    }
+
+    pub fn clear_viewport(&self) -> Result<(), CoreError> {
+        self.with_session(|session| {
+            session.set_viewport(None);
+            Ok(())
+        })
+    }
+}
+
+fn validate_viewport(
+    south: f64,
+    west: f64,
+    north: f64,
+    east: f64,
+) -> Result<Viewport, CoreError> {
+    if !south.is_finite()
+        || !west.is_finite()
+        || !north.is_finite()
+        || !east.is_finite()
+        || south > north
+        || west > east
+        || !(MIN_LATITUDE..=MAX_LATITUDE).contains(&south)
+        || !(MIN_LATITUDE..=MAX_LATITUDE).contains(&north)
+        || !(MIN_LONGITUDE..=MAX_LONGITUDE).contains(&west)
+        || !(MIN_LONGITUDE..=MAX_LONGITUDE).contains(&east)
+    {
+        return Err(CoreError::InvalidInput);
+    }
+    Ok(Viewport {
+        south,
+        west,
+        north,
+        east,
+    })
 }
 
 fn validate_point(latitude: f64, longitude: f64) -> Result<(f64, f64), CoreError> {

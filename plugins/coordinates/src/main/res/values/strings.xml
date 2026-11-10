@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.coordinates.name">Coordinates</string>
+    <string name="plugin.coordinates.description">Reads a coordinate typed into search and finds the point on the map.</string>
+</resources>

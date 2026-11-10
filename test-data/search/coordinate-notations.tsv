@@ -1,0 +1,55 @@
+# Coordinate notations a search field reads, and near misses it refuses (T-0206).
+#
+# Tab-separated, one row per vector, no header row. The first column says what
+# the row expects:
+#
+#   accept  <text>  <latitude>  <longitude>
+#   refuse  <text>  <why it is not a coordinate>
+#
+# Read by two tests, never copied:
+#   - `plugins/coordinates` parses every accept row and requires every refuse
+#     row to stay refused;
+#   - the app formats each accepted point with `plugins/share` in decimal, DMS
+#     and DDM and parses the result back with `plugins/coordinates`, so the two
+#     directions cannot drift apart.
+#
+# The 18 accept rows are the notations: decimal with and without signs, the
+# hemisphere letters as a prefix and as a suffix, symbols and plain spaces for
+# DMS and DDM, lower case letters, letters attached to the number, negative
+# zero, and a bare DMS pair where the comma alone separates the components.
+# The refuse rows are the forms that must not become a coordinate row: three
+# numbers, a minute or second at 60, an axis out of range, a longitude-first
+# pair, a sign that contradicts its hemisphere, one component alone, and a bare
+# integer pair that is as likely a house number.
+
+accept	49.841740, 24.023910	49.841740	24.023910
+accept	-33.868800, 151.209300	-33.868800	151.209300
+accept	-33.868800, -70.669300	-33.868800	-70.669300
+accept	49.841740 24.023910	49.841740	24.023910
+accept	N 49.841740, E 24.023910	49.841740	24.023910
+accept	49.841740 N, 24.023910 E	49.841740	24.023910
+accept	n 49.841740, e 24.023910	49.841740	24.023910
+accept	49.84174N, 24.02391E	49.841740	24.023910
+accept	49.841740°N, 24.023910°E	49.841740	24.023910
+accept	49°49'18.26"N, 24°01'26.08"E	49.821738888889	24.023911111111
+accept	N 49°49'18.26", E 24°01'26.08"	49.821738888889	24.023911111111
+accept	N 49 49 18.26, E 24 1 26.08	49.821738888889	24.023911111111
+accept	49 49 18.26 N, 24 1 26.08 E	49.821738888889	24.023911111111
+accept	49 49 18.26, 24 1 26.08	49.821738888889	24.023911111111
+accept	49°49.3044'N, 24°01.4346'E	49.821740	24.023910
+accept	N 49 49.3044, E 24 1.4346	49.821740	24.023910
+accept	S 33 52 7.68, E 151 12 33.48	-33.868800	151.209300
+accept	-0.0, -0.0	-0.0	-0.0
+refuse	49 49 18.26	three numbers and no pair separator
+refuse	49°61'00"N, 24°01'26.08"E	minute 61 is outside 0 to 59
+refuse	49°49'60"N, 24°01'26.08"E	second 60 is outside 0 to 59
+refuse	91.0, 24.0	latitude 91 is outside 90
+refuse	49.841740, 181.0	longitude 181 is outside 180
+refuse	12 45	a bare integer pair is as likely a house number
+refuse	12, 45	a bare integer pair with a comma is still a house number
+refuse	49.841740	one component is not a point
+refuse	49.841740, 24.023910, 100	three components are not a pair
+refuse	E 24.023910, N 49.841740	longitude first is refused, never swapped
+refuse	N 49.841740, N 24.023910	two latitudes are not a point
+refuse	-49.841740 N, 24.023910 E	the sign contradicts the north hemisphere
+refuse	львів	ordinary search text

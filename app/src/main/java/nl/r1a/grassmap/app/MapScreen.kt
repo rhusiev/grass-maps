@@ -425,8 +425,12 @@ private fun MapContent(
                             Log.w(TAG, "search result camera move failed: $error")
                         }
                     }
-                    container.showPlaceCard(SearchScreenSession.DEFAULT_INDEX, placeId).onFailure { error ->
-                        Log.w(TAG, "search result card failed: $error")
+                    // A coordinate row is a point, not a place: there is no card
+                    // behind it, so the map moves and no card is opened (T-0206).
+                    if (hit?.isCoordinate != true) {
+                        container.showPlaceCard(SearchScreenSession.DEFAULT_INDEX, placeId).onFailure { error ->
+                            Log.w(TAG, "search result card failed: $error")
+                        }
                     }
                 }
             },

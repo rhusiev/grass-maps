@@ -36,8 +36,6 @@ const val MAX_SEARCH_RESULTS: Int = 50
 private const val CANCEL_POLL_MILLIS: Long = 2L
 private const val NATIVE_LINKAGE_ERROR: String = "places.native"
 private const val ID_SEPARATOR: Char = ':'
-private const val MAX_LATITUDE: Double = 90.0
-private const val MAX_LONGITUDE: Double = 180.0
 
 /**
  * The offline [PlaceProvider] over one region's Rust search section.
@@ -71,12 +69,33 @@ class RustPlaceProvider private constructor(
         if (cancellation.isCancelled()) {
             return Outcome.Failure(AppError.Cancelled)
         }
+        val viewport = context.viewport
+        if (viewport != null && !viewport.isValid()) {
+            return Outcome.Failure(AppError.InvalidInput)
+        }
         return withContext(Dispatchers.Default) {
             sessionMutex.withLock {
                 val active = session ?: index.newSession(null, null).also { session = it }
                 when (val origin = context.position) {
                     null -> active.clearOrigin()
                     else -> active.setOrigin(origin.latitude, origin.longitude)
+                }
+                // "This area" is a property of the search box, not of one
+                // keystroke, so the viewport is set before the query runs and
+                // cleared when the caller stops asking for it (T-0206).
+                when (viewport) {
+                    null -> {
+                        active.clearViewport()
+                    }
+
+                    else -> {
+                        active.setViewport(
+                            viewport.southWest.latitude,
+                            viewport.southWest.longitude,
+                            viewport.northEast.latitude,
+                            viewport.northEast.longitude,
+                        )
+                    }
                 }
                 queryWithCancellation(cancellation) { token ->
                     active.query(query, limit.toUInt(), token).map(::toHit)
@@ -91,7 +110,7 @@ class RustPlaceProvider private constructor(
         limit: Int,
         cancellation: CancellationHandle,
     ): Outcome<List<Place>> {
-        if (limit !in 1..MAX_SEARCH_RESULTS || !isValid(bbox)) {
+        if (limit !in 1..MAX_SEARCH_RESULTS || !bbox.isValid()) {
             return Outcome.Failure(AppError.InvalidInput)
         }
         if (cancellation.isCancelled()) {
@@ -210,18 +229,6 @@ class RustPlaceProvider private constructor(
         }
         return placeId.substring(separator + 1).toUIntOrNull()
     }
-
-    private fun isValid(bbox: BoundingBox): Boolean =
-        bbox.southWest.latitude.isFinite() &&
-            bbox.southWest.longitude.isFinite() &&
-            bbox.northEast.latitude.isFinite() &&
-            bbox.northEast.longitude.isFinite() &&
-            bbox.southWest.latitude in -MAX_LATITUDE..MAX_LATITUDE &&
-            bbox.northEast.latitude in -MAX_LATITUDE..MAX_LATITUDE &&
-            bbox.southWest.longitude in -MAX_LONGITUDE..MAX_LONGITUDE &&
-            bbox.northEast.longitude in -MAX_LONGITUDE..MAX_LONGITUDE &&
-            bbox.southWest.latitude <= bbox.northEast.latitude &&
-            bbox.southWest.longitude <= bbox.northEast.longitude
 
     companion object {
         /**

@@ -44,4 +44,5 @@ include(
     ":plugins:favourites-ui",
     ":plugins:links",
     ":plugins:share",
+    ":plugins:coordinates",
 )

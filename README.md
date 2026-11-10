@@ -200,6 +200,12 @@ shared paged-provider contract suite as test fixtures; `PagedProviderContractSui
 covers limits, paging, ordering, concurrency and cancellation. See
 `tools/pipeline/README.md`.
 
+`test-data/search/coordinate-notations.tsv` is the T-0206 coordinate vector set:
+18 accepted notations with their points and 13 refused near misses with their
+reason. `plugins/coordinates` reads it to prove the parser, and the app's
+`CoordinateRoundTripTest` formats each point through `plugins/share` in all
+three notations and parses it back.
+
 `test-data/styles/bench-light.json` is the phase-A dense bench style. The
 T-0020 spike checks that every layer, filter and expression in it compiles to a
 maplibre-compose layer node. The Standard style keeps that layer list as its
@@ -246,6 +252,7 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/favourites-ui` | the favourites lists state, the create, move, recolour, Home and Work commands, and the browsing search, sorts and description rendering | `plugin-api` |
 | `plugins/links` | the pure `geo:` and osm.org link parsers, including the osm.org short-link decoder | `plugin-api` |
 | `plugins/share` | the decimal, DMS and DDM coordinate notations, the osm.org and `geo:` link builders, and the copy, share and open-in commands | `plugin-api` |
+| `plugins/coordinates` | the coordinate notation parser the search field reads, and the vectors it shares with the formatters | `plugin-api` |
 
 ## Place card
 
@@ -316,6 +323,12 @@ the `OsmType` and `osmId` from `PlaceDetails`. A `geo:` URI is
 `geo:lat,lon?q=lat,lon(label)`, with the label percent-encoded. A place with no
 identity has no element to link, so the choice is a typed `PlaceLink.Geo` for
 the same point and never a guessed osm.org URL.
+
+That is the output direction. The input direction is `plugins/coordinates`
+(T-0206), which reads those three notations plus hemisphere letters and
+symbols; the two modules share `test-data/search/coordinate-notations.tsv`
+rather than a formatting constant, and the app round-trip test proves each
+direction agrees with the other.
 
 The plugin declares four control-allowlisted commands on the default dispatcher:
 `share.copy_coordinates`, `share.share_place`, `share.share_location` and
@@ -767,11 +780,37 @@ it through `MockGpxLocationSource`, follows it, and draws the replacement route.
 
 ## Search seam
 
-`PlaceProvider` in `plugin-api` is the `places.search` 2.0.0 contract:
+`PlaceProvider` in `plugin-api` is the `places.search` 2.1.0 contract:
 `search(query, context, limit, cancel)`, `pois(bbox, categories, limit, cancel)`
 and `details(placeId, cancel)`. `places` implements it over `rust/grass-core`
 through uniffi. The generated Kotlin and every Rust type stay inside `places`
 (package `nl.r1a.grassmap.places.core`); no plugin imports them.
+
+Version 2.1.0 makes `SearchContext.viewport` a filter rather than a ranking
+bias and adds `PlaceHit.isCoordinate`. No shipped provider implemented the
+2.0.0 wording. When the caller searches "this area", every hit the provider
+returns is inside the box, edges included: `BoundingBox.contains` is inclusive,
+and the Rust session filters candidates before it applies the result limit, so
+an out-of-view place cannot consume one of the limit's slots. A box that is not
+finite, ordered or inside WGS84 is `InvalidInput`. `MapHost.visibleBounds()` is
+the seam for the bounds themselves; the map reports the north-up box that
+covers the rotated viewport, and null before it has a size.
+
+A coordinate typed into the search field is one result row at that point.
+`plugins/coordinates` owns the parser, and `PlacesAccess` asks it before it
+opens a section, so the row appears on a device with no region installed and a
+point outside the installed region still shows and still moves the map. The
+row carries `isCoordinate` and no category, address or brand: nothing about it
+comes from an index, so `details` has no record behind its id and the shell
+moves the camera instead of opening a card. The parser reads decimal, DMS and
+DDM with explicit signs or hemisphere letters, as a prefix or a suffix, with
+symbols or plain spaces. `test-data/search/coordinate-notations.tsv` lists the
+accepted notations and the near misses that must stay refused: three numbers, a
+minute or second at 60, an axis out of range, a longitude-first pair, a sign
+that contradicts its hemisphere, and a bare integer pair that is as likely a
+house number. The same file drives an app test that formats every accepted
+point with `plugins/share` in all three notations and parses it back, so the
+writing and reading directions cannot drift apart.
 
 `details` returns `PlaceDetails`: the place record plus its canonical OSM
 `osmType` and `osmId` and its raw `tags` map. Those come from the region
@@ -874,7 +913,16 @@ never replace a newer one.
 The list and the markers are two views of one result set. `searchResultView`
 maps the hits once, and the screen draws its `rows` and its `markers` from that
 one value. Tapping a row moves the camera to the place and opens the place card
-through the same `PlaceCardAccess` path the debug command uses.
+through the same `PlaceCardAccess` path the debug command uses. A coordinate
+row is the exception: it has no card behind it, so `MapScreen` moves the camera
+and opens nothing when `PlaceHit.isCoordinate` is set (T-0206).
+
+A keystroke may also carry `viewport` as `{"south": .., "west": .., "north":
+.., "east": ..}`. That is "search this area": the provider keeps only results
+inside the box, so the list and the markers never show a place off the map.
+The shell asks `MapHost.visibleBounds()` for the bounds; the command parameter
+and the provider filter are the seam, and the on-screen control that turns the
+option on belongs to the search screen.
 
 Markers draw as a Compose overlay above the map surface, not as a style layer.
 `SearchMarkerProjection` uses `WebMercator`'s two constants and the camera

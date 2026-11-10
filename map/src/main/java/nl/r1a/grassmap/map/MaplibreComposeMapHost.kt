@@ -398,6 +398,20 @@ class MaplibreComposeMapHost internal constructor(
             Outcome.Success(Unit)
         }
 
+    override suspend fun visibleBounds(): BoundingBox? =
+        withContext(Dispatchers.Main.immediate) {
+            // Null while the map has no viewport yet. `getVisibleBounds` keeps
+            // longitudes continuous across the repeated world; `toBoundingBox`
+            // wraps them into the RFC 7946 form, and a box that crosses the
+            // antimeridian comes back with east < west, which is not a viewport
+            // this filter can express, so it is reported as "not yet".
+            val engine = state.getVisibleBounds()?.toBoundingBox() ?: return@withContext null
+            BoundingBox(
+                southWest = GeoPoint(engine.south, engine.west),
+                northEast = GeoPoint(engine.north, engine.east),
+            ).takeIf { it.isValid() }
+        }
+
     override suspend fun moveCamera(update: CameraUpdate): Outcome<Unit> =
         withContext(Dispatchers.Main.immediate) {
             state.setCameraPosition(state.cameraPosition.apply(update))

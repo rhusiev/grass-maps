@@ -60,6 +60,11 @@ internal class FakeMapHost(
 
     override suspend fun removeLayer(layer: LayerId): Outcome<Unit> = Outcome.Success(Unit)
 
+    /** The bounds a test asks "search this area" for; null until one is set. */
+    var stubbedBounds: BoundingBox? = null
+
+    override suspend fun visibleBounds(): BoundingBox? = stubbedBounds
+
     override suspend fun moveCamera(update: CameraUpdate): Outcome<Unit> {
         moves += update
         cameraState.value = cameraState.value.applied(update)

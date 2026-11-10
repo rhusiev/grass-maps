@@ -56,14 +56,21 @@ interface PlaceProvider : Provider {
 
 object PlaceProviderContract {
     const val NAME: String = "places.search"
-    const val VERSION: String = "2.0.0"
+
+    /**
+     * 2.1.0 makes [SearchContext.viewport] a filter rather than a ranking bias
+     * and adds [PlaceHit.isCoordinate]. No provider in the tree implemented the
+     * 2.0.0 wording, so nothing that shipped changes behaviour.
+     */
+    const val VERSION: String = "2.1.0"
 
     val REFERENCE: ProviderContract = ProviderContract(NAME, VERSION)
 }
 
 /**
- * What the caller lets the provider know. [viewport] biases ranking towards the
- * visible area, [language] selects name and address wording, and [position] is
+ * What the caller lets the provider know. [viewport] restricts the result set
+ * to the visible area and every returned hit is inside it, edges included
+ * (T-0206); [language] selects name and address wording; and [position] is
  * null whenever the caller does not allow location use.
  */
 data class SearchContext(
@@ -83,6 +90,12 @@ data class SearchContext(
  * carries, null when it has none. The shell shows [brand] in preference to
  * [kind] when the place has no address, so a branch reads its brand rather
  * than "shop=supermarket".
+ *
+ * [isCoordinate] marks a row the caller typed as a coordinate rather than a
+ * place the index found (T-0206). Such a row is a point: [kind] is empty, there
+ * is no [address] or [brand], and [PlaceProvider.details] has no record behind
+ * its [id]. The shell moves the map to [position] and does not open a place
+ * card for it.
  */
 data class PlaceHit(
     val id: String,
@@ -93,6 +106,7 @@ data class PlaceHit(
     val regionBuild: String,
     val score: Float,
     val brand: String? = null,
+    val isCoordinate: Boolean = false,
 )
 
 /**

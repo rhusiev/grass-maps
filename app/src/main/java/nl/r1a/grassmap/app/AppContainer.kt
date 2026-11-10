@@ -43,6 +43,7 @@ import nl.r1a.grassmap.plugin.api.service.NetworkGate
 import nl.r1a.grassmap.plugin.api.service.PrivacySwitches
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.api.service.SystemClock
+import nl.r1a.grassmap.plugins.coordinates.Coordinates
 import nl.r1a.grassmap.plugins.dev.tools.DevToolsContract
 import nl.r1a.grassmap.plugins.map.controls.CameraModeController
 import nl.r1a.grassmap.plugins.map.controls.MapControls
@@ -160,9 +161,17 @@ class AppContainer(
         }
     }
 
-    /** The offline search indexes over the app's external files directory. */
+    /**
+     * The offline search indexes over the app's external files directory, with
+     * the coordinate parser in front of them (T-0206): a typed coordinate is a
+     * result row even when no index is installed.
+     */
     val places: PlacesAccess by lazy {
-        PlacesAccess(searchFilesProvider(), log = { message -> Log.i(SEARCH_TAG, message) })
+        PlacesAccess(
+            externalFilesRoot = searchFilesProvider(),
+            coordinateParser = Coordinates.parser,
+            log = { message -> Log.i(SEARCH_TAG, message) },
+        )
     }
 
     /**

@@ -214,6 +214,8 @@ class CameraModeControllerTest {
 
         override suspend fun removeLayer(layer: LayerId): Outcome<Unit> = Outcome.Success(Unit)
 
+        override suspend fun visibleBounds(): BoundingBox? = null
+
         override suspend fun moveCamera(update: CameraUpdate): Outcome<Unit> {
             moves += update
             state.value =

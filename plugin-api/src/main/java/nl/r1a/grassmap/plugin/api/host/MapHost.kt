@@ -51,6 +51,16 @@ interface MapHost {
     /** Removes one layer by id. */
     suspend fun removeLayer(layer: LayerId): Outcome<Unit>
 
+    /**
+     * The bounds of the visible map area, or null before the map has a size.
+     *
+     * This is what "search this area" sends as `SearchContext.viewport`
+     * (T-0206). The engine reports the north-up box that covers the rotated
+     * viewport, so a result inside it is visible whatever the bearing. The
+     * edges are inclusive.
+     */
+    suspend fun visibleBounds(): BoundingBox?
+
     suspend fun moveCamera(update: CameraUpdate): Outcome<Unit>
 
     suspend fun animateCamera(update: CameraUpdate): Outcome<Unit>

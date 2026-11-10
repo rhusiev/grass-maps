@@ -19,6 +19,7 @@ import nl.r1a.grassmap.plugin.api.command.CommandResult
 import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.model.BoundingBox
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.provider.SearchContext
 import java.util.concurrent.TimeUnit
@@ -57,10 +58,12 @@ private val REPLAY_POLICY: CommandPolicy =
 /**
  * One search keystroke from the screen (T-0203).
  *
- * Parameters: `query`, `sequence`, and optionally `index`, `limit`, `position`
- * and `clear`. A blank query or `clear: true` empties the screen without
- * reaching the provider. The result is a one-line summary; the screen itself
- * reads [SearchScreenSession.state].
+ * Parameters: `query`, `sequence`, and optionally `index`, `limit`, `position`,
+ * `viewport` and `clear`. `viewport` is `{"south": .., "west": .., "north": ..,
+ * "east": ..}` and restricts every result to the visible map area, which is
+ * "search this area" (T-0206). A blank query or `clear: true` empties the
+ * screen without reaching the provider. The result is a one-line summary; the
+ * screen itself reads [SearchScreenSession.state].
  */
 class SearchScreenCommand(
     private val session: SearchScreenSession,
@@ -68,7 +71,7 @@ class SearchScreenCommand(
         id = SEARCH_SCREEN_COMMAND,
         paramsSerializer = JsonElement.serializer(),
         resultSerializer = String.serializer(),
-        doc = "Sends one search screen keystroke. Parameters: query, sequence, and optionally index, limit, position or clear.",
+        doc = "Sends one search screen keystroke. Parameters: query, sequence, and optionally index, limit, position, viewport or clear.",
         policy = SCREEN_POLICY,
     ) {
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
@@ -113,7 +116,18 @@ class SearchScreenCommand(
                 val longitude = (point["lon"] as? JsonPrimitive)?.doubleOrNull ?: return null
                 GeoPoint(latitude, longitude)
             }
-        return Request(query ?: "", sequence, index, limit, SearchContext(position = position), clear)
+        val viewport =
+            (json[PARAM_VIEWPORT] as? JsonObject)?.let { box ->
+                val south = (box["south"] as? JsonPrimitive)?.doubleOrNull ?: return null
+                val west = (box["west"] as? JsonPrimitive)?.doubleOrNull ?: return null
+                val north = (box["north"] as? JsonPrimitive)?.doubleOrNull ?: return null
+                val east = (box["east"] as? JsonPrimitive)?.doubleOrNull ?: return null
+                BoundingBox(
+                    southWest = GeoPoint(south, west),
+                    northEast = GeoPoint(north, east),
+                ).takeIf { it.isValid() } ?: return null
+            }
+        return Request(query ?: "", sequence, index, limit, SearchContext(viewport = viewport, position = position), clear)
     }
 
     private data class Request(
@@ -131,6 +145,7 @@ class SearchScreenCommand(
         const val PARAM_INDEX = "index"
         const val PARAM_LIMIT = "limit"
         const val PARAM_POSITION = "position"
+        const val PARAM_VIEWPORT = "viewport"
         const val PARAM_CLEAR = "clear"
     }
 }
@@ -145,8 +160,8 @@ class SearchScreenCommand(
  * keystroke budget rather than a raw index timing.
  *
  * Parameters: `queries` (array of strings, required), and optionally `index`,
- * `limit`, `position`, `runs`. Runs are pooled; the first keystroke of the
- * first run is reported separately because it pays the cold index open.
+ * `limit`, `position`, `viewport`, `runs`. Runs are pooled; the first keystroke
+ * of the first run is reported separately because it pays the cold index open.
  */
 class ReplaySearchCommand(
     private val session: SearchScreenSession,
@@ -155,7 +170,9 @@ class ReplaySearchCommand(
         id = SEARCH_REPLAY_COMMAND,
         paramsSerializer = JsonElement.serializer(),
         resultSerializer = String.serializer(),
-        doc = "Types queries letter by letter and reports p50/p95/p99 per keystroke. Parameters: queries, index, limit, runs.",
+        doc =
+            "Types queries letter by letter and reports p50/p95/p99 per keystroke. " +
+                "Parameters: queries, index, limit, position, viewport, runs.",
         policy = REPLAY_POLICY,
     ) {
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
@@ -233,7 +250,18 @@ class ReplaySearchCommand(
                 val longitude = (point["lon"] as? JsonPrimitive)?.doubleOrNull ?: return null
                 GeoPoint(latitude, longitude)
             }
-        return Request(queries, index, limit, SearchContext(position = position), runs)
+        val viewport =
+            (json[PARAM_VIEWPORT] as? JsonObject)?.let { box ->
+                val south = (box["south"] as? JsonPrimitive)?.doubleOrNull ?: return null
+                val west = (box["west"] as? JsonPrimitive)?.doubleOrNull ?: return null
+                val north = (box["north"] as? JsonPrimitive)?.doubleOrNull ?: return null
+                val east = (box["east"] as? JsonPrimitive)?.doubleOrNull ?: return null
+                BoundingBox(
+                    southWest = GeoPoint(south, west),
+                    northEast = GeoPoint(north, east),
+                ).takeIf { it.isValid() } ?: return null
+            }
+        return Request(queries, index, limit, SearchContext(viewport = viewport, position = position), runs)
     }
 
     private data class Request(
@@ -249,6 +277,7 @@ class ReplaySearchCommand(
         const val PARAM_INDEX = "index"
         const val PARAM_LIMIT = "limit"
         const val PARAM_POSITION = "position"
+        const val PARAM_VIEWPORT = "viewport"
         const val PARAM_RUNS = "runs"
         const val MAX_REPLAY_RUNS = 20
     }

@@ -391,10 +391,10 @@ fn lat_lon(record: &PlaceRecord) -> (f64, f64) {
 fn score_place(
     index: &Index,
     place: u32,
+    record: &PlaceRecord,
     words: &[Arc<WordMatches>],
     origin: Option<(f64, f64)>,
 ) -> Result<f32, CoreError> {
-    let record = index.place(place)?;
     let mut sum = 0.0;
     let mut used = 0;
     let mut exact_name_words = 0;
@@ -519,8 +519,31 @@ pub struct Session {
     index: Arc<Index>,
     typos: Arc<TypoAutomata>,
     pub origin: Option<(f64, f64)>,
+    pub viewport: Option<Viewport>,
     pub reuse_words: bool,
     previous: FastMap<String, Arc<WordMatches>>,
+}
+
+/// The visible map area a query is restricted to, in degrees (T-0206).
+///
+/// The search provider sets it while the caller searches "this area", so a
+/// result outside the map is never offered. The edges are inclusive: a place
+/// exactly on a screen edge is visible and is inside.
+#[derive(Clone, Copy, Debug)]
+pub struct Viewport {
+    pub south: f64,
+    pub west: f64,
+    pub north: f64,
+    pub east: f64,
+}
+
+impl Viewport {
+    pub fn contains(&self, latitude: f64, longitude: f64) -> bool {
+        latitude >= self.south
+            && latitude <= self.north
+            && longitude >= self.west
+            && longitude <= self.east
+    }
 }
 
 impl Session {
@@ -529,6 +552,7 @@ impl Session {
             index,
             typos,
             origin,
+            viewport: None,
             reuse_words: true,
             previous: FastMap::default(),
         }
@@ -540,6 +564,10 @@ impl Session {
 
     pub fn set_origin(&mut self, origin: Option<(f64, f64)>) {
         self.origin = origin;
+    }
+
+    pub fn set_viewport(&mut self, viewport: Option<Viewport>) {
+        self.viewport = viewport;
     }
 
     /// Results for `text`; [CoreError::Cancelled] when the token was set.
@@ -594,10 +622,26 @@ impl Session {
         if cancel.is_cancelled() {
             return Err(CoreError::Cancelled);
         }
-        let mut scored: Vec<(f32, u32)> = candidates
-            .iter()
-            .map(|&p| Ok((score_place(&self.index, p, &resolved, self.origin)?, p)))
-            .collect::<Result<_, CoreError>>()?;
+        let mut scored: Vec<(f32, u32)> = Vec::with_capacity(candidates.len());
+        for &place in &candidates {
+            let record = self.index.place(place)?;
+            // The viewport is a filter, not a bonus: a place outside the map is
+            // not a result at all, and it must not consume one of the `limit`
+            // slots that an in-bounds place would have taken.
+            if let Some(viewport) = self.viewport {
+                let (latitude, longitude) = lat_lon(&record);
+                if !viewport.contains(latitude, longitude) {
+                    continue;
+                }
+            }
+            scored.push((
+                score_place(&self.index, place, &record, &resolved, self.origin)?,
+                place,
+            ));
+        }
+        if cancel.is_cancelled() {
+            return Err(CoreError::Cancelled);
+        }
         let pool = COLLAPSE_POOL.min(scored.len());
         if pool < scored.len() {
             scored.select_nth_unstable_by(pool, |a, b| b.0.total_cmp(&a.0));
@@ -634,5 +678,20 @@ mod tests {
         let prefix = term_quality(&word, "славського");
         let typo = term_quality(&word, "славсъко");
         assert!(exact > prefix && prefix > typo, "{exact} {prefix} {typo}");
+    }
+
+    #[test]
+    fn viewport_edges_are_inclusive() {
+        let viewport = Viewport {
+            south: 49.8,
+            west: 24.0,
+            north: 49.9,
+            east: 24.1,
+        };
+        assert!(viewport.contains(49.8, 24.0));
+        assert!(viewport.contains(49.9, 24.1));
+        assert!(viewport.contains(49.85, 24.05));
+        assert!(!viewport.contains(49.7999, 24.05));
+        assert!(!viewport.contains(49.85, 24.1001));
     }
 }

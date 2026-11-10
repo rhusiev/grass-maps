@@ -110,22 +110,28 @@ English forms. Add one line and run `cargo test --locked` in
 Do not edit the table to fix a single place's name: that is name data and
 belongs in OSM.
 
-Measured on the Lviv city fixture (58,160 rows, the committed
-`places/src/test/resources/search/lviv-addresses`), same extractor snapshot
-and one build per column. The two changes are separated so each cost is
-visible; the baseline is the committed section before T-0204.
+Measured on the Lviv city fixture (58,160 rows), same extractor snapshot, one
+build per row of the table. The committed section is the baseline, but it was
+built before the builder's house-number folding took effect in the committed
+bytes: it still carries terms such as `10а` and `100х100` beside the folded
+`10a` and `100x100`. That drift is older than T-0204, so it is measured on its
+own row and not charged to the synonym layer.
 
-| Build | Search section | `terms.fst` | `postings.bin` | `features.bin` |
-|---|---|---|---|---|
-| Baseline (committed) | 3,974,199 B | 131,357 B | 407,673 B | 4,823,038 B |
-| Abbreviations only | 3,958,783 B (-15,416 B, -0.39%) | 130,702 B | 392,912 B | unchanged |
-| Abbreviations and brand aliases | 3,967,210 B (-6,989 B, -0.18%) | 133,311 B | 398,730 B | 5,015,181 B (+192,143 B, +3.98%) |
+| Build | Search section | Terms | `terms.fst` | `postings.bin` | `features.bin` |
+|---|---|---|---|---|---|
+| Committed section | 3,974,199 B | 13,162 | 131,357 B | 407,673 B | 4,823,038 B |
+| Current builder, no abbreviations, no brand aliases | 3,959,552 B (-14,647 B) | 13,016 | 131,453 B | 392,930 B | unchanged |
+| Plus abbreviations | 3,958,783 B (-769 B, -0.02%) | 13,014 | 130,702 B | 392,912 B | unchanged |
+| Plus brand aliases (the fixture now committed) | 3,967,210 B (+8,427 B, +0.21%) | 13,311 | 133,311 B | 398,730 B | 5,015,181 B (+192,143 B, +3.98%) |
 
-The synonym layer costs no index bytes for kinds and slightly shrinks the
-section for abbreviations: a name "вул. X" no longer leaves the short word as
-its own term, and "вулиця" is already in the vocabulary. Brand aliases add
-8,427 B to the search section; the brand and operator tags that the result row
-reads add 192,143 B to `features.bin`. The whole Ukraine extract has 928,666
+Against the same data without the layer, T-0204 adds 7,658 B (0.19%) to the
+search section: -769 B from abbreviations and +8,427 B from brand aliases. The
+synonym layer costs no index bytes for kinds. Abbreviations shrink the section
+because a name "вул. X" no longer leaves the short word as its own term and
+"вулиця" is already in the vocabulary; the 751-byte drop in `terms.fst` is the
+two terms `вул` and `пл` disappearing. Brand aliases add 297 distinct terms.
+The brand and operator tags that the result row reads add 192,143 B to
+`features.bin`, on top of the search section. The whole Ukraine extract has 928,666
 place rows against Lviv city's 23,086 (about 40 times), so by row ratio expect
 roughly 0.34 MB of brand aliases and 7.7 MB of feature tags for the country.
 That is an estimate from the row ratio, not a measured whole-country run; only

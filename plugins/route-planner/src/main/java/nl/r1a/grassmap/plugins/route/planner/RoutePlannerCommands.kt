@@ -73,6 +73,71 @@ class SetRoutePlanPointCommand(
     }
 }
 
+/** Adds one intermediate stop after the last via and routes the chain. */
+class AddRoutePlanViaCommand(
+    private val session: RoutePlannerSession,
+) : Command<JsonElement, RoutePlanState>(
+        id = RoutePlannerContract.addVia,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = RoutePlanState.serializer(),
+        doc = "Adds an intermediate stop. Parameters: lat, lon, and optionally label.",
+        policy = PLANNER_POLICY,
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<RoutePlanState>> {
+        val latitude = params.number(PARAM_LAT) ?: return Outcome.Failure(AppError.InvalidInput)
+        val longitude = params.number(PARAM_LON) ?: return Outcome.Failure(AppError.InvalidInput)
+        return result(session.addVia(GeoPoint(latitude, longitude), params.text(PARAM_LABEL)))
+    }
+
+    private companion object {
+        const val PARAM_LAT = "lat"
+        const val PARAM_LON = "lon"
+        const val PARAM_LABEL = "label"
+    }
+}
+
+/** Removes one intermediate stop by position and routes the shorter chain. */
+class RemoveRoutePlanViaCommand(
+    private val session: RoutePlannerSession,
+) : Command<JsonElement, RoutePlanState>(
+        id = RoutePlannerContract.removeVia,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = RoutePlanState.serializer(),
+        doc = "Removes the intermediate stop at a zero-based position. Parameter: index.",
+        policy = PLANNER_POLICY,
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<RoutePlanState>> {
+        val index = params.integer(PARAM_INDEX) ?: return Outcome.Failure(AppError.InvalidInput)
+        return result(session.removeVia(index))
+    }
+
+    private companion object {
+        const val PARAM_INDEX = "index"
+    }
+}
+
+/** Moves one intermediate stop to another position and routes the new order. */
+class MoveRoutePlanViaCommand(
+    private val session: RoutePlannerSession,
+) : Command<JsonElement, RoutePlanState>(
+        id = RoutePlannerContract.moveVia,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = RoutePlanState.serializer(),
+        doc = "Moves the intermediate stop at from to position to. Parameters: from, to.",
+        policy = PLANNER_POLICY,
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<RoutePlanState>> {
+        val from = params.integer(PARAM_FROM) ?: return Outcome.Failure(AppError.InvalidInput)
+        val to = params.integer(PARAM_TO) ?: return Outcome.Failure(AppError.InvalidInput)
+        return result(session.moveVia(from, to))
+    }
+
+    private companion object {
+        const val PARAM_FROM = "from"
+        const val PARAM_TO = "to"
+    }
+}
+
 /** Requests the current pair again. */
 class PlanRouteCommand(
     private val session: RoutePlannerSession,

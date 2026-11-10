@@ -8,6 +8,7 @@ import kotlinx.serialization.json.put
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess
+import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
 import org.junit.Assert.assertEquals
@@ -18,7 +19,7 @@ import org.junit.Test
 /** The route planner plugin (T-0302): registration, commands and the stream. */
 class RoutePlannerPluginTest {
     @Test
-    fun activationDeclaresSevenCommandsAndOneStateStream() =
+    fun activationDeclaresTenCommandsAndOneStateStream() =
         runTest {
             val context = context()
             val plugin = RoutePlannerPlugin()
@@ -202,6 +203,136 @@ class RoutePlannerPluginTest {
             )
         }
 
+    @Test
+    fun aViaChainGoesOutAsOneOrderedRequestAndKeepsItsNames() =
+        runTest {
+            val engine = FakeEngine()
+            val context = context(engine)
+            RoutePlannerPlugin().activate(context)
+            context.command(RoutePlannerContract.begin).invokeRaw(JsonObject(emptyMap()))
+            context.command(RoutePlannerContract.setPoint).invokeRaw(point("start", 49.8290, 23.9520))
+            context.command(RoutePlannerContract.addVia).invokeRaw(via("Cafe", 49.8330, 23.9700))
+            context.command(RoutePlannerContract.addVia).invokeRaw(via("Museum", 49.8370, 23.9900))
+
+            val routed =
+                context
+                    .command(RoutePlannerContract.setPoint)
+                    .invokeRaw(point("destination", 49.8420, 24.0320))
+
+            assertTrue(routed is Outcome.Success)
+            val request = engine.requests.last()
+            assertEquals(
+                listOf(
+                    GeoPoint(49.8290, 23.9520),
+                    GeoPoint(49.8330, 23.9700),
+                    GeoPoint(49.8370, 23.9900),
+                    GeoPoint(49.8420, 24.0320),
+                ),
+                request.waypoints,
+            )
+            assertEquals(
+                listOf("Cafe", "Museum"),
+                context
+                    .state()
+                    .value.vias
+                    .map { stop -> stop.label },
+            )
+            assertEquals(RoutePlanStatus.Ready, context.state().value.status)
+        }
+
+    @Test
+    fun movingAndRemovingAViaRoutesTheNewChainAndKeepsTheLabelsInOrder() =
+        runTest {
+            val engine = FakeEngine()
+            val context = context(engine)
+            RoutePlannerPlugin().activate(context)
+            context.command(RoutePlannerContract.begin).invokeRaw(JsonObject(emptyMap()))
+            context.command(RoutePlannerContract.setPoint).invokeRaw(point("start", 49.8290, 23.9520))
+            context.command(RoutePlannerContract.addVia).invokeRaw(via("Cafe", 49.8330, 23.9700))
+            context.command(RoutePlannerContract.addVia).invokeRaw(via("Museum", 49.8370, 23.9900))
+            context.command(RoutePlannerContract.setPoint).invokeRaw(point("destination", 49.8420, 24.0320))
+
+            context.command(RoutePlannerContract.moveVia).invokeRaw(JsonObject(mapOf("from" to JsonPrimitive(0), "to" to JsonPrimitive(1))))
+
+            assertEquals(
+                listOf("Museum", "Cafe"),
+                context
+                    .state()
+                    .value.vias
+                    .map { stop -> stop.label },
+            )
+            assertEquals(
+                listOf(
+                    GeoPoint(49.8290, 23.9520),
+                    GeoPoint(49.8370, 23.9900),
+                    GeoPoint(49.8330, 23.9700),
+                    GeoPoint(49.8420, 24.0320),
+                ),
+                engine.requests.last().waypoints,
+            )
+
+            context.command(RoutePlannerContract.removeVia).invokeRaw(JsonObject(mapOf("index" to JsonPrimitive(0))))
+
+            assertEquals(
+                listOf("Cafe"),
+                context
+                    .state()
+                    .value.vias
+                    .map { stop -> stop.label },
+            )
+            assertEquals(
+                3,
+                engine.requests
+                    .last()
+                    .waypoints.size,
+            )
+            assertEquals(RoutePlanStatus.Ready, context.state().value.status)
+        }
+
+    @Test
+    fun aViaCommandWithoutCoordinatesOrWithABadIndexIsInvalidInput() =
+        runTest {
+            val context = context()
+            RoutePlannerPlugin().activate(context)
+            context.command(RoutePlannerContract.begin).invokeRaw(JsonObject(emptyMap()))
+
+            assertEquals(
+                Outcome.Failure(AppError.InvalidInput),
+                context.command(RoutePlannerContract.addVia).invokeRaw(JsonObject(mapOf("lat" to JsonPrimitive(49.8330)))),
+            )
+            assertEquals(
+                Outcome.Failure(AppError.InvalidInput),
+                context.command(RoutePlannerContract.removeVia).invokeRaw(JsonObject(mapOf("index" to JsonPrimitive(0)))),
+            )
+            assertEquals(
+                Outcome.Failure(AppError.InvalidInput),
+                context
+                    .command(RoutePlannerContract.moveVia)
+                    .invokeRaw(JsonObject(mapOf("from" to JsonPrimitive(0), "to" to JsonPrimitive(1)))),
+            )
+        }
+
+    @Test
+    fun clearDropsTheViasAsWellAsTheEnds() =
+        runTest {
+            val context = context()
+            RoutePlannerPlugin().activate(context)
+            context.command(RoutePlannerContract.begin).invokeRaw(JsonObject(emptyMap()))
+            context.command(RoutePlannerContract.setPoint).invokeRaw(point("start", 49.8290, 23.9520))
+            context.command(RoutePlannerContract.addVia).invokeRaw(via("Cafe", 49.8330, 23.9700))
+            context.command(RoutePlannerContract.setPoint).invokeRaw(point("destination", 49.8420, 24.0320))
+
+            context.command(RoutePlannerContract.clear).invokeRaw(JsonObject(emptyMap()))
+
+            assertTrue(
+                context
+                    .state()
+                    .value.vias
+                    .isEmpty(),
+            )
+            assertEquals(RoutePlanStatus.Idle, context.state().value.status)
+        }
+
     private fun context(
         engine: FakeEngine = FakeEngine(),
         access: RoutingEngineAccess = RoutingEngineAccess { Outcome.Success(engine) },
@@ -217,5 +348,16 @@ class RoutePlannerPluginTest {
             put("lat", lat)
             put("lon", lon)
             put("label", role)
+        }
+
+    private fun via(
+        label: String,
+        lat: Double,
+        lon: Double,
+    ): JsonObject =
+        buildJsonObject {
+            put("label", label)
+            put("lat", lat)
+            put("lon", lon)
         }
 }

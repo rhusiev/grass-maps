@@ -260,7 +260,7 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/share` | the decimal, DMS and DDM coordinate notations, the osm.org and `geo:` link builders, and the copy, share and open-in commands | `plugin-api` |
 | `plugins/coordinates` | the coordinate notation parser the search field reads, and the vectors it shares with the formatters | `plugin-api` |
 | `plugins/valhalla` | the v1 `routing.engine` provider: profile mapping, the native Valhalla adapter, the async segment attributes | `plugin-api` |
-| `plugins/route-planner` | the start/end plan, its commands and its state stream; the shell draws the preview from it | `plugin-api`, `routing` |
+| `plugins/route-planner` | the start/end plan, its intermediate stops, its commands and its state stream; the shell draws the preview from it | `plugin-api`, `routing` |
 
 ## Place card
 
@@ -773,16 +773,24 @@ synthetic DataSource for cost modifiers and routes again. Valhalla takes a
 multiplier as `linear_cost_factors`; when the synthetic line has no graph edges
 near it, the adapter retries with `exclude_polygons` around the same line.
 
-`routing.RoutePlanner` is the start/end planning state (T-0302): two points in,
-one `RouteRequest` out, the engine's own list as selectable options, and a swap
-that routes the reversed pair rather than reversing a line. `plugins/route-planner`
-owns the commands and the `route.planner.state` stream; it resolves the engine
-through `RoutingEngineAccess` in `plugin-api`, never by naming the provider. The
-map picks points with its long press and with a search result; `ui-shell` draws
-the preview from the stream and `MapHost.setRoute` draws the selected option plus
-its two ends. The preview derivation, `routePlanPreview` in `ui-shell`, returns
-exactly four entries: time, distance, arrival and Start. The response vectors
-and the reverse-route evidence are in `test-data/routing/README.md`.
+`routing.RoutePlanner` is the planning state (T-0302), with intermediate stops
+(T-0303): a start, its vias in visit order and a destination go in as one
+`RouteRequest`, the engine's own list comes back as selectable options, and a
+swap routes the reversed journey with the via order reversed rather than
+reversing a line. `add_via`, `remove_via` and `move_via` edit the chain and ask
+the engine again, so a reorder changes the drawn line and not only the list.
+`plugins/route-planner` owns the commands and the `route.planner.state` stream;
+it resolves the engine through `RoutingEngineAccess` in `plugin-api`, never by
+naming the provider. The map picks points with its long press and with a search
+result; `ui-shell` draws the preview from the stream and `MapHost.setRoute`
+draws the selected option plus its two ends. The preview derivation,
+`routePlanPreview` in `ui-shell`, returns exactly four entries - time, distance,
+arrival and Start - for a route with vias as well, all four being totals of the
+whole chain. `app` converts a stored favourite and a search result into a stop
+with `Favourite.toRouteStop` and `PlaceHit.toRouteStop`, keeping the source's
+coordinate and name. The response vectors, the ten-metre measurements per
+profile and the reorder and removal evidence are in
+`test-data/routing/README.md`.
 
 ## Navigation seam
 

@@ -41,6 +41,18 @@ class RoutePlannerSession(
         label: String?,
     ): Outcome<RoutePlanState> = planner.setPoint(role, RoutePlanPoint(position, label.orEmpty()))
 
+    suspend fun addVia(
+        position: GeoPoint,
+        label: String?,
+    ): Outcome<RoutePlanState> = planner.addVia(RoutePlanPoint(position, label.orEmpty()))
+
+    suspend fun removeVia(index: Int): Outcome<RoutePlanState> = planner.removeVia(index)
+
+    suspend fun moveVia(
+        from: Int,
+        to: Int,
+    ): Outcome<RoutePlanState> = planner.moveVia(from, to)
+
     suspend fun plan(): Outcome<RoutePlanState> = planner.plan()
 
     suspend fun swap(): Outcome<RoutePlanState> = planner.swap()

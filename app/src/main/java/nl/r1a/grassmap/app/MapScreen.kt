@@ -74,6 +74,7 @@ import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
 import nl.r1a.grassmap.plugin.api.model.FavouriteSort
 import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanRole
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
@@ -693,16 +694,15 @@ private suspend fun setPlanPoint(
     position: GeoPoint,
     label: String?,
 ) {
-    invokePlannerCommand(
-        container,
-        RoutePlannerContract.setPoint,
+    val stop = routeStopParams(RoutePlanPoint(position, label.orEmpty()))
+    val params =
         buildJsonObject {
             put("role", if (role == RoutePlanRole.Start) "start" else "destination")
-            put("lat", position.latitude)
-            put("lon", position.longitude)
-            label?.let { put("label", it) }
-        },
-    )
+            for ((key, value) in stop) {
+                put(key, value)
+            }
+        }
+    invokePlannerCommand(container, RoutePlannerContract.setPoint, params)
 }
 
 private suspend fun invokePlannerCommand(

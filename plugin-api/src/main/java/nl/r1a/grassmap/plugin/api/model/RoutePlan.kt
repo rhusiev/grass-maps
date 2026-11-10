@@ -3,8 +3,9 @@ package nl.r1a.grassmap.plugin.api.model
 import kotlinx.serialization.Serializable
 
 /**
- * The two ends of a planned route. A later task adds vias; the role keeps the
- * swap operation unambiguous until then.
+ * The two ends of a planned route. The role keeps the swap operation
+ * unambiguous; a via is an intermediate stop and is addressed by its index in
+ * [RoutePlanState.vias] instead.
  */
 @Serializable
 enum class RoutePlanRole {
@@ -12,7 +13,7 @@ enum class RoutePlanRole {
     Destination,
 }
 
-/** One end of a planned route, with the text the user picked it from. */
+/** One end or stop of a planned route, with the text the user picked it from. */
 @Serializable
 data class RoutePlanPoint(
     val position: GeoPoint,
@@ -46,12 +47,18 @@ data class RoutePlanOption(
 )
 
 /**
- * The whole planning state a route-planner plugin publishes (T-0302).
+ * The whole planning state a route-planner plugin publishes (T-0302, vias in
+ * T-0303).
  *
  * [generation] increments on every successful route request, so a repeated
  * route with unchanged geometry still refits the camera. [selectedIndex] picks
  * one of [options]; the list is the engine's answer in its own order, and the
  * first option is the primary route.
+ *
+ * [vias] are the intermediate stops in visit order, between [start] and
+ * [destination]. One route request carries all of them as one ordered waypoint
+ * chain, so the engine returns one route with one leg per hop; the planner never
+ * joins independent routes.
  */
 @Serializable
 data class RoutePlanState(
@@ -61,10 +68,23 @@ data class RoutePlanState(
     val options: List<RoutePlanOption> = emptyList(),
     val selectedIndex: Int = 0,
     val generation: Long = 0,
+    val vias: List<RoutePlanPoint> = emptyList(),
 ) {
     /** The selected route, or null before a request succeeds. */
     val selected: RoutePlanOption?
         get() = options.getOrNull(selectedIndex)
+
+    /**
+     * Start, every via in visit order and the destination, skipping an end that
+     * is not set yet. This is the order the engine is asked to route through.
+     */
+    val stops: List<RoutePlanPoint>
+        get() =
+            buildList {
+                start?.let(::add)
+                addAll(vias)
+                destination?.let(::add)
+            }
 
     /** The end the next map long press should fill, or null when not picking. */
     val pickingRole: RoutePlanRole?

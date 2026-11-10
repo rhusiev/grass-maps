@@ -2,6 +2,7 @@ package nl.r1a.grassmap.ui.shell
 
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanOption
+import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
 import nl.r1a.grassmap.plugin.api.service.Strings
@@ -81,6 +82,32 @@ class RoutePlanPreviewTest {
         assertEquals("25 min", routePlanAlternativeText(1_482.0, strings()))
         assertEquals("2 h 3 min", routePlanAlternativeText(7_380.0, strings()))
         assertEquals("2 h", routePlanAlternativeText(7_200.0, strings()))
+    }
+
+    @Test
+    fun aRouteWithViasStillShowsOnlyTheFourTotals() {
+        val withVias =
+            READY.copy(
+                vias =
+                    listOf(
+                        RoutePlanPoint(GeoPoint(49.8330, 23.9700), "Cafe"),
+                        RoutePlanPoint(GeoPoint(49.8370, 23.9900), "Museum"),
+                        RoutePlanPoint(GeoPoint(49.8400, 24.0100), "Park"),
+                    ),
+            )
+
+        val preview = routePlanPreview(withVias, strings(), Locale.US, ZoneId.of("UTC")) ?: error("no preview")
+
+        assertEquals(
+            listOf(
+                RoutePreviewField.Time,
+                RoutePreviewField.Distance,
+                RoutePreviewField.Arrival,
+                RoutePreviewField.Start,
+            ),
+            preview.entries.map { it.field },
+        )
+        assertEquals(listOf("25 min", "7.1 km", "22:38", "Start"), preview.entries.map { it.text })
     }
 
     private fun strings(): Strings =

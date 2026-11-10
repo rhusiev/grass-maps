@@ -2,7 +2,7 @@
   "id": "route.planner",
   "name": "plugin.route_planner.name",
   "description": "plugin.route_planner.description",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "api": "0.1.0",
   "implementation": "nl.r1a.grassmap.plugins.route.planner.RoutePlannerPlugin",
   "contributes": {
@@ -26,6 +26,36 @@
         "allowlistedForControl": true,
         "dispatcher": "io",
         "implementation": "nl.r1a.grassmap.plugins.route.planner.SetRoutePlanPointCommand"
+      },
+      {
+        "id": "route.planner.add_via",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "doc": "Adds an intermediate stop. Parameters: lat, lon, and optionally label.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.route.planner.AddRoutePlanViaCommand"
+      },
+      {
+        "id": "route.planner.remove_via",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "doc": "Removes the intermediate stop at a zero-based position. Parameter: index.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.route.planner.RemoveRoutePlanViaCommand"
+      },
+      {
+        "id": "route.planner.move_via",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "doc": "Moves the intermediate stop at from to position to. Parameters: from, to.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.route.planner.MoveRoutePlanViaCommand"
       },
       {
         "id": "route.planner.plan",

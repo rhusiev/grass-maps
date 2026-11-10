@@ -15,6 +15,7 @@ Files:
 | `lviv-routes.csv` | one row per pair and profile: both engines' status, distance, time and the segment attribute counts |
 | `lviv-summary.json` | per-profile counts, distance-delta distribution, the derived tolerance, attribute coverage, engine identities |
 | `planner-vectors.json` | one captured bicycle route pair for T-0302: the forward and reverse answer with two alternatives each, used by `routing`'s planner tests |
+| `via-vectors.json` | three captured intermediate-stop chains for T-0303: the same three stops on each profile, the bike chain reordered, and the bike chain with one stop removed |
 
 ## Profiles
 
@@ -212,6 +213,81 @@ model fields; the raw response is not committed. The pair returns one
 alternative (`alternates: 1`); a longer Lviv pair returns two, and a Lviv-Zhovkva
 pair returns none, which is why the preview says "no alternative routes" rather
 than inventing one.
+
+## Via vectors (T-0303)
+
+Intermediate stops. `via-vectors.json` is five captured `/route` answers on the
+same offline pack: the same start, three stops and destination for walk, bike
+and hike; the bike chain with the last two stops swapped; and the bike chain
+with the last stop removed. Each entry carries the visited via order, the engine
+summary and the leg list, because a stop chain is one route with one leg per hop
+and not three separate routes.
+
+Start `49.8290, 23.9520` (Sykhiv), destination `49.8420, 24.0320` (centre). The
+three stops are points a few metres off the walking line at
+`49.830707, 23.968369`, `49.836774, 24.002926` and `49.840959, 24.013863`; each
+was taken from the bicycle route's own shape and then moved about 4 m, so a
+returned line has to snap to the street rather than start on the stop.
+
+The capture used a read-only, networkless container, like T-0301:
+
+```sh
+docker run -d --rm --name valhalla-t0303 --network none \
+  -v /hdd/drive/Projects/Life/grass-maps-bench/data:/data:ro \
+  ghcr.io/valhalla/valhalla:latest \
+  valhalla_service /data/valhalla/valhalla.json 2
+```
+
+Each request is `POST /route` with `units: kilometers`, `language: uk-UA`,
+`locations` of type `break` in visit order, and no alternates:
+`[start, via1, via2, via3, destination]`. Walk and hike use `pedestrian`, bike
+uses `bicycle`.
+
+The acceptance rule is ten metres: the returned line must pass within 10 m of
+every stop, and in the asked order. `RoutePlannerViaTest` measures the shortest
+distance from each stop to the line and the line vertex nearest each stop; both
+checks run on the stored geometry, not on a line the test draws.
+
+| chain | legs | walk | bike | hike |
+|---|---|---|---|---|
+| all three stops, order 1-2-3 | 4 | 6 548 m | 7 070 m | 6 548 m |
+| bike, order 1-3-2 | 4 | | 8 897 m | |
+| bike, stops 1-2 only | 3 | | 7 052 m | |
+
+Distance from each stop to the returned line, and the line vertex nearest it:
+
+| chain | distances | nearest-vertex indices |
+|---|---|---|
+| walk 1-2-3 | 2.76, 2.15, 1.43 m | 53, 171, 210 |
+| bike 1-2-3 | 2.76, 5.31, 1.43 m | 121, 222, 253 |
+| hike 1-2-3 | 2.76, 2.15, 1.43 m | 53, 171, 210 |
+| bike 1-3-2 | 2.76, 1.43, 5.31 m | 121, 252, 285 |
+| bike 1-2 | 2.76, 5.31 m | 121, 222 |
+
+The largest distance is 5.31 m, so every stop is inside the 10 m rule, and the
+indices increase in every chain, so the line reaches the stops in the asked
+order.
+
+Walk and hike return the same line as each other because the pack carries no
+elevation and no street on this pair is a marked trail, so the two costings
+agree; T-0301 measured the same overlap on random pairs.
+
+Reordering changes the route and not only the list: swapping the last two stops
+adds 1 827 m to the bike route, changes the geometry from 310 to 369 points, and
+the line reaches the stops in the new order (indices 121, 252, 285). Removing
+the last stop takes one leg off the chain, shortens the bike route by 18 m and
+returns a different 306-point line. Removing the middle stop is accepted by the
+planner and the chain is re-asked with four waypoints, but it is not captured
+here: that stop is on the corridor, so its route is the same line.
+
+Alternatives and stops: the Valhalla engine accepts `alternates` together with
+four or more locations but answers with no alternatives (one route, status 200),
+so a via chain publishes a single option and the panel keeps its "no alternative
+routes" line. No capture stores an alternative because the engine produced none.
+
+What was not measured: the g32, the Android binary and timing. Every number is
+desktop, on the phase-A pack, and the geometry is a property of the tiles and the
+costing options.
 
 ## What was not measured
 

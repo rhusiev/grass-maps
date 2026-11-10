@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.routing
+package nl.r1a.grassmap.plugins.valhalla
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -8,12 +8,19 @@ import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.host.ElevationAccess
+import nl.r1a.grassmap.plugin.api.host.NoElevationAccess
+import nl.r1a.grassmap.plugin.api.host.RoutingPackAccess
+import nl.r1a.grassmap.plugin.api.model.AttributeValue
+import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.provider.ProviderContract
 import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmap.plugin.api.provider.RouteAttributes
 import nl.r1a.grassmap.plugin.api.provider.RouteModifierKind
 import nl.r1a.grassmap.plugin.api.provider.RouteModifierRules
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteRequest
+import nl.r1a.grassmap.plugin.api.provider.RouteSegment
 import nl.r1a.grassmap.plugin.api.provider.RoutingCapabilities
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngineContract
@@ -30,6 +37,7 @@ import java.io.File
 class ValhallaRoutingEngine internal constructor(
     private val transportFactory: () -> ValhallaTransport,
     private val log: RoutingLog = RoutingLog.None,
+    private val elevation: ElevationAccess = NoElevationAccess,
 ) : RoutingEngine,
     Closeable {
     /** A platform engine over the pack copied to the device. */
@@ -37,7 +45,26 @@ class ValhallaRoutingEngine internal constructor(
         packDirectory: File,
         configDirectory: File,
         log: RoutingLog = RoutingLog.None,
-    ) : this({ NativeValhallaTransport(packDirectory, configDirectory) }, log)
+        elevation: ElevationAccess = NoElevationAccess,
+    ) : this({ NativeValhallaTransport(packDirectory, configDirectory) }, log, elevation)
+
+    /**
+     * The engine a plugin builds: the pack directory comes from the host at
+     * route time, so activation succeeds before a pack is mounted and a route
+     * reports `NotFound` until one is.
+     */
+    constructor(
+        packs: RoutingPackAccess,
+        log: RoutingLog = RoutingLog.None,
+        elevation: ElevationAccess = NoElevationAccess,
+    ) : this(
+        {
+            val pack = packs.packDirectory()?.let(::File) ?: throw ValhallaPackMissingException()
+            NativeValhallaTransport(pack, pack.parentFile ?: pack)
+        },
+        log,
+        elevation,
+    )
 
     private val lock = Any()
     private var transport: ValhallaTransport? = null
@@ -52,7 +79,7 @@ class ValhallaRoutingEngine internal constructor(
 
     override fun capabilities(): RoutingCapabilities =
         RoutingCapabilities(
-            profiles = setOf(RouteProfile.Walk, RouteProfile.Bike, RouteProfile.Hike, RouteProfile.Car),
+            profiles = setOf(RouteProfile.Walk, RouteProfile.Bike, RouteProfile.Hike),
             modifierKinds =
                 setOf(
                     RouteModifierKind.Multiplier,
@@ -61,8 +88,10 @@ class ValhallaRoutingEngine internal constructor(
                 ),
             maxAlternatives = 2,
             maxDistanceMeters = 250_000.0,
-            attributeKeys = emptySet(),
-            hasMatchTrack = false,
+            attributeKeys = RouteAttributes.V1,
+            // The pack's loki actions list `trace_route`, and valhalla-mobile
+            // 0.6.4 exposes `traceRouteRaw`; both are needed for map matching.
+            hasMatchTrack = true,
         )
 
     override suspend fun route(
@@ -122,6 +151,104 @@ class ValhallaRoutingEngine internal constructor(
             }
             ValhallaResponse.parse(raw)
         }
+
+    /**
+     * Re-splits the route by graph edge and adds the five v1 attributes.
+     *
+     * Four come straight from `trace_attributes`. Grade does not: the phase-A
+     * pack was built without elevation, so Valhalla reports the "no data"
+     * sentinel (-500) for every edge. Grade is instead sampled from the mounted
+     * region DEM through [ElevationAccess]; without one the key is absent
+     * rather than wrong.
+     */
+    override suspend fun annotate(
+        route: Route,
+        profile: RouteProfile,
+        cancellation: CancellationHandle,
+    ): Outcome<Route> =
+        withContext(Dispatchers.IO) {
+            val chunks = ValhallaTrace.chunks(route.geometry)
+            if (chunks.isEmpty()) {
+                return@withContext Outcome.Failure(AppError.InvalidInput)
+            }
+            if (cancellation.isCancelled()) {
+                return@withContext Outcome.Failure(AppError.Cancelled)
+            }
+            val active =
+                try {
+                    transportOrCreate()
+                } catch (exception: ValhallaPackMissingException) {
+                    return@withContext Outcome.Failure(AppError.NotFound)
+                } catch (exception: ValhallaPackCorruptException) {
+                    return@withContext Outcome.Failure(AppError.CorruptData)
+                } catch (exception: CancellationException) {
+                    throw exception
+                } catch (exception: Exception) {
+                    return@withContext Outcome.Failure(
+                        AppError.Internal("routing.valhalla.engine", exception.message),
+                    )
+                }
+            val profileOptions = ValhallaProfiles.of(profile)
+            val edges = mutableListOf<ValhallaTrace.TraceEdge>()
+            routeMutex.withLock {
+                for (chunk in chunks) {
+                    if (cancellation.isCancelled()) {
+                        return@withContext Outcome.Failure(AppError.Cancelled)
+                    }
+                    val raw =
+                        try {
+                            active.traceAttributes(ValhallaTrace.request(chunk, profileOptions))
+                        } catch (exception: CancellationException) {
+                            throw exception
+                        } catch (exception: Exception) {
+                            log.info("trace_attributes failed: ${exception.message}")
+                            return@withContext Outcome.Failure(
+                                AppError.Internal("routing.valhalla.trace", exception.message),
+                            )
+                        }
+                    when (val parsed = ValhallaTrace.edges(raw)) {
+                        is Outcome.Failure -> return@withContext parsed
+                        is Outcome.Success -> edges += parsed.value
+                    }
+                }
+            }
+            Outcome.Success(
+                route.copy(segments = grade(ValhallaTrace.segments(route, edges), route.geometry)),
+            )
+        }
+
+    private suspend fun grade(
+        segments: List<RouteSegment>,
+        points: List<GeoPoint>,
+    ): List<RouteSegment> {
+        val heights = HashMap<Int, Double?>()
+        return segments.map { segment ->
+            val start = heightAt(points, heights, segment.startIndex)
+            val end = heightAt(points, heights, segment.endIndex)
+            if (start == null || end == null || segment.distanceMeters <= 0.0) {
+                segment
+            } else {
+                val grade = (end - start) / segment.distanceMeters * 100.0
+                segment.copy(
+                    attributes = segment.attributes + (RouteAttributes.GRADE to AttributeValue.NumberValue(grade)),
+                )
+            }
+        }
+    }
+
+    private suspend fun heightAt(
+        points: List<GeoPoint>,
+        cache: MutableMap<Int, Double?>,
+        index: Int,
+    ): Double? {
+        if (cache.containsKey(index)) {
+            return cache[index]
+        }
+        val point = points.getOrNull(index) ?: return null
+        val height = (elevation.elevationMeters(point) as? Outcome.Success)?.value
+        cache[index] = height
+        return height
+    }
 
     override fun close() {
         synchronized(lock) {

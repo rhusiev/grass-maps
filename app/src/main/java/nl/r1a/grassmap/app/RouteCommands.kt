@@ -47,7 +47,7 @@ private const val MAX_LOGGED_INSTRUCTIONS = 3
  */
 internal class TestWalkCommand(
     private val session: MapSessionHolder,
-    private val engine: () -> RoutingEngine?,
+    private val engine: suspend () -> RoutingEngine?,
     private val dataSources: () -> DataSourceAccess,
     private val log: (String) -> Unit = { message -> Log.i(TAG, message) },
 ) : Command<JsonElement, String>(
@@ -251,6 +251,6 @@ internal class TestWalkCommand(
 
 internal fun routeCommands(
     session: MapSessionHolder,
-    engine: () -> RoutingEngine?,
+    engine: suspend () -> RoutingEngine?,
     dataSources: () -> DataSourceAccess,
 ): List<Command<*, *>> = listOf(TestWalkCommand(session, engine, dataSources))

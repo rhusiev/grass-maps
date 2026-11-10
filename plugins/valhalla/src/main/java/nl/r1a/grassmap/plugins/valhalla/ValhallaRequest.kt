@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.routing
+package nl.r1a.grassmap.plugins.valhalla
 
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonArray
@@ -6,6 +6,7 @@ import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.provider.RouteModifier
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
@@ -36,9 +37,13 @@ internal object ValhallaRequest {
     fun build(
         request: RouteRequest,
         useExclusionForModifiers: Boolean = false,
-    ): String =
-        buildJsonObject {
-            put("costing", request.profile.costing)
+    ): String {
+        val profile = ValhallaProfiles.of(request.profile)
+        return buildJsonObject {
+            put("costing", profile.costing)
+            putJsonObject("costing_options") {
+                put(profile.costing, profile.costingOptions)
+            }
             put("units", "kilometers")
             put("language", "uk-UA")
             putJsonArray("locations") {
@@ -95,6 +100,7 @@ internal object ValhallaRequest {
                 }
             }
         }.toString()
+    }
 
     /**
      * The multiplier Valhalla should apply to [modifier]. A forbidden modifier
@@ -144,7 +150,7 @@ internal object ValhallaRequest {
         )
     }
 
-    private fun distanceMetres(
+    fun distanceMetres(
         from: GeoPoint,
         to: GeoPoint,
     ): Double {
@@ -154,14 +160,6 @@ internal object ValhallaRequest {
         val east = longitudeDelta * kotlin.math.cos(meanLatitude)
         return kotlin.math.hypot(latitudeDelta, east) * EARTH_RADIUS_METRES
     }
-
-    private val RouteProfile.costing: String
-        get() =
-            when (this) {
-                RouteProfile.Walk, RouteProfile.Hike -> "pedestrian"
-                RouteProfile.Bike -> "bicycle"
-                RouteProfile.Car -> "auto"
-            }
 
     private val RouteProfile.nominalSpeed: Double
         get() =

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.routing
+package nl.r1a.grassmap.plugins.valhalla
 
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
@@ -6,14 +6,16 @@ import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.host.ElevationAccess
+import nl.r1a.grassmap.plugin.api.model.AttributeValue
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmap.plugin.api.provider.RouteAttributes
 import nl.r1a.grassmap.plugin.api.provider.RouteModifier
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteRequest
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngineContract
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
@@ -85,7 +87,7 @@ class ValhallaRoutingEngineTest {
                     failure = RuntimeException("ValhallaError(code=173, No edges near start/end)"),
                 )
             val messages = mutableListOf<String>()
-            val engine = ValhallaRoutingEngine({ transport }, log = { messages += it })
+            val engine = ValhallaRoutingEngine({ transport }, log = RoutingLog { message -> messages += message })
             val modifier =
                 RouteModifier(
                     geometry = listOf(GeoPoint(49.9410, 23.9410), GeoPoint(49.9420, 23.9425)),
@@ -167,12 +169,76 @@ class ValhallaRoutingEngineTest {
         val capabilities = engine.capabilities()
 
         assertEquals(RoutingEngineContract.REFERENCE, engine.contract)
-        assertEquals(setOf(RouteProfile.Walk, RouteProfile.Bike, RouteProfile.Hike, RouteProfile.Car), capabilities.profiles)
+        assertEquals(setOf(RouteProfile.Walk, RouteProfile.Bike, RouteProfile.Hike), capabilities.profiles)
         assertEquals(2, capabilities.maxAlternatives)
-        // RoutingEngine 1.0.0 has no matchTrack method and the adapter never
-        // calls Valhalla's trace API, so this must stay false until T-0301.
-        assertFalse(capabilities.hasMatchTrack)
+        assertEquals(RouteAttributes.V1, capabilities.attributeKeys)
+        // Evidence: the pack's loki actions list `trace_route` and
+        // valhalla-mobile 0.6.4 exposes Valhalla.traceRouteRaw(String).
+        assertTrue(capabilities.hasMatchTrack)
     }
+
+    @Test
+    fun annotateSplitsTheRouteByEdgeAndFillsTheFiveAttributes() =
+        runTest {
+            val transport = RecordingTransport(response(denseShape()), trace = traceResponse())
+            val engine = ValhallaRoutingEngine({ transport }, elevation = elevations(100.0, 104.0, 109.0))
+
+            val routed =
+                (engine.route(request(), CancellationHandle.None) as Outcome.Success).value.single()
+            val annotated =
+                (engine.annotate(routed, RouteProfile.Walk, CancellationHandle.None) as Outcome.Success).value
+
+            assertEquals(3, annotated.segments.size)
+            val surface = annotated.segments.map { (it.attributes[RouteAttributes.SURFACE] as AttributeValue.TextValue).value }
+            assertEquals(listOf("paved", "gravel", "paved"), surface)
+            val highway = annotated.segments.map { (it.attributes[RouteAttributes.HIGHWAY] as AttributeValue.TextValue).value }
+            assertEquals(listOf("footway", "path", "steps"), highway)
+            val sac = annotated.segments.map { (it.attributes[RouteAttributes.SAC_SCALE] as AttributeValue.TextValue).value }
+            assertEquals(listOf("none", "mountain_hiking", "none"), sac)
+            val access = annotated.segments.map { (it.attributes[RouteAttributes.ACCESS] as AttributeValue.TextValue).value }
+            assertEquals(listOf("yes", "yes", "private"), access)
+            val grade = annotated.segments.first().attributes[RouteAttributes.GRADE] as AttributeValue.NumberValue
+            assertTrue(grade.value > 0.0)
+            assertEquals(1, transport.traces.size)
+            assertTrue(transport.traces.single().contains("map_snap"))
+        }
+
+    @Test
+    fun aFailedTraceLeavesTheRouteUnannotatedForTheCaller() =
+        runTest {
+            val transport = RecordingTransport(response(shape()), traceFailure = RuntimeException("no trace"))
+            val engine = ValhallaRoutingEngine({ transport })
+
+            val routed =
+                (engine.route(request(), CancellationHandle.None) as Outcome.Success).value.single()
+            val result = engine.annotate(routed, RouteProfile.Walk, CancellationHandle.None)
+
+            assertTrue(result is Outcome.Failure)
+            assertEquals(
+                0,
+                routed.segments
+                    .single()
+                    .attributes.size,
+            )
+        }
+
+    private fun elevations(vararg heights: Double): ElevationAccess {
+        val points = mutableListOf<Double>()
+        return ElevationAccess { _ ->
+            val index = points.size.coerceAtMost(heights.size - 1)
+            points += heights[index]
+            Outcome.Success(heights[index])
+        }
+    }
+
+    private fun traceResponse(): String =
+        """
+        {"edges":[
+          {"length":0.500,"surface":"paved","use":"footway","road_class":"service_other"},
+          {"length":0.400,"surface":"gravel","use":"path","road_class":"service_other","sac_scale":2},
+          {"length":0.109,"surface":"paved","use":"steps","road_class":"service_other","access_restriction":["private"]}
+        ]}
+        """.trimIndent()
 
     private fun request(): RouteRequest =
         RouteRequest(
@@ -181,6 +247,9 @@ class ValhallaRoutingEngineTest {
         )
 
     private fun shape(): String = Polyline6.encode(listOf(GeoPoint(49.8419, 24.0316), GeoPoint(49.8365, 24.0250)))
+
+    /** About one kilometre of geometry at roughly 100 m per point, so edges cut. */
+    private fun denseShape(): String = Polyline6.encode((0..10).map { GeoPoint(49.8419, 24.0316 + it * 0.0015) })
 
     private fun response(shape: String): String =
         """
@@ -214,8 +283,11 @@ class ValhallaRoutingEngineTest {
         private val success: String = "{}",
         private val failuresBeforeSuccess: Int = 0,
         private val failure: RuntimeException = RuntimeException("boom"),
+        private val trace: String = "{}",
+        private val traceFailure: RuntimeException? = null,
     ) : ValhallaTransport {
         val requests = mutableListOf<String>()
+        val traces = mutableListOf<String>()
 
         override fun route(requestJson: String): String {
             requests += requestJson
@@ -223,6 +295,12 @@ class ValhallaRoutingEngineTest {
                 throw failure
             }
             return success
+        }
+
+        override fun traceAttributes(requestJson: String): String {
+            traces += requestJson
+            traceFailure?.let { throw it }
+            return trace
         }
     }
 }

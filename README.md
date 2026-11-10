@@ -217,6 +217,12 @@ one fix per second. The debug build replays it through `MockGpxLocationSource`;
 `core-services` tests parse and replay the same file. It is authored data, not
 an OSM extract.
 
+`test-data/routing/` holds the v1 profile validation: the costing document the
+engine sends, 100 seeded Lviv-oblast pairs, the 100x3 route table and the
+derived length tolerance. Its README records the engines, their versions and the
+commands; `plugins/valhalla`'s tests fail when the table stops meeting the
+tolerance or loses an attribute.
+
 ## Module map
 
 Each namespace is `nl.r1a.grassmap.<module>`, with dots in place of hyphens in
@@ -231,7 +237,7 @@ the module name. Only `app` is an application module; its application ID is
 | `core-services` | settings and profiles, storage, location, network gate, i18n, clock, logging | `core`, `plugin-api` |
 | `map` | the `MapHost` implementation, style composer, layer slots, gestures, camera, location puck | `plugin-api` |
 | `regions` | catalogue, download, verify, mount, update, source resolver, routing pack handling | `plugin-api` |
-| `routing` | engine host, request builder, route model assembly, the Valhalla adapter | `plugin-api`, valhalla-mobile (MIT) |
+| `routing` | route model, the `routing.engine` contract seam and its stable JSON form | `plugin-api` |
 | `navigation` | route follower, off-route detection, reroute policy, guidance | `routing`, `plugin-api` |
 | `alerts` | alert sources, scheduling, sound, vibration and banner output | `navigation`, `plugin-api` |
 | `places` | place and search provider hosts, favourites store | `plugin-api` |
@@ -253,6 +259,7 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/links` | the pure `geo:` and osm.org link parsers, including the osm.org short-link decoder | `plugin-api` |
 | `plugins/share` | the decimal, DMS and DDM coordinate notations, the osm.org and `geo:` link builders, and the copy, share and open-in commands | `plugin-api` |
 | `plugins/coordinates` | the coordinate notation parser the search field reads, and the vectors it shares with the formatters | `plugin-api` |
+| `plugins/valhalla` | the v1 `routing.engine` provider: profile mapping, the native Valhalla adapter, the async segment attributes | `plugin-api` |
 
 ## Place card
 
@@ -733,11 +740,21 @@ method list, the token handling and the CLI examples.
 
 ## Routing seam
 
-`RoutingEngine` in `plugin-api` is the engine contract. `routing` binds it to
-valhalla-mobile 0.6.4 and keeps every library type inside that module. The
-engine reads a pack directory copied to the device's external files, writes a
-local `valhalla.local.json` whose paths point at that pack, and creates the
-native actor on the first route.
+`RoutingEngine` in `plugin-api` is the engine contract (1.1.0). `plugins/valhalla`
+is the v1 provider: it binds the contract to valhalla-mobile 0.6.4 and keeps
+every library type inside that module. The engine reads the pack directory from
+the host's `RoutingPackAccess` service, writes a local `valhalla.local.json`
+whose paths point at that pack, and creates the native actor on the first
+route. `app` resolves the provider through `ProviderRegistry`, so a build with
+no pack registers an engine that answers `NotFound` rather than failing at
+startup.
+
+`annotate` fills the segment attributes after the route is already returned:
+the routed line goes back to Valhalla's `trace_attributes` with `map_snap`, is
+cut into one segment per graph edge, and carries `surface`, `highway`,
+`sac_scale` and `access`; `grade` is sampled from the mounted region DEM because
+the phase-A pack has no elevation. The profile mapping, the seeded 100x3
+validation and its derived length tolerance are in `test-data/routing/`.
 
 `MapHost.setRoute(Route?)` draws the route as one GeoJSON `LineString` in the
 `Routes` slot, using the same source pattern as the location puck. The app's

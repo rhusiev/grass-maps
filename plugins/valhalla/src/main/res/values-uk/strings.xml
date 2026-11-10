@@ -1,0 +1,4 @@
+<resources>
+    <string name="plugin.valhalla.name">Маршрутизація Valhalla</string>
+    <string name="plugin.valhalla.description">Офлайн-маршрути через змонтований пакет Valhalla</string>
+</resources>

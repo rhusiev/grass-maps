@@ -24,16 +24,37 @@ interface RoutingEngine : Provider {
         request: RouteRequest,
         cancellation: CancellationHandle,
     ): Outcome<List<Route>>
+
+    /**
+     * Re-reads [route] with the engine's per-segment attributes, keyed by the
+     * route line rather than by a second routing run. The returned route keeps
+     * the geometry, distance, duration and instructions of [route], and its
+     * segments gain the keys [RoutingCapabilities.attributeKeys] declares.
+     *
+     * This runs after guidance is already showing, because an engine may have
+     * to match the line to its graph edge by edge. An engine without the
+     * capability returns the route unchanged; a caller must not wait for it
+     * before drawing the route.
+     */
+    suspend fun annotate(
+        route: Route,
+        profile: RouteProfile,
+        cancellation: CancellationHandle,
+    ): Outcome<Route> = Outcome.Success(route)
 }
 
 object RoutingEngineContract {
     const val NAME: String = "routing.engine"
-    const val VERSION: String = "1.0.0"
+    const val VERSION: String = "1.1.0"
 
     val REFERENCE: ProviderContract = ProviderContract(NAME, VERSION)
 }
 
-/** The travel modes v1 needs. T-0301 adds the remaining profiles. */
+/**
+ * The travel modes the shared model names. An engine declares the ones it
+ * accepts in [RoutingCapabilities.profiles]; v1 ships walk, bike and hike, and
+ * [Car] is kept for the engine that declares it later.
+ */
 enum class RouteProfile {
     Walk,
     Bike,
@@ -61,6 +82,21 @@ data class RoutingCapabilities(
     val attributeKeys: Set<String> = emptySet(),
     val hasMatchTrack: Boolean = false,
 )
+
+/**
+ * The attribute keys a route segment may carry. The vocabulary is shared so an
+ * engine and the UI agree on the spelling before [RoutingEngine.annotate] runs.
+ */
+object RouteAttributes {
+    const val SURFACE: String = "surface"
+    const val HIGHWAY: String = "highway"
+    const val GRADE: String = "grade"
+    const val SAC_SCALE: String = "sac_scale"
+    const val ACCESS: String = "access"
+
+    /** The five attributes the v1 engine fills. */
+    val V1: Set<String> = setOf(SURFACE, HIGHWAY, GRADE, SAC_SCALE, ACCESS)
+}
 
 /**
  * One route request. [waypoints] are ordered breaks. [alternatives] counts the
@@ -156,8 +192,9 @@ object RouteModifierRules {
 /**
  * A route in the shared model. [geometry] is the full ordered line. [segments]
  * split it by leg and carry attributes under the engine's declared vocabulary;
- * v1 leaves the attributes empty and T-0301 fills them. [rawResponse] keeps the
- * engine response for debugging and is never shown to the user.
+ * [RoutingEngine.annotate] re-splits them by graph edge and fills the attributes
+ * after the route is already returned. [rawResponse] keeps the engine response
+ * for debugging and is never shown to the user.
  */
 data class Route(
     val geometry: List<GeoPoint>,

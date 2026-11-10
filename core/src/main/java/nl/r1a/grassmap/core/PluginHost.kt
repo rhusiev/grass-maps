@@ -34,8 +34,10 @@ import nl.r1a.grassmap.plugin.api.host.NoDevToolsAccess
 import nl.r1a.grassmap.plugin.api.host.NoElevationAccess
 import nl.r1a.grassmap.plugin.api.host.NoFavouritesListsAccess
 import nl.r1a.grassmap.plugin.api.host.NoPlatformActions
+import nl.r1a.grassmap.plugin.api.host.NoRoutingPacks
 import nl.r1a.grassmap.plugin.api.host.PlatformActions
 import nl.r1a.grassmap.plugin.api.host.PluginServices
+import nl.r1a.grassmap.plugin.api.host.RoutingPackAccess
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
@@ -77,6 +79,7 @@ class PluginHost(
     private val devToolsAccess: DevToolsAccess = NoDevToolsAccess,
     private val favouritesListsAccess: FavouritesListsAccess = NoFavouritesListsAccess,
     private val platformActions: PlatformActions = NoPlatformActions,
+    private val routingPacks: RoutingPackAccess = NoRoutingPacks,
 ) {
     private val factories: Map<PluginId, PluginFactory> = plugins.associateBy { it.manifest.id }
     private val streamOwners: Map<StreamId, PluginId> = streams.associate { it.id to it.pluginId }
@@ -508,6 +511,8 @@ class PluginHost(
         override val favouritesLists: FavouritesListsAccess = favouritesListsAccess
 
         override val platformActions: PlatformActions = this@PluginHost.platformActions
+
+        override val routingPacks: RoutingPackAccess = this@PluginHost.routingPacks
     }
 
     private companion object {

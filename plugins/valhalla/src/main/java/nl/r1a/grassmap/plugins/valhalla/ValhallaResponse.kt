@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.routing
+package nl.r1a.grassmap.plugins.valhalla
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray

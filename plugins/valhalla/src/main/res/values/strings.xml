@@ -1,0 +1,4 @@
+<resources>
+    <string name="plugin.valhalla.name">Valhalla routing</string>
+    <string name="plugin.valhalla.description">Offline routes over the mounted Valhalla pack</string>
+</resources>

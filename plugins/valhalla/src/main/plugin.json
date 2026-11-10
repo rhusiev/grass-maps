@@ -1,0 +1,29 @@
+{
+  "id": "valhalla",
+  "name": "plugin.valhalla.name",
+  "description": "plugin.valhalla.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.valhalla.ValhallaPlugin",
+  "contributes": {
+    "providers": [
+      {
+        "contract": "routing.engine",
+        "version": "1.1.0",
+        "capabilities": {
+          "profiles": ["walk", "bike", "hike"],
+          "attributes": ["surface", "highway", "grade", "sac_scale", "access"],
+          "hasMatchTrack": true
+        }
+      }
+    ]
+  },
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": []
+  },
+  "activation": [
+    "provider"
+  ]
+}

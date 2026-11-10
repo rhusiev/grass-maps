@@ -140,6 +140,7 @@ dependencies {
     implementation(project(":plugins:links"))
     implementation(project(":plugins:share"))
     implementation(project(":plugins:coordinates"))
+    implementation(project(":plugins:valhalla"))
 
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("org.jetbrains.compose.ui:ui:1.12.1")

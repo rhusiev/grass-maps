@@ -81,6 +81,7 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         ":plugins:coordinates" to setOf(":plugin-api"),
         ":plugins:style-standard" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:synthetic-data" to setOf(":plugin-api", ":plugin-ui-api"),
+        ":plugins:valhalla" to setOf(":plugin-api"),
     )
 // Test-only edges are separate so a test fixture cannot quietly become a
 // production dependency. :control's info-widgets edge is the accepted T-0113

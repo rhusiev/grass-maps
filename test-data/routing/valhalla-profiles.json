@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "profiles": {
+    "walk": {
+      "costing": "pedestrian",
+      "costing_options": {
+        "pedestrian": {
+          "use_ferry": 1.0,
+          "walkway_factor": 1.0,
+          "sidewalk_factor": 0.9,
+          "alley_factor": 2.0,
+          "driveway_factor": 5.0,
+          "use_hills": 0.5,
+          "walking_speed": 5.0,
+          "step_penalty": 30.0,
+          "max_hiking_difficulty": 1
+        }
+      }
+    },
+    "bike": {
+      "costing": "bicycle",
+      "costing_options": {
+        "bicycle": {
+          "bicycle_type": "hybrid",
+          "cycling_speed": 18.0,
+          "use_roads": 0.3,
+          "avoid_bad_surfaces": 0.5,
+          "use_hills": 0.4,
+          "use_ferry": 0.5
+        }
+      }
+    },
+    "hike": {
+      "costing": "pedestrian",
+      "costing_options": {
+        "pedestrian": {
+          "use_ferry": 1.0,
+          "walkway_factor": 1.0,
+          "sidewalk_factor": 0.9,
+          "alley_factor": 2.0,
+          "driveway_factor": 5.0,
+          "use_hills": 0.9,
+          "walking_speed": 4.5,
+          "step_penalty": 20.0,
+          "max_hiking_difficulty": 5
+        }
+      }
+    }
+  }
+}

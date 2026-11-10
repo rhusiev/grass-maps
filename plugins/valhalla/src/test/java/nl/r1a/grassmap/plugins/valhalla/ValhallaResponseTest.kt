@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.routing
+package nl.r1a.grassmap.plugins.valhalla
 
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome

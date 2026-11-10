@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.routing
+package nl.r1a.grassmap.plugins.valhalla
 
 import com.valhalla.valhalla.Valhalla
 import kotlinx.serialization.json.Json
@@ -11,6 +11,12 @@ import java.io.IOException
 /** One way to run a Valhalla request body. Tests replace the native engine. */
 internal fun interface ValhallaTransport : Closeable {
     fun route(requestJson: String): String
+
+    /**
+     * Runs a `trace_attributes` body. Valhalla's library exposes it separately
+     * from `route`, so an engine that only needs matching leaves this unused.
+     */
+    fun traceAttributes(requestJson: String): String = throw NotImplementedError("trace_attributes is not available")
 
     override fun close() = Unit
 }
@@ -34,6 +40,8 @@ internal class NativeValhallaTransport(
     private val engine: Valhalla by engineDelegate
 
     override fun route(requestJson: String): String = engine.routeRaw(requestJson)
+
+    override fun traceAttributes(requestJson: String): String = engine.traceAttributesRaw(requestJson)
 
     override fun close() {
         if (engineDelegate.isInitialized()) {

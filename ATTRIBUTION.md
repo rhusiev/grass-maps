@@ -15,7 +15,7 @@ first product asset lands.
 | `test-data/map-goldens` screenshots | ODbL-1.0 / Copernicus DEM GLO-30 terms | Rendered captures of the `fixture-mini` map tiles and contours for the T-0102 fixture and T-0108 Standard style golden tests |
 | Noto fonts | SIL OFL 1.1 | map labels and UI text; `app/src/main/assets/fonts` uses the Protomaps basemaps-assets Noto Sans glyph PBFs |
 | `app/src/main/assets/sprites` Standard sprite | CC0-1.0 / Apache-2.0 | one single-colour SDF sheet shared by the light and dark Standard variants; glyphs from Osmic, OSM Carto, Temaki and Maki, shield frames authored here. The per-icon source, licence and commit are listed below |
-| valhalla-mobile | MIT | Android/iOS wrapper around the Valhalla engine, used by `routing` |
+| valhalla-mobile | MIT | Android/iOS wrapper around the Valhalla engine, used by `plugins/valhalla` |
 | Ferrostar core | BSD-3-Clause | Rust route-following core with UniFFI Kotlin bindings, used by `navigation`; the `core` artifact only, no UI or map binding |
 | Valhalla routing engine | MIT | C++ engine packaged inside valhalla-mobile; routing tiles are OSM-derived data (ODbL-1.0) |
 | `plugins/style-standard` Standard style | Apache-2.0 (this repository) | Authored for Grass Maps from the T-0020 Protomaps-derived layer list and the phase-A palette; OsmAnd's standard style is design inspiration only, no GPL content is translated |

@@ -59,7 +59,7 @@ private const val GPX_BASE_EPOCH_MILLIS = 1_767_225_600_000L
  */
 internal class TestFollowCommand(
     private val session: MapSessionHolder,
-    private val engine: () -> RoutingEngine?,
+    private val engine: suspend () -> RoutingEngine?,
     private val log: (String) -> Unit = { message -> Log.i(TAG, message) },
     private val followerFactory: () -> RouteFollowerEngine = { FerrostarRouteFollower(log = log) },
     private val config: NavigationConfig = NavigationConfig(),
@@ -321,5 +321,5 @@ internal class TestFollowCommand(
 
 internal fun navCommands(
     session: MapSessionHolder,
-    engine: () -> RoutingEngine?,
+    engine: suspend () -> RoutingEngine?,
 ): List<Command<*, *>> = listOf(TestFollowCommand(session, engine))

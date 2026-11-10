@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.routing
+package nl.r1a.grassmap.plugins.valhalla
 
 /**
  * The engine's one diagnostic line. The app binds this to logcat; a test binds

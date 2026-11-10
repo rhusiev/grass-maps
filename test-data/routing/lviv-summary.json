@@ -1,0 +1,258 @@
+{
+  "generated": "2026-11-10T11:52:09Z",
+  "seed": 20261110,
+  "pair_count": 100,
+  "profiles": {
+    "walk": {
+      "pairs": 100,
+      "valhalla_routed": 100,
+      "reference_routed": 100,
+      "both_routed": 100,
+      "valhalla_missing_where_reference_routes": 0,
+      "missing_pairs": [],
+      "valhalla_only": 0,
+      "reference_failures": [],
+      "distance_delta": {
+        "count": 100,
+        "min": -0.1823595050707536,
+        "p50": -0.04291649820643616,
+        "p90": -0.00494728782613811,
+        "p95": -0.0008248714965474788,
+        "p99": 0.00040943844627013714,
+        "max": 0.0010203869140584328,
+        "mean": -0.050015232371743226
+      },
+      "distance_delta_abs": {
+        "count": 100,
+        "min": 5.239717055279015e-05,
+        "p50": 0.042720254271555326,
+        "p90": 0.10156234231591575,
+        "p95": 0.11327052965616405,
+        "p99": 0.18123566173562217,
+        "max": 0.1823595050707536,
+        "mean": 0.05005287065508726
+      },
+      "segments": 30013,
+      "attribute_values": {
+        "surface": {
+          "paved_smooth": 23812,
+          "dirt": 2394,
+          "compacted": 1465,
+          "gravel": 1257,
+          "paved": 805,
+          "path": 248,
+          "paved_rough": 32
+        },
+        "highway": {
+          "tertiary": 8829,
+          "primary": 4912,
+          "trunk": 4563,
+          "secondary": 3074,
+          "residential": 2900,
+          "track": 2643,
+          "footway": 1054,
+          "unclassified": 870,
+          "service": 548,
+          "path": 448,
+          "pedestrian_crossing": 124,
+          "living_street": 33,
+          "cycleway": 6,
+          "driveway": 5,
+          "steps": 4
+        },
+        "sac_scale": {
+          "none": 30011,
+          "hiking": 2
+        },
+        "access": {
+          "yes": 30013
+        }
+      },
+      "attribute_coverage": {
+        "surface": 1.0,
+        "highway": 1.0,
+        "grade": 0.981774564355446,
+        "sac_scale": 1.0,
+        "access": 1.0
+      }
+    },
+    "bike": {
+      "pairs": 100,
+      "valhalla_routed": 100,
+      "reference_routed": 100,
+      "both_routed": 100,
+      "valhalla_missing_where_reference_routes": 0,
+      "missing_pairs": [],
+      "valhalla_only": 0,
+      "reference_failures": [],
+      "distance_delta": {
+        "count": 100,
+        "min": -0.22900604292560947,
+        "p50": -0.014984245190371216,
+        "p90": 0.032575375686317305,
+        "p95": 0.05810151707905297,
+        "p99": 0.12057847152411207,
+        "max": 0.14068489111663368,
+        "mean": -0.02330116140784744
+      },
+      "distance_delta_abs": {
+        "count": 100,
+        "min": 0.00020911669895478234,
+        "p50": 0.028426724192799648,
+        "p90": 0.11586618482808259,
+        "p95": 0.1686934194835408,
+        "p99": 0.20817155281396155,
+        "max": 0.22900604292560947,
+        "mean": 0.04557028088043901
+      },
+      "segments": 30608,
+      "attribute_values": {
+        "surface": {
+          "paved_smooth": 26448,
+          "compacted": 1548,
+          "dirt": 1523,
+          "paved": 731,
+          "gravel": 250,
+          "paved_rough": 71,
+          "path": 37
+        },
+        "highway": {
+          "tertiary": 11972,
+          "residential": 5510,
+          "secondary": 3735,
+          "primary": 2813,
+          "track": 1585,
+          "unclassified": 1456,
+          "trunk": 1318,
+          "path": 1037,
+          "service": 572,
+          "footway": 291,
+          "cycleway": 229,
+          "living_street": 81,
+          "driveway": 9
+        },
+        "sac_scale": {
+          "none": 30603,
+          "hiking": 5
+        },
+        "access": {
+          "yes": 30608
+        }
+      },
+      "attribute_coverage": {
+        "surface": 1.0,
+        "highway": 1.0,
+        "grade": 0.9784370099320439,
+        "sac_scale": 1.0,
+        "access": 1.0
+      }
+    },
+    "hike": {
+      "pairs": 100,
+      "valhalla_routed": 100,
+      "reference_routed": 100,
+      "both_routed": 100,
+      "valhalla_missing_where_reference_routes": 0,
+      "missing_pairs": [],
+      "valhalla_only": 0,
+      "reference_failures": [],
+      "distance_delta": {
+        "count": 100,
+        "min": -0.1823595050707536,
+        "p50": -0.04291649820643616,
+        "p90": -0.00555593007979561,
+        "p95": -0.0008248714965474788,
+        "p99": 0.00040943844627013714,
+        "max": 0.0010203869140584328,
+        "mean": -0.05027107317545667
+      },
+      "distance_delta_abs": {
+        "count": 100,
+        "min": 5.239717055279015e-05,
+        "p50": 0.042653086172640894,
+        "p90": 0.10156234231591575,
+        "p95": 0.11327052965616405,
+        "p99": 0.18123566173562217,
+        "max": 0.1823595050707536,
+        "mean": 0.0503007176260743
+      },
+      "segments": 29909,
+      "attribute_values": {
+        "surface": {
+          "paved_smooth": 23714,
+          "dirt": 2445,
+          "compacted": 1418,
+          "gravel": 1243,
+          "paved": 794,
+          "path": 263,
+          "paved_rough": 32
+        },
+        "highway": {
+          "tertiary": 8935,
+          "primary": 4868,
+          "trunk": 4458,
+          "secondary": 3047,
+          "residential": 2918,
+          "track": 2702,
+          "footway": 1038,
+          "unclassified": 824,
+          "service": 516,
+          "path": 432,
+          "pedestrian_crossing": 121,
+          "living_street": 33,
+          "cycleway": 6,
+          "steps": 6,
+          "driveway": 5
+        },
+        "sac_scale": {
+          "none": 29907,
+          "hiking": 2
+        },
+        "access": {
+          "yes": 29909
+        }
+      },
+      "attribute_coverage": {
+        "surface": 1.0,
+        "highway": 1.0,
+        "grade": 0.9817111906115216,
+        "sac_scale": 1.0,
+        "access": 1.0
+      }
+    }
+  },
+  "distance_delta_all": {
+    "count": 300,
+    "min": -0.22900604292560947,
+    "p50": -0.03677321021139774,
+    "p90": 0.0010203869140584328,
+    "p95": 0.024462462626083707,
+    "p99": 0.09083900809456517,
+    "max": 0.14068489111663368,
+    "mean": -0.04119582231834912
+  },
+  "distance_delta_abs_all": {
+    "count": 300,
+    "min": 5.239717055279015e-05,
+    "p50": 0.0388327056655019,
+    "p90": 0.10295754223855934,
+    "p95": 0.12057847152411207,
+    "p99": 0.1823595050707536,
+    "max": 0.22900604292560947,
+    "mean": 0.048641289720533526
+  },
+  "tolerance": {
+    "fraction": 0.23,
+    "percent": 23.0,
+    "derived_from": "largest |valhalla - reference| / reference over every pair both engines routed, rounded up to 0.001",
+    "p99": 0.1823595050707536,
+    "samples": 300
+  },
+  "engines": {
+    "valhalla": "ghcr.io/valhalla/valhalla:latest (3.9.1-52228c4e0), sha256 bf88b5c5c5131414c66a76ba77a8c5ce803a1c724c2a1f07c25961a874a419fb12, valhalla_service over the phase-A pack",
+    "reference": "GraphHopper 11.1 graphhopper-web-11.1.jar, sha256 8462f758d9ea49edaded557cec5c687a0a24f004ec371cd4daaeb0534824ea33, stock foot/bike/hike custom models, imported from an osmium bbox extract of ukraine-latest.osm.pbf (2026-11-04), no elevation",
+    "graphhopper": "http://127.0.0.1:18989",
+    "valhalla_url": "http://127.0.0.1:8002",
+    "valhalla_network": "docker exec into valhalla-t0301, started with --network none"
+  }
+}

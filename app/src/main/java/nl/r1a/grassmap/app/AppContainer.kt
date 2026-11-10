@@ -30,6 +30,7 @@ import nl.r1a.grassmap.places.PlacesAccess
 import nl.r1a.grassmap.places.SearchScreenSession
 import nl.r1a.grassmap.places.searchScreenCommands
 import nl.r1a.grassmap.plugin.api.command.Command
+import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.NoPlatformActions
@@ -37,6 +38,7 @@ import nl.r1a.grassmap.plugin.api.host.PlatformActions
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
+import nl.r1a.grassmap.plugin.api.provider.RoutingEngineContract
 import nl.r1a.grassmap.plugin.api.service.Clock
 import nl.r1a.grassmap.plugin.api.service.HeadingSource
 import nl.r1a.grassmap.plugin.api.service.NetworkGate
@@ -56,7 +58,6 @@ import nl.r1a.grassmap.regions.HttpDownloadTransport
 import nl.r1a.grassmap.regions.NetworkAccess
 import nl.r1a.grassmap.regions.RegionDownloader
 import nl.r1a.grassmap.regions.RegionPaths
-import nl.r1a.grassmap.routing.ValhallaRoutingEngine
 import java.io.File
 
 /**
@@ -146,18 +147,19 @@ class AppContainer(
         LocationPermissionCoordinator(locationSource, locationPermissionStore)
 
     /**
-     * The Valhalla engine over the pack copied to the device. The file lookup
-     * happens here, on the first route, never during app startup: resolving the
-     * external files directory reads the disk and StrictMode forbids that on
-     * Main. A missing directory or pack becomes a typed failure on the route.
+     * The `routing.engine` provider, resolved on the first route. The plugin is
+     * activated here rather than at startup, and the pack directory reaches it
+     * through the host's pack access, so no routing path is read on Main.
      */
-    val routingEngine: RoutingEngine? by lazy {
-        routingFilesProvider()?.let { root ->
-            ValhallaRoutingEngine(
-                packDirectory = File(root, ROUTING_PACK_DIRECTORY),
-                configDirectory = root,
-                log = { message -> Log.i(ROUTING_TAG, message) },
-            )
+    val routingEngine: suspend () -> RoutingEngine? = {
+        when (
+            val outcome =
+                providerRegistry.invoke(ROUTING_ENGINE_PLUGIN, RoutingEngineContract.REFERENCE) {
+                    it as? RoutingEngine ?: throw IllegalStateException("routing.engine provider is not an engine")
+                }
+        ) {
+            is Outcome.Success -> outcome.value
+            is Outcome.Failure -> null
         }
     }
 
@@ -292,8 +294,8 @@ class AppContainer(
 
     private val hostCommands: List<Command<*, *>> by lazy {
         mapCommands(mapSession, locationController, locationPermission, cameraModes) +
-            routeCommands(mapSession, { routingEngine }, { dataSources }) +
-            navCommands(mapSession, { routingEngine }) +
+            routeCommands(mapSession, routingEngine, { dataSources }) +
+            navCommands(mapSession, routingEngine) +
             searchCommands { places } +
             searchScreenCommands(searchScreen) { message -> Log.i(SEARCH_TAG, message) } +
             trackCommands({ tracks }, assetReader) +
@@ -328,6 +330,11 @@ class AppContainer(
             devToolsAccess = devTools,
             favouritesListsAccess = favouritesLists,
             platformActions = platformActions,
+            routingPacks = {
+                routingFilesProvider()?.let { root ->
+                    File(root, ROUTING_PACK_DIRECTORY).absolutePath
+                }
+            },
         )
     }
 
@@ -360,12 +367,12 @@ class AppContainer(
     }
 
     private companion object {
-        const val ROUTING_TAG = "GrassMapsRouting"
         const val SEARCH_TAG = "GrassMapsSearch"
         const val REGIONS_TAG = "GrassMapsRegions"
         const val MAP_CONTROLS_TAG = "GrassMapsMapControls"
         const val LINKS_TAG = "GrassMapsLinks"
         const val FAVOURITES_TAG = "GrassMapsFavourites"
         const val ROUTING_PACK_DIRECTORY = "valhalla"
+        val ROUTING_ENGINE_PLUGIN = PluginId("valhalla")
     }
 }

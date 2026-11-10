@@ -275,6 +275,8 @@ class RoutePlanner(
                     distanceMeters = route.distanceMeters,
                     durationSeconds = route.durationSeconds,
                     arrivalEpochMillis = now + (route.durationSeconds * MILLIS_PER_SECOND).toLong(),
+                    segments = route.segments,
+                    instructions = route.instructions,
                 )
             }
         generation += 1

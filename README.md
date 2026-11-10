@@ -797,8 +797,8 @@ profile and the reorder and removal evidence are in
 `NavigationSession` in `navigation` binds Ferrostar's Rust core to our route
 model. It takes a `Route`, a `Flow<LocationFix>` and a `RoutingEngine`, and
 emits `NavigationState`: phase, on-route relation, distance from the line,
-snapped position, remaining distance and time, and the next instruction. No
-Ferrostar type leaves the module; `FerrostarRouteFollower` is the only file
+snapped position, remaining distance and time, ETA, and the next instruction.
+No Ferrostar type leaves the module; `FerrostarRouteFollower` is the only file
 that names one.
 
 The `com.stadiamaps.ferrostar:core` AAR (0.59.0) is used without `ui-compose`
@@ -808,14 +808,55 @@ bounds, distance, waypoints and steps. Steps are split at the instruction
 distances because our `Route` has no per-step geometry. Elevation and typed way
 attributes stay in our model; Ferrostar's route has neither.
 
-Off-route uses Ferrostar's `StaticThreshold` deviation detector with the
-configured `maxDeviationMeters`. When the core reports no deviation (including
-its own horizontal-accuracy gate) or is unavailable, a `PolylineLocator`
-distance over the whole line decides instead. Two consecutive off-route fixes
-start a reroute through `RoutingEngine` from the current position to the
-original destination, and the session logs the detection-to-route-ready
-milliseconds. That is a seam policy, not the final one: T-0312 owns the 20 s
-profile-scaled, debounced policy with accuracy gating and rejoin-first.
+Guidance numbers come from the route's own model, not from a second
+calculation. `RouteProgress` builds spans from the route: the per-maneuver
+times of `Route.instructions` when their distances and durations agree with the
+totals, else the per-leg times of `Route.segments`, else one uniform span.
+Remaining time is the unused part of the current span plus every span still
+ahead; remaining distance is the route total minus the distance along it; the
+ETA is the current fix's epoch time plus that remaining time, so a stale fix
+carries a stale arrival time instead of hiding it. A source whose totals
+disagree is dropped rather than corrected. The follower's own duration is
+never published: the mapper prorates Ferrostar's step durations by distance, so
+using them would average a slow stretch into a fast one. `snappedPosition`
+still comes from the follower.
+
+A route planned through `plugins/route-planner` carries the same model.
+`RoutePlanOption` keeps the engine's `segments` and `instructions`, and
+`selectedRoute()` restores them for guidance, so the panel counts down from the
+numbers the preview showed. Both types are serializable, attributes included,
+so the plugin state round-trips unchanged.
+
+`GeometryRouteFollower` is the fallback when the native core cannot start, and
+the follower the desktop gate can run. It projects onto the line with
+`PolylineLocator`, reports no deviation verdict, and reports remaining distance
+in the route's own distance space.
+
+Off-route is declared at `NavigationConfig.maxDeviationMeters`, 35 m, and the
+engine's threshold is that same value: Ferrostar's `StaticThreshold` is built
+with it and the session's geometry floor compares against it. When the core
+returns a verdict it is authoritative, including its 15 m horizontal-accuracy
+gate; the floor answers only when there is no verdict, which also covers an
+unavailable core. Two consecutive off-route fixes confirm it. A fix that is off
+the current step but still on the route never counts. Arrival uses one number
+too: the core's end-of-step advance takes `arrivalDistanceMeters` instead of
+the old hardcoded 10 m. This is a seam policy, not the final one: T-0312 owns
+the 20 s profile-scaled, debounced policy with accuracy gating and
+rejoin-first.
+
+The 15 m noise acceptance replays the committed `test-data/location/mock-walk.gpx`
+with every fix moved exactly 15 m in a seeded random direction (seed
+20261110), through the full session, and measures every published snapped
+position against the route line with the harness's own haversine geometry. The
+route continues 300 m past the fixture's last point because the track is an
+82 m loop whose end sits inside one noise radius of its start; the measured
+line still contains the committed track unchanged. The bound is 2 m: the
+measured worst is 0.060 m, so 2 m leaves numerical and step-line margin while
+staying far below the 15 m noise and the 35 m off-route threshold. Results and
+the run command are in `test-data/location/README.md`. The native core ships
+Android ABIs only, so the Ferrostar run is an instrumented test and not part of
+`./check.sh --fast`; the desktop test runs the same harness with
+`GeometryRouteFollower`.
 
 The debug channel exposes `core.nav.test_follow`. It routes a walk, generates a
 GPX from that line with a sideways segment past the deviation threshold, parses

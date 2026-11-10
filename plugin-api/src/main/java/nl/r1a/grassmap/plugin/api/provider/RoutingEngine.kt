@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.plugin.api.provider
 
+import kotlinx.serialization.Serializable
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -205,7 +206,12 @@ data class Route(
     val rawResponse: String? = null,
 )
 
-/** One leg of [Route], with half-open shape indices. */
+/**
+ * One leg of [Route], with half-open shape indices. Each leg is one hop between
+ * requested waypoints, so its distance and duration are the route's own time
+ * model below the whole-route totals.
+ */
+@Serializable
 data class RouteSegment(
     val startIndex: Int,
     val endIndex: Int,
@@ -215,6 +221,7 @@ data class RouteSegment(
 )
 
 /** One guidance maneuver, placed by its distance from the route start. */
+@Serializable
 data class RouteInstruction(
     val text: String,
     val streetName: String? = null,

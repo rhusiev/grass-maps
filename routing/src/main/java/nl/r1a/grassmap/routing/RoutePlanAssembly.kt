@@ -14,5 +14,7 @@ fun RoutePlanState.selectedRoute(): Route? =
             geometry = option.geometry,
             distanceMeters = option.distanceMeters,
             durationSeconds = option.durationSeconds,
+            segments = option.segments,
+            instructions = option.instructions,
         )
     }

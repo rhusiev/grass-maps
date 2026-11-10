@@ -7,6 +7,10 @@ package nl.r1a.grassmap.navigation
  *
  * [maxDeviationMeters] feeds both Ferrostar's `StaticThreshold` deviation
  * detector and the geometry fallback, so the two agree.
+ *
+ * [arrivalDistanceMeters] is the single arrival radius: it sets the core's
+ * end-of-step advance and the session's own remaining-distance check, so the
+ * core cannot finish the trip while the session still counts.
  */
 data class NavigationConfig(
     val maxDeviationMeters: Double = 35.0,

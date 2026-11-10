@@ -8,6 +8,20 @@ android {
 
     defaultConfig {
         minSdk = 29
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // The replay fixture and the harness are shared by the desktop test and the
+    // instrumented Ferrostar test, so both measure the same replay.
+    sourceSets {
+        getByName("test") {
+            kotlin.srcDir("src/sharedTest/java")
+            resources.srcDir(rootProject.file("test-data"))
+        }
+        getByName("androidTest") {
+            kotlin.srcDir("src/sharedTest/java")
+            assets.srcDir(rootProject.file("test-data"))
+        }
     }
 
     compileOptions {
@@ -28,4 +42,9 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    // The native core ships Android ABIs only, so only an instrumented test can
+    // run the real follower; see `FerrostarReplayTest`.
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
 }

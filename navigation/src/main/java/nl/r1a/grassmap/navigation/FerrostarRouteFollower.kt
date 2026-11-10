@@ -20,6 +20,7 @@ import uniffi.ferrostar.createNavigationSession
 import uniffi.ferrostar.stepAdvanceDistanceEntryAndExit
 import uniffi.ferrostar.stepAdvanceDistanceToEndOfStep
 import java.time.Instant
+import kotlin.math.roundToInt
 
 /**
  * The Ferrostar Rust core behind [RouteFollowerEngine]. This is the only file
@@ -59,7 +60,13 @@ class FerrostarRouteFollower(
                 STEP_ADVANCE_EXIT_METERS,
                 STEP_ADVANCE_MIN_ACCURACY_METERS,
             ),
-            stepAdvanceDistanceToEndOfStep(ARRIVAL_STEP_ADVANCE_METERS, STEP_ADVANCE_MIN_ACCURACY_METERS),
+            stepAdvanceDistanceToEndOfStep(
+                config.arrivalDistanceMeters
+                    .roundToInt()
+                    .coerceIn(MIN_ARRIVAL_ADVANCE_METERS.toInt(), MAX_ARRIVAL_ADVANCE_METERS.toInt())
+                    .toUShort(),
+                STEP_ADVANCE_MIN_ACCURACY_METERS,
+            ),
             RouteDeviationTracking.StaticThreshold(
                 config.minimumHorizontalAccuracyMeters.toUShort(),
                 config.maxDeviationMeters,
@@ -193,6 +200,11 @@ class FerrostarRouteFollower(
         const val STEP_ADVANCE_ENTRY_METERS: UShort = 30u
         const val STEP_ADVANCE_EXIT_METERS: UShort = 5u
         const val STEP_ADVANCE_MIN_ACCURACY_METERS: UShort = 32u
-        const val ARRIVAL_STEP_ADVANCE_METERS: UShort = 10u
+
+        // The core takes a UShort, and a zero would make it wait for the exact
+        // waypoint. The session's own arrival check uses the same configured
+        // distance, so the two cannot disagree about when the trip is over.
+        const val MIN_ARRIVAL_ADVANCE_METERS: UShort = 1u
+        val MAX_ARRIVAL_ADVANCE_METERS: Int = UShort.MAX_VALUE.toInt()
     }
 }

@@ -36,6 +36,12 @@ data class NavigationInstruction(
  * One emitted navigation state. It carries the active route so a consumer can
  * draw a rerouted line without a second channel; [routeRevision] changes only
  * when the route is replaced.
+ *
+ * [remainingDistanceMeters], [remainingDurationSeconds] and [etaEpochMillis]
+ * are counted from the route's own model, not from the follower's second
+ * arithmetic. [etaEpochMillis] is the current fix's [LocationFix.timeMillis]
+ * plus the remaining duration, so a stale fix carries a stale arrival time
+ * instead of hiding it.
  */
 data class NavigationState(
     val phase: NavigationPhase = NavigationPhase.Idle,
@@ -45,6 +51,7 @@ data class NavigationState(
     val distanceFromRouteMeters: Double = 0.0,
     val remainingDistanceMeters: Double = 0.0,
     val remainingDurationSeconds: Double = 0.0,
+    val etaEpochMillis: Long? = null,
     val nextInstruction: NavigationInstruction? = null,
     val activeRoute: Route? = null,
     val routeRevision: Long = 0,

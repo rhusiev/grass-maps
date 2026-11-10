@@ -1,6 +1,8 @@
 package nl.r1a.grassmap.plugin.api.model
 
 import kotlinx.serialization.Serializable
+import nl.r1a.grassmap.plugin.api.provider.RouteInstruction
+import nl.r1a.grassmap.plugin.api.provider.RouteSegment
 
 /**
  * The two ends of a planned route. The role keeps the swap operation
@@ -37,6 +39,11 @@ enum class RoutePlanStatus {
 /**
  * One returned route as the plan publishes it. The geometry is kept because
  * the map draws it and the shell must not derive a second copy.
+ *
+ * [segments] and [instructions] are the engine's own time model for that route:
+ * one segment per leg between waypoints, and one instruction per maneuver. They
+ * travel with the option so guidance counts down from the same numbers the
+ * route was built with instead of recomputing them from the totals.
  */
 @Serializable
 data class RoutePlanOption(
@@ -44,6 +51,8 @@ data class RoutePlanOption(
     val distanceMeters: Double,
     val durationSeconds: Double,
     val arrivalEpochMillis: Long,
+    val segments: List<RouteSegment> = emptyList(),
+    val instructions: List<RouteInstruction> = emptyList(),
 )
 
 /**

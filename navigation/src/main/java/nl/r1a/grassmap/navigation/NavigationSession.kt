@@ -15,16 +15,26 @@ import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteRequest
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
 import java.util.Locale
+import kotlin.math.roundToLong
 
 /**
  * The navigation seam: one active route, a stream of fixes, an engine-neutral
  * state, and a reroute through [RoutingEngine] when the route is left.
  *
- * The off-route decision uses Ferrostar's deviation verdict when the follower
- * is available and a [PolylineLocator] distance as the floor and the fallback.
- * A fix must be off route for [NavigationConfig.offRouteConfirmFixes] in a row
- * before a reroute starts. That is deliberately simpler than the 20 s
- * profile-scaled, debounced policy T-0312 owns.
+ * Guidance numbers come from one place. The follower reports where the driver
+ * is on the line; [RouteProgress] turns that position into remaining distance,
+ * remaining time and the arrival time from the route's own per-maneuver and
+ * per-leg model. The follower's own duration is never published, because the
+ * core prorates its steps by distance and that would average a slow part of the
+ * route into a fast one.
+ *
+ * Off-route uses Ferrostar's verdict when the core gives one, because the core
+ * owns `StaticThreshold` with the same [NavigationConfig.maxDeviationMeters]
+ * that the geometry floor applies. The floor decides when the core reports no
+ * verdict, including its own horizontal-accuracy gate. A fix must be off route
+ * for [NavigationConfig.offRouteConfirmFixes] in a row before a reroute starts.
+ * That is deliberately simpler than the 20 s profile-scaled, debounced policy
+ * T-0312 owns.
  */
 class NavigationSession(
     private val follower: RouteFollowerEngine,
@@ -35,6 +45,9 @@ class NavigationSession(
     private val log: (String) -> Unit = {},
 ) {
     private val mutableState = MutableStateFlow(NavigationState())
+
+    /** The engine that needs no native core; used when [follower] cannot start. */
+    private val fallback = GeometryRouteFollower(config, log)
 
     /** The latest state; a consumer draws [NavigationState.activeRoute] on a revision change. */
     val state: StateFlow<NavigationState> = mutableState.asStateFlow()
@@ -54,6 +67,11 @@ class NavigationSession(
         val destination = initialRoute.geometry.last()
         var activeRoute = initialRoute
         var locator = PolylineLocator(activeRoute.geometry)
+        var progress = RouteProgress.of(activeRoute)
+        log(
+            "navigation-model source=${progress.source} spans=${progress.spanCount} " +
+                "total_m=${format(progress.totalDistanceMeters)} total_s=${format(activeRoute.durationSeconds)}",
+        )
         var active =
             try {
                 open(activeRoute)
@@ -104,6 +122,8 @@ class NavigationSession(
                             projection = projection,
                             relation = RouteRelation.OffRoute,
                             route = activeRoute,
+                            progress = progress,
+                            locator = locator,
                             revision = revision,
                             rerouteCount = rerouteCount,
                             lastRerouteMillis = lastRerouteMillis,
@@ -126,6 +146,7 @@ class NavigationSession(
                                 active.close()
                                 activeRoute = replacement
                                 locator = PolylineLocator(replacement.geometry)
+                                progress = RouteProgress.of(replacement)
                                 revision += 1
                                 rerouteCount += 1
                                 fixesSinceReroute = 0
@@ -143,6 +164,7 @@ class NavigationSession(
                                     "navigation-reroute fixes=$fixCount revision=$revision " +
                                         "duration_ms=$lastRerouteMillis " +
                                         "distance_m=${format(replacement.distanceMeters)} " +
+                                        "model=${progress.source} spans=${progress.spanCount} " +
                                         "destination=${format(destination.latitude)},${format(destination.longitude)}",
                                 )
                             }
@@ -173,6 +195,8 @@ class NavigationSession(
                         projection = projection,
                         relation = relation,
                         route = activeRoute,
+                        progress = progress,
+                        locator = locator,
                         revision = revision,
                         rerouteCount = rerouteCount,
                         lastRerouteMillis = lastRerouteMillis,
@@ -181,7 +205,7 @@ class NavigationSession(
                 if (arrived) {
                     log(
                         "navigation-arrived fixes=$fixCount " +
-                            "remaining_m=${format(snapshot?.remainingDistanceMeters ?: projection?.remainingMeters)}",
+                            "remaining_m=${format(mutableState.value.remainingDistanceMeters)}",
                     )
                 }
             }
@@ -190,14 +214,11 @@ class NavigationSession(
         } catch (error: Exception) {
             log("navigation-session-failed error=${error.javaClass.simpleName}: ${error.message}")
             publish(
-                stateOf(
+                mutableState.value.copy(
                     phase = NavigationPhase.Stopped,
-                    fix = mutableState.value.fix,
-                    snapshot = null,
-                    projection = null,
                     relation = mutableState.value.relation,
-                    route = activeRoute,
-                    revision = revision,
+                    activeRoute = activeRoute,
+                    routeRevision = revision,
                     rerouteCount = rerouteCount,
                     lastRerouteMillis = lastRerouteMillis,
                 ),
@@ -208,14 +229,10 @@ class NavigationSession(
         }
 
         publish(
-            stateOf(
+            mutableState.value.copy(
                 phase = if (arrived) NavigationPhase.Arrived else NavigationPhase.Stopped,
-                fix = mutableState.value.fix,
-                snapshot = null,
-                projection = null,
-                relation = mutableState.value.relation,
-                route = activeRoute,
-                revision = revision,
+                activeRoute = activeRoute,
+                routeRevision = revision,
                 rerouteCount = rerouteCount,
                 lastRerouteMillis = lastRerouteMillis,
             ),
@@ -233,17 +250,27 @@ class NavigationSession(
         )
     }
 
-    private fun open(route: Route): ActiveFollower =
-        when (val outcome = follower.begin(route)) {
+    private fun open(route: Route): ActiveFollower {
+        when (val primary = follower.begin(route)) {
             is Outcome.Success -> {
-                ActiveFollower(outcome.value)
+                return ActiveFollower(primary.value)
             }
 
             is Outcome.Failure -> {
-                log("navigation-follower-unavailable error=${outcome.error}")
+                log("navigation-follower-unavailable error=${primary.error} fallback=geometry")
+            }
+        }
+        return when (val geometry = fallback.begin(route)) {
+            is Outcome.Success -> {
+                ActiveFollower(geometry.value)
+            }
+
+            is Outcome.Failure -> {
+                log("navigation-geometry-follower-unavailable error=${geometry.error}")
                 ActiveFollower(handle = null)
             }
         }
+    }
 
     private fun read(
         active: ActiveFollower,
@@ -308,22 +335,24 @@ class NavigationSession(
         projection: PolylineLocator.Projection?,
         relation: RouteRelation,
         route: Route,
+        progress: RouteProgress,
+        locator: PolylineLocator,
         revision: Long,
         rerouteCount: Int,
         lastRerouteMillis: Long?,
     ): NavigationState {
-        val remaining = snapshot?.remainingDistanceMeters ?: projection?.remainingMeters ?: 0.0
+        val along = alongMeters(progress, locator, snapshot, projection)
+        val remainingSeconds = progress.remainingSeconds(along)
         return NavigationState(
             phase = phase,
             fix = fix,
             snappedPosition = snapshot?.snappedPosition ?: projection?.position,
             relation = relation,
             distanceFromRouteMeters = projection?.distanceMeters ?: snapshot?.deviationMeters ?: 0.0,
-            remainingDistanceMeters = remaining,
-            remainingDurationSeconds =
-                snapshot?.remainingDurationSeconds
-                    ?: remainingDuration(route, remaining),
-            nextInstruction = instructionAhead(route, projection?.alongMeters, snapshot),
+            remainingDistanceMeters = progress.remainingMeters(along),
+            remainingDurationSeconds = remainingSeconds,
+            etaEpochMillis = fix?.let { it.timeMillis + (remainingSeconds * MILLIS_PER_SECOND).roundToLong() },
+            nextInstruction = instructionAhead(route, along, snapshot),
             activeRoute = route,
             routeRevision = revision,
             rerouteCount = rerouteCount,
@@ -331,25 +360,38 @@ class NavigationSession(
         )
     }
 
-    private fun remainingDuration(
-        route: Route,
-        remainingMeters: Double,
+    /**
+     * The distance along the route the fix has reached, in the route's own
+     * distance space. The follower's remaining distance is preferred because
+     * its numbers come from the same model the route was converted from; the
+     * geometry projection is the fallback for an engine that reports none.
+     */
+    private fun alongMeters(
+        progress: RouteProgress,
+        locator: PolylineLocator,
+        snapshot: FollowerSnapshot?,
+        projection: PolylineLocator.Projection?,
     ): Double {
-        if (route.distanceMeters <= 0.0) {
-            return route.durationSeconds
+        val total = progress.totalDistanceMeters
+        val fromFollower = snapshot?.remainingDistanceMeters
+        if (fromFollower != null && fromFollower.isFinite()) {
+            return total - fromFollower.coerceIn(0.0, total)
         }
-        return route.durationSeconds * (remainingMeters / route.distanceMeters).coerceIn(0.0, 1.0)
+        val lineMeters = locator.totalMeters()
+        if (projection != null && lineMeters > 0.0) {
+            return total * (projection.alongMeters / lineMeters).coerceIn(0.0, 1.0)
+        }
+        return 0.0
     }
 
     private fun instructionAhead(
         route: Route,
-        alongMeters: Double?,
+        alongMeters: Double,
         snapshot: FollowerSnapshot?,
     ): NavigationInstruction? {
-        val along = alongMeters ?: 0.0
         val upcoming =
             route.instructions
-                .filter { it.distanceAlongRouteMeters > along + INSTRUCTION_LOOKAHEAD_METERS }
+                .filter { it.distanceAlongRouteMeters > alongMeters + INSTRUCTION_LOOKAHEAD_METERS }
                 .minByOrNull { it.distanceAlongRouteMeters }
         val text = snapshot?.nextInstruction?.takeIf { it.isNotBlank() } ?: upcoming?.text ?: return null
         return NavigationInstruction(
@@ -357,7 +399,7 @@ class NavigationSession(
             streetName = upcoming?.streetName,
             distanceToInstructionMeters =
                 snapshot?.distanceToNextInstructionMeters
-                    ?: upcoming?.let { it.distanceAlongRouteMeters - along },
+                    ?: upcoming?.let { it.distanceAlongRouteMeters - alongMeters },
         )
     }
 
@@ -382,5 +424,6 @@ class NavigationSession(
         const val SESSION_ID = "navigation.session"
         const val MIN_ROUTE_POINTS = 2
         const val INSTRUCTION_LOOKAHEAD_METERS = 1.0
+        const val MILLIS_PER_SECOND = 1_000.0
     }
 }

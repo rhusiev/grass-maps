@@ -260,6 +260,7 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/share` | the decimal, DMS and DDM coordinate notations, the osm.org and `geo:` link builders, and the copy, share and open-in commands | `plugin-api` |
 | `plugins/coordinates` | the coordinate notation parser the search field reads, and the vectors it shares with the formatters | `plugin-api` |
 | `plugins/valhalla` | the v1 `routing.engine` provider: profile mapping, the native Valhalla adapter, the async segment attributes | `plugin-api` |
+| `plugins/direct-engine` | the second `routing.engine` provider: one geodesic per leg with the haversine length, its leg segments and its honest empty capabilities | `plugin-api` |
 | `plugins/route-planner` | the start/end plan, its intermediate stops, its commands and its state stream; the shell draws the preview from it | `plugin-api`, `routing` |
 
 ## Place card
@@ -697,6 +698,11 @@ implementations. The only feature-to-feature edges are `navigation -> routing`
 and `alerts -> navigation`, plus the compiled-in `plugins/route-planner ->
 routing` exception above.
 
+One test-only edge is declared separately in `moduleTestDependencyAllowlist`:
+`navigation`'s tests depend on `plugins/direct-engine` (T-0305), because the
+follower's acceptance test feeds the real engine's route through the Ferrostar
+mapper. It reaches no runtime classpath.
+
 ## Plugin manifests
 
 Every module under `plugins/` carries `src/main/plugin.json`. At build time the
@@ -764,6 +770,26 @@ cut into one segment per graph edge, and carries `surface`, `highway`,
 `sac_scale` and `access`; `grade` is sampled from the mounted region DEM because
 the phase-A pack has no elevation. The profile mapping, the seeded 100x3
 validation and its derived length tolerance are in `test-data/routing/`.
+
+`plugins/direct-engine` is the second `routing.engine` provider (T-0305), and
+the proof that the engine seam is real: the planner and the follower consume
+its routes exactly as they consume Valhalla's, and only the source of the
+answer changes. A route is the geodesic between each pair of waypoints, and its
+length is the haversine of that pair, not the sum of the drawn line. One vertex
+per kilometre keeps the sampled arc within about 2 cm of the true geodesic, so
+the line the map draws and the length the follower counts down agree within a
+millimetre; the longest accepted route is 250 km, 250 segments. A leg across
+the antimeridian is refused, because the line would come back with a longitude
+jump the map would draw the long way round. A chain of waypoints becomes one
+route with one leg per hop in visit order and one segment per leg, so a via is
+routed through and not straightened away. `annotate`
+returns the route unchanged and the engine declares no attribute keys, no cost
+modifiers, one route (a geodesic has no alternative) and no track matching;
+walk, bike and hike are accepted, car is not. Durations use picked cruising
+speeds (1.4 m/s walking, 1.1 m/s hiking, 4.2 m/s cycling) because a line with no
+surface has no better number. `app` still resolves `valhalla` by plugin id, so
+choosing the direct engine, as a fallback when no pack is mounted or as a
+setting, is not wired yet.
 
 `MapHost.setRoute(Route?)` draws the route as one GeoJSON `LineString` in the
 `Routes` slot, using the same source pattern as the location puck. The app's

@@ -82,6 +82,7 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         ":plugins:style-standard" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:synthetic-data" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:valhalla" to setOf(":plugin-api"),
+        ":plugins:direct-engine" to setOf(":plugin-api"),
         // The first-party route planner is a compiled-in feature over the
         // routing domain, the same way navigation reads it. It reaches no core
         // internals and the engine still crosses the plugin-api contract.
@@ -96,6 +97,10 @@ val moduleTestDependencyAllowlist: Map<String, Set<String>> =
         ":regions" to setOf(":plugin-api"),
         ":control" to setOf(":plugins:info-widgets"),
         ":plugins:synthetic-data" to setOf(":plugin-api"),
+        // T-0305: the follower's acceptance test feeds the real direct engine's
+        // route through the Ferrostar mapper. Test only, never on a runtime
+        // classpath, so the plugins -> plugin-api rule still holds for the app.
+        ":navigation" to setOf(":plugins:direct-engine"),
     )
 val moduleBoundaryViolations = objects.listProperty(String::class.java)
 

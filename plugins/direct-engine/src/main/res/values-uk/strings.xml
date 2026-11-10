@@ -1,0 +1,4 @@
+<resources>
+    <string name="plugin.direct.name">Пряма маршрутизація</string>
+    <string name="plugin.direct.description">Маршрути по прямій без картографічних даних</string>
+</resources>

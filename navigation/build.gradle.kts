@@ -47,4 +47,7 @@ dependencies {
     // run the real follower; see `FerrostarReplayTest`.
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.ext.junit)
+    // T-0305: the direct engine's own route is the fixture the follower's
+    // acceptance test feeds through the mapper. Test only.
+    testImplementation(project(":plugins:direct-engine"))
 }

@@ -141,6 +141,7 @@ dependencies {
     implementation(project(":plugins:share"))
     implementation(project(":plugins:coordinates"))
     implementation(project(":plugins:valhalla"))
+    implementation(project(":plugins:direct-engine"))
     implementation(project(":plugins:route-planner"))
 
     implementation("androidx.activity:activity-compose:1.13.0")

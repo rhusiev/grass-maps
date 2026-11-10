@@ -1,0 +1,4 @@
+<resources>
+    <string name="plugin.direct.name">Direct routing</string>
+    <string name="plugin.direct.description">Straight-line routes without map data</string>
+</resources>

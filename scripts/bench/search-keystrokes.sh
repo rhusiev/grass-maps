@@ -80,7 +80,7 @@ timeout 30 "${ADB[@]}" shell am force-stop "$PACKAGE"
 timeout 30 "${ADB[@]}" shell mkdir -p "$DEVICE_SEARCH_DIR/$INDEX"
 timeout 120 "${ADB[@]}" push "$SOURCE_SECTION/." "$DEVICE_SEARCH_DIR/$INDEX/" >/dev/null
 
-timeout 30 "${ADB[@]}" shell am start -n "$ACTIVITY" >/dev/null
+timeout 30 "${ADB[@]}" shell am start -n "$PACKAGE/$ACTIVITY" >/dev/null
 
 deadline=$((SECONDS + BOOT_SECONDS))
 until timeout 20 "${GRASSCTL[@]}" commands >/dev/null 2>&1; do

@@ -39,7 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="use an existing adb forward instead of setting one",
     )
-    parser.add_argument("--timeout", type=float, default=20.0, help="connect timeout, seconds")
+    parser.add_argument("--timeout", type=float, default=20.0, help="connect and reply timeout, seconds")
     parser.add_argument("--json", action="store_true", help="print raw JSON results")
 
     commands = parser.add_subparsers(dest="command", required=True)
@@ -86,13 +86,18 @@ def open_client(args: argparse.Namespace) -> control_client.ControlClient:
     )
     if args.no_forward:
         return control_client.connect(port=args.port, token=token, timeout=args.timeout)
-    return control_client.wait_for_channel(
+    client = control_client.wait_for_channel(
         port=args.port,
         token=token,
         serial=args.serial,
         abstract=args.abstract,
         timeout_s=args.timeout,
     )
+    # wait_for_channel connects with the short default; a command may take much
+    # longer than that to answer (a 1,434-keystroke replay takes ~26 s on the
+    # g32), so the requested timeout applies to the reply as well.
+    client.set_timeout(args.timeout)
+    return client
 
 
 def parse_params(text: str | None) -> object:

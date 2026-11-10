@@ -73,6 +73,9 @@
     <string name="route_planner_pick_destination">Торкніться карти або результату пошуку, щоб задати призначення</string>
     <string name="route_planner_planning">Планування маршруту</string>
     <string name="route_planner_failed">Маршрут для цих точок не знайдено</string>
+    <string name="route_planner_pack_missing">Навігація недоступна: набір карт для маршрутів відсутній або неповний</string>
+    <string name="route_planner_pack_unusable">Навігація недоступна: не вдається прочитати набір карт для маршрутів</string>
+    <string name="route_planner_engine_unavailable">Маршрутизація недоступна в цій збірці</string>
     <string name="route_planner_no_alternatives">Для цих картографічних даних немає альтернативних маршрутів</string>
     <string name="route_planner_alternative_description">Альтернативний маршрут %1$s</string>
     <string name="route_planner_start_unavailable">Навігація ще недоступна в цій збірці</string>

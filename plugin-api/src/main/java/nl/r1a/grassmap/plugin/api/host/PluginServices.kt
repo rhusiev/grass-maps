@@ -50,8 +50,8 @@ interface PluginServices {
 
     /**
      * The mounted Valhalla pack a routing engine plugin reads (T-0301). Null
-     * until the host mounts one, so the engine reports "not found" on a route
-     * instead of failing at activation.
+     * until the host mounts one, so a route before one is a typed pack failure
+     * instead of a failed plugin.
      */
     val routingPacks: RoutingPackAccess get() = NoRoutingPacks
 

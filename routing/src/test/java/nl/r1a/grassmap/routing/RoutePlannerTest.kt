@@ -12,6 +12,7 @@ import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.RoutePlanFailure
 import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanRole
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
@@ -22,6 +23,7 @@ import nl.r1a.grassmap.plugin.api.service.Clock
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -134,6 +136,75 @@ class RoutePlannerTest {
                 planner.state.value.options
                     .isEmpty(),
             )
+        }
+
+    @Test
+    fun aPackFailureKeepsItsReasonForTheShell() =
+        runTest {
+            val planner =
+                RoutePlanner(
+                    { _, _ ->
+                        Outcome.Failure(
+                            AppError.RoutingPackUnavailable(
+                                AppError.RoutingPackUnavailable.Reason.Incomplete,
+                                "no tiles",
+                            ),
+                        )
+                    },
+                    clock = clock(),
+                    profile = RouteProfile.Bike,
+                )
+
+            planner.setPoint(RoutePlanRole.Start, START)
+            planner.setPoint(RoutePlanRole.Destination, DESTINATION)
+
+            assertEquals(RoutePlanStatus.Failed, planner.state.value.status)
+            assertEquals(RoutePlanFailure.PackMissing, planner.state.value.failure)
+        }
+
+    @Test
+    fun aMissingEngineIsItsOwnReasonNotAMissingRoute() =
+        runTest {
+            val planner =
+                RoutePlanner(
+                    { _, _ -> Outcome.Failure(AppError.NotFound) },
+                    clock = clock(),
+                    profile = RouteProfile.Bike,
+                )
+
+            planner.setPoint(RoutePlanRole.Start, START)
+            planner.setPoint(RoutePlanRole.Destination, DESTINATION)
+
+            assertEquals(RoutePlanFailure.EngineUnavailable, planner.state.value.failure)
+        }
+
+    @Test
+    fun aRetryClearsTheFailureReason() =
+        runTest {
+            var fail = true
+            val engine = FakeEngine()
+            val planner =
+                RoutePlanner(
+                    { request, cancellation ->
+                        if (fail) {
+                            Outcome.Failure(AppError.NotFound)
+                        } else {
+                            engine.route(request, cancellation)
+                        }
+                    },
+                    clock = clock(),
+                    profile = RouteProfile.Bike,
+                )
+            planner.setPoint(RoutePlanRole.Start, START)
+            planner.setPoint(RoutePlanRole.Destination, DESTINATION)
+            assertEquals(RoutePlanFailure.EngineUnavailable, planner.state.value.failure)
+
+            fail = false
+            val retried = planner.plan()
+
+            assertTrue(retried is Outcome.Success)
+            assertEquals(RoutePlanStatus.Ready, planner.state.value.status)
+            assertNull(planner.state.value.failure)
         }
 
     @Test

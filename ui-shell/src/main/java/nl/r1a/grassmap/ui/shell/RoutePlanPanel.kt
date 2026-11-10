@@ -20,6 +20,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmap.plugin.api.model.RoutePlanFailure
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
 import nl.r1a.grassmap.plugin.api.service.Strings
@@ -90,7 +91,14 @@ fun RoutePlanPanel(
             }
 
             RoutePlanStatus.Failed -> {
-                StatusLine(strings.resolve(FAILED_KEY), strings.resolve(FAILED_KEY))
+                val key =
+                    when (state.failure) {
+                        RoutePlanFailure.PackMissing -> PACK_MISSING_KEY
+                        RoutePlanFailure.PackUnusable -> PACK_UNUSABLE_KEY
+                        RoutePlanFailure.EngineUnavailable -> ENGINE_UNAVAILABLE_KEY
+                        RoutePlanFailure.NoRoute, null -> FAILED_KEY
+                    }
+                StatusLine(strings.resolve(key), strings.resolve(key))
             }
 
             RoutePlanStatus.Ready -> {
@@ -260,6 +268,9 @@ private const val PICK_START_KEY = "route_planner_pick_start"
 private const val PICK_DESTINATION_KEY = "route_planner_pick_destination"
 private const val PLANNING_KEY = "route_planner_planning"
 private const val FAILED_KEY = "route_planner_failed"
+private const val PACK_MISSING_KEY = "route_planner_pack_missing"
+private const val PACK_UNUSABLE_KEY = "route_planner_pack_unusable"
+private const val ENGINE_UNAVAILABLE_KEY = "route_planner_engine_unavailable"
 private const val NO_ALTERNATIVES_KEY = "route_planner_no_alternatives"
 private const val ALTERNATIVE_DESCRIPTION_KEY = "route_planner_alternative_description"
 private const val SWAP_KEY = "route_planner_swap"

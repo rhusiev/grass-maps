@@ -59,8 +59,8 @@ class ValhallaRoutingEngine internal constructor(
         elevation: ElevationAccess = NoElevationAccess,
     ) : this(
         {
-            val pack = packs.packDirectory()?.let(::File) ?: throw ValhallaPackMissingException()
-            NativeValhallaTransport(pack, pack.parentFile ?: pack)
+            val pack = ValhallaPack.inspect(packs.packDirectory()).readyOrThrow()
+            NativeValhallaTransport(pack.directory, pack.directory.parentFile ?: pack.directory)
         },
         log,
         elevation,
@@ -106,16 +106,12 @@ class ValhallaRoutingEngine internal constructor(
             val active =
                 try {
                     transportOrCreate()
-                } catch (exception: ValhallaPackMissingException) {
-                    return@withContext Outcome.Failure(AppError.NotFound)
-                } catch (exception: ValhallaPackCorruptException) {
-                    return@withContext Outcome.Failure(AppError.CorruptData)
+                } catch (exception: ValhallaPackException) {
+                    return@withContext packFailure(exception)
                 } catch (exception: CancellationException) {
                     throw exception
                 } catch (exception: Exception) {
-                    return@withContext Outcome.Failure(
-                        AppError.Internal("routing.valhalla.engine", exception.message),
-                    )
+                    return@withContext internalFailure("routing.valhalla.engine", exception)
                 }
 
             val raw =
@@ -124,12 +120,12 @@ class ValhallaRoutingEngine internal constructor(
                         active.route(ValhallaRequest.build(request))
                     } catch (exception: CancellationException) {
                         throw exception
+                    } catch (exception: ValhallaPackException) {
+                        return@withContext packFailure(exception)
                     } catch (exception: Exception) {
                         log.info("route failed: ${exception.message}")
                         if (!hasCostOverlay(request) || !isOffGraphOverlay(exception)) {
-                            return@withContext Outcome.Failure(
-                                AppError.Internal("routing.valhalla.route", exception.message),
-                            )
+                            return@withContext internalFailure("routing.valhalla.route", exception)
                         }
                         log.info("cost line has no edges near it; using exclusion polygons")
                         try {
@@ -138,11 +134,11 @@ class ValhallaRoutingEngine internal constructor(
                             )
                         } catch (retry: CancellationException) {
                             throw retry
+                        } catch (retry: ValhallaPackException) {
+                            return@withContext packFailure(retry)
                         } catch (retry: Exception) {
                             log.info("exclusion fallback failed: ${retry.message}")
-                            return@withContext Outcome.Failure(
-                                AppError.Internal("routing.valhalla.route", retry.message),
-                            )
+                            return@withContext internalFailure("routing.valhalla.route", retry)
                         }
                     }
                 }
@@ -177,16 +173,12 @@ class ValhallaRoutingEngine internal constructor(
             val active =
                 try {
                     transportOrCreate()
-                } catch (exception: ValhallaPackMissingException) {
-                    return@withContext Outcome.Failure(AppError.NotFound)
-                } catch (exception: ValhallaPackCorruptException) {
-                    return@withContext Outcome.Failure(AppError.CorruptData)
+                } catch (exception: ValhallaPackException) {
+                    return@withContext packFailure(exception)
                 } catch (exception: CancellationException) {
                     throw exception
                 } catch (exception: Exception) {
-                    return@withContext Outcome.Failure(
-                        AppError.Internal("routing.valhalla.engine", exception.message),
-                    )
+                    return@withContext internalFailure("routing.valhalla.engine", exception)
                 }
             val profileOptions = ValhallaProfiles.of(profile)
             val edges = mutableListOf<ValhallaTrace.TraceEdge>()
@@ -200,11 +192,11 @@ class ValhallaRoutingEngine internal constructor(
                             active.traceAttributes(ValhallaTrace.request(chunk, profileOptions))
                         } catch (exception: CancellationException) {
                             throw exception
+                        } catch (exception: ValhallaPackException) {
+                            return@withContext packFailure(exception)
                         } catch (exception: Exception) {
                             log.info("trace_attributes failed: ${exception.message}")
-                            return@withContext Outcome.Failure(
-                                AppError.Internal("routing.valhalla.trace", exception.message),
-                            )
+                            return@withContext internalFailure("routing.valhalla.trace", exception)
                         }
                     when (val parsed = ValhallaTrace.edges(raw)) {
                         is Outcome.Failure -> return@withContext parsed
@@ -258,6 +250,31 @@ class ValhallaRoutingEngine internal constructor(
             }
             transport = null
         }
+    }
+
+    /** One pack problem, logged once and reported as the typed outcome. */
+    private fun packFailure(exception: ValhallaPackException): Outcome.Failure {
+        log.error("valhalla pack: ${exception.detail}", exception)
+        return Outcome.Failure(
+            AppError.RoutingPackUnavailable(
+                reason =
+                    when (exception.problem) {
+                        ValhallaPackProblem.Absent -> AppError.RoutingPackUnavailable.Reason.Absent
+                        ValhallaPackProblem.Incomplete -> AppError.RoutingPackUnavailable.Reason.Incomplete
+                        ValhallaPackProblem.Unusable -> AppError.RoutingPackUnavailable.Reason.Unusable
+                    },
+                detail = exception.detail,
+            ),
+        )
+    }
+
+    /** An unexpected engine failure: always logged, then reported as internal. */
+    private fun internalFailure(
+        id: String,
+        exception: Exception,
+    ): Outcome.Failure {
+        log.error("$id failed", exception)
+        return Outcome.Failure(AppError.Internal(id, exception.message))
     }
 
     private fun transportOrCreate(): ValhallaTransport =

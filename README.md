@@ -758,10 +758,21 @@ method list, the token handling and the CLI examples.
 `RoutingEngine` in `plugin-api` is the engine contract (1.1.0). `plugins/valhalla`
 is the v1 provider: it binds the contract to valhalla-mobile 0.6.4 and keeps
 every library type inside that module. The engine reads the pack directory from
-the host's `RoutingPackAccess` service, writes a local `valhalla.local.json`
-whose paths point at that pack, and creates the native actor on the first
-route. `app` resolves the provider through `ProviderRegistry`, so a build with
-no pack registers an engine that answers `NotFound` rather than failing at
+the host's `RoutingPackAccess` service. It inspects that directory on the first
+route, so a missing, incomplete or unreadable pack becomes the typed
+`AppError.RoutingPackUnavailable`. The planner publishes `PackMissing` or
+`PackUnusable` in `RoutePlanState.failure`. The shell shows the matching string.
+The control channel answers `-32005` with a `routing_pack_*` kind. The engine
+writes a local `valhalla.local.json` and creates the native actor on the first
+route.
+
+The app does not trust the pack's own `valhalla.json` for paths. It replaces
+`tile_extract`, `tile_dir`, `admin` and `timezone` with the paths on this
+device. It clears the optional `landmarks`, `traffic_extract`, `transit_dir`,
+`transit_feeds_dir` and `additional_data.elevation` entries unless the pack
+ships them. The tiles may be a `tiles.tar` extract or a `tiles/` directory.
+`app` resolves the provider through `ProviderRegistry`, so a build with no pack
+registers an engine that answers that typed failure. It does not fail at
 startup.
 
 `annotate` fills the segment attributes after the route is already returned:

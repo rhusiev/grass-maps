@@ -36,6 +36,26 @@ sealed interface AppError {
         val pluginId: PluginId,
     ) : AppError
 
+    /**
+     * A routing pack is absent, incomplete or unreadable, so no engine can
+     * serve a route. [detail] is diagnostic data for the log, never user text.
+     */
+    data class RoutingPackUnavailable(
+        val reason: Reason,
+        val detail: String? = null,
+    ) : AppError {
+        enum class Reason {
+            /** No pack directory, or nothing mounted at the path. */
+            Absent,
+
+            /** The directory exists but a required file is missing. */
+            Incomplete,
+
+            /** Every required file exists but the engine cannot read them. */
+            Unusable,
+        }
+    }
+
     data class Internal(
         val id: String,
         val detail: String? = null,

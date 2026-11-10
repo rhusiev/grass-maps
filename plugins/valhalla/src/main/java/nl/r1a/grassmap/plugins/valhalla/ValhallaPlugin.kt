@@ -10,7 +10,7 @@ import nl.r1a.grassmap.plugin.api.error.Outcome
  * The engine is built here, not by the host, and reads the pack directory from
  * [nl.r1a.grassmap.plugin.api.host.PluginServices.routingPacks] when the first
  * route needs it. Activation therefore succeeds before a pack is mounted, and
- * a route before one is a `NotFound` value rather than a failed plugin.
+ * a route before one is a typed pack failure rather than a failed plugin.
  */
 class ValhallaPlugin : Plugin {
     override suspend fun activate(context: PluginContext): Outcome<Unit> {

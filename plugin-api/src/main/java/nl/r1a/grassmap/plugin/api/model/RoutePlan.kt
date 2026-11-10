@@ -37,6 +37,20 @@ enum class RoutePlanStatus {
 }
 
 /**
+ * Why the last request failed. [NoRoute] is the engine's answer to a valid
+ * request; the other values say the engine could not be reached at all, so the
+ * shell can tell the user to install or repair the pack instead of blaming the
+ * points they picked.
+ */
+@Serializable
+enum class RoutePlanFailure {
+    NoRoute,
+    EngineUnavailable,
+    PackMissing,
+    PackUnusable,
+}
+
+/**
  * One returned route as the plan publishes it. The geometry is kept because
  * the map draws it and the shell must not derive a second copy.
  *
@@ -68,6 +82,9 @@ data class RoutePlanOption(
  * [destination]. One route request carries all of them as one ordered waypoint
  * chain, so the engine returns one route with one leg per hop; the planner never
  * joins independent routes.
+ *
+ * [failure] is set only while [status] is [RoutePlanStatus.Failed], and says
+ * whether the points or the engine were at fault.
  */
 @Serializable
 data class RoutePlanState(
@@ -78,6 +95,7 @@ data class RoutePlanState(
     val selectedIndex: Int = 0,
     val generation: Long = 0,
     val vias: List<RoutePlanPoint> = emptyList(),
+    val failure: RoutePlanFailure? = null,
 ) {
     /** The selected route, or null before a request succeeds. */
     val selected: RoutePlanOption?

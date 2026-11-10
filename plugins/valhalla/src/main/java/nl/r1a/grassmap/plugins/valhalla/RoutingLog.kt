@@ -7,6 +7,15 @@ package nl.r1a.grassmap.plugins.valhalla
 fun interface RoutingLog {
     fun info(message: String)
 
+    /**
+     * Logs one failure with its cause. The default keeps the message; a host
+     * that keeps stack traces overrides this.
+     */
+    fun error(
+        message: String,
+        throwable: Throwable,
+    ) = info("$message: ${throwable.message}")
+
     companion object {
         val None: RoutingLog = RoutingLog { }
     }

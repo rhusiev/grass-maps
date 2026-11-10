@@ -72,6 +72,9 @@
     <string name="route_planner_pick_destination">Tap the map or a search result to set the destination</string>
     <string name="route_planner_planning">Planning the route</string>
     <string name="route_planner_failed">No route found for these points</string>
+    <string name="route_planner_pack_missing">Routing is unavailable: the map pack is missing or incomplete</string>
+    <string name="route_planner_pack_unusable">Routing is unavailable: the map pack cannot be read</string>
+    <string name="route_planner_engine_unavailable">Routing is unavailable in this build</string>
     <string name="route_planner_no_alternatives">No alternative routes for this map data</string>
     <string name="route_planner_alternative_description">Alternative route %1$s</string>
     <string name="route_planner_start_unavailable">Guidance is not available in this build yet</string>

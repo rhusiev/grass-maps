@@ -41,8 +41,17 @@ policy: required switch, dispatcher, cancellation and undo.
 
 Stream values arrive as `control.stream.data` notifications with
 `{subscription, stream, value}`. Refusals carry a JSON-RPC error whose `data`
-has a `kind`: `unauthorized`, `not_allowlisted`, `unknown_command`,
-`unknown_stream`, `not_subscribed`, `switch_off`, `plugin_failed`.
+has a `kind`. The kinds are `unauthorized`, `not_allowlisted`,
+`unknown_command`, `unknown_stream`, `not_subscribed`, `switch_off`,
+`plugin_failed`, `routing_pack_absent`, `routing_pack_incomplete` and
+`routing_pack_unusable`.
+
+A routing-pack refusal uses code `-32005`. Its message is `routing pack absent`,
+`routing pack incomplete` or `routing pack unusable`. A pack failure is never
+reported as `-32603`. The channel logs every refusal and every handler exception
+on the device. The log line names the command. A refusal is logged at warning
+level with the typed error. An escaped exception is logged at error level with
+its stack trace.
 
 The framing is newline-delimited JSON, one object per line, UTF-8. A frame
 larger than 1 MiB ends the connection.

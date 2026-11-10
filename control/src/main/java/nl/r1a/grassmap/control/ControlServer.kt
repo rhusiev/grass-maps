@@ -46,6 +46,7 @@ class ControlServer(
     private val onState: (ControlServerState) -> Unit = {},
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val maxFailedAuth: Int = ControlSession.DEFAULT_MAX_FAILED_AUTH,
+    private val log: ControlLog = ControlLog.None,
 ) {
     private val exceptionHandler =
         CoroutineExceptionHandler { _, error ->
@@ -152,6 +153,7 @@ class ControlServer(
                 token = token,
                 transport = transport,
                 maxFailedAuth = maxFailedAuth,
+                log = log,
             ).run()
         } finally {
             transport.close()

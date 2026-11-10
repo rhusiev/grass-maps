@@ -40,6 +40,7 @@ class ControlSession(
     private val token: ControlToken,
     private val transport: FrameTransport,
     private val maxFailedAuth: Int = DEFAULT_MAX_FAILED_AUTH,
+    private val log: ControlLog = ControlLog.None,
 ) {
     private val writeMutex = Mutex()
     private val subscriptions = ConcurrentHashMap<Long, Job>()
@@ -155,6 +156,7 @@ class ControlSession(
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: Exception) {
+            log.error("control ${requestLabel(request)} failed", exception)
             Reply.Failure(JsonRpcCodec.refusal(RpcCodes.INTERNAL, "handler_failure", "internal error"))
         }
     }
@@ -201,8 +203,14 @@ class ControlSession(
         }
         val commandParams = params[PARAMS_PARAM] ?: JsonNull
         return when (val outcome = endpoint.invoker.invoke(CommandId(commandId), commandParams)) {
-            is Outcome.Success -> Reply.Result(outcome.value)
-            is Outcome.Failure -> Reply.Failure(JsonRpcCodec.fromAppError(outcome.error))
+            is Outcome.Success -> {
+                Reply.Result(outcome.value)
+            }
+
+            is Outcome.Failure -> {
+                log.warn("control command $commandId refused: ${outcome.error}")
+                Reply.Failure(JsonRpcCodec.fromAppError(outcome.error))
+            }
         }
     }
 
@@ -295,6 +303,14 @@ class ControlSession(
         id: JsonElement?,
         error: RpcError,
     ): String = JsonRpcCodec.error(id, error)
+
+    /** Names the command a failing request carried, for the log line. */
+    private fun requestLabel(request: RpcRequest): String =
+        if (request.method == METHOD_INVOKE_COMMAND) {
+            "command ${request.params.string(COMMAND_PARAM) ?: "?"}"
+        } else {
+            "method ${request.method}"
+        }
 
     private fun parseError(): RpcError = JsonRpcCodec.refusal(RpcCodes.PARSE_ERROR, "parse_error", "malformed JSON-RPC frame")
 

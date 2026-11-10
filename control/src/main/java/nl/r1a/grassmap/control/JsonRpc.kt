@@ -41,6 +41,9 @@ object RpcCodes {
     const val NOT_FOUND = -32002
     const val SWITCH_OFF = -32003
     const val DENIED = -32004
+
+    /** A routing pack is absent, incomplete or unusable; retrying will not help. */
+    const val ROUTING_PACK = -32005
 }
 
 /**
@@ -190,6 +193,27 @@ object JsonRpcCodec {
                     "plugin_failed",
                     "plugin failed",
                     mapOf("plugin" to JsonPrimitive(error.pluginId.value)),
+                )
+            }
+
+            is AppError.RoutingPackUnavailable -> {
+                val kind =
+                    when (error.reason) {
+                        AppError.RoutingPackUnavailable.Reason.Absent -> "routing_pack_absent"
+                        AppError.RoutingPackUnavailable.Reason.Incomplete -> "routing_pack_incomplete"
+                        AppError.RoutingPackUnavailable.Reason.Unusable -> "routing_pack_unusable"
+                    }
+                val message =
+                    when (error.reason) {
+                        AppError.RoutingPackUnavailable.Reason.Absent -> "routing pack absent"
+                        AppError.RoutingPackUnavailable.Reason.Incomplete -> "routing pack incomplete"
+                        AppError.RoutingPackUnavailable.Reason.Unusable -> "routing pack unusable"
+                    }
+                refusal(
+                    RpcCodes.ROUTING_PACK,
+                    kind,
+                    message,
+                    mapOf("reason" to JsonPrimitive(error.reason.name.lowercase())),
                 )
             }
 

@@ -18,7 +18,9 @@ import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Base64
@@ -388,6 +390,74 @@ class ControlSessionTest {
             harness.send(2L, ControlSession.METHOD_INVOKE_COMMAND, JsonObject(emptyMap()))
 
             assertEquals(RpcCodes.INVALID_PARAMS, harness.nextObject().errorCode())
+        }
+
+    @Test
+    fun packRefusalsAreTypedAndNeverInternal() =
+        runTest {
+            val cases =
+                mapOf(
+                    AppError.RoutingPackUnavailable.Reason.Absent to
+                        ("routing_pack_absent" to "routing pack absent"),
+                    AppError.RoutingPackUnavailable.Reason.Incomplete to
+                        ("routing_pack_incomplete" to "routing pack incomplete"),
+                    AppError.RoutingPackUnavailable.Reason.Unusable to
+                        ("routing_pack_unusable" to "routing pack unusable"),
+                )
+            for ((reason, expected) in cases) {
+                val (kind, message) = expected
+                val invoker = RecordingInvoker(Outcome.Failure(AppError.RoutingPackUnavailable(reason, "detail")))
+                val harness = Harness(invoker = invoker)
+                backgroundScope.launch { harness.session.run() }
+                harness.authenticate()
+
+                harness.send(
+                    2L,
+                    ControlSession.METHOD_INVOKE_COMMAND,
+                    buildJsonObject { put(ControlSession.COMMAND_PARAM, "test.allowed") },
+                )
+                val response = harness.nextObject()
+
+                assertEquals(kind, response.errorKind())
+                assertEquals(
+                    message,
+                    response["error"]
+                        ?.let { it as JsonObject }
+                        ?.get("message")
+                        ?.jsonPrimitive
+                        ?.content,
+                )
+                assertNotEquals(RpcCodes.INTERNAL, response.errorCode())
+                assertEquals(RpcCodes.ROUTING_PACK, response.errorCode())
+                assertTrue(
+                    harness.log.warnings
+                        .single()
+                        .contains("test.allowed"),
+                )
+                harness.transport.close()
+            }
+        }
+
+    @Test
+    fun anEscapingCommandExceptionIsLoggedWithItsCommandAndStackTrace() =
+        runTest {
+            val failure = IllegalStateException("native actor failed")
+            val harness = Harness(invoker = RecordingInvoker(thrown = failure))
+            backgroundScope.launch { harness.session.run() }
+            harness.authenticate()
+
+            harness.send(
+                2L,
+                ControlSession.METHOD_INVOKE_COMMAND,
+                buildJsonObject { put(ControlSession.COMMAND_PARAM, "test.allowed") },
+            )
+            val response = harness.nextObject()
+
+            assertEquals(RpcCodes.INTERNAL, response.errorCode())
+            assertEquals("handler_failure", response.errorKind())
+            val (message, throwable) = harness.log.errors.single()
+            assertTrue(message.contains("test.allowed"))
+            assertSame(failure, throwable)
         }
 
     private companion object {

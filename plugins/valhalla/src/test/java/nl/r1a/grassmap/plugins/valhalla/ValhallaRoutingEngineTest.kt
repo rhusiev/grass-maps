@@ -18,6 +18,8 @@ import nl.r1a.grassmap.plugin.api.provider.RoutingEngineContract
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
+import java.nio.file.Files
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -150,6 +152,76 @@ class ValhallaRoutingEngineTest {
         }
 
     @Test
+    fun anEmptyPackDirectoryIsATypedAbsentFailure() =
+        runTest {
+            val pack = temporaryDirectory()
+            val messages = mutableListOf<String>()
+            val engine = ValhallaRoutingEngine(packs = { pack.absolutePath }, log = RoutingLog { messages += it })
+
+            val error = packFailure(engine.route(request(), CancellationHandle.None))
+
+            assertEquals(AppError.RoutingPackUnavailable.Reason.Absent, error.reason)
+            assertTrue(error.detail.orEmpty().contains(pack.absolutePath))
+            assertEquals(1, messages.size)
+            assertTrue(messages.single().startsWith("valhalla pack:"))
+        }
+
+    @Test
+    fun aPackWithoutAConfigIsIncomplete() =
+        runTest {
+            val pack = temporaryDirectory()
+            writeFile(pack, "admins.sqlite")
+            writeFile(pack, "timezones.sqlite")
+            writeFile(pack, "tiles.tar")
+            val engine = ValhallaRoutingEngine(packs = { pack.absolutePath })
+
+            val error = packFailure(engine.route(request(), CancellationHandle.None))
+
+            assertEquals(AppError.RoutingPackUnavailable.Reason.Incomplete, error.reason)
+            assertTrue(error.detail.orEmpty().contains("valhalla.json"))
+        }
+
+    @Test
+    fun aPackWithoutTilesIsIncomplete() =
+        runTest {
+            val pack = temporaryDirectory()
+            writeFile(pack, "valhalla.json", CONFIG)
+            writeFile(pack, "admins.sqlite")
+            writeFile(pack, "timezones.sqlite")
+            val engine = ValhallaRoutingEngine(packs = { pack.absolutePath })
+
+            val error = packFailure(engine.route(request(), CancellationHandle.None))
+
+            assertEquals(AppError.RoutingPackUnavailable.Reason.Incomplete, error.reason)
+            assertTrue(error.detail.orEmpty().contains("tiles.tar"))
+        }
+
+    @Test
+    fun anUnreadableConfigIsUnusable() =
+        runTest {
+            val pack = temporaryDirectory()
+            writeFile(pack, "valhalla.json", "{ not json")
+            writeFile(pack, "admins.sqlite")
+            writeFile(pack, "timezones.sqlite")
+            writeFile(pack, "tiles.tar")
+            val engine = ValhallaRoutingEngine(packs = { pack.absolutePath })
+
+            val error = packFailure(engine.route(request(), CancellationHandle.None))
+
+            assertEquals(AppError.RoutingPackUnavailable.Reason.Unusable, error.reason)
+        }
+
+    @Test
+    fun aPackProblemAlsoReachesAnnotate() =
+        runTest {
+            val engine = ValhallaRoutingEngine(packs = { temporaryDirectory().resolve("missing").absolutePath })
+
+            val error = packFailure(engine.annotate(aRoute(), RouteProfile.Walk, CancellationHandle.None))
+
+            assertEquals(AppError.RoutingPackUnavailable.Reason.Absent, error.reason)
+        }
+
+    @Test
     fun aCancelledRequestDoesNoWork() =
         runTest {
             val transport = RecordingTransport(response(shape()))
@@ -221,6 +293,29 @@ class ValhallaRoutingEngineTest {
                     .attributes.size,
             )
         }
+
+    private fun packFailure(result: Outcome<*>): AppError.RoutingPackUnavailable =
+        ((result as? Outcome.Failure)?.error as? AppError.RoutingPackUnavailable)
+            ?: throw AssertionError("expected a typed pack failure, got $result")
+
+    private fun temporaryDirectory(): File = Files.createTempDirectory("valhalla-engine").toFile().also { it.deleteOnExit() }
+
+    private fun writeFile(
+        directory: File,
+        name: String,
+        content: String = "",
+    ) {
+        val file = File(directory, name)
+        file.parentFile?.mkdirs()
+        file.writeText(content)
+    }
+
+    private fun aRoute(): Route =
+        Route(
+            geometry = listOf(GeoPoint(49.8419, 24.0316), GeoPoint(49.8365, 24.0250)),
+            distanceMeters = 1_009.0,
+            durationSeconds = 716.0,
+        )
 
     private fun elevations(vararg heights: Double): ElevationAccess {
         val points = mutableListOf<Double>()
@@ -302,5 +397,10 @@ class ValhallaRoutingEngineTest {
             traceFailure?.let { throw it }
             return trace
         }
+    }
+
+    private companion object {
+        /** A minimal pack config; the engine never reaches the native layer here. */
+        const val CONFIG = """{"mjolnir":{"tile_extract":"/data/valhalla/tiles.tar"}}"""
     }
 }

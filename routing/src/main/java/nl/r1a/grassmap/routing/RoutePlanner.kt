@@ -9,6 +9,7 @@ import kotlinx.coroutines.sync.withLock
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.model.RoutePlanFailure
 import nl.r1a.grassmap.plugin.api.model.RoutePlanOption
 import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanRole
@@ -68,6 +69,7 @@ class RoutePlanner(
                         status = if (complete) RoutePlanStatus.Planning else nextPickingStatus(current),
                         options = emptyList(),
                         selectedIndex = 0,
+                        failure = null,
                     )
                 _state.value
             }
@@ -94,6 +96,7 @@ class RoutePlanner(
                         status = if (complete) RoutePlanStatus.Planning else nextPickingStatus(next),
                         options = emptyList(),
                         selectedIndex = 0,
+                        failure = null,
                     )
                 _state.value
             }
@@ -150,6 +153,7 @@ class RoutePlanner(
                         status = RoutePlanStatus.Planning,
                         options = emptyList(),
                         selectedIndex = 0,
+                        failure = null,
                     )
                 _state.value
             }
@@ -174,7 +178,11 @@ class RoutePlanner(
                         selectedIndex = 0,
                     )
                 val complete = next.start != null && next.destination != null
-                _state.value = next.copy(status = if (complete) RoutePlanStatus.Planning else nextPickingStatus(next))
+                _state.value =
+                    next.copy(
+                        status = if (complete) RoutePlanStatus.Planning else nextPickingStatus(next),
+                        failure = null,
+                    )
                 _state.value
             }
         return if (snapshot.status == RoutePlanStatus.Planning) request(snapshot) else Outcome.Success(snapshot)
@@ -197,6 +205,7 @@ class RoutePlanner(
                         status = if (complete) RoutePlanStatus.Planning else nextPickingStatus(updated),
                         options = emptyList(),
                         selectedIndex = 0,
+                        failure = null,
                     )
                 _state.value
             } ?: return Outcome.Failure(AppError.InvalidInput)
@@ -250,7 +259,12 @@ class RoutePlanner(
             }
             when (outcome) {
                 is Outcome.Failure -> {
-                    _state.value = _state.value.copy(status = RoutePlanStatus.Failed, options = emptyList())
+                    _state.value =
+                        _state.value.copy(
+                            status = RoutePlanStatus.Failed,
+                            options = emptyList(),
+                            failure = failureOf(outcome.error),
+                        )
                     outcome
                 }
 
@@ -264,7 +278,12 @@ class RoutePlanner(
     private fun publish(routes: List<Route>): Outcome<RoutePlanState> {
         val usable = routes.filter { route -> route.geometry.size >= MIN_ROUTE_POINTS }
         if (usable.isEmpty()) {
-            _state.value = _state.value.copy(status = RoutePlanStatus.Failed, options = emptyList())
+            _state.value =
+                _state.value.copy(
+                    status = RoutePlanStatus.Failed,
+                    options = emptyList(),
+                    failure = RoutePlanFailure.NoRoute,
+                )
             return Outcome.Failure(AppError.NotFound)
         }
         val now = clock.nowMillis()
@@ -286,9 +305,32 @@ class RoutePlanner(
                 options = options,
                 selectedIndex = 0,
                 generation = generation,
+                failure = null,
             )
         return Outcome.Success(_state.value)
     }
+
+    private fun failureOf(error: AppError): RoutePlanFailure =
+        when (error) {
+            is AppError.RoutingPackUnavailable -> {
+                when (error.reason) {
+                    AppError.RoutingPackUnavailable.Reason.Absent -> RoutePlanFailure.PackMissing
+                    AppError.RoutingPackUnavailable.Reason.Incomplete -> RoutePlanFailure.PackMissing
+                    AppError.RoutingPackUnavailable.Reason.Unusable -> RoutePlanFailure.PackUnusable
+                }
+            }
+
+            AppError.NotFound,
+            AppError.NotReady,
+            is AppError.PluginFailed,
+            -> {
+                RoutePlanFailure.EngineUnavailable
+            }
+
+            else -> {
+                RoutePlanFailure.NoRoute
+            }
+        }
 
     private fun nextPickingStatus(state: RoutePlanState): RoutePlanStatus =
         if (state.start == null) RoutePlanStatus.PickingStart else RoutePlanStatus.PickingDestination

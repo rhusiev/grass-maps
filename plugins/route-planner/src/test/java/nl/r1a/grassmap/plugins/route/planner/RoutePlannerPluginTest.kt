@@ -9,6 +9,7 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.RoutePlanFailure
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
 import org.junit.Assert.assertEquals
@@ -161,6 +162,30 @@ class RoutePlannerPluginTest {
 
             assertEquals(Outcome.Failure(AppError.NotFound), routed)
             assertEquals(RoutePlanStatus.Failed, context.state().value.status)
+            assertEquals(RoutePlanFailure.EngineUnavailable, context.state().value.failure)
+        }
+
+    @Test
+    fun aMissingPackReachesThePublishedStateAsItsOwnReason() =
+        runTest {
+            val missing =
+                AppError.RoutingPackUnavailable(
+                    AppError.RoutingPackUnavailable.Reason.Incomplete,
+                    "/packs/valhalla has no tiles.tar",
+                )
+            val context = context(access = { Outcome.Failure(missing) })
+            RoutePlannerPlugin().activate(context)
+            context.command(RoutePlannerContract.begin).invokeRaw(JsonObject(emptyMap()))
+            context.command(RoutePlannerContract.setPoint).invokeRaw(point("start", 49.8290, 23.9520))
+
+            val routed =
+                context
+                    .command(RoutePlannerContract.setPoint)
+                    .invokeRaw(point("destination", 49.8420, 24.0320))
+
+            assertEquals(Outcome.Failure(missing), routed)
+            assertEquals(RoutePlanStatus.Failed, context.state().value.status)
+            assertEquals(RoutePlanFailure.PackMissing, context.state().value.failure)
         }
 
     @Test

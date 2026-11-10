@@ -53,6 +53,7 @@ internal class ChannelFrameTransport : FrameTransport {
 
 internal class RecordingInvoker(
     private val reply: Outcome<JsonElement> = Outcome.Success(JsonNull),
+    private val thrown: Exception? = null,
 ) : CommandInvoker {
     val invocations = mutableListOf<Pair<CommandId, JsonElement>>()
 
@@ -61,12 +62,30 @@ internal class RecordingInvoker(
         params: JsonElement,
     ): Outcome<JsonElement> {
         invocations += id to params
+        thrown?.let { throw it }
         return reply
     }
 
     override suspend fun undo(): Outcome<Unit> = Outcome.Success(Unit)
 
     override suspend fun redo(): Outcome<Unit> = Outcome.Success(Unit)
+}
+
+/** Records what the channel tells the device log, so a test can assert on it. */
+internal class RecordingControlLog : ControlLog {
+    val warnings = mutableListOf<String>()
+    val errors = mutableListOf<Pair<String, Throwable>>()
+
+    override fun warn(message: String) {
+        warnings += message
+    }
+
+    override fun error(
+        message: String,
+        throwable: Throwable,
+    ) {
+        errors += message to throwable
+    }
 }
 
 internal class FakeStreams(
@@ -125,6 +144,7 @@ internal class Harness(
     streams: ControlStreamSource = FakeStreams(),
     val screenshot: ControlScreenshot? = null,
     val maxFailedAuth: Int = ControlSession.DEFAULT_MAX_FAILED_AUTH,
+    val log: RecordingControlLog = RecordingControlLog(),
 ) {
     val token: ControlToken = ControlTokens.generate()
     val transport = ChannelFrameTransport()
@@ -140,6 +160,7 @@ internal class Harness(
             token = token,
             transport = transport,
             maxFailedAuth = maxFailedAuth,
+            log = log,
         )
 
     fun rawToken(): String = token.rawValue()

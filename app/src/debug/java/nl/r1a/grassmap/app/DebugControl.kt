@@ -11,6 +11,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import nl.r1a.grassmap.app.generated.GeneratedPlugins
 import nl.r1a.grassmap.control.ControlEndpoint
+import nl.r1a.grassmap.control.ControlLog
 import nl.r1a.grassmap.control.ControlPeerGate
 import nl.r1a.grassmap.control.ControlServer
 import nl.r1a.grassmap.control.ControlSettings
@@ -74,6 +75,7 @@ internal object DebugControl {
                     endpoint = endpoint,
                     admittedUids = ControlPeerGate.admittedUids(Process.myUid()),
                     onState = { state -> Log.i(TAG, "control: ${state.name.lowercase()}") },
+                    log = controlLog,
                 )
             if (created.start() is Outcome.Success) {
                 server = created
@@ -113,4 +115,19 @@ internal object DebugControl {
     }
 
     private const val TAG = "GrassMapsControl"
+
+    /** Refusals and escaped exceptions are logged here, naming the command. */
+    private val controlLog: ControlLog =
+        object : ControlLog {
+            override fun warn(message: String) {
+                Log.w(TAG, message)
+            }
+
+            override fun error(
+                message: String,
+                throwable: Throwable,
+            ) {
+                Log.e(TAG, message, throwable)
+            }
+        }
 }

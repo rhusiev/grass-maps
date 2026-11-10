@@ -1,5 +1,8 @@
 package nl.r1a.grassmap.app
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.MapHost
 import nl.r1a.grassmap.plugin.api.model.CameraUpdate
@@ -11,22 +14,32 @@ import nl.r1a.grassmap.plugins.map.controls.CameraModeController
 /**
  * Turns a link that another app sent into a camera move (T-0211).
  *
- * The Activity hands over the intent URI before any map surface exists, so a
- * parsed point is parked until a surface binds and then moved once through the
- * host seam. The move also leaves follow and heading mode, because the next fix
- * would otherwise drag the camera back off the linked point.
+ * The Activity can hand over the intent URI before any map surface exists, so a
+ * parsed point is parked and replayed when a surface binds. A link can also
+ * arrive while a surface is already bound, and then no composition key changes:
+ * [pendingMoves] carries that move to the screen's collector, so a running
+ * instance moves the camera without a recomposition. The move goes through
+ * [applyPending] once, which takes the parked value, leaves follow and heading
+ * mode, and asks the host to move; the next fix would otherwise drag the camera
+ * back off the linked point.
  */
 class MapLinks(
     private val session: MapSessionHolder,
     private val modes: CameraModeController,
     private val log: (String) -> Unit = {},
 ) {
-    @Volatile
-    private var pending: CameraUpdate? = null
+    /**
+     * The newest move not yet applied. A StateFlow conflates two links that
+     * arrive before a surface binds, so the last one is the one that is shown.
+     */
+    private val pending = MutableStateFlow<CameraUpdate?>(null)
 
-    /** The move waiting for a bound surface, if any. */
+    /** Moves for the screen to apply; each emission is taken exactly once. */
+    val pendingMoves: Flow<CameraUpdate> = pending.filterNotNull()
+
+    /** The move waiting for a bound surface, if any; for diagnostics and tests. */
     val pendingMove: CameraUpdate?
-        get() = pending
+        get() = pending.value
 
     /**
      * Parses [uri] and parks its camera move. A link that names an element
@@ -52,12 +65,13 @@ class MapLinks(
 
     /**
      * Hands the parked move to [host] and reports the move, or null when
-     * nothing was parked. The screen shows a failed move to the user; a failure
-     * here would otherwise leave the map at its old position with no answer.
+     * nothing was parked. Taking the value before the move is what stops an
+     * older move from being applied twice. The screen shows a failed move to
+     * the user; a failure here would otherwise leave the map at its old
+     * position with no answer.
      */
     suspend fun applyPending(host: MapHost): Outcome<Unit>? {
-        val update = pending ?: return null
-        pending = null
+        val update = takePending() ?: return null
         when (val outcome = modes.free()) {
             is Outcome.Success -> Unit
             is Outcome.Failure -> log("link kept the camera mode: ${outcome.error}")
@@ -75,10 +89,20 @@ class MapLinks(
         }
     }
 
+    /** Removes and returns the parked move, or null when there is none. */
+    private fun takePending(): CameraUpdate? {
+        while (true) {
+            val current = pending.value ?: return null
+            if (pending.compareAndSet(current, null)) {
+                return current
+            }
+        }
+    }
+
     private fun queue(target: LinkTarget) {
         when (target) {
             is LinkTarget.Point -> {
-                pending = CameraUpdate(center = target.point, zoom = clampZoom(target.zoom))
+                pending.value = CameraUpdate(center = target.point, zoom = clampZoom(target.zoom))
             }
 
             is LinkTarget.Element -> {
@@ -90,7 +114,7 @@ class MapLinks(
                     )
                     return
                 }
-                pending = CameraUpdate(center = point, zoom = clampZoom(target.zoom))
+                pending.value = CameraUpdate(center = point, zoom = clampZoom(target.zoom))
             }
         }
     }

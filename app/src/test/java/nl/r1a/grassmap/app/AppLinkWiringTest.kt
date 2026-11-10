@@ -57,6 +57,7 @@ class AppLinkWiringTest {
         val source = File(MAP_SCREEN).readText()
 
         assertTrue("parked move", "container.links.applyPending(surface.host)" in source)
+        assertTrue("link flow", "container.links.pendingMoves.collect" in source)
         assertTrue("failed move", "R.string.link_not_opened" in source)
     }
 

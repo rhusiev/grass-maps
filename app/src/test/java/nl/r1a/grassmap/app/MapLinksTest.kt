@@ -1,7 +1,13 @@
 package nl.r1a.grassmap.app
 
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import nl.r1a.grassmap.plugin.api.host.MapHost
 import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.model.CameraUpdate
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
@@ -37,6 +43,71 @@ class MapLinksTest {
                 host.moves,
             )
             assertNull(links.pendingMove)
+        }
+
+    @Test
+    fun aLinkArrivingWhileTheSurfaceIsBoundMovesTheCameraImmediately() =
+        runTest {
+            val session = MapSessionHolder()
+            val host = FakeMapHost(CAMERA)
+            session.bind(host)
+            val links = links(session)
+            val collector = collectLinks(links, host)
+
+            links.submit("geo:49.821740,24.023910")
+            advanceUntilIdle()
+            advanceUntilIdle()
+
+            assertEquals(
+                listOf(CameraUpdate(center = GeoPoint(49.821740, 24.023910), zoom = 16.0)),
+                host.moves,
+            )
+            collector.cancel()
+        }
+
+    @Test
+    fun twoLinksBeforeTheSurfaceBindsEndAtTheSecondOnce() =
+        runTest {
+            val session = MapSessionHolder()
+            val host = FakeMapHost(CAMERA)
+            val links = links(session)
+
+            links.submit("geo:50.4501,30.5234")
+            links.submit("geo:49.821740,24.023910")
+
+            session.bind(host)
+            val collector = collectLinks(links, host)
+            advanceUntilIdle()
+
+            assertEquals(
+                listOf(CameraUpdate(center = GeoPoint(49.821740, 24.023910), zoom = 16.0)),
+                host.moves,
+            )
+            collector.cancel()
+        }
+
+    @Test
+    fun twoLinksAfterTheSurfaceBindsEndAtTheSecond() =
+        runTest {
+            val session = MapSessionHolder()
+            val host = FakeMapHost(CAMERA)
+            session.bind(host)
+            val links = links(session)
+            val collector = collectLinks(links, host)
+
+            links.submit("geo:50.4501,30.5234")
+            advanceUntilIdle()
+            links.submit("geo:49.821740,24.023910")
+            advanceUntilIdle()
+
+            assertEquals(
+                listOf(
+                    CameraUpdate(center = GeoPoint(50.4501, 30.5234), zoom = 16.0),
+                    CameraUpdate(center = GeoPoint(49.821740, 24.023910), zoom = 16.0),
+                ),
+                host.moves,
+            )
+            collector.cancel()
         }
 
     @Test
@@ -184,6 +255,15 @@ class MapLinksTest {
         session: MapSessionHolder,
         messages: MutableList<String> = mutableListOf(),
     ): MapLinks = MapLinks(session, modes(session)) { message -> messages += message }
+
+    /** The map screen's collector: one host move per emitted link. */
+    private fun TestScope.collectLinks(
+        links: MapLinks,
+        host: MapHost,
+    ): Job =
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            links.pendingMoves.collect { links.applyPending(host) }
+        }
 
     private fun modes(session: MapSessionHolder): CameraModeController =
         CameraModeController(

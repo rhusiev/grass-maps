@@ -222,12 +222,17 @@ private fun MapContent(
     }
     LaunchedEffect(container.locationController, surface.host) {
         container.locationController.syncToHost()
-        // A link that arrived before this surface bound is applied after the
-        // follow recentre, so it wins the first frame (T-0211). A move the host
-        // refuses is visible: the link would otherwise leave the map unmoved.
-        val linkOutcome = container.links.applyPending(surface.host)
-        if (linkOutcome is Outcome.Failure) {
-            Toast.makeText(context, R.string.link_not_opened, Toast.LENGTH_LONG).show()
+        // A link parked before this surface bound is replayed when the
+        // collection starts, after the follow recentre, so it wins the first
+        // frame. A link delivered while the surface stays bound arrives on the
+        // same flow, which is what moves the camera in a running instance
+        // without a recomposition (T-0211). A move the host refuses is visible:
+        // the link would otherwise leave the map unmoved.
+        container.links.pendingMoves.collect {
+            val linkOutcome = container.links.applyPending(surface.host)
+            if (linkOutcome is Outcome.Failure) {
+                Toast.makeText(context, R.string.link_not_opened, Toast.LENGTH_LONG).show()
+            }
         }
     }
     LaunchedEffect(surface.host, container.devToolsVisible) {

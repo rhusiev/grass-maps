@@ -12,6 +12,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "tools" /
 import control_client
 import map_goldens
 
+FOREIGN_FOCUS = (
+    "mCurrentFocus=Window{9 u0 com.android.launcher3/com.android.launcher3.Launcher}"
+)
+
+# One `dumpsys window windows` entry for the map activity after it has drawn.
+APP_WINDOW = """
+  Window #4 Window{9f2c1a u0 nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity}:
+    mDisplayId=0 stackId=0
+    mHasSurface=true isReadyForDisplay()=true
+    isOnScreen=true isVisible=true
+"""
+
 
 class FakeClient:
     """A control client whose invoke answers from a scripted list."""
@@ -264,14 +276,23 @@ class AppFocusTest(unittest.TestCase):
 class FakeAdb:
     """An adb whose focus moves through a scripted list and which records taps."""
 
-    def __init__(self, focus: list[str], xml: str = "", resumed: str = "") -> None:
+    def __init__(
+        self,
+        focus: list[str],
+        xml: str = "",
+        resumed: str = "",
+        windows: str = "",
+    ) -> None:
         self.focus = focus
         self.xml = xml
         self.resumed = resumed
+        self.windows = windows
         self.taps: list[tuple[str, str]] = []
         self.fronted = 0
 
     def shell(self, *args: str, timeout_s: float = 0, check: bool = True) -> str:
+        if args[:3] == ("dumpsys", "window", "windows"):
+            return self.windows
         if args[:2] == ("dumpsys", "window"):
             return self.focus.pop(0) if len(self.focus) > 1 else self.focus[0]
         if args[:3] == ("dumpsys", "activity", "activities"):
@@ -348,18 +369,93 @@ class ResumedActivityTest(unittest.TestCase):
 
         self.assertIn("com.android.launcher3", str(raised.exception))
 
-    def test_a_foreign_focus_does_not_use_the_resumed_fallback(self) -> None:
+    def test_a_foreign_focus_with_the_app_window_drawing_is_accepted(self) -> None:
+        # singleTop delivers a second launch to the running window, so the
+        # launcher can still own mCurrentFocus while the map is on screen.
         adb = FakeAdb(
-            ["mCurrentFocus=Window{9 u0 com.android.launcher3/com.android.launcher3.Launcher}"],
+            [FOREIGN_FOCUS],
+            resumed=ResumedActivityTest.APP_RESUMED,
+            windows=APP_WINDOW,
+        )
+
+        with (
+            mock.patch.object(map_goldens, "FOCUS_RETRY_TIMEOUT_S", 0.0),
+            mock.patch.object(map_goldens.time, "sleep"),
+        ):
+            focus = map_goldens.require_app_focused(adb, "place-a-z12")
+
+        self.assertIn("mResumedActivity=", focus)
+        self.assertIn("mHasSurface=true", focus)
+
+    def test_a_foreign_focus_without_a_drawing_window_still_fails(self) -> None:
+        adb = FakeAdb(
+            [FOREIGN_FOCUS],
             resumed=ResumedActivityTest.APP_RESUMED,
         )
 
         with (
             mock.patch.object(map_goldens, "FOCUS_RETRY_TIMEOUT_S", 0.0),
             mock.patch.object(map_goldens.time, "sleep"),
-            self.assertRaises(map_goldens.FocusError),
+            self.assertRaises(map_goldens.FocusError) as raised,
         ):
             map_goldens.require_app_focused(adb, "place-a-z12")
+
+        self.assertIn("com.android.launcher3", str(raised.exception))
+        self.assertIn("drawing=False", str(raised.exception))
+
+
+class WindowDrawingTest(unittest.TestCase):
+    """The fallback oracle reads only the app window's own block."""
+
+    def test_an_app_window_with_a_surface_and_visible_flag_is_drawing(self) -> None:
+        self.assertTrue(
+            map_goldens.parse_window_drawing(
+                APP_WINDOW,
+                "nl.r1a.grassmap",
+                "nl.r1a.grassmap.app.MainActivity",
+            )
+        )
+
+    def test_an_app_window_without_a_surface_is_not_drawing(self) -> None:
+        self.assertFalse(
+            map_goldens.parse_window_drawing(
+                APP_WINDOW.replace("mHasSurface=true", "mHasSurface=false"),
+                "nl.r1a.grassmap",
+                "nl.r1a.grassmap.app.MainActivity",
+            )
+        )
+
+    def test_an_invisible_app_window_is_not_drawing(self) -> None:
+        self.assertFalse(
+            map_goldens.parse_window_drawing(
+                APP_WINDOW.replace("isVisible=true", "isVisible=false"),
+                "nl.r1a.grassmap",
+                "nl.r1a.grassmap.app.MainActivity",
+            )
+        )
+
+    def test_another_window_with_a_surface_does_not_count(self) -> None:
+        other = APP_WINDOW.replace(
+            "nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity",
+            "com.android.launcher3/com.android.launcher3.Launcher",
+        )
+
+        self.assertFalse(
+            map_goldens.parse_window_drawing(
+                other,
+                "nl.r1a.grassmap",
+                "nl.r1a.grassmap.app.MainActivity",
+            )
+        )
+
+    def test_a_missing_window_is_not_drawing(self) -> None:
+        self.assertFalse(
+            map_goldens.parse_window_drawing(
+                "mCurrentFocus=null",
+                "nl.r1a.grassmap",
+                "nl.r1a.grassmap.app.MainActivity",
+            )
+        )
 
 
 class CompareRecaptureTest(unittest.TestCase):

@@ -76,6 +76,12 @@ FOCUS_RETRY_PAUSE_S = 0.5
 # A null or foreign focus can mean the app is simply not foregrounded yet.
 # Bring it forward once per focus check, then give the window time to settle.
 APP_FOREGROUND_SETTLE_S = 2.0
+# A singleTop activity that is already running takes the new intent in its
+# existing window: `am start` can return while the launcher still owns
+# `mCurrentFocus`. The launch reorders the task to the front so Android emits a
+# window event, and the focus check accepts the app window when it is resumed
+# and its surface is visible even if `mCurrentFocus` has not caught up.
+LAUNCH_FLAGS = "0x10200000"  # NEW_TASK | REORDER_TO_FRONT
 # If focus still fails after the bounded check, redo the whole position once:
 # the camera move and settle are idempotent, and the second attempt sees a
 # foregrounded app. A persistent wrong focus still fails.
@@ -332,7 +338,16 @@ def clear_app_data(adb: Adb) -> None:
 
 def launch(adb: Adb) -> str:
     adb.shell("am", "force-stop", PACKAGE, timeout_s=30, check=False)
-    return adb.shell("am", "start", "-W", "-n", f"{PACKAGE}/{ACTIVITY}", timeout_s=120)
+    return adb.shell(
+        "am",
+        "start",
+        "-W",
+        "-f",
+        LAUNCH_FLAGS,
+        "-n",
+        f"{PACKAGE}/{ACTIVITY}",
+        timeout_s=120,
+    )
 
 
 def wait_for_channel(adb: Adb) -> control_client.ControlClient:
@@ -567,16 +582,56 @@ def dismiss_anr_dialog(adb: Adb) -> bool:
 
 
 def bring_app_to_front(adb: Adb) -> None:
-    """Start the map activity again so its window can take the focus."""
+    """Raise the map task so its window can take the focus.
+
+    `REORDER_TO_FRONT` matters now that the activity is `singleTop`: without it
+    the intent reaches the existing instance but Android may leave the launcher
+    as `mCurrentFocus`, because no new window is created to take it.
+    """
     adb.shell(
         "am",
         "start",
         "-W",
+        "-f",
+        LAUNCH_FLAGS,
         "-n",
         f"{PACKAGE}/{ACTIVITY}",
         timeout_s=120,
         check=False,
     )
+
+
+def window_drawing(adb: Adb) -> bool:
+    """True when the map activity's own window has a surface and is visible."""
+    raw = adb.shell("dumpsys", "window", "windows", timeout_s=30, check=False)
+    return parse_window_drawing(raw, PACKAGE, ACTIVITY)
+
+
+def parse_window_drawing(
+    raw: str,
+    package: str,
+    activity: str,
+) -> bool:
+    """Whether [raw] `dumpsys window windows` draws the [package]/[activity] window.
+
+    A window entry starts at `  Window #N`; its own block carries
+    `mHasSurface=true` and `isVisible=true` once the surface exists and the
+    window is shown. Another window's flags never count.
+    """
+    component = f"{package}/{activity}"
+    for block in re.split(r"\n(?=  Window #)", raw):
+        if component not in block.split("\n", 1)[0]:
+            continue
+        return "mHasSurface=true" in block and "isVisible=true" in block
+    return False
+
+
+def drawing_map_window(adb: Adb) -> str | None:
+    """The oracle for a resumed, drawing map window; None when it does not hold."""
+    resumed = resumed_activity(adb)
+    if not is_map_activity(resumed) or not window_drawing(adb):
+        return None
+    return f"mResumedActivity={resumed}; window mHasSurface=true isVisible=true"
 
 
 def require_app_focused(
@@ -590,13 +645,20 @@ def require_app_focused(
     A dialog on top of the map dims every pixel beneath it, and a null focus
     means the app window was not foregrounded yet; both would make a golden
     meaningless. An ANR dialog is dismissed by its own Wait button. A null or
-    foreign focus is retried after bringing the app to the front when
-    `foreground` is set; the call before the camera move uses that, while the
-    assertion after the settle does not, so a recreate can never silently
-    reset the camera under a capture. After the bounded budget a persistent
-    wrong focus is named instead of silently comparing the wrong window. When
-    `mCurrentFocus` is null, `dumpsys activity activities` is consulted and a
-    resumed map activity is accepted as the fallback oracle.
+    foreign focus is retried after raising the app task when `foreground` is
+    set; the call before the camera move uses that, while the assertion after
+    the settle does not, so a recreate can never silently reset the camera
+    under a capture.
+
+    A foreign focus is not fatal by itself: `singleTop` delivers a second
+    launch to the running instance without creating a window, so `am start`
+    can return while the launcher still owns `mCurrentFocus`. When the map
+    activity is resumed and its own window is visible with a surface, that
+    window is the one the capture would read, so it is accepted with a printed
+    oracle. After the bounded budget a persistent wrong focus is named instead
+    of silently comparing the wrong window. When `mCurrentFocus` is null,
+    `dumpsys activity activities` is consulted and a resumed map activity is
+    accepted as the fallback oracle.
     """
     deadline = time.monotonic() + FOCUS_RETRY_TIMEOUT_S
     brought_to_front = False
@@ -606,10 +668,19 @@ def require_app_focused(
             return focus
         if is_anr_dialog(focus):
             dismiss_anr_dialog(adb)
-        elif foreground and not brought_to_front:
-            bring_app_to_front(adb)
-            brought_to_front = True
-            time.sleep(APP_FOREGROUND_SETTLE_S)
+        else:
+            if foreground and not brought_to_front:
+                bring_app_to_front(adb)
+                brought_to_front = True
+                time.sleep(APP_FOREGROUND_SETTLE_S)
+            if not is_null_focus(focus):
+                drawing = drawing_map_window(adb)
+                if drawing is not None:
+                    print(
+                        f"foreground oracle: {drawing} accepted for {stage}",
+                        file=sys.stderr,
+                    )
+                    return drawing
         if time.monotonic() >= deadline:
             if is_null_focus(focus):
                 resumed = resumed_activity(adb)
@@ -622,7 +693,11 @@ def require_app_focused(
                 raise FocusError(
                     f"{stage}: no focused window and resumed activity is {resumed}",
                 )
-            raise FocusError(f"{stage}: the focused window is not {PACKAGE}: {focus}")
+            raise FocusError(
+                f"{stage}: the focused window is not {PACKAGE}: {focus}; "
+                f"mResumedActivity={resumed_activity(adb)}; "
+                f"app window drawing={window_drawing(adb)}",
+            )
         time.sleep(FOCUS_RETRY_PAUSE_S)
 
 

@@ -18,7 +18,6 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.error.onFailure
 import nl.r1a.grassmap.plugin.api.host.MapHost
-import nl.r1a.grassmap.plugin.api.model.BoundingBox
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.provider.CostModifierRequest
 import nl.r1a.grassmap.plugin.api.provider.Route
@@ -201,16 +200,6 @@ internal class TestWalkCommand(
         return first.geometry
             .zip(second.geometry)
             .any { (left, right) -> distanceMetres(left, right) > SAME_GEOMETRY_METRES }
-    }
-
-    private fun boundsOf(points: List<GeoPoint>): BoundingBox? {
-        if (points.isEmpty()) {
-            return null
-        }
-        return BoundingBox(
-            southWest = GeoPoint(points.minOf { it.latitude }, points.minOf { it.longitude }),
-            northEast = GeoPoint(points.maxOf { it.latitude }, points.maxOf { it.longitude }),
-        )
     }
 
     private fun distanceMetres(

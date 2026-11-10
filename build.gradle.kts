@@ -82,6 +82,10 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         ":plugins:style-standard" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:synthetic-data" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:valhalla" to setOf(":plugin-api"),
+        // The first-party route planner is a compiled-in feature over the
+        // routing domain, the same way navigation reads it. It reaches no core
+        // internals and the engine still crosses the plugin-api contract.
+        ":plugins:route-planner" to setOf(":plugin-api", ":routing"),
     )
 // Test-only edges are separate so a test fixture cannot quietly become a
 // production dependency. :control's info-widgets edge is the accepted T-0113

@@ -21,6 +21,7 @@ import nl.r1a.grassmap.map.MapHostState
 import nl.r1a.grassmap.map.PuckAgeFormatter
 import nl.r1a.grassmap.map.PuckDisplay
 import nl.r1a.grassmap.map.PuckGeometry
+import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerType
 import nl.r1a.grassmap.plugin.api.model.LocationFix
@@ -147,8 +148,10 @@ private fun MarkerLayerSlot(
 }
 
 /**
- * The planned route as one GeoJSON line in the routes slot. The source is
- * re-keyed when the route changes, matching the puck's update pattern.
+ * The planned route as one GeoJSON line in the routes slot, with one point at
+ * each end. The source is re-keyed when the route changes, matching the puck's
+ * update pattern. This composable reads only [Route], never the camera, so a
+ * pan or a zoom does not re-run it.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -162,6 +165,26 @@ private fun RouteLine(route: Route?) {
         color = const(ROUTE_COLOR),
         opacity = const(1f),
         width = const(ROUTE_WIDTH_DP.dp),
+    )
+    RouteEnd(route.geometry.first(), ROUTE_START_LAYER_ID)
+    RouteEnd(route.geometry.last(), ROUTE_END_LAYER_ID)
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+@MaplibreComposable
+private fun RouteEnd(
+    point: GeoPoint,
+    layerId: String,
+) {
+    val source = rememberGeoJsonSource(GeoJsonData.JsonString(point.toPointFeatureCollection()))
+    CircleLayer(
+        id = layerId,
+        source = source,
+        radius = const(ROUTE_END_RADIUS_DP.dp),
+        color = const(ROUTE_COLOR),
+        strokeColor = const(Color.White),
+        strokeWidth = const(ROUTE_END_STROKE_DP.dp),
     )
 }
 
@@ -255,7 +278,11 @@ private val ACCURACY_COLOR = Color(0x221E88E5)
 private val ACCURACY_STROKE_COLOR = Color(0x551E88E5)
 
 private const val ROUTE_LAYER_ID = "core.route.line"
+private const val ROUTE_START_LAYER_ID = "core.route.start"
+private const val ROUTE_END_LAYER_ID = "core.route.end"
 private const val ROUTE_WIDTH_DP = 5
+private const val ROUTE_END_RADIUS_DP = 6
+private const val ROUTE_END_STROKE_DP = 2
 private const val MIN_ROUTE_POINTS = 2
 private val ROUTE_COLOR = Color(0xFF2E7D32)
 

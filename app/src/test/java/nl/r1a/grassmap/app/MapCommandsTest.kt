@@ -28,6 +28,7 @@ import nl.r1a.grassmap.plugin.api.service.LocationService
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugins.map.controls.CameraModeController
 import nl.r1a.grassmap.plugins.map.controls.CameraModeStore
+import nl.r1a.grassmap.plugins.route.planner.RoutePlannerContract
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -241,9 +242,15 @@ class MapCommandsTest {
                 MapControlCommands.ZOOM_IN,
                 MapControlCommands.NORTH_UP,
                 MapControlCommands.FOLLOW,
+                MapControlCommands.ROUTE_PLANNER,
             ),
             moveControl(layout, MapControlCommands.ZOOM_IN, 1),
         )
+    }
+
+    @Test
+    fun thePlannerButtonUsesThePluginsCommandId() {
+        assertEquals(RoutePlannerContract.begin, MapControlCommands.ROUTE_PLANNER)
     }
 
     @Test
@@ -251,7 +258,7 @@ class MapCommandsTest {
         val layout = MapControlCommands.DEFAULT_ORDER
 
         assertEquals(layout, moveControl(layout, MapControlCommands.ZOOM_IN, -1))
-        assertEquals(layout, moveControl(layout, MapControlCommands.FOLLOW, 1))
+        assertEquals(layout, moveControl(layout, MapControlCommands.ROUTE_PLANNER, 1))
         assertEquals(layout, moveControl(layout, CommandId("core.map.missing"), 1))
     }
 

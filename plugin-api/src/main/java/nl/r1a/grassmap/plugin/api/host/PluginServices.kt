@@ -54,4 +54,10 @@ interface PluginServices {
      * instead of failing at activation.
      */
     val routingPacks: RoutingPackAccess get() = NoRoutingPacks
+
+    /**
+     * The active `routing.engine` provider (T-0302). A planning feature asks
+     * the host for the engine instead of naming the provider plugin.
+     */
+    val routingEngines: RoutingEngineAccess get() = NoRoutingEngines
 }

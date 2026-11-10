@@ -32,9 +32,11 @@ import nl.r1a.grassmap.places.searchScreenCommands
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
+import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.NoPlatformActions
 import nl.r1a.grassmap.plugin.api.host.PlatformActions
+import nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
@@ -147,20 +149,29 @@ class AppContainer(
         LocationPermissionCoordinator(locationSource, locationPermissionStore)
 
     /**
-     * The `routing.engine` provider, resolved on the first route. The plugin is
+     * The `routing.engine` provider behind a host seam (T-0302). The plugin is
      * activated here rather than at startup, and the pack directory reaches it
      * through the host's pack access, so no routing path is read on Main.
      */
-    val routingEngine: suspend () -> RoutingEngine? = {
-        when (
-            val outcome =
-                providerRegistry.invoke(ROUTING_ENGINE_PLUGIN, RoutingEngineContract.REFERENCE) {
-                    it as? RoutingEngine ?: throw IllegalStateException("routing.engine provider is not an engine")
-                }
-        ) {
-            is Outcome.Success -> outcome.value
-            is Outcome.Failure -> null
+    private val routingEngineAccess: RoutingEngineAccess =
+        RoutingEngineAccess {
+            when (
+                val resolved =
+                    providerRegistry.invoke(ROUTING_ENGINE_PLUGIN, RoutingEngineContract.REFERENCE) { provider ->
+                        when (val engine = provider as? RoutingEngine) {
+                            null -> Outcome.Failure(AppError.Unsupported)
+                            else -> Outcome.Success(engine)
+                        }
+                    }
+            ) {
+                is Outcome.Success -> resolved.value
+                is Outcome.Failure -> resolved
+            }
         }
+
+    /** The engine a host command resolves on the first route (T-0301). */
+    val routingEngine: suspend () -> RoutingEngine? = {
+        ((routingEngineAccess.engine()) as? Outcome.Success)?.value
     }
 
     /**
@@ -335,6 +346,7 @@ class AppContainer(
                     File(root, ROUTING_PACK_DIRECTORY).absolutePath
                 }
             },
+            routingEngines = routingEngineAccess,
         )
     }
 

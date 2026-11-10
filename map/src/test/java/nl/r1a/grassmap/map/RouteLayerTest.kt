@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.jsonObject
 import nl.r1a.grassmap.map.style.toFeatureCollection
+import nl.r1a.grassmap.map.style.toPointFeatureCollection
 import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.StyleId
@@ -32,6 +33,20 @@ class RouteLayerTest {
         val first = coordinates[0] as JsonArray
         assertEquals(24.0316, (first[0] as JsonPrimitive).double, 0.0)
         assertEquals(49.8419, (first[1] as JsonPrimitive).double, 0.0)
+    }
+
+    @Test
+    fun eachRouteEndBecomesOneLongitudeFirstPoint() {
+        val point = GeoPoint(49.8419, 24.0316)
+
+        val root = Json.parseToJsonElement(point.toPointFeatureCollection()).jsonObject
+
+        val feature = (root.getValue("features") as JsonArray).single().jsonObject
+        val geometry = feature.getValue("geometry") as JsonObject
+        assertEquals("Point", geometry.getValue("type").toStringValue())
+        val coordinates = geometry["coordinates"] as JsonArray
+        assertEquals(24.0316, (coordinates[0] as JsonPrimitive).double, 0.0)
+        assertEquals(49.8419, (coordinates[1] as JsonPrimitive).double, 0.0)
     }
 
     @Test

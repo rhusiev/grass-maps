@@ -14,6 +14,7 @@ Files:
 | `lviv-oblast-pairs.json` | the 100 seeded pairs, with the seed, the separation rule and the oblast polygon digest |
 | `lviv-routes.csv` | one row per pair and profile: both engines' status, distance, time and the segment attribute counts |
 | `lviv-summary.json` | per-profile counts, distance-delta distribution, the derived tolerance, attribute coverage, engine identities |
+| `planner-vectors.json` | one captured bicycle route pair for T-0302: the forward and reverse answer with two alternatives each, used by `routing`'s planner tests |
 
 ## Profiles
 
@@ -182,6 +183,35 @@ The engine declares `hasMatchTrack = true`. Evidence, not expectation:
 - `valhalla-mobile` 0.6.4 exposes `Valhalla.traceRouteRaw(String)` and
   `ValhallaTraceRaw`, which is the map-matching call (`javap` on the AAR's
   `classes.jar`).
+
+## Planning vectors (T-0302)
+
+`planner-vectors.json` is one captured `/route` answer on the same pack, with
+`alternates: 1`, for a bicycle pair from Sykhiv towards the centre. It holds the
+forward pair and the reverse pair, each with the primary route and one
+alternative, and is the fixed fixture `routing`'s `RoutePlannerTest` reads.
+
+The reverse line is not the forward line read backwards: one-way streets make
+the reverse route 6 582 m against 7 052 m forward, and the geometry has 288
+points against 304. That is the evidence the planner's swap goes back to the
+engine instead of reversing a geometry. The pair was picked for exactly this
+property; a pedestrian pair on the same streets reverses geometrically, so its
+capture could not prove the distinction.
+
+The run used the same offline container and pack as the T-0301 validation:
+
+```sh
+docker run -d --rm --name valhalla-t0302 --network none \
+  -v /hdd/drive/Projects/Life/grass-maps-bench/data:/data:ro \
+  ghcr.io/valhalla/valhalla:latest \
+  valhalla_service /data/valhalla/valhalla.json 2
+```
+
+The response was decoded with the shared polyline6 rule and stored as route
+model fields; the raw response is not committed. The pair returns one
+alternative (`alternates: 1`); a longer Lviv pair returns two, and a Lviv-Zhovkva
+pair returns none, which is why the preview says "no alternative routes" rather
+than inventing one.
 
 ## What was not measured
 

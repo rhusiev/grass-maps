@@ -237,7 +237,7 @@ the module name. Only `app` is an application module; its application ID is
 | `core-services` | settings and profiles, storage, location, network gate, i18n, clock, logging | `core`, `plugin-api` |
 | `map` | the `MapHost` implementation, style composer, layer slots, gestures, camera, location puck | `plugin-api` |
 | `regions` | catalogue, download, verify, mount, update, source resolver, routing pack handling | `plugin-api` |
-| `routing` | route model, the `routing.engine` contract seam and its stable JSON form | `plugin-api` |
+| `routing` | route model, the `routing.engine` contract seam, its stable JSON form, and the start/end planner state machine | `plugin-api` |
 | `navigation` | route follower, off-route detection, reroute policy, guidance | `routing`, `plugin-api` |
 | `alerts` | alert sources, scheduling, sound, vibration and banner output | `navigation`, `plugin-api` |
 | `places` | place and search provider hosts, favourites store | `plugin-api` |
@@ -260,6 +260,7 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/share` | the decimal, DMS and DDM coordinate notations, the osm.org and `geo:` link builders, and the copy, share and open-in commands | `plugin-api` |
 | `plugins/coordinates` | the coordinate notation parser the search field reads, and the vectors it shares with the formatters | `plugin-api` |
 | `plugins/valhalla` | the v1 `routing.engine` provider: profile mapping, the native Valhalla adapter, the async segment attributes | `plugin-api` |
+| `plugins/route-planner` | the start/end plan, its commands and its state stream; the shell draws the preview from it | `plugin-api`, `routing` |
 
 ## Place card
 
@@ -679,6 +680,13 @@ A module under `plugins/` may depend on `:plugin-api`. It may also depend on
 `:plugin-ui-api` when it contributes Compose UI. No other project dependency is
 allowed in any configuration.
 
+One exception is `plugins/route-planner`: it is a first-party compiled-in
+feature over `:routing`, the same domain edge `navigation` already has, because
+the planning state machine is shared with future guidance work. It reaches no
+core internals and still asks the host for the engine through
+`RoutingEngineAccess`, so the plugin boundary that matters - the contract - is
+unchanged.
+
 `./gradlew checkPluginBoundaries` checks every module under `plugins/` and
 fails with each violating module, configuration and dependency. Plugin modules
 wire this task into `check`.
@@ -686,7 +694,8 @@ wire this task into `check`.
 Feature modules never import `core` or `core-services`. They take the host and
 service interfaces they need in their constructors, and `app` wires the
 implementations. The only feature-to-feature edges are `navigation -> routing`
-and `alerts -> navigation`.
+and `alerts -> navigation`, plus the compiled-in `plugins/route-planner ->
+routing` exception above.
 
 ## Plugin manifests
 
@@ -763,6 +772,17 @@ in the fixture area or in Lviv and, with `{"modifiers": true}`, asks the
 synthetic DataSource for cost modifiers and routes again. Valhalla takes a
 multiplier as `linear_cost_factors`; when the synthetic line has no graph edges
 near it, the adapter retries with `exclude_polygons` around the same line.
+
+`routing.RoutePlanner` is the start/end planning state (T-0302): two points in,
+one `RouteRequest` out, the engine's own list as selectable options, and a swap
+that routes the reversed pair rather than reversing a line. `plugins/route-planner`
+owns the commands and the `route.planner.state` stream; it resolves the engine
+through `RoutingEngineAccess` in `plugin-api`, never by naming the provider. The
+map picks points with its long press and with a search result; `ui-shell` draws
+the preview from the stream and `MapHost.setRoute` draws the selected option plus
+its two ends. The preview derivation, `routePlanPreview` in `ui-shell`, returns
+exactly four entries: time, distance, arrival and Start. The response vectors
+and the reverse-route evidence are in `test-data/routing/README.md`.
 
 ## Navigation seam
 

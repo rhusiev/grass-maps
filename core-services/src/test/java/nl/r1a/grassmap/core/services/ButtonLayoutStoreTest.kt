@@ -37,6 +37,7 @@ class ButtonLayoutStoreTest {
                 MapControlCommands.ZOOM_IN,
                 MapControlCommands.ZOOM_OUT,
                 MapControlCommands.FOLLOW,
+                MapControlCommands.ROUTE_PLANNER,
             )
 
         assertEquals(Outcome.Success(Unit), store.save(ProfileId("default"), layout))
@@ -44,7 +45,7 @@ class ButtonLayoutStoreTest {
     }
 
     @Test
-    fun aThreeButtonStoredLayoutFallsBackToTheFourButtonDefault() {
+    fun aThreeButtonStoredLayoutFallsBackToTheFiveButtonDefault() {
         directory.mkdirs()
         file.writeText(
             """{"profiles":{"default":["core.map.zoom_in","core.map.zoom_out","core.map.north_up"]}}""",
@@ -52,11 +53,11 @@ class ButtonLayoutStoreTest {
         val store = ButtonLayoutStore(file)
 
         assertEquals(MapControlCommands.DEFAULT_ORDER, store.load(ProfileId("default")))
-        assertEquals(4, MapControlCommands.DEFAULT_ORDER.size)
+        assertEquals(5, MapControlCommands.DEFAULT_ORDER.size)
     }
 
     @Test
-    fun aFourButtonPermutationRoundTrips() {
+    fun aFiveButtonPermutationRoundTrips() {
         val store = ButtonLayoutStore(file)
         val layout =
             listOf(
@@ -64,6 +65,7 @@ class ButtonLayoutStoreTest {
                 MapControlCommands.NORTH_UP,
                 MapControlCommands.ZOOM_OUT,
                 MapControlCommands.ZOOM_IN,
+                MapControlCommands.ROUTE_PLANNER,
             )
 
         assertEquals(Outcome.Success(Unit), store.save(ProfileId("default"), layout))
@@ -90,6 +92,7 @@ class ButtonLayoutStoreTest {
                 MapControlCommands.NORTH_UP,
                 MapControlCommands.ZOOM_IN,
                 MapControlCommands.FOLLOW,
+                MapControlCommands.ROUTE_PLANNER,
             )
 
         assertEquals(Outcome.Success(Unit), store.save(ProfileId("walking"), walking))
@@ -109,6 +112,7 @@ class ButtonLayoutStoreTest {
                 MapControlCommands.ZOOM_IN,
                 MapControlCommands.ZOOM_OUT,
                 MapControlCommands.FOLLOW,
+                MapControlCommands.ROUTE_PLANNER,
             )
         store.save(ProfileId("walking"), walking)
 
@@ -207,6 +211,7 @@ class ButtonLayoutStoreTest {
                 MapControlCommands.ZOOM_IN,
                 MapControlCommands.ZOOM_OUT,
                 MapControlCommands.FOLLOW,
+                MapControlCommands.ROUTE_PLANNER,
             )
         assertEquals(Outcome.Success(Unit), store.save(ProfileId("default"), saved))
         val temporary = File(directory, "${file.name}.tmp")
@@ -236,6 +241,6 @@ class ButtonLayoutStoreTest {
         store.save(ProfileId("default"), MapControlCommands.DEFAULT_ORDER)
 
         assertFalse(File(directory, "button-layout.json.tmp").exists())
-        assertEquals(4, store.load(ProfileId("default")).size)
+        assertEquals(5, store.load(ProfileId("default")).size)
     }
 }

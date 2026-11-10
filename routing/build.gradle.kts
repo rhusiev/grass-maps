@@ -6,6 +6,8 @@ android {
     namespace = "nl.r1a.grassmap.routing"
     compileSdk = 37
 
+    sourceSets.getByName("test").resources.srcDir(rootProject.file("test-data"))
+
     defaultConfig {
         minSdk = 29
     }

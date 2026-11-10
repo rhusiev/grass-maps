@@ -62,4 +62,24 @@
     <string name="map_scale_kilometres">%1$s км</string>
     <string name="map_scale_feet">%1$s фут</string>
     <string name="map_scale_miles">%1$s миля</string>
+
+    <string name="plugin.route_planner.name">Планувальник маршруту</string>
+    <string name="plugin.route_planner.description">Планує маршрут між двома точками та показує час, відстань і час прибуття.</string>
+    <string name="control_route_planner_label">Р</string>
+    <string name="control_route_planner_description">Спланувати маршрут</string>
+    <string name="route_planner_swap">Поміняти початок і призначення</string>
+    <string name="route_planner_close">Закрити маршрут</string>
+    <string name="route_planner_pick_start">Торкніться карти або результату пошуку, щоб задати початок</string>
+    <string name="route_planner_pick_destination">Торкніться карти або результату пошуку, щоб задати призначення</string>
+    <string name="route_planner_planning">Планування маршруту</string>
+    <string name="route_planner_failed">Маршрут для цих точок не знайдено</string>
+    <string name="route_planner_no_alternatives">Для цих картографічних даних немає альтернативних маршрутів</string>
+    <string name="route_planner_alternative_description">Альтернативний маршрут %1$s</string>
+    <string name="route_planner_start_unavailable">Навігація ще недоступна в цій збірці</string>
+    <string name="route_preview_start">Старт</string>
+    <string name="route_preview_minutes">%1$s хв</string>
+    <string name="route_preview_hours">%1$s год</string>
+    <string name="route_preview_hours_minutes">%1$s год %2$s хв</string>
+    <string name="route_preview_metres">%1$s м</string>
+    <string name="route_preview_kilometres">%1$s км</string>
 </resources>

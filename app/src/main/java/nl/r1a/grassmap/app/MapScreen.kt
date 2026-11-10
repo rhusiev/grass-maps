@@ -73,6 +73,9 @@ import nl.r1a.grassmap.plugin.api.model.CameraUpdate
 import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
 import nl.r1a.grassmap.plugin.api.model.FavouriteSort
 import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
+import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.RoutePlanRole
+import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleId
@@ -89,12 +92,15 @@ import nl.r1a.grassmap.plugins.map.controls.ScaleBarUnit
 import nl.r1a.grassmap.plugins.point.info.PointInfoContract
 import nl.r1a.grassmap.plugins.point.info.PointInfoLabel
 import nl.r1a.grassmap.plugins.point.info.SelectedPointValue
+import nl.r1a.grassmap.plugins.route.planner.RoutePlannerContract
+import nl.r1a.grassmap.routing.selectedRoute
 import nl.r1a.grassmap.ui.shell.ControlBarLabels
 import nl.r1a.grassmap.ui.shell.ControlButton
 import nl.r1a.grassmap.ui.shell.FavouritesListsHost
 import nl.r1a.grassmap.ui.shell.MapControlBar
 import nl.r1a.grassmap.ui.shell.MapScaleBar
 import nl.r1a.grassmap.ui.shell.PlaceCardHost
+import nl.r1a.grassmap.ui.shell.RoutePlanPanel
 import nl.r1a.grassmap.ui.shell.SearchScreenHost
 import java.io.File
 import java.util.Locale
@@ -269,6 +275,11 @@ private fun MapContent(
     val searchState by container.searchScreen.state.collectAsState()
     val searchSequence = remember { longArrayOf(0L) }
     val searchCamera by surface.host.camera.collectAsState()
+    val planFlow =
+        remember(container) {
+            container.streamAccess.subscribe<RoutePlanState>(RoutePlannerContract.stateStream)
+        }
+    val plan by planFlow.collectAsState(initial = RoutePlanState())
     val unitStore by
         produceState<UnitSettings?>(null) {
             value = withContext(Dispatchers.IO) { container.unitSettings }
@@ -287,13 +298,36 @@ private fun MapContent(
         val active = store ?: return@LaunchedEffect
         layout = withContext(Dispatchers.IO) { active.load(DEFAULT_PROFILE) }
     }
+    val drawnRoute = remember(plan.selected) { plan.selectedRoute() }
+    LaunchedEffect(drawnRoute) {
+        surface.host.setRoute(drawnRoute).onFailure { error ->
+            Log.w(TAG, "route not drawn: $error")
+        }
+    }
+    LaunchedEffect(plan.generation) {
+        if (plan.generation == 0L) {
+            return@LaunchedEffect
+        }
+        boundsOf(plan.selected?.geometry)?.let { bounds ->
+            surface.host.fitBounds(bounds).onFailure { error ->
+                Log.w(TAG, "route not fitted: $error")
+            }
+        }
+    }
     Box(Modifier.fillMaxSize().onSizeChanged { viewport = it }) {
         MapSurfaceView(
             surface = surface,
             modifier = Modifier.fillMaxSize(),
             distanceByTap = container.distanceByTap,
             onDistanceMeasured = { meters -> distance = MapDistance.readout(meters) },
-            onPointSelected = { point -> container.selectedPoint.select(point) },
+            onPointSelected = { point ->
+                val role = plan.pickingRole
+                if (role == null) {
+                    container.selectedPoint.select(point)
+                } else {
+                    scope.launch { setPlanPoint(container, role, point, label = null) }
+                }
+            },
         )
         if (selectedRows.isNotEmpty()) {
             SelectedPointLabel(
@@ -419,17 +453,24 @@ private fun MapContent(
             },
             onSelect = { placeId ->
                 val hit = searchState.hits.firstOrNull { it.id == placeId }
-                scope.launch {
-                    if (hit != null) {
-                        surface.host.animateCamera(CameraUpdate(center = hit.position)).onFailure { error ->
-                            Log.w(TAG, "search result camera move failed: $error")
-                        }
+                val role = plan.pickingRole
+                if (hit != null && role != null) {
+                    scope.launch {
+                        setPlanPoint(container, role, hit.position, label = hit.name)
                     }
-                    // A coordinate row is a point, not a place: there is no card
-                    // behind it, so the map moves and no card is opened (T-0206).
-                    if (hit?.isCoordinate != true) {
-                        container.showPlaceCard(SearchScreenSession.DEFAULT_INDEX, placeId).onFailure { error ->
-                            Log.w(TAG, "search result card failed: $error")
+                } else {
+                    scope.launch {
+                        if (hit != null) {
+                            surface.host.animateCamera(CameraUpdate(center = hit.position)).onFailure { error ->
+                                Log.w(TAG, "search result camera move failed: $error")
+                            }
+                        }
+                        // A coordinate row is a point, not a place: there is no card
+                        // behind it, so the map moves and no card is opened (T-0206).
+                        if (hit?.isCoordinate != true) {
+                            container.showPlaceCard(SearchScreenSession.DEFAULT_INDEX, placeId).onFailure { error ->
+                                Log.w(TAG, "search result card failed: $error")
+                            }
                         }
                     }
                 }
@@ -456,6 +497,44 @@ private fun MapContent(
                     Log.w(TAG, "place card action ${link.action} failed: $error")
                 }
             },
+        )
+        RoutePlanPanel(
+            state = plan,
+            strings = container.strings,
+            onSwap = {
+                scope.launch {
+                    invokePlannerCommand(container, RoutePlannerContract.swap, JsonObject(emptyMap()))
+                }
+            },
+            onSelectAlternative = { index ->
+                scope.launch {
+                    invokePlannerCommand(
+                        container,
+                        RoutePlannerContract.select,
+                        buildJsonObject { put("index", index) },
+                    )
+                }
+            },
+            onStart = {
+                scope.launch {
+                    container.commandBus.invoke(RoutePlannerContract.start).onFailure { error ->
+                        if (error == AppError.Unsupported) {
+                            Toast.makeText(context, R.string.route_planner_start_unavailable, Toast.LENGTH_LONG).show()
+                        } else {
+                            Log.w(TAG, "route start failed: $error")
+                        }
+                    }
+                }
+            },
+            onClose = {
+                scope.launch {
+                    invokePlannerCommand(container, RoutePlannerContract.clear, JsonObject(emptyMap()))
+                }
+            },
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding(),
         )
         if (listsVisible) {
             val listsFlow =
@@ -607,6 +686,35 @@ private const val MILLIS_PER_SECOND = 1_000L
 private const val AGE_NOW_SECONDS = 10L
 private const val SECONDS_PER_MINUTE = 60L
 
+/** Sends one picked point to the planner; the plugin requests the route. */
+private suspend fun setPlanPoint(
+    container: AppContainer,
+    role: RoutePlanRole,
+    position: GeoPoint,
+    label: String?,
+) {
+    invokePlannerCommand(
+        container,
+        RoutePlannerContract.setPoint,
+        buildJsonObject {
+            put("role", if (role == RoutePlanRole.Start) "start" else "destination")
+            put("lat", position.latitude)
+            put("lon", position.longitude)
+            label?.let { put("label", it) }
+        },
+    )
+}
+
+private suspend fun invokePlannerCommand(
+    container: AppContainer,
+    id: CommandId,
+    params: JsonObject,
+) {
+    container.commandBus.invoke(id, params).onFailure { error ->
+        Log.w(TAG, "route planner $id failed: $error")
+    }
+}
+
 /** Moves one control by [delta] positions; an out-of-range move keeps the order. */
 internal fun moveControl(
     layout: List<CommandId>,
@@ -669,6 +777,14 @@ private fun controlButton(
 
         MapControlCommands.FOLLOW -> {
             followButton(id, context, mode)
+        }
+
+        MapControlCommands.ROUTE_PLANNER -> {
+            ControlButton(
+                id = id,
+                label = context.getString(R.string.control_route_planner_label),
+                contentDescription = context.getString(R.string.control_route_planner_description),
+            )
         }
 
         else -> {

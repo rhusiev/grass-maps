@@ -993,6 +993,82 @@ set. That command types each query letter by letter through
 number includes the uniffi bridge and not the adb round trip.
 
 
+## Search history
+
+`places`' `SearchHistoryStore` (T-0207) keeps the last 20 completed searches,
+newest first, in `history/search-history.json` under the app's private files
+directory. The number is `DEFAULT_MAX_ENTRIES`. Twenty rows cover a few days of
+real use and read without paging. Twenty also bound the file at about 7 kB when
+every query and context is at its widest.
+
+A search is one terminal keystroke the screen completed, not every letter on
+the way there. The store replaces its newest entry when the next query extends
+or shortens it, so typing "lviv" leaves one row and not four. A repeated query
+moves to the front with a new time.
+
+An entry holds the query and the exact request context, so a replay calls
+`PlaceProvider.search` again with the same values: the region `index`, the
+`limit`, the viewport filter, the map position and the language. The language
+is stored even though no caller sets it yet. The store also records the
+completion time from the injected `Clock`. That time is the only ordering key,
+and file order breaks a tie.
+
+The file is JSON with a `format` version and an `entries` array. A write goes
+through a temporary sibling, an fsync and an atomic move, like the favourites
+store, so a failed write leaves the previous list. One entry looks like this:
+
+```json
+{"query":"lviv","index":"lviv","limit":5,"atMillis":1794000000000,"position":{"lat":49.83,"lon":24.03},"language":"uk"}
+```
+
+History is disposable data, not a document the user authored, so its failure
+rules differ from favourites. A missing or unreadable file is an empty history.
+A corrupt file also reads as empty, and the next search replaces it. A file
+whose `format` is newer than this build is never overwritten: `remember` and
+`list` return `Unsupported` until the app updates, and only an explicit clear
+removes it. A query that is blank, longer than 256 characters, or carries a
+limit or box outside the search contract is `InvalidInput` and writes nothing.
+
+The switch is `core-services`' `SearchHistorySettings`, stored in
+`settings/search-history.json` and on by default. It is a local setting, not an
+entry in `NetworkSwitches`. That registry and its request counters describe
+contact that leaves the device, while this switch gates a local file. With the
+switch off, `remember` returns success without reading or writing the file and
+`list` returns empty without opening it. The store therefore proves the rule
+that a switch off stops the store write, not only a screen element. An explicit
+clear still works while history is off, because erasing history is the user's
+own action.
+
+`core.search.history_clear` empties the store, including a temporary sibling a
+crash may have left, and returns `cleared=true entries=0`.
+`core.search.history_list` returns the entry count and deliberately no query
+text, because control-channel output is logged. Both are on the control
+allowlist and run on IO. The settings screen arrives later. Until then
+`core.settings.search_history` sets the switch from the control channel with
+`{"enabled":false}` or a bare boolean.
+
+### Why the store is a file and not SQLite or the Rust core
+
+The design left the history database open between SQLite and the Rust core's
+own store. This task settles it as one small JSON file in the same app-private
+storage as the other user data. The rejected options:
+
+- SQLite (`history.db`) was the earlier default. The list is at most 20 rows of
+  a few hundred bytes, so a database adds a schema, a migration surface and an
+  Android-only dependency that the plain JVM tests cannot open. Every store in
+  this repository is a checked, atomically written file, and this change keeps
+  one pattern rather than adding a second.
+- The Rust core's store does not fit. The core is a read-only index reader that
+  answers queries over region data. A writable user-data store there would
+  cross the uniffi boundary for data the app already owns, and would put a
+  write path into a component whose contract is reads.
+- A key in the future global `settings.json` does not fit either. History is a
+  list with its own clear action and its own privacy switch, not a scalar
+  preference. It moves into the versioned settings file when that file exists,
+  as `settings/units.json` and `settings/search-history.json` will.
+
+The file is app-private and is never backed up.
+
 ## Favourites lists seam
 
 `plugins/favourites-ui` (T-0213) owns the lists screen state and its commands:

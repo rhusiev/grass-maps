@@ -67,6 +67,8 @@ private val REPLAY_POLICY: CommandPolicy =
  */
 class SearchScreenCommand(
     private val session: SearchScreenSession,
+    private val history: SearchHistoryStore? = null,
+    private val log: (String) -> Unit = {},
 ) : Command<JsonElement, String>(
         id = SEARCH_SCREEN_COMMAND,
         paramsSerializer = JsonElement.serializer(),
@@ -87,6 +89,7 @@ class SearchScreenCommand(
 
             is Outcome.Success -> {
                 val state = outcome.value
+                record(state, request)
                 Outcome.Success(
                     CommandResult(
                         "sequence=${state.sequence} status=${state.status} hits=${state.hits.size} " +
@@ -94,6 +97,24 @@ class SearchScreenCommand(
                     ),
                 )
             }
+        }
+    }
+
+    /**
+     * Adds a terminal completed search to the history. A failure to remember is
+     * logged and never fails the search: the result the user asked for stands.
+     */
+    private suspend fun record(
+        state: SearchScreenState,
+        request: Request,
+    ) {
+        val store = history ?: return
+        if (state.status != SearchScreenStatus.RESULTS && state.status != SearchScreenStatus.EMPTY) {
+            return
+        }
+        when (val recorded = store.remember(request.query, request.index, request.limit, request.context)) {
+            is Outcome.Failure -> log("search history not recorded: ${recorded.error}")
+            is Outcome.Success -> Unit
         }
     }
 
@@ -286,8 +307,9 @@ class ReplaySearchCommand(
 /** The commands the app registers for the search screen and its harness. */
 fun searchScreenCommands(
     session: SearchScreenSession,
+    history: SearchHistoryStore? = null,
     log: (String) -> Unit = {},
-): List<Command<*, *>> = listOf(SearchScreenCommand(session), ReplaySearchCommand(session, log))
+): List<Command<*, *>> = listOf(SearchScreenCommand(session, history, log), ReplaySearchCommand(session, log))
 
 /**
  * The nearest-rank percentile of [timings] in microseconds. Empty input is 0,

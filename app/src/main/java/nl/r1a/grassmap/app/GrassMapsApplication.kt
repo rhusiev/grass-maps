@@ -53,6 +53,8 @@ open class GrassMapsApplication : Application() {
             distanceByTap = distanceByTap(),
             headingSource = AndroidHeadingSource(this, compassScope),
             unitSettingsFileProvider = { File(filesDir, UNIT_SETTINGS_PATH) },
+            searchHistoryFileProvider = { File(filesDir, SEARCH_HISTORY_PATH) },
+            searchHistorySettingsFileProvider = { File(filesDir, SEARCH_HISTORY_SETTINGS_PATH) },
             favouritesRootProvider = { filesDir },
             platformActions = AndroidPlatformActions(this),
         )
@@ -184,6 +186,8 @@ open class GrassMapsApplication : Application() {
         const val PERMISSION_DIRECTORY = "location"
         const val PERMISSION_FILE = "permission-asked"
         const val UNIT_SETTINGS_PATH = "settings/units.json"
+        const val SEARCH_HISTORY_SETTINGS_PATH = "settings/search-history.json"
+        const val SEARCH_HISTORY_PATH = "history/search-history.json"
         const val DEV_TOOLS_GPX_ASSET = "mock-walk.gpx"
         const val BYTES_PER_KILOBYTE = 1024L
         const val UNKNOWN_VERSION = "unknown"

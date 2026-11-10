@@ -23,11 +23,15 @@ import nl.r1a.grassmap.core.services.NoHeadingSource
 import nl.r1a.grassmap.core.services.NoLocationSource
 import nl.r1a.grassmap.core.services.PrivacyNetworkGate
 import nl.r1a.grassmap.core.services.PrivacySwitchSettings
+import nl.r1a.grassmap.core.services.SearchHistorySettings
 import nl.r1a.grassmap.core.services.UnitSettings
 import nl.r1a.grassmap.core.services.diagnosticsCommands
 import nl.r1a.grassmap.map.DistanceByTapSetting
 import nl.r1a.grassmap.places.PlacesAccess
+import nl.r1a.grassmap.places.SearchHistorySetting
+import nl.r1a.grassmap.places.SearchHistoryStore
 import nl.r1a.grassmap.places.SearchScreenSession
+import nl.r1a.grassmap.places.searchHistoryCommands
 import nl.r1a.grassmap.places.searchScreenCommands
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.contract.PluginId
@@ -86,6 +90,8 @@ class AppContainer(
     private val headingSource: HeadingSource = NoHeadingSource,
     private val positionOffsetProvider: PositionOffsetProvider = PositionOffsetProvider.CENTERED,
     private val unitSettingsFileProvider: () -> File? = { null },
+    private val searchHistoryFileProvider: () -> File? = { null },
+    private val searchHistorySettingsFileProvider: () -> File? = { null },
     private val favouritesRootProvider: () -> File? = { null },
     private val favouritesBackupClock: Clock = SystemClock,
     private val favouritesBackupScope: CoroutineScope? = null,
@@ -134,6 +140,25 @@ class AppContainer(
      * IO-loaded state, never Main.
      */
     val unitSettings: UnitSettings by lazy { UnitSettings(unitSettingsFileProvider()) }
+
+    /**
+     * The search history switch (T-0207). Resolving it reads the settings file,
+     * so the first access happens in an IO-dispatched command or in the search
+     * command, never on Main.
+     */
+    val searchHistorySettings: SearchHistorySettings by lazy { SearchHistorySettings(searchHistorySettingsFileProvider()) }
+
+    /**
+     * The last searches (T-0207). It asks [searchHistorySettings] before it
+     * writes or reads, so the switch stops the store itself rather than a
+     * screen. A build with no files root writes nothing and reads as empty.
+     */
+    val searchHistory: SearchHistoryStore by lazy {
+        SearchHistoryStore(
+            file = searchHistoryFileProvider(),
+            setting = SearchHistorySetting { searchHistorySettings.isEnabled() },
+        )
+    }
 
     /** The compass; the map subscribes while it is visible. */
     val heading: StateFlow<Double?>
@@ -308,13 +333,15 @@ class AppContainer(
             routeCommands(mapSession, routingEngine, { dataSources }) +
             navCommands(mapSession, routingEngine) +
             searchCommands { places } +
-            searchScreenCommands(searchScreen) { message -> Log.i(SEARCH_TAG, message) } +
+            searchScreenCommands(searchScreen, searchHistory) { message -> Log.i(SEARCH_TAG, message) } +
+            searchHistoryCommands(searchHistory) +
             trackCommands({ tracks }, assetReader) +
             favouriteCommands({ favourites }, assetReader).map { command ->
                 observedFavouriteCommand(command) { favouritesBackup?.onMutation() }
             } +
             regionCommands({ regionDownloader }, regionNetwork, debuggable) +
             UnitsCommand({ unitSettings }) +
+            SearchHistorySettingCommand({ searchHistorySettings }) +
             extraCommands(mapSession) +
             diagnosticsCommands { diagnostics }
     }

@@ -112,11 +112,13 @@ jobs:
   emulator-map-goldens:
     name: Style and fixture map goldens (API 29, swangle)
     runs-on: ubuntu-latest
-    # Measured on run 42456896336: all 60 style comparisons passed by 08:49:34Z,
-    # fixtures 1-4 were captured 08:54:32-08:58:15Z, and the 120-minute bound
-    # cancelled the job at 08:59:07Z during fixture 5. The job needed about
-    # 2-3 more minutes, not another 30, so 150 minutes keeps a real margin.
-    timeout-minutes: 150
+    # Measured, not assumed. Run 42456896336 needed ~123 minutes: the old
+    # 120-minute bound cancelled it during the last fixture. At 150 minutes the
+    # margin did not hold either - the job was cancelled at the bound on 4 of
+    # the 6 runs before 2026-11-10, and successful runs took 1 h 56 m to
+    # 2 h 01 m. A job that regularly uses 96 % of its limit is the same risk as
+    # one that fails, so the bound is 210 minutes until the capture is split.
+    timeout-minutes: 210
     steps:
       - name: Check out
         uses: actions/checkout@v7

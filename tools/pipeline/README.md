@@ -145,6 +145,134 @@ with `brand=Укрпошта` is found by "укрпошта", and its search hit
 brand for the result row. The hit's `kind` stays the exact OSM category, which
 the `pois` filter and the committed probes match on.
 
+### Search in other scripts (T-0205)
+
+A person may type a Ukrainian name in Cyrillic or in Latin, and the interface
+language does not decide which. Two data sources make the index answer both. They
+do different jobs and neither replaces the other.
+
+`name:<language>` tags in OSM are real names in other languages, and the
+extractor now carries the Latin and Cyrillic ones into the row's alias column.
+"Złoczów" is the `name:pl` of Золочів (OSM node 1429712455); "Zolochiv" is its
+`name:en`, "Золочев" its `name:ru`. No table can derive "Złoczów": it is a Polish
+exonym, not a transliteration of the Cyrillic letters. The alias column keeps
+the brand values it already carried and appends these names, so a row's
+alternatives stay in one place.
+
+`rust/grass-core/data/transliteration.tsv` is the second source. The builder
+romanises a Cyrillic name that has no Latin spelling of its own and indexes the
+result beside the name. This is what reaches the places OSM has only in
+Cyrillic: Золочівка has no `name:en`, so "zolochivka" matches it only because
+the builder wrote that term.
+
+The table holds two conventions:
+
+| Scheme | Source | Used for |
+|---|---|---|
+| `national` | Ukrainian transliteration, Cabinet of Ministers resolution 55 (2010) | the official spelling a reader has seen on a sign or a passport |
+| `pragmatic` | no standard: г as g, и as i, х as h, ц as c, щ as sch | how people type Ukrainian in a Latin keyboard |
+
+One standard would have been enough if people typed standards. They do not: the
+official scheme writes Городоцька as "horodotska" and most people type
+"gorodocka". The pragmatic scheme is not a rival standard and does not claim to
+be; it is the same table with five letters spelled the way a search box sees
+them. A third convention, Polish, is deliberately absent: Polish names of
+Ukrainian towns are historical exonyms ("Lwów" for Львів, not a romanisation of
+"Львів"), and those come from OSM or not at all.
+
+Both schemes are one table of `scheme`, `position`, `source` and `target`
+columns. `position` is `any` or `start` because the 2010 rules spell є, ї, й, ю
+and я differently at the start of a word. A multi-letter source wins over its
+first letter, which is how the official "зг" to "zgh" rule keeps Згода distinct
+from Жода. Russian letters (ы, э, ё, ъ) are in the table because Ukrainian OSM
+data carries `name:ru`, and they romanise instead of passing through.
+
+Transliteration runs at build time only. The query side is unchanged: it folds
+the typed text and matches prefixes, and a Latin query meets the Latin term the
+builder wrote. The alternative was to expand a Latin query into Cyrillic
+candidates at every keystroke. That inversion is one-to-many in the wrong
+direction ("ch" is ч or х, "y" is и, і or й, "i" is і or и), so a word produces
+many candidates, each with its own prefix walk and typo automaton, on every
+keystroke. The index-time table is paid once, is byte-stable, and keeps the
+builder and the app on one folding implementation.
+
+Romanisation is lossy in both directions and this is deliberate. г and ґ are
+both g in the pragmatic scheme, и and і are both i, and е and є depend on
+position. The variants are indexed *beside* the Cyrillic name and never replace
+it, so two places that romanise alike keep their own Cyrillic terms, and a query
+that reaches both returns both. The ranking then decides: exact word, then
+address length, then area, street and distance from the origin, and the row's
+context names the oblast and raion. Nothing is dropped silently. The acceptance
+case is not a collision: one place in the Золочів section carries the term
+"zloczow", so its top result is not one of two folded rows. A builder test
+proves the collision case with a crafted pair ("Гай" and "Ґай", both "gai"),
+which asserts that both places come back.
+
+A name that already has a Latin spelling in the data gets no generated variant.
+The rule is per row: if the name or any alias carries a Latin letter, the
+builder writes no romanised term. OSM's own spelling is a name a person wrote,
+and it beats anything a table generates.
+
+The extractor keeps a `name:<language>` value when its suffix looks like a
+language tag (`en`, `crh`, `sr-Latn`; not `name:prefix` or `name:source`) and the
+value carries a Latin or Cyrillic letter. Arabic and CJK names are not indexed:
+no query in this region reaches them, and each one costs bytes and terms. The
+values do not go into the feature tags, only into search aliases, so a place's
+tag map and the region size stay as they were.
+
+Measured on the Lviv city fixture (58,160 rows: 23,086 places, 35,074 houses),
+the same extractor snapshot and one build per row. The baseline is the
+current builder without this layer. The search section here means the seven
+files the reader maps plus `format.bin`, without `features.bin`.
+
+| Build | Search section | Terms | `terms.fst` | `postings.bin` |
+|---|---|---|---|---|
+| Baseline, no name variants and no transliteration | 3,967,210 B | 13,243 | 133,311 B | 398,730 B |
+| Plus `name:<language>` aliases | 4,017,743 B (+50,533 B, +1.27%) | 16,166 | 162,238 B | 420,336 B |
+| Plus national transliteration | 4,251,939 B (+234,196 B over the row above) | 23,467 | 217,154 B | 599,616 B |
+| Plus pragmatic transliteration (the shipped build) | 4,384,183 B (+132,244 B over the row above) | 27,191 | 242,754 B | 706,260 B |
+
+Against the baseline the layer adds 416,973 B (9.2% of the whole 8,982,391 B
+section, 10.5% of the search section): 50,533 B for the OSM names and 366,440 B
+for the romanised variants. The pragmatic scheme is 132,244 B of that. Two
+alternatives were measured, not shipped: romanising place rows only saves
+166,571 B and loses Latin address search ("stryiska 45"), and dropping the
+pragmatic scheme saves 132,244 B and loses "gorodocka". The whole Ukraine
+extract has 2,134,952 rows against these 58,160, 36.7 times as many, so by row
+ratio expect about 1.9 MB of names and 13 MB of variants. Lviv city is densely
+mapped, so that ratio probably overstates both; only the Lviv city bbox was
+built.
+
+The same 58,160 rows build in 1.60 s instead of 0.75 s (three runs each, peak
+RSS 118 MB instead of 114 MB), and two builds of one input are byte-identical.
+
+The committed section `places/src/test/resources/search/zolochiv` is the
+pipeline's own output for the town, and `ZolochivSearchTest` reads it:
+
+```sh
+"$CARGO_TARGET_DIR/release/osm-extract" \
+  --pbf ukraine-latest.osm.pbf --bbox 24.85,49.78,24.95,49.85 --no-addresses \
+  --out build/data/zolochiv.tsv
+cargo run --release --locked --manifest-path rust/grass-core/Cargo.toml \
+  --bin build-section -- build/data/zolochiv.tsv \
+  places/src/test/resources/search/zolochiv
+```
+
+The section is 99,022 B over 538 place rows and carries the town's 18 Latin and
+Cyrillic name variants, which is why "Złoczów" and "zloczow" find it. The test
+asserts that "zloczow", "Złoczów" and "Золочів" return one row as the top
+result, that "zolochivka" reaches a village with no Latin name, and that exactly
+one town in the section answers to the folded term.
+
+`test-data/search/normalisation-vectors.tsv` is the shared fold. It holds rows
+for `fold::normalise` and `fold::canonical_words` and is read by two tests,
+never copied: `fold::tests` in the crate and `NormalisationVectorsTest` in the
+app, which calls the same two functions through the generated Kotlin bindings.
+The builder folds a stored name with the crate; the app folds the typed text
+with the library it ships. A change that moves one side alone fails one of the
+two tests. Transliteration is not in the file because it has no app-side
+counterpart: it runs at build time only, and a query never romanises anything.
+
 ### OSM extraction and house numbers
 
 `tools/pipeline/osm-extract` turns an OSM PBF extract into the place list

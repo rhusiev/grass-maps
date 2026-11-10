@@ -812,6 +812,23 @@ and wording set is `kind-brand-queries.tsv`, read and scored by
 table (`rust/grass-core/data/synonyms.tsv`), street abbreviations in both
 directions, and brand tags.
 
+Search answers a name typed in Cyrillic or in Latin. Two data sources make that
+work, and `tools/pipeline/README.md` has their measurements. OSM's
+`name:<language>` tags are carried into a row's aliases, so a Polish exonym
+("Złoczów" for Золочів) is found because OSM has it. A Cyrillic name with no
+Latin spelling gets one from
+`rust/grass-core/data/transliteration.tsv`, applied by the builder: the
+official 2010 transliteration plus a pragmatic variant for how people type.
+Transliteration is index-time only, so the query path stays one fold and one
+prefix walk. `ZolochivSearchTest` asserts the acceptance case: "zloczow",
+"Złoczów" and "Золочів" return the same top result from the committed
+`search/zolochiv` section.
+
+`normaliseText` and `canonicalWords` cross the uniffi boundary, and
+`test-data/search/normalisation-vectors.tsv` is read by `fold::tests` in the
+crate and by `NormalisationVectorsTest` through those bindings, so the builder
+and the app cannot fold a name differently.
+
 The index is external data: the provider reads
 `<externalFilesDir>/search/<region>/`. The committed Lviv section under
 `places/src/test/resources/search` is 10.1 MiB and ODbL-licensed; its
@@ -819,9 +836,11 @@ The index is external data: the provider reads
 component, so those places have no identity or tags. The house-number fixture
 `places/src/test/resources/search/lviv-addresses` is 8.57 MiB: places and house
 rows, built by `tools/pipeline/osm-extract` from the 2026-11-04 Ukraine extract
-over the Lviv city bbox. The extraction stage, its commands, the Lviv-bbox and
-whole-country size measurements, and their conditions are in
-`tools/pipeline/README.md`. The debug channel exposes `core.search.query`:
+over the Lviv city bbox. `search/zolochiv` is 99,022 B and is the same pipeline's
+output for one town, places only, for the transliteration tests. The extraction
+stage, its commands, the Lviv-bbox and whole-country size measurements, and
+their conditions are in `tools/pipeline/README.md`. The debug channel exposes
+`core.search.query`:
 
 ```sh
 tools/control/grassctl.py invoke core.search.query \

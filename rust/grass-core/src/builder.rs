@@ -11,8 +11,9 @@
 //! `amenity=cafe` or `addr=house`; `context` is a comma-separated address;
 //! `tags` is `key=value` pairs separated by `|`, empty for a place with no
 //! tags; `aliases` is optional and holds `|`-separated alternative names,
-//! indexed one field weaker than the primary name. A house number is a place
-//! whose name is the street and number ("вулиця Стрийська 45"); its kind
+//! indexed one field weaker than the primary name. An alias is a brand or a
+//! name in another language the extractor carried from OSM. A house number is a
+//! place whose name is the street and number ("вулиця Стрийська 45"); its kind
 //! starts with `addr=` and the row carries [format::FLAG_ADDRESS]. Blank lines
 //! and lines starting with `#` are ignored.
 
@@ -26,6 +27,7 @@ use crate::fold;
 use crate::format::{self, Field, PlaceRecord};
 use crate::index::Index;
 use crate::synonym;
+use crate::transliteration;
 
 const COLUMNS: usize = 8;
 const COLUMNS_WITH_ALIASES: usize = 9;
@@ -216,6 +218,7 @@ fn write_section(places: &[SourcePlace], out_dir: &Path) -> Result<BuildStats, C
         for alias in &place.aliases {
             add_name_terms(&mut terms, alias, place_id, Field::OtherName, &place.kind);
         }
+        add_transliteration_terms(&mut terms, place, place_id);
         add_term(&mut terms, &place.kind, place_id, Field::KindWord);
 
         let kind_id = kinds.id(&place.kind);
@@ -230,7 +233,7 @@ fn write_section(places: &[SourcePlace], out_dir: &Path) -> Result<BuildStats, C
             let entity = entities.id(part);
             format::put_varint(&mut context_bin, u64::from(entity));
             if new {
-                add_entity_term(&mut terms, part, entity);
+                add_entity_terms(&mut terms, part, entity);
             }
         }
 
@@ -346,6 +349,39 @@ fn add_name_terms(
 fn add_entity_term(terms: &mut BTreeMap<String, TermPostings>, text: &str, entity: u32) {
     for word in fold::canonical_words(text) {
         terms.entry(word).or_default().entities.push(entity);
+    }
+}
+
+/// A context entity's terms. A locality with no Latin spelling in the data also
+/// gets the romanised ones, so a query in Latin reaches an address through its
+/// town; a locality that already has one needs no generated spelling.
+fn add_entity_terms(terms: &mut BTreeMap<String, TermPostings>, text: &str, entity: u32) {
+    add_entity_term(terms, text, entity);
+    if fold::contains_latin(text) || !fold::contains_cyrillic(text) {
+        return;
+    }
+    for variant in transliteration::variants(text) {
+        add_entity_term(terms, &variant, entity);
+    }
+}
+
+/// The Latin spellings of a Cyrillic name, indexed one field weaker than the
+/// name itself. They are skipped when the row or any of its aliases already
+/// carries a Latin name: OSM's own spelling ("Złoczów" for Золочів) is a name
+/// that people wrote, and it beats anything a table can generate.
+fn add_transliteration_terms(
+    terms: &mut BTreeMap<String, TermPostings>,
+    place: &SourcePlace,
+    place_id: u32,
+) {
+    let carries_latin = std::iter::once(place.name.as_str())
+        .chain(place.aliases.iter().map(String::as_str))
+        .any(fold::contains_latin);
+    if carries_latin || !fold::contains_cyrillic(&place.name) {
+        return;
+    }
+    for variant in transliteration::variants(&place.name) {
+        add_name_terms(terms, &variant, place_id, Field::OtherName, &place.kind);
     }
 }
 
@@ -583,6 +619,145 @@ mod tests {
                 "{text}: {hits:?}"
             );
         }
+
+        fs::remove_dir_all(directory).ok();
+    }
+
+    /// A town and a village, each with only its Cyrillic name, and an address.
+    /// The town is the named acceptance case.
+    const TRANSLITERATION_SOURCE: &str = concat!(
+        "# osm_type\tosm_id\tlat\tlon\tname\tkind\tcontext\ttags\taliases\n",
+        "node\t1\t49.8056\t24.8989\tЗолочів\tplace=town\tЗолочів\tname=Золочів\n",
+        "node\t2\t49.8078\t24.9283\tЗолочівка\tplace=village\tЗолочівка\t",
+        "name=Золочівка\n",
+        "node\t3\t49.8419\t24.0316\tКав'ярня\tamenity=cafe\tЛьвів\t",
+        "amenity=cafe|name=Кав'ярня\n",
+    );
+
+    #[test]
+    fn a_cyrillic_name_is_found_by_its_transliterations_and_not_by_an_exonym() {
+        let directory = temp_directory();
+        let source = directory.join("places.tsv");
+        fs::write(&source, TRANSLITERATION_SOURCE).expect("write source");
+        let section = directory.join("section");
+        build(&source, &section).expect("build");
+
+        for text in ["золочів", "zolochiv", "zolociv"] {
+            let hits = query(&section, text, 5);
+            assert_eq!(
+                hits.first().map(|hit| hit.name.as_str()),
+                Some("Золочів"),
+                "{text}: {hits:?}",
+            );
+        }
+        // "Złoczów" is a Polish exonym, not a transliteration: no table can
+        // derive it, so this row has no such term until the data carries it.
+        assert!(query(&section, "zloczow", 5).is_empty());
+
+        // A village with no Latin name of its own is reached the same way.
+        let hits = query(&section, "zolochivka", 5);
+        assert_eq!(hits.first().map(|hit| hit.name.as_str()), Some("Золочівка"));
+
+        fs::remove_dir_all(directory).ok();
+    }
+
+    #[test]
+    fn an_exonym_in_the_alias_column_is_what_finds_the_polish_spelling() {
+        let directory = temp_directory();
+        let source = directory.join("places.tsv");
+        fs::write(
+            &source,
+            concat!(
+                "# osm_type\tosm_id\tlat\tlon\tname\tkind\tcontext\ttags\taliases\n",
+                "node\t1\t49.8056\t24.8989\tЗолочів\tplace=town\tЗолочів\t",
+                "name=Золочів\tZłoczów|Zolochiv\n",
+            ),
+        )
+        .expect("write source");
+        let section = directory.join("section");
+        build(&source, &section).expect("build");
+
+        for text in ["zloczow", "Złoczów", "Золочів", "zolochiv"] {
+            let hits = query(&section, text, 5);
+            assert_eq!(
+                hits.first().map(|hit| hit.name.as_str()),
+                Some("Золочів"),
+                "{text}: {hits:?}",
+            );
+        }
+
+        fs::remove_dir_all(directory).ok();
+    }
+
+    #[test]
+    fn a_name_that_already_has_a_latin_spelling_gets_no_generated_one() {
+        let directory = temp_directory();
+        let source = directory.join("places.tsv");
+        fs::write(
+            &source,
+            concat!(
+                "# osm_type\tosm_id\tlat\tlon\tname\tkind\tcontext\ttags\taliases\n",
+                "node\t1\t49.84\t24.03\tЛьвів\tplace=city\tЛьвів\t",
+                "name=Львів\tLeopolis\n",
+            ),
+        )
+        .expect("write source");
+        let section = directory.join("section");
+        build(&source, &section).expect("build");
+
+        assert_eq!(
+            query(&section, "leopolis", 5).first().map(|hit| hit.name.as_str()),
+            Some("Львів"),
+        );
+        // The row carries a Latin name, so the builder wrote no romanised
+        // variant: the search does not invent spellings the data already
+        // answers.
+        assert!(query(&section, "lviv", 5).is_empty());
+
+        fs::remove_dir_all(directory).ok();
+    }
+
+    #[test]
+    fn two_towns_that_romanise_alike_are_both_returned() {
+        let directory = temp_directory();
+        let source = directory.join("places.tsv");
+        fs::write(
+            &source,
+            concat!(
+                "# osm_type\tosm_id\tlat\tlon\tname\tkind\tcontext\ttags\n",
+                // The pragmatic scheme romanises both г and ґ as g.
+                "node\t1\t49.80\t24.90\tГай\tplace=village\tГай\tname=Гай\n",
+                "node\t2\t49.60\t24.10\tҐай\tplace=village\tҐай\tname=Ґай\n",
+            ),
+        )
+        .expect("write source");
+        let section = directory.join("section");
+        build(&source, &section).expect("build");
+
+        let names: Vec<String> = query(&section, "gai", 5)
+            .into_iter()
+            .map(|hit| hit.name)
+            .collect();
+        assert!(names.contains(&"Гай".to_owned()), "{names:?}");
+        assert!(names.contains(&"Ґай".to_owned()), "{names:?}");
+        // Each keeps its own Cyrillic term too, so the collision did not
+        // replace one name's only spelling with a shared one.
+        assert_eq!(query(&section, "гай", 5).first().map(|hit| hit.name.as_str()), Some("Гай"));
+        assert_eq!(query(&section, "ґай", 5).first().map(|hit| hit.name.as_str()), Some("Ґай"));
+
+        fs::remove_dir_all(directory).ok();
+    }
+
+    #[test]
+    fn a_house_is_found_by_a_latin_street_name() {
+        let directory = temp_directory();
+        let source = directory.join("places.tsv");
+        fs::write(&source, ADDRESS_SOURCE).expect("write source");
+        let section = directory.join("section");
+        build(&source, &section).expect("build");
+
+        let hits = query(&section, "stryiska 45", 5);
+        assert_eq!(hits.first().map(|hit| hit.id), Some(2), "{hits:?}");
 
         fs::remove_dir_all(directory).ok();
     }

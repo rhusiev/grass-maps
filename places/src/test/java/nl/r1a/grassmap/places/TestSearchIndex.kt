@@ -32,9 +32,13 @@ internal object TestSearchIndex {
 
     val addressesDirectory: Path by lazy { extract("/search/lviv-addresses") }
 
+    val zolochivDirectory: Path by lazy { extract("/search/zolochiv") }
+
     fun open(regionBuild: String = "lviv-test"): RustPlaceProvider = open(directory, regionBuild)
 
     fun openAddresses(regionBuild: String = "lviv-addresses-test"): RustPlaceProvider = open(addressesDirectory, regionBuild)
+
+    fun openZolochiv(regionBuild: String = "zolochiv-test"): RustPlaceProvider = open(zolochivDirectory, regionBuild)
 
     private fun open(
         root: Path,

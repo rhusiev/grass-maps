@@ -15,7 +15,6 @@ import org.junit.BeforeClass
 import org.junit.Test
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.Comparator
 
 /**
@@ -197,20 +196,6 @@ class RustPlaceProviderFixtureTest {
         @JvmStatic
         fun tearDown() {
             provider.close()
-        }
-
-        /** The repository root, found by walking up from the test working directory. */
-        private fun repositoryRoot(): Path {
-            var directory: Path? = Paths.get(System.getProperty("user.dir")).toAbsolutePath()
-            while (directory != null) {
-                if (Files.isRegularFile(directory.resolve("settings.gradle.kts")) &&
-                    Files.isDirectory(directory.resolve("test-data"))
-                ) {
-                    return directory
-                }
-                directory = directory.parent
-            }
-            error("Cannot find the repository root from ${System.getProperty("user.dir")}")
         }
     }
 }

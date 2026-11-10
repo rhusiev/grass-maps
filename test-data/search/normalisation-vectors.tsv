@@ -1,0 +1,47 @@
+# Normalisation vectors, shared by the builder and the app (T-0205).
+#
+# Three tab-separated columns, no header row:
+#
+#   function    input    expected
+#
+# `function` is `fold` or `words`:
+#
+#   fold    fold::normalise - lower case, accents and apostrophes dropped, й/ї/ё
+#           folded to и/і/е, ł to l. The builder folds a stored name with it and
+#           the query folds the typed text with it, so a row here is a promise
+#           that both sides see the same word.
+#   words   fold::canonical_words - fold, then split on anything that is not a
+#           letter or digit, with a digit-led token absorbing a short letter
+#           suffix. The expected column is the words separated by one space.
+#
+# This file is read by two tests, never copied: `fold::tests` in the crate, and
+# `NormalisationVectorsTest` in the app, which calls the generated Kotlin
+# bindings of the same functions. A change to the fold on one side alone fails
+# one of them.
+#
+# Add a row for every spelling class in a commit that changes the fold. Keep the
+# expected column exact: a row that "looks about right" hides the drift these
+# rows exist to catch.
+fold	львів	львів
+fold	Львів	львів
+fold	ЛЬВІВ	львів
+fold	Київ	киів
+fold	Хмельницький	хмельницькии
+fold	Złoczów	zloczow
+fold	Łódź	lodz
+fold	Lwów	lwow
+fold	Straße	strasse
+fold	ΣΟΦΙΑΣ	σοφιασ
+fold	Кав'ярня	кавярня
+fold	Кам’янець-Подільський	камянець-подільськии
+fold	вулиця Стрийська	вулиця стрииська
+words	львів	львів
+words	Київ	киів
+words	Złoczów	zloczow
+words	Кав'ярня 5	кавярня 5
+words	Кам'янець-Подільський	камянець подільськии
+words	Сербська 2-А	сербська 2a
+words	Сербська 2а	сербська 2a
+words	Сербська 2a	сербська 2a
+words	Стрийська 12/2	стрииська 12 2
+words	1-й Заозерний провулок	1и заозернии провулок

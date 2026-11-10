@@ -7,7 +7,7 @@
 use unicode_normalization::UnicodeNormalization;
 use unicode_normalization::char::is_combining_mark;
 
-const APOSTROPHES: [char; 4] = ['\'', '’', 'ʼ', '`'];
+pub const APOSTROPHES: [char; 4] = ['\'', '’', 'ʼ', '`'];
 
 /// Street-type words carry no discrimination: every address on "вулиця X" has
 /// "вулиця", and the token saturates the postings budget, so an exact
@@ -65,6 +65,36 @@ pub fn words(text: &str) -> Vec<String> {
         .filter(|w| !w.is_empty())
         .map(str::to_owned)
         .collect()
+}
+
+/// Cyrillic blocks, including the extended ones, which Ukrainian, Belarusian
+/// and Russian names use.
+pub fn is_cyrillic(character: char) -> bool {
+    matches!(character,
+        '\u{0400}'..='\u{04FF}'
+            | '\u{0500}'..='\u{052F}'
+            | '\u{2DE0}'..='\u{2DFF}'
+            | '\u{A640}'..='\u{A69F}')
+}
+
+/// Latin blocks: Basic, Latin-1 Supplement, Latin Extended-A and -B, and
+/// Latin Extended Additional, which between them hold every Latin letter a
+/// European name uses.
+fn is_latin(character: char) -> bool {
+    matches!(character,
+        'a'..='z' | 'A'..='Z' | '\u{00C0}'..='\u{024F}' | '\u{1E00}'..='\u{1EFF}')
+}
+
+/// Whether `text` carries a Cyrillic letter, which is what makes a romanised
+/// variant worth writing.
+pub fn contains_cyrillic(text: &str) -> bool {
+    text.chars().any(is_cyrillic)
+}
+
+/// Whether `text` carries a Latin letter. A name that has one already has a
+/// Latin spelling, so no generated variant adds a way to type it.
+pub fn contains_latin(text: &str) -> bool {
+    text.chars().any(is_latin)
 }
 
 /// A house-number letter is at most this long; "2-А" splits into "2" and "а",
@@ -131,6 +161,29 @@ pub fn canonical_words(text: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_shared_normalisation_vectors_hold() {
+        let text = include_str!("../../../test-data/search/normalisation-vectors.tsv");
+        let mut rows = 0;
+        for line in text.lines() {
+            let line = line.trim_end_matches('\r');
+            if line.trim().is_empty() || line.starts_with('#') {
+                continue;
+            }
+            let columns: Vec<&str> = line.split('\t').collect();
+            assert_eq!(columns.len(), 3, "malformed vector row: {line:?}");
+            let (function, input, expected) = (columns[0], columns[1], columns[2]);
+            let actual = match function {
+                "fold" => normalise(input),
+                "words" => canonical_words(input).join(" "),
+                other => panic!("unknown vector function {other:?}"),
+            };
+            assert_eq!(actual, expected, "{function}({input:?})");
+            rows += 1;
+        }
+        assert!(rows >= 20, "the vector file lost rows: {rows}");
+    }
 
     #[test]
     fn folds_like_osm_mapidx() {

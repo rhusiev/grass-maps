@@ -116,6 +116,9 @@ const BRAND_KEYS: [&str; 6] = [
     "operator:en",
 ];
 
+/// The tag prefix of a name in another language, e.g. `name:pl` (T-0205).
+const NAME_LANGUAGE_PREFIX: &str = "name:";
+
 fn is_brand_key(key: &str) -> bool {
     BRAND_KEYS.contains(&key)
 }
@@ -760,7 +763,7 @@ fn write_place(
         .map(|(key, value)| format!("{key}={}", clean(value)))
         .collect::<Vec<_>>()
         .join("|");
-    let aliases = brand_values(tags, &name).join("|");
+    let aliases = place_aliases(tags, &name).join("|");
     write_row(
         writer,
         osm_type,
@@ -775,6 +778,76 @@ fn write_place(
     )?;
     stats.places += 1;
     Ok(())
+}
+
+/// The row's search aliases: the brand values, then the place's names in other
+/// languages (`name:pl`, `name:en`, ...). A Latin query reaches a Cyrillic name
+/// through these; "Złoczów" is the `name:pl` of Золочів, not a transliteration
+/// a table could produce.
+fn place_aliases(tags: &[(String, String)], name: &str) -> Vec<String> {
+    let mut aliases = brand_values(tags, name);
+    for value in name_language_values(tags, name) {
+        if !aliases
+            .iter()
+            .any(|existing| existing.eq_ignore_ascii_case(&value))
+        {
+            aliases.push(value);
+        }
+    }
+    aliases
+}
+
+/// The values of `name:<language>` tags whose name is not the row's own.
+///
+/// Only Latin and Cyrillic spellings are kept. A search box in this app is used
+/// with those two scripts; an Arabic or CJK name would add bytes and terms that
+/// no query in this region reaches. The language suffix must look like a
+/// language tag, which keeps `name:prefix`, `name:left` and `name:source` out.
+fn name_language_values(tags: &[(String, String)], name: &str) -> Vec<String> {
+    let mut values: Vec<String> = Vec::new();
+    for (key, raw) in tags {
+        let Some(language) = key.strip_prefix(NAME_LANGUAGE_PREFIX) else {
+            continue;
+        };
+        if !is_language_tag(language) {
+            continue;
+        }
+        let value = clean(raw);
+        if value.is_empty()
+            || value.eq_ignore_ascii_case(name)
+            || !is_latin_or_cyrillic(&value)
+            || values.iter().any(|existing| existing == &value)
+        {
+            continue;
+        }
+        values.push(value);
+    }
+    values
+}
+
+/// `uk`, `en`, `crh`, `sr-Latn`: two or three letters, optionally followed by
+/// one or more subtags.
+fn is_language_tag(tag: &str) -> bool {
+    let mut parts = tag.split('-');
+    let Some(primary) = parts.next() else {
+        return false;
+    };
+    if !(2..=3).contains(&primary.len()) || !primary.chars().all(|c| c.is_ascii_lowercase()) {
+        return false;
+    }
+    parts.all(|part| {
+        (2..=8).contains(&part.len()) && part.chars().all(|c| c.is_ascii_alphanumeric())
+    })
+}
+
+/// Whether the value carries a Latin or Cyrillic letter.
+fn is_latin_or_cyrillic(value: &str) -> bool {
+    value.chars().any(|character| {
+        matches!(character,
+            'a'..='z' | 'A'..='Z'
+                | '\u{00C0}'..='\u{024F}' | '\u{1E00}'..='\u{1EFF}'
+                | '\u{0400}'..='\u{04FF}' | '\u{0500}'..='\u{052F}')
+    })
 }
 
 /// The brand or, when no brand tag exists, the operator values a place
@@ -1074,6 +1147,43 @@ mod tests {
         assert_eq!(
             brand_values(&operator_only, "Крамниця"),
             vec!["Сільпо".to_owned()]
+        );
+    }
+
+    #[test]
+    fn a_place_keeps_its_names_in_other_languages_as_aliases() {
+        let tags = vec![
+            ("name".to_owned(), "Золочів".to_owned()),
+            ("name:en".to_owned(), "Zolochiv".to_owned()),
+            ("name:pl".to_owned(), "Złoczów".to_owned()),
+            ("name:ru".to_owned(), "Золочев".to_owned()),
+            ("name:uk".to_owned(), "Золочів".to_owned()),
+            // Not a language: the suffix must look like a language tag.
+            ("name:prefix".to_owned(), "місто".to_owned()),
+            ("name:signed".to_owned(), "no".to_owned()),
+            // A script no search box in this region uses.
+            ("name:ja".to_owned(), "ゾーロチウ".to_owned()),
+        ];
+        assert_eq!(
+            name_language_values(&tags, "Золочів"),
+            vec!["Zolochiv".to_owned(), "Złoczów".to_owned(), "Золочев".to_owned()],
+        );
+        assert_eq!(
+            place_aliases(&tags, "Золочів"),
+            name_language_values(&tags, "Золочів"),
+        );
+    }
+
+    #[test]
+    fn a_brand_and_a_name_in_another_language_share_the_alias_column() {
+        let tags = vec![
+            ("name".to_owned(), "Магазин".to_owned()),
+            ("brand".to_owned(), "АТБ".to_owned()),
+            ("name:en".to_owned(), "Shop".to_owned()),
+        ];
+        assert_eq!(
+            place_aliases(&tags, "Магазин"),
+            vec!["АТБ".to_owned(), "Shop".to_owned()],
         );
     }
 

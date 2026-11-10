@@ -1,0 +1,122 @@
+# Cyrillic-to-Latin romanisation for search variants (T-0205).
+#
+# Three tab-separated columns, no header row:
+#
+#   scheme    position    source    target
+#
+# `scheme` names a romanisation convention. Every row of a scheme is applied
+# together, so a name produces one Latin spelling per scheme and the builder
+# indexes each of them beside the Cyrillic name.
+#
+#   national    the official Ukrainian transliteration (Cabinet of Ministers
+#               resolution 55, 2010). It is what passports, road signs and
+#               Ukrainian `name:en` mostly follow, so it is the one a reader
+#               who has seen the name written officially will type.
+#   pragmatic   how people actually type Ukrainian in a Latin keyboard: г as
+#               g (not h), и as i (not y), х as h (not kh), ц as c (not ts),
+#               щ as sch (not shch). It is not a standard. It exists because a
+#               search box is not a passport office.
+#
+# `position` is `any` or `start`. The 2010 rules spell є, ї, й, ю and я
+# differently at the start of a word (ye, yi, y, yu, ya) and inside it (ie, i,
+# i, iu, ia); every other row is `any`.
+#
+# `source` is a run of Cyrillic letters, folded before it is matched: lower
+# case, no apostrophes. A multi-letter source wins over its first letter, which
+# is how the official "зг -> zgh" rule keeps Згода distinct from Жода. Russian
+# letters are present because Ukrainian OSM data carries Russian names
+# (`name:ru`), and they romanise rather than pass through.
+#
+# `target` is Latin. An empty target drops the letter (ь, ъ). The table is
+# compiled into the reader with `include_str!`, applied at build time only, and
+# validated by `transliteration::tests`: an unknown scheme, a duplicate row, a
+# Cyrillic target or an empty source fails the build's tests.
+#
+# To add a spelling, add a row. It reaches existing names when the section is
+# rebuilt; nothing about it is read on the query side.
+
+national	any	а	a
+national	any	б	b
+national	any	в	v
+national	any	г	h
+national	any	ґ	g
+national	any	д	d
+national	any	е	e
+national	start	є	ye
+national	any	є	ie
+national	any	ж	zh
+national	any	з	z
+national	any	и	y
+national	any	і	i
+national	start	ї	yi
+national	any	ї	i
+national	start	й	y
+national	any	й	i
+national	any	к	k
+national	any	л	l
+national	any	м	m
+national	any	н	n
+national	any	о	o
+national	any	п	p
+national	any	р	r
+national	any	с	s
+national	any	т	t
+national	any	у	u
+national	any	ф	f
+national	any	х	kh
+national	any	ц	ts
+national	any	ч	ch
+national	any	ш	sh
+national	any	щ	shch
+national	any	ь	
+national	start	ю	yu
+national	any	ю	iu
+national	start	я	ya
+national	any	я	ia
+national	any	зг	zgh
+national	any	ы	y
+national	any	э	e
+national	any	ё	e
+national	any	ъ	
+pragmatic	any	а	a
+pragmatic	any	б	b
+pragmatic	any	в	v
+pragmatic	any	г	g
+pragmatic	any	ґ	g
+pragmatic	any	д	d
+pragmatic	any	е	e
+pragmatic	start	є	ye
+pragmatic	any	є	ie
+pragmatic	any	ж	zh
+pragmatic	any	з	z
+pragmatic	any	и	i
+pragmatic	any	і	i
+pragmatic	start	ї	yi
+pragmatic	any	ї	i
+pragmatic	start	й	y
+pragmatic	any	й	i
+pragmatic	any	к	k
+pragmatic	any	л	l
+pragmatic	any	м	m
+pragmatic	any	н	n
+pragmatic	any	о	o
+pragmatic	any	п	p
+pragmatic	any	р	r
+pragmatic	any	с	s
+pragmatic	any	т	t
+pragmatic	any	у	u
+pragmatic	any	ф	f
+pragmatic	any	х	h
+pragmatic	any	ц	c
+pragmatic	any	ч	ch
+pragmatic	any	ш	sh
+pragmatic	any	щ	sch
+pragmatic	any	ь	
+pragmatic	start	ю	yu
+pragmatic	any	ю	iu
+pragmatic	start	я	ya
+pragmatic	any	я	ia
+pragmatic	any	ы	y
+pragmatic	any	э	e
+pragmatic	any	ё	e
+pragmatic	any	ъ	

@@ -9,6 +9,13 @@
 //! Version 2 adds `format.bin` and house-number rows ([`format::FLAG_ADDRESS`]):
 //! a place whose name is the street and number and whose context is the
 //! locality. A section without the header is version 1 and still opens.
+//!
+//! A place's terms are its names in the scripts OSM has them, plus a
+//! romanisation of a Cyrillic name that has no Latin spelling of its own
+//! ([`transliteration`]). Everything the query does to text is
+//! [`fold::normalise`] and [`fold::canonical_words`]; transliteration never runs
+//! on a query, and `test-data/search/normalisation-vectors.tsv` pins that fold
+//! for both sides.
 
 mod api;
 pub mod builder;
@@ -19,6 +26,7 @@ mod format;
 mod index;
 mod search;
 mod synonym;
+mod transliteration;
 
 pub use api::{CancelToken, PlaceDetail, PlaceHit, SearchIndex, SearchSession};
 pub use error::CoreError;

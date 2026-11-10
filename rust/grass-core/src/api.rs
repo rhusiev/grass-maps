@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::error::CoreError;
 use crate::features::{OsmElementType, PlaceFeature};
+use crate::fold;
 use crate::index::Index;
 use crate::search::{Cancel, Session, TypoAutomata};
 
@@ -318,4 +319,25 @@ fn validate_point(latitude: f64, longitude: f64) -> Result<(f64, f64), CoreError
         return Err(CoreError::InvalidInput);
     }
     Ok((latitude, longitude))
+}
+
+/// The fold the reader applies to a name or a query word: lower case, accents
+/// and apostrophes dropped, й/ї/ё folded to и/і/е. It is exposed so a caller
+/// can agree with the search on what two spellings are the same one, e.g. to
+/// mark the typed words in a result's name.
+///
+/// The builder and the query side both call this function, and the committed
+/// `test-data/search/normalisation-vectors.tsv` is checked from the crate and
+/// from the generated Kotlin bindings, so the two cannot drift apart.
+#[uniffi::export]
+pub fn normalise_text(text: String) -> String {
+    fold::normalise(&text)
+}
+
+/// The query words of `text`, as the index stores them: [`normalise_text`],
+/// then split on anything that is not a letter or digit, with a digit-led
+/// token absorbing a short letter suffix ("2-А" and "2а" both become "2a").
+#[uniffi::export]
+pub fn canonical_words(text: String) -> Vec<String> {
+    fold::canonical_words(&text)
 }

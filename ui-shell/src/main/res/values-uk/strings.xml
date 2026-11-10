@@ -30,4 +30,11 @@
     <string name="favourites_lists_sort_name_descending">Назва Я-А</string>
     <string name="favourites_lists_sort_list_then_name">Список, потім назва</string>
     <string name="favourites_lists_no_matches">Немає збігів</string>
+
+    <string name="search_title">Пошук місць</string>
+    <string name="search_hint">Назва, вулиця або номер будинку</string>
+    <string name="search_close">Закрити пошук</string>
+    <string name="search_no_matches">Немає збігів</string>
+    <string name="search_not_ready">Для цих карт немає пошукового індексу</string>
+    <string name="search_loading">Пошук</string>
 </resources>

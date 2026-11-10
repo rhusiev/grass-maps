@@ -9,7 +9,6 @@ import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
 import nl.r1a.grassmap.plugin.api.command.CommandPolicy
 import nl.r1a.grassmap.plugin.api.command.CommandResult
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -46,18 +45,12 @@ internal class ShowPlaceCardCommand(
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
         val request = parse(params) ?: return Outcome.Failure(AppError.InvalidInput)
         val active = container()
-        val access =
-            PlaceCardAccess(
-                details = { index, placeId, cancellation -> active.places.details(index, placeId, cancellation) },
-                providers = { active.providerRegistry },
-            )
-        return when (val outcome = access.card(request.index, request.placeId, CancellationHandle.None)) {
+        return when (val outcome = active.showPlaceCard(request.index, request.placeId)) {
             is Outcome.Failure -> {
                 outcome
             }
 
             is Outcome.Success -> {
-                PlaceCardSession.show(outcome.value)
                 Outcome.Success(CommandResult(describe(placeCardContent(outcome.value, active.strings))))
             }
         }

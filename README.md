@@ -255,8 +255,8 @@ index, file or network handle, so the tags it draws can only be the tags the
 `places.search` contract returned. `plugins/osm-places` is the first provider;
 `ui-shell`'s `PlaceCardHost` resolves its label keys through `Strings` and drops
 an absent field instead of drawing an empty row. The debug command
-`core.place.card_show` opens a card for an index place id; the search screen is
-T-0203.
+`core.place.card_show` opens a card for an index place id, and the search screen
+opens the same card from a result row (T-0203).
 
 Version 1.2.0 adds two optional parts (T-0210): `PlaceCard.coordinates`, three
 `PlaceCardEntry` rows in decimal, DMS and DDM, and `PlaceCard.shortcuts`, the
@@ -802,10 +802,11 @@ The reader is an FST of folded terms, delta-varint postings, a fixed 20-byte
 place table, context entities, a string pool and the feature component. It
 mmaps read-only, validates every offset before handing the index out, and
 returns `CorruptData` for a truncated section. Ranking and typo budgets are the
-spike's, so the osm-mapidx probe table stays a quality oracle: 45 of 45 in the
-top five, asserted by `RustPlaceProviderQualityTest`. The house-number oracle is
-50 fixed Lviv addresses, top one, asserted by `LvivAddressSearchTest` with a
-45/50 floor; the test prints every miss by name.
+spike's, so the osm-mapidx probe table stays a quality oracle. The score is
+computed from the committed `queries.tsv` and asserted as 1.0 by
+`RustPlaceProviderQualityTest`, so the table stays 45 of 45. The house-number
+oracle is 50 fixed Lviv addresses, top one, asserted by `LvivAddressSearchTest`
+with a 45/50 floor; the test prints every miss by name.
 
 The index is external data: the provider reads
 `<externalFilesDir>/search/<region>/`. The committed Lviv section under
@@ -829,8 +830,52 @@ reports `cancelled=true hits=0`. On the API 35 emulator (`grassmaps-bench`,
 host OpenGL), a street prefix measured p50 3.7 ms and p99 5.5 ms per keystroke
 including the JNA bridge; the full string of 13 keystrokes took 111 ms. The
 first single-letter keystroke after opening the index cost 63.6 ms (cold FST
-walk); later single-letter keystrokes stayed under 11 ms. The Moto g32 budget is
-T-0203's.
+walk); later single-letter keystrokes stayed under 11 ms.
+
+## Search screen
+
+The search screen (T-0203) is one field for every kind of place: a name, a
+street or a house number. `ui-shell`'s `SearchScreenHost` draws the field, the
+result list and the map markers. `places`' `SearchScreenSession` holds the one
+query path: it calls `PlacesAccess.search` and publishes a `SearchScreenState`
+that carries the newest result set. The screen never reaches an index directly.
+
+A keystroke travels through the command bus as `core.search.screen` with a
+sequence number. The command is registered with the `core.search.screen.query`
+cancellation key, so a newer keystroke stops the running one. The session also
+drops a result whose sequence is not the newest started, which covers a caller
+that bypasses the bus; the replay harness is such a caller. A superseded
+keystroke returns `Cancelled` and publishes nothing, so a slow older result can
+never replace a newer one.
+
+The list and the markers are two views of one result set. `searchResultView`
+maps the hits once, and the screen draws its `rows` and its `markers` from that
+one value. Tapping a row moves the camera to the place and opens the place card
+through the same `PlaceCardAccess` path the debug command uses.
+
+Markers draw as a Compose overlay above the map surface, not as a style layer.
+`SearchMarkerProjection` uses `WebMercator`'s two constants and the camera
+bearing, then adds the same position offset the map host was given, so a puck
+that sits off-centre keeps its markers under it. Tilt is not applied: the
+shipped app never tilts the camera, and a tilting mode would need the engine's
+marker slot instead. The overlay changes no style, sprite or golden reference.
+It draws nothing until the field has results, and a golden capture runs with the
+field empty.
+
+The keystroke budget is measured through the screen's own session.
+`SearchKeystrokeBenchTest` types the committed probe set letter by letter on the
+JVM and fails when p99 passes 50 ms. On this machine (Fedora, Intel Core
+i5-9300H, 8 threads, JVM 21.0.12.1) 478 keystrokes from 48 probes measured p50
+0.95 ms, p95 4.79 ms and p99 6.62 ms; the first keystroke cost 29.59 ms because
+it opens the index.
+
+The phone run is `scripts/bench/search-keystrokes.sh`. It installs the debug
+APK, copies the committed section into the app's external files directory,
+starts the activity and invokes `core.search.replay` with the committed probe
+set. That command types each query letter by letter through
+`SearchScreenSession.submit` and returns p50, p95 and p99 in the app, so the
+number includes the uniffi bridge and not the adb round trip.
+
 
 ## Favourites lists seam
 

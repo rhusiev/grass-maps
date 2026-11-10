@@ -61,3 +61,30 @@ class PlaceCardAccess(
             }
         }
 }
+
+/**
+ * Resolves the card for one index place id and shows it over the map. The search
+ * screen (T-0203) and the debug `core.place.card_show` command share this path,
+ * so a card opened from a result and a card opened from the control channel are
+ * the same card.
+ */
+internal suspend fun AppContainer.showPlaceCard(
+    index: String,
+    placeId: String,
+): Outcome<PlaceCard> {
+    val access =
+        PlaceCardAccess(
+            details = { indexName, id, cancellation -> places.details(indexName, id, cancellation) },
+            providers = { providerRegistry },
+        )
+    return when (val outcome = access.card(index, placeId, CancellationHandle.None)) {
+        is Outcome.Failure -> {
+            outcome
+        }
+
+        is Outcome.Success -> {
+            PlaceCardSession.show(outcome.value)
+            outcome
+        }
+    }
+}

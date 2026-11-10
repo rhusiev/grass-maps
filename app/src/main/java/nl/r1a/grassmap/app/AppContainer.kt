@@ -27,6 +27,8 @@ import nl.r1a.grassmap.core.services.UnitSettings
 import nl.r1a.grassmap.core.services.diagnosticsCommands
 import nl.r1a.grassmap.map.DistanceByTapSetting
 import nl.r1a.grassmap.places.PlacesAccess
+import nl.r1a.grassmap.places.SearchScreenSession
+import nl.r1a.grassmap.places.searchScreenCommands
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -163,6 +165,24 @@ class AppContainer(
         PlacesAccess(searchFilesProvider(), log = { message -> Log.i(SEARCH_TAG, message) })
     }
 
+    /**
+     * The search screen's state (T-0203). The shell sends each keystroke through
+     * the command bus; this session holds the one query path and publishes the
+     * result set both the list and the map markers draw.
+     */
+    val searchScreen: SearchScreenSession by lazy {
+        val indexes = places
+        SearchScreenSession { request ->
+            indexes.search(
+                indexName = request.index,
+                query = request.query,
+                context = request.context,
+                limit = request.limit,
+                cancellation = request.cancellation,
+            )
+        }
+    }
+
     /** The track import path over the generated `file.gpx` provider. */
     val tracks: TrackAccess by lazy {
         TrackAccess(providerRegistry, GeneratedPlugins.providers)
@@ -266,6 +286,7 @@ class AppContainer(
             routeCommands(mapSession, { routingEngine }, { dataSources }) +
             navCommands(mapSession, { routingEngine }) +
             searchCommands { places } +
+            searchScreenCommands(searchScreen) { message -> Log.i(SEARCH_TAG, message) } +
             trackCommands({ tracks }, assetReader) +
             favouriteCommands({ favourites }, assetReader).map { command ->
                 observedFavouriteCommand(command) { favouritesBackup?.onMutation() }

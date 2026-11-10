@@ -7,6 +7,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import nl.r1a.grassmap.core.CommandDispatchers
 import nl.r1a.grassmap.places.PlacesAccess
+import nl.r1a.grassmap.places.SEARCH_REPLAY_COMMAND
+import nl.r1a.grassmap.places.SEARCH_SCREEN_COMMAND
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.service.Strings
@@ -61,6 +63,26 @@ class SearchCommandsTest {
             val entry = container.controlCommands.singleOrNull { it.id == SEARCH_QUERY_COMMAND }
             assertTrue("core.search.query is not in the control catalog", entry != null)
             assertEquals(true, entry?.allowlistedForControl)
+        }
+
+    @Test
+    fun `the screen and the replay harness are in the control catalog`() =
+        runTest {
+            val container =
+                AppContainer(
+                    strings = KeyOnlyStrings,
+                    dispatchers =
+                        CommandDispatchers(
+                            main = StandardTestDispatcher(testScheduler),
+                            default = StandardTestDispatcher(testScheduler),
+                            io = StandardTestDispatcher(testScheduler),
+                        ),
+                )
+            for (id in listOf(SEARCH_SCREEN_COMMAND, SEARCH_REPLAY_COMMAND)) {
+                val entry = container.controlCommands.singleOrNull { it.id == id }
+                assertTrue("$id is not in the control catalog", entry != null)
+                assertEquals(true, entry?.allowlistedForControl)
+            }
         }
 
     private object KeyOnlyStrings : Strings {

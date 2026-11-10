@@ -60,12 +60,16 @@ import nl.r1a.grassmap.map.MapSurfaceView
 import nl.r1a.grassmap.map.PuckAgeFormatter
 import nl.r1a.grassmap.map.prepareMapEngine
 import nl.r1a.grassmap.map.rememberMapSurface
+import nl.r1a.grassmap.places.SEARCH_SCREEN_COMMAND
+import nl.r1a.grassmap.places.SearchScreenSession
+import nl.r1a.grassmap.places.SearchScreenStatus
 import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.error.onFailure
 import nl.r1a.grassmap.plugin.api.host.MapEvent
+import nl.r1a.grassmap.plugin.api.model.CameraUpdate
 import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
 import nl.r1a.grassmap.plugin.api.model.FavouriteSort
 import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
@@ -91,6 +95,7 @@ import nl.r1a.grassmap.ui.shell.FavouritesListsHost
 import nl.r1a.grassmap.ui.shell.MapControlBar
 import nl.r1a.grassmap.ui.shell.MapScaleBar
 import nl.r1a.grassmap.ui.shell.PlaceCardHost
+import nl.r1a.grassmap.ui.shell.SearchScreenHost
 import java.io.File
 import java.util.Locale
 
@@ -256,6 +261,9 @@ private fun MapContent(
     val placeCard by PlaceCardSession.card.collectAsState()
     val listsVisible by FavouritesListsSession.visible.collectAsState()
     val listsQuerySequence = remember { longArrayOf(0L) }
+    val searchState by container.searchScreen.state.collectAsState()
+    val searchSequence = remember { longArrayOf(0L) }
+    val searchCamera by surface.host.camera.collectAsState()
     val unitStore by
         produceState<UnitSettings?>(null) {
             value = withContext(Dispatchers.IO) { container.unitSettings }
@@ -377,6 +385,59 @@ private fun MapContent(
                         .padding(BAR_PADDING_DP.dp),
             )
         }
+        SearchScreenHost(
+            hits = searchState.hits,
+            loading = searchState.status == SearchScreenStatus.LOADING,
+            failed = searchState.status == SearchScreenStatus.FAILED,
+            camera = searchCamera,
+            viewport = viewport,
+            anchorOffset = screenOffset,
+            onQueryChange = { text ->
+                searchSequence[0] += 1
+                val sequence = searchSequence[0]
+                scope.launch {
+                    container.commandBus
+                        .invoke(
+                            SEARCH_SCREEN_COMMAND,
+                            buildJsonObject {
+                                put("query", text)
+                                put("sequence", sequence)
+                                put("index", SearchScreenSession.DEFAULT_INDEX)
+                                put("limit", SearchScreenSession.DEFAULT_LIMIT)
+                            },
+                        ).onFailure { error ->
+                            if (error != AppError.Cancelled) {
+                                Log.w(TAG, "search keystroke failed: $error")
+                            }
+                        }
+                }
+            },
+            onSelect = { placeId ->
+                val hit = searchState.hits.firstOrNull { it.id == placeId }
+                scope.launch {
+                    if (hit != null) {
+                        surface.host.animateCamera(CameraUpdate(center = hit.position)).onFailure { error ->
+                            Log.w(TAG, "search result camera move failed: $error")
+                        }
+                    }
+                    container.showPlaceCard(SearchScreenSession.DEFAULT_INDEX, placeId).onFailure { error ->
+                        Log.w(TAG, "search result card failed: $error")
+                    }
+                }
+            },
+            onClear = {
+                scope.launch {
+                    container.commandBus
+                        .invoke(SEARCH_SCREEN_COMMAND, buildJsonObject { put("clear", true) })
+                        .onFailure { error -> Log.w(TAG, "search clear failed: $error") }
+                }
+            },
+            modifier = Modifier.fillMaxSize(),
+            cardModifier =
+                Modifier
+                    .statusBarsPadding()
+                    .padding(BAR_PADDING_DP.dp),
+        )
         PlaceCardHost(
             card = placeCard,
             strings = container.strings,

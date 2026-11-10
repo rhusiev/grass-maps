@@ -107,7 +107,7 @@ fun registerCargo(
         commandLine(cargoCommand, "build", "--release", "--locked", "--target", triple)
         inputs.files(
             rustCrate.asFileTree.matching {
-                include("src/**", "Cargo.toml", "Cargo.lock", "uniffi.toml", "rust-toolchain.toml")
+                include("src/**", "data/**", "Cargo.toml", "Cargo.lock", "uniffi.toml", "rust-toolchain.toml")
             },
         )
         inputs.property("remap", remapFlags())
@@ -169,7 +169,7 @@ val cargoBindgen =
         )
         inputs.files(
             rustCrate.asFileTree.matching {
-                include("src/**", "Cargo.toml", "Cargo.lock", "uniffi.toml", "rust-toolchain.toml")
+                include("src/**", "data/**", "Cargo.toml", "Cargo.lock", "uniffi.toml", "rust-toolchain.toml")
             },
         )
         inputs.property("remap", remapFlags())

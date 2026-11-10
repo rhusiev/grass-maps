@@ -101,6 +101,25 @@ const STREET_TYPE_WORDS: [&str; 18] = [
     "алея",
 ];
 
+/// Tags that name a brand or its operator, most specific first. They are
+/// carried into the feature tags and, when the name does not already say them,
+/// into the search alias column, so "АТБ" finds a branch called "Магазин"
+/// (T-0204).
+const BRAND_TAG_KEYS: [&str; 3] = ["brand", "brand:uk", "brand:en"];
+const OPERATOR_TAG_KEYS: [&str; 3] = ["operator", "operator:uk", "operator:en"];
+const BRAND_KEYS: [&str; 6] = [
+    "brand",
+    "brand:uk",
+    "brand:en",
+    "operator",
+    "operator:uk",
+    "operator:en",
+];
+
+fn is_brand_key(key: &str) -> bool {
+    BRAND_KEYS.contains(&key)
+}
+
 /// A locality an address or place inherits: a named settlement node. A real
 /// settlement outranks a subdivision at the same distance, because a house is
 /// in Львів before it is in Знесіння.
@@ -560,6 +579,11 @@ fn make_way(osm_id: i64, tags: &[(String, String)], refs: Vec<i64>) -> Option<Wa
     if let Some(name) = &name {
         feature_tags.push(("name".to_owned(), name.clone()));
     }
+    for (key, value) in tags {
+        if is_brand_key(key) {
+            feature_tags.push((key.clone(), clean(value)));
+        }
+    }
     Some(WayCandidate {
         osm_id,
         refs,
@@ -732,10 +756,11 @@ fn write_place(
     let context = grid.nearest(lon, lat).map(clean).unwrap_or_default();
     let feature_tags = tags
         .iter()
-        .filter(|(key, _)| key == "name" || key.starts_with("addr:"))
+        .filter(|(key, _)| key == "name" || key.starts_with("addr:") || is_brand_key(key))
         .map(|(key, value)| format!("{key}={}", clean(value)))
         .collect::<Vec<_>>()
         .join("|");
+    let aliases = brand_values(tags, &name).join("|");
     write_row(
         writer,
         osm_type,
@@ -746,10 +771,44 @@ fn write_place(
         &kind,
         &context,
         &feature_tags,
-        "",
+        &aliases,
     )?;
     stats.places += 1;
     Ok(())
+}
+
+/// The brand or, when no brand tag exists, the operator values a place
+/// carries that its name does not already contain. They become the row's
+/// search aliases, so a branch whose name is generic is still found by the
+/// brand. When the brand is in the name the row is already findable, so the
+/// operator's legal name ("ТОВ АТБ") is not added as noise.
+fn brand_values(tags: &[(String, String)], name: &str) -> Vec<String> {
+    let keys: &[&str] = if BRAND_TAG_KEYS
+        .iter()
+        .any(|key| tag(tags, key).is_some())
+    {
+        &BRAND_TAG_KEYS
+    } else {
+        &OPERATOR_TAG_KEYS
+    };
+    let folded_name = name.to_lowercase();
+    let mut values: Vec<String> = Vec::new();
+    for key in keys {
+        let Some(raw) = tag(tags, key) else {
+            continue;
+        };
+        let value = clean(raw);
+        if value.is_empty() || folded_name.contains(&value.to_lowercase()) {
+            continue;
+        }
+        if !values
+            .iter()
+            .any(|existing| existing.eq_ignore_ascii_case(&value))
+        {
+            values.push(value);
+        }
+    }
+    values
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -990,6 +1049,32 @@ mod tests {
         assert!(has_street_type("Стрийська вулиця"));
         assert!(has_street_type("проспект Тараса Шевченка"));
         assert!(!has_street_type("Стрийська"));
+    }
+
+    #[test]
+    fn a_brand_becomes_an_alias_only_when_the_name_does_not_say_it() {
+        let tags = vec![
+            ("name".to_owned(), "АТБ-Маркет".to_owned()),
+            ("brand".to_owned(), "АТБ".to_owned()),
+            ("operator".to_owned(), "ТОВ АТБ".to_owned()),
+        ];
+        assert_eq!(brand_values(&tags, "АТБ-Маркет"), Vec::<String>::new());
+
+        let branch = vec![
+            ("name".to_owned(), "Магазин".to_owned()),
+            ("brand".to_owned(), "АТБ".to_owned()),
+            ("brand:uk".to_owned(), "АТБ".to_owned()),
+        ];
+        assert_eq!(brand_values(&branch, "Магазин"), vec!["АТБ".to_owned()]);
+
+        let operator_only = vec![
+            ("name".to_owned(), "Крамниця".to_owned()),
+            ("operator".to_owned(), "Сільпо".to_owned()),
+        ];
+        assert_eq!(
+            brand_values(&operator_only, "Крамниця"),
+            vec!["Сільпо".to_owned()]
+        );
     }
 
     #[test]

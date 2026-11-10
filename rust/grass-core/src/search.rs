@@ -18,6 +18,7 @@ use crate::error::CoreError;
 use crate::fold;
 use crate::format::{self, Field, PlaceRecord};
 use crate::index::Index;
+use crate::synonym;
 
 /// Organic Maps' typo budget: none under 4 letters, 1 under 8, else 2.
 const ONE_EDIT_MIN_CHARS: usize = 4;
@@ -93,6 +94,26 @@ type FastMap<K, V> = HashMap<K, V, BuildHasherDefault<FxHasher>>;
 pub struct WordMatches {
     places: FastMap<u32, f32>,
     entities: FastMap<u32, f32>,
+}
+
+impl WordMatches {
+    /// Folds another spelling of the same query word into this one. A word and
+    /// its synonyms are alternatives, not extra required words, so the merged
+    /// match keeps the best quality a place reached by any of them.
+    fn merge(&mut self, other: WordMatches) {
+        for (place, score) in other.places {
+            self.places
+                .entry(place)
+                .and_modify(|best| *best = best.max(score))
+                .or_insert(score);
+        }
+        for (entity, score) in other.entities {
+            self.entities
+                .entry(entity)
+                .and_modify(|best| *best = best.max(score))
+                .or_insert(score);
+        }
+    }
 }
 
 fn max_edits(word: &str) -> u32 {
@@ -238,8 +259,30 @@ fn matching_terms(
     Ok(out)
 }
 
-/// Resolves one word; [CoreError::Cancelled] when a newer keystroke superseded it.
+/// Resolves one word and its synonym expansions; [CoreError::Cancelled] when a
+/// newer keystroke superseded it.
+///
+/// A synonym is the same query word said another way, so every expansion's
+/// matches fold into one [WordMatches]. Adding the expansion as its own word
+/// instead would divide the score by a longer word count and demand that a
+/// pharmacy named "Пульс" match "аптека" too.
 fn resolve(
+    index: &Index,
+    typos: &TypoAutomata,
+    word: &str,
+    cancel: &Cancel,
+) -> Result<WordMatches, CoreError> {
+    let mut matches = resolve_term(index, typos, word, cancel)?;
+    for expansion in synonym::kind_expansions(word) {
+        if expansion == word {
+            continue;
+        }
+        matches.merge(resolve_term(index, typos, expansion, cancel)?);
+    }
+    Ok(matches)
+}
+
+fn resolve_term(
     index: &Index,
     typos: &TypoAutomata,
     word: &str,
@@ -317,6 +360,7 @@ pub struct Hit {
     pub score: f32,
     pub name: String,
     pub kind: String,
+    pub brand: Option<String>,
     pub context: String,
     pub lat: f64,
     pub lon: f64,
@@ -396,6 +440,34 @@ fn score_place(
     Ok(score)
 }
 
+/// The tags that name a brand or operator, most specific first. The result row
+/// shows the first one a place carries instead of its generic category.
+const BRAND_TAGS: [&str; 6] = [
+    "brand:uk",
+    "brand",
+    "operator:uk",
+    "operator",
+    "brand:en",
+    "operator:en",
+];
+
+/// The brand or operator a place is known by, from the feature component. A
+/// section without a feature entry, or a place with no such tag, has none.
+fn brand_of(index: &Index, place: u32) -> Option<String> {
+    let feature = index.feature(place).ok().flatten()?;
+    for key in BRAND_TAGS {
+        let value = feature
+            .tags
+            .iter()
+            .find(|(tag, _)| tag == key)
+            .map(|(_, value)| value.trim());
+        if let Some(value) = value.filter(|value| !value.is_empty()) {
+            return Some(value.to_owned());
+        }
+    }
+    None
+}
+
 pub fn hit(index: &Index, place: u32, score: f32) -> Result<Hit, CoreError> {
     let record = index.place(place)?;
     let (lat, lon) = lat_lon(&record);
@@ -409,6 +481,7 @@ pub fn hit(index: &Index, place: u32, score: f32) -> Result<Hit, CoreError> {
         score,
         name: index.place_name(&record)?.to_owned(),
         kind: index.kind_name(record.kind)?.to_owned(),
+        brand: brand_of(index, place),
         context: context.join(", "),
         lat,
         lon,
@@ -476,7 +549,8 @@ impl Session {
         limit: usize,
         cancel: &Cancel,
     ) -> Result<Vec<Hit>, CoreError> {
-        let mut words = fold::canonical_words(text);
+        let expanded = synonym::expand_abbreviations(text);
+        let mut words = fold::canonical_words(&expanded);
         // A house-number query names a street type every address on that kind
         // of street shares; the type word adds no discrimination and, as the
         // Lviv run measured, saturates the postings budget. Drop it only when

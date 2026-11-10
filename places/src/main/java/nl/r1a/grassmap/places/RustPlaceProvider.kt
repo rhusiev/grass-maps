@@ -180,6 +180,7 @@ class RustPlaceProvider private constructor(
             address = hit.context.ifBlank { null },
             regionBuild = regionBuild,
             score = hit.score,
+            brand = hit.brand?.takeIf { it.isNotBlank() },
         )
 
     private fun toDetails(detail: PlaceDetail): PlaceDetails =

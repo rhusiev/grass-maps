@@ -33,6 +33,26 @@ class SearchResultViewTest {
     }
 
     @Test
+    fun aBrandWinsOverTheGenericKindWhenThereIsNoAddress() {
+        val view =
+            searchResultView(
+                listOf(hit("a", "Магазин", 49.8413, 24.0312, address = null, brand = "АТБ")),
+            )
+
+        assertEquals("АТБ", view.rows.single().detail)
+    }
+
+    @Test
+    fun anAddressStillWinsOverTheBrand() {
+        val view =
+            searchResultView(
+                listOf(hit("a", "АТБ-Маркет", 49.8413, 24.0312, address = "Львів", brand = "АТБ")),
+            )
+
+        assertEquals("Львів", view.rows.single().detail)
+    }
+
+    @Test
     fun anAddressInTheIndexWinsOverTheKind() {
         val view = searchResultView(listOf(hit("a", "Проспект Шевченка, 12", 49.8419, 24.0316, address = "Львів")))
 
@@ -87,6 +107,7 @@ class SearchResultViewTest {
         latitude: Double,
         longitude: Double,
         address: String? = "Львів",
+        brand: String? = null,
     ): PlaceHit =
         PlaceHit(
             id = id,
@@ -96,6 +117,7 @@ class SearchResultViewTest {
             address = address,
             regionBuild = "test",
             score = 1f,
+            brand = brand,
         )
 
     private companion object {

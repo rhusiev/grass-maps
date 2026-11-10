@@ -3,7 +3,10 @@ package nl.r1a.grassmap.ui.shell
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.provider.PlaceHit
 
-/** One result row: the place's name and its address, or its kind when it has none. */
+/**
+ * One result row: the place's name and its address; without an address, the
+ * brand or operator it carries; without a brand, its kind (T-0204).
+ */
 data class SearchResultRow(
     val id: String,
     val name: String,
@@ -39,7 +42,10 @@ fun searchResultView(hits: List<PlaceHit>): SearchResultView =
                 SearchResultRow(
                     id = hit.id,
                     name = hit.name,
-                    detail = hit.address?.takeIf { it.isNotBlank() } ?: hit.kind.takeIf { it.isNotBlank() },
+                    detail =
+                        hit.address?.takeIf { it.isNotBlank() }
+                            ?: hit.brand?.takeIf { it.isNotBlank() }
+                            ?: hit.kind.takeIf { it.isNotBlank() },
                 )
             },
         markers = hits.map { hit -> SearchMarker(id = hit.id, position = hit.position) },

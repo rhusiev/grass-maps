@@ -26,12 +26,18 @@ struct Core {
 
 /// One place search result. `id` is the row in the region's place table; the
 /// Kotlin side prefixes it with the region build to make it stable.
+///
+/// `brand` is the brand or operator the place carries (`brand`, `brand:uk`,
+/// `operator`, ...), from the features component; null when the place has
+/// none. It is a separate value from `kind`, which stays the exact OSM
+/// category the `pois` filter and the probes match on.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct PlaceHit {
     pub id: u32,
     pub score: f32,
     pub name: String,
     pub kind: String,
+    pub brand: Option<String>,
     pub context: String,
     pub latitude: f64,
     pub longitude: f64,
@@ -270,6 +276,7 @@ impl SearchSession {
                 score: hit.score,
                 name: hit.name,
                 kind: hit.kind,
+                brand: hit.brand,
                 context: hit.context,
                 latitude: hit.lat,
                 longitude: hit.lon,

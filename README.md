@@ -806,14 +806,18 @@ spike's, so the osm-mapidx probe table stays a quality oracle. The score is
 computed from the committed `queries.tsv` and asserted as 1.0 by
 `RustPlaceProviderQualityTest`, so the table stays 45 of 45. The house-number
 oracle is 50 fixed Lviv addresses, top one, asserted by `LvivAddressSearchTest`
-with a 45/50 floor; the test prints every miss by name.
+with a 45/50 floor; the test prints every miss by name. The T-0204 kind, brand
+and wording set is `kind-brand-queries.tsv`, read and scored by
+`KindBrandSearchTest` against the house-number fixture; it covers the synonym
+table (`rust/grass-core/data/synonyms.tsv`), street abbreviations in both
+directions, and brand tags.
 
 The index is external data: the provider reads
 `<externalFilesDir>/search/<region>/`. The committed Lviv section under
 `places/src/test/resources/search` is 10.1 MiB and ODbL-licensed; its
 `features.bin` is an empty placeholder because the P4a spike predates the
 component, so those places have no identity or tags. The house-number fixture
-`places/src/test/resources/search/lviv-addresses` is 8.39 MiB: places and house
+`places/src/test/resources/search/lviv-addresses` is 8.57 MiB: places and house
 rows, built by `tools/pipeline/osm-extract` from the 2026-11-04 Ukraine extract
 over the Lviv city bbox. The extraction stage, its commands, the Lviv-bbox and
 whole-country size measurements, and their conditions are in

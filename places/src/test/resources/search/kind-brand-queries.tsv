@@ -1,0 +1,26 @@
+# The T-0204 CI query set: kind, brand and wording.
+#
+# Query, the expected primary name in the top `limit` (* = any), the expected
+# exact kinds (| separated; empty = any), the expected brand (empty = any), and
+# the result limit. The test computes found/probes and fails on any miss.
+#
+# It runs on the committed Lviv city search section
+# (places/src/test/resources/search/lviv-addresses), rebuilt from the
+# Geofabrik snapshot recorded in tools/pipeline/README.md. A miss means the
+# reader regressed, not that the data changed silently: the coordinates and
+# rows are fixed by the committed fixture.
+#
+# Source of each group: the acceptance criterion (kind, brand, wording), and
+# near-misses where a name already says the word the synonym table adds.
+аптека	*	amenity=pharmacy|healthcare=pharmacy		5
+аптеки	*	amenity=pharmacy|healthcare=pharmacy		5
+pharmacy	*	amenity=pharmacy|healthcare=pharmacy		5
+аптека №3	Біомед Аптека №3	amenity=pharmacy		5
+АТБ	*	shop=supermarket|shop=convenience|shop=grocery|shop=mall		5
+укрпошта №35	Відділення поштового зв’язку №35	amenity=post_office	Укрпошта	5
+вул. Авіаційна 1-А	Авіаційна вулиця 1-А	addr=house		5
+вулиця Авіаційна 1-А	Авіаційна вулиця 1-А	addr=house		5
+пр-т Червоної Калини 62-А	пр-т Червоної Калини 62-А	addr=house		5
+проспект Червоної Калини 62-А	пр-т Червоної Калини 62-А	addr=house		5
+пр-т Червоної Калини	*	highway=secondary|highway=tertiary		5
+проспект Червоної Калини	*	highway=secondary|highway=tertiary		5

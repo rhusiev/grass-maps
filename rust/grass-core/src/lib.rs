@@ -18,6 +18,7 @@ mod fold;
 mod format;
 mod index;
 mod search;
+mod synonym;
 
 pub use api::{CancelToken, PlaceDetail, PlaceHit, SearchIndex, SearchSession};
 pub use error::CoreError;

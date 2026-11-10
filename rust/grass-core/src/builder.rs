@@ -25,6 +25,7 @@ use crate::features::{self, FeatureRecord, OsmElementType, PlaceFeature};
 use crate::fold;
 use crate::format::{self, Field, PlaceRecord};
 use crate::index::Index;
+use crate::synonym;
 
 const COLUMNS: usize = 8;
 const COLUMNS_WITH_ALIASES: usize = 9;
@@ -317,7 +318,10 @@ fn add_term(
 }
 
 /// A name's terms. An address drops the street-type words, which every address
-/// on that kind of street shares and the query also drops.
+/// on that kind of street shares and the query also drops. Street
+/// abbreviations in a name are expanded first, so a row spelled "пр-т
+/// Червоної Калини" is found by the full word too; the query side applies the
+/// same table to the typed text.
 fn add_name_terms(
     terms: &mut BTreeMap<String, TermPostings>,
     text: &str,
@@ -326,7 +330,8 @@ fn add_name_terms(
     kind: &str,
 ) {
     let is_address = kind.starts_with(KIND_ADDRESS_PREFIX);
-    for word in fold::canonical_words(text) {
+    let expanded = synonym::expand_abbreviations(text);
+    for word in fold::canonical_words(&expanded) {
         if is_address && fold::is_street_type_word(&word) {
             continue;
         }
@@ -480,6 +485,103 @@ mod tests {
         ] {
             let hits = query(&section, text, 5);
             assert_eq!(hits.first().map(|hit| hit.id), Some(5), "{text}: {hits:?}");
+        }
+
+        fs::remove_dir_all(directory).ok();
+    }
+
+    /// A pharmacy whose name says nothing about its category, one whose name
+    /// does, a branch whose name is generic but whose brand tag is not, and a
+    /// street and house spelled with the "пр-т" abbreviation. The alias column
+    /// is what the extractor writes from the brand tag.
+    const SYNONYM_SOURCE: &str = concat!(
+        "# osm_type\tosm_id\tlat\tlon\tname\tkind\tcontext\ttags\taliases\n",
+        "node\t20\t49.8400\t24.0300\tПульс\tamenity=pharmacy\tЛьвів\t",
+        "amenity=pharmacy|name=Пульс\n",
+        "node\t21\t49.8401\t24.0301\tАптека №3\tamenity=pharmacy\tЛьвів\t",
+        "amenity=pharmacy|name=Аптека №3\n",
+        "node\t22\t49.8402\t24.0302\tМагазин\tshop=supermarket\tЛьвів\t",
+        "shop=supermarket|name=Магазин|brand=АТБ|operator=ТОВ АТБ\tАТБ\n",
+        "node\t23\t49.8403\t24.0303\tпр-т Червоної Калини\thighway=secondary\t",
+        "Львів\thighway=secondary|name=пр-т Червоної Калини\n",
+        "way\t24\t49.8404\t24.0304\tпр-т Червоної Калини 62-А\taddr=house\t",
+        "Львів\taddr:housenumber=62-А|addr:street=пр-т Червоної Калини\n",
+    );
+
+    #[test]
+    fn kind_synonyms_find_a_place_whatever_its_name_says() {
+        let directory = temp_directory();
+        let source = directory.join("places.tsv");
+        fs::write(&source, SYNONYM_SOURCE).expect("write source");
+        let section = directory.join("section");
+        build(&source, &section).expect("build");
+
+        for text in ["аптека", "аптеки", "апте", "pharmacy"] {
+            let hits = query(&section, text, 5);
+            assert!(
+                hits.iter().any(|hit| hit.kind == "amenity=pharmacy"),
+                "{text}: {hits:?}"
+            );
+        }
+        // The place named "Аптека №3" keeps its name match and beats the
+        // pharmacy whose name is unrelated.
+        let hits = query(&section, "аптека №3", 5);
+        assert_eq!(hits.first().map(|hit| hit.name.as_str()), Some("Аптека №3"));
+
+        fs::remove_dir_all(directory).ok();
+    }
+
+    #[test]
+    fn a_brand_alias_is_searchable_and_read_back_from_the_feature_tags() {
+        let directory = temp_directory();
+        let source = directory.join("places.tsv");
+        fs::write(&source, SYNONYM_SOURCE).expect("write source");
+        let section = directory.join("section");
+        build(&source, &section).expect("build");
+
+        let hits = query(&section, "атб", 5);
+        let branch = hits
+            .iter()
+            .find(|hit| hit.name == "Магазин")
+            .unwrap_or_else(|| panic!("no branded branch in {hits:?}"));
+        assert_eq!(branch.kind, "shop=supermarket");
+        assert_eq!(branch.brand.as_deref(), Some("АТБ"));
+
+        fs::remove_dir_all(directory).ok();
+    }
+
+    #[test]
+    fn a_street_abbreviation_expands_on_both_sides() {
+        let directory = temp_directory();
+        let source = directory.join("places.tsv");
+        fs::write(&source, SYNONYM_SOURCE).expect("write source");
+        let section = directory.join("section");
+        build(&source, &section).expect("build");
+
+        for text in [
+            "пр-т Червоної Калини",
+            "проспект Червоної Калини",
+            "просп. Червоної Калини",
+        ] {
+            let hits = query(&section, text, 5);
+            assert!(
+                hits.iter()
+                    .any(|hit| hit.name == "пр-т Червоної Калини" && hit.kind.starts_with("highway=")),
+                "{text}: {hits:?}"
+            );
+        }
+        // The house stores the short form; the full word finds it because the
+        // builder expands the stored name too.
+        for text in [
+            "пр-т Червоної Калини 62-А",
+            "проспект Червоної Калини 62-А",
+        ] {
+            let hits = query(&section, text, 5);
+            assert_eq!(
+                hits.first().map(|hit| hit.name.as_str()),
+                Some("пр-т Червоної Калини 62-А"),
+                "{text}: {hits:?}"
+            );
         }
 
         fs::remove_dir_all(directory).ok();

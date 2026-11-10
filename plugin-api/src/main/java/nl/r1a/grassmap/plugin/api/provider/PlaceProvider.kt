@@ -77,6 +77,12 @@ data class SearchContext(
  * [PlaceProvider.details] accepts. [regionBuild] names the build the row came
  * from, so a stale hit is never applied to a fresh region. [score] is the
  * provider's own ordering value and is not comparable across providers.
+ *
+ * [kind] stays the exact source category ("shop=supermarket"), which category
+ * filters and probes match on; [brand] is the brand or operator the place
+ * carries, null when it has none. The shell shows [brand] in preference to
+ * [kind] when the place has no address, so a branch reads its brand rather
+ * than "shop=supermarket".
  */
 data class PlaceHit(
     val id: String,
@@ -86,6 +92,7 @@ data class PlaceHit(
     val address: String?,
     val regionBuild: String,
     val score: Float,
+    val brand: String? = null,
 )
 
 /**

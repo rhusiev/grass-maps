@@ -1,0 +1,75 @@
+# The search synonym and abbreviation table (T-0204).
+#
+# Four tab-separated columns, no header row:
+#
+#   section      language   term        expansion
+#
+# `section` is `kind` or `abbreviation`.
+#
+# A `kind` row maps a word a person types to an OpenStreetMap category value.
+# The query resolves `term` and `expansion` as the same query word, so
+# "аптека" reaches every `amenity=pharmacy` and `healthcare=pharmacy` row even
+# when the row is named "Подорожник" or "Пульс". The expansion must be a word
+# the builder indexes from the kind string: kinds are indexed as their
+# `key=value` words, so the value word ("pharmacy") is what to use. A `kind`
+# row costs nothing in the index: it is read on the query side only.
+#
+# An `abbreviation` row maps a short street word to its full word. It is read
+# on both sides: the builder rewrites an occurrence in a place's own name
+# (a row spelled "пр-т Червоної Калини" indexes like "проспект ..."), and the
+# query rewrites the typed text the same way. The builder side is what keeps
+# the bytes of a name that already uses the short form searchable by the full
+# word.
+#
+# Columns are folded before use: lower case, accents and apostrophes dropped
+# (`fold::normalise`). Write an entry the way a reader types it; the fold is
+# applied on load. `term` and `expansion` must differ, or the row is dropped.
+#
+# To add an entry, add one line and run `cargo test --locked` in
+# `rust/grass-core`; `synonym::tests` checks the shipped table parses and that
+# no expansion is empty. Keep a `kind` expansion to the OSM value word: the
+# section must not need a rebuild for a new synonym, and a value word is
+# already indexed by `builder::add_term`.
+#
+kind	uk	аптека	pharmacy
+kind	uk	аптеки	pharmacy
+kind	uk	аптеці	pharmacy
+kind	uk	аптеку	pharmacy
+kind	uk	аптекою	pharmacy
+kind	uk	аптекарня	pharmacy
+kind	ru	аптеке	pharmacy
+kind	ru	аптек	pharmacy
+kind	en	pharmacy	pharmacy
+kind	en	pharmacies	pharmacy
+kind	uk	кафе	cafe
+kind	uk	кавярня	cafe
+kind	uk	кофейня	cafe
+kind	ru	кофейня	cafe
+kind	en	cafe	cafe
+kind	en	coffee	cafe
+kind	uk	банкомат	atm
+kind	uk	банкомати	atm
+kind	ru	банкомат	atm
+kind	en	atm	atm
+kind	uk	заправка	fuel
+kind	uk	заправки	fuel
+kind	uk	азс	fuel
+kind	en	fuel	fuel
+kind	uk	готель	hotel
+kind	uk	готелі	hotel
+kind	ru	отель	hotel
+kind	en	hotel	hotel
+kind	uk	школа	school
+kind	uk	школи	school
+kind	en	school	school
+kind	uk	супермаркет	supermarket
+kind	uk	супермаркети	supermarket
+kind	en	supermarket	supermarket
+abbreviation	uk	вул	вулиця
+abbreviation	uk	пр-т	проспект
+abbreviation	uk	просп	проспект
+abbreviation	uk	пл	площа
+abbreviation	uk	пров	провулок
+abbreviation	uk	наб	набережна
+abbreviation	uk	б-р	бульвар
+abbreviation	uk	майд	майдан

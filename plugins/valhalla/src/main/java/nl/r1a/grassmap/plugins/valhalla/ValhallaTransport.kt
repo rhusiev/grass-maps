@@ -54,9 +54,10 @@ internal class NativeValhallaTransport private constructor(
         } catch (exception: ValhallaPackException) {
             throw exception
         } catch (exception: Exception) {
+            val reason = exception.message ?: exception.javaClass.simpleName
             throw ValhallaPackException(
                 ValhallaPackProblem.Unusable,
-                "the native engine rejected ${config.absolutePath}",
+                "the native engine rejected ${config.absolutePath}: $reason",
                 exception,
             )
         }

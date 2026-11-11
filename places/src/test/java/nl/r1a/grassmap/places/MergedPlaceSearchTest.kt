@@ -277,6 +277,7 @@ class MergedPlaceSearchTest {
     private fun request(
         context: SearchContext = SearchContext(),
         cancellation: CancellationHandle = CancellationHandle.None,
+        onPartial: suspend (List<PlaceHit>) -> Unit = {},
     ): SearchScreenRequest =
         SearchScreenRequest(
             query = "львів",
@@ -284,6 +285,7 @@ class MergedPlaceSearchTest {
             limit = 5,
             context = context,
             cancellation = cancellation,
+            onPartial = onPartial,
         )
 
     private fun hit(

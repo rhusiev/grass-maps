@@ -49,6 +49,12 @@ data class SearchScreenRequest(
     val limit: Int,
     val context: SearchContext,
     val cancellation: CancellationHandle,
+    /**
+     * Publishes the rows a provider already has while the rest of the request
+     * is still running (T-0212). The session applies its sequence guard, so a
+     * partial result from a superseded keystroke is dropped like a final one.
+     */
+    val onPartial: suspend (List<PlaceHit>) -> Unit = {},
 )
 
 /**
@@ -137,6 +143,7 @@ class SearchScreenSession(
                     limit = limit,
                     context = context,
                     cancellation = CancellationHandle { token.get() },
+                    onPartial = { hits -> publishPartial(query, sequence, hits, token) },
                 ),
             )
         return when (outcome) {
@@ -187,6 +194,35 @@ class SearchScreenSession(
             current.value = SearchScreenState()
         }
         return current.value
+    }
+
+    /**
+     * Publishes rows a provider already has without ending the keystroke
+     * (T-0212). An empty partial keeps [SearchScreenStatus.LOADING], so the
+     * screen says "searching" rather than "no matches" while the slower half
+     * is still out.
+     */
+    private suspend fun publishPartial(
+        query: String,
+        sequence: Long,
+        hits: List<PlaceHit>,
+        token: AtomicBoolean,
+    ) {
+        mutex.withLock {
+            if (token.get()) {
+                return@withLock
+            }
+            if (sequence > 0 && (sequence < newestStarted || sequence <= newestPublished)) {
+                return@withLock
+            }
+            current.value =
+                SearchScreenState(
+                    query = query,
+                    sequence = sequence,
+                    status = if (hits.isEmpty()) SearchScreenStatus.LOADING else SearchScreenStatus.RESULTS,
+                    hits = hits,
+                )
+        }
     }
 
     /**

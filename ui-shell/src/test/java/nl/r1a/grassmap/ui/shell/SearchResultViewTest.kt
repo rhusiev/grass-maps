@@ -77,6 +77,14 @@ class SearchResultViewTest {
     }
 
     @Test
+    fun anEmptyOfflineHalfStaysLoadingInsteadOfSayingNoMatches() {
+        val content = searchScreenContent(emptyList(), query = "льв", loading = true, failed = false, labels = LABELS)
+
+        assertTrue(content.loading)
+        assertNull("the gap is still searching, not empty", content.message)
+    }
+
+    @Test
     fun aRunWithNoHitsSaysSoInTheActiveLanguage() {
         val content = searchScreenContent(emptyList(), query = "льв", loading = false, failed = false, labels = UKRAINIAN_LABELS)
 

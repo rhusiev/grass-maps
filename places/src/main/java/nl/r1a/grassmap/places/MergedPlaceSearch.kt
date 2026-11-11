@@ -18,10 +18,13 @@ import kotlin.math.sqrt
  * [DUPLICATE_RADIUS_METERS]; the first row wins, so the offline record and its
  * details stay the one the screen opens.
  *
- * The online provider waits [debounceMillis] after the offline result, which
- * coalesces a burst of keystrokes into one request. Cancellation is checked
- * across the wait, and the provider's own gate still decides whether any
- * socket may open.
+ * When an online half will follow, the offline rows are published through
+ * [SearchScreenRequest.onPartial] as soon as the index answers, so the
+ * debounce never gates the first paint. The online provider then waits
+ * [debounceMillis], which coalesces a burst of keystrokes into one request.
+ * With online search off there is no second half, so the one ordinary result
+ * is returned without an extra publish. Cancellation is checked across the
+ * wait, and the provider's own gate still decides whether any socket may open.
  *
  * A failed online search never hides offline results. A failed offline search
  * still succeeds with the online rows when the online call succeeded, so a
@@ -46,6 +49,9 @@ class MergedPlaceSearch(
         }
         if (!onlineEnabled()) {
             return offlineOutcome
+        }
+        if (offlineOutcome is Outcome.Success) {
+            request.onPartial(offlineHits)
         }
         if (request.cancellation.isCancelled()) {
             return Outcome.Failure(AppError.Cancelled)

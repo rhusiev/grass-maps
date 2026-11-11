@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.plugin.api.contract.PluginId
+import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.MapEvent
 import nl.r1a.grassmap.plugin.api.host.MapHost
@@ -245,6 +246,40 @@ class NavigationCameraControllerTest {
         }
 
     @Test
+    fun aCameraBoundAfterTheFirstFixesCatchesUpOnTheNextOne() =
+        runTest {
+            val drive = Drive()
+            var bound: RecordingMapHost? = null
+            val controller = NavigationCameraController(host = { bound }, clockMillis = { 0L })
+            controller.onState(following(drive.first()))
+            controller.onState(following(drive.at(speedKmh = 5.0)))
+
+            val host = RecordingMapHost()
+            bound = host
+            val next = drive.at(speedKmh = 5.0)
+            controller.onState(following(next))
+
+            assertEquals(listOf(next.position), host.centres())
+            assertEquals(listOf(17.0), host.zooms())
+        }
+
+    @Test
+    fun aRejectedCameraMoveIsRetriedOnTheNextFix() =
+        runTest {
+            val drive = Drive()
+            val host = RecordingMapHost()
+            val controller = controller(host)
+            controller.onState(following(drive.first()))
+            host.failNextMove = true
+
+            controller.onState(following(drive.at(speedKmh = 5.0)))
+            assertTrue(host.zooms().isEmpty())
+
+            controller.onState(following(drive.at(speedKmh = 5.0)))
+            assertEquals(listOf(17.0), host.zooms())
+        }
+
+    @Test
     fun phasesWithoutGuidanceDoNotMoveTheCamera() =
         runTest {
             val drive = Drive()
@@ -253,6 +288,7 @@ class NavigationCameraControllerTest {
             controller.onState(following(drive.first()))
             val before = host.updates.size
 
+            controller.onState(NavigationState(phase = NavigationPhase.Following))
             for (phase in listOf(NavigationPhase.Idle, NavigationPhase.Paused, NavigationPhase.Arrived, NavigationPhase.Stopped)) {
                 controller.onState(NavigationState(phase = phase, fix = drive.at(speedKmh = 30.0)))
             }
@@ -311,6 +347,7 @@ class NavigationCameraControllerTest {
     private class RecordingMapHost : MapHost {
         private val state = MutableStateFlow(Camera(center = START, zoom = 14.0))
         val updates = mutableListOf<CameraUpdate>()
+        var failNextMove: Boolean = false
 
         override val camera: StateFlow<Camera> = state
         override val events: Flow<MapEvent> = emptyFlow()
@@ -352,6 +389,10 @@ class NavigationCameraControllerTest {
         fun tilts(): List<Double> = updates.mapNotNull { it.tilt }
 
         private fun record(update: CameraUpdate): Outcome<Unit> {
+            if (failNextMove) {
+                failNextMove = false
+                return Outcome.Failure(AppError.NotReady)
+            }
             updates += update
             state.value =
                 state.value.copy(

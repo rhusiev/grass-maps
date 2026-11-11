@@ -292,12 +292,44 @@ class ReroutePolicyTest {
             assertTrue("median was $median ms", median < ACCEPTANCE_MILLIS)
         }
 
+    @Test
+    fun everyInstalledRerouteCarriesTheFixThatStartedItsEpisode() =
+        runTest {
+            val journey =
+                ReplayReroute
+                    .walk()
+                    .onRoute(3)
+                    .offRoute(60)
+                    .build()
+            // The replacement snaps back to the original line, as Valhalla does
+            // when the side street is not a road: the replay stays off it, so
+            // the walker spends a fresh budget and the session installs again.
+            val router = RecordingRouter(replacementOverride = { journey.route })
+            val events = mutableListOf<RerouteEvent>()
+
+            val run = follow(router, journey, events = events)
+
+            assertTrue("expected more than one reroute, got ${events.size}", events.size > 1)
+            assertEquals(run.rerouteCount, events.size)
+            assertEquals((1..events.size).toList(), events.map { it.index })
+            for (event in events) {
+                assertEquals(event.budgetFix, event.installedFix)
+                assertTrue("episode starts at or before the budget fix", event.episodeStartFix <= event.budgetFix)
+                assertTrue("budget must be spent", event.budgetTravelMeters >= 22.0 - TOLERANCE_METERS)
+            }
+            // The second event cannot belong to the first episode: the reroute
+            // installed a new line, and the still-off fix begins a new streak.
+            assertTrue(events[1].episodeStartFix >= events[0].installedFix)
+            assertTrue(events[1].budgetFix > events[0].budgetFix)
+        }
+
     private suspend fun TestScope.follow(
         router: RoutingEngine,
         journey: RerouteReplay.Journey,
         states: MutableList<NavigationState>? = null,
         logs: MutableList<String>? = null,
         profile: RouteProfile = RouteProfile.Walk,
+        events: MutableList<RerouteEvent>? = null,
     ): NavigationRun {
         val session =
             NavigationSession(
@@ -307,6 +339,7 @@ class ReroutePolicyTest {
                 config = NavigationConfig(maxDeviationMeters = 5.0),
                 clockMillis = { testScheduler.currentTime },
                 log = { message -> logs?.add(message) },
+                onReroute = { event -> events?.add(event) },
             )
         val collector =
             states?.let {

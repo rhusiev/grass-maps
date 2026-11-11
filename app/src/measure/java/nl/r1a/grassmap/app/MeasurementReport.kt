@@ -7,6 +7,7 @@ import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import java.time.Instant
 
 /** One file the pack installer wrote, in bytes. */
@@ -39,19 +40,19 @@ internal data class MeasurementContext(
  *
  * Every number carries its definition here, because a number whose definition
  * is unclear is worse than no number. The definitions are the same strings the
- * screen draws.
+ * screen draws. A run installs several reroutes; the report keeps all of them
+ * with their fix indices and states which one the headline is.
  */
 internal object MeasurementReport {
-    const val SCHEMA = "grass-maps-measurement/1"
+    const val SCHEMA = "grass-maps-measurement/2"
     const val PACK_DIRECTORY = "valhalla"
     const val MEASUREMENT_DIRECTORY = "measurement"
     const val FILE_NAME = "report.json"
 
     private const val PACK_ASSET_DIRECTORY = "valhalla-lviv"
 
-    /** The gate `scripts/bench/reroute-latency.sh` uses: 20 s of walk at 1.1 m/s. */
+    /** The gate `scripts/bench/reroute-latency.sh` uses, in seconds of travel. */
     const val REROUTE_GATE_SECONDS = 20.0
-    const val REROUTE_GATE_METERS = 22.0
 
     val definitions: Map<String, String> =
         linkedMapOf(
@@ -59,27 +60,43 @@ internal object MeasurementReport {
                 "Wall time of the first RoutingEngine.route() call in this app process. It includes " +
                 "resolving the engine, inspecting the pack, writing the device config, mounting the " +
                 "Valhalla tiles in the native actor and the /route request. It excludes the map, the " +
-                "planner screen, drawing and the fix stream.",
+                "planner screen, drawing and the fix stream. Only the walk profile has it: bike runs " +
+                "after walk, so bike's cold_ms is null.",
             "warm_route_ms" to
                 "Median of the repeated route() calls on the already-mounted engine with the same " +
-                "request. Each sample includes the /route call and the route-model build; it " +
-                "excludes the engine mount, the map, the planner screen and drawing.",
-            "reroute_ms" to
-                "The navigation session's own reroute_ms: wall time from the fix that spends the last " +
-                "metre of the off-route budget to the moment the replacement route is installed. It " +
-                "includes the Valhalla /route call and the route-model rebuild. It excludes the " +
-                "$REROUTE_GATE_SECONDS s travel gate, the fix pacing, the map redraw and the planner. " +
-                "One fix stream is one sample.",
+                "request, per profile. Each sample includes the /route call and the route-model " +
+                "build; it excludes the engine mount, the map, the planner screen and drawing.",
+            "reroute_first_ms" to
+                "The headline reroute number: the median across runs of the FIRST reroute installed " +
+                "in each run. Each value is the navigation session's own reroute_ms: wall time from " +
+                "the fix that spends the last metre of the profile's off-route budget to the moment " +
+                "the replacement route is installed. It includes the Valhalla /route call and the " +
+                "route-model rebuild; it excludes the gate itself, fix pacing, map redraw and the " +
+                "planner. The first reroute is the one the acceptance criterion names: a reroute " +
+                "started by leaving the route.",
+            "reroute_all_median_ms" to
+                "The median of every reroute installed in every run, pooled. A run can install " +
+                "several when the replay stays off the replacement line; each one is a separate " +
+                "episode with its own fix indices in samples[].events.",
+            "reroute_events" to
+                "Samples[].events[] lists every installed reroute with index (1-based within the " +
+                "run), episode_start_fix (first fix of that off-route streak), budget_fix (the fix " +
+                "whose travel spent the gate), installed_fix (the fix being processed when the " +
+                "replacement was installed; the request is awaited, so it equals budget_fix), " +
+                "budget_m (travel the gate had banked), reroute_ms (the session's timing), and the " +
+                "replacement's distance and point count. budget_m can exceed the gate because the " +
+                "replay's geometry points are sparse and one fix step can spend more than 22 m: the " +
+                "gate is a floor, not an upper bound.",
             "fix_tick_ms" to
                 "Wall pacing between replayed fixes. The GPX timestamps advance with distance at the " +
-                "profile's gate speed, so the gate is 22 m of travel whatever this tick is; the tick " +
-                "only sets how long the sample takes.",
+                "profile's gate speed, so the gate is the profile's metres of travel whatever this " +
+                "tick is; the tick only sets how long a sample takes.",
             "detour_m" to
-                "Sideways offset of the replay's off-route segment. The route is cut in thirds and the " +
-                "middle third is pushed sideways, tapered over the first fixes.",
+                "Sideways offset of the replay's off-route segment. The route is cut in thirds and " +
+                "the middle third is pushed sideways, tapered over the first fixes.",
             "not_measured" to
-                "Rendering and frame pacing, map drawing, the route planner screen, CPU or memory use, " +
-                "battery, and any real GNSS input. The fixes are a generated GPX replay at 5 m " +
+                "Rendering and frame pacing, map drawing, the route planner screen, CPU or memory " +
+                "use, battery, and any real GNSS input. The fixes are a generated GPX replay at 5 m " +
                 "reported accuracy.",
         )
 
@@ -101,9 +118,7 @@ internal object MeasurementReport {
             if (result == null) {
                 put("error", failure ?: "the measurement did not run")
             } else {
-                put("route", route(result))
-                put("route_plan", routePlan(result))
-                put("reroute", reroute(result))
+                put("profiles", profiles(result))
             }
         }
 
@@ -159,72 +174,121 @@ internal object MeasurementReport {
             )
         }
 
-    private fun route(result: MeasurementResult): JsonObject =
+    private fun profiles(result: MeasurementResult): JsonObject =
         buildJsonObject {
-            put("profile", "walk")
+            result.profiles.forEach { measurement ->
+                put(measurement.profile.label(), profile(measurement, result))
+            }
+        }
+
+    private fun profile(
+        measurement: ProfileMeasurement,
+        result: MeasurementResult,
+    ): JsonObject =
+        buildJsonObject {
+            put("profile", measurement.profile.label())
+            put("gate_seconds", REROUTE_GATE_SECONDS)
+            put("gate_meters", measurement.gateMeters)
+            put("route", route(measurement))
+            put("route_plan", routePlan(measurement, result))
+            put("reroute", reroute(measurement, result))
+        }
+
+    private fun route(measurement: ProfileMeasurement): JsonObject =
+        buildJsonObject {
             put(
                 "from_lat",
-                result.route.geometry
+                measurement.route.geometry
                     .first()
                     .latitude,
             )
             put(
                 "from_lon",
-                result.route.geometry
+                measurement.route.geometry
                     .first()
                     .longitude,
             )
             put(
                 "to_lat",
-                result.route.geometry
+                measurement.route.geometry
                     .last()
                     .latitude,
             )
             put(
                 "to_lon",
-                result.route.geometry
+                measurement.route.geometry
                     .last()
                     .longitude,
             )
-            put("distance_m", result.route.distanceMeters)
-            put("duration_s", result.route.durationSeconds)
-            put("points", result.route.geometry.size)
+            put("distance_m", measurement.route.distanceMeters)
+            put("duration_s", measurement.route.durationSeconds)
+            put("points", measurement.route.geometry.size)
         }
 
-    private fun routePlan(result: MeasurementResult): JsonObject =
+    private fun routePlan(
+        measurement: ProfileMeasurement,
+        result: MeasurementResult,
+    ): JsonObject =
         buildJsonObject {
-            put("cold_ms", result.routePlan.coldMillis)
+            put("cold_ms", JsonPrimitive(measurement.routePlan.coldMillis))
+            if (measurement.routePlan.coldMillis == null) {
+                put(
+                    "cold_note",
+                    "the ${result.profiles.first().profile.label()} profile mounted the engine first; " +
+                        "this profile has no cold number",
+                )
+            }
             put("warm_runs", result.warmRuns)
-            put("warm_median_ms", JsonPrimitive(result.routePlan.warmMedianMillis.oneDecimal()))
+            put("warm_median_ms", JsonPrimitive(measurement.routePlan.warmMedianMillis.oneDecimal()))
             put(
                 "warm_samples_ms",
-                buildJsonArray { result.routePlan.warmMillis.forEach { add(it) } },
+                buildJsonArray { measurement.routePlan.warmMillis.forEach { add(it) } },
             )
         }
 
-    private fun reroute(result: MeasurementResult): JsonObject =
+    private fun reroute(
+        measurement: ProfileMeasurement,
+        result: MeasurementResult,
+    ): JsonObject =
         buildJsonObject {
-            put("profile", "walk")
-            put("gate_seconds", REROUTE_GATE_SECONDS)
-            put("gate_meters", REROUTE_GATE_METERS)
+            put("first_reroute_ms", JsonPrimitive(measurement.firstRerouteMillis.oneDecimal()))
+            put("all_reroutes_median_ms", JsonPrimitive(measurement.allReroutesMedianMillis.oneDecimal()))
+            put("runs", result.rerouteRuns)
             put("fix_tick_ms", result.fixTickMillis)
             put("detour_m", result.detourMeters)
-            put("runs", result.rerouteRuns)
-            put("median_ms", JsonPrimitive(result.rerouteMedianMillis.oneDecimal()))
             put(
                 "samples",
                 buildJsonArray {
-                    result.rerouteSamples.forEach { sample ->
+                    measurement.rerouteRuns.forEach { run ->
+                        add(rerouteSample(run))
+                    }
+                },
+            )
+        }
+
+    private fun rerouteSample(run: RerouteRun): JsonObject =
+        buildJsonObject {
+            put("fixes", run.fixCount)
+            put("off_route_fixes", run.offRouteFixCount)
+            put("detection_ms", JsonPrimitive(run.detectionMillis))
+            put("first_reroute_ms", JsonPrimitive(run.firstRerouteMillis))
+            if (run.error != null) {
+                put("error", run.error)
+            }
+            put(
+                "events",
+                buildJsonArray {
+                    run.events.forEach { event ->
                         add(
                             buildJsonObject {
-                                put("reroute_ms", JsonPrimitive(sample.millis))
-                                put("fixes", sample.fixCount)
-                                put("off_route_fixes", sample.offRouteFixCount)
-                                put("detection_ms", JsonPrimitive(sample.detectionMillis))
-                                put("reroutes", sample.rerouteCount)
-                                if (sample.error != null) {
-                                    put("error", sample.error)
-                                }
+                                put("index", event.index)
+                                put("episode_start_fix", event.episodeStartFix)
+                                put("budget_fix", event.budgetFix)
+                                put("installed_fix", event.installedFix)
+                                put("budget_m", event.budgetTravelMeters)
+                                put("reroute_ms", event.durationMillis)
+                                put("replacement_m", event.replacementDistanceMeters)
+                                put("replacement_points", event.replacementPoints)
                             },
                         )
                     }
@@ -236,4 +300,6 @@ internal object MeasurementReport {
         buildJsonObject {
             definitions.forEach { (key, value) -> put(key, value) }
         }
+
+    private fun RouteProfile.label(): String = name.lowercase()
 }

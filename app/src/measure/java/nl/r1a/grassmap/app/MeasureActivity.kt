@@ -23,8 +23,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugin.api.provider.RouteRequest
 import java.io.File
 import java.io.IOException
 import java.time.Instant
@@ -208,8 +206,7 @@ class MeasureActivity : ComponentActivity() {
             val runner =
                 MeasurementRunner(
                     engineProvider = { container.routingEngine() },
-                    request = RouteRequest(LVIV_BENCH_WAYPOINTS, RouteProfile.Walk),
-                    profile = RouteProfile.Walk,
+                    waypoints = LVIV_BENCH_WAYPOINTS,
                     log = { message -> Log.i(TAG, message) },
                 )
             val outcome =
@@ -237,23 +234,53 @@ class MeasureActivity : ComponentActivity() {
             reportView.text = text
             reportFile = writeReport(text)
             status.text =
-                getString(
-                    R.string.measure_done,
-                    result?.routePlan?.coldMillis ?: -1,
-                    result
-                        ?.routePlan
-                        ?.warmMedianMillis
-                        ?.oneDecimal()
-                        ?.toString() ?: "-",
-                    result?.rerouteMedianMillis?.oneDecimal()?.toString() ?: "-",
-                    (SystemClock.elapsedRealtime() - started) / MILLIS_PER_SECOND,
-                )
+                if (outcome.isFailure) {
+                    getString(R.string.measure_failed, failure.orEmpty())
+                } else {
+                    summary(result, (SystemClock.elapsedRealtime() - started) / MILLIS_PER_SECOND)
+                }
             running = false
             runButton.isEnabled = true
             shareButton.isEnabled = reportFile != null
             Log.i(TAG, "measure-report ${reportFile?.absolutePath}")
         }
     }
+
+    /** The two profile lines the status bar shows after a run. */
+    private fun summary(
+        result: MeasurementResult?,
+        seconds: Long,
+    ): String {
+        val measured = result ?: return getString(R.string.measure_failed, "no result")
+        return buildString {
+            measured.profiles.forEach { profile ->
+                val label = profile.profile.name.lowercase()
+                if (profile.routePlan.coldMillis != null) {
+                    appendLine(
+                        getString(
+                            R.string.measure_profile_cold,
+                            label,
+                            profile.routePlan.coldMillis,
+                            decimal(profile.routePlan.warmMedianMillis),
+                            decimal(profile.firstRerouteMillis),
+                        ),
+                    )
+                } else {
+                    appendLine(
+                        getString(
+                            R.string.measure_profile_warm,
+                            label,
+                            decimal(profile.routePlan.warmMedianMillis),
+                            decimal(profile.firstRerouteMillis),
+                        ),
+                    )
+                }
+            }
+            append(getString(R.string.measure_total, seconds))
+        }
+    }
+
+    private fun decimal(value: Double?): String = value?.oneDecimal()?.toString() ?: "-"
 
     private fun writeReport(text: String): File? {
         val root = getExternalFilesDir(null) ?: filesDir

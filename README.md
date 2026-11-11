@@ -61,13 +61,16 @@ that is away from adb. It is signed with the debug key and is not a release:
 `release` and `benchmark` do not include that source set, so neither the
 screen nor the pack can ship.
 
-The screen plans the Lviv bench route (`LVIV_BENCH_WAYPOINTS`) once cold and ten
-times warm, then follows the reroute replay five times through the real
-`NavigationSession` with the 20 s / 22 m gate. It writes
+The screen plans the Lviv bench route once cold and ten times warm for the walk
+profile, then for bike (warm only, because walk mounted the engine), and follows
+the reroute replay five times per profile through the real `NavigationSession`
+with the 20 s gate: 22 m walking and 56 m cycling. It writes
 `<externalFilesDir>/measurement/report.json`, shows it, and offers a share
 sheet; nothing is uploaded. The report carries a `definitions` object that
 states what each number includes and excludes, and the screen shows the same
-text.
+text. Every reroute the session installs is listed with its fix indices, so the
+headline `first_reroute_ms` (the acceptance number) is distinguishable from
+`all_reroutes_median_ms`. The schema is `grass-maps-measurement/2`.
 
 The Lviv Valhalla pack is a generated input, not a tracked file, so point the
 build at a directory that contains `valhalla-lviv/`:

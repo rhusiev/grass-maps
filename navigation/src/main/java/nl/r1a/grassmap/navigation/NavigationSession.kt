@@ -64,6 +64,7 @@ class NavigationSession(
     private val clockMillis: () -> Long = { System.nanoTime() / 1_000_000L },
     private val log: (String) -> Unit = {},
     val control: NavigationControl = NavigationControl(),
+    private val onReroute: (RerouteEvent) -> Unit = {},
 ) {
     private val mutableState = MutableStateFlow(NavigationState())
 
@@ -105,6 +106,7 @@ class NavigationSession(
         var inaccurateFixCount = 0
         var offRouteFixCount = 0
         var offRouteStreak = 0
+        var offRouteStartFix = 0
         var detectionMillis: Long? = null
         var lastRerouteMillis: Long? = null
         var arrived = false
@@ -159,6 +161,9 @@ class NavigationSession(
                             var snapshot = read(active, fix)
 
                             val candidateOffRoute = isOffRoute(snapshot, projection?.distanceMeters)
+                            if (candidateOffRoute && offRouteStreak == 0) {
+                                offRouteStartFix = fixCount
+                            }
                             offRouteStreak = if (candidateOffRoute) offRouteStreak + 1 else 0
                             if (candidateOffRoute) {
                                 offRouteFixCount += 1
@@ -205,6 +210,8 @@ class NavigationSession(
                                                 log("navigation-reroute-failed fixes=$fixCount error=${AppError.NotFound}")
                                                 rerouteGate.reset()
                                             } else {
+                                                val budgetTravelMeters = rerouteGate.travelledMeters
+                                                val eventEpisodeStartFix = offRouteStartFix
                                                 active.close()
                                                 activeRoute = replacement
                                                 locator = PolylineLocator(replacement.geometry)
@@ -213,7 +220,8 @@ class NavigationSession(
                                                 rerouteCount += 1
                                                 rerouteGate.reset()
                                                 active = open(replacement)
-                                                lastRerouteMillis = clockMillis() - started
+                                                val durationMillis = clockMillis() - started
+                                                lastRerouteMillis = durationMillis
                                                 projection = locator.locate(fix.position)
                                                 snapshot = read(active, fix)
                                                 // The replacement line starts where Valhalla
@@ -222,15 +230,33 @@ class NavigationSession(
                                                 // on-route until the geometry says so.
                                                 offRouteStreak =
                                                     if (isOffRoute(snapshot, projection?.distanceMeters)) 1 else 0
+                                                if (offRouteStreak == 1) {
+                                                    // Still off the replacement: a new episode
+                                                    // starts here, not at the original one.
+                                                    offRouteStartFix = fixCount
+                                                }
                                                 previousRelation = relationOf(offRouteStreak)
                                                 log(
                                                     "navigation-reroute fixes=$fixCount revision=$revision " +
-                                                        "duration_ms=$lastRerouteMillis " +
+                                                        "duration_ms=$durationMillis " +
+                                                        "episode_fix=$eventEpisodeStartFix budget_m=${format(budgetTravelMeters)} " +
                                                         "distance_m=${format(replacement.distanceMeters)} " +
                                                         "model=${progress.source} spans=${progress.spanCount} " +
                                                         "waypoints=${request.waypoints.size} " +
                                                         "destination=${format(request.waypoints.last().latitude)}," +
                                                         "${format(request.waypoints.last().longitude)}",
+                                                )
+                                                onReroute(
+                                                    RerouteEvent(
+                                                        index = rerouteCount,
+                                                        episodeStartFix = eventEpisodeStartFix,
+                                                        budgetFix = fixCount,
+                                                        installedFix = fixCount,
+                                                        budgetTravelMeters = budgetTravelMeters,
+                                                        durationMillis = durationMillis,
+                                                        replacementDistanceMeters = replacement.distanceMeters,
+                                                        replacementPoints = replacement.geometry.size,
+                                                    ),
                                                 )
                                                 // Announce the new line only now: the state
                                                 // carries it together with the phase, so a

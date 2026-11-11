@@ -10,7 +10,10 @@
     <string name="measure_run">Run measurement</string>
     <string name="measure_share">Share report</string>
     <string name="measure_running">Running...</string>
-    <string name="measure_idle">Tap Run measurement. The run takes about two minutes; the report appears here and is written to the app\'s measurement folder.</string>
+    <string name="measure_idle">Tap Run measurement. The run takes one to two minutes (walk and bike); the report appears here and is written to the app\'s measurement folder.</string>
     <string name="measure_definitions_title">What each number measures</string>
-    <string name="measure_done">Cold %1$d ms - warm median %2$s ms - reroute median %3$s ms - %4$d s total</string>
+    <string name="measure_profile_cold">%1$s: cold %2$d ms - warm median %3$s ms - first reroute %4$s ms</string>
+    <string name="measure_profile_warm">%1$s: warm median %2$s ms - first reroute %3$s ms</string>
+    <string name="measure_total">%1$d s total</string>
+    <string name="measure_failed">Measurement failed: %1$s</string>
 </resources>

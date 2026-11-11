@@ -141,13 +141,21 @@ from the bench `RESULTS.md`.
 
 These numbers are trends. They are not the Moto g32 acceptance gate and must
 not be compared across GPU modes or hosts. A launch that exceeds the
-ActivityManager wait is recorded as `status: timeout` with its wait time, not
-treated as a failed run.
+ActivityManager wait is recorded as `status: timeout` with its wait time. The
+measurement then waits up to 120 s for the logcat `Displayed` line, and the
+cold-start summary falls back to process-to-first-frame when ActivityManager
+never completed. A run with neither a first frame nor a frame-pacing row fails
+and keeps its JSON: a green job with no sample is worse than a red one.
 
 The benchmark job is advisory. A failed emulator host leaves the job red and
 the data missing for that commit, but it does not fail the workflow; the gate,
 API 29 smoke, native follower replay and reproducibility jobs are the blocking
 checks.
+
+The job also used to pass while measuring nothing. Every stored JSON from
+2026-11-09 to 2026-11-11 held five timed-out launches and zero frame rows,
+because the read happened before the app's first frame. That state is now a
+failure.
 
 Its fragile part is the first adb call after boot. Between 2026-11-09 and
 2026-11-11 seven runs failed before the measurement started, all with

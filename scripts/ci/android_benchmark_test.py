@@ -39,9 +39,38 @@ class TransientInstallErrorTest(unittest.TestCase):
         self.assertTrue(android_benchmark.transient_install_error(detail))
 
     def test_bad_apk_is_not_transient(self) -> None:
-        detail = "exit 1: adb -s emulator-5554 install -r app-debug.apk\nadb: failed to install: INSTALL_FAILED_INVALID_APK"
+        detail = (
+            "exit 1: adb -s emulator-5554 install -r app-debug.apk\n"
+            "adb: failed to install: INSTALL_FAILED_INVALID_APK"
+        )
 
         self.assertFalse(android_benchmark.transient_install_error(detail))
+
+
+class EmptySampleTest(unittest.TestCase):
+    def metrics(self, total: int, process: int) -> dict[str, object]:
+        return {
+            "total_time_ms": {"n": total},
+            "process_to_first_frame_ms": {"n": process},
+        }
+
+    def test_no_first_frame_and_no_pacing_row_is_empty(self) -> None:
+        metrics = self.metrics(0, 0)
+        pacing = {"frame_time_ms": {"n": 0}}
+
+        self.assertTrue(android_benchmark.sample_is_empty(metrics, pacing))
+
+    def test_first_frame_alone_is_a_sample(self) -> None:
+        metrics = self.metrics(0, 5)
+        pacing = {"frame_time_ms": {"n": 0}}
+
+        self.assertFalse(android_benchmark.sample_is_empty(metrics, pacing))
+
+    def test_pacing_row_alone_is_a_sample(self) -> None:
+        metrics = self.metrics(0, 0)
+        pacing = {"frame_time_ms": {"n": 3}}
+
+        self.assertFalse(android_benchmark.sample_is_empty(metrics, pacing))
 
 
 class ColdStartMetricsTest(unittest.TestCase):

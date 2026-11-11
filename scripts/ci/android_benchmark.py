@@ -49,6 +49,11 @@ ASSUMED_REFRESH_HZ = 60.0
 # A completed frame must finish within this long of its intended vsync. A row
 # with the unfinished-frame sentinel is not a sample.
 MAX_FRAME_MS = 5000.0
+# `am start -W` returns Status: timeout before a software-GPU first frame. The
+# logcat Displayed line is the real start signal; poll for it for up to this
+# long instead of reading logcat once at the ActivityManager timeout.
+DISPLAY_DEADLINE_S = 120.0
+DISPLAY_POLL_S = 2.0
 # The fixed interaction rotates the app three times and back. Every rotation
 # recreates the single-view window, and that window's frame enters the sample.
 # The map will add many frames to each window instead.
@@ -254,6 +259,20 @@ def parse_launch_log(raw: str) -> tuple[float | None, float | None]:
     return displayed_ms, process_ms
 
 
+def wait_for_display(adb: Adb) -> tuple[float | None, float | None]:
+    """Poll logcat for the package's first Displayed line, up to the deadline."""
+    deadline = time.monotonic() + DISPLAY_DEADLINE_S
+    while True:
+        displayed_ms, process_ms = parse_launch_log(
+            adb.logcat("-d", "-v", "epoch", timeout_s=60)
+        )
+        if displayed_ms is not None or process_ms is not None:
+            return displayed_ms, process_ms
+        if time.monotonic() >= deadline:
+            return None, None
+        time.sleep(DISPLAY_POLL_S)
+
+
 def cold_start_metrics(runs: list[dict[str, object]]) -> dict[str, object]:
     """Summaries for the measured fields, skipping launches with no value.
 
@@ -268,6 +287,12 @@ def cold_start_metrics(runs: list[dict[str, object]]) -> dict[str, object]:
     return metrics
 
 
+def sample_is_empty(metrics: dict[str, object], pacing: dict[str, object]) -> bool:
+    """True when the run produced neither a first frame nor a pacing row."""
+    cold = metrics["total_time_ms"]["n"] + metrics["process_to_first_frame_ms"]["n"]
+    return cold == 0 and pacing["frame_time_ms"]["n"] == 0
+
+
 def cold_start_run(adb: Adb) -> dict[str, float | int | str | None]:
     """One force-stopped launch measured with `am start -W` and logcat."""
     adb.shell("am", "force-stop", PACKAGE, timeout_s=30)
@@ -280,6 +305,8 @@ def cold_start_run(adb: Adb) -> dict[str, float | int | str | None]:
     if status not in ("ok", "timeout"):
         raise BenchmarkError(f"am start -W failed: {start}")
     displayed_ms, process_ms = parse_launch_log(adb.logcat("-d", "-v", "epoch", timeout_s=60))
+    if displayed_ms is None and process_ms is None:
+        displayed_ms, process_ms = wait_for_display(adb)
     return {
         "status": status,
         "total_time_ms": start.get("TotalTime"),
@@ -379,12 +406,16 @@ def frame_pacing(adb: Adb, refresh_hz: float) -> dict[str, object]:
     """Launch a fresh process, run the fixed interaction, then read gfxinfo."""
     adb.shell("am", "force-stop", PACKAGE, timeout_s=30)
     wait_until_process_gone(adb)
+    adb.logcat_clear()
     start = parse_start_output(
         adb.shell("am", "start", "-W", "-n", f"{PACKAGE}/{ACTIVITY}", timeout_s=90)
     )
     status = start.get("Status")
     if status not in ("ok", "timeout"):
         raise BenchmarkError(f"the frame-pacing launch failed: {start}")
+    # The ActivityManager wait can expire before the first frame; wait for the
+    # Displayed line so gfxinfo sees the app's window rather than an empty one.
+    wait_for_display(adb)
 
     windows: list[dict[str, object]] = []
     window_rows: list[list[tuple[int, int]]] = []
@@ -577,12 +608,21 @@ def write_result(result: dict[str, object], output: Path) -> None:
             f"{device['refresh_hz']} Hz, gpu {result['conditions']['gpu_mode']}\n"
         )
         total = cold["total_time_ms"]
-        if total["median"] is None:
-            total_text = "no completed total-time sample"
+        process = cold["process_to_first_frame_ms"]
+        if total["median"] is not None:
+            samples = total["n"]
+            start_text = f"median {total['median']} ms, p90 {total['p90']} ms"
+        elif process["median"] is not None:
+            samples = process["n"]
+            start_text = (
+                f"process-to-first-frame median {process['median']} ms, "
+                f"p90 {process['p90']} ms"
+            )
         else:
-            total_text = f"median {total['median']} ms, p90 {total['p90']} ms"
+            samples = 0
+            start_text = "no cold-start sample"
         summary_file.write(
-            f"- cold start: {total_text} over {total['n']} runs; "
+            f"- cold start: {start_text} over {samples} runs; "
             f"{cold['timed_out']} timed out\n"
         )
         frame_time = pacing["frame_time_ms"]
@@ -698,6 +738,10 @@ def main() -> int:
         ci["branch"] or git["branch"],
     )
     write_result(result, output)
+    if sample_is_empty(metrics, pacing):
+        raise BenchmarkError(
+            "the sample is empty: no cold-start first frame and no frame-pacing row"
+        )
     json.dump(result, sys.stdout, indent=2)
     sys.stdout.write("\n")
     return 0

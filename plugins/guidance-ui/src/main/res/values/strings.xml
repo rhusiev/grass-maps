@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.guidance_ui.name">Guidance panel</string>
+    <string name="plugin.guidance_ui.description">Shows the next turns and the next stop while a route is followed.</string>
+    <string name="guidance_panel_next_stop">Next stop</string>
+    <string name="guidance_panel_arrive">Arrive at the destination</string>
+    <string name="guidance_panel_arrived">Arrived</string>
+    <string name="guidance_panel_off_route">Off route</string>
+    <string name="guidance_panel_in">in %1$s, %2$s</string>
+    <string name="guidance_panel_then_in">then in %1$s, %2$s</string>
+    <string name="guidance_panel_metres">%1$s m</string>
+    <string name="guidance_panel_kilometres">%1$s km</string>
+    <string name="guidance_panel_minutes">%1$s min</string>
+    <string name="guidance_panel_hours">%1$s h</string>
+    <string name="guidance_panel_hours_minutes">%1$s h %2$s min</string>
+</resources>

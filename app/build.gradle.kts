@@ -137,6 +137,7 @@ dependencies {
     implementation(project(":plugins:point-info"))
     implementation(project(":plugins:osm-places"))
     implementation(project(":plugins:favourites-ui"))
+    implementation(project(":plugins:guidance-ui"))
     implementation(project(":plugins:links"))
     implementation(project(":plugins:share"))
     implementation(project(":plugins:coordinates"))

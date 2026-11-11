@@ -262,6 +262,7 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/valhalla` | the v1 `routing.engine` provider: profile mapping, the native Valhalla adapter, the async segment attributes | `plugin-api` |
 | `plugins/direct-engine` | the second `routing.engine` provider: one geodesic per leg with the haversine length, its leg segments and its honest empty capabilities | `plugin-api` |
 | `plugins/route-planner` | the start/end plan, its intermediate stops, its undo and redo history, its reuse commands and its state and history streams; the shell draws the preview and the turn stepper from it | `plugin-api`, `routing` |
+| `plugins/guidance-ui` | the guidance panel's four facts and its Compose chrome, drawn from the navigation state the app holds | `plugin-api`, `plugin-ui-api` |
 
 ## Place card
 
@@ -701,7 +702,9 @@ routing` exception above.
 One test-only edge is declared separately in `moduleTestDependencyAllowlist`:
 `navigation`'s tests depend on `plugins/direct-engine` (T-0305), because the
 follower's acceptance test feeds the real engine's route through the Ferrostar
-mapper. It reaches no runtime classpath.
+mapper. `plugins/guidance-ui`'s tests depend on `navigation` (T-0310), because
+the panel's acceptance feeds the real session's published state into the panel.
+Both reach no runtime classpath.
 
 ## Plugin manifests
 
@@ -873,9 +876,12 @@ distances because our `Route` has no per-step geometry. Elevation and typed way
 attributes stay in our model; Ferrostar's route has neither.
 
 Guidance numbers come from the route's own model, not from a second
-calculation. `RouteProgress` builds spans from the route: the per-maneuver
-times of `Route.instructions` when their distances and durations agree with the
-totals, else the per-leg times of `Route.segments`, else one uniform span.
+calculation. `RouteProgress` in `plugin-api` builds spans from the route: the
+per-maneuver times of `Route.instructions` when their distances and durations
+agree with the totals, else the per-leg times of `Route.segments`, else one
+uniform span. It lives in `plugin-api` because the guidance panel counts from
+it too: one span model keeps the session's remaining time and the panel's turn
+and stop times from drifting apart.
 Remaining time is the unused part of the current span plus every span still
 ahead; remaining distance is the route total minus the distance along it; the
 ETA is the current fix's epoch time plus that remaining time, so a stale fix
@@ -927,6 +933,41 @@ GPX from that line with a sideways segment past the deviation threshold, parses
 it through `MockGpxLocationSource`, follows it, and draws the replacement route.
 `{"area":"fixture"}` and `{"area":"lviv"}` select the area; `tick_ms` and
 `detour_m` tune the replay.
+
+## Guidance panel
+
+`plugins/guidance-ui` is compiled-in chrome over the navigation state the app
+already holds (T-0310). It shows four facts and no more: the next turn with the
+distance and time to it, the second next turn, and the distance and the time to
+the next intermediate stop. `GuidancePanel` fixes the vocabulary - a fifth kind
+needs a fifth enum value, and a repeated or reordered fact fails construction.
+The stop rows are absent when the route has no via.
+
+`guidancePanel` is pure: it takes the route, the distance along it and the
+guidance status, and it reads no camera, location or clock. The app maps a
+published `NavigationState` onto `GuidanceInput` (`alongMeters` is the route
+total minus the remaining distance), derives the panel once per state and
+remembers it. `GuidancePanelContent` then only draws that model, so a camera or
+gesture frame cannot recompute guidance and the panel is not on the map's draw
+path. The app does not show the panel yet: no live navigation state reaches the
+screen, and the wiring belongs to the task that owns the navigation screen.
+
+Turns come from `routeTurns` in `plugin-ui-api`, the same enumeration the
+planner's turn stepper walks, so one route has one turn order. A turn passed by
+more than one metre is behind the driver. Time is
+`RouteProgress.durationBetween`. A stop is a leg end in `Route.segments`; a
+chain whose leg distances do not add up to the route total has no stop fact
+rather than a guessed one. Arrival shows the arrival fact alone and off route
+adds a notice beside the same facts.
+
+The acceptance replays the committed `test-data/location/mock-walk.gpx` through
+the geometry follower at 20 points - every third track point from the first to
+the fifty-fifth - on a three-leg route with two intermediate stops and a
+different speed per leg. The panel's input is each published `NavigationState`,
+mapped exactly as the app maps it. Its two turns and its stop distance and time
+are compared with a route model the test computes from `Route.instructions` and
+`Route.segments` in its own arithmetic; the worst mismatch is 0 for all four
+facts over all 20 points. Results are in `test-data/location/README.md`.
 
 ## Search seam
 

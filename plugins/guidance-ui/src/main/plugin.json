@@ -1,0 +1,17 @@
+{
+  "id": "guidance.ui",
+  "name": "plugin.guidance_ui.name",
+  "description": "plugin.guidance_ui.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.guidance.ui.GuidanceUiPlugin",
+  "contributes": {},
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": []
+  },
+  "activation": [
+    "ui"
+  ]
+}

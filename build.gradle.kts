@@ -76,6 +76,7 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         ":plugins:point-info" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:osm-places" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:favourites-ui" to setOf(":plugin-api"),
+        ":plugins:guidance-ui" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:links" to setOf(":plugin-api"),
         ":plugins:share" to setOf(":plugin-api"),
         ":plugins:coordinates" to setOf(":plugin-api"),
@@ -101,6 +102,9 @@ val moduleTestDependencyAllowlist: Map<String, Set<String>> =
         // route through the Ferrostar mapper. Test only, never on a runtime
         // classpath, so the plugins -> plugin-api rule still holds for the app.
         ":navigation" to setOf(":plugins:direct-engine"),
+        // T-0310: the guidance panel's acceptance feeds the real session's
+        // published state into the panel. Test only.
+        ":plugins:guidance-ui" to setOf(":navigation"),
     )
 val moduleBoundaryViolations = objects.listProperty(String::class.java)
 

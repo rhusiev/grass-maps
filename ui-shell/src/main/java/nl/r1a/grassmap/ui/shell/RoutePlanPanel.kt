@@ -37,6 +37,7 @@ import nl.r1a.grassmap.plugin.api.model.RoutePointEntry
 import nl.r1a.grassmap.plugin.api.model.routePointEntry
 import nl.r1a.grassmap.plugin.api.provider.CoordinateParser
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.ui.api.RouteTurnStep
 import java.util.Locale
 
 private const val PANEL_CORNER_DP = 12

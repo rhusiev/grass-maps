@@ -45,6 +45,7 @@ include(
     ":plugins:links",
     ":plugins:share",
     ":plugins:coordinates",
+    ":plugins:guidance-ui",
     ":plugins:valhalla",
     ":plugins:direct-engine",
     ":plugins:route-planner",

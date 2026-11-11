@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.guidance_ui.name">Панель підказок</string>
+    <string name="plugin.guidance_ui.description">Показує наступні повороти та наступну зупинку під час руху маршрутом.</string>
+    <string name="guidance_panel_next_stop">Наступна зупинка</string>
+    <string name="guidance_panel_arrive">Прибуття до призначення</string>
+    <string name="guidance_panel_arrived">Прибули</string>
+    <string name="guidance_panel_off_route">Поза маршрутом</string>
+    <string name="guidance_panel_in">через %1$s, %2$s</string>
+    <string name="guidance_panel_then_in">потім через %1$s, %2$s</string>
+    <string name="guidance_panel_metres">%1$s м</string>
+    <string name="guidance_panel_kilometres">%1$s км</string>
+    <string name="guidance_panel_minutes">%1$s хв</string>
+    <string name="guidance_panel_hours">%1$s год</string>
+    <string name="guidance_panel_hours_minutes">%1$s год %2$s хв</string>
+</resources>

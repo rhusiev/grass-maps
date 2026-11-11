@@ -1162,6 +1162,53 @@ distance.
 The acceptance line is "a run at 5 km/h moves along the route and fires arrival."
 The acceptance test is `NavigationSimulatorTest`.
 
+### Navigation camera
+
+`NavigationCameraController` in `navigation` drives the camera during guidance
+(T-0313). It consumes the published `NavigationState` and writes one
+`CameraUpdate` per change through `MapHost.animateCamera`; only `Following` and
+`Rerouting` drive, while `Paused`, `Idle`, `Arrived` and `Stopped` leave the
+camera alone. It is pure logic plus the host seam and an injected clock, so a
+JVM test with a fake host and a fake clock covers every branch. Auto zoom and
+auto-centre default on; tilt is off.
+
+Speed is the ground distance between consecutive fixes over the time between
+them, not `LocationFix.speedMetersPerSecond`, the same rule as the speed widgets
+(T-0316). The first fix measures no interval, so it does not set the zoom. The
+auto-zoom table is:
+
+| Band | Speed | Zoom |
+|---|---|---|
+| Walk | up to 7 km/h | 17.0 |
+| Bike | above 7, up to 20 km/h | 16.0 |
+| Car | above 20 km/h | 15.0 |
+
+The edges have 1 km/h of hysteresis. A faster band is entered at the current
+band's upper edge plus 1 km/h and a slower band at the slower band's edge minus
+1 km/h: a walker becomes a cyclist above 8 km/h, and a cyclist becomes a walker
+below 6 km/h. A speed exactly on 7 or 20 km/h, or drifting across by less than
+the margin, changes nothing. A zoom is written only when the band changes, and
+auto zoom off writes no zoom at all.
+
+A manual pan is reported through `onManualPan`. The camera then stays free for
+five seconds (`RECENTRE_DELAY_MILLIS`) of clock time, and the next fix recentres
+it on that fix's position; a second pan restarts the five seconds. The delay is
+evaluated when a state arrives, so a source that stops publishing fixes leaves
+the camera free until the next one. Auto-centre off never recentres after a pan,
+and turning the switch back on releases the pan at the next fix. A paused or
+ended session drops the speed interval, so the time spent paused cannot read as
+a very slow speed and drop the zoom.
+
+Tilt is off by default in v1. With it on the pitch is 45 degrees; turning it off
+writes 0 degrees and restores the flat camera. The pitch gesture stays disabled
+(T-0104), so this is the only way the navigation camera pitches.
+
+The controller does not set a tracking mode. The screen that binds it must leave
+the host in `TrackingMode.Free`, otherwise the host's own follow loop and this
+controller both write the centre. No screen binds the three switches or calls
+`onManualPan` yet, so the controls are not user-reachable until the navigation
+screen wires them to a settings surface and the pan gesture.
+
 ## Guidance panel
 
 `plugins/guidance-ui` is compiled-in chrome over the navigation state the app

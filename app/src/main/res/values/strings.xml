@@ -64,6 +64,8 @@
 
     <string name="plugin.route_planner.name">Route planner</string>
     <string name="plugin.route_planner.description">Plans a route between two points and shows its time, distance and arrival.</string>
+    <string name="plugin.nav_simulator.name">Navigation simulator</string>
+    <string name="plugin.nav_simulator.description">Runs the current route at 5 km/h and reports arrival.</string>
     <string name="control_route_planner_label">R</string>
     <string name="control_route_planner_description">Plan a route</string>
     <string name="route_planner_swap">Swap start and destination</string>

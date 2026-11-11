@@ -89,6 +89,10 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         // routing domain, the same way navigation reads it. It reaches no core
         // internals and the engine still crosses the plugin-api contract.
         ":plugins:route-planner" to setOf(":plugin-api", ":routing"),
+        // The navigation simulator drives the production session and geometry
+        // follower, and reads a passed route through the shared JSON form. It
+        // changes no navigation policy and reaches no core internals.
+        ":plugins:nav-simulator" to setOf(":plugin-api", ":navigation", ":routing"),
     )
 // Test-only edges are separate so a test fixture cannot quietly become a
 // production dependency. :control's info-widgets edge is the accepted T-0113

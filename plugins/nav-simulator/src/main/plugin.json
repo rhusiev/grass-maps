@@ -1,0 +1,48 @@
+{
+  "id": "nav.simulator",
+  "name": "plugin.nav_simulator.name",
+  "description": "plugin.nav_simulator.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.nav.simulator.NavSimulatorPlugin",
+  "contributes": {
+    "commands": [
+      {
+        "id": "nav.simulator.start",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugins.nav.simulator.SimulatorStatus",
+        "doc": "Starts a simulated run at 5 km/h. Uses the current route, or the route in params. Parameters: optional route (stable route JSON), optional profile (walk, bike, hike, car).",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.nav.simulator.StartSimulationCommand"
+      },
+      {
+        "id": "nav.simulator.stop",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugins.nav.simulator.SimulatorStatus",
+        "doc": "Stops the simulated run and returns its phase, fix count and arrival.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.nav.simulator.StopSimulationCommand"
+      }
+    ],
+    "streams": [
+      {
+        "id": "nav.simulator.state",
+        "valueType": "nl.r1a.grassmap.plugins.nav.simulator.SimulatorStatus",
+        "serializer": "nl.r1a.grassmap.plugins.nav.simulator.SimulatorStatus.serializer"
+      }
+    ]
+  },
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": []
+  },
+  "activation": [
+    "command",
+    "stream"
+  ]
+}

@@ -71,6 +71,22 @@ class GeneratedPluginRegistryTest {
     }
 
     @Test
+    fun generatedRegistryContainsTheNavigationSimulator() {
+        assertTrue(
+            GeneratedPlugins.plugins.any { it.manifest.id == PluginId("nav.simulator") },
+        )
+        assertTrue(
+            GeneratedPlugins.commands.any { it.id == CommandId("nav.simulator.start") },
+        )
+        assertTrue(
+            GeneratedPlugins.commands.any { it.id == CommandId("nav.simulator.stop") },
+        )
+        assertTrue(
+            GeneratedStreams.streams.any { it.id == StreamId("nav.simulator.state") },
+        )
+    }
+
+    @Test
     fun theReleaseControlCatalogRegistersTheMapControlsAndTheUnitSetting() {
         val ids = AppContainer(strings = KeyOnlyStrings).controlCommands.map { it.id }.toSet()
 

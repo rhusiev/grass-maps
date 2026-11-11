@@ -419,6 +419,7 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/direct-engine` | the second `routing.engine` provider: one geodesic per leg with the haversine length, its leg segments and its honest empty capabilities | `plugin-api` |
 | `plugins/route-planner` | the start/end plan, its intermediate stops, its undo and redo history, its reuse commands and its state and history streams; the shell draws the preview and the turn stepper from it | `plugin-api`, `routing` |
 | `plugins/guidance-ui` | the guidance panel's four facts and its Compose chrome, drawn from the navigation state the app holds | `plugin-api`, `plugin-ui-api` |
+| `plugins/nav-simulator` | the simulated run at 5 km/h through the production navigation session, its start and stop commands and its status stream | `plugin-api`, `navigation`, `routing` |
 
 ## Place card
 
@@ -845,6 +846,12 @@ core internals and still asks the host for the engine through
 `RoutingEngineAccess`, so the plugin boundary that matters - the contract - is
 unchanged.
 
+A second exception is `plugins/nav-simulator`: it depends on `:navigation`
+because the simulated run is the production `NavigationSession` driven by
+synthetic fixes, and on `:routing` for the stable route JSON form a passed route
+uses. It reaches no core internals, changes no navigation policy and lets the
+session decide arrival.
+
 `./gradlew checkPluginBoundaries` checks every module under `plugins/` and
 fails with each violating module, configuration and dependency. Plugin modules
 wire this task into `check`.
@@ -1108,6 +1115,22 @@ with distance at the profile's gate speed, so the off-route budget sees travel
 even when the wall tick is fast. The summary carries `inaccurate_fixes`,
 `off_route_fixes`, `reroutes` and `reroute_ms`; the phone benchmark is
 `scripts/bench/reroute-latency.sh`.
+
+`plugins/nav-simulator` is the simulated run (T-0315). `NavigationSimulator`
+places one synthetic fix per simulated second 1.389 m further along the route,
+so the run holds 5 km/h whatever the vertex spacing is. The fixes go through the
+production `NavigationSession` and `GeometryRouteFollower`; arrival is the
+session's own 15 m check, and the simulator never sets a phase. Its clock
+advances only with the fixes, so a JVM test runs the whole route without
+sleeping. The control-allowlisted `nav.simulator.start` command uses the
+selected route from `route.planner.state`, or a route in the stable `RouteJson`
+form passed as `route`, with an optional `profile`; `nav.simulator.stop` ends
+the fix flow, so the session publishes `Stopped` and no arrival.
+`nav.simulator.state` publishes the phase, fix count, arrival and remaining
+distance.
+
+The acceptance line is "a run at 5 km/h moves along the route and fires arrival."
+The acceptance test is `NavigationSimulatorTest`.
 
 ## Guidance panel
 

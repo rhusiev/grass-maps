@@ -65,6 +65,8 @@
 
     <string name="plugin.route_planner.name">Планувальник маршруту</string>
     <string name="plugin.route_planner.description">Планує маршрут між двома точками та показує час, відстань і час прибуття.</string>
+    <string name="plugin.nav_simulator.name">Симулятор навігації</string>
+    <string name="plugin.nav_simulator.description">Проходить поточний маршрут зі швидкістю 5 км/год і повідомляє про прибуття.</string>
     <string name="control_route_planner_label">Р</string>
     <string name="control_route_planner_description">Спланувати маршрут</string>
     <string name="route_planner_swap">Поміняти початок і призначення</string>

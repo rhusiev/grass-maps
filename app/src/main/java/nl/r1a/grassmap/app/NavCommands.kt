@@ -12,6 +12,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
+import nl.r1a.grassmap.alerts.BeepHost
 import nl.r1a.grassmap.core.services.MockGpxLocationSource
 import nl.r1a.grassmap.navigation.FerrostarRouteFollower
 import nl.r1a.grassmap.navigation.NavigationConfig
@@ -50,6 +51,9 @@ internal val NAV_RESUME_COMMAND: CommandId = CommandId("core.nav.resume")
 
 /** Ends live guidance and releases the navigation foreground service. */
 internal val NAV_STOP_COMMAND: CommandId = CommandId("core.nav.stop")
+
+/** Turns the T-0318 turn-beep mode on or off. */
+internal val NAV_BEEPS_COMMAND: CommandId = CommandId("core.nav.beeps")
 
 private const val TAG = "GrassMapsNav"
 private const val AREA_FIXTURE = "fixture"
@@ -248,13 +252,16 @@ internal fun navCommands(
     session: MapSessionHolder,
     engine: suspend () -> RoutingEngine?,
     navigation: NavigationController,
+    beeps: () -> BeepHost,
 ): List<Command<*, *>> =
     listOf(
         TestFollowCommand(session, engine),
-        StartNavigationCommand(navigation),
+        StartNavigationCommand(navigation, beeps),
         PauseNavigationCommand(navigation),
         ResumeNavigationCommand(navigation),
         StopNavigationCommand(navigation),
+        BeepsCommand(beeps),
+        BeepProbeCommand(beeps),
     )
 
 /**
@@ -268,6 +275,7 @@ internal fun navCommands(
  */
 internal class StartNavigationCommand(
     private val navigation: NavigationController,
+    private val beeps: () -> BeepHost,
 ) : Command<JsonElement, String>(
         id = NAV_START_COMMAND,
         paramsSerializer = JsonElement.serializer(),
@@ -281,6 +289,7 @@ internal class StartNavigationCommand(
     ) {
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
         val selection = parse(params) ?: return Outcome.Failure(AppError.InvalidInput)
+        beeps().setProfile(selection.profile)
         return when (val outcome = navigation.start(selection.route, selection.profile)) {
             is Outcome.Failure -> {
                 outcome
@@ -389,5 +398,46 @@ internal class StopNavigationCommand(
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
         val stopped = navigation.stop()
         return Outcome.Success(CommandResult("stopped=$stopped phase=${navigation.state.value.phase}"))
+    }
+}
+
+/**
+ * Turns the turn-beep mode on or off (T-0318). The profile picks the distance;
+ * leaving it out keeps the current one, which `core.nav.start` sets for a new
+ * session anyway.
+ */
+internal class BeepsCommand(
+    private val beeps: () -> BeepHost,
+) : Command<JsonElement, String>(
+        id = NAV_BEEPS_COMMAND,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = String.serializer(),
+        doc = "Turns turn beeps on or off. Parameters: enabled, optional profile (walk, bike, hike, car).",
+        policy =
+            CommandPolicy(
+                allowlistedForControl = true,
+                dispatcher = CommandDispatcher.DEFAULT,
+            ),
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
+        val objectValue = params as? JsonObject ?: return Outcome.Failure(AppError.InvalidInput)
+        val enabled =
+            (objectValue["enabled"] as? JsonPrimitive)?.booleanOrNull
+                ?: return Outcome.Failure(AppError.InvalidInput)
+        val profileName = (objectValue["profile"] as? JsonPrimitive)?.contentOrNull
+        val profile =
+            profileName?.let { name ->
+                RouteProfile.entries.firstOrNull { it.name.equals(name, ignoreCase = true) }
+                    ?: return Outcome.Failure(AppError.InvalidInput)
+            }
+        val host = beeps()
+        profile?.let(host::setProfile)
+        host.setEnabled(enabled)
+        return Outcome.Success(
+            CommandResult(
+                "enabled=${host.enabled.value} profile=${host.profile.name.lowercase()} " +
+                    "threshold_m=${host.thresholdMeters}",
+            ),
+        )
     }
 }

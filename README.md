@@ -1338,8 +1338,7 @@ Sound and vibration are values, not platform calls: `AlertEffect.Sound` and
 an `AlertEffectSink`. The default `NoopAlertEffectSink` does nothing, which is
 what keeps the host JVM-testable. `AndroidAlertEffects` is a minimal platform
 sink with a short notification tone and a vibration pattern; it is not reached
-by the JVM tests. Real audio - the stream, audio focus, pausing music and
-ducking - belongs to T-0318 and is not implemented here.
+by the JVM tests. Real audio for turn beeps is T-0318 and is described below.
 
 The acceptance replays one deterministic fix timeline through the production
 `NavigationSession` and the geometry follower: on route, 20 m off, a reroute
@@ -1350,6 +1349,87 @@ notice carrying the replacement's distance; with the signal switch on it emits
 lost then regained once. The host tests cover the 10 s boundary, a 9.999 s gap,
 a repeated arrival, off-route episodes and the JSON round trip. No screen renders
 a banner yet, no live session is wired to a host, and way alerts are T-0319.
+
+## Turn beeps
+
+Turn beeps are the beep-only guidance mode (T-0318). `BeepHost` reads the same
+published `NavigationState` as the alert host, asks `BeepSchedule` whether a
+turn is due, and sends the cue to a `BeepSink`. Beeps are off by default. The
+app wires `AndroidBeepSink`; `NoopBeepSink` keeps a JVM test free of Android.
+
+The distance is one beep about ten to eleven seconds before the turn, at the
+profile's nominal speed:
+
+| Profile | Distance | At the profile speed |
+|---|---|---|
+| Walk, Hike | 15 m | 5 km/h, about 11 s |
+| Bike | 50 m | 18 km/h, about 10 s |
+| Car | 150 m | 50 km/h, about 11 s |
+
+One value cannot serve every profile: 100 m is 72 s of walking and seven
+seconds of driving. `BeepDistance` holds the three values, and
+`core.nav.start` sets the profile on the host before a session starts.
+
+A turn is armed when the next instruction is seen farther than the distance and
+beeps on the first later state that reports the same turn at or inside it. A
+turn first seen inside the distance is not armed, so attaching to a running
+session does not beep late. A turn that is passed while the signal is gone, or
+while the session is paused, is disarmed: the same 10 s fix gap as the signal
+alert clears the approach, and a paused state clears it. A turn is beeped at
+most once per route revision.
+
+The once-per-turn key is `BeepTurnKey(routeRevision, instructionIndex)`. The
+index is the position in `activeRoute.instructions` of the maneuver whose
+absolute route position is the travelled distance plus the distance ahead.
+Two turns with the same text therefore remain two turns. A reroute changes the
+revision and re-arms every turn on the replacement route. When the route carries
+no matching instruction, the fallback key is the instruction text, the street
+and a ten-metre bucket of the maneuver's route position.
+
+The typed request is `BeepAudioRequest(AudioStream.Music, AudioFocusMode.Duck,
+1_500 ms)`. The beep chooses the music stream with the navigation-guidance
+usage, because it is guidance audio: it follows media volume and is not
+silenced by the notification stream or a ringer mode. It asks for
+`AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`, so other audio keeps playing quieter
+rather than stopping. `AudioFocusMode.Pause`
+(`AUDIOFOCUS_GAIN_TRANSIENT`) and the notification and system streams exist as
+typed alternatives. Focus is requested before the 500 ms tone and abandoned
+after the 1.5 s window; a later beep supersedes the earlier window. A refused
+focus request keeps the beep silent. `AndroidBeepSink` implements the Android
+side; `BeepAudio` and the JVM tests drive the same policy without Android.
+
+The probe tag is `GrassMapsBeep` (`LogcatBeepProbe.TAG`). One line is logged
+for each beep that the audio policy accepted:
+
+```
+beep instruction="Turn left at the square" distance_m=14.9 stream=music route_revision=0 turn=1
+```
+
+The device run turns beeps on with the control command `core.nav.beeps`, whose
+parameters are `enabled` and an optional `profile` (`walk`, `bike`, `hike`,
+`car`). The command reports the profile and distance it applied. The debug
+route used for the g32 run has two turns at 40 m and 60 m, so the beeps land at
+25 m and 45 m along the route.
+
+`core.nav.beep_probe` is the deterministic device probe: it takes a route in
+the stable JSON form, an optional profile and `tick_ms`, replays the route's
+vertices at the profile's speed through a real `NavigationSession` and the
+geometry follower, and feeds every published state into the same beep host. It
+returns `beeps`, `fixes` and `arrived`, and each beep writes the line above.
+The g32 run used `test-data/navigation/beep-route.json`, logged two beeps at
+14.8 m and 13.8 m and held `GAIN_TRANSIENT_MAY_DUCK` for the beep window; the
+transcript is in `test-data/navigation/evidence/t-0318-g32-beeps.txt`.
+
+The live path is also wired: `AppContainer` attaches the host to
+`NavigationController.state`, and `core.nav.start` sets the profile before a
+session starts. On the g32 probe the live replay did not deliver fixes to that
+controller, so the device evidence comes from the probe command; the live
+attachment itself was not exercised on the phone. What remains: a screen that
+exposes the beep mode and its distance, T-0319 way alerts, and the real
+music-app pause behaviour. The pause mode only requests focus; whether a
+particular player pauses on the loss is the player's decision, so it was not
+measured here. The duck request is visible in `dumpsys audio`; whether music is
+audibly quieter needs a player that is actually playing.
 
 ## Search seam
 

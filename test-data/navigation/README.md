@@ -24,3 +24,9 @@ foreground service record, the notification content, pause and resume, leaving
 the app with and without navigation, and the edge cases. The three PNG files in
 the same directory are the expanded shade and the lock screen while following
 and while paused.
+
+`beep-route.json` is the T-0318 device fixture. It is the same mock-walk
+geometry as the replay, with turns at 40 m and 60 m so the walking beep
+distances (15 m) produce two beeps at 25 m and 45 m before the replay loops.
+It is started with `core.nav.start` after `core.nav.beeps` turns the mode on,
+or replayed by `core.nav.beep_probe` with the same route and profile.

@@ -1,0 +1,32 @@
+T-0318 beeps on the Moto g32 (serial ZY22FX5TK9)
+
+Build: debug APK from feat/t-0318-beeps-audio, installed with `adb install -r`.
+Command sequence:
+  tools/control/grassctl.py invoke core.nav.beeps '{"enabled":true,"profile":"walk"}'
+  tools/control/grassctl.py invoke core.nav.beep_probe '{"route": <beep-route.json>, "profile": "walk", "tick_ms": 200}'
+
+Beep probe result:
+  beeps=2 fixes=50 arrived=true profile=walk threshold_m=15.0
+
+Probe log (adb logcat -s GrassMapsBeep:I):
+  I/GrassMapsBeep(10771): beep instruction="Turn left at the corner" distance_m=14.8 stream=music route_revision=0 turn=1
+  I/GrassMapsBeep(10771): beep instruction="Turn right at the square" distance_m=13.8 stream=music route_revision=0 turn=2
+
+dumpsys audio, captured while the second beep's focus window was held:
+  Audio Focus stack entries (last is top of stack):
+    source:android.os.BinderProxy@d81f176 -- pack: nl.r1a.grassmap -- client: android.media.AudioManager@1da8908nl.r1a.grassmap.alerts.AndroidAudioFocus$$ExternalSyntheticLambda0@3fcf8a1 -- gain: GAIN_TRANSIENT_MAY_DUCK -- flags:  -- loss: none -- notified: true -- limbofalse -- uid: 10307 -- attr: AudioAttributes: usage=USAGE_ASSISTANCE_NAVIGATION_GUIDANCE content=CONTENT_TYPE_SONIFICATION flags=0x800(FLAG_MUTE_HAPTIC)  tags= bundle=null -- sdk:36
+
+The focus entry is the ducking request and the navigation-guidance usage. The
+stream is not a field of the focus stack; the probe line names it as `music`,
+which is `AudioManager.STREAM_MUSIC` from AndroidBeepAudio.kt. `dumpsys audio`
+also records the two focus requests and their abandonment:
+  23:29:59:000 requestAudioFocus() from uid/pid 10307/10771 AA=USAGE_ASSISTANCE_NAVIGATION_GUIDANCE/CONTENT_TYPE_SONIFICATION callingPack=nl.r1a.grassmap req=3
+  23:30:00:621 abandonAudioFocus() from uid/pid 10307/10771 callingPack=nl.r1a.grassmap
+  23:30:02:108 requestAudioFocus() from uid/pid 10307/10771 AA=USAGE_ASSISTANCE_NAVIGATION_GUIDANCE/CONTENT_TYPE_SONIFICATION callingPack=nl.r1a.grassmap req=3
+
+No other media player was running, so `dumpsys audio` had no `ducked players`
+entry; the gain above is the request the system applies when a player is
+present. The live `NavigationController` path was wired to the same host, but
+the g32 replay did not deliver fixes to that controller during this probe; the
+probe command drives a `NavigationSession` directly so the beep policy and the
+real Android audio path are what the evidence covers.

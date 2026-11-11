@@ -5,6 +5,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.StateFlow
+import nl.r1a.grassmap.alerts.BeepHost
+import nl.r1a.grassmap.alerts.BeepSink
+import nl.r1a.grassmap.alerts.NoopBeepSink
 import nl.r1a.grassmap.app.generated.GeneratedPlugins
 import nl.r1a.grassmap.app.generated.GeneratedStreams
 import nl.r1a.grassmap.core.CommandBus
@@ -111,6 +114,8 @@ class AppContainer(
     val platformActions: PlatformActions = NoPlatformActions,
     /** The navigation foreground service (T-0314); absent in tests. */
     private val navigationService: NavigationServiceHandle = NoNavigationServiceHandle,
+    /** The audio backend for turn beeps (T-0318); the app wires the Android one. */
+    private val beepSink: BeepSink = NoopBeepSink,
 ) {
     private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val backupScope: CoroutineScope = favouritesBackupScope ?: processScope
@@ -267,6 +272,17 @@ class AppContainer(
             service = navigationService,
             log = { message -> Log.i(NAVIGATION_TAG, message) },
         )
+    }
+
+    /**
+     * Turn beeps (T-0318). The host is off until the `core.nav.beeps` debug
+     * command turns it on; attaching here means it sees the same published
+     * state the notification and a screen read.
+     */
+    val beeps: BeepHost by lazy {
+        BeepHost(sink = beepSink).also { host ->
+            host.attach(processScope, navigation.state)
+        }
     }
 
     /**
@@ -441,7 +457,7 @@ class AppContainer(
     private val hostCommands: List<Command<*, *>> by lazy {
         mapCommands(mapSession, locationController, locationPermission, cameraModes) +
             routeCommands(mapSession, routingEngine, { dataSources }) +
-            navCommands(mapSession, routingEngine, navigation) +
+            navCommands(mapSession, routingEngine, navigation, { beeps }) +
             searchCommands { places } +
             searchScreenCommands(searchScreen, searchHistory) { message -> Log.i(SEARCH_TAG, message) } +
             searchHistoryCommands(searchHistory) +

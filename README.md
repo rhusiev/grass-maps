@@ -180,6 +180,30 @@ the Moto g32 at 90 Hz with the phone's prefixed `BufferTX - *SurfaceView[...]`
 track; emulator numbers are trends and must not be compared across GPU modes or
 hosts.
 
+### Reroute latency (Moto g32)
+
+`scripts/bench/reroute-latency.sh` measures automatic rerouting on the phone
+with the app's own timing:
+
+```sh
+./scripts/bench/reroute-latency.sh app/build/outputs/apk/debug/app-debug.apk
+```
+
+Each sample is `NavigationRun.lastRerouteMillis`: the wall time from the fix
+that spends the last metre of the off-route budget to the installation of the
+replacement route. It includes the Valhalla `/route` call and the route-model
+rebuild, and excludes the 20 s travel gate, fix pacing, map redraw and the
+planner. The script invokes `core.nav.test_follow` once per sample, parses the
+`reroute_ms=` field of the summary and prints the median and p95 per profile.
+One warm-up sample per profile is discarded, because it mounts the Valhalla
+graph.
+
+The run is phone-only and refuses an emulator: the emulator trend for this
+number is T-0025. It needs a debug APK, the routing pack installed and covering
+Lviv, and the `gm-phone` slot; `REROUTE_NO_LOCK=1` skips the slot. Defaults are
+20 samples for walk and bike, `lviv` waypoints, a 250 ms wall tick and a 60 m
+detour.
+
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull
 request. Format, lint, build, unit tests, boundaries and manifest lint are one
 fast job; reproducibility, the API 29 emulator smoke and the trend benchmarks
@@ -908,11 +932,26 @@ with it and the session's geometry floor compares against it. When the core
 returns a verdict it is authoritative, including its 15 m horizontal-accuracy
 gate; the floor answers only when there is no verdict, which also covers an
 unavailable core. Two consecutive off-route fixes confirm it. A fix that is off
-the current step but still on the route never counts. Arrival uses one number
-too: the core's end-of-step advance takes `arrivalDistanceMeters` instead of
-the old hardcoded 10 m. This is a seam policy, not the final one: T-0312 owns
-the 20 s profile-scaled, debounced policy with accuracy gating and
-rejoin-first.
+the current step but still on the route never counts.
+
+Rerouting adds a distance budget on top of that confirmation. `RerouteGate`
+converts `offRouteDelaySeconds` (20 s) with the profile's own gate speed, 1.1 m/s
+walking and 2.8 m/s cycling, so the gate spends 22 m and 56 m. A fix spends the
+budget by moving, not by the clock: a stationary fix spends nothing, and one
+fix that jumps more than four gate speeds for its elapsed time is a new reading
+rather than travel. A confirmed off-route fix starts the request only when both
+conditions agree. Returning to the line resets the budget, which is the cancel.
+
+The request is speculative: the engine computes while the current line is still
+published, and the replacement line is announced in the state only when it is
+ready. One request is in flight at a time and every attempt resets the budget,
+so a burst of off-route fixes cannot queue a storm. A fix worse than
+`minimumHorizontalAccuracyMeters` is dropped before the follower and the gate,
+so it neither starts nor cancels a reroute; the last good fix and its guidance
+stay on screen. A reroute continues the plan: the request carries the current
+position, every intermediate stop not yet passed, and the destination. Arrival
+uses one number too: the core's end-of-step advance takes
+`arrivalDistanceMeters` instead of the old hardcoded 10 m.
 
 The 15 m noise acceptance replays the committed `test-data/location/mock-walk.gpx`
 with every fix moved exactly 15 m in a seeded random direction (seed
@@ -928,11 +967,15 @@ Android ABIs only, so the Ferrostar run is an instrumented test and not part of
 `./check.sh --fast`; the desktop test runs the same harness with
 `GeometryRouteFollower`.
 
-The debug channel exposes `core.nav.test_follow`. It routes a walk, generates a
-GPX from that line with a sideways segment past the deviation threshold, parses
-it through `MockGpxLocationSource`, follows it, and draws the replacement route.
-`{"area":"fixture"}` and `{"area":"lviv"}` select the area; `tick_ms` and
-`detour_m` tune the replay.
+The debug channel exposes `core.nav.test_follow`. It routes a walk or bike
+ride, generates a GPX from that line with a sideways segment past the deviation
+threshold, parses it through `MockGpxLocationSource`, follows it, and draws the
+replacement route. `{"area":"fixture"}` and `{"area":"lviv"}` select the area;
+`profile`, `tick_ms` and `detour_m` tune the replay. The GPX timestamps advance
+with distance at the profile's gate speed, so the off-route budget sees travel
+even when the wall tick is fast. The summary carries `inaccurate_fixes`,
+`off_route_fixes`, `reroutes` and `reroute_ms`; the phone benchmark is
+`scripts/bench/reroute-latency.sh`.
 
 ## Guidance panel
 

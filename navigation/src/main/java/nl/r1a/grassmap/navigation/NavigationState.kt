@@ -62,6 +62,7 @@ data class NavigationState(
 /** Evidence from one completed replay or live session. */
 data class NavigationRun(
     val fixCount: Int,
+    val inaccurateFixCount: Int,
     val offRouteFixCount: Int,
     val rerouteCount: Int,
     val arrived: Boolean,

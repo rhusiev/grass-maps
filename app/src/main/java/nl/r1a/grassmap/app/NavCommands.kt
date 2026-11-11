@@ -80,7 +80,7 @@ internal class TestFollowCommand(
         val host = session.hostOrNull() ?: return Outcome.Failure(AppError.NotReady)
         val active = engine() ?: return Outcome.Failure(AppError.NotReady)
         val selection = parse(params) ?: return Outcome.Failure(AppError.InvalidInput)
-        val request = RouteRequest(waypoints = selection.waypoints, profile = RouteProfile.Walk)
+        val request = RouteRequest(waypoints = selection.waypoints, profile = selection.profile)
         val route =
             when (val outcome = active.route(request, CancellationHandle.None)) {
                 is Outcome.Failure -> {
@@ -93,7 +93,12 @@ internal class TestFollowCommand(
                 }
             }
         draw(host, route)
-        val replay = replayGpx(route, selection.detourMeters, selection.tickMillis) ?: return Outcome.Failure(AppError.InvalidInput)
+        val replay =
+            replayGpx(
+                route = route,
+                detourMeters = selection.detourMeters,
+                speedMetersPerSecond = config.speedMetersPerSecond(selection.profile),
+            ) ?: return Outcome.Failure(AppError.InvalidInput)
         val source =
             when (
                 val outcome =
@@ -112,14 +117,15 @@ internal class TestFollowCommand(
                 }
             }
         log(
-            "follow-start area=${selection.area} points=${route.geometry.size} " +
-                "base_m=${route.distanceMeters} tick_ms=${selection.tickMillis} detour_m=${selection.detourMeters}",
+            "follow-start area=${selection.area} profile=${selection.profile} points=${route.geometry.size} " +
+                "base_m=${route.distanceMeters} tick_ms=${selection.tickMillis} detour_m=${selection.detourMeters} " +
+                "gate_m=${config.travelMeters(selection.profile)}",
         )
         val navigation =
             NavigationSession(
                 follower = followerFactory(),
                 routing = active,
-                profile = RouteProfile.Walk,
+                profile = selection.profile,
                 config = config.copy(reroute = selection.reroute),
                 clockMillis = { System.nanoTime() / 1_000_000L },
                 log = log,
@@ -138,8 +144,9 @@ internal class TestFollowCommand(
         val finalRoute = run.finalRoute ?: route
         draw(host, finalRoute)
         val summary =
-            "engine=valhalla area=${selection.area} fixes=${run.fixCount} " +
-                "off_route_fixes=${run.offRouteFixCount} reroutes=${run.rerouteCount} " +
+            "engine=valhalla area=${selection.area} profile=${selection.profile} fixes=${run.fixCount} " +
+                "inaccurate_fixes=${run.inaccurateFixCount} off_route_fixes=${run.offRouteFixCount} " +
+                "reroutes=${run.rerouteCount} " +
                 "arrived=${run.arrived} detection_ms=${run.detectionMillis ?: -1} " +
                 "reroute_ms=${run.lastRerouteMillis ?: -1} " +
                 "base_m=${route.distanceMeters} final_m=${finalRoute.distanceMeters} " +
@@ -183,18 +190,30 @@ internal class TestFollowCommand(
                 ?.takeIf { it in MIN_DETOUR_METERS..MAX_DETOUR_METERS }
                 ?: DEFAULT_DETOUR_METERS
         val reroute = (objectValue["reroute"] as? JsonPrimitive)?.booleanOrNull ?: true
-        return Selection(area, waypoints, tick.toLong(), detour, reroute)
+        val profile =
+            when ((objectValue["profile"] as? JsonPrimitive)?.contentOrNull?.lowercase() ?: PROFILE_WALK) {
+                PROFILE_WALK -> RouteProfile.Walk
+                PROFILE_BIKE -> RouteProfile.Bike
+                PROFILE_HIKE -> RouteProfile.Hike
+                else -> return null
+            }
+        return Selection(area, waypoints, tick.toLong(), detour, reroute, profile)
     }
 
     /**
      * Builds the replay: a third of the line on route, then the next few
      * vertices pushed sideways, then the rest on route. The sideways push is
      * tapered so the replay moves off the line instead of jumping.
+     *
+     * Fix timestamps advance with distance at [speedMetersPerSecond], not with
+     * the wall tick. The reroute gate is distance-based, but its plausibility
+     * bound reads the timestamps, and a timestamp that claims 30 m in half a
+     * second would look like a jump rather than travel.
      */
     private fun replayGpx(
         route: Route,
         detourMeters: Double,
-        tickMillis: Long,
+        speedMetersPerSecond: Double,
     ): String? {
         val geometry = route.geometry
         if (geometry.size < MIN_GEOMETRY_POINTS) {
@@ -216,12 +235,32 @@ internal class TestFollowCommand(
             appendLine("""<?xml version="1.0" encoding="UTF-8"?>""")
             appendLine("""<gpx version="1.1" creator="grass-maps" xmlns="http://www.topografix.com/GPX/1/1">""")
             appendLine("<trk><name>nav-off-route</name><trkseg>")
+            var travelled = 0.0
             points.forEachIndexed { index, point ->
-                val time = Instant.ofEpochMilli(GPX_BASE_EPOCH_MILLIS + index * tickMillis).toString()
+                if (index > 0) {
+                    travelled += distanceMeters(points[index - 1], point)
+                }
+                val offsetMillis = (travelled / speedMetersPerSecond * MILLIS_PER_SECOND).toLong()
+                val time = Instant.ofEpochMilli(GPX_BASE_EPOCH_MILLIS + offsetMillis).toString()
                 appendLine("""<trkpt lat="${point.latitude}" lon="${point.longitude}"><time>$time</time></trkpt>""")
             }
             appendLine("</trkseg></trk></gpx>")
         }
+    }
+
+    /** The great-circle distance used to time the replay, in metres. */
+    private fun distanceMeters(
+        from: GeoPoint,
+        to: GeoPoint,
+    ): Double {
+        val fromLat = Math.toRadians(from.latitude)
+        val toLat = Math.toRadians(to.latitude)
+        val deltaLat = toLat - fromLat
+        val deltaLon = Math.toRadians(to.longitude - from.longitude)
+        val a =
+            kotlin.math.sin(deltaLat / 2) * kotlin.math.sin(deltaLat / 2) +
+                cos(fromLat) * cos(toLat) * kotlin.math.sin(deltaLon / 2) * kotlin.math.sin(deltaLon / 2)
+        return 2 * EARTH_RADIUS_METERS * kotlin.math.asin(kotlin.math.sqrt(a.coerceIn(0.0, 1.0)))
     }
 
     private fun bearingAt(
@@ -290,11 +329,16 @@ internal class TestFollowCommand(
         val tickMillis: Long,
         val detourMeters: Double,
         val reroute: Boolean,
+        val profile: RouteProfile,
     )
 
     private companion object {
         const val EARTH_RADIUS_METERS = 6_371_000.0
+        const val MILLIS_PER_SECOND = 1_000.0
         const val MIN_GEOMETRY_POINTS = 3
+        const val PROFILE_WALK = "walk"
+        const val PROFILE_BIKE = "bike"
+        const val PROFILE_HIKE = "hike"
         const val SIDEWAYS_DEGREES = 90.0
         const val FULL_CIRCLE_DEGREES = 360.0
         const val HALF_CIRCLE_DEGREES = 180.0

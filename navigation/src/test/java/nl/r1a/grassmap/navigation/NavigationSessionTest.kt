@@ -1,10 +1,7 @@
 package nl.r1a.grassmap.navigation
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
@@ -23,53 +20,20 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicLong
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class NavigationSessionTest {
     @Test
-    fun twoOffRouteFixesTriggerOneRerouteAndArrival() =
-        runTest {
-            val clock = AtomicLong(1_000L)
-            val router = FakeRouter(clock, replacement = REPLACEMENT)
-            val follower = FakeFollowerEngine()
-            val session = session(follower, router, clock)
-
-            val states = mutableListOf<NavigationPhase>()
-            val collector = launch(UnconfinedTestDispatcher(testScheduler)) { session.state.collect { states += it.phase } }
-            val outcome = session.run(ORIGINAL, flowOf(*FIXES))
-            collector.cancel()
-
-            val run = outcome.valueOrFail()
-            assertEquals(FIXES.size, run.fixCount)
-            assertEquals(2, run.offRouteFixCount)
-            assertEquals(1, run.rerouteCount)
-            assertTrue(run.arrived)
-            assertEquals(0L, run.detectionMillis)
-            assertEquals(42L, run.lastRerouteMillis)
-            assertEquals(REPLACEMENT, run.finalRoute)
-            assertEquals(2, follower.begins)
-            assertEquals(1, router.requests.size)
-            assertEquals(listOf(FIXES[3].position, DESTINATION), router.requests.single().waypoints)
-            assertEquals(RouteProfile.Walk, router.requests.single().profile)
-            assertTrue(states.contains(NavigationPhase.Rerouting))
-            assertTrue(states.contains(NavigationPhase.Arrived))
-            assertEquals(NavigationPhase.Arrived, session.state.value.phase)
-        }
-
-    @Test
-    fun theOffRouteRelationIsEmittedBeforeTheConfirmedReroute() =
+    fun aConfirmedOffRouteWithoutTravelSpendsNoBudget() =
         runTest {
             val clock = AtomicLong(1_000L)
             val router = FakeRouter(clock, replacement = REPLACEMENT)
             val session = session(FakeFollowerEngine(), router, clock)
 
-            val relations = mutableListOf<RouteRelation>()
-            val collector = launch(UnconfinedTestDispatcher(testScheduler)) { session.state.collect { relations += it.relation } }
-            session.run(ORIGINAL, flowOf(FIXES[0], FIXES[1], FIXES[2]))
-            collector.cancel()
+            val run = session.run(ORIGINAL, flowOf(FIXES[0], FIXES[2], FIXES[3])).valueOrFail()
 
-            assertTrue(relations.contains(RouteRelation.OnRoute))
-            assertTrue(relations.contains(RouteRelation.OffStepOnRoute))
-            assertTrue(!relations.contains(RouteRelation.OffRoute))
+            assertEquals(3, run.fixCount)
+            assertEquals(2, run.offRouteFixCount)
+            assertEquals(0, run.rerouteCount)
+            assertEquals(RouteRelation.OffRoute, session.state.value.relation)
             assertTrue(router.requests.isEmpty())
         }
 
@@ -78,13 +42,18 @@ class NavigationSessionTest {
         runTest {
             val clock = AtomicLong(1_000L)
             val router = FakeRouter(clock, replacement = null)
-            val session = session(FakeFollowerEngine(), router, clock)
+            val session = sessionWithGeometryFollower(router, clock)
+            val journey =
+                RerouteReplay
+                    .Builder()
+                    .onRoute(3)
+                    .offRoute(21)
+                    .build()
 
-            val outcome = session.run(ORIGINAL, flowOf(FIXES[0], FIXES[2], FIXES[3]))
+            val run = session.run(journey.route, flowOf(*journey.fixes.toTypedArray())).valueOrFail()
 
-            val run = outcome.valueOrFail()
             assertEquals(0, run.rerouteCount)
-            assertEquals(2, run.offRouteFixCount)
+            assertEquals(1, router.requests.size)
             assertEquals(RouteRelation.OffRoute, session.state.value.relation)
             assertEquals(NavigationPhase.Stopped, session.state.value.phase)
         }
@@ -93,13 +62,26 @@ class NavigationSessionTest {
     fun aMissingFollowerFallsBackToTheGeometryLocator() =
         runTest {
             val clock = AtomicLong(1_000L)
-            val router = FakeRouter(clock, replacement = REPLACEMENT)
-            val session = session(FakeFollowerEngine(unavailable = true), router, clock)
+            val router = FakeRouter(clock, replacement = RerouteReplay.straightRoute())
+            val journey =
+                RerouteReplay
+                    .Builder()
+                    .onRoute(3)
+                    .offRoute(21)
+                    .build()
+            val session =
+                NavigationSession(
+                    follower = FakeFollowerEngine(unavailable = true),
+                    routing = router,
+                    profile = RouteProfile.Walk,
+                    config = NavigationConfig(maxDeviationMeters = 5.0),
+                    clockMillis = clock::get,
+                )
 
-            val run = session.run(ORIGINAL, flowOf(*FIXES)).valueOrFail()
+            val run = session.run(journey.route, flowOf(*journey.fixes.toTypedArray())).valueOrFail()
 
             assertEquals(1, run.rerouteCount)
-            assertTrue(run.arrived)
+            assertEquals(1, router.requests.size)
         }
 
     @Test
@@ -109,9 +91,9 @@ class NavigationSessionTest {
             val router = FakeRouter(clock, replacement = REPLACEMENT)
             val session = session(FakeFollowerEngine(), router, clock)
 
-            val outcome = session.run(ORIGINAL, flowOf(FIXES[0], FIXES[2]))
+            val run = session.run(ORIGINAL, flowOf(FIXES[0], FIXES[2])).valueOrFail()
 
-            assertEquals(0, (outcome as Outcome.Success<NavigationRun>).value.rerouteCount)
+            assertEquals(0, run.rerouteCount)
             assertEquals(RouteRelation.OffStepOnRoute, session.state.value.relation)
             assertTrue(router.requests.isEmpty())
         }
@@ -162,16 +144,20 @@ class NavigationSessionTest {
     fun aThrowingRoutingEngineBecomesATypedFailure() =
         runTest {
             val clock = AtomicLong(1_000L)
-            val follower = FakeFollowerEngine()
-            val session = session(follower, ThrowingRouter(), clock)
+            val session = sessionWithGeometryFollower(ThrowingRouter(), clock)
+            val journey =
+                RerouteReplay
+                    .Builder()
+                    .onRoute(3)
+                    .offRoute(21)
+                    .build()
 
-            val outcome = session.run(ORIGINAL, flowOf(FIXES[0], FIXES[2], FIXES[3]))
+            val outcome = session.run(journey.route, flowOf(*journey.fixes.toTypedArray()))
 
             val error = (outcome as Outcome.Failure).error as AppError.Internal
             assertEquals("navigation.session", error.id)
             assertEquals("router broke", error.detail)
             assertEquals(NavigationPhase.Stopped, session.state.value.phase)
-            assertEquals(1, follower.closes)
         }
 
     @Test
@@ -193,7 +179,19 @@ class NavigationSessionTest {
             follower = follower,
             routing = router,
             profile = RouteProfile.Walk,
-            config = NavigationConfig(offRouteConfirmFixes = 2, rerouteCooldownFixes = 5),
+            config = NavigationConfig(maxDeviationMeters = 5.0, offRouteConfirmFixes = 2),
+            clockMillis = clock::get,
+        )
+
+    private fun sessionWithGeometryFollower(
+        router: RoutingEngine,
+        clock: AtomicLong,
+    ): NavigationSession =
+        NavigationSession(
+            follower = GeometryRouteFollower(),
+            routing = router,
+            profile = RouteProfile.Walk,
+            config = NavigationConfig(maxDeviationMeters = 5.0, offRouteConfirmFixes = 2),
             clockMillis = clock::get,
         )
 

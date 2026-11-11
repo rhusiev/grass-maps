@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The measure variant's own screen. These strings are not part of the app's
+     shipped resources: the `measure` source set exists only in that build type. -->
+<resources>
+    <string name="measure_title">Grass Maps measurement</string>
+    <string name="measure_pack_checking">Checking the bundled routing pack...</string>
+    <string name="measure_pack_ready">Pack at %1$s, %2$s on disk.</string>
+    <string name="measure_pack_copied">Copied from the APK in %1$d ms.</string>
+    <string name="measure_pack_failed">Pack unavailable: %1$s</string>
+    <string name="measure_run">Run measurement</string>
+    <string name="measure_share">Share report</string>
+    <string name="measure_running">Running...</string>
+    <string name="measure_idle">Tap Run measurement. The run takes about two minutes; the report appears here and is written to the app\'s measurement folder.</string>
+    <string name="measure_definitions_title">What each number measures</string>
+    <string name="measure_done">Cold %1$d ms - warm median %2$s ms - reroute median %3$s ms - %4$d s total</string>
+</resources>

@@ -52,6 +52,34 @@ rustup toolchain install 1.93.1 --profile minimal \
     --target aarch64-linux-android,x86_64-linux-android
 ```
 
+### Measurement build
+
+`./gradlew :app:assembleMeasure` builds the self-measuring variant for a phone
+that is away from adb. It is signed with the debug key and is not a release:
+`measure` is its own build type (not debuggable, application id suffix
+`.measure`) with one launcher screen in `app/src/measure` and its pack assets.
+`release` and `benchmark` do not include that source set, so neither the
+screen nor the pack can ship.
+
+The screen plans the Lviv bench route (`LVIV_BENCH_WAYPOINTS`) once cold and ten
+times warm, then follows the reroute replay five times through the real
+`NavigationSession` with the 20 s / 22 m gate. It writes
+`<externalFilesDir>/measurement/report.json`, shows it, and offers a share
+sheet; nothing is uploaded. The report carries a `definitions` object that
+states what each number includes and excludes, and the screen shows the same
+text.
+
+The Lviv Valhalla pack is a generated input, not a tracked file, so point the
+build at a directory that contains `valhalla-lviv/`:
+
+```sh
+./gradlew :app:assembleMeasure -PmeasurePackDir=/path/to/measure-pack/assets
+```
+
+Without the property the APK still builds and the screen reports the pack as
+absent. On the first launch the screen copies the pack to
+`<externalFilesDir>/valhalla/` and reports the bytes and milliseconds it wrote.
+
 ## Checks
 
 `./check.sh` is the gate every agent and the orchestrator runs before merging.

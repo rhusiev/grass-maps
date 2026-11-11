@@ -12,6 +12,11 @@ val pluginManifestFiles =
         .filter { it.path.startsWith(":plugins:") }
         .map { it.file("src/main/plugin.json") }
 
+val measurePackAssets: String? = providers.gradleProperty("measurePackDir").orNull
+
+/** The one ABI a measure APK packages; the phone is arm64-v8a. */
+val measureAbi: String = providers.gradleProperty("measureAbi").orElse("arm64-v8a").get()
+
 val generatePluginRegistry =
     tasks.register<GeneratePluginRegistryTask>("generatePluginRegistry") {
         group = "build"
@@ -53,6 +58,27 @@ android {
             }
             matchingFallbacks += listOf("release")
         }
+        // The self-measuring build for a phone that cannot reach adb: one
+        // launcher screen that plans a route cold and warm and replays the
+        // reroute gate, then shows and shares a JSON report. It is signed with
+        // the debug key, is not debuggable (so ART takes the release path), and
+        // carries its own application id so it installs beside the real app.
+        // The screen lives in `src/measure` and never reaches `release` or
+        // `benchmark`.
+        create("measure") {
+            initWith(getByName("debug"))
+            signingConfig = signingConfigs.getByName("debug")
+            isDebuggable = false
+            applicationIdSuffix = ".measure"
+            versionNameSuffix = "-measure"
+            matchingFallbacks += listOf("debug")
+            // One ABI per APK: the phone is arm64-v8a, and a universal APK
+            // carries three more copies of the map and routing natives. The
+            // emulator verification build passes -PmeasureAbi=x86_64.
+            ndk {
+                abiFilters += measureAbi.split(",")
+            }
+        }
     }
 
     buildFeatures {
@@ -63,6 +89,14 @@ android {
     // it by default and the release development-tools plugin starts it on
     // request (T-0114). It is the same file the JVM tests read.
     sourceSets.getByName("main").assets.srcDir(rootProject.file("test-data/location"))
+
+    // The measurement pack is tens of megabytes of generated routing tiles, so
+    // it does not live in the repository. -PmeasurePackDir names a directory
+    // that contains `valhalla-lviv/`; without it the measure variant still
+    // builds and its screen reports the pack as absent.
+    measurePackAssets?.let { pack ->
+        sourceSets.getByName("measure").assets.srcDir(pack)
+    }
 
     // JVM tests read the same committed fixtures, including mock-walk.gpx.
     sourceSets.getByName("test").resources.srcDir(rootProject.file("test-data"))

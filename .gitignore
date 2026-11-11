@@ -15,5 +15,8 @@ captures/
 __pycache__/
 *.pyc
 
+# The measure build's routing pack is a generated local input, not source
+app/src/measure/assets/valhalla-lviv/
+
 # Rust (the Gradle build writes its target under places/build)
 rust/grass-core/target/

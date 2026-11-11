@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The measurement report lives in the app's external files directory. -->
+<paths>
+    <external-files-path
+        name="measurement"
+        path="measurement/" />
+</paths>

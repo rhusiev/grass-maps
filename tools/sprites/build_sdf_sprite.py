@@ -3,12 +3,12 @@
 
 The source SVGs are vendored next to this script.  `sources.json` records, for
 every icon, the upstream repository, the path inside it, the commit the file
-was taken from and the licence.  The icon families come from:
+was taken from and the licence.  Every glyph is a Google Material Symbols
+Rounded SVG:
 
-  * Osmic, https://github.com/gmgeo/osmic, CC0-1.0
-  * OSM Carto symbols, https://github.com/gravitystorm/openstreetmap-carto, CC0-1.0
-  * Temaki, https://github.com/rapideditor/temaki, CC0-1.0
-  * Maki, https://github.com/mapbox/maki, CC0-1.0
+  * Material Symbols Rounded, https://github.com/google/material-design-icons,
+    Apache-2.0, the `fill1` weight-400 variant at 24 px, except `electronics`,
+    which uses the outlined `tv` because the filled one collapses at map size
 
 The 15 road-shield frames (`US:I-<n>char`, `NL:S-road-<n>char`,
 `generic_shield-<n>char`) are authored in this repository under `shields/`,

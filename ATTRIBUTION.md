@@ -14,7 +14,7 @@ first product asset lands.
 | `test-data/regions/fixture-mini` contours | Copernicus DEM GLO-30 terms | © DLR e.V. and © Airbus Defence and Space GmbH, provided under Copernicus by the EU and ESA |
 | `test-data/map-goldens` screenshots | ODbL-1.0 / Copernicus DEM GLO-30 terms | Rendered captures of the `fixture-mini` map tiles and contours for the T-0102 fixture and T-0108 Standard style golden tests |
 | Noto fonts | SIL OFL 1.1 | map labels and UI text; `app/src/main/assets/fonts` uses the Protomaps basemaps-assets Noto Sans glyph PBFs |
-| `app/src/main/assets/sprites` Standard sprite | CC0-1.0 / Apache-2.0 | one single-colour SDF sheet shared by the light and dark Standard variants; glyphs from Osmic, OSM Carto, Temaki and Maki, shield frames authored here. The per-icon source, licence and commit are listed below |
+| `app/src/main/assets/sprites` Standard sprite | Apache-2.0 | one single-colour SDF sheet shared by the light and dark Standard variants; the 39 glyphs are Google Material Symbols Rounded, vendored unmodified, and the 15 shield frames are authored here. The per-icon source, licence, commit and sha256 are listed below |
 | valhalla-mobile | MIT | Android/iOS wrapper around the Valhalla engine, used by `plugins/valhalla` |
 | Ferrostar core | BSD-3-Clause | Rust route-following core with UniFFI Kotlin bindings, used by `navigation`; the `core` artifact only, no UI or map binding |
 | Valhalla routing engine | MIT | C++ engine packaged inside valhalla-mobile; routing tiles are OSM-derived data (ODbL-1.0) |
@@ -36,50 +36,66 @@ first product asset lands.
 `app/src/main/assets/sprites/standard.json` names every icon in the single SDF
 sheet. `tools/sprites/build_sdf_sprite.py` builds the sheet from the SVGs under
 `tools/sprites/`; `tools/sprites/sources.json` is the machine-readable copy of
-this table. The arrow is the OSM Carto oneway arrow rotated 90 degrees so the
-glyph points up, because the style's line placement adds `icon-rotate: 90`.
+this table.
+
+The 39 glyphs are Google Material Symbols Rounded, Apache-2.0, taken from commit
+`10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7` (2026-10-23) of
+<https://github.com/google/material-design-icons>. Each file is the weight-400
+`fill1` 24 px variant, vendored byte-for-byte, except `electronics`, which uses
+the outlined `tv` because the filled TV collapses into a solid block at map
+size. The URL in each row is the exact file at that commit; the sha256 is of
+the file as vendored. The 15 road-shield frames are authored in this
+repository and are Apache-2.0 like the rest of it.
+
+| Icon | Material symbol | Source path | Licence | Commit | sha256 |
+|---|---|---|---|---|---|
+| `aerodrome` | `flight` | [`symbols/web/flight/materialsymbolsrounded/flight_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/flight/materialsymbolsrounded/flight_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `0749f1226aa2bd1942e3c73f571fe8a0ef445cb1119b924f01e2c4d1eff9bd72` |
+| `animal` | `cruelty_free` | [`symbols/web/cruelty_free/materialsymbolsrounded/cruelty_free_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/cruelty_free/materialsymbolsrounded/cruelty_free_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `029dfcb163605ed946d134aece775e4f472170bb889f23199b6bd4fbdf8508eb` |
+| `arrow` | `navigation` | [`symbols/web/navigation/materialsymbolsrounded/navigation_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/navigation/materialsymbolsrounded/navigation_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `56d76dae9410898a4a7cd03db02138884c76253211a4e897b5c8df0a8a6eb3ac` |
+| `artwork` | `palette` | [`symbols/web/palette/materialsymbolsrounded/palette_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/palette/materialsymbolsrounded/palette_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `d058ad95558c491154a9239ce9eb03c3bb1ceb06c709dd4889b882773fa7b7b7` |
+| `attraction` | `star` | [`symbols/web/star/materialsymbolsrounded/star_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/star/materialsymbolsrounded/star_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `513a0f450ac62c6bdc6c6cb8701896ea4ac7a82121b9e19cc52596fd7ce3b5fc` |
+| `bar` | `local_bar` | [`symbols/web/local_bar/materialsymbolsrounded/local_bar_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/local_bar/materialsymbolsrounded/local_bar_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `a6c0bef0e7428aec22bb638eb4e149b674e551accc37aaab500b8f13ed1cc03b` |
+| `beach` | `beach_access` | [`symbols/web/beach_access/materialsymbolsrounded/beach_access_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/beach_access/materialsymbolsrounded/beach_access_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `d0340d513024aad80c70200a0099b66c78e76fce3a5cf6f55e40f8fec040ceee` |
+| `beauty` | `content_cut` | [`symbols/web/content_cut/materialsymbolsrounded/content_cut_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/content_cut/materialsymbolsrounded/content_cut_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `5d2dab4959bb57628e5dc609d08ec356514c90f04456832eb0115e5974057df7` |
+| `bench` | `chair` | [`symbols/web/chair/materialsymbolsrounded/chair_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/chair/materialsymbolsrounded/chair_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `c1b6520a95c649f02c33e6edea5d49079d153ce13fe734898380ffa4337c6bf3` |
+| `books` | `menu_book` | [`symbols/web/menu_book/materialsymbolsrounded/menu_book_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/menu_book/materialsymbolsrounded/menu_book_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `5c777c23b8535d621de7d5c2edaed226613d5864b84e8e9118beac596e615e69` |
+| `building` | `apartment` | [`symbols/web/apartment/materialsymbolsrounded/apartment_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/apartment/materialsymbolsrounded/apartment_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `e4385e82c3e0b686407af7b0529c8076a4ade779b126302ab4f687a5e48424e0` |
+| `bus_stop` | `directions_bus` | [`symbols/web/directions_bus/materialsymbolsrounded/directions_bus_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/directions_bus/materialsymbolsrounded/directions_bus_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `14bf0043a7af68a2fa5bd232e8ae5b481e96507f586b5137d7addf6a6e2564b0` |
+| `cafe` | `local_cafe` | [`symbols/web/local_cafe/materialsymbolsrounded/local_cafe_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/local_cafe/materialsymbolsrounded/local_cafe_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `cafefce9df21a834d4ba282a0d2640ae3ab1aa0bd96750bf06b21c000320858c` |
+| `capital` | `circle` | [`symbols/web/circle/materialsymbolsrounded/circle_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/circle/materialsymbolsrounded/circle_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `9b27570d46ef5626156a81ce051a563a588f27f68fbf3076547f0ec823a9cb6f` |
+| `clothes` | `checkroom` | [`symbols/web/checkroom/materialsymbolsrounded/checkroom_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/checkroom/materialsymbolsrounded/checkroom_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `ba5a64a10a3ab74cb4b2c8ab7b3cd4765775c6acf32e07de0f0351a0ad45f2de` |
+| `convenience` | `shopping_basket` | [`symbols/web/shopping_basket/materialsymbolsrounded/shopping_basket_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/shopping_basket/materialsymbolsrounded/shopping_basket_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `2f325149d67b303aa44eb71821e60095b67f60764c95f65416e04a0fddfbc460` |
+| `drinking_water` | `water_drop` | [`symbols/web/water_drop/materialsymbolsrounded/water_drop_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/water_drop/materialsymbolsrounded/water_drop_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `b16dbaebe4927e7b9b5b6b199dce49f77a83191ae7a7902a3fb6ee5d51265e10` |
+| `electronics` | `tv` | [`symbols/web/tv/materialsymbolsrounded/tv_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/tv/materialsymbolsrounded/tv_24px.svg) | Apache-2.0 | `10ecc1479061` | `b71c6f73dc5a1958ab8838f92625b310667c07b40f4bcdd3c610339d2e39d904` |
+| `fast_food` | `fastfood` | [`symbols/web/fastfood/materialsymbolsrounded/fastfood_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/fastfood/materialsymbolsrounded/fastfood_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `f944c4bc358c657ef92d7c7eac12274214a54a6b67db2be99e16b13e37afd240` |
+| `ferry_terminal` | `directions_boat` | [`symbols/web/directions_boat/materialsymbolsrounded/directions_boat_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/directions_boat/materialsymbolsrounded/directions_boat_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `d0aa6f2336ff9a1e75f00ea5256440eef44074749693d67d58df36786ada5ba7` |
+| `forest` | `forest` | [`symbols/web/forest/materialsymbolsrounded/forest_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/forest/materialsymbolsrounded/forest_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `6ed7036b7019b94e7fe2b6fac0f3219bb94c1e0f111ee4f5731594e0fb9dbe84` |
+| `garden` | `local_florist` | [`symbols/web/local_florist/materialsymbolsrounded/local_florist_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/local_florist/materialsymbolsrounded/local_florist_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `8f532ce13386a2b3c88cb5b80d801018f381319f9773289ead41abc31c45a0db` |
+| `library` | `local_library` | [`symbols/web/local_library/materialsymbolsrounded/local_library_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/local_library/materialsymbolsrounded/local_library_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `cd8bc3347679652b29850bcac6e13c55c4d1e37f1caa1066d24422651741af4a` |
+| `marina` | `anchor` | [`symbols/web/anchor/materialsymbolsrounded/anchor_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/anchor/materialsymbolsrounded/anchor_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `ee0be1c20a35b7f0c5ec4f443f27818d8dfbff63cf226157e9ab14b256d0bcca` |
+| `museum` | `museum` | [`symbols/web/museum/materialsymbolsrounded/museum_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/museum/materialsymbolsrounded/museum_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `f05ad985ec3595614c31f6055d2e5b91d904a2b47eabcbd99af83d3cb64cb1d6` |
+| `park` | `park` | [`symbols/web/park/materialsymbolsrounded/park_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/park/materialsymbolsrounded/park_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `53691cc139f527e0b654352b2ac5e2a654a2915e038cd2951726a821384a504e` |
+| `peak` | `landscape` | [`symbols/web/landscape/materialsymbolsrounded/landscape_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/landscape/materialsymbolsrounded/landscape_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `0ded699d6b2bbed0395e6ebede13d709328d5dbc5a676602d6660ae2b287a820` |
+| `post_office` | `local_post_office` | [`symbols/web/local_post_office/materialsymbolsrounded/local_post_office_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/local_post_office/materialsymbolsrounded/local_post_office_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `79c58d2904ea40293309029871012c63068a0a6a3ec433b5da3bdb936ebc5496` |
+| `restaurant` | `restaurant` | [`symbols/web/restaurant/materialsymbolsrounded/restaurant_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/restaurant/materialsymbolsrounded/restaurant_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `45cb5f6db38ce6d7e8755f211a3fa0b6f5cf6cb54f7a66c78ae42235496f9b8b` |
+| `school` | `school` | [`symbols/web/school/materialsymbolsrounded/school_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/school/materialsymbolsrounded/school_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `646355683fd4f5e651793944f437e638fb6838934eb948d422453b283ff4ef7a` |
+| `stadium` | `stadium` | [`symbols/web/stadium/materialsymbolsrounded/stadium_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/stadium/materialsymbolsrounded/stadium_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `3c135ffbc912abe8047e4574e70776e8c061873d26f5c8ff921180c8c282152f` |
+| `supermarket` | `shopping_cart` | [`symbols/web/shopping_cart/materialsymbolsrounded/shopping_cart_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/shopping_cart/materialsymbolsrounded/shopping_cart_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `6c30a8f242422626aff151755502ca0ac447436c8a66988039a25ab163fbbf00` |
+| `theatre` | `theater_comedy` | [`symbols/web/theater_comedy/materialsymbolsrounded/theater_comedy_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/theater_comedy/materialsymbolsrounded/theater_comedy_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `3a0a1dfe969e3742353eb7afa5e0e54aef8ecc495162dc2771fdfdb397c5d2d0` |
+| `toilets` | `wc` | [`symbols/web/wc/materialsymbolsrounded/wc_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/wc/materialsymbolsrounded/wc_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `c837e4c47c6e200948d19a64008a48a7878625fe713b6e7d57e8ceda28d31b93` |
+| `townhall` | `location_city` | [`symbols/web/location_city/materialsymbolsrounded/location_city_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/location_city/materialsymbolsrounded/location_city_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `37fc44b5fa347903f538a558f10355cd7f5addd4fbe963910a69daa783944d05` |
+| `townspot` | `square` | [`symbols/web/square/materialsymbolsrounded/square_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/square/materialsymbolsrounded/square_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `b53e6f9dcd8c7e412a54727e236e0458ef70a8ab09ef32ea69dcd56bb8cec0b8` |
+| `train_station` | `train` | [`symbols/web/train/materialsymbolsrounded/train_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/train/materialsymbolsrounded/train_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `47e8a0a4bf2811ac86cfdf0ebaf046443dc3c99d38f7bdd99d1fb4beaa1d90be` |
+| `university` | `account_balance` | [`symbols/web/account_balance/materialsymbolsrounded/account_balance_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/account_balance/materialsymbolsrounded/account_balance_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `036b151d3b3e53f72396d6d15d1560750f0146614cbf4c3f671969701f1fb6dc` |
+| `zoo` | `pets` | [`symbols/web/pets/materialsymbolsrounded/pets_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/pets/materialsymbolsrounded/pets_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `36de9fdf4f0dd9b9df0240bd3a88ad26a648bfbffe8fd53caf1de4a8f4114fb9` |
+
+### Shield frames
+
+The 15 road-shield frames are authored here; they are not glyphs and were
+not touched by the Material Symbols change.
 
 | Icon | Source | Source path | Licence | Commit |
 |---|---|---|---|---|
-| `aerodrome` | Osmic | `transport/airport-14.svg` | CC0-1.0 | `94b418619c72` |
-| `animal` | Osmic | `shop/pet-14.svg` | CC0-1.0 | `94b418619c72` |
-| `arrow` | OSM Carto | `symbols/oneway.svg` | CC0-1.0 | `003cefdd6791` |
-| `artwork` | Maki | `icons/art-gallery.svg` | CC0-1.0 | `28e2a3602e4b` |
-| `attraction` | Maki | `icons/star.svg` | CC0-1.0 | `28e2a3602e4b` |
-| `bar` | Osmic | `eat-drink/bar-14.svg` | CC0-1.0 | `94b418619c72` |
-| `beach` | Maki | `icons/beach.svg` | CC0-1.0 | `28e2a3602e4b` |
-| `beauty` | Osmic | `shop/beauty-14.svg` | CC0-1.0 | `94b418619c72` |
-| `bench` | Osmic | `outdoor/bench-14.svg` | CC0-1.0 | `94b418619c72` |
-| `books` | Osmic | `shop/books-14.svg` | CC0-1.0 | `94b418619c72` |
-| `building` | Maki | `icons/building.svg` | CC0-1.0 | `28e2a3602e4b` |
-| `bus_stop` | Osmic | `transport/bus-stop-14.svg` | CC0-1.0 | `94b418619c72` |
-| `cafe` | Osmic | `eat-drink/cafe-14.svg` | CC0-1.0 | `94b418619c72` |
-| `capital` | Maki | `icons/circle.svg` | CC0-1.0 | `28e2a3602e4b` |
-| `clothes` | Osmic | `shop/clothes-14.svg` | CC0-1.0 | `94b418619c72` |
-| `convenience` | Osmic | `shop/convenience-14.svg` | CC0-1.0 | `94b418619c72` |
-| `drinking_water` | Osmic | `outdoor/drinking-water-14.svg` | CC0-1.0 | `94b418619c72` |
-| `electronics` | Osmic | `shop/electronics-14.svg` | CC0-1.0 | `94b418619c72` |
-| `fast_food` | Osmic | `eat-drink/fast-food-14.svg` | CC0-1.0 | `94b418619c72` |
-| `ferry_terminal` | Osmic | `transport/ferry-14.svg` | CC0-1.0 | `94b418619c72` |
-| `forest` | Osmic | `nature/tree-coniferous-14.svg` | CC0-1.0 | `94b418619c72` |
-| `garden` | Temaki | `icons/garden_bed.svg` | CC0-1.0 | `6d9ac860d1d6` |
-| `library` | Osmic | `amenity/library-14.svg` | CC0-1.0 | `94b418619c72` |
-| `marina` | Maki | `icons/harbor.svg` | CC0-1.0 | `28e2a3602e4b` |
-| `museum` | Osmic | `tourism/museum-14.svg` | CC0-1.0 | `94b418619c72` |
-| `park` | Maki | `icons/park.svg` | CC0-1.0 | `28e2a3602e4b` |
-| `peak` | Osmic | `nature/peak-14.svg` | CC0-1.0 | `94b418619c72` |
-| `post_office` | Osmic | `amenity/post-office-14.svg` | CC0-1.0 | `94b418619c72` |
-| `restaurant` | Osmic | `eat-drink/restaurant-14.svg` | CC0-1.0 | `94b418619c72` |
-| `school` | Maki | `icons/school.svg` | CC0-1.0 | `28e2a3602e4b` |
-| `stadium` | Maki | `icons/stadium.svg` | CC0-1.0 | `28e2a3602e4b` |
-| `supermarket` | Osmic | `shop/supermarket-14.svg` | CC0-1.0 | `94b418619c72` |
-| `theatre` | Osmic | `tourism/theatre-14.svg` | CC0-1.0 | `94b418619c72` |
-| `toilets` | Osmic | `amenity/toilets-14.svg` | CC0-1.0 | `94b418619c72` |
-| `townhall` | Osmic | `administration/town-hall-14.svg` | CC0-1.0 | `94b418619c72` |
-| `townspot` | Maki | `icons/square.svg` | CC0-1.0 | `28e2a3602e4b` |
-| `train_station` | Osmic | `transport/railway-station-14.svg` | CC0-1.0 | `94b418619c72` |
-| `university` | Maki | `icons/college.svg` | CC0-1.0 | `28e2a3602e4b` |
-| `zoo` | Temaki | `icons/zoo.svg` | CC0-1.0 | `6d9ac860d1d6` |
 | `NL:S-road-1char` | this repository | `tools/sprites/shields/NL:S-road-1char.svg` | Apache-2.0 | - |
 | `NL:S-road-2char` | this repository | `tools/sprites/shields/NL:S-road-2char.svg` | Apache-2.0 | - |
 | `NL:S-road-3char` | this repository | `tools/sprites/shields/NL:S-road-3char.svg` | Apache-2.0 | - |

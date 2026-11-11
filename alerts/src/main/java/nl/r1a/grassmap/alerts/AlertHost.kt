@@ -139,8 +139,9 @@ class AlertHost(
 
     /**
      * Feeds a live session into this host: [states] through [onState] and
-     * [fixes] through [onFix]. The job ends when either flow ends or the
-     * caller cancels it.
+     * [fixes] through [onFix]. The job runs until the caller cancels it or both
+     * flows end; tie it to the screen or session scope so it does not outlive
+     * the trip.
      */
     fun attach(
         scope: CoroutineScope,

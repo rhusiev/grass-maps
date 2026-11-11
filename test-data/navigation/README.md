@@ -18,3 +18,9 @@ The fixture is test data, not a product route. It exists so `dumpsys` and the
 notification can be read on the emulator without a Valhalla pack. The
 `navigation-notification` lines in `adb logcat` are the same content the
 notification shows.
+
+`evidence/t-0314-dumpsys.txt` is the emulator transcript for T-0314: the
+foreground service record, the notification content, pause and resume, leaving
+the app with and without navigation, and the edge cases. The three PNG files in
+the same directory are the expanded shade and the lock screen while following
+and while paused.

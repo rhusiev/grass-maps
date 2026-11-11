@@ -1,0 +1,190 @@
+# T-0314 emulator evidence
+
+Device: `sdk_phone64_x86_64`, Android 15 (API 35), serial `emulator-5580`.
+App: the debug build, application id `nl.r1a.grassmap`, `targetSdkVersion=36`.
+Captured 2026-11-11 between 14:04 and 14:09 (emulator clock).
+
+The route is `test-data/navigation/nav-route.json`, passed to the control
+channel as `{"route": <the file>, "profile": "walk"}`. The debug build replays
+`test-data/location/mock-walk.gpx` by default; the location-lifecycle section
+uses the real platform source, selected with
+`--ez t0103_platform_location true` as in `test-data/location/README.md`.
+
+## 1. A location foreground service while guidance runs
+
+```
+$ tools/control/grassctl.py --serial emulator-5580 invoke core.nav.start '<route JSON>'
+started=true phase=Following points=70 distance_m=382.587 profile=Walk
+
+$ adb -s emulator-5580 shell dumpsys activity services nl.r1a.grassmap
+  * ServiceRecord{c723f26 u0 nl.r1a.grassmap/.app.NavigationService c:nl.r1a.grassmap}
+    intent={act=nl.r1a.grassmap.action.NAVIGATION_START cmp=nl.r1a.grassmap/.app.NavigationService}
+    packageName=nl.r1a.grassmap
+    targetSdkVersion=36
+    startForegroundCount=1
+    isForeground=true foregroundId=1 types=0x00000008 foregroundNoti=Notification(channel=navigation shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=ONGOING_EVENT|ONLY_ALERT_ONCE|NO_CLEAR|FOREGROUND_SERVICE color=0x00000000 category=navigation actions=2 vis=PUBLIC)
+```
+
+`types=0x00000008` is `FOREGROUND_SERVICE_TYPE_LOCATION`. A second start while
+the session runs does not create a second service or route:
+
+```
+$ ... invoke core.nav.start '<route JSON>'
+started=false phase=Following points=70 distance_m=382.587 profile=Walk
+```
+
+## 2. The notification and the lock screen
+
+```
+$ adb -s emulator-5580 shell dumpsys notification --noredact
+  NotificationRecord(0x0baaa2dc: pkg=nl.r1a.grassmap user=UserHandle{0} id=1 tag=null importance=3 ... Notification(channel=navigation ... category=navigation actions=2 vis=PUBLIC))
+      vis=1
+      actions={
+          [0] "Pause" -> PendingIntent{... nl.r1a.grassmap startService ...}
+          [1] "Stop" -> PendingIntent{... nl.r1a.grassmap startService ...}
+      }
+      extras={
+          android.title=String (Turn left at the square)
+          android.text=String (100 m)
+```
+
+`notification-shade.png` shows the expanded shade with the same title,
+distance and both actions. `lockscreen-following.png` shows the notification
+on the lock screen while following; `lockscreen-paused.png` shows it while
+paused.
+
+The service logs the same content once per change, so the log is a record of
+what the notification showed:
+
+```
+14:08:04.416 I GrassMapsNavService: navigation-notification phase=Following title="Turn left at the square" text="104 m"
+14:08:05.418 I GrassMapsNavService: navigation-notification phase=Following title="Turn left at the square" text="103 m"
+14:08:07.422 I GrassMapsNavService: navigation-notification phase=Following title="Turn left at the square" text="100 m"
+```
+
+## 3. Pause stops guidance and resume continues
+
+```
+$ ... invoke core.nav.pause
+changed=true phase=Paused paused=true
+
+14:08:15.940 I GrassMapsNavigation: navigation-paused fixes=14 remaining_m=344.8
+14:08:15.941 I GrassMapsNavService: navigation-notification phase=Paused title="Turn left at the square" text="Navigation paused"
+
+$ adb -s emulator-5580 shell dumpsys notification --noredact
+      actions={
+          [0] "Resume" -> PendingIntent{...}
+          [1] "Stop" -> PendingIntent{...}
+      }
+      extras={
+          android.title=String (Turn left at the square)
+          android.text=String (Navigation paused)
+```
+
+No further notification line appears while paused. Resume continues from the
+next fix, not from a fix buffered during the pause:
+
+```
+$ ... invoke core.nav.resume
+changed=true phase=Following
+
+14:08:19.146 I GrassMapsNavService: navigation-notification phase=Following title="Turn left at the square" text="88 m"
+14:08:19.427 I GrassMapsNavService: navigation-notification phase=Following title="Turn left at the square" text="83 m"
+14:08:20.429 I GrassMapsNavService: navigation-notification phase=Following title="Turn left at the square" text="81 m"
+```
+
+## 4. Leaving the app with navigation keeps the service and location
+
+```
+$ adb -s emulator-5580 shell input keyevent KEYCODE_HOME
+$ adb -s emulator-5580 shell dumpsys activity services nl.r1a.grassmap
+    isForeground=true foregroundId=1 types=0x00000008 ...
+
+14:08:22.431 I GrassMapsNavService: navigation-notification ... text="79 m"
+14:08:23.429 I GrassMapsNavService: navigation-notification ... text="77 m"
+14:08:24.430 I GrassMapsNavService: navigation-notification ... text="76 m"
+```
+
+With the platform source active, the GPS request stays active after Home:
+
+```
+    gps provider:
+      service: ProviderRequest[@+1s0ms, HIGH_ACCURACY, WorkSource{10153 nl.r1a.grassmap}]
+      listeners:
+        10153/nl.r1a.grassmap/35ED41F8 Request[@+1s0ms HIGH_ACCURACY, WorkSource{10153 nl.r1a.grassmap}]
+        10153/nl.r1a.grassmap/5B57FF4D Request[@+1s0ms HIGH_ACCURACY, WorkSource{10153 nl.r1a.grassmap}]
+```
+
+After the session stops, the service and notification are gone and the request
+is off:
+
+```
+$ ... invoke core.nav.stop
+stopped=true phase=Following
+$ adb -s emulator-5580 shell dumpsys activity services nl.r1a.grassmap
+  (nothing)
+$ adb -s emulator-5580 shell dumpsys notification --noredact | grep -c pkg=nl.r1a.grassmap
+0
+$ ... invoke core.nav.stop          # again, with no session
+stopped=false phase=Stopped
+```
+
+## 5. Leaving the app without navigation releases location
+
+The app was launched with `--ez t0103_platform_location true` and no
+navigation. While visible:
+
+```
+    gps provider:
+      service: ProviderRequest[@+1s0ms, HIGH_ACCURACY, WorkSource{10153 nl.r1a.grassmap}]
+      listeners:
+        10153/nl.r1a.grassmap/9F7B3EA0 Request[@+1s0ms HIGH_ACCURACY, WorkSource{10153 nl.r1a.grassmap}]
+        10153/nl.r1a.grassmap/35ED41F8 Request[@+1s0ms HIGH_ACCURACY, WorkSource{10153 nl.r1a.grassmap}]
+```
+
+After Home:
+
+```
+$ adb -s emulator-5580 shell input keyevent KEYCODE_HOME
+    gps provider:
+      service: ProviderRequest[OFF]
+      listeners:
+        10153/nl.r1a.grassmap/35ED41F8 {bg, na} Request[@+30m0s0ms HIGH_ACCURACY, minUpdateInterval=+1s0ms, WorkSource{10153 nl.r1a.grassmap}] (inactive)
+```
+
+The request is off and the remaining registration is marked `{bg, na}` and
+`(inactive)`: the system delivers no fix to it. The history in the same dump
+has no delivery after Home. The registration belongs to a plugin stream that
+reads the raw location service rather than the shared source; it is outside the
+navigation path and the system disables it with the app in the background. The
+map collector's own registration (`9F7B3EA0`) was removed at Home.
+
+## 6. Edge cases
+
+Navigation ending while paused:
+
+```
+$ ... invoke core.nav.pause
+changed=true phase=Paused paused=true
+$ ... invoke core.nav.stop
+stopped=true phase=Paused
+$ adb -s emulator-5580 shell dumpsys activity services nl.r1a.grassmap
+  (nothing)
+$ adb -s emulator-5580 shell dumpsys notification --noredact | grep -c pkg=nl.r1a.grassmap
+0
+14:09:34.730 I GrassMapsNavigation: navigation-cancelled
+14:09:34.733 I GrassMapsNavigation: navigation-service-stop phase=Stopped
+```
+
+The permission revoked mid-navigation (the system kills the process):
+
+```
+before: pid=2377, dumpsys activity services ... isForeground=true (1 record)
+$ adb -s emulator-5580 shell pm revoke nl.r1a.grassmap android.permission.ACCESS_FINE_LOCATION
+after:  pid empty
+        dumpsys activity services nl.r1a.grassmap: (nothing)
+        dumpsys notification --noredact | grep -c pkg=nl.r1a.grassmap: 0
+```
+
+The service is `START_NOT_STICKY`, so the process death is not followed by a
+restart without a route.

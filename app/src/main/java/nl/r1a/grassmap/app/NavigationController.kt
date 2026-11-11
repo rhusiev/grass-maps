@@ -134,7 +134,11 @@ class NavigationController(
             log("navigation-pause-ignored")
             return false
         }
-        return active.pause()
+        val changed = active.pause()
+        if (changed) {
+            publishPhase(NavigationPhase.Paused)
+        }
+        return changed
     }
 
     /** Resumes guidance. Returns whether the session was resumed by this call. */
@@ -144,7 +148,11 @@ class NavigationController(
             log("navigation-resume-ignored")
             return false
         }
-        return active.resume()
+        val changed = active.resume()
+        if (changed) {
+            publishPhase(NavigationPhase.Following)
+        }
+        return changed
     }
 
     /** Ends the session. Returns false when there was no session to stop. */
@@ -152,6 +160,18 @@ class NavigationController(
         val active = synchronized(lock) { job } ?: return false
         active.cancel()
         return true
+    }
+
+    /**
+     * Publishes a phase change at once, so pause and resume reach the
+     * notification in the same turn instead of waiting for the next fix.
+     */
+    private fun publishPhase(phase: NavigationPhase) {
+        val current = mutableState.value
+        if (current.phase == NavigationPhase.Arrived || current.phase == NavigationPhase.Stopped) {
+            return
+        }
+        mutableState.value = current.copy(phase = phase)
     }
 
     private suspend fun runSession(

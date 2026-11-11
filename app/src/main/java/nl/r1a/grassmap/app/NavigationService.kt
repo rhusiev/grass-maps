@@ -237,10 +237,12 @@ class NavigationService : Service() {
             NotificationChannel(
                 CHANNEL_ID,
                 getString(R.string.nav_notification_channel_name),
-                NotificationManager.IMPORTANCE_LOW,
+                NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
                 description = getString(R.string.nav_notification_channel_description)
                 setShowBadge(false)
+                setSound(null, null)
+                enableVibration(false)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
         manager.createNotificationChannel(channel)

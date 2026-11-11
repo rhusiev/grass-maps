@@ -7,9 +7,11 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// Every `plugins/*` module carries a manifest, and so does the compiled-in
+// planner at the top level.
 val pluginManifestFiles =
     rootProject.subprojects
-        .filter { it.path.startsWith(":plugins:") }
+        .filter { it.path.startsWith(":plugins:") || it.path == ":planner" }
         .map { it.file("src/main/plugin.json") }
 
 val measurePackAssets: String? = providers.gradleProperty("measurePackDir").orNull
@@ -158,6 +160,7 @@ dependencies {
     implementation(project(":routing"))
     implementation(project(":navigation"))
     implementation(project(":alerts"))
+    implementation(project(":planner"))
     implementation(project(":places"))
     implementation(project(":tracks"))
     implementation(project(":ui-shell"))
@@ -178,7 +181,6 @@ dependencies {
     implementation(project(":plugins:coordinates"))
     implementation(project(":plugins:valhalla"))
     implementation(project(":plugins:direct-engine"))
-    implementation(project(":plugins:route-planner"))
     implementation(project(":plugins:nav-simulator"))
 
     implementation("androidx.activity:activity-compose:1.13.0")

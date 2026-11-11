@@ -12,7 +12,7 @@ object MapControlCommands {
     val NORTH_UP: CommandId = CommandId("core.map.north_up")
     val FOLLOW: CommandId = CommandId("core.map.follow")
 
-    /** Opens the start/end route planner (T-0302); the command belongs to `plugins/route-planner`. */
+    /** Opens the start/end route planner (T-0302); the command belongs to `planner`. */
     val ROUTE_PLANNER: CommandId = CommandId("route.planner.begin")
 
     /** The order a profile uses until it saves its own. */

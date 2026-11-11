@@ -26,6 +26,7 @@ include(
     ":routing",
     ":navigation",
     ":alerts",
+    ":planner",
     ":places",
     ":tracks",
     ":ui-shell",
@@ -49,6 +50,5 @@ include(
     ":plugins:guidance-ui",
     ":plugins:valhalla",
     ":plugins:direct-engine",
-    ":plugins:route-planner",
     ":plugins:nav-simulator",
 )

@@ -119,8 +119,8 @@ resources; `app` wires `AndroidStrings` in the composition root.
 `checkPluginBoundaries` enforces the plugin module dependency rule.
 `checkPluginManifests` validates every `src/main/plugin.json`: unique plugin
 ids, namespaced command and stream ids, command implementations, setting
-defaults and scopes, dispatch policies, and stream serializers. Plugin modules
-wire both checks into `check`.
+defaults and scopes, dispatch policies, and stream serializers. The plugin
+modules and the planner wire both checks into `check`.
 
 `checkPrivacyGuards` enforces the privacy rules in `AGENTS.md`. It resolves
 every module's debug and release runtime classpath and fails on a Play Services,
@@ -381,8 +381,10 @@ tolerance or loses an attribute.
 ## Module map
 
 Each namespace is `nl.r1a.grassmap.<module>`, with dots in place of hyphens in
-the module name. Only `app` is an application module; its application ID is
-`nl.r1a.grassmap`.
+the module name. The `planner` module keeps its historical
+`nl.r1a.grassmap.plugins.route.planner` namespace so the plugin id and
+implementation class do not change. Only `app` is an application module; its
+application ID is `nl.r1a.grassmap`.
 
 | Module | Owns | Depends on |
 |---|---|---|
@@ -395,6 +397,7 @@ the module name. Only `app` is an application module; its application ID is
 | `routing` | route model, the `routing.engine` contract seam, its stable JSON form, the start/end planner state machine, and the reuse history store | `plugin-api` |
 | `navigation` | route follower, off-route detection, reroute policy, guidance | `routing`, `plugin-api` |
 | `alerts` | alert sources, scheduling, sound, vibration and banner output | `navigation`, `plugin-api` |
+| `planner` | the start/end plan, its intermediate stops, its undo and redo history, its reuse commands and its state and history streams; the shell draws the preview and the turn stepper from it | `plugin-api`, `routing` |
 | `places` | place and search provider hosts, favourites store | `plugin-api` |
 | `tracks` | GPX import and export, track store, analysis engine | `plugin-api` |
 | `ui-shell` | screens, bottom bar and sheet, configurable button and widget grid, command palette, theme, strings | `plugin-api`, `plugin-ui-api` |
@@ -417,7 +420,6 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/coordinates` | the coordinate notation parser the search field reads, and the vectors it shares with the formatters | `plugin-api` |
 | `plugins/valhalla` | the v1 `routing.engine` provider: profile mapping, the native Valhalla adapter, the async segment attributes | `plugin-api` |
 | `plugins/direct-engine` | the second `routing.engine` provider: one geodesic per leg with the haversine length, its leg segments and its honest empty capabilities | `plugin-api` |
-| `plugins/route-planner` | the start/end plan, its intermediate stops, its undo and redo history, its reuse commands and its state and history streams; the shell draws the preview and the turn stepper from it | `plugin-api`, `routing` |
 | `plugins/guidance-ui` | the guidance panel's four facts and its Compose chrome, drawn from the navigation state the app holds | `plugin-api`, `plugin-ui-api` |
 | `plugins/nav-simulator` | the simulated run at 5 km/h through the production navigation session, its start and stop commands and its status stream | `plugin-api`, `navigation`, `routing` |
 
@@ -839,28 +841,27 @@ A module under `plugins/` may depend on `:plugin-api`. It may also depend on
 `:plugin-ui-api` when it contributes Compose UI. No other project dependency is
 allowed in any configuration.
 
-One exception is `plugins/route-planner`: it is a first-party compiled-in
-feature over `:routing`, the same domain edge `navigation` already has, because
-the planning state machine is shared with future guidance work. It reaches no
-core internals and still asks the host for the engine through
+The route planner is a top-level feature module (`planner`), not a `plugins/*`
+module. It depends on `:routing`, the same domain edge `navigation` already has,
+because the planning state machine is shared with future guidance work. It
+reaches no core internals and still asks the host for the engine through
 `RoutingEngineAccess`, so the plugin boundary that matters - the contract - is
 unchanged.
 
-A second exception is `plugins/nav-simulator`: it depends on `:navigation`
+One exception remains, `plugins/nav-simulator`: it depends on `:navigation`
 because the simulated run is the production `NavigationSession` driven by
 synthetic fixes, and on `:routing` for the stable route JSON form a passed route
 uses. It reaches no core internals, changes no navigation policy and lets the
 session decide arrival.
 
-`./gradlew checkPluginBoundaries` checks every module under `plugins/` and
-fails with each violating module, configuration and dependency. Plugin modules
-wire this task into `check`.
+`./gradlew checkPluginBoundaries` checks every module and fails with each
+violating module, configuration and dependency. Modules wire this task into
+`check`.
 
 Feature modules never import `core` or `core-services`. They take the host and
 service interfaces they need in their constructors, and `app` wires the
-implementations. The only feature-to-feature edges are `navigation -> routing`
-and `alerts -> navigation`, plus the compiled-in `plugins/route-planner ->
-routing` exception above.
+implementations. The only feature-to-feature edges are `navigation -> routing`,
+`alerts -> navigation` and `planner -> routing`.
 
 One test-only edge is declared separately in `moduleTestDependencyAllowlist`:
 `navigation`'s tests depend on `plugins/direct-engine` (T-0305), because the
@@ -871,10 +872,10 @@ Both reach no runtime classpath.
 
 ## Plugin manifests
 
-Every module under `plugins/` carries `src/main/plugin.json`. At build time the
-`generatePluginRegistry` task reads those manifests and writes
-`GeneratedPlugins.kt` and `GeneratedStreams.kt` into `app`, so the host never
-scans the classpath or uses reflection.
+Every `plugins/*` module carries `src/main/plugin.json`, and so does the
+compiled-in `planner`. At build time the `generatePluginRegistry` task reads
+those manifests and writes `GeneratedPlugins.kt` and `GeneratedStreams.kt` into
+`app`, so the host never scans the classpath or uses reflection.
 
 A manifest declares the plugin id, version, the `plugin-api` version, the
 implementation class, and its contributions: commands with parameter and result
@@ -901,7 +902,8 @@ constructing platform services itself.
 including a declared command whose implementation class is missing from the
 plugin's source, a command id in the reserved `core` host namespace, a widget
 over an undeclared stream, or a policy field the generator does not understand.
-Each plugin module's `check` and `app:check` depend on it.
+Every module that carries a manifest wires the check into `check`, as does
+`app:check`.
 
 ## Speed widgets
 
@@ -1012,7 +1014,7 @@ near it, the adapter retries with `exclude_polygons` around the same line.
 swap routes the reversed journey with the via order reversed rather than
 reversing a line. `add_via`, `remove_via` and `move_via` edit the chain and ask
 the engine again, so a reorder changes the drawn line and not only the list.
-`plugins/route-planner` owns the commands and the `route.planner.state` stream;
+`planner` owns the commands and the `route.planner.state` stream;
 it resolves the engine through `RoutingEngineAccess` in `plugin-api`, never by
 naming the provider. The map picks points with its long press and with a search
 result; `ui-shell` draws the preview from the stream and `MapHost.setRoute`
@@ -1084,7 +1086,7 @@ never published: the mapper prorates Ferrostar's step durations by distance, so
 using them would average a slow stretch into a fast one. `snappedPosition`
 still comes from the follower.
 
-A route planned through `plugins/route-planner` carries the same model.
+A route planned through `planner` carries the same model.
 `RoutePlanOption` keeps the engine's `segments` and `instructions`, and
 `selectedRoute()` restores them for guidance, so the panel counts down from the
 numbers the preview showed. Both types are serializable, attributes included,

@@ -109,10 +109,13 @@ document, section 3, plus the build and module rules of this repository.
 - Feature modules never import `core` or `core-services`. They take the service
   and host interfaces they need in their constructors, and `app` wires the
   implementations
-- The only feature-to-feature edges are `navigation -> routing` and
-  `alerts -> navigation`. Every other call goes through `plugin-api` contracts
+- The only feature-to-feature edges are `navigation -> routing`,
+  `alerts -> navigation` and `planner -> routing`. Every other call goes through
+  `plugin-api` contracts
 - Package layout: `nl.r1a.grassmap.<module>`, with dots in place of hyphens:
-  `core-services` is `nl.r1a.grassmap.core.services`
+  `core-services` is `nl.r1a.grassmap.core.services`. The `planner` module keeps
+  its historical `nl.r1a.grassmap.plugins.route.planner` package so the plugin
+  id and implementation class do not change
 - `plugin-api` and `plugin-ui-api` are ordinary Android libraries until they
   move to Kotlin Multiplatform source sets. Keep Android types out of their
   contracts

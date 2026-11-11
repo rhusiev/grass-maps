@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * Two ends and any number of vias go in, one route request goes out through
  * [requestRoute], and the engine's own answer list becomes the selectable
- * options. The planner owns no engine type, so `plugins/route-planner` supplies
+ * options. The planner owns no engine type, so the `planner` module supplies
  * the resolved engine and a test supplies a fixed one.
  *
  * A start, the vias in visit order and a destination are one ordered waypoint

@@ -77,7 +77,7 @@ data class FavouriteBrowseState(
 
 /**
  * The planner stop a browse row denotes, or null when the row carries no point
- * (T-0304). `plugins/route-planner` can therefore resolve a favourite without
+ * (T-0304). `planner` can therefore resolve a favourite without
  * reading the app's own `Favourite` record.
  */
 fun FavouritePointRow.toRouteStop(): RoutePlanPoint? =

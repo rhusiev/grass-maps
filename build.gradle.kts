@@ -49,8 +49,8 @@ allprojects {
 // other project modules only where the documented graph allows it. Plugins may
 // use :plugin-api, and :plugin-ui-api only when they contribute Compose UI.
 // Feature modules never import :core or :core-services; the only
-// feature-to-feature edges are navigation -> routing and alerts -> navigation.
-// Anything else is a build failure, not a convention.
+// feature-to-feature edges are navigation -> routing, alerts -> navigation and
+// planner -> routing. Anything else is a build failure, not a convention.
 val moduleDependencyAllowlist: Map<String, Set<String>> =
     mapOf(
         // testFixtures(project(":plugin-api")) is the module's own fixtures.
@@ -63,6 +63,10 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         ":routing" to setOf(":plugin-api"),
         ":navigation" to setOf(":routing", ":plugin-api"),
         ":alerts" to setOf(":navigation", ":plugin-api"),
+        // The planner is a compiled-in feature over the routing domain, like
+        // navigation. It reaches no core internals and asks the host for the
+        // engine through the plugin-api contract.
+        ":planner" to setOf(":plugin-api", ":routing"),
         ":places" to setOf(":plugin-api"),
         ":tracks" to setOf(":plugin-api"),
         ":ui-shell" to setOf(":plugin-api", ":plugin-ui-api"),
@@ -85,10 +89,6 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         ":plugins:synthetic-data" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:valhalla" to setOf(":plugin-api"),
         ":plugins:direct-engine" to setOf(":plugin-api"),
-        // The first-party route planner is a compiled-in feature over the
-        // routing domain, the same way navigation reads it. It reaches no core
-        // internals and the engine still crosses the plugin-api contract.
-        ":plugins:route-planner" to setOf(":plugin-api", ":routing"),
         // The navigation simulator drives the production session and geometry
         // follower, and reads a passed route through the shared JSON form. It
         // changes no navigation policy and reaches no core internals.
@@ -172,7 +172,8 @@ subprojects {
         }
     }
 
-    if (path.startsWith(":plugins:")) {
+    // The compiled-in planner sits at the top level but still ships a manifest.
+    if (path.startsWith(":plugins:") || path == ":planner") {
         plugins.withId("com.android.library") {
             tasks.named("check") {
                 dependsOn(":checkPluginManifests")
@@ -216,11 +217,11 @@ gradle.projectsEvaluated {
 }
 
 // Manifest-driven registries (architecture section 13): each plugin module carries
-// src/main/plugin.json. The app generates the static registries; this task
-// validates the same manifests.
+// src/main/plugin.json, and so does the compiled-in planner at the top level. The
+// app generates the static registries; this task validates the same manifests.
 val pluginManifestFiles =
     subprojects
-        .filter { it.path.startsWith(":plugins:") }
+        .filter { it.path.startsWith(":plugins:") || it.path == ":planner" }
         .map { it.file("src/main/plugin.json") }
 
 tasks.register<LintPluginManifestsTask>("checkPluginManifests") {

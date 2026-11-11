@@ -4,8 +4,10 @@ import kotlinx.serialization.json.double
 import kotlinx.serialization.json.jsonPrimitive
 import nl.r1a.grassmap.places.Favourite
 import nl.r1a.grassmap.places.FavouriteId
+import nl.r1a.grassmap.plugin.api.model.FavouritePointRow
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
+import nl.r1a.grassmap.plugin.api.model.toRouteStop
 import nl.r1a.grassmap.plugin.api.provider.PlaceHit
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -33,6 +35,19 @@ class RouteStopsTest {
 
         assertEquals(GeoPoint(49.8419, 24.0322), stop.position)
         assertEquals("Дім", stop.label)
+    }
+
+    @Test
+    fun aFavouriteRowResolvesToAStopThroughTheContract() {
+        val row =
+            FavouritePointRow(
+                id = "home",
+                name = "Дім",
+                position = GeoPoint(49.8419, 24.0322),
+            )
+
+        assertEquals(RoutePlanPoint(GeoPoint(49.8419, 24.0322), "Дім"), row.toRouteStop())
+        assertEquals(null, FavouritePointRow("old", "No point").toRouteStop())
     }
 
     @Test

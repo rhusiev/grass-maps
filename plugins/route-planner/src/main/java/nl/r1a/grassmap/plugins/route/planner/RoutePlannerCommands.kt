@@ -206,6 +206,55 @@ class StartRoutePlanCommand(
     }
 }
 
+/**
+ * Steps back one planning edit. The route an edit produced is restored with it,
+ * so no engine request runs (T-0304).
+ */
+class UndoRoutePlanCommand(
+    private val session: RoutePlannerSession,
+) : Command<JsonElement, RoutePlanState>(
+        id = RoutePlannerContract.undo,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = RoutePlanState.serializer(),
+        doc = "Undoes one planning edit and returns the restored state.",
+        policy = PLANNER_POLICY,
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<RoutePlanState>> = result(session.undo())
+}
+
+/** Steps forward one planning edit that a previous undo left available. */
+class RedoRoutePlanCommand(
+    private val session: RoutePlannerSession,
+) : Command<JsonElement, RoutePlanState>(
+        id = RoutePlannerContract.redo,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = RoutePlanState.serializer(),
+        doc = "Redoes one planning edit and returns the restored state.",
+        policy = PLANNER_POLICY,
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<RoutePlanState>> = result(session.redo())
+}
+
+/** Reopens one stored route by its position in the history. */
+class ReuseRouteHistoryCommand(
+    private val session: RoutePlannerSession,
+) : Command<JsonElement, RoutePlanState>(
+        id = RoutePlannerContract.reuseHistory,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = RoutePlanState.serializer(),
+        doc = "Reopens the stored route at a zero-based history index. Parameter: index.",
+        policy = PLANNER_POLICY,
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<RoutePlanState>> {
+        val index = params.integer(PARAM_INDEX) ?: return Outcome.Failure(AppError.InvalidInput)
+        return result(session.reuse(index))
+    }
+
+    private companion object {
+        const val PARAM_INDEX = "index"
+    }
+}
+
 /** Closes the plan and removes its route. */
 class ClearRoutePlanCommand(
     private val session: RoutePlannerSession,

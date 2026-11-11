@@ -85,6 +85,11 @@ data class RoutePlanOption(
  *
  * [failure] is set only while [status] is [RoutePlanStatus.Failed], and says
  * whether the points or the engine were at fault.
+ *
+ * [undoAvailable] and [redoAvailable] drive the panel's two controls (T-0304).
+ * They report the plan's own edit history, not the command bus's global undo:
+ * one edit is one change to the waypoint chain, and the route a request
+ * produced is part of that edit, so undo returns the line the user saw.
  */
 @Serializable
 data class RoutePlanState(
@@ -96,6 +101,8 @@ data class RoutePlanState(
     val generation: Long = 0,
     val vias: List<RoutePlanPoint> = emptyList(),
     val failure: RoutePlanFailure? = null,
+    val undoAvailable: Boolean = false,
+    val redoAvailable: Boolean = false,
 ) {
     /** The selected route, or null before a request succeeds. */
     val selected: RoutePlanOption?

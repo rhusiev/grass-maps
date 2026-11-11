@@ -11,13 +11,16 @@ import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.contract.StreamId
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.ElevationAccess
+import nl.r1a.grassmap.plugin.api.host.NoRouteHistoryAccess
 import nl.r1a.grassmap.plugin.api.host.PluginServices
+import nl.r1a.grassmap.plugin.api.host.RouteHistoryAccess
 import nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
 import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmap.plugin.api.model.RouteHistoryEntry
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.provider.Provider
 import nl.r1a.grassmap.plugin.api.provider.ProviderContract
@@ -60,12 +63,17 @@ internal class RecordingContext(
     fun command(id: CommandId): Command<*, *> = commands.first { it.id == id }
 
     @Suppress("UNCHECKED_CAST")
-    fun state(): StateFlow<RoutePlanState> = streams.single().flow as StateFlow<RoutePlanState>
+    fun state(): StateFlow<RoutePlanState> = streams.first { it.id == RoutePlannerContract.stateStream }.flow as StateFlow<RoutePlanState>
+
+    @Suppress("UNCHECKED_CAST")
+    fun history(): StateFlow<List<RouteHistoryEntry>> =
+        streams.first { it.id == RoutePlannerContract.historyStream }.flow as StateFlow<List<RouteHistoryEntry>>
 }
 
 internal class FakeServices(
     override val routingEngines: RoutingEngineAccess,
     override val clock: Clock = Clock { FakeEngine.NOW_MILLIS },
+    override val routeHistory: RouteHistoryAccess = NoRouteHistoryAccess,
 ) : PluginServices {
     override val streams: StreamAccess =
         object : StreamAccess {

@@ -43,6 +43,7 @@ import nl.r1a.grassmap.plugin.api.host.PlatformActions
 import nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
+import nl.r1a.grassmap.plugin.api.provider.CoordinateParser
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngineContract
 import nl.r1a.grassmap.plugin.api.service.Clock
@@ -64,6 +65,8 @@ import nl.r1a.grassmap.regions.HttpDownloadTransport
 import nl.r1a.grassmap.regions.NetworkAccess
 import nl.r1a.grassmap.regions.RegionDownloader
 import nl.r1a.grassmap.regions.RegionPaths
+import nl.r1a.grassmap.routing.RouteHistorySetting
+import nl.r1a.grassmap.routing.RouteHistoryStore
 import java.io.File
 
 /**
@@ -92,6 +95,7 @@ class AppContainer(
     private val unitSettingsFileProvider: () -> File? = { null },
     private val searchHistoryFileProvider: () -> File? = { null },
     private val searchHistorySettingsFileProvider: () -> File? = { null },
+    private val routeHistoryFileProvider: () -> File? = { null },
     private val favouritesRootProvider: () -> File? = { null },
     private val favouritesBackupClock: Clock = SystemClock,
     private val favouritesBackupScope: CoroutineScope? = null,
@@ -159,6 +163,27 @@ class AppContainer(
             setting = SearchHistorySetting { searchHistorySettings.isEnabled() },
         )
     }
+
+    /**
+     * The last routes the planner produced (T-0304). It asks
+     * [searchHistorySettings] before it writes or reads, so one "keep local
+     * history" decision covers both the searches and the routes; the two files
+     * stay separate because a query and a waypoint chain are different data.
+     * A build with no files root writes nothing and reads as empty.
+     */
+    val routeHistory: RouteHistoryStore by lazy {
+        RouteHistoryStore(
+            file = routeHistoryFileProvider(),
+            setting = RouteHistorySetting { searchHistorySettings.isEnabled() },
+        )
+    }
+
+    /**
+     * The one coordinate parser search and the planner's entry field use
+     * (T-0206, T-0304). Both ask the same instance, so the notations one
+     * accepts are the notations the other accepts.
+     */
+    val coordinateParser: CoordinateParser = Coordinates.parser
 
     /** The compass; the map subscribes while it is visible. */
     val heading: StateFlow<Double?>
@@ -374,6 +399,7 @@ class AppContainer(
                 }
             },
             routingEngines = routingEngineAccess,
+            routeHistoryAccess = routeHistory,
         )
     }
 

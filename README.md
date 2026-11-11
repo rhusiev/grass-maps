@@ -237,7 +237,7 @@ the module name. Only `app` is an application module; its application ID is
 | `core-services` | settings and profiles, storage, location, network gate, i18n, clock, logging | `core`, `plugin-api` |
 | `map` | the `MapHost` implementation, style composer, layer slots, gestures, camera, location puck | `plugin-api` |
 | `regions` | catalogue, download, verify, mount, update, source resolver, routing pack handling | `plugin-api` |
-| `routing` | route model, the `routing.engine` contract seam, its stable JSON form, and the start/end planner state machine | `plugin-api` |
+| `routing` | route model, the `routing.engine` contract seam, its stable JSON form, the start/end planner state machine, and the reuse history store | `plugin-api` |
 | `navigation` | route follower, off-route detection, reroute policy, guidance | `routing`, `plugin-api` |
 | `alerts` | alert sources, scheduling, sound, vibration and banner output | `navigation`, `plugin-api` |
 | `places` | place and search provider hosts, favourites store | `plugin-api` |
@@ -261,7 +261,7 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/coordinates` | the coordinate notation parser the search field reads, and the vectors it shares with the formatters | `plugin-api` |
 | `plugins/valhalla` | the v1 `routing.engine` provider: profile mapping, the native Valhalla adapter, the async segment attributes | `plugin-api` |
 | `plugins/direct-engine` | the second `routing.engine` provider: one geodesic per leg with the haversine length, its leg segments and its honest empty capabilities | `plugin-api` |
-| `plugins/route-planner` | the start/end plan, its intermediate stops, its commands and its state stream; the shell draws the preview from it | `plugin-api`, `routing` |
+| `plugins/route-planner` | the start/end plan, its intermediate stops, its undo and redo history, its reuse commands and its state and history streams; the shell draws the preview and the turn stepper from it | `plugin-api`, `routing` |
 
 ## Place card
 
@@ -828,6 +828,33 @@ with `Favourite.toRouteStop` and `PlaceHit.toRouteStop`, keeping the source's
 coordinate and name. The response vectors, the ten-metre measurements per
 profile and the reorder and removal evidence are in
 `test-data/routing/README.md`.
+
+The planning edit history is T-0304. `undo` and `redo` restore whole published
+states, including the route each edit produced: undo asks no engine, because the
+line the user saw is what it must return and a second request could return
+another route. Five edits, five undos and five redos end at the same states;
+`undoAvailable` and `redoAvailable` report the reach. Selecting an alternative
+and stepping through turns are views, not edits, so they are not on the stack,
+and a new edit drops what could have been redone.
+
+The panel's coordinate field reads typed text with the same `Coordinates.parser`
+the search field uses, through `routePointEntry` in `plugin-api`; blank text is
+not a refusal, and a refused notation changes nothing. The stop list rows move a
+via earlier or later and remove it; each is one edit. The turn stepper walks
+`RoutePlanOption.instructions` with their text, distance along the route and the
+geometry point to show; a route with no instructions - the direct engine's
+geodesic line - has exactly one step, arriving at the destination.
+
+`RouteHistoryStore` in `routing` keeps the last 20 produced routes in
+`history/route-history.json`, newest first, keyed by the waypoint chain and not
+by geometry, so a reuse asks the engine again against the current map data.
+`route.planner.history` publishes the list and `route.planner.reuse_history`
+reopens one entry as a single edit. The store shares the search history's
+privacy switch: with it off the file is neither read nor written and stays byte
+identical, and the search-history setting command turns both stores off.
+`FavouritePointSummary.position` and `FavouritePointRow.position` carry the
+stored coordinate, so a plugin resolves a favourite with
+`FavouritePointRow.toRouteStop` instead of reading the app's own record.
 
 ## Navigation seam
 

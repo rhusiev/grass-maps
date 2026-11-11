@@ -13,6 +13,7 @@ import nl.r1a.grassmap.plugin.api.model.FavouriteListSummary
 import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
 import nl.r1a.grassmap.plugin.api.model.FavouritePointSummary
 import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
+import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.places.FavouriteSpecial as StoredSpecial
 
 /**
@@ -124,6 +125,7 @@ internal fun FavouritesSnapshot.toListsState(): FavouriteListsState {
                     list = favourite.group,
                     special = favourite.special?.toApi(),
                     description = favourite.description,
+                    position = GeoPoint(favourite.latitude, favourite.longitude),
                 )
             },
     )

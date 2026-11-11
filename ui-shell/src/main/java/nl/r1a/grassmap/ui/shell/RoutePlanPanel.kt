@@ -6,24 +6,38 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.RouteHistoryEntry
 import nl.r1a.grassmap.plugin.api.model.RoutePlanFailure
+import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
+import nl.r1a.grassmap.plugin.api.model.RoutePointEntry
+import nl.r1a.grassmap.plugin.api.model.routePointEntry
+import nl.r1a.grassmap.plugin.api.provider.CoordinateParser
 import nl.r1a.grassmap.plugin.api.service.Strings
+import java.util.Locale
 
 private const val PANEL_CORNER_DP = 12
 private const val PANEL_PADDING_DP = 12
@@ -31,32 +45,50 @@ private const val PANEL_MAX_WIDTH_DP = 520
 private const val PANEL_ROW_GAP_DP = 8
 private const val CHIP_PADDING_HORIZONTAL_DP = 10
 private const val CHIP_PADDING_VERTICAL_DP = 6
+private const val FIELD_PADDING_DP = 6
 private const val VALUE_FONT_SP = 16
 private const val ACTION_FONT_SP = 15
 private const val STATUS_FONT_SP = 13
+private const val CONTROL_FONT_SP = 20
+private const val RECENT_LIMIT = 5
 private val PANEL_BACKGROUND = Color(0xF2202020)
 private val VALUE_COLOR = Color.White
 private val STATUS_COLOR = Color(0xFFBDBDBD)
+private val DISABLED_COLOR = Color(0xFF6E6E6E)
 private val CHIP_COLOR = Color(0xFF37474F)
 private val CHIP_SELECTED_COLOR = Color(0xFF2E7D32)
 private val ACTION_COLOR = Color(0xFF2E7D32)
 
 /**
- * The planning panel (T-0302): the start/end plan, the returned alternatives,
- * the four-field preview and the Start action. The map and this card read the
- * same [RoutePlanState], so an alternative changes both or neither.
+ * The planning panel (T-0302, stops T-0303, controls and history T-0304): the
+ * start/end plan, the editable stop chain, the returned alternatives, the
+ * four-field preview, the turn stepper and the Start action. The map and this
+ * card read the same [RoutePlanState], so an alternative changes both or
+ * neither.
  *
- * The preview card is [routePlanPreview] and nothing else. Swap, the close
- * control and the alternative chips are controls around it, not extra preview
- * rows; later tasks add elevation and way detail elsewhere.
+ * The preview card is [routePlanPreview] and nothing else. Undo, redo, swap, the
+ * close control, the stop rows, the coordinate field and the turn stepper are
+ * controls around it, not extra preview rows.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 fun RoutePlanPanel(
     state: RoutePlanState,
     strings: Strings,
-    onSwap: () -> Unit,
+    recent: List<RouteHistoryEntry>,
+    turnIndex: Int,
+    parseCoordinate: CoordinateParser,
+    onStartPoint: (GeoPoint, String) -> Unit,
+    onDestinationPoint: (GeoPoint, String) -> Unit,
+    onAddVia: (GeoPoint, String) -> Unit,
+    onRemoveVia: (Int) -> Unit,
+    onMoveVia: (Int, Int) -> Unit,
     onSelectAlternative: (Int) -> Unit,
+    onTurnChange: (Int) -> Unit,
+    onReuse: (RouteHistoryEntry) -> Unit,
+    onUndo: () -> Unit,
+    onRedo: () -> Unit,
+    onSwap: () -> Unit,
     onStart: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
@@ -73,9 +105,25 @@ fun RoutePlanPanel(
         verticalArrangement = Arrangement.spacedBy(PANEL_ROW_GAP_DP.dp),
     ) {
         PanelControls(
+            state = state,
             strings = strings,
+            onUndo = onUndo,
+            onRedo = onRedo,
             onSwap = onSwap,
             onClose = onClose,
+        )
+        CoordinateEntry(
+            strings = strings,
+            parseCoordinate = parseCoordinate,
+            onStartPoint = onStartPoint,
+            onDestinationPoint = onDestinationPoint,
+            onAddVia = onAddVia,
+        )
+        StopList(
+            stops = state.stops,
+            strings = strings,
+            onRemoveVia = onRemoveVia,
+            onMoveVia = onMoveVia,
         )
         when (state.status) {
             RoutePlanStatus.PickingStart -> {
@@ -117,19 +165,34 @@ fun RoutePlanPanel(
                 if (preview != null) {
                     PreviewCard(preview = preview, onStart = onStart)
                 }
+                TurnStepper(
+                    turns = routePlanTurns(state, strings),
+                    turnIndex = turnIndex,
+                    strings = strings,
+                    onTurnChange = onTurnChange,
+                )
             }
 
             RoutePlanStatus.Idle -> {
-                Unit
+                // The panel returns before this branch; kept for an exhaustive enum.
             }
         }
+        RecentRoutes(
+            recent = recent,
+            strings = strings,
+            visible = state.status == RoutePlanStatus.PickingStart || state.status == RoutePlanStatus.PickingDestination,
+            onReuse = onReuse,
+        )
     }
 }
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
 private fun PanelControls(
+    state: RoutePlanState,
     strings: Strings,
+    onUndo: () -> Unit,
+    onRedo: () -> Unit,
     onSwap: () -> Unit,
     onClose: () -> Unit,
 ) {
@@ -138,29 +201,297 @@ private fun PanelControls(
         horizontalArrangement = Arrangement.spacedBy(PANEL_ROW_GAP_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val swap = strings.resolve(SWAP_KEY)
-        BasicText(
-            text = SWAP_GLYPH,
-            style = TextStyle(color = VALUE_COLOR, fontSize = ACTIVE_ICON_FONT_SP.sp),
-            modifier =
-                Modifier
-                    .semantics { contentDescription = swap }
-                    .clickable(onClick = onSwap)
-                    .padding(SWAP_PADDING_DP.dp),
+        ControlGlyph(
+            glyph = UNDO_GLYPH,
+            description = strings.resolve(UNDO_DESCRIPTION_KEY),
+            enabled = state.undoAvailable,
+            onClick = onUndo,
+        )
+        ControlGlyph(
+            glyph = REDO_GLYPH,
+            description = strings.resolve(REDO_DESCRIPTION_KEY),
+            enabled = state.redoAvailable,
+            onClick = onRedo,
+        )
+        ControlGlyph(
+            glyph = SWAP_GLYPH,
+            description = strings.resolve(SWAP_KEY),
+            enabled = true,
+            onClick = onSwap,
         )
         Box(Modifier.weight(1f))
-        val close = strings.resolve(PANEL_CLOSE_KEY)
-        BasicText(
-            text = CLOSE_GLYPH,
-            style = TextStyle(color = VALUE_COLOR, fontSize = ACTIVE_ICON_FONT_SP.sp),
-            modifier =
-                Modifier
-                    .semantics { contentDescription = close }
-                    .clickable(onClick = onClose)
-                    .padding(SWAP_PADDING_DP.dp),
+        ControlGlyph(
+            glyph = CLOSE_GLYPH,
+            description = strings.resolve(PANEL_CLOSE_KEY),
+            enabled = true,
+            onClick = onClose,
         )
     }
 }
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun ControlGlyph(
+    glyph: String,
+    description: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    BasicText(
+        text = glyph,
+        style =
+            TextStyle(
+                color = if (enabled) VALUE_COLOR else DISABLED_COLOR,
+                fontSize = CONTROL_FONT_SP.sp,
+            ),
+        modifier =
+            Modifier
+                .semantics { contentDescription = description }
+                .clickable(enabled = enabled, onClick = onClick)
+                .padding(SWAP_PADDING_DP.dp),
+    )
+}
+
+/**
+ * The typed coordinate field: the same parser the search field uses turns the
+ * text into a start, a destination or one more intermediate stop. A refusal is
+ * shown here and changes nothing, so a malformed text never becomes a point.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun CoordinateEntry(
+    strings: Strings,
+    parseCoordinate: CoordinateParser,
+    onStartPoint: (GeoPoint, String) -> Unit,
+    onDestinationPoint: (GeoPoint, String) -> Unit,
+    onAddVia: (GeoPoint, String) -> Unit,
+) {
+    var text by remember { mutableStateOf("") }
+    var refused by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(PANEL_ROW_GAP_DP.dp)) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(CHIP_COLOR, RoundedCornerShape(CHIP_CORNER_DP.dp))
+                    .padding(FIELD_PADDING_DP.dp)
+                    .widthIn(min = FIELD_MIN_WIDTH_DP.dp),
+        ) {
+            val hint = strings.resolve(COORDINATE_HINT_KEY)
+            BasicTextField(
+                value = text,
+                onValueChange = { typed ->
+                    text = typed
+                    refused = false
+                },
+                singleLine = true,
+                textStyle = TextStyle(color = VALUE_COLOR, fontSize = STATUS_FONT_SP.sp),
+                cursorBrush = SolidColor(VALUE_COLOR),
+                decorationBox = { inner ->
+                    Box {
+                        if (text.isEmpty()) {
+                            BasicText(
+                                text = hint,
+                                style = TextStyle(color = STATUS_COLOR, fontSize = STATUS_FONT_SP.sp),
+                            )
+                        }
+                        inner()
+                    }
+                },
+                modifier = Modifier.semantics { contentDescription = hint },
+            )
+        }
+        Row(
+            modifier = Modifier,
+            horizontalArrangement = Arrangement.spacedBy(PANEL_ROW_GAP_DP.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val roles =
+                listOf(
+                    strings.resolve(ROLE_START_KEY) to { point: GeoPoint, label: String -> onStartPoint(point, label) },
+                    strings.resolve(ROLE_VIA_KEY) to { point: GeoPoint, label: String -> onAddVia(point, label) },
+                    strings.resolve(ROLE_DESTINATION_KEY) to { point: GeoPoint, label: String -> onDestinationPoint(point, label) },
+                )
+            for ((label, apply) in roles) {
+                ActionChip(
+                    text = label,
+                    onClick = {
+                        when (val entry = routePointEntry(text, parseCoordinate)) {
+                            is RoutePointEntry.Blank -> {
+                                Unit
+                            }
+
+                            is RoutePointEntry.Refused -> {
+                                refused = true
+                            }
+
+                            is RoutePointEntry.Point -> {
+                                apply(entry.position, entry.label)
+                                text = ""
+                                refused = false
+                            }
+                        }
+                    },
+                )
+            }
+        }
+        if (refused) {
+            StatusLine(strings.resolve(COORDINATE_REFUSED_KEY), strings.resolve(COORDINATE_REFUSED_KEY))
+        }
+    }
+}
+
+/**
+ * One intermediate-stop row: its label, a move up, a move down and a remove.
+ * The first row cannot move up and the last cannot move down, because the list
+ * is the visit order the engine receives.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun StopList(
+    stops: List<RoutePlanPoint>,
+    strings: Strings,
+    onRemoveVia: (Int) -> Unit,
+    onMoveVia: (Int, Int) -> Unit,
+) {
+    if (stops.size <= 1) return
+    Column(verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp)) {
+        StatusLine(strings.resolve(STOPS_KEY), strings.resolve(STOPS_KEY))
+        stops.forEachIndexed { index, stop ->
+            val isVia = index != 0 && index != stops.lastIndex
+            val viaIndex = index - 1
+            Row(
+                modifier = Modifier,
+                horizontalArrangement = Arrangement.spacedBy(PANEL_ROW_GAP_DP.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BasicText(
+                    text = stopText(stop),
+                    style = TextStyle(color = VALUE_COLOR, fontSize = STATUS_FONT_SP.sp),
+                    modifier = Modifier.weight(1f),
+                )
+                if (isVia) {
+                    ControlGlyph(
+                        glyph = UP_GLYPH,
+                        description = strings.resolve(MOVE_UP_KEY),
+                        enabled = viaIndex > 0,
+                        onClick = { onMoveVia(viaIndex, viaIndex - 1) },
+                    )
+                    ControlGlyph(
+                        glyph = DOWN_GLYPH,
+                        description = strings.resolve(MOVE_DOWN_KEY),
+                        enabled = viaIndex < stops.size - 3,
+                        onClick = { onMoveVia(viaIndex, viaIndex + 1) },
+                    )
+                    ControlGlyph(
+                        glyph = REMOVE_GLYPH,
+                        description = strings.resolve(REMOVE_VIA_KEY),
+                        enabled = true,
+                        onClick = { onRemoveVia(viaIndex) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun TurnStepper(
+    turns: List<RouteTurnStep>,
+    turnIndex: Int,
+    strings: Strings,
+    onTurnChange: (Int) -> Unit,
+) {
+    val step = routeTurnStep(turns, turnIndex) ?: return
+    Row(
+        modifier = Modifier,
+        horizontalArrangement = Arrangement.spacedBy(PANEL_ROW_GAP_DP.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ControlGlyph(
+            glyph = PREVIOUS_TURN_GLYPH,
+            description = strings.resolve(PREVIOUS_TURN_KEY),
+            enabled = step.index > 0,
+            onClick = { onTurnChange(routeTurnAdvance(turns, step.index, -1)) },
+        )
+        BasicText(
+            text = strings.resolve(TURN_COUNTER_KEY, listOf((step.index + 1).toString(), turns.size.toString())),
+            style = TextStyle(color = STATUS_COLOR, fontSize = STATUS_FONT_SP.sp),
+        )
+        BasicText(
+            text = "${step.text} - ${routeTurnDistanceText(step.distanceMeters, strings)}",
+            style =
+                TextStyle(
+                    color = VALUE_COLOR,
+                    fontSize = STATUS_FONT_SP.sp,
+                ),
+            modifier = Modifier.weight(1f).semantics { contentDescription = step.text },
+        )
+        ControlGlyph(
+            glyph = NEXT_TURN_GLYPH,
+            description = strings.resolve(NEXT_TURN_KEY),
+            enabled = step.index < turns.lastIndex,
+            onClick = { onTurnChange(routeTurnAdvance(turns, step.index, 1)) },
+        )
+    }
+}
+
+/**
+ * The stored routes as reuse rows. A tap hands the entry to the planner, which
+ * sets the whole chain as one edit; the list is shown while an end is being
+ * picked, because that is when a stored route is the faster way to a plan.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun RecentRoutes(
+    recent: List<RouteHistoryEntry>,
+    strings: Strings,
+    visible: Boolean,
+    onReuse: (RouteHistoryEntry) -> Unit,
+) {
+    if (!visible || recent.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp)) {
+        StatusLine(strings.resolve(RECENT_KEY), strings.resolve(RECENT_KEY))
+        recent.take(RECENT_LIMIT).forEach { entry ->
+            val text = "${stopText(entry.start)} - ${stopText(entry.destination)}"
+            BasicText(
+                text = "$text - ${routePlanAlternativeText(entry.durationSeconds, strings)}",
+                style = TextStyle(color = VALUE_COLOR, fontSize = STATUS_FONT_SP.sp),
+                modifier =
+                    Modifier
+                        .clickable { onReuse(entry) }
+                        .semantics { contentDescription = strings.resolve(REUSE_KEY, listOf(text)) },
+            )
+        }
+    }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun ActionChip(
+    text: String,
+    onClick: () -> Unit,
+) {
+    BasicText(
+        text = text,
+        style = TextStyle(color = VALUE_COLOR, fontSize = STATUS_FONT_SP.sp, fontWeight = FontWeight.Bold),
+        modifier =
+            Modifier
+                .background(CHIP_COLOR, RoundedCornerShape(CHIP_CORNER_DP.dp))
+                .clickable(onClick = onClick)
+                .padding(
+                    horizontal = CHIP_PADDING_HORIZONTAL_DP.dp,
+                    vertical = CHIP_PADDING_VERTICAL_DP.dp,
+                ),
+    )
+}
+
+/** The label the stop list shows; a point without one shows its coordinates. */
+private fun stopText(stop: RoutePlanPoint): String =
+    stop.label.ifEmpty {
+        String.format(Locale.US, "%.5f, %.5f", stop.position.latitude, stop.position.longitude)
+    }
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -260,10 +591,18 @@ private fun StatusLine(
 
 private const val SWAP_GLYPH = "\u21C4"
 private const val CLOSE_GLYPH = "\u00D7"
-private const val ACTIVE_ICON_FONT_SP = 20
+private const val UNDO_GLYPH = "\u21B6"
+private const val REDO_GLYPH = "\u21B7"
+private const val UP_GLYPH = "\u2191"
+private const val DOWN_GLYPH = "\u2193"
+private const val REMOVE_GLYPH = "\u00D7"
+private const val PREVIOUS_TURN_GLYPH = "\u2039"
+private const val NEXT_TURN_GLYPH = "\u203A"
 private const val SWAP_PADDING_DP = 4
 private const val CHIP_CORNER_DP = 8
 private const val VALUE_GAP_DP = 12
+private const val ROW_GAP_DP = 4
+private const val FIELD_MIN_WIDTH_DP = 220
 private const val PICK_START_KEY = "route_planner_pick_start"
 private const val PICK_DESTINATION_KEY = "route_planner_pick_destination"
 private const val PLANNING_KEY = "route_planner_planning"
@@ -275,3 +614,19 @@ private const val NO_ALTERNATIVES_KEY = "route_planner_no_alternatives"
 private const val ALTERNATIVE_DESCRIPTION_KEY = "route_planner_alternative_description"
 private const val SWAP_KEY = "route_planner_swap"
 private const val PANEL_CLOSE_KEY = "route_planner_close"
+private const val UNDO_DESCRIPTION_KEY = "route_planner_undo"
+private const val REDO_DESCRIPTION_KEY = "route_planner_redo"
+private const val COORDINATE_HINT_KEY = "route_planner_coordinate_hint"
+private const val COORDINATE_REFUSED_KEY = "route_planner_coordinate_refused"
+private const val ROLE_START_KEY = "route_planner_role_start"
+private const val ROLE_VIA_KEY = "route_planner_role_via"
+private const val ROLE_DESTINATION_KEY = "route_planner_role_destination"
+private const val STOPS_KEY = "route_planner_stops"
+private const val MOVE_UP_KEY = "route_planner_move_up"
+private const val MOVE_DOWN_KEY = "route_planner_move_down"
+private const val REMOVE_VIA_KEY = "route_planner_remove_via"
+private const val PREVIOUS_TURN_KEY = "route_planner_previous_turn"
+private const val NEXT_TURN_KEY = "route_planner_next_turn"
+private const val TURN_COUNTER_KEY = "route_planner_turn_counter"
+private const val RECENT_KEY = "route_planner_recent"
+private const val REUSE_KEY = "route_planner_reuse"

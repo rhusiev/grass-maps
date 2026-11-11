@@ -13,20 +13,32 @@ import java.nio.file.Paths
  * parser reads back. One file, two directions, no copied constants.
  */
 internal object CoordinateVectors {
-    fun acceptedPoints(): List<GeoPoint> {
+    fun acceptedPoints(): List<GeoPoint> = acceptedRows().map { row -> row.second }
+
+    /** The typed text of every accepted notation next to the point it denotes. */
+    fun acceptedRows(): List<Pair<String, GeoPoint>> =
+        rows()
+            .mapNotNull { columns ->
+                if (columns[0] != ACCEPT || columns.size != ACCEPT_COLUMNS) {
+                    null
+                } else {
+                    columns[1] to GeoPoint(latitude = columns[2].toDouble(), longitude = columns[3].toDouble())
+                }
+            }
+
+    /** The typed text of every notation the parser must refuse. */
+    fun refusedTexts(): List<String> =
+        rows()
+            .mapNotNull { columns -> if (columns[0] == REFUSE) columns[1] else null }
+
+    private fun rows(): List<List<String>> {
         val text = Files.readString(repositoryRoot().resolve(VECTOR_FILE))
         return text
             .lineSequence()
             .map { it.trimEnd('\r') }
             .filter { it.isNotBlank() && !it.startsWith("#") }
-            .mapNotNull { line ->
-                val columns = line.split('\t')
-                if (columns[0] != ACCEPT || columns.size != ACCEPT_COLUMNS) {
-                    null
-                } else {
-                    GeoPoint(latitude = columns[2].toDouble(), longitude = columns[3].toDouble())
-                }
-            }.toList()
+            .map { line -> line.split('\t') }
+            .toList()
     }
 
     private fun repositoryRoot(): Path {
@@ -45,4 +57,5 @@ internal object CoordinateVectors {
     private const val VECTOR_FILE = "test-data/search/coordinate-notations.tsv"
     private const val ACCEPT = "accept"
     private const val ACCEPT_COLUMNS = 4
+    private const val REFUSE = "refuse"
 }

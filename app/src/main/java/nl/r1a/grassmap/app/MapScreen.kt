@@ -20,6 +20,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -74,6 +75,7 @@ import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
 import nl.r1a.grassmap.plugin.api.model.FavouriteSort
 import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.RouteHistoryEntry
 import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanRole
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
@@ -103,6 +105,8 @@ import nl.r1a.grassmap.ui.shell.MapScaleBar
 import nl.r1a.grassmap.ui.shell.PlaceCardHost
 import nl.r1a.grassmap.ui.shell.RoutePlanPanel
 import nl.r1a.grassmap.ui.shell.SearchScreenHost
+import nl.r1a.grassmap.ui.shell.routePlanTurns
+import nl.r1a.grassmap.ui.shell.routeTurnStep
 import java.io.File
 import java.util.Locale
 
@@ -281,6 +285,23 @@ private fun MapContent(
             container.streamAccess.subscribe<RoutePlanState>(RoutePlannerContract.stateStream)
         }
     val plan by planFlow.collectAsState(initial = RoutePlanState())
+    val historyFlow =
+        remember(container) {
+            container.streamAccess.subscribe<List<RouteHistoryEntry>>(RoutePlannerContract.historyStream)
+        }
+    val recentRoutes by historyFlow.collectAsState(initial = emptyList())
+    var turnIndex by remember(plan.selected) { mutableIntStateOf(0) }
+    var turnRequest by remember(plan.selected) { mutableIntStateOf(0) }
+    val turns = remember(plan.selected, container.strings) { routePlanTurns(plan, container.strings) }
+    LaunchedEffect(turnRequest) {
+        if (turnRequest == 0) {
+            return@LaunchedEffect
+        }
+        val step = routeTurnStep(turns, turnIndex) ?: return@LaunchedEffect
+        surface.host.animateCamera(CameraUpdate(center = step.position)).onFailure { error ->
+            Log.w(TAG, "turn not shown: $error")
+        }
+    }
     val unitStore by
         produceState<UnitSettings?>(null) {
             value = withContext(Dispatchers.IO) { container.unitSettings }
@@ -502,6 +523,68 @@ private fun MapContent(
         RoutePlanPanel(
             state = plan,
             strings = container.strings,
+            recent = recentRoutes,
+            turnIndex = turnIndex,
+            parseCoordinate = container.coordinateParser,
+            onStartPoint = { point, label ->
+                scope.launch { setPlanPoint(container, RoutePlanRole.Start, point, label) }
+            },
+            onDestinationPoint = { point, label ->
+                scope.launch { setPlanPoint(container, RoutePlanRole.Destination, point, label) }
+            },
+            onAddVia = { point, label ->
+                scope.launch {
+                    invokePlannerCommand(
+                        container,
+                        RoutePlannerContract.addVia,
+                        routeStopParams(RoutePlanPoint(point, label)),
+                    )
+                }
+            },
+            onRemoveVia = { index ->
+                scope.launch {
+                    invokePlannerCommand(
+                        container,
+                        RoutePlannerContract.removeVia,
+                        buildJsonObject { put("index", index) },
+                    )
+                }
+            },
+            onMoveVia = { from, to ->
+                scope.launch {
+                    invokePlannerCommand(
+                        container,
+                        RoutePlannerContract.moveVia,
+                        buildJsonObject {
+                            put("from", from)
+                            put("to", to)
+                        },
+                    )
+                }
+            },
+            onTurnChange = { index ->
+                turnIndex = index
+                turnRequest += 1
+            },
+            onReuse = { entry ->
+                scope.launch {
+                    invokePlannerCommand(
+                        container,
+                        RoutePlannerContract.reuseHistory,
+                        buildJsonObject { put("index", recentRoutes.indexOf(entry)) },
+                    )
+                }
+            },
+            onUndo = {
+                scope.launch {
+                    invokePlannerCommand(container, RoutePlannerContract.undo, JsonObject(emptyMap()))
+                }
+            },
+            onRedo = {
+                scope.launch {
+                    invokePlannerCommand(container, RoutePlannerContract.redo, JsonObject(emptyMap()))
+                }
+            },
             onSwap = {
                 scope.launch {
                     invokePlannerCommand(container, RoutePlannerContract.swap, JsonObject(emptyMap()))

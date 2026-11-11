@@ -50,15 +50,13 @@ class RoutePlannerManifestTest {
             )
         }
 
-        val stream =
-            contributes
-                .getValue("streams")
-                .jsonArray
-                .single()
-                .jsonObject
-        assertEquals(RoutePlannerContract.STATE_STREAM_ID, stream.getValue("id").jsonPrimitive.content)
-        assertEquals(RoutePlannerContract.STATE_VALUE_TYPE, stream.getValue("valueType").jsonPrimitive.content)
-        assertEquals(RoutePlannerContract.STATE_SERIALIZER, stream.getValue("serializer").jsonPrimitive.content)
+        val streams = contributes.getValue("streams").jsonArray.map { it.jsonObject }
+        val state = streams.single { stream -> stream.getValue("id").jsonPrimitive.content == RoutePlannerContract.STATE_STREAM_ID }
+        assertEquals(RoutePlannerContract.STATE_VALUE_TYPE, state.getValue("valueType").jsonPrimitive.content)
+        assertEquals(RoutePlannerContract.STATE_SERIALIZER, state.getValue("serializer").jsonPrimitive.content)
+        val history = streams.single { stream -> stream.getValue("id").jsonPrimitive.content == RoutePlannerContract.HISTORY_STREAM_ID }
+        assertEquals(RoutePlannerContract.HISTORY_VALUE_TYPE, history.getValue("valueType").jsonPrimitive.content)
+        assertEquals(RoutePlannerContract.HISTORY_SERIALIZER, history.getValue("serializer").jsonPrimitive.content)
     }
 
     @Test

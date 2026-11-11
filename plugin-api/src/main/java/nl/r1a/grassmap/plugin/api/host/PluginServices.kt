@@ -60,4 +60,11 @@ interface PluginServices {
      * the host for the engine instead of naming the provider plugin.
      */
     val routingEngines: RoutingEngineAccess get() = NoRoutingEngines
+
+    /**
+     * The planner's reuse history behind `plugins/route-planner` (T-0304).
+     * Inert until `app` wires the persisted store, so a build without history
+     * still plans.
+     */
+    val routeHistory: RouteHistoryAccess get() = NoRouteHistoryAccess
 }

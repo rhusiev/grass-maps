@@ -2,7 +2,7 @@
   "id": "route.planner",
   "name": "plugin.route_planner.name",
   "description": "plugin.route_planner.description",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "api": "0.1.0",
   "implementation": "nl.r1a.grassmap.plugins.route.planner.RoutePlannerPlugin",
   "contributes": {
@@ -106,6 +106,36 @@
         "allowlistedForControl": true,
         "dispatcher": "io",
         "implementation": "nl.r1a.grassmap.plugins.route.planner.ClearRoutePlanCommand"
+      },
+      {
+        "id": "route.planner.undo",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "doc": "Undoes one planning edit and returns the restored state.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.route.planner.UndoRoutePlanCommand"
+      },
+      {
+        "id": "route.planner.redo",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "doc": "Redoes one planning edit and returns the restored state.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.route.planner.RedoRoutePlanCommand"
+      },
+      {
+        "id": "route.planner.reuse_history",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "doc": "Reopens the stored route at a zero-based history index. Parameter: index.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.route.planner.ReuseRouteHistoryCommand"
       }
     ],
     "streams": [
@@ -113,6 +143,11 @@
         "id": "route.planner.state",
         "valueType": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
         "serializer": "nl.r1a.grassmap.plugin.api.model.RoutePlanState.serializer"
+      },
+      {
+        "id": "route.planner.history",
+        "valueType": "kotlin.collections.ArrayList",
+        "serializer": "kotlinx.serialization.builtins.ListSerializer"
       }
     ]
   },

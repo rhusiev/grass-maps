@@ -5,14 +5,18 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.host.RouteHistoryAccess
 import nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.RouteHistoryEntry
 import nl.r1a.grassmap.plugin.api.model.RoutePlanFailure
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -20,7 +24,7 @@ import org.junit.Test
 /** The route planner plugin (T-0302): registration, commands and the stream. */
 class RoutePlannerPluginTest {
     @Test
-    fun activationDeclaresTenCommandsAndOneStateStream() =
+    fun activationDeclaresTheCommandsAndBothStreams() =
         runTest {
             val context = context()
             val plugin = RoutePlannerPlugin()
@@ -28,12 +32,76 @@ class RoutePlannerPluginTest {
             assertEquals(Outcome.Success(Unit), plugin.activate(context))
 
             assertEquals(RoutePlannerContract.commands.toSet(), context.commands.map { it.id }.toSet())
-            val stream = context.streams.single()
-            assertEquals(RoutePlannerContract.stateStream, stream.id)
-            assertEquals(RoutePlannerContract.STATE_VALUE_TYPE, stream.valueType)
+            val state = context.streams.first { stream -> stream.id == RoutePlannerContract.stateStream }
+            assertEquals(RoutePlannerContract.STATE_VALUE_TYPE, state.valueType)
             assertEquals(RoutePlannerContract.STATE_VALUE_TYPE, RoutePlanState.serializer().descriptor.serialName)
+            val history = context.streams.first { stream -> stream.id == RoutePlannerContract.historyStream }
+            assertEquals(RoutePlannerContract.HISTORY_VALUE_TYPE, history.valueType)
+            assertEquals(2, context.streams.size)
             assertTrue(context.providers.isEmpty())
             assertTrue(context.widgets.isEmpty())
+        }
+
+    @Test
+    fun fiveCommandsUndoAndRedoThroughThePlugin() =
+        runTest {
+            val context = context()
+            RoutePlannerPlugin().activate(context)
+            context.command(RoutePlannerContract.begin).invokeRaw(JsonObject(emptyMap()))
+            val edits = mutableListOf<RoutePlanState>()
+            edits += invoke(context, RoutePlannerContract.setPoint, point("start", 49.8290, 23.9520))
+            edits += invoke(context, RoutePlannerContract.setPoint, point("destination", 49.8420, 24.0320))
+            edits += invoke(context, RoutePlannerContract.addVia, via("Cafe", 49.8330, 23.9700))
+            edits += invoke(context, RoutePlannerContract.addVia, via("Museum", 49.8370, 23.9900))
+            edits += invoke(context, RoutePlannerContract.moveVia, JsonObject(mapOf("from" to JsonPrimitive(0), "to" to JsonPrimitive(1))))
+
+            val undone = mutableListOf<RoutePlanState>()
+            repeat(edits.size) { undone += invoke(context, RoutePlannerContract.undo, JsonObject(emptyMap())) }
+            val redone = mutableListOf<RoutePlanState>()
+            repeat(edits.size) { redone += invoke(context, RoutePlannerContract.redo, JsonObject(emptyMap())) }
+
+            assertEquals(
+                edits.map { state -> state.copy(undoAvailable = false, redoAvailable = false) },
+                redone.map { state -> state.copy(undoAvailable = false, redoAvailable = false) },
+            )
+            assertEquals(RoutePlanStatus.PickingStart, undone.last().status)
+            assertTrue(undone.last().vias.isEmpty())
+            assertFalse(undone.last().undoAvailable)
+        }
+
+    @Test
+    fun aProducedRouteIsPublishedInTheHistoryAndCanBeReused() =
+        runTest {
+            val history = MemoryHistory()
+            val context = context(history = history)
+            RoutePlannerPlugin().activate(context)
+            context.command(RoutePlannerContract.begin).invokeRaw(JsonObject(emptyMap()))
+            context.command(RoutePlannerContract.setPoint).invokeRaw(point("start", 49.8290, 23.9520))
+            context.command(RoutePlannerContract.setPoint).invokeRaw(point("destination", 49.8420, 24.0320))
+
+            val stored = context.history().value
+            assertEquals(1, stored.size)
+            assertEquals(
+                49.8290,
+                stored
+                    .single()
+                    .start.position.latitude,
+                0.0,
+            )
+
+            context.command(RoutePlannerContract.clear).invokeRaw(JsonObject(emptyMap()))
+            context.command(RoutePlannerContract.begin).invokeRaw(JsonObject(emptyMap()))
+            val reused = invoke(context, RoutePlannerContract.reuseHistory, JsonObject(mapOf("index" to JsonPrimitive(0))))
+
+            assertEquals(RoutePlanStatus.Ready, reused.status)
+            assertEquals(49.8290, reused.start?.position?.latitude ?: 0.0, 0.0)
+            assertEquals(49.8420, reused.destination?.position?.latitude ?: 0.0, 0.0)
+            assertEquals(
+                Outcome.Failure(AppError.InvalidInput),
+                context
+                    .command(RoutePlannerContract.reuseHistory)
+                    .invokeRaw(JsonObject(mapOf("index" to JsonPrimitive(9)))),
+            )
         }
 
     @Test
@@ -358,10 +426,40 @@ class RoutePlannerPluginTest {
             assertEquals(RoutePlanStatus.Idle, context.state().value.status)
         }
 
+    private suspend fun invoke(
+        context: RecordingContext,
+        id: CommandId,
+        params: JsonObject,
+    ): RoutePlanState {
+        val outcome = context.command(id).invokeRaw(params)
+        if (outcome is Outcome.Failure) {
+            error("$id failed: ${outcome.error}")
+        }
+        return context.state().value
+    }
+
     private fun context(
         engine: FakeEngine = FakeEngine(),
         access: RoutingEngineAccess = RoutingEngineAccess { Outcome.Success(engine) },
-    ): RecordingContext = RecordingContext(FakeServices(routingEngines = access))
+        history: RouteHistoryAccess = MemoryHistory(),
+    ): RecordingContext = RecordingContext(FakeServices(routingEngines = access, routeHistory = history))
+
+    private class MemoryHistory : RouteHistoryAccess {
+        private val entries = mutableListOf<RouteHistoryEntry>()
+
+        override suspend fun remember(entry: RouteHistoryEntry): Outcome<List<RouteHistoryEntry>> {
+            entries.removeAll { existing -> existing.stops == entry.stops }
+            entries.add(0, entry.copy(atMillis = entries.size + 1L))
+            return Outcome.Success(entries.toList())
+        }
+
+        override suspend fun recent(): Outcome<List<RouteHistoryEntry>> = Outcome.Success(entries.toList())
+
+        override suspend fun clear(): Outcome<Unit> {
+            entries.clear()
+            return Outcome.Success(Unit)
+        }
+    }
 
     private fun point(
         role: String,

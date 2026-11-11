@@ -25,6 +25,11 @@ data class FavouriteListSummary(
  * One favourite as the lists screen draws it. [list] is null for a point that
  * is not in a list, and [special] marks a Home or Work point.
  *
+ * [position] is the stored point (T-0304). A planner stop needs coordinates,
+ * and before this field a plugin could only read the app's own `Favourite`
+ * record, which is not in the contract. It is nullable so a library entry that
+ * cannot be read keeps drawing the row without becoming a route stop.
+ *
  * [description] is the stored text, untrusted region data or a user's own
  * note. It may contain simple HTML, so a renderer must sanitise it before the
  * screen draws it; see `plugins/favourites-ui` (T-0214).
@@ -36,6 +41,7 @@ data class FavouritePointSummary(
     val list: String? = null,
     val special: FavouriteSpecial? = null,
     val description: String? = null,
+    val position: GeoPoint? = null,
 )
 
 /**

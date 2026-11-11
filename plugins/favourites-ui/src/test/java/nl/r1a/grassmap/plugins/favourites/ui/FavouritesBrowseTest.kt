@@ -3,6 +3,7 @@ package nl.r1a.grassmap.plugins.favourites.ui
 import nl.r1a.grassmap.plugin.api.model.FavouriteMatch
 import nl.r1a.grassmap.plugin.api.model.FavouritePointSummary
 import nl.r1a.grassmap.plugin.api.model.FavouriteSort
+import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -42,6 +43,20 @@ class FavouritesBrowseTest {
             listOf("cafe-none", "alpha-a", "beta-a", "cafe-a", "alpha-b", "beta-b"),
             sorted(FavouriteSort.LIST_THEN_NAME),
         )
+    }
+
+    @Test
+    fun aBrowsedRowKeepsThePointOfItsSummary() {
+        val point = GeoPoint(49.8419, 24.0322)
+
+        val state =
+            FavouritesBrowser.browse(
+                listOf(FavouritePointSummary("home", "Rynok Square", position = point)),
+                "",
+                FavouriteSort.INSERTION,
+            )
+
+        assertEquals(point, state.rows.single().position)
     }
 
     @Test

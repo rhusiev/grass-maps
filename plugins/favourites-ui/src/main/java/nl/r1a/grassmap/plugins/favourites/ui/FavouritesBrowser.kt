@@ -184,6 +184,7 @@ internal object FavouritesBrowser {
             special = point.special,
             description = renderDescription(point.description),
             match = reason,
+            position = point.position,
         )
 
     private fun match(

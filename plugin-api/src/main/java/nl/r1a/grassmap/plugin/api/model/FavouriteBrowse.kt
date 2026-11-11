@@ -45,6 +45,10 @@ enum class FavouriteMatch {
  *
  * [description] is the sanitised plain text the screen draws, never the raw
  * stored value, so a markup-carrying description cannot reach the UI as HTML.
+ *
+ * [position] is carried through from [FavouritePointSummary] (T-0304) so a
+ * row a plugin resolves can become a route stop without reading the app's
+ * store.
  */
 @Serializable
 data class FavouritePointRow(
@@ -54,6 +58,7 @@ data class FavouritePointRow(
     val special: FavouriteSpecial? = null,
     val description: String? = null,
     val match: FavouriteMatch = FavouriteMatch.NONE,
+    val position: GeoPoint? = null,
 )
 
 /**
@@ -69,3 +74,13 @@ data class FavouriteBrowseState(
     val sort: FavouriteSort = FavouriteSort.INSERTION,
     val rows: List<FavouritePointRow> = emptyList(),
 )
+
+/**
+ * The planner stop a browse row denotes, or null when the row carries no point
+ * (T-0304). `plugins/route-planner` can therefore resolve a favourite without
+ * reading the app's own `Favourite` record.
+ */
+fun FavouritePointRow.toRouteStop(): RoutePlanPoint? =
+    position?.let { point ->
+        RoutePlanPoint(position = point, label = name)
+    }

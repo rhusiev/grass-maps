@@ -105,7 +105,7 @@ private fun durationText(
     }
 }
 
-private fun distanceText(
+internal fun distanceText(
     meters: Double,
     strings: Strings,
     locale: Locale,

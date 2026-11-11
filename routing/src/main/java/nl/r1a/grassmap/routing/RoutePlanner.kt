@@ -9,6 +9,9 @@ import kotlinx.coroutines.sync.withLock
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.host.NoRouteHistoryAccess
+import nl.r1a.grassmap.plugin.api.host.RouteHistoryAccess
+import nl.r1a.grassmap.plugin.api.model.RouteHistoryEntry
 import nl.r1a.grassmap.plugin.api.model.RoutePlanFailure
 import nl.r1a.grassmap.plugin.api.model.RoutePlanOption
 import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
@@ -24,7 +27,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 /**
  * The one planning state behind the start/end preview (T-0302), with
- * intermediate stops (T-0303).
+ * intermediate stops (T-0303) and an edit history (T-0304).
  *
  * Two ends and any number of vias go in, one route request goes out through
  * [requestRoute], and the engine's own answer list becomes the selectable
@@ -39,12 +42,19 @@ import java.util.concurrent.atomic.AtomicLong
  * rules the engine knows about. A point change, a via edit or a newer request
  * invalidates an older in-flight request, so a slow answer cannot overwrite the
  * state a later edit produced.
+ *
+ * [undo] and [redo] step through whole published states, so the route a request
+ * produced is part of its edit. An edit's snapshots are kept in memory only and
+ * bounded; the planner asks no engine when it restores one, because the line the
+ * user saw is what undo must return and a second request could return another
+ * route.
  */
 class RoutePlanner(
     private val requestRoute: suspend (RouteRequest, CancellationHandle) -> Outcome<List<Route>>,
     private val clock: Clock = SystemClock,
     private val profile: RouteProfile = RouteProfile.Walk,
     private val alternatives: Int = 1,
+    private val history: RouteHistoryAccess = NoRouteHistoryAccess,
 ) {
     init {
         require(alternatives >= 0) { "alternatives must not be negative" }
@@ -53,9 +63,23 @@ class RoutePlanner(
     private val mutex = Mutex()
     private val ticket = AtomicLong(0)
     private val _state = MutableStateFlow(RoutePlanState())
+    private val undoStack = ArrayDeque<RoutePlanState>()
+    private val redoStack = ArrayDeque<RoutePlanState>()
+    private val _recent = MutableStateFlow<List<RouteHistoryEntry>>(emptyList())
     private var generation = 0L
 
     val state: StateFlow<RoutePlanState> = _state.asStateFlow()
+
+    /** The routes the host kept for reuse, newest first. */
+    val recent: StateFlow<List<RouteHistoryEntry>> = _recent.asStateFlow()
+
+    /** Reads the stored history once; the plugin calls this on activation. */
+    suspend fun loadHistory() {
+        val listed = history.recent()
+        if (listed is Outcome.Success) {
+            _recent.value = listed.value
+        }
+    }
 
     /** Opens the planner; a complete pair re-routes instead of asking again. */
     suspend fun begin(): Outcome<RoutePlanState> {
@@ -64,13 +88,14 @@ class RoutePlanner(
                 ticket.incrementAndGet()
                 val current = _state.value
                 val complete = current.start != null && current.destination != null
-                _state.value =
+                setState(
                     current.copy(
                         status = if (complete) RoutePlanStatus.Planning else nextPickingStatus(current),
                         options = emptyList(),
                         selectedIndex = 0,
                         failure = null,
-                    )
+                    ),
+                )
                 _state.value
             }
         return if (snapshot.status == RoutePlanStatus.Planning) request(snapshot) else Outcome.Success(snapshot)
@@ -90,14 +115,16 @@ class RoutePlanner(
                         RoutePlanRole.Start -> current.copy(start = point)
                         RoutePlanRole.Destination -> current.copy(destination = point)
                     }
+                rememberEdit(current)
                 val complete = next.start != null && next.destination != null
-                _state.value =
+                setState(
                     next.copy(
                         status = if (complete) RoutePlanStatus.Planning else nextPickingStatus(next),
                         options = emptyList(),
                         selectedIndex = 0,
                         failure = null,
-                    )
+                    ),
+                )
                 _state.value
             }
         return if (snapshot.status == RoutePlanStatus.Planning) request(snapshot) else Outcome.Success(snapshot)
@@ -148,13 +175,14 @@ class RoutePlanner(
             mutex.withLock {
                 ticket.incrementAndGet()
                 val current = _state.value
-                _state.value =
+                setState(
                     current.copy(
                         status = RoutePlanStatus.Planning,
                         options = emptyList(),
                         selectedIndex = 0,
                         failure = null,
-                    )
+                    ),
+                )
                 _state.value
             }
         return request(snapshot)
@@ -177,12 +205,14 @@ class RoutePlanner(
                         options = emptyList(),
                         selectedIndex = 0,
                     )
+                rememberEdit(current)
                 val complete = next.start != null && next.destination != null
-                _state.value =
+                setState(
                     next.copy(
                         status = if (complete) RoutePlanStatus.Planning else nextPickingStatus(next),
                         failure = null,
-                    )
+                    ),
+                )
                 _state.value
             }
         return if (snapshot.status == RoutePlanStatus.Planning) request(snapshot) else Outcome.Success(snapshot)
@@ -199,17 +229,71 @@ class RoutePlanner(
                 ticket.incrementAndGet()
                 val current = _state.value
                 val updated = update(current) ?: return@withLock null
+                rememberEdit(current)
                 val complete = updated.start != null && updated.destination != null
-                _state.value =
+                setState(
                     updated.copy(
                         status = if (complete) RoutePlanStatus.Planning else nextPickingStatus(updated),
                         options = emptyList(),
                         selectedIndex = 0,
                         failure = null,
-                    )
+                    ),
+                )
                 _state.value
             } ?: return Outcome.Failure(AppError.InvalidInput)
         return if (snapshot.status == RoutePlanStatus.Planning) request(snapshot) else Outcome.Success(snapshot)
+    }
+
+    /**
+     * Steps back one edit, restoring the whole state that edit produced
+     * (including its route) without asking the engine. Five edits, five undos
+     * and five redos end at the same states; the flags in the published state
+     * say how many steps are left.
+     */
+    suspend fun undo(): Outcome<RoutePlanState> =
+        mutex.withLock {
+            val restored = undoStack.removeLastOrNull() ?: return@withLock Outcome.Failure(AppError.InvalidInput)
+            ticket.incrementAndGet()
+            redoStack.addLast(_state.value)
+            setState(restored)
+            Outcome.Success(_state.value)
+        }
+
+    /** Steps forward to the state an undo left, the same way [undo] steps back. */
+    suspend fun redo(): Outcome<RoutePlanState> =
+        mutex.withLock {
+            val restored = redoStack.removeLastOrNull() ?: return@withLock Outcome.Failure(AppError.InvalidInput)
+            ticket.incrementAndGet()
+            undoStack.addLast(_state.value)
+            setState(restored)
+            Outcome.Success(_state.value)
+        }
+
+    /**
+     * Replaces the chain with a stored entry and routes it, as one edit so one
+     * undo returns to the plan the user had. The stored totals are not reused:
+     * the engine resolves the chain again against the current map data.
+     */
+    suspend fun reuse(entry: RouteHistoryEntry): Outcome<RoutePlanState> {
+        val snapshot =
+            mutex.withLock {
+                val current = _state.value
+                rememberEdit(current)
+                ticket.incrementAndGet()
+                setState(
+                    current.copy(
+                        start = entry.start,
+                        destination = entry.destination,
+                        vias = entry.vias,
+                        status = RoutePlanStatus.Planning,
+                        options = emptyList(),
+                        selectedIndex = 0,
+                        failure = null,
+                    ),
+                )
+                _state.value
+            }
+        return request(snapshot)
     }
 
     /** Selects one returned alternative; the drawn line follows [state]. */
@@ -219,15 +303,17 @@ class RoutePlanner(
             if (current.status != RoutePlanStatus.Ready || index !in current.options.indices) {
                 return@withLock Outcome.Failure(AppError.InvalidInput)
             }
-            _state.value = current.copy(selectedIndex = index)
+            setState(current.copy(selectedIndex = index))
             Outcome.Success(_state.value)
         }
 
-    /** Closes the plan and cancels any request still in flight. */
+    /** Closes the plan, cancels any request still in flight and drops the edit history. */
     suspend fun clear(): Outcome<RoutePlanState> {
         ticket.incrementAndGet()
         return mutex.withLock {
-            _state.value = RoutePlanState()
+            undoStack.clear()
+            redoStack.clear()
+            setState(RoutePlanState())
             Outcome.Success(_state.value)
         }
     }
@@ -259,31 +345,33 @@ class RoutePlanner(
             }
             when (outcome) {
                 is Outcome.Failure -> {
-                    _state.value =
+                    setState(
                         _state.value.copy(
                             status = RoutePlanStatus.Failed,
                             options = emptyList(),
                             failure = failureOf(outcome.error),
-                        )
+                        ),
+                    )
                     outcome
                 }
 
                 is Outcome.Success -> {
-                    publish(outcome.value)
+                    publishRoutes(outcome.value)
                 }
             }
         }
     }
 
-    private fun publish(routes: List<Route>): Outcome<RoutePlanState> {
+    private suspend fun publishRoutes(routes: List<Route>): Outcome<RoutePlanState> {
         val usable = routes.filter { route -> route.geometry.size >= MIN_ROUTE_POINTS }
         if (usable.isEmpty()) {
-            _state.value =
+            setState(
                 _state.value.copy(
                     status = RoutePlanStatus.Failed,
                     options = emptyList(),
                     failure = RoutePlanFailure.NoRoute,
-                )
+                ),
+            )
             return Outcome.Failure(AppError.NotFound)
         }
         val now = clock.nowMillis()
@@ -299,15 +387,61 @@ class RoutePlanner(
                 )
             }
         generation += 1
-        _state.value =
+        setState(
             _state.value.copy(
                 status = RoutePlanStatus.Ready,
                 options = options,
                 selectedIndex = 0,
                 generation = generation,
                 failure = null,
-            )
+            ),
+        )
+        rememberRoute(_state.value)
         return Outcome.Success(_state.value)
+    }
+
+    /**
+     * Publishes [value] with the edit history's current reach. The flags are
+     * derived, never stored in a snapshot, so a restore cannot carry a stale
+     * count.
+     */
+    private fun setState(value: RoutePlanState) {
+        _state.value =
+            value.copy(
+                undoAvailable = undoStack.isNotEmpty(),
+                redoAvailable = redoStack.isNotEmpty(),
+            )
+    }
+
+    /** Keeps the state an edit replaces; a new edit drops anything redoable. */
+    private fun rememberEdit(before: RoutePlanState) {
+        undoStack.addLast(before)
+        if (undoStack.size > MAX_UNDO_STEPS) {
+            undoStack.removeFirst()
+        }
+        redoStack.clear()
+    }
+
+    /**
+     * Records a produced route for reuse. History is auxiliary: a store that is
+     * missing or refuses must not fail the plan the user asked for.
+     */
+    private suspend fun rememberRoute(state: RoutePlanState) {
+        val start = state.start ?: return
+        val destination = state.destination ?: return
+        val selected = state.selected ?: return
+        val entry =
+            RouteHistoryEntry(
+                start = start,
+                destination = destination,
+                vias = state.vias,
+                distanceMeters = selected.distanceMeters,
+                durationSeconds = selected.durationSeconds,
+            )
+        val stored = history.remember(entry)
+        if (stored is Outcome.Success) {
+            _recent.value = stored.value
+        }
     }
 
     private fun failureOf(error: AppError): RoutePlanFailure =
@@ -338,5 +472,12 @@ class RoutePlanner(
     private companion object {
         const val MILLIS_PER_SECOND = 1_000.0
         const val MIN_ROUTE_POINTS = 2
+
+        /**
+         * How many edits can be undone. A snapshot carries a route geometry, so
+         * the bound keeps the worst case at a few megabytes; five is what the
+         * acceptance exercises and ten leaves room for ordinary editing.
+         */
+        const val MAX_UNDO_STEPS = 10
     }
 }

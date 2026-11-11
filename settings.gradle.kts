@@ -41,6 +41,7 @@ include(
     ":plugins:map-controls",
     ":plugins:point-info",
     ":plugins:osm-places",
+    ":plugins:online-search",
     ":plugins:favourites-ui",
     ":plugins:links",
     ":plugins:share",

@@ -79,6 +79,12 @@ data class SearchContext(
     val position: GeoPoint? = null,
 )
 
+/** Where a search result came from, so the screen can mark a row that left the device. */
+enum class PlaceSource {
+    OFFLINE,
+    ONLINE,
+}
+
 /**
  * One ranked result. [id] is stable for the same index build and is the value
  * [PlaceProvider.details] accepts. [regionBuild] names the build the row came
@@ -107,6 +113,8 @@ data class PlaceHit(
     val score: Float,
     val brand: String? = null,
     val isCoordinate: Boolean = false,
+    /** [PlaceSource.ONLINE] when the row came from a network provider. */
+    val source: PlaceSource = PlaceSource.OFFLINE,
 )
 
 /**

@@ -1,0 +1,26 @@
+{
+  "id": "online.search",
+  "name": "plugin.online_search.name",
+  "description": "plugin.online_search.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.online.search.OnlineSearchPlugin",
+  "contributes": {
+    "providers": [
+      {
+        "contract": "places.search",
+        "version": "2.1.0"
+      }
+    ]
+  },
+  "needs": {
+    "network": [
+      "network.online_search"
+    ],
+    "location": "none",
+    "regions": []
+  },
+  "activation": [
+    "provider"
+  ]
+}

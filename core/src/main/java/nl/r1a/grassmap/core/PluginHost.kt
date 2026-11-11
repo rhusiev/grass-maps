@@ -57,6 +57,8 @@ import nl.r1a.grassmap.plugin.api.provider.Provider
 import nl.r1a.grassmap.plugin.api.provider.ProviderContract
 import nl.r1a.grassmap.plugin.api.service.Clock
 import nl.r1a.grassmap.plugin.api.service.LocationService
+import nl.r1a.grassmap.plugin.api.service.NetworkGate
+import nl.r1a.grassmap.plugin.api.service.NoNetworkGate
 import nl.r1a.grassmap.plugin.api.widget.WidgetDescriptor
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.AbstractCoroutineContextElement
@@ -78,6 +80,7 @@ class PluginHost(
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val clockMillis: () -> Long = System::currentTimeMillis,
     private val locationService: LocationService = InertLocationService,
+    private val networkGate: NetworkGate = NoNetworkGate,
     private val elevationAccess: ElevationAccess = NoElevationAccess,
     private val cameraFlow: Flow<Camera> = emptyFlow(),
     private val devToolsAccess: DevToolsAccess = NoDevToolsAccess,
@@ -505,6 +508,8 @@ class PluginHost(
         override val streams: StreamAccess by lazy { StreamRegistry(this@PluginHost) }
 
         override val location: LocationService = locationService
+
+        override val network: NetworkGate = this@PluginHost.networkGate
 
         override val elevation: ElevationAccess = elevationAccess
 

@@ -1,10 +1,13 @@
-package nl.r1a.grassmap.core.services
+package nl.r1a.grassmap.plugin.api.service
 
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
 
 /**
  * The v1 network switches. There is one switch per kind of contact that leaves
  * the device (cross-cutting.md section 3), and all of them start off.
+ *
+ * The ids live in the API because a plugin that opens a socket names the
+ * switch it needs; the state and its request counters stay with the host.
  */
 object NetworkSwitches {
     /** An online place search: sends the query, the IP address and usually the map area. */

@@ -4,6 +4,8 @@ import kotlinx.coroutines.flow.Flow
 import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.service.Clock
 import nl.r1a.grassmap.plugin.api.service.LocationService
+import nl.r1a.grassmap.plugin.api.service.NetworkGate
+import nl.r1a.grassmap.plugin.api.service.NoNetworkGate
 
 /**
  * The host interfaces a plugin reads on activation.
@@ -28,6 +30,12 @@ interface PluginServices {
 
     /** Wall-clock time, for cadence checks and fix ages. */
     val clock: Clock
+
+    /**
+     * The only path to the network. A plugin that needs it names the privacy
+     * switch its request requires; an unwired host refuses every request.
+     */
+    val network: NetworkGate get() = NoNetworkGate
 
     /**
      * Development seams: the GPX replay and the frame-rate and memory sample.

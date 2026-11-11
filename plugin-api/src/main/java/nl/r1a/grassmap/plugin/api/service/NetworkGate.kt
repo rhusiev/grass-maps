@@ -24,3 +24,14 @@ interface NetworkGate {
         block: suspend () -> Outcome<T>,
     ): Outcome<T>
 }
+
+/**
+ * The gate a plugin sees before the host wires the real one. It refuses every
+ * request, so a plugin built without a network path cannot open a socket.
+ */
+object NoNetworkGate : NetworkGate {
+    override suspend fun <T> request(
+        switch: SwitchId,
+        block: suspend () -> Outcome<T>,
+    ): Outcome<T> = Outcome.Failure(AppError.SwitchOff(switch))
+}

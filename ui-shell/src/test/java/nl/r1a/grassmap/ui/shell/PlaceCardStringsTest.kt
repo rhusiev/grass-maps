@@ -65,6 +65,14 @@ class PlaceCardStringsTest {
                 "search_no_matches",
                 "search_not_ready",
                 "search_loading",
+                "search_online_off_sends_position",
+                "search_online_off_no_position",
+                "search_online_on_sends_position",
+                "search_online_on_no_position",
+                "search_online_enable",
+                "search_online_badge",
+                "search_position_allow",
+                "search_position_stop",
             )
     }
 }

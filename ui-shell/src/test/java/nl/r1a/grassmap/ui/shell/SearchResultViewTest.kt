@@ -2,6 +2,7 @@ package nl.r1a.grassmap.ui.shell
 
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.provider.PlaceHit
+import nl.r1a.grassmap.plugin.api.provider.PlaceSource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -90,6 +91,19 @@ class SearchResultViewTest {
     }
 
     @Test
+    fun anOnlineHitIsMarkedInItsRow() {
+        val view =
+            searchResultView(
+                listOf(
+                    hit("off", "Площа Ринок", 49.8413, 24.0312),
+                    hit("on", "АТБ", 49.8419, 24.0316, source = PlaceSource.ONLINE),
+                ),
+            )
+
+        assertEquals(listOf(false, true), view.rows.map { it.online })
+    }
+
+    @Test
     fun everyHitBecomesOneRowAndOneMarker() {
         val hits = (1..5).map { index -> hit("id-$index", "Place $index", 49.84 + index / 1000.0, 24.03) }
 
@@ -108,6 +122,7 @@ class SearchResultViewTest {
         longitude: Double,
         address: String? = "Львів",
         brand: String? = null,
+        source: PlaceSource = PlaceSource.OFFLINE,
     ): PlaceHit =
         PlaceHit(
             id = id,
@@ -118,6 +133,7 @@ class SearchResultViewTest {
             regionBuild = "test",
             score = 1f,
             brand = brand,
+            source = source,
         )
 
     private companion object {

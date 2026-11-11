@@ -21,6 +21,7 @@ import nl.r1a.grassmap.core.services.LocationPermissionStore
 import nl.r1a.grassmap.core.services.LocationSource
 import nl.r1a.grassmap.core.services.NoHeadingSource
 import nl.r1a.grassmap.core.services.NoLocationSource
+import nl.r1a.grassmap.core.services.OnlineSearchSettings
 import nl.r1a.grassmap.core.services.PrivacyNetworkGate
 import nl.r1a.grassmap.core.services.PrivacySwitchSettings
 import nl.r1a.grassmap.core.services.SearchHistorySettings
@@ -28,6 +29,7 @@ import nl.r1a.grassmap.core.services.SharedLocationSource
 import nl.r1a.grassmap.core.services.UnitSettings
 import nl.r1a.grassmap.core.services.diagnosticsCommands
 import nl.r1a.grassmap.map.DistanceByTapSetting
+import nl.r1a.grassmap.places.MergedPlaceSearch
 import nl.r1a.grassmap.places.PlacesAccess
 import nl.r1a.grassmap.places.SearchHistorySetting
 import nl.r1a.grassmap.places.SearchHistoryStore
@@ -45,11 +47,14 @@ import nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
 import nl.r1a.grassmap.plugin.api.provider.CoordinateParser
+import nl.r1a.grassmap.plugin.api.provider.PlaceProvider
+import nl.r1a.grassmap.plugin.api.provider.PlaceProviderContract
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngineContract
 import nl.r1a.grassmap.plugin.api.service.Clock
 import nl.r1a.grassmap.plugin.api.service.HeadingSource
 import nl.r1a.grassmap.plugin.api.service.NetworkGate
+import nl.r1a.grassmap.plugin.api.service.NetworkSwitches
 import nl.r1a.grassmap.plugin.api.service.PrivacySwitches
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.api.service.SystemClock
@@ -96,6 +101,7 @@ class AppContainer(
     private val unitSettingsFileProvider: () -> File? = { null },
     private val searchHistoryFileProvider: () -> File? = { null },
     private val searchHistorySettingsFileProvider: () -> File? = { null },
+    private val onlineSearchSettingsFileProvider: () -> File? = { null },
     private val routeHistoryFileProvider: () -> File? = { null },
     private val favouritesRootProvider: () -> File? = { null },
     private val favouritesBackupClock: Clock = SystemClock,
@@ -154,6 +160,13 @@ class AppContainer(
      * command, never on Main.
      */
     val searchHistorySettings: SearchHistorySettings by lazy { SearchHistorySettings(searchHistorySettingsFileProvider()) }
+
+    /**
+     * The separate "send my position" allowance for online search (T-0212).
+     * Construction reads the settings file, so the search path and the screen
+     * resolve it off Main.
+     */
+    val onlineSearchSettings: OnlineSearchSettings by lazy { OnlineSearchSettings(onlineSearchSettingsFileProvider()) }
 
     /**
      * The last searches (T-0207). It asks [searchHistorySettings] before it
@@ -269,22 +282,62 @@ class AppContainer(
         )
     }
 
+    /** Whether the user allowed online place search. */
+    val onlineSearchEnabled: Boolean
+        get() = privacySwitches.state(NetworkSwitches.onlineSearch).enabled
+
+    /** Turns the online-search privacy switch on or off. */
+    suspend fun setOnlineSearchEnabled(enabled: Boolean): Outcome<Unit> = privacySwitches.setEnabled(NetworkSwitches.onlineSearch, enabled)
+
+    /**
+     * The one query path (T-0203, T-0212): offline rows first, then the opt-in
+     * online rows from the Photon provider, merged in [MergedPlaceSearch].
+     */
+    private val mergedSearch: MergedPlaceSearch by lazy {
+        val indexes = places
+        MergedPlaceSearch(
+            offline = { request ->
+                indexes.search(
+                    indexName = request.index,
+                    query = request.query,
+                    context = request.context,
+                    limit = request.limit,
+                    cancellation = request.cancellation,
+                )
+            },
+            online = { request ->
+                when (
+                    val invoked =
+                        providerRegistry.invoke(ONLINE_SEARCH_PLUGIN, PlaceProviderContract.REFERENCE) { provider ->
+                            val placeProvider = provider as? PlaceProvider
+                            if (placeProvider == null) {
+                                Outcome.Failure(AppError.Unsupported)
+                            } else {
+                                placeProvider.search(
+                                    query = request.query,
+                                    context = request.context,
+                                    limit = request.limit,
+                                    cancellation = request.cancellation,
+                                )
+                            }
+                        }
+                ) {
+                    is Outcome.Success -> invoked.value
+                    is Outcome.Failure -> invoked
+                }
+            },
+            onlineEnabled = { onlineSearchEnabled },
+            positionAllowed = { onlineSearchSettings.isPositionAllowed() },
+        )
+    }
+
     /**
      * The search screen's state (T-0203). The shell sends each keystroke through
      * the command bus; this session holds the one query path and publishes the
      * result set both the list and the map markers draw.
      */
     val searchScreen: SearchScreenSession by lazy {
-        val indexes = places
-        SearchScreenSession { request ->
-            indexes.search(
-                indexName = request.index,
-                query = request.query,
-                context = request.context,
-                limit = request.limit,
-                cancellation = request.cancellation,
-            )
-        }
+        SearchScreenSession { request -> mergedSearch.search(request) }
     }
 
     /** The track import path over the generated `file.gpx` provider. */
@@ -421,6 +474,7 @@ class AppContainer(
             hostCommands = hostCommands,
             dispatcher = dispatchers.default,
             locationService = locationSource,
+            networkGate = networkGate,
             cameraFlow = mapSession.camera,
             devToolsAccess = devTools,
             favouritesListsAccess = favouritesLists,
@@ -472,5 +526,6 @@ class AppContainer(
         const val NAVIGATION_TAG = "GrassMapsNavigation"
         const val ROUTING_PACK_DIRECTORY = "valhalla"
         val ROUTING_ENGINE_PLUGIN = PluginId("valhalla")
+        val ONLINE_SEARCH_PLUGIN = PluginId("online.search")
     }
 }

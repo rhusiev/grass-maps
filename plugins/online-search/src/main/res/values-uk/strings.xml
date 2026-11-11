@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.online_search.name">Онлайн-пошук</string>
+    <string name="plugin.online_search.description">Шукає місця через Photon, геокодер OpenStreetMap.</string>
+</resources>

@@ -10,6 +10,7 @@ first product asset lands.
 | MapLibre Native | BSD-2-Clause | map renderer, reached through maplibre-compose |
 | Protomaps basemaps | BSD-3-Clause | vector basemap schema and build tooling |
 | OpenStreetMap data | ODbL-1.0 | © OpenStreetMap contributors; region packs are derived data |
+| Photon public geocoder (`photon.komoot.io`) | Apache-2.0 (service software); ODbL-1.0 (results) | Online place search (T-0212); used under the public instance's fair-use terms, results are © OpenStreetMap contributors, and the search screen names both |
 | `test-data/regions/fixture-mini` map tiles | ODbL-1.0 | © OpenStreetMap contributors; extracted from the bench Ukraine build |
 | `test-data/regions/fixture-mini` contours | Copernicus DEM GLO-30 terms | © DLR e.V. and © Airbus Defence and Space GmbH, provided under Copernicus by the EU and ESA |
 | `test-data/map-goldens` screenshots | ODbL-1.0 / Copernicus DEM GLO-30 terms | Rendered captures of the `fixture-mini` map tiles and contours for the T-0102 fixture and T-0108 Standard style golden tests |

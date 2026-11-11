@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
@@ -87,6 +88,7 @@ import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.model.WebMercator
 import nl.r1a.grassmap.plugin.api.provider.MapLayerContract
 import nl.r1a.grassmap.plugin.api.provider.MapLayerProvider
+import nl.r1a.grassmap.plugin.api.provider.PlaceSource
 import nl.r1a.grassmap.plugins.favourites.ui.FavouritesUiContract
 import nl.r1a.grassmap.plugins.map.controls.CameraMode
 import nl.r1a.grassmap.plugins.map.controls.ScaleBar
@@ -279,6 +281,12 @@ private fun MapContent(
     val listsQuerySequence = remember { longArrayOf(0L) }
     val searchState by container.searchScreen.state.collectAsState()
     val searchSequence = remember { longArrayOf(0L) }
+    var onlineSearchEnabled by remember { mutableStateOf(container.onlineSearchEnabled) }
+    val positionAllowed by
+        produceState(false) {
+            val allowed = withContext(Dispatchers.IO) { container.onlineSearchSettings.positionAllowed }
+            allowed.collect { value = it }
+        }
     val searchCamera by surface.host.camera.collectAsState()
     val planFlow =
         remember(container) {
@@ -460,12 +468,14 @@ private fun MapContent(
                     container.commandBus
                         .invoke(
                             SEARCH_SCREEN_COMMAND,
-                            buildJsonObject {
-                                put("query", text)
-                                put("sequence", sequence)
-                                put("index", SearchScreenSession.DEFAULT_INDEX)
-                                put("limit", SearchScreenSession.DEFAULT_LIMIT)
-                            },
+                            searchKeystrokeParams(
+                                query = text,
+                                sequence = sequence,
+                                index = SearchScreenSession.DEFAULT_INDEX,
+                                limit = SearchScreenSession.DEFAULT_LIMIT,
+                                position = searchCamera.center,
+                                positionAllowed = positionAllowed,
+                            ),
                         ).onFailure { error ->
                             if (error != AppError.Cancelled) {
                                 Log.w(TAG, "search keystroke failed: $error")
@@ -489,7 +499,9 @@ private fun MapContent(
                         }
                         // A coordinate row is a point, not a place: there is no card
                         // behind it, so the map moves and no card is opened (T-0206).
-                        if (hit?.isCoordinate != true) {
+                        // An online row has no offline record either, so it moves the
+                        // map and opens no card (T-0212).
+                        if (hit?.isCoordinate != true && hit?.source != PlaceSource.ONLINE) {
                             container.showPlaceCard(SearchScreenSession.DEFAULT_INDEX, placeId).onFailure { error ->
                                 Log.w(TAG, "search result card failed: $error")
                             }
@@ -509,6 +521,25 @@ private fun MapContent(
                 Modifier
                     .statusBarsPadding()
                     .padding(BAR_PADDING_DP.dp),
+            onlineSearchEnabled = onlineSearchEnabled,
+            positionAllowed = positionAllowed,
+            onEnableOnlineSearch = {
+                scope.launch {
+                    container.setOnlineSearchEnabled(true).onFailure { error ->
+                        Log.w(TAG, "online search switch failed: $error")
+                    }
+                    onlineSearchEnabled = container.onlineSearchEnabled
+                }
+            },
+            onAllowPosition = { allowed ->
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        container.onlineSearchSettings.setPositionAllowed(allowed)
+                    }.onFailure { error ->
+                        Log.w(TAG, "position allowance not saved: $error")
+                    }
+                }
+            },
         )
         PlaceCardHost(
             card = placeCard,

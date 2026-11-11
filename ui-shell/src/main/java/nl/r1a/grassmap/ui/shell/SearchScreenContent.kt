@@ -2,15 +2,18 @@ package nl.r1a.grassmap.ui.shell
 
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.provider.PlaceHit
+import nl.r1a.grassmap.plugin.api.provider.PlaceSource
 
 /**
  * One result row: the place's name and its address; without an address, the
- * brand or operator it carries; without a brand, its kind (T-0204).
+ * brand or operator it carries; without a brand, its kind (T-0204). [online]
+ * marks a row that came from the network (T-0212).
  */
 data class SearchResultRow(
     val id: String,
     val name: String,
     val detail: String?,
+    val online: Boolean = false,
 )
 
 /** One map marker: the same result row's place, at its position. */
@@ -46,6 +49,7 @@ fun searchResultView(hits: List<PlaceHit>): SearchResultView =
                         hit.address?.takeIf { it.isNotBlank() }
                             ?: hit.brand?.takeIf { it.isNotBlank() }
                             ?: hit.kind.takeIf { it.isNotBlank() },
+                    online = hit.source == PlaceSource.ONLINE,
                 )
             },
         markers = hits.map { hit -> SearchMarker(id = hit.id, position = hit.position) },
@@ -59,7 +63,54 @@ data class SearchScreenLabels(
     val noMatches: String,
     val notReady: String,
     val loading: String,
+    val onlineOffSendsPosition: String = "",
+    val onlineOffNoPosition: String = "",
+    val onlineOnSendsPosition: String = "",
+    val onlineOnNoPosition: String = "",
+    val onlineEnable: String = "",
+    val onlineBadge: String = "",
+    val positionAllow: String = "",
+    val positionStop: String = "",
 )
+
+/** The action the online-search notice offers. */
+enum class SearchOnlineAction {
+    ENABLE,
+    ALLOW_POSITION,
+    STOP_POSITION,
+}
+
+/** The one line the search screen shows about online search and its action. */
+data class SearchOnlineNotice(
+    val text: String,
+    val action: String?,
+    val actionKind: SearchOnlineAction,
+)
+
+/**
+ * What the screen says about online search (T-0212). With the switch off it
+ * names exactly what enabling sends: always the query and the IP address, and
+ * the map position only when the separate allowance is on. With the switch on
+ * it names the source and the current position choice.
+ */
+fun searchOnlineNotice(
+    labels: SearchScreenLabels,
+    onlineEnabled: Boolean,
+    positionAllowed: Boolean,
+): SearchOnlineNotice =
+    if (onlineEnabled) {
+        SearchOnlineNotice(
+            text = if (positionAllowed) labels.onlineOnSendsPosition else labels.onlineOnNoPosition,
+            action = if (positionAllowed) labels.positionStop else labels.positionAllow,
+            actionKind = if (positionAllowed) SearchOnlineAction.STOP_POSITION else SearchOnlineAction.ALLOW_POSITION,
+        )
+    } else {
+        SearchOnlineNotice(
+            text = if (positionAllowed) labels.onlineOffSendsPosition else labels.onlineOffNoPosition,
+            action = labels.onlineEnable,
+            actionKind = SearchOnlineAction.ENABLE,
+        )
+    }
 
 /** One keystroke's worth of screen content: the labels, the rows and the state line. */
 data class SearchScreenContent(
@@ -68,6 +119,7 @@ data class SearchScreenContent(
     val markers: List<SearchMarker>,
     val message: String?,
     val loading: Boolean,
+    val online: SearchOnlineNotice? = null,
 )
 
 /**
@@ -81,6 +133,7 @@ fun searchScreenContent(
     loading: Boolean,
     failed: Boolean,
     labels: SearchScreenLabels,
+    online: SearchOnlineNotice? = null,
 ): SearchScreenContent {
     val view = searchResultView(hits)
     val message =
@@ -97,5 +150,6 @@ fun searchScreenContent(
         markers = view.markers,
         message = message,
         loading = loading,
+        online = online,
     )
 }

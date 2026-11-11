@@ -71,6 +71,10 @@ fun SearchScreenHost(
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
     cardModifier: Modifier = Modifier,
+    onlineSearchEnabled: Boolean = false,
+    positionAllowed: Boolean = false,
+    onEnableOnlineSearch: () -> Unit = {},
+    onAllowPosition: (Boolean) -> Unit = {},
 ) {
     val labels =
         SearchScreenLabels(
@@ -80,13 +84,22 @@ fun SearchScreenHost(
             noMatches = stringResource(R.string.search_no_matches),
             notReady = stringResource(R.string.search_not_ready),
             loading = stringResource(R.string.search_loading),
+            onlineOffSendsPosition = stringResource(R.string.search_online_off_sends_position),
+            onlineOffNoPosition = stringResource(R.string.search_online_off_no_position),
+            onlineOnSendsPosition = stringResource(R.string.search_online_on_sends_position),
+            onlineOnNoPosition = stringResource(R.string.search_online_on_no_position),
+            onlineEnable = stringResource(R.string.search_online_enable),
+            onlineBadge = stringResource(R.string.search_online_badge),
+            positionAllow = stringResource(R.string.search_position_allow),
+            positionStop = stringResource(R.string.search_position_stop),
         )
+    val onlineNotice = searchOnlineNotice(labels, onlineSearchEnabled, positionAllowed)
     // The field keeps its own text. A keystroke travels to the session and back
     // asynchronously, so waiting for the round trip before drawing the character
     // would drop characters typed quickly. The session's query is only the
     // search text; the field is the user's.
     var typed by remember { mutableStateOf("") }
-    val content = searchScreenContent(hits, typed, loading, failed, labels)
+    val content = searchScreenContent(hits, typed, loading, failed, labels, onlineNotice)
     var expanded by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
 
@@ -157,8 +170,30 @@ fun SearchScreenHost(
                 if (content.loading && content.rows.isEmpty()) {
                     BasicText(text = content.labels.loading, style = secondaryStyle())
                 }
+                content.online?.let { notice ->
+                    BasicText(text = notice.text, style = secondaryStyle())
+                    notice.action?.let { action ->
+                        BasicText(
+                            text = action,
+                            style = TextStyle(color = TEXT_PRIMARY, fontSize = DETAIL_FONT_SP.sp),
+                            modifier =
+                                Modifier
+                                    .clickable {
+                                        when (notice.actionKind) {
+                                            SearchOnlineAction.ENABLE -> onEnableOnlineSearch()
+                                            SearchOnlineAction.ALLOW_POSITION -> onAllowPosition(true)
+                                            SearchOnlineAction.STOP_POSITION -> onAllowPosition(false)
+                                        }
+                                    }.padding(ROW_PADDING_DP.dp),
+                        )
+                    }
+                }
                 content.rows.forEach { row ->
-                    SearchResultRowContent(row = row, onSelect = { onSelect(row.id) })
+                    SearchResultRowContent(
+                        row = row,
+                        onlineBadge = content.labels.onlineBadge,
+                        onSelect = { onSelect(row.id) },
+                    )
                 }
                 content.message?.let { message -> BasicText(text = message, style = secondaryStyle()) }
             }
@@ -211,6 +246,7 @@ private fun SearchMarkerDot(
 @Composable
 private fun SearchResultRowContent(
     row: SearchResultRow,
+    onlineBadge: String,
     onSelect: () -> Unit,
 ) {
     Column(
@@ -220,10 +256,18 @@ private fun SearchResultRowContent(
                 .clickable(onClick = onSelect)
                 .padding(ROW_PADDING_DP.dp),
     ) {
-        BasicText(
-            text = row.name,
-            style = TextStyle(color = TEXT_PRIMARY, fontSize = ROW_FONT_SP.sp),
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            BasicText(
+                text = row.name,
+                style = TextStyle(color = TEXT_PRIMARY, fontSize = ROW_FONT_SP.sp),
+            )
+            if (row.online) {
+                BasicText(
+                    text = ONLINE_BADGE_SEPARATOR + onlineBadge,
+                    style = secondaryStyle(),
+                )
+            }
+        }
         row.detail?.let { detail -> BasicText(text = detail, style = secondaryStyle()) }
     }
 }
@@ -231,6 +275,7 @@ private fun SearchResultRowContent(
 private fun secondaryStyle(): TextStyle = TextStyle(color = TEXT_SECONDARY, fontSize = DETAIL_FONT_SP.sp)
 
 private const val CLOSE_GLYPH = "×"
+private const val ONLINE_BADGE_SEPARATOR = " · "
 private const val WEIGHT_ONE = 1f
 private const val PANEL_CORNER_DP = 12
 private const val PANEL_PADDING_DP = 12

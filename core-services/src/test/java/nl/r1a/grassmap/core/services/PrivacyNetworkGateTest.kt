@@ -5,6 +5,7 @@ import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.service.NetworkSwitches
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

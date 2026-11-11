@@ -37,4 +37,12 @@
     <string name="search_no_matches">No matches</string>
     <string name="search_not_ready">No search index for this map</string>
     <string name="search_loading">Searching</string>
+    <string name="search_online_off_sends_position">Online search is off. Enabling it sends your query text, your IP address and your map position to photon.komoot.io.</string>
+    <string name="search_online_off_no_position">Online search is off. Enabling it sends your query text and your IP address to photon.komoot.io. Your map position is not sent.</string>
+    <string name="search_online_on_sends_position">Online results come from Photon (photon.komoot.io) and OpenStreetMap contributors. Your map position is sent.</string>
+    <string name="search_online_on_no_position">Online results come from Photon (photon.komoot.io) and OpenStreetMap contributors. Your map position is not sent.</string>
+    <string name="search_online_enable">Enable online search</string>
+    <string name="search_online_badge">Online</string>
+    <string name="search_position_allow">Send my position</string>
+    <string name="search_position_stop">Stop sending my position</string>
 </resources>

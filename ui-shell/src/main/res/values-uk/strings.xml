@@ -37,4 +37,12 @@
     <string name="search_no_matches">Немає збігів</string>
     <string name="search_not_ready">Для цих карт немає пошукового індексу</string>
     <string name="search_loading">Пошук</string>
+    <string name="search_online_off_sends_position">Онлайн-пошук вимкнено. Його ввімкнення надсилає текст запиту, вашу IP-адресу та позицію на карті до photon.komoot.io.</string>
+    <string name="search_online_off_no_position">Онлайн-пошук вимкнено. Його ввімкнення надсилає текст запиту та вашу IP-адресу до photon.komoot.io. Позиція на карті не надсилається.</string>
+    <string name="search_online_on_sends_position">Онлайн-результати надходять від Photon (photon.komoot.io) та учасників OpenStreetMap. Ваша позиція на карті надсилається.</string>
+    <string name="search_online_on_no_position">Онлайн-результати надходять від Photon (photon.komoot.io) та учасників OpenStreetMap. Ваша позиція на карті не надсилається.</string>
+    <string name="search_online_enable">Увімкнути онлайн-пошук</string>
+    <string name="search_online_badge">Онлайн</string>
+    <string name="search_position_allow">Надсилати мою позицію</string>
+    <string name="search_position_stop">Припинити надсилати мою позицію</string>
 </resources>

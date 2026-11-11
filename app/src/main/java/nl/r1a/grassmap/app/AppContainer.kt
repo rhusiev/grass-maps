@@ -24,6 +24,7 @@ import nl.r1a.grassmap.core.services.NoLocationSource
 import nl.r1a.grassmap.core.services.PrivacyNetworkGate
 import nl.r1a.grassmap.core.services.PrivacySwitchSettings
 import nl.r1a.grassmap.core.services.SearchHistorySettings
+import nl.r1a.grassmap.core.services.SharedLocationSource
 import nl.r1a.grassmap.core.services.UnitSettings
 import nl.r1a.grassmap.core.services.diagnosticsCommands
 import nl.r1a.grassmap.map.DistanceByTapSetting
@@ -102,6 +103,8 @@ class AppContainer(
     private val favouritesBackupDebounceMillis: Long = FavouritesBackupRecorder.DEFAULT_DEBOUNCE_MILLIS,
     /** Clipboard, share-sheet and `ACTION_VIEW` effects (T-0210). */
     val platformActions: PlatformActions = NoPlatformActions,
+    /** The navigation foreground service (T-0314); absent in tests. */
+    private val navigationService: NavigationServiceHandle = NoNavigationServiceHandle,
 ) {
     private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val backupScope: CoroutineScope = favouritesBackupScope ?: processScope
@@ -189,14 +192,26 @@ class AppContainer(
     val heading: StateFlow<Double?>
         get() = headingSource.headingDegrees
 
-    /** The process-owned location collector; it survives Activity recreation. */
+    /**
+     * One provider collection shared by the map's collector and an active
+     * navigation session (T-0314). It registers platform providers once and
+     * releases them when the last subscriber leaves, which is the release rule
+     * for location outside navigation.
+     */
+    private val sharedLocation: LocationSource by lazy { SharedLocationSource(locationSource, processScope) }
+
+    /**
+     * The activity-scoped location collector; the activity starts it at
+     * `STARTED` and stops it at `STOPPED`. Keeping it stopped outside the
+     * foreground is what releases location when guidance is not running.
+     */
     val locationController: LocationController by lazy {
-        LocationController(locationSource, processScope, cameraModes).also { it.start() }
+        LocationController(sharedLocation, processScope, cameraModes)
     }
 
     /** The permission decision for the position control, bound by the activity. */
     val locationPermission: LocationPermissionCoordinator =
-        LocationPermissionCoordinator(locationSource, locationPermissionStore)
+        LocationPermissionCoordinator(sharedLocation, locationPermissionStore)
 
     /**
      * The `routing.engine` provider behind a host seam (T-0302). The plugin is
@@ -222,6 +237,23 @@ class AppContainer(
     /** The engine a host command resolves on the first route (T-0301). */
     val routingEngine: suspend () -> RoutingEngine? = {
         ((routingEngineAccess.engine()) as? Outcome.Success)?.value
+    }
+
+    /**
+     * The live navigation session (T-0314). Commands and the future navigation
+     * screen start it; the foreground service keeps it and location alive while
+     * the activity is gone, and stops both when the session ends.
+     */
+    val navigation: NavigationController by lazy {
+        NavigationController(
+            scope = processScope,
+            fixes = sharedLocation.fixes,
+            hasLocationPermission = { sharedLocation.hasPermission() },
+            requiresLocationPermission = { sharedLocation.requiresPermission() },
+            routing = routingEngine,
+            service = navigationService,
+            log = { message -> Log.i(NAVIGATION_TAG, message) },
+        )
     }
 
     /**
@@ -356,7 +388,7 @@ class AppContainer(
     private val hostCommands: List<Command<*, *>> by lazy {
         mapCommands(mapSession, locationController, locationPermission, cameraModes) +
             routeCommands(mapSession, routingEngine, { dataSources }) +
-            navCommands(mapSession, routingEngine) +
+            navCommands(mapSession, routingEngine, navigation) +
             searchCommands { places } +
             searchScreenCommands(searchScreen, searchHistory) { message -> Log.i(SEARCH_TAG, message) } +
             searchHistoryCommands(searchHistory) +
@@ -437,6 +469,7 @@ class AppContainer(
         const val MAP_CONTROLS_TAG = "GrassMapsMapControls"
         const val LINKS_TAG = "GrassMapsLinks"
         const val FAVOURITES_TAG = "GrassMapsFavourites"
+        const val NAVIGATION_TAG = "GrassMapsNavigation"
         const val ROUTING_PACK_DIRECTORY = "valhalla"
         val ROUTING_ENGINE_PLUGIN = PluginId("valhalla")
     }

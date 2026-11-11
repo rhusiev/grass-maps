@@ -103,4 +103,14 @@
     <string name="route_preview_hours_minutes">%1$s год %2$s хв</string>
     <string name="route_preview_metres">%1$s м</string>
     <string name="route_preview_kilometres">%1$s км</string>
+    <string name="nav_notification_channel_name">Навігація</string>
+    <string name="nav_notification_channel_description">Показує наступний поворот під час навігації та не дає вимкнути місцеположення</string>
+    <string name="nav_notification_starting">Запуск навігації</string>
+    <string name="nav_notification_following">Рух за маршрутом</string>
+    <string name="nav_notification_arrived">Ви прибули</string>
+    <string name="nav_notification_paused">Навігацію призупинено</string>
+    <string name="nav_notification_stopped">Навігацію зупинено</string>
+    <string name="nav_notification_pause">Призупинити</string>
+    <string name="nav_notification_resume">Продовжити</string>
+    <string name="nav_notification_stop">Зупинити</string>
 </resources>

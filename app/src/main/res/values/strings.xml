@@ -102,4 +102,14 @@
     <string name="route_preview_hours_minutes">%1$s h %2$s min</string>
     <string name="route_preview_metres">%1$s m</string>
     <string name="route_preview_kilometres">%1$s km</string>
+    <string name="nav_notification_channel_name">Navigation</string>
+    <string name="nav_notification_channel_description">Shows the next turn while navigation runs and keeps location active</string>
+    <string name="nav_notification_starting">Starting navigation</string>
+    <string name="nav_notification_following">Following the route</string>
+    <string name="nav_notification_arrived">You have arrived</string>
+    <string name="nav_notification_paused">Navigation paused</string>
+    <string name="nav_notification_stopped">Navigation stopped</string>
+    <string name="nav_notification_pause">Pause</string>
+    <string name="nav_notification_resume">Resume</string>
+    <string name="nav_notification_stop">Stop</string>
 </resources>

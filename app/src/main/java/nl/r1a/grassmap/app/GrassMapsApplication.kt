@@ -58,6 +58,7 @@ open class GrassMapsApplication : Application() {
             routeHistoryFileProvider = { File(filesDir, ROUTE_HISTORY_PATH) },
             favouritesRootProvider = { filesDir },
             platformActions = AndroidPlatformActions(this),
+            navigationService = AndroidNavigationServiceHandle(this),
         )
     }
 

@@ -4,11 +4,20 @@ import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.provider.Route
 
-/** Where the session is in its own lifecycle. Off-route is a relation, not a phase. */
+/**
+ * Where the session is in its own lifecycle. Off-route is a relation, not a
+ * phase.
+ *
+ * [Paused] is guidance not accepting fixes: the session still holds the last
+ * published state, and the next fix after a resume is the new position. A
+ * paused session that is stopped ends in [Stopped], never in [Arrived], because
+ * no arrival can be detected while fixes are not consumed.
+ */
 enum class NavigationPhase {
     Idle,
     Following,
     Rerouting,
+    Paused,
     Arrived,
     Stopped,
 }

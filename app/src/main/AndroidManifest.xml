@@ -4,6 +4,15 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- T-0314: the navigation foreground service. Android 14 (API 34) requires
+         the typed permission; the app never asks for ACCESS_BACKGROUND_LOCATION,
+         because a running location foreground service is in use. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- Android 13 (API 33) shows the foreground notification only when this
+         runtime permission is granted; the activity asks for it when guidance
+         starts and navigation still runs if the answer is no. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name="nl.r1a.grassmap.app.GrassMapsApplication"
@@ -49,5 +58,14 @@
                 <data android:pathPrefix="/go/" />
             </intent-filter>
         </activity>
+        <!-- T-0314: guidance runs here while the activity is not in the
+             foreground. It starts and stops with a navigation session, never on
+             its own; stopWithTask stays false so navigation survives a task
+             swipe and stopWithTask cannot release location early. -->
+        <service
+            android:name="nl.r1a.grassmap.app.NavigationService"
+            android:exported="false"
+            android:foregroundServiceType="location"
+            android:stopWithTask="false" />
     </application>
 </manifest>

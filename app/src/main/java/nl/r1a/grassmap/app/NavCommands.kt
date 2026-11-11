@@ -15,6 +15,7 @@ import kotlinx.serialization.json.intOrNull
 import nl.r1a.grassmap.core.services.MockGpxLocationSource
 import nl.r1a.grassmap.navigation.FerrostarRouteFollower
 import nl.r1a.grassmap.navigation.NavigationConfig
+import nl.r1a.grassmap.navigation.NavigationPhase
 import nl.r1a.grassmap.navigation.NavigationSession
 import nl.r1a.grassmap.navigation.RouteFollowerEngine
 import nl.r1a.grassmap.plugin.api.command.Command
@@ -33,11 +34,24 @@ import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteRequest
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
+import nl.r1a.grassmap.routing.RouteJson
 import java.time.Instant
 import kotlin.math.cos
 
 /** The debug trigger that proves the navigation seam on a replay. */
 internal val NAV_TEST_COMMAND: CommandId = CommandId("core.nav.test_follow")
+
+/** Starts live guidance on a route passed in the stable route JSON form. */
+internal val NAV_START_COMMAND: CommandId = CommandId("core.nav.start")
+
+/** Pauses live guidance: no fix reaches the follower and no reroute starts. */
+internal val NAV_PAUSE_COMMAND: CommandId = CommandId("core.nav.pause")
+
+/** Resumes live guidance from the next fix. */
+internal val NAV_RESUME_COMMAND: CommandId = CommandId("core.nav.resume")
+
+/** Ends live guidance and releases the navigation foreground service. */
+internal val NAV_STOP_COMMAND: CommandId = CommandId("core.nav.stop")
 
 private const val TAG = "GrassMapsNav"
 private const val AREA_FIXTURE = "fixture"
@@ -366,4 +380,147 @@ internal class TestFollowCommand(
 internal fun navCommands(
     session: MapSessionHolder,
     engine: suspend () -> RoutingEngine?,
-): List<Command<*, *>> = listOf(TestFollowCommand(session, engine))
+    navigation: NavigationController,
+): List<Command<*, *>> =
+    listOf(
+        TestFollowCommand(session, engine),
+        StartNavigationCommand(navigation),
+        PauseNavigationCommand(navigation),
+        ResumeNavigationCommand(navigation),
+        StopNavigationCommand(navigation),
+    )
+
+/**
+ * Starts live navigation on a route in the stable [RouteJson] form:
+ * `{"route": {...}, "profile": "walk"}`. The route is passed in rather than
+ * requested here, so the command works without a routing pack; that is also
+ * how the emulator acceptance drives the foreground service.
+ *
+ * A second start while a session runs is not an error: it reports
+ * `started=false` and leaves the running session and its route untouched.
+ */
+internal class StartNavigationCommand(
+    private val navigation: NavigationController,
+) : Command<JsonElement, String>(
+        id = NAV_START_COMMAND,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = String.serializer(),
+        doc = "Starts guidance on a route in the stable route JSON form.",
+        policy =
+            CommandPolicy(
+                allowlistedForControl = true,
+                dispatcher = CommandDispatcher.DEFAULT,
+            ),
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
+        val selection = parse(params) ?: return Outcome.Failure(AppError.InvalidInput)
+        return when (val outcome = navigation.start(selection.route, selection.profile)) {
+            is Outcome.Failure -> {
+                outcome
+            }
+
+            is Outcome.Success -> {
+                val state = navigation.state.value
+                Outcome.Success(
+                    CommandResult(
+                        "started=${outcome.value} phase=${state.phase} " +
+                            "points=${selection.route.geometry.size} " +
+                            "distance_m=${selection.route.distanceMeters} " +
+                            "profile=${selection.profile}",
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun parse(params: JsonElement): Selection? {
+        val objectValue = params as? JsonObject ?: return null
+        val routeElement = objectValue["route"] ?: return null
+        val json =
+            when (routeElement) {
+                is JsonObject -> routeElement.toString()
+                is JsonPrimitive -> routeElement.contentOrNull?.takeIf { it.isNotBlank() } ?: return null
+                else -> return null
+            }
+        val route =
+            when (val decoded = RouteJson.decode(json)) {
+                is Outcome.Success -> decoded.value
+                is Outcome.Failure -> return null
+            }
+        val profile =
+            (objectValue["profile"] as? JsonPrimitive)
+                ?.contentOrNull
+                ?.let { name -> RouteProfile.entries.firstOrNull { it.name.equals(name, ignoreCase = true) } }
+                ?: RouteProfile.Walk
+        return Selection(route, profile)
+    }
+
+    private data class Selection(
+        val route: Route,
+        val profile: RouteProfile,
+    )
+}
+
+/** Pauses guidance. Pausing without a session changes nothing. */
+internal class PauseNavigationCommand(
+    private val navigation: NavigationController,
+) : Command<JsonElement, String>(
+        id = NAV_PAUSE_COMMAND,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = String.serializer(),
+        doc = "Pauses live guidance; fixes and reroutes stop until resume.",
+        policy =
+            CommandPolicy(
+                allowlistedForControl = true,
+                dispatcher = CommandDispatcher.DEFAULT,
+            ),
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
+        val changed = navigation.pause()
+        val state = navigation.state.value
+        return Outcome.Success(
+            CommandResult("changed=$changed phase=${state.phase} paused=${state.phase == NavigationPhase.Paused}"),
+        )
+    }
+}
+
+/** Resumes guidance from the next fix. Resuming a running session changes nothing. */
+internal class ResumeNavigationCommand(
+    private val navigation: NavigationController,
+) : Command<JsonElement, String>(
+        id = NAV_RESUME_COMMAND,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = String.serializer(),
+        doc = "Resumes live guidance from the next fix.",
+        policy =
+            CommandPolicy(
+                allowlistedForControl = true,
+                dispatcher = CommandDispatcher.DEFAULT,
+            ),
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
+        val changed = navigation.resume()
+        val state = navigation.state.value
+        return Outcome.Success(CommandResult("changed=$changed phase=${state.phase}"))
+    }
+}
+
+/** Ends guidance and its foreground service. Stopping without a session changes nothing. */
+internal class StopNavigationCommand(
+    private val navigation: NavigationController,
+) : Command<JsonElement, String>(
+        id = NAV_STOP_COMMAND,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = String.serializer(),
+        doc = "Ends live guidance and removes the navigation notification.",
+        policy =
+            CommandPolicy(
+                allowlistedForControl = true,
+                dispatcher = CommandDispatcher.DEFAULT,
+            ),
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
+        val stopped = navigation.stop()
+        return Outcome.Success(CommandResult("stopped=$stopped phase=${navigation.state.value.phase}"))
+    }
+}

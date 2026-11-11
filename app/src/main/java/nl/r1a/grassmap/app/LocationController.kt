@@ -12,7 +12,13 @@ import nl.r1a.grassmap.plugins.map.controls.CameraMode
 import nl.r1a.grassmap.plugins.map.controls.CameraModeController
 
 /**
- * Process-scoped collector for the active [LocationSource].
+ * The activity-scoped collector for the active [LocationSource].
+ *
+ * Its subscription is the map's need for location: the activity starts it at
+ * `STARTED` and stops it at `STOPPED`, so leaving the app with no navigation
+ * cancels the cold source and releases the platform providers. While guidance
+ * runs, the navigation foreground service holds its own subscription, so the
+ * same stop does not release location under an active session.
  *
  * Every fix, including a null one, goes to the bound map host through
  * [CameraModeController] so the puck stays current and the camera follows or
@@ -50,6 +56,17 @@ class LocationController(
                         modes.onFix(fix)
                     }
             }
+    }
+
+    /**
+     * Stops collection and releases the source's provider registrations. The
+     * activity calls it when it leaves the foreground; a later [start] collects
+     * the cold flow again.
+     */
+    @Synchronized
+    fun stop() {
+        job?.cancel()
+        job = null
     }
 
     /**

@@ -1115,6 +1115,50 @@ are compared with a route model the test computes from `Route.instructions` and
 `Route.segments` in its own arithmetic; the worst mismatch is 0 for all four
 facts over all 20 points. Results are in `test-data/location/README.md`.
 
+## Navigation service and location lifecycle
+
+`NavigationController` in `app` owns the one live session (T-0314). It starts
+`NavigationService` before the session begins and stops it when the session
+ends; no other component starts the service. The service declares
+`foregroundServiceType="location"`, so the system shows it as a location
+foreground service and `dumpsys activity services` reports `isForeground=true`
+with type `0x8`.
+
+The notification shows the next turn's text as its title and the distance to it
+as its text. Its two actions pause or resume guidance and stop navigation. It is
+public and ongoing, so it survives the lock screen. Pausing publishes
+`NavigationPhase.Paused`; the session drops every fix before the follower and
+before the reroute gate, so guidance stops and no reroute can start. Resuming
+continues from the next fix; a fix that arrived during the pause is never
+replayed. A paused session that is stopped ends in `Stopped`, never in
+`Arrived`, because no arrival can be detected while fixes are dropped.
+
+The control commands `core.nav.start`, `core.nav.pause`, `core.nav.resume` and
+`core.nav.stop` drive the controller. `core.nav.start` takes a route in the
+`RouteJson` form, so it needs no routing pack; the emulator acceptance uses
+`test-data/navigation/nav-route.json`. A second start while a session runs
+reports `started=false` and changes nothing. A stop without a session changes
+nothing.
+
+Location is shared, not process-scoped (T-0314, user decision Q10 on
+2026-11-08). The map's collector and an active session subscribe to
+`SharedLocationSource` in `core-services`: it registers the platform providers
+once and stops them when the last subscriber leaves. The activity subscribes at
+`STARTED` and stops at `STOPPED`, so leaving the app with no navigation releases
+location. During navigation the service holds a subscription, so location
+continues while the app is in the background. The app never asks for
+`ACCESS_BACKGROUND_LOCATION`.
+
+Android 14 and later require the `FOREGROUND_SERVICE_LOCATION` permission and a
+declared `location` type; `startForeground` passes the type explicitly. Android
+13 and later show the notification only with the `POST_NOTIFICATIONS` runtime
+permission, so the activity asks for it when guidance becomes active; a refusal
+leaves guidance running without the notification. The service returns
+`START_NOT_STICKY`: after a process death there is no session to resume, and a
+restarted service would hold location for nothing. If the location permission
+is revoked while the service starts, it catches `SecurityException`, ends the
+session and removes itself.
+
 ## Search seam
 
 `PlaceProvider` in `plugin-api` is the `places.search` 2.1.0 contract:

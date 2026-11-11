@@ -1,11 +1,14 @@
 package nl.r1a.grassmap.navigation
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.launch
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -47,6 +50,11 @@ import kotlin.math.roundToLong
  * can neither start nor cancel a reroute and the last good fix stays on screen.
  * One request is in flight at a time, and every attempt resets the budget, so a
  * burst of off-route fixes cannot queue a storm of requests.
+ *
+ * Pause and resume go through [control]. While paused the session publishes
+ * [NavigationPhase.Paused] and drops every fix before the follower and the
+ * gate, so guidance stands still and no reroute can start. Resuming continues
+ * from the next fix; no fix from the pause is replayed.
  */
 class NavigationSession(
     private val follower: RouteFollowerEngine,
@@ -55,6 +63,7 @@ class NavigationSession(
     private val config: NavigationConfig = NavigationConfig(),
     private val clockMillis: () -> Long = { System.nanoTime() / 1_000_000L },
     private val log: (String) -> Unit = {},
+    val control: NavigationControl = NavigationControl(),
 ) {
     private val mutableState = MutableStateFlow(NavigationState())
 
@@ -107,159 +116,184 @@ class NavigationSession(
         val sessionStartedMillis = clockMillis()
 
         try {
-            fixes.takeWhile { !arrived }.collect { fix ->
-                fixCount += 1
-                if (!isAccurate(fix)) {
-                    inaccurateFixCount += 1
-                    if (!inaccurate) {
-                        inaccurate = true
-                        log(
-                            "navigation-fix-ignored fixes=$fixCount " +
-                                "accuracy_m=${format(fix.accuracyMeters)} " +
-                                "limit_m=${config.minimumHorizontalAccuracyMeters}",
-                        )
-                    }
-                    return@collect
-                }
-                if (inaccurate) {
-                    inaccurate = false
-                    log("navigation-fix-accepted fixes=$fixCount accuracy_m=${format(fix.accuracyMeters)}")
-                }
-                var projection = locator.locate(fix.position)
-                var snapshot = read(active, fix)
-
-                val candidateOffRoute = isOffRoute(snapshot, projection?.distanceMeters)
-                offRouteStreak = if (candidateOffRoute) offRouteStreak + 1 else 0
-                if (candidateOffRoute) {
-                    offRouteFixCount += 1
-                    rerouteGate.observe(previousFix, fix)
-                } else if (rerouteGate.hasPending) {
-                    log(
-                        "navigation-reroute-cancelled fixes=$fixCount " +
-                            "travel_m=${format(rerouteGate.travelledMeters)}",
-                    )
-                    rerouteGate.reset()
-                }
-                previousFix = fix
-
-                val confirmed = candidateOffRoute && offRouteStreak >= config.offRouteConfirmFixes
-                if (confirmed && detectionMillis == null) {
-                    detectionMillis = clockMillis() - sessionStartedMillis
-                    log(
-                        "navigation-off-route fixes=$fixCount " +
-                            "after_ms=$detectionMillis " +
-                            "distance_m=${format(projection?.distanceMeters)} " +
-                            "deviation=${snapshot?.deviation}",
-                    )
-                }
-                val reroute = confirmed && config.reroute && rerouteGate.isMet && !rerouteInFlight
-                if (reroute) {
-                    rerouteInFlight = true
-                    try {
-                        val along = alongMeters(progress, locator, snapshot, projection)
-                        val request =
-                            RouteRequest(
-                                waypoints = listOf(fix.position) + remainingWaypoints(activeRoute, along),
-                                profile = profile,
-                            )
-                        val started = clockMillis()
-                        when (val outcome = routing.route(request, CancellationHandle.None)) {
-                            is Outcome.Failure -> {
-                                log("navigation-reroute-failed fixes=$fixCount error=${outcome.error}")
-                                rerouteGate.reset()
-                            }
-
-                            is Outcome.Success -> {
-                                val replacement = outcome.value.firstOrNull { it.geometry.size >= MIN_ROUTE_POINTS }
-                                if (replacement == null) {
-                                    log("navigation-reroute-failed fixes=$fixCount error=${AppError.NotFound}")
-                                    rerouteGate.reset()
-                                } else {
-                                    active.close()
-                                    activeRoute = replacement
-                                    locator = PolylineLocator(replacement.geometry)
-                                    progress = RouteProgress.of(replacement)
-                                    revision += 1
-                                    rerouteCount += 1
-                                    rerouteGate.reset()
-                                    active = open(replacement)
-                                    lastRerouteMillis = clockMillis() - started
-                                    projection = locator.locate(fix.position)
-                                    snapshot = read(active, fix)
-                                    // The replacement line starts where Valhalla
-                                    // snapped the off-route fix, so the fix can
-                                    // still be off the new line. Do not report
-                                    // on-route until the geometry says so.
-                                    offRouteStreak =
-                                        if (isOffRoute(snapshot, projection?.distanceMeters)) 1 else 0
-                                    previousRelation = relationOf(offRouteStreak)
-                                    log(
-                                        "navigation-reroute fixes=$fixCount revision=$revision " +
-                                            "duration_ms=$lastRerouteMillis " +
-                                            "distance_m=${format(replacement.distanceMeters)} " +
-                                            "model=${progress.source} spans=${progress.spanCount} " +
-                                            "waypoints=${request.waypoints.size} " +
-                                            "destination=${format(request.waypoints.last().latitude)}," +
-                                            "${format(request.waypoints.last().longitude)}",
-                                    )
-                                    // Announce the new line only now: the state
-                                    // carries it together with the phase, so a
-                                    // consumer never shows a reroute that has
-                                    // not produced a route.
-                                    publish(
-                                        stateOf(
-                                            phase = NavigationPhase.Rerouting,
-                                            fix = fix,
-                                            snapshot = snapshot,
-                                            projection = projection,
-                                            relation = previousRelation,
-                                            route = activeRoute,
-                                            progress = progress,
-                                            locator = locator,
-                                            revision = revision,
-                                            rerouteCount = rerouteCount,
-                                            lastRerouteMillis = lastRerouteMillis,
-                                        ),
-                                    )
-                                    return@collect
-                                }
+            coroutineScope {
+                val pauseWatcher =
+                    launch {
+                        control.paused.collect { paused ->
+                            val current = mutableState.value
+                            if (paused && current.phase != NavigationPhase.Paused) {
+                                log(
+                                    "navigation-paused fixes=$fixCount " +
+                                        "remaining_m=${format(current.remainingDistanceMeters)}",
+                                )
+                                publish(current.copy(phase = NavigationPhase.Paused))
+                            } else if (!paused && current.phase == NavigationPhase.Paused) {
+                                log("navigation-resumed fixes=$fixCount")
+                                publish(current.copy(phase = NavigationPhase.Following))
                             }
                         }
-                    } finally {
-                        rerouteInFlight = false
                     }
-                }
+                try {
+                    fixes
+                        .takeWhile { !arrived }
+                        .filter { !control.paused.value }
+                        .collect { fix ->
+                            fixCount += 1
+                            if (!isAccurate(fix)) {
+                                inaccurateFixCount += 1
+                                if (!inaccurate) {
+                                    inaccurate = true
+                                    log(
+                                        "navigation-fix-ignored fixes=$fixCount " +
+                                            "accuracy_m=${format(fix.accuracyMeters)} " +
+                                            "limit_m=${config.minimumHorizontalAccuracyMeters}",
+                                    )
+                                }
+                                return@collect
+                            }
+                            if (inaccurate) {
+                                inaccurate = false
+                                log("navigation-fix-accepted fixes=$fixCount accuracy_m=${format(fix.accuracyMeters)}")
+                            }
+                            var projection = locator.locate(fix.position)
+                            var snapshot = read(active, fix)
 
-                val relation = relationOf(offRouteStreak)
-                if (relation == RouteRelation.OnRoute && previousRelation != RouteRelation.OnRoute) {
-                    log(
-                        "navigation-on-route fixes=$fixCount " +
-                            "after_ms=${clockMillis() - sessionStartedMillis} " +
-                            "distance_m=${format(projection?.distanceMeters)}",
-                    )
-                }
-                previousRelation = relation
-                arrived = arrivalOf(snapshot, projection)
-                publish(
-                    stateOf(
-                        phase = if (arrived) NavigationPhase.Arrived else NavigationPhase.Following,
-                        fix = fix,
-                        snapshot = snapshot,
-                        projection = projection,
-                        relation = relation,
-                        route = activeRoute,
-                        progress = progress,
-                        locator = locator,
-                        revision = revision,
-                        rerouteCount = rerouteCount,
-                        lastRerouteMillis = lastRerouteMillis,
-                    ),
-                )
-                if (arrived) {
-                    log(
-                        "navigation-arrived fixes=$fixCount " +
-                            "remaining_m=${format(mutableState.value.remainingDistanceMeters)}",
-                    )
+                            val candidateOffRoute = isOffRoute(snapshot, projection?.distanceMeters)
+                            offRouteStreak = if (candidateOffRoute) offRouteStreak + 1 else 0
+                            if (candidateOffRoute) {
+                                offRouteFixCount += 1
+                                rerouteGate.observe(previousFix, fix)
+                            } else if (rerouteGate.hasPending) {
+                                log(
+                                    "navigation-reroute-cancelled fixes=$fixCount " +
+                                        "travel_m=${format(rerouteGate.travelledMeters)}",
+                                )
+                                rerouteGate.reset()
+                            }
+                            previousFix = fix
+
+                            val confirmed = candidateOffRoute && offRouteStreak >= config.offRouteConfirmFixes
+                            if (confirmed && detectionMillis == null) {
+                                detectionMillis = clockMillis() - sessionStartedMillis
+                                log(
+                                    "navigation-off-route fixes=$fixCount " +
+                                        "after_ms=$detectionMillis " +
+                                        "distance_m=${format(projection?.distanceMeters)} " +
+                                        "deviation=${snapshot?.deviation}",
+                                )
+                            }
+                            val reroute = confirmed && config.reroute && rerouteGate.isMet && !rerouteInFlight
+                            if (reroute) {
+                                rerouteInFlight = true
+                                try {
+                                    val along = alongMeters(progress, locator, snapshot, projection)
+                                    val request =
+                                        RouteRequest(
+                                            waypoints = listOf(fix.position) + remainingWaypoints(activeRoute, along),
+                                            profile = profile,
+                                        )
+                                    val started = clockMillis()
+                                    when (val outcome = routing.route(request, CancellationHandle.None)) {
+                                        is Outcome.Failure -> {
+                                            log("navigation-reroute-failed fixes=$fixCount error=${outcome.error}")
+                                            rerouteGate.reset()
+                                        }
+
+                                        is Outcome.Success -> {
+                                            val replacement = outcome.value.firstOrNull { it.geometry.size >= MIN_ROUTE_POINTS }
+                                            if (replacement == null) {
+                                                log("navigation-reroute-failed fixes=$fixCount error=${AppError.NotFound}")
+                                                rerouteGate.reset()
+                                            } else {
+                                                active.close()
+                                                activeRoute = replacement
+                                                locator = PolylineLocator(replacement.geometry)
+                                                progress = RouteProgress.of(replacement)
+                                                revision += 1
+                                                rerouteCount += 1
+                                                rerouteGate.reset()
+                                                active = open(replacement)
+                                                lastRerouteMillis = clockMillis() - started
+                                                projection = locator.locate(fix.position)
+                                                snapshot = read(active, fix)
+                                                // The replacement line starts where Valhalla
+                                                // snapped the off-route fix, so the fix can
+                                                // still be off the new line. Do not report
+                                                // on-route until the geometry says so.
+                                                offRouteStreak =
+                                                    if (isOffRoute(snapshot, projection?.distanceMeters)) 1 else 0
+                                                previousRelation = relationOf(offRouteStreak)
+                                                log(
+                                                    "navigation-reroute fixes=$fixCount revision=$revision " +
+                                                        "duration_ms=$lastRerouteMillis " +
+                                                        "distance_m=${format(replacement.distanceMeters)} " +
+                                                        "model=${progress.source} spans=${progress.spanCount} " +
+                                                        "waypoints=${request.waypoints.size} " +
+                                                        "destination=${format(request.waypoints.last().latitude)}," +
+                                                        "${format(request.waypoints.last().longitude)}",
+                                                )
+                                                // Announce the new line only now: the state
+                                                // carries it together with the phase, so a
+                                                // consumer never shows a reroute that has
+                                                // not produced a route.
+                                                publish(
+                                                    stateOf(
+                                                        phase = NavigationPhase.Rerouting,
+                                                        fix = fix,
+                                                        snapshot = snapshot,
+                                                        projection = projection,
+                                                        relation = previousRelation,
+                                                        route = activeRoute,
+                                                        progress = progress,
+                                                        locator = locator,
+                                                        revision = revision,
+                                                        rerouteCount = rerouteCount,
+                                                        lastRerouteMillis = lastRerouteMillis,
+                                                    ),
+                                                )
+                                                return@collect
+                                            }
+                                        }
+                                    }
+                                } finally {
+                                    rerouteInFlight = false
+                                }
+                            }
+
+                            val relation = relationOf(offRouteStreak)
+                            if (relation == RouteRelation.OnRoute && previousRelation != RouteRelation.OnRoute) {
+                                log(
+                                    "navigation-on-route fixes=$fixCount " +
+                                        "after_ms=${clockMillis() - sessionStartedMillis} " +
+                                        "distance_m=${format(projection?.distanceMeters)}",
+                                )
+                            }
+                            previousRelation = relation
+                            arrived = arrivalOf(snapshot, projection)
+                            publish(
+                                stateOf(
+                                    phase = if (arrived) NavigationPhase.Arrived else NavigationPhase.Following,
+                                    fix = fix,
+                                    snapshot = snapshot,
+                                    projection = projection,
+                                    relation = relation,
+                                    route = activeRoute,
+                                    progress = progress,
+                                    locator = locator,
+                                    revision = revision,
+                                    rerouteCount = rerouteCount,
+                                    lastRerouteMillis = lastRerouteMillis,
+                                ),
+                            )
+                            if (arrived) {
+                                log(
+                                    "navigation-arrived fixes=$fixCount " +
+                                        "remaining_m=${format(mutableState.value.remainingDistanceMeters)}",
+                                )
+                            }
+                        }
+                } finally {
+                    pauseWatcher.cancel()
                 }
             }
         } catch (cancellation: CancellationException) {
@@ -508,8 +542,20 @@ class NavigationSession(
         )
     }
 
+    /**
+     * Publishes one state. A paused session keeps the paused phase for every
+     * non-terminal update, so a reroute that was already in flight when pause
+     * was pressed cannot publish a following or rerouting phase over it.
+     */
     private fun publish(state: NavigationState) {
-        mutableState.value = state
+        val paused = control.paused.value
+        val phase =
+            if (paused && state.phase != NavigationPhase.Arrived && state.phase != NavigationPhase.Stopped) {
+                NavigationPhase.Paused
+            } else {
+                state.phase
+            }
+        mutableState.value = state.copy(phase = phase)
     }
 
     private fun format(value: Double?): String = if (value == null) "-" else String.format(Locale.ROOT, "%.1f", value)

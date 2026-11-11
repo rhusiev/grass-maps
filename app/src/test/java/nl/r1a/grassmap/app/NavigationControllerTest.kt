@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.app
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -13,6 +14,7 @@ import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -90,6 +92,31 @@ class NavigationControllerTest {
         }
 
     @Test
+    fun pauseWorksWhileTheEngineIsBeingResolved() =
+        runTest {
+            val release = CompletableDeferred<Unit>()
+            val harness =
+                harness(
+                    backgroundScope,
+                    routing = {
+                        release.await()
+                        null
+                    },
+                )
+            harness.controller.start(ROUTE, RouteProfile.Walk).valueOrFail()
+            runCurrent()
+
+            assertTrue(harness.controller.pause())
+            release.complete(Unit)
+            runCurrent()
+
+            assertEquals(NavigationPhase.Paused, harness.controller.state.value.phase)
+            harness.controller.stop()
+            runCurrent()
+            advanceUntilIdle()
+        }
+
+    @Test
     fun aSessionEndingWhilePausedStopsTheService() =
         runTest {
             val harness = harness(backgroundScope)
@@ -136,6 +163,7 @@ class NavigationControllerTest {
         scope: CoroutineScope,
         hasPermission: Boolean = true,
         requiresPermission: Boolean = false,
+        routing: suspend () -> RoutingEngine? = { null },
     ): Harness {
         val fixes = MutableSharedFlow<LocationFix?>(extraBufferCapacity = FIX_BUFFER)
         val service = FakeServiceHandle()
@@ -145,7 +173,7 @@ class NavigationControllerTest {
                 fixes = fixes,
                 hasLocationPermission = { hasPermission },
                 requiresLocationPermission = { requiresPermission },
-                routing = { null },
+                routing = routing,
                 service = service,
                 followerFactory = { GeometryRouteFollower() },
             )

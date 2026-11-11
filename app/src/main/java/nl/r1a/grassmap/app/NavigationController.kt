@@ -178,6 +178,17 @@ class NavigationController(
         route: Route,
         profile: RouteProfile,
     ) {
+        val sessionControl = NavigationControl()
+        synchronized(lock) {
+            if (job == null) {
+                // The session was cancelled before its body began.
+                return
+            }
+            control = sessionControl
+        }
+        // Resolving the engine can activate a plugin, so pause works while it
+        // runs: the flag is set now and the session publishes Paused when its
+        // watcher starts.
         val engine =
             try {
                 routing()
@@ -187,14 +198,6 @@ class NavigationController(
                 log("navigation-engine-failed error=${error.javaClass.simpleName}: ${error.message}")
                 null
             }
-        val sessionControl = NavigationControl()
-        synchronized(lock) {
-            if (job == null) {
-                // The session was cancelled before its body began.
-                return
-            }
-            control = sessionControl
-        }
         val session =
             NavigationSession(
                 follower = followerFactory(),

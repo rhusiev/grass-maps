@@ -154,18 +154,22 @@ checks.
 
 The job also used to pass while measuring nothing. Every stored JSON from
 2026-11-09 to 2026-11-11 held five timed-out launches and zero frame rows,
-because the read happened before the app's first frame. That state is now a
-failure.
+because the read happened before the app's first frame. The measurement now
+waits for the `Displayed` line, and the 2026-11-11 run produced five
+process-to-first-frame samples (median 41.0 s). The frame-pacing window still
+returned no rows; treat frame pacing as unmeasured until a run reports them.
 
-Its fragile part is the first adb call after boot. Between 2026-11-09 and
-2026-11-11 seven runs failed before the measurement started, all with
-`cmd: Failure calling service ...: Broken pipe (32)` (for example `42739619598`
-and `42959054167`). Six were in the emulator runner's own post-boot settings
-and input calls, one in the first `adb install`. The job now leaves those calls
-to the script, waits for the package and settings services
-(`scripts/ci/lib/device.sh`), and retries only a transient install failure. If
-the emulator runner itself fails before the script starts, the workflow retries
-the boot once; a test, measurement or bad-APK failure is never retried.
+The fragile part is the runner's emulator, not the measurement. Between
+2026-11-09 and 2026-11-11 seven runs failed before the measurement started,
+all with `cmd: Failure calling service ...: Broken pipe (32)` (for example
+`42739619598` and `42959054167`); the smoke failed once the same way. The
+runner's own post-boot calls include an unconditional `input keyevent 82`,
+which happens before this script and cannot be gated from here. The repo's
+part is fixed: the job leaves the animation calls to the script and gates its
+own adb calls on the package and settings services
+(`scripts/ci/lib/device.sh`). If a service dies after that, the job is red and
+the log names the call; it is not retried. The measured boot times and the
+frequency are under "Runner limits".
 
 ### Map pacing (emulator, trend only)
 
@@ -254,15 +258,54 @@ green):
 The goldens job dominates: it took 86 minutes while every other job finished
 within the first 24, so it is the critical path and the run's wall time. Every
 other job runs in parallel, so it adds runner minutes but not wall time until
-the goldens job finishes. Its 210-minute bound is there
-because successful runs took 1 h 56 m to 2 h 01 m at the previous 150-minute
-bound; it is the first job to split when its duration is next addressed.
+the goldens job finishes. The native follower replay first ran in run
+`42979708400` at 7 min 04 s (6 min 43 s in the emulator step). The goldens
+job's 210-minute bound is there because successful runs took 1 h 56 m to
+2 h 01 m at the previous 150-minute bound; it is the first job to split when
+its duration is next addressed.
 
 A job that regularly uses most of its timeout is the same risk as one that
 fails. Both produce a red run that says nothing about the code. Set a timeout
 from measured durations with a margin, and when successful runs approach the
 bound, split the job or raise the bound with a measured reason. Do not delete a
 slow job without recording where its work went.
+
+### Runner limits
+
+GitHub-hosted `ubuntu-latest` runners have no usable `/dev/kvm`. The action
+logs `ProbeKVM: This user doesn't have permissions to use KVM` and starts the
+emulator with `-accel off`, so every boot below is software emulation:
+
+| Run | Image | Boot |
+|---|---|---|
+| `42979708400` smoke | API 29 | 117 s |
+| `42969584876` smoke | API 29 | 153 s |
+| `42983215413` benchmark, first attempt | API 35 | 468.6 s, then `input` Broken pipe |
+| `42983215413` benchmark, second attempt | API 35 | 616.3 s |
+
+600 s is ample for API 29 and too short for a cold API 35 image; the benchmark
+sets 900 s. The action does not pass `-verbose`, so the boot log holds only the
+emulator's normal output and the `sys.boot_completed` polls.
+
+`sys.boot_completed` is the right boot signal, but it turns 1 before the binder
+services are stable. In the `42969584876` smoke, the 51 empty polls ended at
+`Emulator booted.` and `Boot completed in 153186 ms`; the install then failed
+with `Broken pipe (32)` at 06:17:45. The emulator did boot; the package service
+died. `init.svc.bootanim` would be no better. Waiting for a real `am start` to
+succeed is stronger, but it is app-specific and still runs after the action's
+own `input keyevent 82`.
+
+Measured frequency: 7 of 89 benchmark jobs between 2026-11-09 and 2026-11-11
+failed this way (about 8 %), plus one smoke job. A system-image install failed
+once with `Error reading Zip content from a SeekableByteChannel`; successful
+installs took 18-29 s from the runner's SDK cache. A pre-pulled image needs a
+custom runner image: GitHub-hosted runners are ephemeral and the action still
+calls `sdkmanager`, so the repo cannot remove that failure.
+
+The honest limit is that these jobs depend on a software-emulated runner that
+sometimes loses its services or downloads a corrupt image. A self-hosted runner
+with `/dev/kvm` is the fix. Without one, a red emulator job is a runner event,
+not a code event, and the log names which call died.
 
 ## Test data and contract suite
 

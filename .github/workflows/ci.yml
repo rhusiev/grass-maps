@@ -100,7 +100,9 @@ jobs:
           target: default
           arch: x86_64
           profile: pixel_2
-          disable-animations: true
+          # The runner's post-boot settings calls hit the window where the
+          # services answer "Broken pipe (32)"; the smoke does not need them.
+          disable-animations: false
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: ./scripts/ci/android-smoke.sh app/build/outputs/apk/debug/app-debug.apk
 
@@ -115,6 +117,8 @@ jobs:
     runs-on: ubuntu-latest
     # The checks job is ~11 minutes and the goldens job is ~86, so this job
     # runs in parallel and does not move the critical path.
+    # The runner has no KVM; API 29 cold boots measured 117 s and 153 s, so the
+    # action's 600 s boot bound holds.
     timeout-minutes: 40
     steps:
       - name: Check out
@@ -132,8 +136,6 @@ jobs:
           toolchain: 1.93.1
           targets: aarch64-linux-android,x86_64-linux-android
       - name: Run the native follower on the emulator
-        id: navigation-run-1
-        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 29
@@ -144,29 +146,8 @@ jobs:
           # are its first adb calls after boot - the window where a slow boot
           # answers with "Broken pipe (32)". The script owns readiness instead.
           disable-animations: false
-          emulator-boot-timeout: 900
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: ./scripts/ci/android-navigation-test.sh
-      # The runner's own post-boot `input keyevent` can fail in the same
-      # window. android-navigation-test.sh writes attempt-started before its
-      # first wait, so only a boot that never reached the script is retried; a
-      # failed test is not.
-      - name: Retry the emulator boot once when the test never started
-        id: navigation-run-2
-        if: steps.navigation-run-1.outcome == 'failure' && hashFiles('build/ci/navigation-attempt-started') == ''
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 29
-          target: default
-          arch: x86_64
-          profile: pixel_2
-          disable-animations: false
-          emulator-boot-timeout: 900
-          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: ./scripts/ci/android-navigation-test.sh
-      - name: Fail when the test started and still failed
-        if: steps.navigation-run-1.outcome == 'failure' && steps.navigation-run-2.outcome == 'skipped'
-        run: exit 1
       - name: Keep the instrumented test report
         if: always()
         uses: actions/upload-artifact@v7
@@ -243,9 +224,10 @@ jobs:
     # between 2026-11-09 and 2026-11-11 failed before the measurement started,
     # six in the runner's own post-boot calls and one in the first install,
     # every one with "Broken pipe (32)" (42564988652, 42575135546, 42607425070,
-    # 42701960189, 42739619598, 42765594723, 42959054167). The boot wait and
-    # the transient install retry are the fix; do not re-enable the runner's
-    # animation calls.
+    # 42701960189, 42739619598, 42765594723, 42959054167). The runner has no
+    # KVM (the action logs "-accel off"), so API 35 boots take 7-10 minutes; the
+    # 900 s bound and the script's service gate are the fix. The action's own
+    # `input keyevent 82` cannot be gated from here; a failure is left red.
     continue-on-error: true
     steps:
       - name: Check out
@@ -265,8 +247,6 @@ jobs:
       - name: Build the debug APK
         run: ./gradlew --console=plain :app:assembleDebug
       - name: Boot the emulator and run the benchmark
-        id: benchmark-run-1
-        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -278,28 +258,12 @@ jobs:
           # boot, in the window where a slow boot fails with
           # "cmd: Failure calling service ...: Broken pipe (32)".
           disable-animations: false
+          # The runner has no KVM: the action runs the emulator with
+          # `-accel off`. API 35 cold boots measured 468.6 s and 616.3 s, so
+          # the 600 s default is too short; 900 s is the measured bound.
           emulator-boot-timeout: 900
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: BENCH_DEVICE_SOURCE=ci-runner BENCH_GPU_MODE=swiftshader_indirect ./scripts/ci/android-benchmark.sh app/build/outputs/apk/debug/app-debug.apk
-      # The runner's own post-boot `input keyevent` can hit the same broken
-      # service. android-benchmark.sh writes attempt-started before its first
-      # wait, so this retries only a boot that never reached the script.
-      - name: Retry the emulator boot once when the script never started
-        id: benchmark-run-2
-        if: steps.benchmark-run-1.outcome == 'failure' && hashFiles('build/benchmarks/attempt-started') == ''
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          target: default
-          arch: x86_64
-          profile: pixel_6
-          disable-animations: false
-          emulator-boot-timeout: 900
-          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: BENCH_DEVICE_SOURCE=ci-runner BENCH_GPU_MODE=swiftshader_indirect ./scripts/ci/android-benchmark.sh app/build/outputs/apk/debug/app-debug.apk
-      - name: Fail when the benchmark started and still failed
-        if: steps.benchmark-run-1.outcome == 'failure' && steps.benchmark-run-2.outcome == 'skipped'
-        run: exit 1
       - name: Upload the benchmark JSON
         if: always()
         uses: actions/upload-artifact@v7

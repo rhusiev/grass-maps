@@ -29,13 +29,6 @@ ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 # shellcheck source=lib/device.sh
 source "$SCRIPT_DIR/lib/device.sh"
 
-# The workflow retries the emulator only when this file does not exist, so a
-# failure after the measurement starts is never retried.
-if [[ -n "${CI:-}" ]]; then
-    mkdir -p "$ROOT/build/benchmarks"
-    : >"$ROOT/build/benchmarks/attempt-started"
-fi
-
 APK="${1:-$ROOT/app/build/outputs/apk/debug/app-debug.apk}"
 PORT="${BENCH_EMULATOR_PORT:-5580}"
 AVD="${BENCH_AVD_NAME:-grassmaps-bench}"

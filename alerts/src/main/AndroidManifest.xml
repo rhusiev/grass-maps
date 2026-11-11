@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- T-0317: an enabled alert may vibrate. A normal permission, granted at
+         install; the switch stays off by default. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+</manifest>

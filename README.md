@@ -1244,6 +1244,66 @@ restarted service would hold location for nothing. If the location permission
 is revoked while the service starts, it catches `SecurityException`, ends the
 session and removes itself.
 
+## Alerts
+
+`alerts` owns the alert host (T-0317). `AlertHost` reads the published
+`NavigationState` and the fix flow through `onState`, `onFix` or `attach`, and
+emits `AlertEvent`s on a typed stream. Every alert is off by default and has its
+own switch in `AlertSettings`; the signal switch covers both lost and regained
+because one gap is one announcement.
+
+| Alert | Switch | Default | Fires on |
+|---|---|---|---|
+| Signal lost, regained | `signal` | off | a fix-time gap of 10 s or more |
+| Route recalculated | `reroute` | off | a new `NavigationState.routeRevision` |
+| Off route | `offRoute` | off | the transition into `RouteRelation.OffRoute` |
+| Arrival | `arrival` | off | the transition into `NavigationPhase.Arrived` |
+
+A fix-time gap of at least 10 s (`AlertHost.SIGNAL_GAP_MILLIS`) counts as a lost
+signal. The host compares consecutive fix timestamps and announces lost, then
+regained, on the first fix after the gap. The detection is retrospective on
+purpose: a pure host has no wall clock, and the later fix is the evidence that
+the earlier ones were missing. A gap of 9.999 s emits nothing. A timestamp that
+does not advance starts a new baseline and announces nothing, so a duplicate
+fix or a clock step is not a signal loss.
+
+The other rules keep one episode to one announcement. Off route is announced
+once when the relation becomes `OffRoute`, and re-arms only after the relation
+leaves it, so the two fixes of the confirmation and a stream of off-route fixes
+are one banner. A reroute is announced once per `routeRevision` change; the
+first state only sets the baseline, so a host attached to a running session does
+not announce a reroute from before it was attached. Arrival is announced once on
+the transition into `Arrived`; a second `Arrived` state is the same arrival, and
+the latch re-arms only when the phase leaves `Arrived`, which is a new trip.
+Latches advance while their switch is off, so enabling an alert in the middle of
+an episode waits for the next episode instead of replaying a past one.
+
+`AlertEvent` carries an `AlertBanner`, the effects, a per-host sequence number
+and the fix time that decided it. The banner holds the kind, the severity, the
+replacement route's own distance for a reroute, and the gap length for a lost
+signal. It holds no text: the screen resolves the kind through i18n and formats
+the distance with the unit system. The event is `@Serializable`, so
+`AlertEvent.serializer()` is the stream's serializer for the control channel and
+a future screen.
+
+Sound and vibration are values, not platform calls: `AlertEffect.Sound` and
+`AlertEffect.Vibration` each carry the alert kind, and the host forwards them to
+an `AlertEffectSink`. The default `NoopAlertEffectSink` does nothing, which is
+what keeps the host JVM-testable. `AndroidAlertEffects` is a minimal platform
+sink with a short notification tone and a vibration pattern; it is not reached
+by the JVM tests. Real audio - the stream, audio focus, pausing music and
+ducking - belongs to T-0318 and is not implemented here.
+
+The acceptance replays one deterministic fix timeline through the production
+`NavigationSession` and the geometry follower: on route, 20 m off, a reroute
+with a longer replacement, a 15 s fix gap, then arrival. With every switch off
+it emits no event and no effect while the session still reports the off-route
+fixes, the reroute and the arrival. With the reroute switch on it emits one
+notice carrying the replacement's distance; with the signal switch on it emits
+lost then regained once. The host tests cover the 10 s boundary, a 9.999 s gap,
+a repeated arrival, off-route episodes and the JSON round trip. No screen renders
+a banner yet, no live session is wired to a host, and way alerts are T-0319.
+
 ## Search seam
 
 `PlaceProvider` in `plugin-api` is the `places.search` 2.1.0 contract:

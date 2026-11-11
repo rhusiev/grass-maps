@@ -14,7 +14,7 @@ first product asset lands.
 | `test-data/regions/fixture-mini` contours | Copernicus DEM GLO-30 terms | © DLR e.V. and © Airbus Defence and Space GmbH, provided under Copernicus by the EU and ESA |
 | `test-data/map-goldens` screenshots | ODbL-1.0 / Copernicus DEM GLO-30 terms | Rendered captures of the `fixture-mini` map tiles and contours for the T-0102 fixture and T-0108 Standard style golden tests |
 | Noto fonts | SIL OFL 1.1 | map labels and UI text; `app/src/main/assets/fonts` uses the Protomaps basemaps-assets Noto Sans glyph PBFs |
-| `app/src/main/assets/sprites` Standard sprite | Apache-2.0 | one single-colour SDF sheet shared by the light and dark Standard variants; the 39 glyphs are Google Material Symbols Rounded, vendored unmodified, and the 15 shield frames are authored here. The per-icon source, licence, commit and sha256 are listed below |
+| `app/src/main/assets/sprites` Standard sprite | Apache-2.0 | one single-colour SDF sheet shared by the light and dark Standard variants; of its 39 glyphs, 37 are Google Material Symbols Rounded and 2 are Osmic, all vendored unmodified, and the 15 shield frames are authored here. The per-icon source, licence, commit and sha256 are listed below |
 | valhalla-mobile | MIT | Android/iOS wrapper around the Valhalla engine, used by `plugins/valhalla` |
 | Ferrostar core | BSD-3-Clause | Rust route-following core with UniFFI Kotlin bindings, used by `navigation`; the `core` artifact only, no UI or map binding |
 | Valhalla routing engine | MIT | C++ engine packaged inside valhalla-mobile; routing tiles are OSM-derived data (ODbL-1.0) |
@@ -38,26 +38,26 @@ sheet. `tools/sprites/build_sdf_sprite.py` builds the sheet from the SVGs under
 `tools/sprites/`; `tools/sprites/sources.json` is the machine-readable copy of
 this table.
 
-The 39 glyphs are Google Material Symbols Rounded, Apache-2.0, taken from commit
-`10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7` (2026-10-23) of
+Thirty-seven of the 39 glyphs are Google Material Symbols Rounded,
+Apache-2.0, taken from commit `10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7`
+(2026-10-23) of
 <https://github.com/google/material-design-icons>. Each file is the weight-400
 `fill1` 24 px variant, vendored byte-for-byte, except `electronics`, which uses
 the outlined `tv` because the filled TV collapses into a solid block at map
 size. The URL in each row is the exact file at that commit; the sha256 is of
-the file as vendored. The 15 road-shield frames are authored in this
-repository and are Apache-2.0 like the rest of it.
+the file as vendored. The other two glyphs, `animal` and `bench`, are Osmic,
+CC0-1.0, listed after the table. The 15 road-shield frames are authored in
+this repository and are Apache-2.0 like the rest of it.
 
 | Icon | Material symbol | Source path | Licence | Commit | sha256 |
 |---|---|---|---|---|---|
 | `aerodrome` | `flight` | [`symbols/web/flight/materialsymbolsrounded/flight_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/flight/materialsymbolsrounded/flight_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `0749f1226aa2bd1942e3c73f571fe8a0ef445cb1119b924f01e2c4d1eff9bd72` |
-| `animal` | `cruelty_free` | [`symbols/web/cruelty_free/materialsymbolsrounded/cruelty_free_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/cruelty_free/materialsymbolsrounded/cruelty_free_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `029dfcb163605ed946d134aece775e4f472170bb889f23199b6bd4fbdf8508eb` |
 | `arrow` | `navigation` | [`symbols/web/navigation/materialsymbolsrounded/navigation_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/navigation/materialsymbolsrounded/navigation_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `56d76dae9410898a4a7cd03db02138884c76253211a4e897b5c8df0a8a6eb3ac` |
 | `artwork` | `palette` | [`symbols/web/palette/materialsymbolsrounded/palette_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/palette/materialsymbolsrounded/palette_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `d058ad95558c491154a9239ce9eb03c3bb1ceb06c709dd4889b882773fa7b7b7` |
 | `attraction` | `star` | [`symbols/web/star/materialsymbolsrounded/star_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/star/materialsymbolsrounded/star_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `513a0f450ac62c6bdc6c6cb8701896ea4ac7a82121b9e19cc52596fd7ce3b5fc` |
 | `bar` | `local_bar` | [`symbols/web/local_bar/materialsymbolsrounded/local_bar_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/local_bar/materialsymbolsrounded/local_bar_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `a6c0bef0e7428aec22bb638eb4e149b674e551accc37aaab500b8f13ed1cc03b` |
 | `beach` | `beach_access` | [`symbols/web/beach_access/materialsymbolsrounded/beach_access_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/beach_access/materialsymbolsrounded/beach_access_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `d0340d513024aad80c70200a0099b66c78e76fce3a5cf6f55e40f8fec040ceee` |
 | `beauty` | `content_cut` | [`symbols/web/content_cut/materialsymbolsrounded/content_cut_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/content_cut/materialsymbolsrounded/content_cut_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `5d2dab4959bb57628e5dc609d08ec356514c90f04456832eb0115e5974057df7` |
-| `bench` | `chair` | [`symbols/web/chair/materialsymbolsrounded/chair_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/chair/materialsymbolsrounded/chair_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `c1b6520a95c649f02c33e6edea5d49079d153ce13fe734898380ffa4337c6bf3` |
 | `books` | `menu_book` | [`symbols/web/menu_book/materialsymbolsrounded/menu_book_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/menu_book/materialsymbolsrounded/menu_book_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `5c777c23b8535d621de7d5c2edaed226613d5864b84e8e9118beac596e615e69` |
 | `building` | `apartment` | [`symbols/web/apartment/materialsymbolsrounded/apartment_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/apartment/materialsymbolsrounded/apartment_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `e4385e82c3e0b686407af7b0529c8076a4ade779b126302ab4f687a5e48424e0` |
 | `bus_stop` | `directions_bus` | [`symbols/web/directions_bus/materialsymbolsrounded/directions_bus_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/directions_bus/materialsymbolsrounded/directions_bus_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `14bf0043a7af68a2fa5bd232e8ae5b481e96507f586b5137d7addf6a6e2564b0` |
@@ -79,7 +79,7 @@ repository and are Apache-2.0 like the rest of it.
 | `post_office` | `local_post_office` | [`symbols/web/local_post_office/materialsymbolsrounded/local_post_office_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/local_post_office/materialsymbolsrounded/local_post_office_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `79c58d2904ea40293309029871012c63068a0a6a3ec433b5da3bdb936ebc5496` |
 | `restaurant` | `restaurant` | [`symbols/web/restaurant/materialsymbolsrounded/restaurant_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/restaurant/materialsymbolsrounded/restaurant_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `45cb5f6db38ce6d7e8755f211a3fa0b6f5cf6cb54f7a66c78ae42235496f9b8b` |
 | `school` | `school` | [`symbols/web/school/materialsymbolsrounded/school_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/school/materialsymbolsrounded/school_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `646355683fd4f5e651793944f437e638fb6838934eb948d422453b283ff4ef7a` |
-| `stadium` | `stadium` | [`symbols/web/stadium/materialsymbolsrounded/stadium_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/stadium/materialsymbolsrounded/stadium_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `3c135ffbc912abe8047e4574e70776e8c061873d26f5c8ff921180c8c282152f` |
+| `stadium` | `sports_soccer` | [`symbols/web/sports_soccer/materialsymbolsrounded/sports_soccer_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/sports_soccer/materialsymbolsrounded/sports_soccer_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `f04c114207da523d2c8d69727e169e29c97cca31bd78a18febe63c6ab31e2989` |
 | `supermarket` | `shopping_cart` | [`symbols/web/shopping_cart/materialsymbolsrounded/shopping_cart_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/shopping_cart/materialsymbolsrounded/shopping_cart_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `6c30a8f242422626aff151755502ca0ac447436c8a66988039a25ab163fbbf00` |
 | `theatre` | `theater_comedy` | [`symbols/web/theater_comedy/materialsymbolsrounded/theater_comedy_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/theater_comedy/materialsymbolsrounded/theater_comedy_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `3a0a1dfe969e3742353eb7afa5e0e54aef8ecc495162dc2771fdfdb397c5d2d0` |
 | `toilets` | `wc` | [`symbols/web/wc/materialsymbolsrounded/wc_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/wc/materialsymbolsrounded/wc_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `c837e4c47c6e200948d19a64008a48a7878625fe713b6e7d57e8ceda28d31b93` |
@@ -88,6 +88,27 @@ repository and are Apache-2.0 like the rest of it.
 | `train_station` | `train` | [`symbols/web/train/materialsymbolsrounded/train_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/train/materialsymbolsrounded/train_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `47e8a0a4bf2811ac86cfdf0ebaf046443dc3c99d38f7bdd99d1fb4beaa1d90be` |
 | `university` | `account_balance` | [`symbols/web/account_balance/materialsymbolsrounded/account_balance_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/account_balance/materialsymbolsrounded/account_balance_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `036b151d3b3e53f72396d6d15d1560750f0146614cbf4c3f671969701f1fb6dc` |
 | `zoo` | `pets` | [`symbols/web/pets/materialsymbolsrounded/pets_fill1_24px.svg`](https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/pets/materialsymbolsrounded/pets_fill1_24px.svg) | Apache-2.0 | `10ecc1479061` | `36de9fdf4f0dd9b9df0240bd3a88ad26a648bfbffe8fd53caf1de4a8f4114fb9` |
+
+### Osmic glyphs
+
+Two glyphs are Osmic, CC0-1.0, taken from commit
+`94b418619c72fd2caa0edfa08c7a959ac3f48b2a` of
+<https://github.com/gmgeo/osmic> and vendored byte-for-byte. Commit `476a666`
+replaced them with Material Symbols Rounded glyphs; this revision restored the
+Osmic files because the 13 px icon review chose them by eye. The Material
+`cruelty_free` and `chair` did not read as the map's animal and bench, and
+`chair` in particular reads as furniture rather than a bench. CC0 imposes no
+attribution obligation, but the source and commit are recorded here so the
+files stay traceable to their upstream.
+
+| Icon | Upstream path | Licence | Commit | sha256 |
+|---|---|---|---|---|
+| `animal` | [`shop/pet-14.svg`](https://raw.githubusercontent.com/gmgeo/osmic/94b418619c72fd2caa0edfa08c7a959ac3f48b2a/shop/pet-14.svg) | CC0-1.0 | `94b418619c` | `d7a1014b983f149806f779c2a9f4ac6655d946ad9d005232b1dc8e3d2d46146d` |
+| `bench` | [`outdoor/bench-14.svg`](https://raw.githubusercontent.com/gmgeo/osmic/94b418619c72fd2caa0edfa08c7a959ac3f48b2a/outdoor/bench-14.svg) | CC0-1.0 | `94b418619c` | `535be45fb80bf0f4d36d3e86a5a87239201a6b75e36ff595813d09d627a00fea` |
+
+`stadium` used the Material `stadium` glyph at `476a666` and now uses the
+Material `sports_soccer` glyph. The same review chose it, because the `stadium`
+glyph reads as an empty bowl at 13 px.
 
 ### Shield frames
 

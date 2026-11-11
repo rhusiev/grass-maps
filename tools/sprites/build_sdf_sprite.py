@@ -3,12 +3,17 @@
 
 The source SVGs are vendored next to this script.  `sources.json` records, for
 every icon, the upstream repository, the path inside it, the commit the file
-was taken from and the licence.  Every glyph is a Google Material Symbols
-Rounded SVG:
+was taken from and the licence.  Thirty-seven glyphs are Google Material
+Symbols Rounded SVGs:
 
   * Material Symbols Rounded, https://github.com/google/material-design-icons,
     Apache-2.0, the `fill1` weight-400 variant at 24 px, except `electronics`,
     which uses the outlined `tv` because the filled one collapses at map size
+
+The other two, `animal` and `bench`, are Osmic SVGs, CC0-1.0, from
+https://github.com/gmgeo/osmic.  They were redrawn in Material Symbols and then
+restored: at 13 px the Osmic glyphs read as the animal and the bench, and the
+Material replacements did not.
 
 The 15 road-shield frames (`US:I-<n>char`, `NL:S-road-<n>char`,
 `generic_shield-<n>char`) are authored in this repository under `shields/`,

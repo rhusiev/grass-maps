@@ -229,12 +229,17 @@ private fun arrivalTurn(
  * The distance along the route at each intermediate stop, excluding the
  * destination. Segments are the route's legs, one per requested hop; a chain
  * that does not add up to the route total is not a leg model and yields none.
+ *
+ * Segments that carry per-edge attributes came from an annotate pass: they are
+ * graph edges, not legs, and treating each as a stop would invent stops on a
+ * route that has none. They yield no stop fact; the task that schedules
+ * annotation must keep the leg model if the panel is to show one.
  */
 private fun legBoundaries(
     route: Route,
     total: Double,
 ): List<Double> {
-    if (route.segments.size < MIN_LEGS) {
+    if (route.segments.size < MIN_LEGS || route.segments.any { it.attributes.isNotEmpty() }) {
         return emptyList()
     }
     val distances = route.segments.map { it.distanceMeters }

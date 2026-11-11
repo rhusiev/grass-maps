@@ -957,8 +957,11 @@ planner's turn stepper walks, so one route has one turn order. A turn passed by
 more than one metre is behind the driver. Time is
 `RouteProgress.durationBetween`. A stop is a leg end in `Route.segments`; a
 chain whose leg distances do not add up to the route total has no stop fact
-rather than a guessed one. Arrival shows the arrival fact alone and off route
-adds a notice beside the same facts.
+rather than a guessed one. Segments that carry per-edge attributes came from an
+annotate pass, and they are graph edges rather than legs, so they show no stop
+either; the task that schedules annotation must keep the leg model if the panel
+is to show a stop. Arrival shows the arrival fact alone and off route adds a
+notice beside the same facts.
 
 The acceptance replays the committed `test-data/location/mock-walk.gpx` through
 the geometry follower at 20 points - every third track point from the first to

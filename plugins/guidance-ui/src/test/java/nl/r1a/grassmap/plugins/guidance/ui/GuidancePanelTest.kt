@@ -1,5 +1,7 @@
 package nl.r1a.grassmap.plugins.guidance.ui
 
+import nl.r1a.grassmap.plugin.api.model.AttributeValue
+import nl.r1a.grassmap.plugin.api.provider.RouteAttributes
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -116,6 +118,26 @@ class GuidancePanelTest {
         assertEquals("Next stop", stopTime.title)
         assertEquals(stopDistance.detail, "${kotlin.math.round(stopDistance.distanceMeters ?: -1.0).toLong()} m")
         assertNotNull(stopTime.durationSeconds)
+    }
+
+    @Test
+    fun annotatedEdgeSegmentsAreNotLegsAndShowNoStop() {
+        val route =
+            straightRoute(
+                distanceMeters = 300.0,
+                durationSeconds = 300.0,
+                instructions = listOf(instruction("Depart", 0.0, 150.0), instruction("Arrive", 300.0, 150.0)),
+                segments =
+                    listOf(
+                        leg(150.0, 150.0).copy(attributes = mapOf(RouteAttributes.SURFACE to AttributeValue.TextValue("paved"))),
+                        leg(150.0, 150.0).copy(attributes = mapOf(RouteAttributes.SURFACE to AttributeValue.TextValue("gravel"))),
+                    ),
+            )
+
+        val panel = requireNotNull(guidancePanel(GuidanceInput(route, alongMeters = 0.0), TestStrings))
+
+        assertNull(panel.entries.singleOrNull { it.field == GuidancePanelField.NextStopDistance })
+        assertNull(panel.entries.singleOrNull { it.field == GuidancePanelField.NextStopTime })
     }
 
     @Test

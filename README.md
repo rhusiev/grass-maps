@@ -155,14 +155,18 @@ checks.
 The job also used to pass while measuring nothing. Every stored JSON from
 2026-11-09 to 2026-11-11 held five timed-out launches and zero frame rows,
 because the read happened before the app's first frame. The measurement now
-waits for the `Displayed` line, and the 2026-11-11 run produced five
-process-to-first-frame samples (median 41.0 s). The frame-pacing window still
-returned no rows; treat frame pacing as unmeasured until a run reports them.
+waits for the `Displayed` line: run `42989063035` produced five
+process-to-first-frame samples (median 34.3 s) with no retry, and run
+`42983215413` produced five on a second attempt after the first died at the
+post-boot input call (median 41.0 s). The
+frame-pacing window still returned no rows; treat frame pacing as unmeasured
+until a run reports them.
 
 The fragile part is the runner's emulator, not the measurement. Between
 2026-11-09 and 2026-11-11 seven runs failed before the measurement started,
 all with `cmd: Failure calling service ...: Broken pipe (32)` (for example
-`42739619598` and `42959054167`); the smoke failed once the same way. The
+`42739619598` and `42959054167`); the smoke failed twice in the same window.
+The
 runner's own post-boot calls include an unconditional `input keyevent 82`,
 which happens before this script and cannot be gated from here. The repo's
 part is fixed: the job leaves the animation calls to the script and gates its
@@ -295,8 +299,8 @@ died. `init.svc.bootanim` would be no better. Waiting for a real `am start` to
 succeed is stronger, but it is app-specific and still runs after the action's
 own `input keyevent 82`.
 
-Measured frequency: 7 of 89 benchmark jobs between 2026-11-09 and 2026-11-11
-failed this way (about 8 %), plus one smoke job. A system-image install failed
+Measured frequency: 7 of 91 benchmark jobs between 2026-11-09 and 2026-11-11
+failed this way (about 8 %), and 2 of 91 smoke jobs. A system-image install failed
 once with `Error reading Zip content from a SeekableByteChannel`; successful
 installs took 18-29 s from the runner's SDK cache. A pre-pulled image needs a
 custom runner image: GitHub-hosted runners are ephemeral and the action still

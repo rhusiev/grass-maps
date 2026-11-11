@@ -18,14 +18,16 @@ import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.widget.AltitudeWidgetValue
 import nl.r1a.grassmap.plugin.api.widget.CoordinatesWidgetValue
 import nl.r1a.grassmap.plugin.api.widget.GpsInfoWidgetValue
+import nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue
 
 /**
- * The top information widgets: altitude, coordinates and GPS info.
+ * The top information widgets: altitude, coordinates, GPS info and the current,
+ * average and max speed.
  *
  * The plugin owns no position source of its own: the host passes the location
  * flow, the camera, the DEM and the clock through [PluginContext.services]. It
- * shares one subscription to the fixes and one to the camera across the three
- * widgets, so a 1 Hz replay is not collected three times.
+ * shares one subscription to the fixes and one to the camera across the
+ * widgets, so a 1 Hz replay is not collected once per widget.
  *
  * Values are streams (section 4.7): the shell binds them by id, and the control
  * channel subscribes to the same ids. The widget descriptors only describe the
@@ -42,12 +44,13 @@ class InfoWidgetsPlugin(
         scope?.cancel()
         scope = pluginScope
 
+        val sharing = SharingStarted.WhileSubscribed(InfoWidgetsContract.SHARE_STOP_MILLIS)
         val fixes =
             services.location.fixes
-                .stateIn(pluginScope, SharingStarted.WhileSubscribed(SHARE_STOP_MILLIS), null)
+                .stateIn(pluginScope, sharing, null)
         val camera =
             services.camera
-                .stateIn(pluginScope, SharingStarted.WhileSubscribed(SHARE_STOP_MILLIS), null)
+                .stateIn(pluginScope, sharing, null)
 
         val altitude =
             AltitudeWidgetProvider(
@@ -65,6 +68,12 @@ class InfoWidgetsPlugin(
             GpsInfoWidgetProvider(
                 fixes = fixes,
                 clock = services.clock,
+            )
+        val speed =
+            SpeedWidgetProvider(
+                fixes = fixes,
+                clock = services.clock,
+                scope = pluginScope,
             )
 
         context.addStream(
@@ -88,24 +97,39 @@ class InfoWidgetsPlugin(
                 flow = gps.values,
             ),
         )
+        context.addStream(
+            StreamDescriptor(
+                id = InfoWidgetsContract.speedCurrentStream,
+                serializer = SpeedWidgetValue.serializer(),
+                flow = speed.values(SpeedMetric.Current),
+            ),
+        )
+        context.addStream(
+            StreamDescriptor(
+                id = InfoWidgetsContract.speedAverageStream,
+                serializer = SpeedWidgetValue.serializer(),
+                flow = speed.values(SpeedMetric.Average),
+            ),
+        )
+        context.addStream(
+            StreamDescriptor(
+                id = InfoWidgetsContract.speedMaxStream,
+                serializer = SpeedWidgetValue.serializer(),
+                flow = speed.values(SpeedMetric.Max),
+            ),
+        )
         context.addWidget(altitudeWidget())
         context.addWidget(coordinatesWidget())
         context.addWidget(gpsWidget())
+        context.addWidget(speedCurrentWidget())
+        context.addWidget(speedAverageWidget())
+        context.addWidget(speedMaxWidget())
         return Outcome.Success(Unit)
     }
 
     override fun deactivate() {
         scope?.cancel()
         scope = null
-    }
-
-    private companion object {
-        /**
-         * Keep the shared sources alive briefly after the last subscriber goes
-         * away, so a widget that is re-bound after a screen rebuild does not
-         * restart the replay.
-         */
-        const val SHARE_STOP_MILLIS = 5_000L
     }
 }
 

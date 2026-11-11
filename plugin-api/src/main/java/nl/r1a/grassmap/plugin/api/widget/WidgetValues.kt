@@ -46,3 +46,16 @@ data class GpsInfoWidgetValue(
     val bearingDegrees: Double?,
     val fixTimeMillis: Long?,
 )
+
+/**
+ * One speed reading for a current, average or max speed widget, in metres per
+ * second. The field is null until an interval has been measured: one fix has no
+ * speed yet, and the shell shows a dash.
+ *
+ * Which of the three speeds a widget shows is its stream, not a field here, so
+ * the shell never has to read a partly empty object.
+ */
+@Serializable
+data class SpeedWidgetValue(
+    val speedMetersPerSecond: Double?,
+)

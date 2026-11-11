@@ -8,6 +8,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
@@ -63,6 +64,9 @@ class InfoWidgetsControlEvidenceTest {
                     InfoWidgetsContract.altitudeStream,
                     InfoWidgetsContract.coordinatesStream,
                     InfoWidgetsContract.gpsStream,
+                    InfoWidgetsContract.speedCurrentStream,
+                    InfoWidgetsContract.speedAverageStream,
+                    InfoWidgetsContract.speedMaxStream,
                 ).associateWith { streamId -> subscribe(harness, streamId, pending) }
 
             val samples = mutableMapOf<String, JsonObject>()
@@ -105,10 +109,16 @@ class InfoWidgetsControlEvidenceTest {
         val altitude = samples[InfoWidgetsContract.ALTITUDE_STREAM_ID] ?: return false
         val coordinates = samples[InfoWidgetsContract.COORDINATES_STREAM_ID] ?: return false
         val gps = samples[InfoWidgetsContract.GPS_STREAM_ID] ?: return false
+        val speed = samples[InfoWidgetsContract.SPEED_CURRENT_STREAM_ID] ?: return false
+        val average = samples[InfoWidgetsContract.SPEED_AVERAGE_STREAM_ID] ?: return false
+        val max = samples[InfoWidgetsContract.SPEED_MAX_STREAM_ID] ?: return false
         return altitude["source"]?.jsonPrimitive?.content == "Dem" &&
             coordinates["fix"] is JsonObject &&
             coordinates["mapCenter"] is JsonObject &&
             gps["accuracyMeters"] != null &&
+            speed["speedMetersPerSecond"]?.jsonPrimitive?.contentOrNull != null &&
+            average["speedMetersPerSecond"]?.jsonPrimitive?.contentOrNull != null &&
+            max["speedMetersPerSecond"]?.jsonPrimitive?.contentOrNull != null &&
             fixes.size >= MINIMUM_DISTINCT_FIXES
     }
 
@@ -171,6 +181,9 @@ class InfoWidgetsControlEvidenceTest {
                             stream(InfoWidgetsContract.altitudeStream, InfoWidgetsContract.ALTITUDE_VALUE_TYPE),
                             stream(InfoWidgetsContract.coordinatesStream, InfoWidgetsContract.COORDINATES_VALUE_TYPE),
                             stream(InfoWidgetsContract.gpsStream, InfoWidgetsContract.GPS_VALUE_TYPE),
+                            stream(InfoWidgetsContract.speedCurrentStream, InfoWidgetsContract.SPEED_VALUE_TYPE),
+                            stream(InfoWidgetsContract.speedAverageStream, InfoWidgetsContract.SPEED_VALUE_TYPE),
+                            stream(InfoWidgetsContract.speedMaxStream, InfoWidgetsContract.SPEED_VALUE_TYPE),
                         ),
                     widgets =
                         listOf(
@@ -188,6 +201,21 @@ class InfoWidgetsControlEvidenceTest {
                                 InfoWidgetsContract.gpsStream,
                                 InfoWidgetsContract.GPS_VALUE_TYPE,
                                 InfoWidgetsContract.GPS_TITLE,
+                            ),
+                            widget(
+                                InfoWidgetsContract.speedCurrentStream,
+                                InfoWidgetsContract.SPEED_VALUE_TYPE,
+                                InfoWidgetsContract.SPEED_CURRENT_TITLE,
+                            ),
+                            widget(
+                                InfoWidgetsContract.speedAverageStream,
+                                InfoWidgetsContract.SPEED_VALUE_TYPE,
+                                InfoWidgetsContract.SPEED_AVERAGE_TITLE,
+                            ),
+                            widget(
+                                InfoWidgetsContract.speedMaxStream,
+                                InfoWidgetsContract.SPEED_VALUE_TYPE,
+                                InfoWidgetsContract.SPEED_MAX_TITLE,
                             ),
                         ),
                 ),

@@ -110,3 +110,51 @@ internal object ElevationOracle {
 internal object FailingElevation : ElevationAccess {
     override suspend fun elevationMeters(position: GeoPoint): Outcome<Double?> = Outcome.Failure(AppError.CorruptData)
 }
+
+/**
+ * A deterministic replay at a known speed: one fix per second, due north.
+ *
+ * The step comes from a metres-per-degree constant that is not the tracker's
+ * own Earth radius (6 371 008.8 m), so the test does not check the code against
+ * itself. The two differ by 0.1 %, far inside the 0.5 km/h acceptance bound.
+ */
+internal object SpeedReplay {
+    const val MPS_TO_KMH: Double = 3.6
+    const val TICK_MILLIS: Long = 1_000L
+    const val START_TIME_MILLIS: Long = 1_792_000_000_000L
+
+    /** Four times the cruise speed: one interval of it moves a 60 s average by 0.25 km/h. */
+    const val SPIKE_KMH: Double = 20.0
+
+    /** Tighter than the 0.5 km/h acceptance bound; the fixture constant costs 0.005 km/h. */
+    const val TOLERANCE_KMH: Double = 0.05
+
+    val start: GeoPoint = GeoPoint(latitude = 49.8400, longitude = 24.0300)
+
+    private const val METERS_PER_DEGREE = 111_320.0
+
+    fun initialFix(): LocationFix = fixAt(start, timeMillis = START_TIME_MILLIS)
+
+    /**
+     * [seconds] fixes, one per second, continuing north from [from] at
+     * [speedKmh]. Each fix lies at the exact cumulative distance for its tick.
+     * A meridian step keeps the fixture free of a longitude cosine.
+     */
+    fun fixes(
+        speedKmh: Double,
+        seconds: Int,
+        from: LocationFix = initialFix(),
+    ): List<LocationFix> {
+        val metersPerSecond = speedKmh / MPS_TO_KMH
+        return (1..seconds).map { tick ->
+            val meters = metersPerSecond * tick
+            fixAt(
+                GeoPoint(
+                    latitude = from.position.latitude + meters / METERS_PER_DEGREE,
+                    longitude = from.position.longitude,
+                ),
+                timeMillis = from.timeMillis + tick * TICK_MILLIS,
+            )
+        }
+    }
+}

@@ -48,6 +48,16 @@ class WidgetContractTest {
         assertEquals(value, decoded)
     }
 
+    @Test
+    fun aSpeedValueRoundTripsMeasuredAndPending() {
+        listOf(SpeedWidgetValue(1.3888888888888888), SpeedWidgetValue(null)).forEach { value ->
+            val encoded = Json.encodeToJsonElement(SpeedWidgetValue.serializer(), value)
+            val decoded = Json.decodeFromJsonElement(SpeedWidgetValue.serializer(), encoded)
+
+            assertEquals(value, decoded)
+        }
+    }
+
     private companion object {
         const val MAX_HERTZ = 10
     }

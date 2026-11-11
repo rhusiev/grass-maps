@@ -405,7 +405,7 @@ the module name. Only `app` is an application module; its application ID is
 | `plugins/style-standard` | the Standard light and dark map styles as a `MapLayerProvider` | `plugin-api` |
 | `plugins/synthetic-data` | the synthetic elevation `DataSource` and its real contour overlay | `plugin-api` |
 | `plugins/gpx` | GPX 1.0/1.1 as a `FileFormat` provider | `plugin-api` |
-| `plugins/info-widgets` | the altitude, coordinates and GPS info widget data providers | `plugin-api` |
+| `plugins/info-widgets` | the altitude, coordinates, GPS info and current / average / max speed widget data providers | `plugin-api` |
 | `plugins/dev-tools` | the release development-tools panel and its GPX replay start/stop commands | `plugin-api` |
 | `plugins/map-controls` | the free, follow and heading camera mode, the compass reset, the position-marker offset seam and the scale-bar layout | `plugin-api` |
 | `plugins/point-info` | the distance and azimuth from the fix or map centre to a long-pressed point | `plugin-api` |
@@ -902,6 +902,36 @@ including a declared command whose implementation class is missing from the
 plugin's source, a command id in the reserved `core` host namespace, a widget
 over an undeclared stream, or a policy field the generator does not understand.
 Each plugin module's `check` and `app:check` depend on it.
+
+## Speed widgets
+
+The info widgets include three speeds (T-0316), fed by the location fix stream:
+`info.widgets.speed.current`, `info.widgets.speed.average` and
+`info.widgets.speed.max`. Their values are metres per second and the shell
+formats them in the user's units. A value is null until an interval has been
+measured, so one fix shows a dash rather than a zero.
+
+The speed is the haversine ground distance between two consecutive fixes
+divided by the time between them. The fix's own `speedMetersPerSecond` is not
+read, so the widget reports what the fixes show, not the GNSS chip's Doppler
+estimate, and every source answers the same way. Average is the distance
+travelled inside a 60 s window of fix time over the time it took
+(`SpeedTracker.AVERAGE_WINDOW_MILLIS`), so a longer interval weighs more than a
+shorter one. One 20 km/h interval inside the window moves a steady 5 km/h
+average to 5.25 km/h. Max is the largest current value since the plugin
+activated. `SpeedTracker.resetMax()` clears it and the next measured interval
+starts it again. Nothing binds that reset yet, because the widget action belongs
+to the shell's widget UI in T-0605.
+
+Not measured: the chip's Doppler speed, accuracy weighting, outlier rejection
+and smoothing. A stationary phone can read a small non-zero speed from position
+noise, and a long gap between fixes is one interval, so the reading is the
+average over the whole gap.
+
+The acceptance line is "on a replay at known speeds the widgets are within
+0.5 km/h." The acceptance tests are `SpeedTrackerTest` for the derivation and
+`SpeedWidgetProviderTest` for the three streams, both on a deterministic 1 Hz
+replay.
 
 ## Debug control channel
 

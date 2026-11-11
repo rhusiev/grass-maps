@@ -21,6 +21,21 @@
         "id": "info.widgets.gps",
         "valueType": "nl.r1a.grassmap.plugin.api.widget.GpsInfoWidgetValue",
         "serializer": "nl.r1a.grassmap.plugin.api.widget.GpsInfoWidgetValue.serializer"
+      },
+      {
+        "id": "info.widgets.speed.current",
+        "valueType": "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue",
+        "serializer": "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue.serializer"
+      },
+      {
+        "id": "info.widgets.speed.average",
+        "valueType": "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue",
+        "serializer": "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue.serializer"
+      },
+      {
+        "id": "info.widgets.speed.max",
+        "valueType": "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue",
+        "serializer": "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue.serializer"
       }
     ],
     "widgets": [
@@ -43,6 +58,27 @@
         "title": "plugin.info_widgets.gps",
         "valueType": "nl.r1a.grassmap.plugin.api.widget.GpsInfoWidgetValue",
         "streamId": "info.widgets.gps",
+        "updateIntervalMillis": 200
+      },
+      {
+        "id": "info.widgets.speed.current",
+        "title": "plugin.info_widgets.speed_current",
+        "valueType": "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue",
+        "streamId": "info.widgets.speed.current",
+        "updateIntervalMillis": 200
+      },
+      {
+        "id": "info.widgets.speed.average",
+        "title": "plugin.info_widgets.speed_average",
+        "valueType": "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue",
+        "streamId": "info.widgets.speed.average",
+        "updateIntervalMillis": 200
+      },
+      {
+        "id": "info.widgets.speed.max",
+        "title": "plugin.info_widgets.speed_max",
+        "valueType": "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue",
+        "streamId": "info.widgets.speed.max",
         "updateIntervalMillis": 200
       }
     ]

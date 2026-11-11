@@ -81,9 +81,14 @@ document, section 3, plus the build and module rules of this repository.
   manifest checks, the example plugin, the privacy guards and the
   reproducibility check
 - CI tiers the same way: the checks job runs `./check.sh --fast`, while
-  reproducibility, the API 29 smoke and the benchmark are separate jobs. A
-  `--fast` run is not evidence for a merge on its own; the reproducibility job
-  is
+  reproducibility, the API 29 smoke, the API 29 native follower replay and the
+  benchmark are separate jobs. The replay runs
+  `:navigation:connectedDebugAndroidTest` and is the only check that runs the
+  real Ferrostar follower; it is a blocking gate. A `--fast` run is not
+  evidence for a merge on its own; the reproducibility job is
+- A job that regularly uses most of its timeout is the same risk as one that
+  fails. README's CI run-cost section records the measured durations; set a
+  bound from a measurement, not a guess
 - Check the plugin boundary rule: `./gradlew checkPluginBoundaries`
 - Check plugin manifests: `./gradlew checkPluginManifests`
 - Check the privacy guards (dependency denylist and merged manifests):

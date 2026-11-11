@@ -110,8 +110,9 @@ step "Rust tests"
 ( cd "$ROOT/rust/grass-core" && "$CARGO" test --locked ) || fail "rust tests (grass-core)"
 ( cd "$ROOT/tools/pipeline/osm-extract" && "$CARGO" test --locked ) || fail "rust tests (osm-extract)"
 
-step "Script tests (map golden capture)"
+step "Script tests (map goldens, benchmark)"
 python3 scripts/ci/map_goldens_test.py || fail "script tests (map goldens)"
+python3 scripts/ci/android_benchmark_test.py || fail "script tests (benchmark)"
 
 step "Translations (English and Ukrainian)"
 ./gradlew --console=plain checkTranslations || fail "translations"

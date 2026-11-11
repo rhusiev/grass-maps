@@ -36,6 +36,8 @@ PACKAGE = "nl.r1a.grassmap"
 ACTIVITY = "nl.r1a.grassmap.app.MainActivity"
 DEFAULT_RUNS = 5
 INSTALL_TIMEOUT_S = 300
+INSTALL_ATTEMPTS = 3
+INSTALL_RETRY_S = 30.0
 SETTLE_BETWEEN_RUNS_S = 1.0
 INTERACTION_SETTLE_S = 1.0
 # A gap longer than this is the app idling between the launch and the
@@ -76,6 +78,19 @@ def run(command: list[str], timeout_s: float, check: bool = True) -> str:
     return result.stdout
 
 
+TRANSIENT_INSTALL_ERRORS = (
+    "Broken pipe",
+    "Failure calling service",
+    "device offline",
+    "device not found",
+)
+
+
+def transient_install_error(detail: str) -> bool:
+    """True when a system service dropped mid-call, not when the APK is bad."""
+    return any(marker in detail for marker in TRANSIENT_INSTALL_ERRORS)
+
+
 class Adb:
     """Small bounded wrapper around adb for one serial."""
 
@@ -93,9 +108,27 @@ class Adb:
         run([*self.prefix, "logcat", "-c"], 30)
 
     def install(self, apk: Path) -> None:
-        result = run([*self.prefix, "install", "-r", str(apk)], INSTALL_TIMEOUT_S)
-        if "Success" not in result:
-            raise BenchmarkError(f"adb install did not report Success:\n{result.strip()}")
+        """Install the APK, retrying only a transient system-service drop."""
+        last_error: BenchmarkError | None = None
+        for attempt in range(1, INSTALL_ATTEMPTS + 1):
+            try:
+                result = run([*self.prefix, "install", "-r", str(apk)], INSTALL_TIMEOUT_S)
+                if "Success" in result:
+                    return
+                last_error = BenchmarkError(
+                    f"adb install did not report Success:\n{result.strip()}"
+                )
+            except BenchmarkError as exc:
+                last_error = exc
+            detail = str(last_error)
+            if attempt == INSTALL_ATTEMPTS or not transient_install_error(detail):
+                raise last_error
+            print(
+                f"install attempt {attempt} hit a transient failure, "
+                f"retrying in {INSTALL_RETRY_S:.0f}s: {detail.splitlines()[-1]}",
+                file=sys.stderr,
+            )
+            time.sleep(INSTALL_RETRY_S)
 
     def pid_of_package(self) -> str:
         return self.shell("pidof", PACKAGE, timeout_s=30, check=False).strip()

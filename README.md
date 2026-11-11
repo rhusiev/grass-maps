@@ -146,7 +146,18 @@ treated as a failed run.
 
 The benchmark job is advisory. A failed emulator host leaves the job red and
 the data missing for that commit, but it does not fail the workflow; the gate,
-API 29 smoke and reproducibility jobs are the blocking checks.
+API 29 smoke, native follower replay and reproducibility jobs are the blocking
+checks.
+
+Its fragile part is the first adb call after boot. Between 2026-11-09 and
+2026-11-11 seven runs failed before the measurement started, all with
+`cmd: Failure calling service ...: Broken pipe (32)` (for example `42739619598`
+and `42959054167`). Six were in the emulator runner's own post-boot settings
+and input calls, one in the first `adb install`. The job now leaves those calls
+to the script, waits for the package and settings services
+(`scripts/ci/lib/device.sh`), and retries only a transient install failure. If
+the emulator runner itself fails before the script starts, the workflow retries
+the boot once; a test, measurement or bad-APK failure is never retried.
 
 ### Map pacing (emulator, trend only)
 
@@ -206,10 +217,44 @@ detour.
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull
 request. Format, lint, build, unit tests, boundaries and manifest lint are one
-fast job; reproducibility, the API 29 emulator smoke and the trend benchmarks
-run as separate jobs. The
+fast job; reproducibility, the API 29 emulator smoke, the native follower
+replay and the trend benchmarks run as separate jobs. The
 iOS compile job is named as pending until an iOS or Kotlin Multiplatform target
 exists, and its summary says that it verified nothing.
+
+The native follower replay is a real gate, not a trend job. Ferrostar's core is
+an Android-only AAR, so every JVM test uses the `GeometryRouteFollower`
+stand-in; `:navigation:connectedDebugAndroidTest` is the only check that runs
+the code deciding where the user is on the route. It runs on API 29, the same
+image as the smoke and goldens jobs and the module's `minSdk`, because the
+replay asserts snapped positions rather than rendered colours.
+
+### CI run cost
+
+Measured on run `42965559623` (2026-11-11, a pull-request run with every job
+green):
+
+| Job | Duration |
+|---|---|
+| Format, lint, build, unit tests, translations, boundaries | 11 min 21 s |
+| Byte-reproducible release APK | 11 min 32 s |
+| API 29 emulator smoke and strict mode | 16 min 14 s |
+| Emulator benchmarks (cold start and frame pacing, trend only) | 23 min 09 s |
+| Style and fixture map goldens (API 29, swangle) | 86 min 02 s |
+| iOS target compile (pending, no iOS target yet) | 5 s |
+
+The goldens job dominates: it took 86 minutes while every other job finished
+within the first 24, so it is the critical path and the run's wall time. Every
+other job runs in parallel, so it adds runner minutes but not wall time until
+the goldens job finishes. Its 210-minute bound is there
+because successful runs took 1 h 56 m to 2 h 01 m at the previous 150-minute
+bound; it is the first job to split when its duration is next addressed.
+
+A job that regularly uses most of its timeout is the same risk as one that
+fails. Both produce a red run that says nothing about the code. Set a timeout
+from measured durations with a margin, and when successful runs approach the
+bound, split the job or raise the bound with a measured reason. Do not delete a
+slow job without recording where its work went.
 
 ## Test data and contract suite
 

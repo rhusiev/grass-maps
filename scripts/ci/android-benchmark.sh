@@ -29,6 +29,13 @@ ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 # shellcheck source=lib/device.sh
 source "$SCRIPT_DIR/lib/device.sh"
 
+# The workflow retries the emulator only when this file does not exist, so a
+# failure after the measurement starts is never retried.
+if [[ -n "${CI:-}" ]]; then
+    mkdir -p "$ROOT/build/benchmarks"
+    : >"$ROOT/build/benchmarks/attempt-started"
+fi
+
 APK="${1:-$ROOT/app/build/outputs/apk/debug/app-debug.apk}"
 PORT="${BENCH_EMULATOR_PORT:-5580}"
 AVD="${BENCH_AVD_NAME:-grassmaps-bench}"
@@ -128,7 +135,17 @@ else
 fi
 
 wait_for_device "$DEVICE_DEADLINE_SECONDS" -s "$SERIAL"
-wait_for_package_manager 120 -s "$SERIAL"
+wait_for_package_manager 240 -s "$SERIAL"
+
+# The emulator runner used to disable animations itself, as its first adb call
+# after boot. On a slow boot that call and the first install failed with
+# "cmd: Failure calling service ...: Broken pipe (32)" (runs 42564988652,
+# 42739619598, 42959054167). The job now leaves animations to this script, so
+# they are set only after both system services answer.
+if [[ -n "${CI:-}" ]]; then
+    wait_for_system_services 180 -s "$SERIAL"
+    set_animation_scales_zero 120 -s "$SERIAL"
+fi
 
 python3 "$SCRIPT_DIR/android_benchmark.py" \
     --apk "$APK" \

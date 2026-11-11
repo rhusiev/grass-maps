@@ -28,6 +28,22 @@ class ParseStartOutputTest(unittest.TestCase):
         self.assertNotIn("TotalTime", parsed)
 
 
+class TransientInstallErrorTest(unittest.TestCase):
+    def test_dropped_service_is_transient(self) -> None:
+        detail = (
+            "exit 1: adb -s emulator-5554 install -r app-debug.apk\n"
+            "adb: failed to install app-debug.apk: "
+            "cmd: Failure calling service package: Broken pipe (32)"
+        )
+
+        self.assertTrue(android_benchmark.transient_install_error(detail))
+
+    def test_bad_apk_is_not_transient(self) -> None:
+        detail = "exit 1: adb -s emulator-5554 install -r app-debug.apk\nadb: failed to install: INSTALL_FAILED_INVALID_APK"
+
+        self.assertFalse(android_benchmark.transient_install_error(detail))
+
+
 class ColdStartMetricsTest(unittest.TestCase):
     def test_timeout_is_counted_and_excluded_from_missing_medians(self) -> None:
         runs = [

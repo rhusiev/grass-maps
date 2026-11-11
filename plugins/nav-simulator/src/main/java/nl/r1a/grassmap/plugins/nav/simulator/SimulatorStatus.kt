@@ -9,6 +9,7 @@ enum class SimulatorPhase {
     Idle,
     Following,
     Rerouting,
+    Paused,
     Arrived,
     Stopped,
     ;
@@ -19,6 +20,7 @@ enum class SimulatorPhase {
                 NavigationPhase.Idle -> Idle
                 NavigationPhase.Following -> Following
                 NavigationPhase.Rerouting -> Rerouting
+                NavigationPhase.Paused -> Paused
                 NavigationPhase.Arrived -> Arrived
                 NavigationPhase.Stopped -> Stopped
             }

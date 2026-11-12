@@ -52,6 +52,10 @@ internal object TrackSidecarJson {
     private const val DESCENT = "descentMeters"
     private const val MIN_ELEVATION = "minElevationMeters"
     private const val MAX_ELEVATION = "maxElevationMeters"
+    private const val DURATION = "durationMillis"
+    private const val MOVING_TIME = "movingTimeMillis"
+    private const val AVERAGE_SPEED = "averageSpeedMetersPerSecond"
+    private const val MAX_SPEED = "maxSpeedMetersPerSecond"
 
     fun encode(sidecar: TrackSidecar): String =
         buildJsonObject {
@@ -77,6 +81,10 @@ internal object TrackSidecarJson {
                     put(DESCENT, sidecar.analysis.descentMeters)
                     put(MIN_ELEVATION, sidecar.analysis.minElevationMeters)
                     put(MAX_ELEVATION, sidecar.analysis.maxElevationMeters)
+                    put(DURATION, sidecar.analysis.durationMillis)
+                    put(MOVING_TIME, sidecar.analysis.movingTimeMillis)
+                    put(AVERAGE_SPEED, sidecar.analysis.averageSpeedMetersPerSecond)
+                    put(MAX_SPEED, sidecar.analysis.maxSpeedMetersPerSecond)
                 },
             )
         }.toString()
@@ -132,6 +140,10 @@ internal object TrackSidecarJson {
             descentMeters = descent,
             minElevationMeters = minElevation,
             maxElevationMeters = maxElevation,
+            durationMillis = json.maybeLong(DURATION),
+            movingTimeMillis = json.maybeLong(MOVING_TIME),
+            averageSpeedMetersPerSecond = json.maybeDouble(AVERAGE_SPEED),
+            maxSpeedMetersPerSecond = json.maybeDouble(MAX_SPEED),
         ).takeIf { it.hasValidValues() }
     }
 
@@ -144,7 +156,13 @@ internal object TrackSidecarJson {
             descentMeters >= 0.0 &&
             descentMeters.isFinite() &&
             (minElevationMeters == null || minElevationMeters.isFinite()) &&
-            (maxElevationMeters == null || maxElevationMeters.isFinite())
+            (maxElevationMeters == null || maxElevationMeters.isFinite()) &&
+            (durationMillis == null || durationMillis >= 0L) &&
+            (movingTimeMillis == null || movingTimeMillis >= 0L) &&
+            (averageSpeedMetersPerSecond == null || averageSpeedMetersPerSecond.isValidSpeed()) &&
+            (maxSpeedMetersPerSecond == null || maxSpeedMetersPerSecond.isValidSpeed())
+
+    private fun Double.isValidSpeed(): Boolean = this >= 0.0 && isFinite()
 
     private fun JsonObject.objectAt(key: String): JsonObject? = this[key] as? JsonObject
 
@@ -162,5 +180,13 @@ internal object TrackSidecarJson {
             return null
         }
         return (element as? JsonPrimitive)?.doubleOrNull
+    }
+
+    private fun JsonObject.maybeLong(key: String): Long? {
+        val element = this[key] ?: return null
+        if (element is JsonNull) {
+            return null
+        }
+        return (element as? JsonPrimitive)?.longOrNull
     }
 }

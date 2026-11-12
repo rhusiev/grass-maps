@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "osmandVersion": null,
+  "device": null,
+  "recordedOn": null,
+  "tolerance": {
+    "distanceMeters": 1.0,
+    "movingTimeMillis": 2000,
+    "averageSpeedMetersPerSecond": 0.05,
+    "maxSpeedMetersPerSecond": 0.1,
+    "ascentMeters": 2.0,
+    "descentMeters": 2.0,
+    "elevationMeters": 1.0,
+    "durationMillis": 1000
+  },
+  "tracks": []
+}

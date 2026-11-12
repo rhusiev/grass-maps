@@ -1,6 +1,10 @@
 package nl.r1a.grassmap.tracks
 
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
@@ -210,6 +214,81 @@ class FileTrackStoreTest {
             assertEquals(emptyList<StoredTrack>(), store.all())
         }
 
+    @Test
+    fun aSidecarWithoutStatisticsGetsThemOnTheNextLoad() =
+        runTest {
+            val source = "timed".toByteArray()
+            val timedTrack =
+                Track(
+                    segments =
+                        listOf(
+                            TrackSegment(
+                                listOf(
+                                    TrackPoint(GeoPoint(49.84, 24.03), 100.0, 0L),
+                                    TrackPoint(GeoPoint(49.8401, 24.03005), 101.0, 1_000L),
+                                ),
+                            ),
+                        ),
+                )
+            val id = TrackIdentity.of(source, 0, 1)
+            val record =
+                StoredTrack(
+                    id = id,
+                    name = "Timed",
+                    track = timedTrack,
+                    analysis = TrackAnalyzer().analyze(timedTrack),
+                    style = TrackPalette.styleFor(id),
+                )
+            val timedReader = TrackDocumentReader { Outcome.Success(listOf(timedTrack)) }
+            success(
+                FileTrackStore(
+                    root = root,
+                    reader = timedReader,
+                    clock = { SAVED_AT_MILLIS },
+                    log = { message -> logs += message },
+                ).save(record, source),
+            )
+            val sidecar = File(root, "${id.value}.json")
+            sidecar.writeText(withholdStatistics(sidecar.readText()))
+
+            val reopened =
+                FileTrackStore(
+                    root = root,
+                    reader = timedReader,
+                    clock = { SAVED_AT_MILLIS },
+                    log = { message -> logs += message },
+                )
+            assertEquals(Outcome.Success(Unit), reopened.reload())
+
+            assertEquals(record.analysis, success(reopened.get(id)).analysis)
+            assertEquals(record.analysis, reopened.summaries().single().analysis)
+            assertTrue(sidecar.readText().contains("\"durationMillis\":1000"))
+        }
+
+    private fun withholdStatistics(text: String): String {
+        val root = Json.parseToJsonElement(text).jsonObject
+        val analysis = root.getValue("analysis").jsonObject
+        val kept =
+            buildJsonObject {
+                root.forEach { (key, value) ->
+                    if (key != "analysis") {
+                        put(key, value)
+                    }
+                }
+                put(
+                    "analysis",
+                    buildJsonObject {
+                        analysis.forEach { (key, value) ->
+                            if (key !in STATISTICS_KEYS) {
+                                put(key, value)
+                            }
+                        }
+                    },
+                )
+            }
+        return kept.toString()
+    }
+
     private fun store(): FileTrackStore =
         FileTrackStore(
             root = root,
@@ -272,5 +351,12 @@ class FileTrackStoreTest {
         val SOURCE_A = "49.84000,24.03000;49.84010,24.03010".toByteArray()
         val SOURCE_B = "49.85000,24.04000;49.85010,24.04010".toByteArray()
         val SOURCE_MULTI = "49.86000,24.05000;49.86010,24.05010|49.87000,24.06000".toByteArray()
+        val STATISTICS_KEYS =
+            setOf(
+                "durationMillis",
+                "movingTimeMillis",
+                "averageSpeedMetersPerSecond",
+                "maxSpeedMetersPerSecond",
+            )
     }
 }

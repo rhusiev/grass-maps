@@ -17,6 +17,12 @@ Points and ascent/descent follow from the authored elevation sequence, one step
 per point, with a segment boundary counting as no step. The test tolerates
 1e-6 m on the elevation sums.
 
+The script prints two tables: the elevation profile per file, and the
+statistics per track. The second table's duration, moving time, average speed
+and maximum speed follow the definitions in "Track statistics" below. Timed
+fixtures advance the clock across a pause, so the multi-segment files exercise
+the segment boundary as a real pause rather than an overlap.
+
 ## What each file covers
 
 | File | Exporter shape | What it exercises |
@@ -46,6 +52,35 @@ per point, with a segment boundary counting as no step. The test tolerates
 import returns one warning line per skipped part, for example
 `trk[0]/trkseg[0]/trkpt[2]: missing coordinates`. `TrackFixturesTest` asserts
 the complete list in document order.
+
+## Track statistics
+
+`TrackAnalyzer` returns `TrackAnalysis`: point count, distance, ascent,
+descent, elevation range, duration, moving time, average speed and maximum
+speed. Distance is the haversine ground distance on the IUGG mean radius
+6 371 008.8 m. Elevation deltas are raw, with no smoothing.
+
+Timing uses only consecutive timestamped points of one segment. A segment
+boundary is a pause. A gap longer than 120 s is a pause too, and a step slower
+than 0.5 m/s is standing still; neither adds to moving time. Duration is the
+wall-clock span from the first timestamped point to the last, pauses included.
+Average speed is distance divided by moving time. Maximum speed is the fastest
+step between two timestamped points of one segment, so it never crosses a
+segment boundary or a pause gap.
+
+A file with fewer than two timestamps has no duration, moving time or speed. A
+file without elevation has no elevation range, and ascent and descent are 0. A
+one-point track has zero distance and no timing. The policy thresholds are
+`TrackStatisticsPolicy`, and the defaults are chosen rather than derived from
+OsmAnd.
+
+## The OsmAnd oracle
+
+`osmand-oracle/` holds the T-0402 acceptance: ten real tracks and the figures
+OsmAnd shows for them. `oracle.json` is empty today, so
+`TrackStatisticsOracleTest` is skipped; the directory's README lists exactly
+what is missing and how to record it. No OsmAnd number in this repository is
+invented.
 
 ## Where the profiles are asserted
 

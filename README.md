@@ -1983,6 +1983,31 @@ Python one-off over `test-data/location/mock-walk.gpx`, recorded in
 maximum 297.6 m and distance 82.5866 m, within 0.01 m on elevation sums and
 0.1 m on distance.
 
+T-0402 extends the analysis with the figures a track detail shows.
+`TrackAnalysis` also carries duration, moving time, average speed and maximum
+speed, cached in the same sidecar. A load parses the GPX anyway, so the store
+recomputes the analysis from it and rewrites the sidecar when the cached copy
+differs. A sidecar written by T-0401 therefore gains the timing on its first
+load, and a later policy change cannot leave a stale profile behind. Distance
+and elevation keep their T-0401 definitions.
+
+Timing uses consecutive timestamped points of one segment only. A segment
+boundary is a pause. A gap longer than 120 s is a pause, and a step slower than
+0.5 m/s is standing still; neither counts as moving time. Duration is the
+wall-clock span from the first timestamped point to the last, pauses included.
+Average speed is distance divided by moving time. Maximum speed is the fastest
+step inside a segment and outside a pause gap. A track without timestamps has
+no timing, one point has no time span, and a track without elevation has no
+elevation range. `TrackStatisticsPolicy` holds the thresholds. They are chosen,
+not derived from OsmAnd.
+
+`test-data/tracks/generate-fixtures.py` prints the per-track statistics oracle,
+and `TrackFixturesTest.everyTimedFixtureHasItsExpectedStatistics` asserts it
+exactly. The other half of the milestone, 10 real tracks against OsmAnd, has no
+data in the repository: `test-data/tracks/osmand-oracle/README.md` lists what
+is missing, and `TrackStatisticsOracleTest` reads `oracle.json` and is skipped
+while it is empty. It rejects a partial list of fewer than 10 tracks.
+
 The debug channel exposes `core.track.import_test`:
 
 ```sh

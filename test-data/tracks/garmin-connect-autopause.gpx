@@ -60,7 +60,7 @@
     <trkseg>
       <trkpt lat="49.854000" lon="24.046000">
         <ele>384.0</ele>
-        <time>2026-08-14T07:41:03Z</time>
+        <time>2026-08-14T07:46:03Z</time>
         <extensions>
           <gpxtpx:TrackPointExtension>
             <gpxtpx:hr>120</gpxtpx:hr>
@@ -70,7 +70,7 @@
       </trkpt>
       <trkpt lat="49.854100" lon="24.046050">
         <ele>383.0</ele>
-        <time>2026-08-14T07:41:04Z</time>
+        <time>2026-08-14T07:46:04Z</time>
         <extensions>
           <gpxtpx:TrackPointExtension>
             <gpxtpx:hr>121</gpxtpx:hr>
@@ -80,7 +80,7 @@
       </trkpt>
       <trkpt lat="49.854200" lon="24.046100">
         <ele>382.0</ele>
-        <time>2026-08-14T07:41:05Z</time>
+        <time>2026-08-14T07:46:05Z</time>
         <extensions>
           <gpxtpx:TrackPointExtension>
             <gpxtpx:hr>122</gpxtpx:hr>
@@ -92,7 +92,7 @@
     <trkseg>
       <trkpt lat="49.855000" lon="24.047000">
         <ele>382.0</ele>
-        <time>2026-08-14T07:41:03Z</time>
+        <time>2026-08-14T07:51:03Z</time>
         <extensions>
           <gpxtpx:TrackPointExtension>
             <gpxtpx:hr>120</gpxtpx:hr>
@@ -102,7 +102,7 @@
       </trkpt>
       <trkpt lat="49.855100" lon="24.047050">
         <ele>384.0</ele>
-        <time>2026-08-14T07:41:04Z</time>
+        <time>2026-08-14T07:51:04Z</time>
         <extensions>
           <gpxtpx:TrackPointExtension>
             <gpxtpx:hr>121</gpxtpx:hr>
@@ -112,7 +112,7 @@
       </trkpt>
       <trkpt lat="49.855200" lon="24.047100">
         <ele>386.0</ele>
-        <time>2026-08-14T07:41:05Z</time>
+        <time>2026-08-14T07:51:05Z</time>
         <extensions>
           <gpxtpx:TrackPointExtension>
             <gpxtpx:hr>122</gpxtpx:hr>
@@ -122,7 +122,7 @@
       </trkpt>
       <trkpt lat="49.855300" lon="24.047150">
         <ele>388.0</ele>
-        <time>2026-08-14T07:41:06Z</time>
+        <time>2026-08-14T07:51:06Z</time>
         <extensions>
           <gpxtpx:TrackPointExtension>
             <gpxtpx:hr>123</gpxtpx:hr>

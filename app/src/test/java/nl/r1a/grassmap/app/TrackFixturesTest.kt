@@ -213,6 +213,40 @@ class TrackFixturesTest {
             assertEquals(recoloured, storedStyle(access, second.id))
         }
 
+    @Test
+    fun everyTimedFixtureHasItsExpectedStatistics() =
+        runTest {
+            val access = access()
+
+            for (row in STATISTICS) {
+                val report = import(access, row.file)
+                val record = report.tracks.single { track -> track.trackIndex == row.trackIndex }
+                val analysis = record.analysis
+                assertEquals("${row.file}: duration", row.durationMillis, analysis.durationMillis)
+                assertEquals("${row.file}: moving time", row.movingMillis, analysis.movingTimeMillis)
+                if (row.averageSpeed == null) {
+                    assertNull("${row.file}: average speed", analysis.averageSpeedMetersPerSecond)
+                } else {
+                    assertEquals(
+                        "${row.file}: average speed",
+                        row.averageSpeed,
+                        analysis.averageSpeedMetersPerSecond ?: Double.NaN,
+                        SPEED_TOLERANCE,
+                    )
+                }
+                if (row.maxSpeed == null) {
+                    assertNull("${row.file}: maximum speed", analysis.maxSpeedMetersPerSecond)
+                } else {
+                    assertEquals(
+                        "${row.file}: maximum speed",
+                        row.maxSpeed,
+                        analysis.maxSpeedMetersPerSecond ?: Double.NaN,
+                        SPEED_TOLERANCE,
+                    )
+                }
+            }
+        }
+
     private fun access(): TrackAccess =
         TrackAccess(
             registry =
@@ -270,10 +304,44 @@ class TrackFixturesTest {
         val warnings: Int = 0,
     )
 
+    private data class StatisticsExpectation(
+        val file: String,
+        val trackIndex: Int,
+        val durationMillis: Long?,
+        val movingMillis: Long?,
+        val averageSpeed: Double?,
+        val maxSpeed: Double?,
+    )
+
     private companion object {
         const val ELEVATION_TOLERANCE = 1e-6
+        const val SPEED_TOLERANCE = 1e-6
         const val SINGLE_POINT = "osmand-single-point.gpx"
         const val RECORD_COUNT = 21
+
+        /** Printed by `test-data/tracks/generate-fixtures.py`, one row per track. */
+        val STATISTICS =
+            listOf(
+                StatisticsExpectation("osmand-walk-two-segments.gpx", 0, 123_000, 7_000, 11.683311, 11.683324),
+                StatisticsExpectation("osmand-morning-run.gpx", 0, 5_000, 5_000, 11.683276, 11.683280),
+                StatisticsExpectation("osmand-multi-track.gpx", 0, 3_000, 3_000, 11.683255, 11.683258),
+                StatisticsExpectation("osmand-multi-track.gpx", 1, 2_000, 2_000, 11.683234, 11.683235),
+                StatisticsExpectation("osmand-waypoints.gpx", 0, 3_000, 3_000, 11.683210, 11.683212),
+                StatisticsExpectation("osmand-no-elevation.gpx", 0, 4_000, 4_000, 11.683163, 11.683167),
+                StatisticsExpectation("osmand-no-time.gpx", 0, null, null, null, null),
+                StatisticsExpectation("osmand-single-point.gpx", 0, null, null, null, null),
+                StatisticsExpectation("osmand-planned-route.gpx", 0, 2_000, 2_000, 11.683097, 11.683098),
+                StatisticsExpectation("garmin-connect-hike.gpx", 0, 5_000, 5_000, 11.683071, 11.683076),
+                StatisticsExpectation("garmin-connect-autopause.gpx", 0, 603_000, 9_000, 11.683017, 11.683053),
+                StatisticsExpectation("garmin-fenix-run.gpx", 0, 604_000, 9_000, 11.682938, 11.682962),
+                StatisticsExpectation("garmin-oregon-gpx10.gpx", 0, 3_000, 3_000, 11.682891, 11.682894),
+                StatisticsExpectation("garmin-waypoints-route.gpx", 0, 2_000, 2_000, 11.682870, 11.682871),
+                StatisticsExpectation("strava-run.gpx", 0, 7_000, 7_000, 11.682841, 11.682848),
+                StatisticsExpectation("strava-ride-pauses.gpx", 0, 722_000, 12_000, 11.682780, 11.682825),
+                StatisticsExpectation("strava-no-elevation.gpx", 0, 4_000, 4_000, 11.682708, 11.682712),
+                StatisticsExpectation("strava-route-and-track.gpx", 0, 3_000, 3_000, 11.682686, 11.682689),
+                StatisticsExpectation("strava-ukrainian-name.gpx", 0, 3_000, 3_000, 11.682664, 11.682666),
+            )
 
         val FIXTURES =
             listOf(

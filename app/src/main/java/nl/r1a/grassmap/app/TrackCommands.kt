@@ -86,8 +86,16 @@ internal class TrackImportTestCommand(
             "ascent_m=${meters(analysis.ascentMeters)} descent_m=${meters(analysis.descentMeters)} " +
             "min_ele_m=${analysis.minElevationMeters?.let(::meters) ?: "none"} " +
             "max_ele_m=${analysis.maxElevationMeters?.let(::meters) ?: "none"} " +
+            "duration_s=${analysis.durationMillis?.let(::seconds) ?: "none"} " +
+            "moving_s=${analysis.movingTimeMillis?.let(::seconds) ?: "none"} " +
+            "avg_speed_mps=${analysis.averageSpeedMetersPerSecond?.let(::speed) ?: "none"} " +
+            "max_speed_mps=${analysis.maxSpeedMetersPerSecond?.let(::speed) ?: "none"} " +
             "stored=$stored warnings=$warnings"
     }
+
+    private fun seconds(millis: Long): String = String.format(Locale.ROOT, "%.3f", millis / MILLIS_PER_SECOND)
+
+    private fun speed(metersPerSecond: Double): String = String.format(Locale.ROOT, "%.3f", metersPerSecond)
 
     private fun load(path: String): Outcome<ByteArray> {
         if (path.startsWith("/")) {
@@ -119,6 +127,7 @@ internal class TrackImportTestCommand(
     private companion object {
         const val PARAM_PATH = "path"
         const val ID_PREFIX = 12
+        const val MILLIS_PER_SECOND = 1_000.0
     }
 }
 

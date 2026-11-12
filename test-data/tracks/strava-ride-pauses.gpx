@@ -70,7 +70,7 @@
     <trkseg>
       <trkpt lat="49.864000" lon="24.055000">
         <ele>437.0</ele>
-        <time>2026-08-14T07:41:03Z</time>
+        <time>2026-08-14T07:45:03Z</time>
         <extensions>
           <gpxtpx:TrackPointExtension>
             <gpxtpx:hr>140</gpxtpx:hr>
@@ -80,7 +80,7 @@
       </trkpt>
       <trkpt lat="49.864100" lon="24.055050">
         <ele>438.0</ele>
-        <time>2026-08-14T07:41:04Z</time>
+        <time>2026-08-14T07:45:04Z</time>
         <extensions>
           <gpxtpx:TrackPointExtension>
             <gpxtpx:hr>141</gpxtpx:hr>
@@ -92,7 +92,7 @@
     <trkseg>
       <trkpt lat="49.865000" lon="24.056000">
         <ele>438.0</ele>
-        <time>2026-08-14T07:41:03Z</time>
+        <time>2026-08-14T07:49:03Z</time>
         <extensions>
           <gpxtpx:TrackPointExtension>
             <gpxtpx:hr>140</gpxtpx:hr>
@@ -102,7 +102,7 @@
       </trkpt>
       <trkpt lat="49.865100" lon="24.056050">
         <ele>437.0</ele>
-        <time>2026-08-14T07:41:04Z</time>
+        <time>2026-08-14T07:49:04Z</time>
         <extensions>
           <gpxtpx:TrackPointExtension>
             <gpxtpx:hr>141</gpxtpx:hr>
@@ -112,7 +112,7 @@
       </trkpt>
       <trkpt lat="49.865200" lon="24.056100">
         <ele>436.0</ele>
-        <time>2026-08-14T07:41:05Z</time>
+        <time>2026-08-14T07:49:05Z</time>
         <extensions>
           <gpxtpx:TrackPointExtension>
             <gpxtpx:hr>142</gpxtpx:hr>
@@ -122,7 +122,7 @@
       </trkpt>
       <trkpt lat="49.865300" lon="24.056150">
         <ele>435.0</ele>
-        <time>2026-08-14T07:41:06Z</time>
+        <time>2026-08-14T07:49:06Z</time>
         <extensions>
           <gpxtpx:TrackPointExtension>
             <gpxtpx:hr>143</gpxtpx:hr>
@@ -132,7 +132,7 @@
       </trkpt>
       <trkpt lat="49.865400" lon="24.056200">
         <ele>434.0</ele>
-        <time>2026-08-14T07:41:07Z</time>
+        <time>2026-08-14T07:49:07Z</time>
         <extensions>
           <gpxtpx:TrackPointExtension>
             <gpxtpx:hr>144</gpxtpx:hr>
@@ -144,7 +144,7 @@
     <trkseg>
       <trkpt lat="49.866000" lon="24.057000">
         <ele>434.0</ele>
-        <time>2026-08-14T07:41:03Z</time>
+        <time>2026-08-14T07:53:03Z</time>
         <extensions>
           <gpxtpx:TrackPointExtension>
             <gpxtpx:hr>140</gpxtpx:hr>
@@ -154,7 +154,7 @@
       </trkpt>
       <trkpt lat="49.866100" lon="24.057050">
         <ele>433.0</ele>
-        <time>2026-08-14T07:41:04Z</time>
+        <time>2026-08-14T07:53:04Z</time>
         <extensions>
           <gpxtpx:TrackPointExtension>
             <gpxtpx:hr>141</gpxtpx:hr>
@@ -164,7 +164,7 @@
       </trkpt>
       <trkpt lat="49.866200" lon="24.057100">
         <ele>431.0</ele>
-        <time>2026-08-14T07:41:05Z</time>
+        <time>2026-08-14T07:53:05Z</time>
         <extensions>
           <gpxtpx:TrackPointExtension>
             <gpxtpx:hr>142</gpxtpx:hr>

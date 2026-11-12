@@ -14,10 +14,14 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 OUT = Path(__file__).resolve().parent
 R = 6371008.8
+BASE_TIME = datetime(2026, 8, 14, 7, 41, 3, tzinfo=timezone.utc)
+PAUSE_GAP_S = 120
+MOVING_SPEED_MPS = 0.5
 
 
 @dataclass
@@ -69,18 +73,17 @@ def pts(
     start_lat: float,
     start_lon: float,
     elevations: list[float | None],
-    start_time: str = "2026-08-14T07:41:03Z",
+    start_offset_s: int | None = 0,
     step_m: float = 0.0001,
 ) -> list[Pt]:
     out = []
     for i, ele in enumerate(elevations):
-        hour = 7
-        minute = 41 + i // 60
-        second = 3 + i % 60
         time = (
-            f"2026-08-14T{hour:02d}:{minute:02d}:{second:02d}Z"
-            if start_time is not None
-            else None
+            None
+            if start_offset_s is None
+            else (BASE_TIME + timedelta(seconds=start_offset_s + i)).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            )
         )
         out.append(
             Pt(
@@ -216,6 +219,83 @@ def analysis(track: Trk) -> tuple[int, float, float, float, float | None, float 
     )
 
 
+def parse_time(text: str) -> datetime:
+    return datetime.strptime(text, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+
+
+def statistics(
+    track: Trk,
+) -> tuple[
+    int,
+    float,
+    float,
+    float,
+    float | None,
+    float | None,
+    int | None,
+    int | None,
+    float | None,
+    float | None,
+]:
+    """The oracle for TrackAnalysis, including the timing figures.
+
+    Duration is the wall-clock span between the first and last timestamped
+    point. Moving time sums only the steps inside one segment whose timestamps
+    are at most PAUSE_GAP_S apart and whose speed is at least MOVING_SPEED_MPS.
+    """
+    count = 0
+    distance = 0.0
+    ascent = 0.0
+    descent = 0.0
+    eles: list[float] = []
+    times: list[datetime] = []
+    moving_s = 0.0
+    max_speed: float | None = None
+    for segment in track.segments:
+        previous = None
+        for point in segment.points:
+            count += 1
+            if point.ele is not None:
+                eles.append(point.ele)
+            if point.time is not None:
+                times.append(parse_time(point.time))
+            if previous is not None:
+                distance += haversine(previous, point)
+                if previous.ele is not None and point.ele is not None:
+                    delta = point.ele - previous.ele
+                    if delta > 0:
+                        ascent += delta
+                    else:
+                        descent += -delta
+                if previous.time is not None and point.time is not None:
+                    dt = (parse_time(point.time) - parse_time(previous.time)).total_seconds()
+                    if 0 < dt <= PAUSE_GAP_S:
+                        speed = haversine(previous, point) / dt
+                        max_speed = speed if max_speed is None else max(max_speed, speed)
+                        if speed >= MOVING_SPEED_MPS:
+                            moving_s += dt
+            previous = point
+    duration_s = None
+    moving = None
+    average = None
+    if len(times) >= 2 and times[-1] >= times[0]:
+        duration_s = int((times[-1] - times[0]).total_seconds())
+        moving = int(round(moving_s))
+        average = distance / moving if moving > 0 else None
+    return (
+        count,
+        distance,
+        ascent,
+        descent,
+        min(eles) if eles else None,
+        max(eles) if eles else None,
+        duration_s,
+        moving,
+        average,
+        max_speed,
+    )
+
+
 FIXTURES: list[Fixture] = []
 
 
@@ -239,7 +319,7 @@ add(
                 "Lviv centre walk",
                 [
                     Seg(pts(49.84010, 24.03010, [300.0, 301.0, 302.0, 303.0, 304.0])),
-                    Seg(pts(49.84110, 24.03100, [304.0, 303.0, 302.0, 300.0])),
+                    Seg(pts(49.84110, 24.03100, [304.0, 303.0, 302.0, 300.0], start_offset_s=120)),
                 ],
             )
         ],
@@ -379,8 +459,8 @@ add(
                 "Autopause ride",
                 [
                     Seg(pts(49.85200, 24.04400, [380.0, 381.0, 382.0, 383.0, 384.0])),
-                    Seg(pts(49.85400, 24.04600, [384.0, 383.0, 382.0])),
-                    Seg(pts(49.85500, 24.04700, [382.0, 384.0, 386.0, 388.0])),
+                    Seg(pts(49.85400, 24.04600, [384.0, 383.0, 382.0], start_offset_s=300)),
+                    Seg(pts(49.85500, 24.04700, [382.0, 384.0, 386.0, 388.0], start_offset_s=600)),
                 ],
             )
         ],
@@ -398,7 +478,7 @@ add(
                 "Fenix interval run",
                 [
                     Seg(pts(49.85600, 24.04800, [390.0, 391.0, 393.0, 395.0, 394.0, 396.0])),
-                    Seg(pts(49.85800, 24.04900, [396.0, 395.0, 394.0, 392.0, 390.0])),
+                    Seg(pts(49.85800, 24.04900, [396.0, 395.0, 394.0, 392.0, 390.0], start_offset_s=600)),
                 ],
             )
         ],
@@ -465,9 +545,9 @@ add(
                 "Lunch Ride",
                 [
                     Seg(pts(49.86200, 24.05300, [430.0, 431.0, 432.0, 434.0, 435.0, 437.0])),
-                    Seg(pts(49.86400, 24.05500, [437.0, 438.0])),
-                    Seg(pts(49.86500, 24.05600, [438.0, 437.0, 436.0, 435.0, 434.0])),
-                    Seg(pts(49.86600, 24.05700, [434.0, 433.0, 431.0])),
+                    Seg(pts(49.86400, 24.05500, [437.0, 438.0], start_offset_s=240)),
+                    Seg(pts(49.86500, 24.05600, [438.0, 437.0, 436.0, 435.0, 434.0], start_offset_s=480)),
+                    Seg(pts(49.86600, 24.05700, [434.0, 433.0, 431.0], start_offset_s=720)),
                 ],
             )
         ],
@@ -598,3 +678,15 @@ print("\nbroken-partial: 1 track, 1 segment, 4 kept points (7 trkpt, 3 dropped),
       "empty-segment x1, empty-track x1")
 print("broken-empty-tracks: 1 track, 2 segments (2 + 2 points kept), "
       "warnings: empty-track trk[0], empty-segment trk[1]/trkseg[0], missing-coordinates trk[1]/trkseg[2]/trkpt[0]")
+print("\nfile | track | duration_s | moving_s | avg_mps | max_mps")
+for fixture in FIXTURES:
+    for index, track in enumerate(fixture.tracks):
+        row = statistics(track)
+        duration, moving, average, maximum = row[6], row[7], row[8], row[9]
+        print(
+            f"{fixture.name} | {index} | "
+            f"{duration if duration is not None else 'None'} | "
+            f"{moving if moving is not None else 'None'} | "
+            f"{f'{average:.6f}' if average is not None else 'None'} | "
+            f"{f'{maximum:.6f}' if maximum is not None else 'None'}"
+        )

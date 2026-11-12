@@ -38,6 +38,7 @@ import java.nio.file.StandardCopyOption
 class FileTrackStore(
     private val root: File,
     private val reader: TrackDocumentReader,
+    private val analyzer: TrackAnalyzer = TrackAnalyzer(),
     private val clock: () -> Long = System::currentTimeMillis,
     private val log: (String) -> Unit = {},
 ) : TrackStore {
@@ -228,18 +229,39 @@ class FileTrackStore(
                     }
                 }
             val track = tracks.getOrNull(sidecar.trackIndex) ?: continue
+            val analysis = analyzer.analyze(track)
             records[id] =
                 StoredTrack(
                     id = id,
                     name = sidecar.name,
                     track = track,
-                    analysis = sidecar.analysis,
+                    analysis = analysis,
                     style = sidecar.style,
                     trackIndex = sidecar.trackIndex,
                 )
             sidecars[id] = sidecar
+            if (analysis != sidecar.analysis) {
+                rewriteAnalysis(id, sidecar, analysis)
+            }
         }
         loaded = true
+    }
+
+    /**
+     * The document is parsed here anyway, so the analysis is derived from it
+     * rather than trusted from the cache. A sidecar from an older build, or
+     * one written under another policy, is brought up to date once.
+     */
+    private fun rewriteAnalysis(
+        id: TrackId,
+        sidecar: TrackSidecar,
+        analysis: TrackAnalysis,
+    ) {
+        val updated = sidecar.copy(analysis = analysis)
+        sidecars[id] = updated
+        if (!writeAtomically(sidecarFile(id), TrackSidecarJson.encode(updated).toByteArray())) {
+            log("track ${id.value}: the sidecar could not be updated with its statistics")
+        }
     }
 
     private fun readSidecar(file: File): TrackSidecar? {

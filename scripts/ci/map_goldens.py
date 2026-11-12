@@ -194,6 +194,47 @@ class FocusError(GoldenError):
     """The app window does not own the focus at capture time."""
 
 
+def attached_devices() -> list[str]:
+    """The serials of the attached devices, in `adb devices` order."""
+    try:
+        result = control_client.adb(["devices"])
+    except control_client.ControlError as error:
+        raise GoldenError(str(error)) from error
+    if result.returncode != 0:
+        raise GoldenError(f"adb devices failed: {result.stderr.strip()}")
+    serials = []
+    for line in result.stdout.splitlines():
+        fields = line.split()
+        if len(fields) >= 2 and fields[1] == "device":
+            serials.append(fields[0])
+    return serials
+
+
+def resolve_serial(explicit: str | None) -> str:
+    """The serial every adb call must name, or a refusal to guess.
+
+    The script passes the serial it booted, which is the answer whenever it is
+    given. Without one, a phone and the bench emulator can be attached at the
+    same time: a bare `adb` call then fails with "more than one
+    device/emulator" and `-s ""` addresses nothing. The single attached
+    emulator is the only safe fallback, because the goldens are captured on an
+    emulator; an ambiguous or empty set is refused rather than guessed.
+    """
+    if explicit and explicit.strip():
+        return explicit.strip()
+    serials = attached_devices()
+    if len(serials) == 1:
+        return serials[0]
+    emulators = [serial for serial in serials if serial.startswith("emulator-")]
+    if len(emulators) == 1:
+        return emulators[0]
+    if not serials:
+        raise GoldenError("no device or emulator is attached")
+    raise GoldenError(
+        f"cannot choose a device among {', '.join(serials)}; pass --serial"
+    )
+
+
 def run(
     command: list[str],
     timeout_s: float,
@@ -213,6 +254,10 @@ def run(
 
 class Adb:
     def __init__(self, serial: str) -> None:
+        if not serial.strip():
+            raise GoldenError(
+                "every adb call must name its device; the serial is empty"
+            )
         self.serial = serial
         self.prefix = ["adb", "-s", serial]
 
@@ -270,10 +315,16 @@ class Adb:
     def wait_for_device(self) -> None:
         deadline = time.monotonic() + DEVICE_DEADLINE_S
         while True:
-            if self.shell("true", timeout_s=10, check=False) == "":
+            try:
+                # A failing probe prints nothing, so the exit status is the
+                # only signal: an empty answer is not a ready device.
+                self.shell("true", timeout_s=10)
                 return
-            if time.monotonic() >= deadline:
-                raise GoldenError(f"{self.serial} did not become available")
+            except GoldenError as error:
+                if time.monotonic() >= deadline:
+                    raise GoldenError(
+                        f"{self.serial} did not become available"
+                    ) from error
             time.sleep(2)
 
 
@@ -1252,8 +1303,7 @@ def build_recapture(
     cannot silently use the other variant.
     """
     try:
-        serial = args.serial or control_client.adb(["get-serialno"]).stdout.strip()
-        adb = Adb(serial)
+        adb = Adb(resolve_serial(args.serial))
         adb.wait_for_device()
         client = wait_for_channel(adb)
         if args.style is not None:
@@ -1273,8 +1323,7 @@ def main() -> int:
     args = build_parser().parse_args()
     try:
         if args.command == "capture":
-            serial = args.serial or control_client.adb(["get-serialno"]).stdout.strip()
-            adb = Adb(serial)
+            adb = Adb(resolve_serial(args.serial))
             adb.wait_for_device()
             output = Path(args.output)
             if args.apk:

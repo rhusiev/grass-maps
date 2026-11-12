@@ -145,8 +145,16 @@ trap cleanup EXIT
 if [[ -n "$SERIAL" ]]; then
     :
 elif [[ -n "${CI:-}" ]]; then
-    SERIAL="$(adb devices 2>/dev/null | awk 'NR > 1 && $2 == "device" { print $1; exit }' || true)"
-    [[ -n "$SERIAL" ]] || fail "CI attached no emulator: $(adb devices | tr '\n' ' ')"
+    # CI boots one emulator, but a phone left attached to the runner must not
+    # capture the goldens and two devices make every bare `adb` call
+    # ambiguous. Prefer the emulator, accept a lone device, refuse the rest.
+    attached="$(adb devices 2>/dev/null | awk 'NR > 1 && $2 == "device" { print $1 }' || true)"
+    SERIAL="$(printf '%s\n' "$attached" | awk '/^emulator-/ { print; exit }')"
+    if [[ -z "$SERIAL" && "$(printf '%s\n' "$attached" | grep -c .)" -eq 1 ]]; then
+        SERIAL="$attached"
+    fi
+    [[ -n "$SERIAL" ]] ||
+        fail "CI attached no single emulator: $(printf '%s ' $attached)"
 else
     [[ -x "$ANDROID_HOME/emulator/emulator" ]] ||
         fail "the Android emulator is not installed under $ANDROID_HOME"
@@ -177,6 +185,11 @@ else
     done
     echo "== $SERIAL booted in $SECONDS s ==" >&2
 fi
+
+# Every adb child inherits the target, including the control channel's
+# `adb forward` and the token read inside map_goldens.py. A call site that
+# forgets `-s` then still addresses this emulator instead of failing.
+export ANDROID_SERIAL="$SERIAL"
 
 wait_for_device 180 -s "$SERIAL"
 wait_for_package_manager 120 -s "$SERIAL"
@@ -247,7 +260,10 @@ for style in "${styles[@]}"; do
         continue
     fi
 
-    COMPARE=(python3 "$SCRIPT_DIR/map_goldens.py" compare --profile "$PROFILE" --captured "$run_output" --reference "$run_reference" --output "$run_output")
+    # The compare run re-captures a failed position through the same emulator,
+    # so it needs the serial the capture used: without it a phone and the
+    # emulator together make the channel's `adb forward` ambiguous.
+    COMPARE=(python3 "$SCRIPT_DIR/map_goldens.py" compare --profile "$PROFILE" --captured "$run_output" --reference "$run_reference" --output "$run_output" --serial "$SERIAL")
     if [[ -n "$style" ]]; then
         COMPARE+=(--style "$style")
     fi

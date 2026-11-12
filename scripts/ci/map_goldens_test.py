@@ -1,6 +1,7 @@
 """Unit tests for the timeout-tolerant parts of the map golden capture."""
 
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -39,6 +40,37 @@ class FakeClient:
         if isinstance(answer, BaseException):
             raise answer
         return answer
+
+
+# A stand-in for adb with the Moto g32 and the bench emulator both attached.
+# It logs every argv and answers a command without `-s` the way adb does.
+FAKE_TWO_DEVICE_ADB = """#!/usr/bin/env bash
+printf '%s\\n' "$*" >>"$ADB_LOG"
+target=""
+if [[ "${1:-}" == "-s" ]]; then
+    target="${2:-}"
+    shift 2
+fi
+case "${1:-}" in
+    devices)
+        printf 'List of devices attached\\n%s\\tdevice\\n%s\\tdevice\\n\\n' \\
+            "$ADB_PHONE" "$ADB_EMULATOR"
+        exit 0
+        ;;
+esac
+if [[ -z "$target" ]]; then
+    echo "error: more than one device/emulator" >&2
+    exit 1
+fi
+if [[ "$target" != "$ADB_PHONE" && "$target" != "$ADB_EMULATOR" ]]; then
+    echo "error: device '$target' not found" >&2
+    exit 1
+fi
+if [[ "${1:-}" == "exec-out" ]]; then
+    echo "a-token"
+fi
+exit 0
+"""
 
 
 class StableFrameTest(unittest.TestCase):
@@ -590,6 +622,79 @@ class CompareRecaptureTest(unittest.TestCase):
 
             self.assertEqual("pass", document["result"])
             self.assertNotIn("recaptured", document["positions"][0])
+
+
+class RecaptureSerialTest(unittest.TestCase):
+    """The re-capture channel must name the emulator when a phone is attached."""
+
+    PHONE = "ZY22phone"
+    EMULATOR = "emulator-5580"
+
+    def _build(self, directory: Path, serial: str | None = None) -> tuple[object, list[str]]:
+        bin_dir = directory / "bin"
+        bin_dir.mkdir()
+        fake = bin_dir / "adb"
+        fake.write_text(FAKE_TWO_DEVICE_ADB, encoding="utf-8")
+        fake.chmod(0o755)
+        log = directory / "adb.log"
+        captured = directory / "captured"
+        captured.mkdir()
+        command = ["compare", "--profile", "standard", "--captured", str(captured)]
+        if serial is not None:
+            command += ["--serial", serial]
+        args = map_goldens.build_parser().parse_args(command)
+        environment = {
+            "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
+            "ADB_LOG": str(log),
+            "ADB_PHONE": self.PHONE,
+            "ADB_EMULATOR": serial or self.EMULATOR,
+        }
+        with (
+            mock.patch.dict(os.environ, environment),
+            mock.patch.object(map_goldens, "CHANNEL_TIMEOUT_S", 0.0),
+            mock.patch.object(control_client, "connect", return_value=mock.Mock()),
+        ):
+            recapture = map_goldens.build_recapture(args, captured)
+        calls = log.read_text(encoding="utf-8").splitlines() if log.is_file() else []
+        return recapture, calls
+
+    def test_a_re_capture_addresses_the_emulator_when_a_phone_is_attached(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            recapture, calls = self._build(Path(directory))
+
+            self.assertIsNotNone(
+                recapture,
+                f"the re-capture channel must open with a phone attached: {calls}",
+            )
+            forwarded = [call for call in calls if "forward" in call]
+            self.assertTrue(forwarded, f"no adb forward was issued: {calls}")
+            for call in forwarded:
+                self.assertTrue(call.startswith(f"-s {self.EMULATOR} "), call)
+            self.assertTrue(
+                any(
+                    "localabstract:nl.r1a.grassmap.control" in call
+                    for call in forwarded
+                )
+            )
+            token = [call for call in calls if "run-as" in call]
+            self.assertTrue(token, f"the token read is missing: {calls}")
+            for call in token:
+                self.assertTrue(call.startswith(f"-s {self.EMULATOR} "), call)
+            untargeted = [
+                call
+                for call in calls
+                if not call.startswith("-s ") and not call.startswith("devices")
+            ]
+            self.assertEqual([], untargeted)
+
+    def test_an_explicit_serial_wins_over_the_attached_devices(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            recapture, calls = self._build(Path(directory), serial="emulator-5556")
+
+            self.assertIsNotNone(recapture)
+            self.assertTrue(calls)
+            for call in calls:
+                self.assertTrue(call.startswith("-s emulator-5556 "), call)
 
 
 class AnrDialogTest(unittest.TestCase):

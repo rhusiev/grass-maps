@@ -676,6 +676,13 @@ anti-aliasing and label rasterisation; a blank, wrong or shifted map still
 changes most blocks. The run writes `comparison.json` and one diff image per
 position.
 
+A position over the tolerance is re-captured once through the control channel
+before the run calls it a failure. The compare run names the device the capture
+used, so the channel's `adb forward` and token read address that emulator even
+when a phone is attached to the same machine. `GOLDEN_SERIAL` overrides the
+device. Without a serial, `map_goldens.py` takes the only attached emulator and
+refuses to guess when several are attached.
+
 ### Location puck
 
 `MapHost.setLocation(LocationFix?)` draws or clears the own-position puck. The

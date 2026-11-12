@@ -32,6 +32,7 @@ import nl.r1a.grassmap.core.services.NoLocationSource
 import nl.r1a.grassmap.core.services.OnlineSearchSettings
 import nl.r1a.grassmap.core.services.PrivacyNetworkGate
 import nl.r1a.grassmap.core.services.PrivacySwitchSettings
+import nl.r1a.grassmap.core.services.RoutingOptionsSettings
 import nl.r1a.grassmap.core.services.SearchHistorySettings
 import nl.r1a.grassmap.core.services.SharedLocationSource
 import nl.r1a.grassmap.core.services.UnitSettings
@@ -49,11 +50,14 @@ import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.host.ElevationAccess
+import nl.r1a.grassmap.plugin.api.host.NoElevationAccess
 import nl.r1a.grassmap.plugin.api.host.NoPlatformActions
 import nl.r1a.grassmap.plugin.api.host.NoRegionAccess
 import nl.r1a.grassmap.plugin.api.host.PlatformActions
 import nl.r1a.grassmap.plugin.api.host.RegionAccess
 import nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess
+import nl.r1a.grassmap.plugin.api.host.RoutingOptionsAccess
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
 import nl.r1a.grassmap.plugin.api.provider.CoordinateParser
@@ -82,6 +86,7 @@ import nl.r1a.grassmap.regions.GateNetworkAccess
 import nl.r1a.grassmap.regions.HttpDownloadTransport
 import nl.r1a.grassmap.regions.NetworkAccess
 import nl.r1a.grassmap.regions.RegionDownloader
+import nl.r1a.grassmap.regions.RegionElevation
 import nl.r1a.grassmap.regions.RegionMount
 import nl.r1a.grassmap.regions.RegionMountResolver
 import nl.r1a.grassmap.regions.RegionPaths
@@ -118,6 +123,7 @@ class AppContainer(
     private val searchHistorySettingsFileProvider: () -> File? = { null },
     private val onlineSearchSettingsFileProvider: () -> File? = { null },
     private val routeHistoryFileProvider: () -> File? = { null },
+    private val routingOptionsFileProvider: () -> File? = { null },
     private val favouritesRootProvider: () -> File? = { null },
     private val favouritesBackupClock: Clock = SystemClock,
     private val favouritesBackupScope: CoroutineScope? = null,
@@ -186,6 +192,14 @@ class AppContainer(
      * resolve it off Main.
      */
     val onlineSearchSettings: OnlineSearchSettings by lazy { OnlineSearchSettings(onlineSearchSettingsFileProvider()) }
+
+    /**
+     * The per-profile routing options (T-0308). Construction reads the settings
+     * file, so the planner asks it through the host and never on Main.
+     */
+    val routingOptionsSettings: RoutingOptionsSettings by lazy {
+        RoutingOptionsSettings(routingOptionsFileProvider())
+    }
 
     /**
      * The last searches (T-0207). It asks [searchHistorySettings] before it
@@ -308,26 +322,43 @@ class AppContainer(
     }
 
     /**
+     * The mounted region's directory, read once. Both region readers use it so
+     * the mount is resolved once and an invalid mount is logged once.
+     */
+    private val mountedRegionDirectory: File? by lazy {
+        val root = regionsRoot ?: return@lazy null
+        when (val mount = RegionMountResolver(root).resolve()) {
+            is RegionMount.Mounted -> {
+                mount.region.directory
+            }
+
+            is RegionMount.Invalid -> {
+                Log.w(REGIONS_TAG, "region mount invalid: ${mount.problem}")
+                null
+            }
+
+            RegionMount.None -> {
+                null
+            }
+        }
+    }
+
+    /**
      * The mounted region's way-alert features (T-0319). The reader opens the
      * component on the first query, off Main; an older package without it is a
      * success with no features, and an unmounted region is the inert source.
      */
     private val regionAccess: RegionAccess by lazy {
-        val root = regionsRoot ?: return@lazy NoRegionAccess
-        when (val mount = RegionMountResolver(root).resolve()) {
-            is RegionMount.Mounted -> {
-                RegionReader(mount.region.directory)
-            }
+        mountedRegionDirectory?.let(::RegionReader) ?: NoRegionAccess
+    }
 
-            is RegionMount.Invalid -> {
-                Log.w(WAY_ALERTS_TAG, "region mount invalid: ${mount.problem}")
-                NoRegionAccess
-            }
-
-            RegionMount.None -> {
-                NoRegionAccess
-            }
-        }
+    /**
+     * The mounted region's DEM heights (T-0308). The grid is opened on the
+     * first query; a package without the component or with the old stand-in
+     * reports no height, and an unmounted region is the inert source.
+     */
+    private val elevationAccess: ElevationAccess by lazy {
+        mountedRegionDirectory?.let(::RegionElevation) ?: NoElevationAccess
     }
 
     /**
@@ -573,6 +604,8 @@ class AppContainer(
             },
             routingEngines = routingEngineAccess,
             routeHistoryAccess = routeHistory,
+            routingOptionsAccess = RoutingOptionsAccess { profile -> routingOptionsSettings.forProfile(profile) },
+            elevationAccess = elevationAccess,
         )
     }
 

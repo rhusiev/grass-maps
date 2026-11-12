@@ -2,9 +2,12 @@ package nl.r1a.grassmap.plugins.valhalla
 
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonObjectBuilder
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
+import nl.r1a.grassmap.plugin.api.provider.Hilliness
+import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 
 /**
@@ -84,6 +87,35 @@ internal object ValhallaProfiles {
             RouteProfile.Hike -> HIKE
             RouteProfile.Car -> CAR
         }
+
+    /**
+     * The costing options for one request: the tuned profile document, with the
+     * user's hilliness preference applied when it is not the default.
+     *
+     * Valhalla reads `use_hills` as willingness to take a hill, 0 to 1. Full
+     * avoidance is 0.0; the profile documents keep their tuned values (0.5
+     * walk, 0.9 hike, 0.4 bike) when the preference is unset. The setting is
+     * applied only to the profile in the request, so another profile's options
+     * cannot appear in this body.
+     */
+    fun costingOptions(
+        profile: RouteProfile,
+        options: RouteOptions,
+    ): JsonObject {
+        val base = of(profile).costingOptions
+        if (options.hilliness == Hilliness.Default) {
+            return base
+        }
+        val avoided =
+            when (profile) {
+                RouteProfile.Walk, RouteProfile.Hike, RouteProfile.Bike -> FULL_HILL_AVOIDANCE
+                RouteProfile.Car -> return base
+            }
+        return JsonObject(base + ("use_hills" to JsonPrimitive(avoided)))
+    }
+
+    /** Valhalla's `use_hills` value for the strongest hill avoidance. */
+    private const val FULL_HILL_AVOIDANCE = 0.0
 
     /** The committed document, compared verbatim by the profile test. */
     fun document(): JsonObject =

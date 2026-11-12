@@ -36,10 +36,80 @@ the pedestrian default, written down so a change is a decision.
 | alleys, driveways | 2.0, 5.0 (avoid) | 2.0, 5.0 | Valhalla defaults |
 
 `max_hiking_difficulty` is the pedestrian option that reads `sac_scale`; it is
-the only place `sac_scale` changes a pedestrian route. The phase-A pack carries
-no elevation, so `use_hills` and `max_grade` have no effect on these runs: they
-stay in the document because they are the mapping the pack will need once it is
-rebuilt with elevation.
+the only place `sac_scale` changes a pedestrian route. The T-0301 runs used the
+phase-A pack, which carries no elevation, so `use_hills` and `max_grade` had no
+effect there; the values stay in the document because they are the mapping the
+T-0308 elevation pack needs.
+
+## Hills and per-profile options (T-0308)
+
+The user's hilliness preference is a per-profile setting, not a global switch.
+`RouteOptions.hilliness` travels on the request; `plugins/valhalla` applies it
+only to the costing named by that request, so setting bike to avoid hills cannot
+change the walk body. The mapping is:
+
+| Preference | walk | hike | bike |
+|---|---|---|---|
+| `Default` | tuned 0.5 | tuned 0.9 | tuned 0.4 |
+| `AvoidHills` | 0.0 | 0.0 | 0.0 |
+
+Valhalla reads `use_hills` as willingness to take a climb, 0 to 1, so 0.0 is
+full avoidance. The settings model is `RoutingOptionsSettings`, one entry per
+profile, defaulting every unset profile to `RouteOptions()`. The planner reads
+it through `RoutingOptionsAccess`; the profile is still the one the planner was
+built with, so this task does not add a profile picker.
+
+The Lviv pack used for the measurement is built with
+`tools/pipeline/build-valhalla-pack.sh`: an osmium polygon extract of Lviv
+oblast, GLO-30 `.hgt` tiles at 1 arcsec, and `valhalla_build_tiles` with
+`additional_data.elevation` set, which adds edge grades in the same pass. The
+phase-A country pack is untouched.
+
+The acceptance routes and their default/avoid ascents are in
+`test-data/routing/hills/bike-hills.json`; the capture command and the result
+table are below.
+
+Capture used the offline container on port 18002, the committed
+`valhalla-profiles.json` for the tuned body, and the same Lviv GLO-30 DEM that
+built the pack:
+
+```sh
+python3 scripts/bench/route-validation/hills.py \
+  --pairs test-data/routing/hills/candidates.json \
+  --profiles test-data/routing/valhalla-profiles.json \
+  --dem /hdd/drive/Projects/Life/grass-maps-bench/data/lviv-elev30-int16.tif \
+  --report /hdd/t-0308-hills/hills-report.json \
+  --out test-data/routing/hills/bike-hills.json \
+  --only 'Drohobych - Skole,Zolochiv - Peremyshliany,Boryslav - Turka,...' \
+  --valhalla http://127.0.0.1:18002
+```
+
+The 100 candidate pairs are hand-picked towns in Lviv oblast, 3-40 km apart.
+The script routes each pair with the tuned bicycle profile and with
+`use_hills: 0.0`, samples the returned line every 25 m, and sums the positive
+height changes. Full avoidance lowered the ascent on 22 of the 100; the 10
+largest drops are committed. Avoidance is a cost preference, not a guarantee:
+on a road with no flatter alternative it can leave the line unchanged or even
+pick a slightly hillier line when the length or road weights dominate.
+
+| Route | tuned km | tuned ascent m | avoid km | avoid ascent m | drop m |
+|---|---|---|---|---|---|
+| Bryukhovychi - Novoyavorivsk | 34.1 | 646 | 34.4 | 612 | 34 |
+| Drohobych - Skole | 54.8 | 1111 | 52.8 | 856 | 255 |
+| Boryslav - Turka | 53.0 | 1201 | 53.9 | 1147 | 54 |
+| Truskavets - Skole | 48.6 | 708 | 47.8 | 696 | 12 |
+| Truskavets - Turka | 61.8 | 1418 | 62.7 | 1357 | 61 |
+| Truskavets - Sambir | 43.5 | 780 | 43.3 | 770 | 10 |
+| Stebnyk - Mykolaiv | 51.3 | 610 | 51.2 | 594 | 16 |
+| Stebnyk - Bolekhiv | 51.0 | 679 | 50.8 | 665 | 14 |
+| Zolochiv - Peremyshliany | 38.4 | 912 | 38.3 | 725 | 187 |
+| Peremyshliany - Rohatyn | 30.4 | 503 | 30.9 | 493 | 10 |
+
+`BikeHillRoutesTest` recomputes each ascent from the committed integer height
+samples and fails if any avoid line is not lower or if the recorded figure
+drifts. The route shape is stored as a polyline6 string, the same encoding the
+engine returns; the heights are a comma-separated string, one integer per 25 m
+of route, so the fixture stays compact.
 
 ## How the run was made
 

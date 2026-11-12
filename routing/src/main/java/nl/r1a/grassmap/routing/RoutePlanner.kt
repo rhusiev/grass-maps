@@ -19,6 +19,7 @@ import nl.r1a.grassmap.plugin.api.model.RoutePlanRole
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
 import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteRequest
 import nl.r1a.grassmap.plugin.api.service.Clock
@@ -53,6 +54,7 @@ class RoutePlanner(
     private val requestRoute: suspend (RouteRequest, CancellationHandle) -> Outcome<List<Route>>,
     private val clock: Clock = SystemClock,
     private val profile: RouteProfile = RouteProfile.Walk,
+    private val optionsForProfile: (RouteProfile) -> RouteOptions = { RouteOptions() },
     private val alternatives: Int = 1,
     private val history: RouteHistoryAccess = NoRouteHistoryAccess,
 ) {
@@ -331,6 +333,7 @@ class RoutePlanner(
                         waypoints = snapshot.stops.map { stop -> stop.position },
                         profile = profile,
                         alternatives = alternatives,
+                        options = optionsForProfile(profile),
                     ),
                     cancellation,
                 )

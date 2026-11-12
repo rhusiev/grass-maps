@@ -59,6 +59,7 @@ open class GrassMapsApplication : Application() {
             searchHistorySettingsFileProvider = { File(filesDir, SEARCH_HISTORY_SETTINGS_PATH) },
             onlineSearchSettingsFileProvider = { File(filesDir, ONLINE_SEARCH_SETTINGS_PATH) },
             routeHistoryFileProvider = { File(filesDir, ROUTE_HISTORY_PATH) },
+            routingOptionsFileProvider = { File(filesDir, ROUTING_OPTIONS_SETTINGS_PATH) },
             favouritesRootProvider = { filesDir },
             platformActions = AndroidPlatformActions(this),
             navigationService = AndroidNavigationServiceHandle(this),
@@ -195,6 +196,7 @@ open class GrassMapsApplication : Application() {
         const val UNIT_SETTINGS_PATH = "settings/units.json"
         const val SEARCH_HISTORY_SETTINGS_PATH = "settings/search-history.json"
         const val ONLINE_SEARCH_SETTINGS_PATH = "settings/online-search.json"
+        const val ROUTING_OPTIONS_SETTINGS_PATH = "settings/routing-options.json"
         const val SEARCH_HISTORY_PATH = "history/search-history.json"
         const val ROUTE_HISTORY_PATH = "history/route-history.json"
         const val DEV_TOOLS_GPX_ASSET = "mock-walk.gpx"

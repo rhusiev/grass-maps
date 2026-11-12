@@ -82,4 +82,11 @@ interface PluginServices {
      * still plans.
      */
     val routeHistory: RouteHistoryAccess get() = NoRouteHistoryAccess
+
+    /**
+     * The per-profile routing options behind `planner` (T-0308). Inert until
+     * `app` wires the settings store, so a build with no settings still routes
+     * with the tuned defaults.
+     */
+    val routingOptions: RoutingOptionsAccess get() = NoRoutingOptionsAccess
 }

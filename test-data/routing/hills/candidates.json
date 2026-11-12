@@ -1,0 +1,1105 @@
+{
+  "seed": "hand-picked hilly towns, 2026-11-12",
+  "pairs": [
+    {
+      "name": "Lviv centre - Vynnyky",
+      "from": [
+        24.0316,
+        49.8419
+      ],
+      "to": [
+        24.13,
+        49.815
+      ]
+    },
+    {
+      "name": "Lviv centre - Bryukhovychi",
+      "from": [
+        24.0316,
+        49.8419
+      ],
+      "to": [
+        23.97,
+        49.9
+      ]
+    },
+    {
+      "name": "Lviv centre - Zhovkva",
+      "from": [
+        24.0316,
+        49.8419
+      ],
+      "to": [
+        23.97,
+        50.056
+      ]
+    },
+    {
+      "name": "Lviv centre - Dublyany",
+      "from": [
+        24.0316,
+        49.8419
+      ],
+      "to": [
+        24.09,
+        49.9
+      ]
+    },
+    {
+      "name": "Lviv centre - Novoyavorivsk",
+      "from": [
+        24.0316,
+        49.8419
+      ],
+      "to": [
+        23.57,
+        49.93
+      ]
+    },
+    {
+      "name": "Lviv centre - Kamianka-Buzka",
+      "from": [
+        24.0316,
+        49.8419
+      ],
+      "to": [
+        24.35,
+        50.1
+      ]
+    },
+    {
+      "name": "Lviv centre - Mykolaiv",
+      "from": [
+        24.0316,
+        49.8419
+      ],
+      "to": [
+        23.98,
+        49.52
+      ]
+    },
+    {
+      "name": "Lviv centre - Bibrka",
+      "from": [
+        24.0316,
+        49.8419
+      ],
+      "to": [
+        24.29,
+        49.63
+      ]
+    },
+    {
+      "name": "Vynnyky - Bryukhovychi",
+      "from": [
+        24.13,
+        49.815
+      ],
+      "to": [
+        23.97,
+        49.9
+      ]
+    },
+    {
+      "name": "Vynnyky - Zhovkva",
+      "from": [
+        24.13,
+        49.815
+      ],
+      "to": [
+        23.97,
+        50.056
+      ]
+    },
+    {
+      "name": "Vynnyky - Dublyany",
+      "from": [
+        24.13,
+        49.815
+      ],
+      "to": [
+        24.09,
+        49.9
+      ]
+    },
+    {
+      "name": "Vynnyky - Busk",
+      "from": [
+        24.13,
+        49.815
+      ],
+      "to": [
+        24.62,
+        49.97
+      ]
+    },
+    {
+      "name": "Vynnyky - Kamianka-Buzka",
+      "from": [
+        24.13,
+        49.815
+      ],
+      "to": [
+        24.35,
+        50.1
+      ]
+    },
+    {
+      "name": "Vynnyky - Mykolaiv",
+      "from": [
+        24.13,
+        49.815
+      ],
+      "to": [
+        23.98,
+        49.52
+      ]
+    },
+    {
+      "name": "Vynnyky - Bibrka",
+      "from": [
+        24.13,
+        49.815
+      ],
+      "to": [
+        24.29,
+        49.63
+      ]
+    },
+    {
+      "name": "Vynnyky - Peremyshliany",
+      "from": [
+        24.13,
+        49.815
+      ],
+      "to": [
+        24.56,
+        49.67
+      ]
+    },
+    {
+      "name": "Bryukhovychi - Zhovkva",
+      "from": [
+        23.97,
+        49.9
+      ],
+      "to": [
+        23.97,
+        50.056
+      ]
+    },
+    {
+      "name": "Bryukhovychi - Dublyany",
+      "from": [
+        23.97,
+        49.9
+      ],
+      "to": [
+        24.09,
+        49.9
+      ]
+    },
+    {
+      "name": "Bryukhovychi - Novoyavorivsk",
+      "from": [
+        23.97,
+        49.9
+      ],
+      "to": [
+        23.57,
+        49.93
+      ]
+    },
+    {
+      "name": "Bryukhovychi - Kamianka-Buzka",
+      "from": [
+        23.97,
+        49.9
+      ],
+      "to": [
+        24.35,
+        50.1
+      ]
+    },
+    {
+      "name": "Bryukhovychi - Bibrka",
+      "from": [
+        23.97,
+        49.9
+      ],
+      "to": [
+        24.29,
+        49.63
+      ]
+    },
+    {
+      "name": "Zhovkva - Dublyany",
+      "from": [
+        23.97,
+        50.056
+      ],
+      "to": [
+        24.09,
+        49.9
+      ]
+    },
+    {
+      "name": "Zhovkva - Novoyavorivsk",
+      "from": [
+        23.97,
+        50.056
+      ],
+      "to": [
+        23.57,
+        49.93
+      ]
+    },
+    {
+      "name": "Zhovkva - Rava-Ruska",
+      "from": [
+        23.97,
+        50.056
+      ],
+      "to": [
+        23.62,
+        50.23
+      ]
+    },
+    {
+      "name": "Zhovkva - Kamianka-Buzka",
+      "from": [
+        23.97,
+        50.056
+      ],
+      "to": [
+        24.35,
+        50.1
+      ]
+    },
+    {
+      "name": "Dublyany - Novoyavorivsk",
+      "from": [
+        24.09,
+        49.9
+      ],
+      "to": [
+        23.57,
+        49.93
+      ]
+    },
+    {
+      "name": "Dublyany - Busk",
+      "from": [
+        24.09,
+        49.9
+      ],
+      "to": [
+        24.62,
+        49.97
+      ]
+    },
+    {
+      "name": "Dublyany - Kamianka-Buzka",
+      "from": [
+        24.09,
+        49.9
+      ],
+      "to": [
+        24.35,
+        50.1
+      ]
+    },
+    {
+      "name": "Dublyany - Bibrka",
+      "from": [
+        24.09,
+        49.9
+      ],
+      "to": [
+        24.29,
+        49.63
+      ]
+    },
+    {
+      "name": "Drohobych - Boryslav",
+      "from": [
+        23.5,
+        49.35
+      ],
+      "to": [
+        23.43,
+        49.29
+      ]
+    },
+    {
+      "name": "Drohobych - Truskavets",
+      "from": [
+        23.5,
+        49.35
+      ],
+      "to": [
+        23.51,
+        49.28
+      ]
+    },
+    {
+      "name": "Drohobych - Stebnyk",
+      "from": [
+        23.5,
+        49.35
+      ],
+      "to": [
+        23.56,
+        49.3
+      ]
+    },
+    {
+      "name": "Drohobych - Stryi",
+      "from": [
+        23.5,
+        49.35
+      ],
+      "to": [
+        23.85,
+        49.25
+      ]
+    },
+    {
+      "name": "Drohobych - Skole",
+      "from": [
+        23.5,
+        49.35
+      ],
+      "to": [
+        23.51,
+        49.04
+      ]
+    },
+    {
+      "name": "Drohobych - Sambir",
+      "from": [
+        23.5,
+        49.35
+      ],
+      "to": [
+        23.2,
+        49.52
+      ]
+    },
+    {
+      "name": "Drohobych - Staryi Sambir",
+      "from": [
+        23.5,
+        49.35
+      ],
+      "to": [
+        23.0,
+        49.44
+      ]
+    },
+    {
+      "name": "Drohobych - Mykolaiv",
+      "from": [
+        23.5,
+        49.35
+      ],
+      "to": [
+        23.98,
+        49.52
+      ]
+    },
+    {
+      "name": "Boryslav - Truskavets",
+      "from": [
+        23.43,
+        49.29
+      ],
+      "to": [
+        23.51,
+        49.28
+      ]
+    },
+    {
+      "name": "Boryslav - Stebnyk",
+      "from": [
+        23.43,
+        49.29
+      ],
+      "to": [
+        23.56,
+        49.3
+      ]
+    },
+    {
+      "name": "Boryslav - Stryi",
+      "from": [
+        23.43,
+        49.29
+      ],
+      "to": [
+        23.85,
+        49.25
+      ]
+    },
+    {
+      "name": "Boryslav - Skole",
+      "from": [
+        23.43,
+        49.29
+      ],
+      "to": [
+        23.51,
+        49.04
+      ]
+    },
+    {
+      "name": "Boryslav - Turka",
+      "from": [
+        23.43,
+        49.29
+      ],
+      "to": [
+        23.03,
+        49.15
+      ]
+    },
+    {
+      "name": "Boryslav - Sambir",
+      "from": [
+        23.43,
+        49.29
+      ],
+      "to": [
+        23.2,
+        49.52
+      ]
+    },
+    {
+      "name": "Boryslav - Staryi Sambir",
+      "from": [
+        23.43,
+        49.29
+      ],
+      "to": [
+        23.0,
+        49.44
+      ]
+    },
+    {
+      "name": "Boryslav - Borynya",
+      "from": [
+        23.43,
+        49.29
+      ],
+      "to": [
+        22.99,
+        49.08
+      ]
+    },
+    {
+      "name": "Boryslav - Bolekhiv",
+      "from": [
+        23.43,
+        49.29
+      ],
+      "to": [
+        23.85,
+        49.07
+      ]
+    },
+    {
+      "name": "Truskavets - Stebnyk",
+      "from": [
+        23.51,
+        49.28
+      ],
+      "to": [
+        23.56,
+        49.3
+      ]
+    },
+    {
+      "name": "Truskavets - Stryi",
+      "from": [
+        23.51,
+        49.28
+      ],
+      "to": [
+        23.85,
+        49.25
+      ]
+    },
+    {
+      "name": "Truskavets - Skole",
+      "from": [
+        23.51,
+        49.28
+      ],
+      "to": [
+        23.51,
+        49.04
+      ]
+    },
+    {
+      "name": "Truskavets - Turka",
+      "from": [
+        23.51,
+        49.28
+      ],
+      "to": [
+        23.03,
+        49.15
+      ]
+    },
+    {
+      "name": "Truskavets - Sambir",
+      "from": [
+        23.51,
+        49.28
+      ],
+      "to": [
+        23.2,
+        49.52
+      ]
+    },
+    {
+      "name": "Truskavets - Bolekhiv",
+      "from": [
+        23.51,
+        49.28
+      ],
+      "to": [
+        23.85,
+        49.07
+      ]
+    },
+    {
+      "name": "Stebnyk - Stryi",
+      "from": [
+        23.56,
+        49.3
+      ],
+      "to": [
+        23.85,
+        49.25
+      ]
+    },
+    {
+      "name": "Stebnyk - Skole",
+      "from": [
+        23.56,
+        49.3
+      ],
+      "to": [
+        23.51,
+        49.04
+      ]
+    },
+    {
+      "name": "Stebnyk - Sambir",
+      "from": [
+        23.56,
+        49.3
+      ],
+      "to": [
+        23.2,
+        49.52
+      ]
+    },
+    {
+      "name": "Stebnyk - Mykolaiv",
+      "from": [
+        23.56,
+        49.3
+      ],
+      "to": [
+        23.98,
+        49.52
+      ]
+    },
+    {
+      "name": "Stebnyk - Bolekhiv",
+      "from": [
+        23.56,
+        49.3
+      ],
+      "to": [
+        23.85,
+        49.07
+      ]
+    },
+    {
+      "name": "Stryi - Skole",
+      "from": [
+        23.85,
+        49.25
+      ],
+      "to": [
+        23.51,
+        49.04
+      ]
+    },
+    {
+      "name": "Stryi - Mykolaiv",
+      "from": [
+        23.85,
+        49.25
+      ],
+      "to": [
+        23.98,
+        49.52
+      ]
+    },
+    {
+      "name": "Stryi - Zhydachiv",
+      "from": [
+        23.85,
+        49.25
+      ],
+      "to": [
+        24.14,
+        49.38
+      ]
+    },
+    {
+      "name": "Stryi - Khodoriv",
+      "from": [
+        23.85,
+        49.25
+      ],
+      "to": [
+        24.3,
+        49.4
+      ]
+    },
+    {
+      "name": "Stryi - Dolyna",
+      "from": [
+        23.85,
+        49.25
+      ],
+      "to": [
+        24.0,
+        48.97
+      ]
+    },
+    {
+      "name": "Stryi - Bolekhiv",
+      "from": [
+        23.85,
+        49.25
+      ],
+      "to": [
+        23.85,
+        49.07
+      ]
+    },
+    {
+      "name": "Skole - Slavske",
+      "from": [
+        23.51,
+        49.04
+      ],
+      "to": [
+        23.45,
+        48.85
+      ]
+    },
+    {
+      "name": "Skole - Turka",
+      "from": [
+        23.51,
+        49.04
+      ],
+      "to": [
+        23.03,
+        49.15
+      ]
+    },
+    {
+      "name": "Skole - Borynya",
+      "from": [
+        23.51,
+        49.04
+      ],
+      "to": [
+        22.99,
+        49.08
+      ]
+    },
+    {
+      "name": "Skole - Dolyna",
+      "from": [
+        23.51,
+        49.04
+      ],
+      "to": [
+        24.0,
+        48.97
+      ]
+    },
+    {
+      "name": "Skole - Bolekhiv",
+      "from": [
+        23.51,
+        49.04
+      ],
+      "to": [
+        23.85,
+        49.07
+      ]
+    },
+    {
+      "name": "Slavske - Bolekhiv",
+      "from": [
+        23.45,
+        48.85
+      ],
+      "to": [
+        23.85,
+        49.07
+      ]
+    },
+    {
+      "name": "Turka - Staryi Sambir",
+      "from": [
+        23.03,
+        49.15
+      ],
+      "to": [
+        23.0,
+        49.44
+      ]
+    },
+    {
+      "name": "Turka - Borynya",
+      "from": [
+        23.03,
+        49.15
+      ],
+      "to": [
+        22.99,
+        49.08
+      ]
+    },
+    {
+      "name": "Sambir - Staryi Sambir",
+      "from": [
+        23.2,
+        49.52
+      ],
+      "to": [
+        23.0,
+        49.44
+      ]
+    },
+    {
+      "name": "Yavoriv - Novoyavorivsk",
+      "from": [
+        23.39,
+        49.94
+      ],
+      "to": [
+        23.57,
+        49.93
+      ]
+    },
+    {
+      "name": "Yavoriv - Rava-Ruska",
+      "from": [
+        23.39,
+        49.94
+      ],
+      "to": [
+        23.62,
+        50.23
+      ]
+    },
+    {
+      "name": "Novoyavorivsk - Rava-Ruska",
+      "from": [
+        23.57,
+        49.93
+      ],
+      "to": [
+        23.62,
+        50.23
+      ]
+    },
+    {
+      "name": "Zolochiv - Brody",
+      "from": [
+        24.9,
+        49.8
+      ],
+      "to": [
+        25.15,
+        50.08
+      ]
+    },
+    {
+      "name": "Zolochiv - Busk",
+      "from": [
+        24.9,
+        49.8
+      ],
+      "to": [
+        24.62,
+        49.97
+      ]
+    },
+    {
+      "name": "Zolochiv - Peremyshliany",
+      "from": [
+        24.9,
+        49.8
+      ],
+      "to": [
+        24.56,
+        49.67
+      ]
+    },
+    {
+      "name": "Brody - Busk",
+      "from": [
+        25.15,
+        50.08
+      ],
+      "to": [
+        24.62,
+        49.97
+      ]
+    },
+    {
+      "name": "Busk - Kamianka-Buzka",
+      "from": [
+        24.62,
+        49.97
+      ],
+      "to": [
+        24.35,
+        50.1
+      ]
+    },
+    {
+      "name": "Busk - Peremyshliany",
+      "from": [
+        24.62,
+        49.97
+      ],
+      "to": [
+        24.56,
+        49.67
+      ]
+    },
+    {
+      "name": "Chervonohrad - Sokal",
+      "from": [
+        24.23,
+        50.39
+      ],
+      "to": [
+        24.28,
+        50.48
+      ]
+    },
+    {
+      "name": "Chervonohrad - Kamianka-Buzka",
+      "from": [
+        24.23,
+        50.39
+      ],
+      "to": [
+        24.35,
+        50.1
+      ]
+    },
+    {
+      "name": "Mykolaiv - Zhydachiv",
+      "from": [
+        23.98,
+        49.52
+      ],
+      "to": [
+        24.14,
+        49.38
+      ]
+    },
+    {
+      "name": "Mykolaiv - Khodoriv",
+      "from": [
+        23.98,
+        49.52
+      ],
+      "to": [
+        24.3,
+        49.4
+      ]
+    },
+    {
+      "name": "Mykolaiv - Bibrka",
+      "from": [
+        23.98,
+        49.52
+      ],
+      "to": [
+        24.29,
+        49.63
+      ]
+    },
+    {
+      "name": "Zhydachiv - Khodoriv",
+      "from": [
+        24.14,
+        49.38
+      ],
+      "to": [
+        24.3,
+        49.4
+      ]
+    },
+    {
+      "name": "Zhydachiv - Bibrka",
+      "from": [
+        24.14,
+        49.38
+      ],
+      "to": [
+        24.29,
+        49.63
+      ]
+    },
+    {
+      "name": "Zhydachiv - Rohatyn",
+      "from": [
+        24.14,
+        49.38
+      ],
+      "to": [
+        24.61,
+        49.41
+      ]
+    },
+    {
+      "name": "Khodoriv - Bibrka",
+      "from": [
+        24.3,
+        49.4
+      ],
+      "to": [
+        24.29,
+        49.63
+      ]
+    },
+    {
+      "name": "Khodoriv - Peremyshliany",
+      "from": [
+        24.3,
+        49.4
+      ],
+      "to": [
+        24.56,
+        49.67
+      ]
+    },
+    {
+      "name": "Khodoriv - Rohatyn",
+      "from": [
+        24.3,
+        49.4
+      ],
+      "to": [
+        24.61,
+        49.41
+      ]
+    },
+    {
+      "name": "Bibrka - Peremyshliany",
+      "from": [
+        24.29,
+        49.63
+      ],
+      "to": [
+        24.56,
+        49.67
+      ]
+    },
+    {
+      "name": "Bibrka - Rohatyn",
+      "from": [
+        24.29,
+        49.63
+      ],
+      "to": [
+        24.61,
+        49.41
+      ]
+    },
+    {
+      "name": "Peremyshliany - Rohatyn",
+      "from": [
+        24.56,
+        49.67
+      ],
+      "to": [
+        24.61,
+        49.41
+      ]
+    },
+    {
+      "name": "Rohatyn - Halych",
+      "from": [
+        24.61,
+        49.41
+      ],
+      "to": [
+        24.72,
+        49.12
+      ]
+    },
+    {
+      "name": "Halych - Kalush",
+      "from": [
+        24.72,
+        49.12
+      ],
+      "to": [
+        24.36,
+        49.02
+      ]
+    },
+    {
+      "name": "Kalush - Dolyna",
+      "from": [
+        24.36,
+        49.02
+      ],
+      "to": [
+        24.0,
+        48.97
+      ]
+    },
+    {
+      "name": "Kalush - Bolekhiv",
+      "from": [
+        24.36,
+        49.02
+      ],
+      "to": [
+        23.85,
+        49.07
+      ]
+    },
+    {
+      "name": "Dolyna - Bolekhiv",
+      "from": [
+        24.0,
+        48.97
+      ],
+      "to": [
+        23.85,
+        49.07
+      ]
+    }
+  ]
+}

@@ -37,12 +37,14 @@ import nl.r1a.grassmap.plugin.api.host.NoPlatformActions
 import nl.r1a.grassmap.plugin.api.host.NoRegionAccess
 import nl.r1a.grassmap.plugin.api.host.NoRouteHistoryAccess
 import nl.r1a.grassmap.plugin.api.host.NoRoutingEngines
+import nl.r1a.grassmap.plugin.api.host.NoRoutingOptionsAccess
 import nl.r1a.grassmap.plugin.api.host.NoRoutingPacks
 import nl.r1a.grassmap.plugin.api.host.PlatformActions
 import nl.r1a.grassmap.plugin.api.host.PluginServices
 import nl.r1a.grassmap.plugin.api.host.RegionAccess
 import nl.r1a.grassmap.plugin.api.host.RouteHistoryAccess
 import nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess
+import nl.r1a.grassmap.plugin.api.host.RoutingOptionsAccess
 import nl.r1a.grassmap.plugin.api.host.RoutingPackAccess
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
@@ -92,6 +94,7 @@ class PluginHost(
     private val routingPacks: RoutingPackAccess = NoRoutingPacks,
     private val routingEngines: RoutingEngineAccess = NoRoutingEngines,
     private val routeHistoryAccess: RouteHistoryAccess = NoRouteHistoryAccess,
+    private val routingOptionsAccess: RoutingOptionsAccess = NoRoutingOptionsAccess,
 ) {
     private val factories: Map<PluginId, PluginFactory> = plugins.associateBy { it.manifest.id }
     private val streamOwners: Map<StreamId, PluginId> = streams.associate { it.id to it.pluginId }
@@ -533,6 +536,8 @@ class PluginHost(
         override val routingEngines: RoutingEngineAccess = this@PluginHost.routingEngines
 
         override val routeHistory: RouteHistoryAccess = this@PluginHost.routeHistoryAccess
+
+        override val routingOptions: RoutingOptionsAccess = this@PluginHost.routingOptionsAccess
     }
 
     private companion object {

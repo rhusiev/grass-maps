@@ -7,12 +7,15 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.provider.Hilliness
 import nl.r1a.grassmap.plugin.api.provider.RouteModifier
+import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteRequest
 import nl.r1a.grassmap.plugin.api.provider.TravelDirection
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -135,18 +138,67 @@ class ValhallaRequestTest {
         assertEquals(2, body.getValue("alternates").jsonPrimitive.int)
     }
 
+    @Test
+    fun fullHillAvoidanceReachesTheBicycleCosting() {
+        val body =
+            parse(
+                ValhallaRequest.build(
+                    request(profile = RouteProfile.Bike, options = RouteOptions(Hilliness.AvoidHills)),
+                ),
+            )
+
+        assertEquals("bicycle", body.string("costing"))
+        assertEquals(0.0, body.costingOption("bicycle", "use_hills"), 0.0)
+    }
+
+    @Test
+    fun theDefaultHillinessLeavesTheTunedProfileValue() {
+        val body = parse(ValhallaRequest.build(request(profile = RouteProfile.Bike)))
+
+        assertEquals(0.4, body.costingOption("bicycle", "use_hills"), 0.0)
+    }
+
+    @Test
+    fun thePreferenceIsAppliedOnlyToTheRequestedProfile() {
+        val walkBefore = ValhallaRequest.build(request(profile = RouteProfile.Walk))
+        val bikeAvoid =
+            ValhallaRequest.build(
+                request(profile = RouteProfile.Bike, options = RouteOptions(Hilliness.AvoidHills)),
+            )
+        val walkAfter = ValhallaRequest.build(request(profile = RouteProfile.Walk))
+
+        assertEquals("a bike option must not change the walk request", walkBefore, walkAfter)
+        assertNotEquals(walkBefore, bikeAvoid)
+        assertEquals(0.5, parse(walkAfter).costingOption("pedestrian", "use_hills"), 0.0)
+    }
+
     private fun request(
         modifiers: List<RouteModifier> = emptyList(),
         alternatives: Int = 0,
+        profile: RouteProfile = RouteProfile.Walk,
+        options: RouteOptions = RouteOptions(),
     ): RouteRequest =
         RouteRequest(
             waypoints = listOf(GeoPoint(49.8419, 24.0316), GeoPoint(49.8365, 24.0250)),
-            profile = RouteProfile.Walk,
+            profile = profile,
             modifiers = modifiers,
             alternatives = alternatives,
+            options = options,
         )
 
     private fun parse(json: String): JsonObject = Json.parseToJsonElement(json).jsonObject
+
+    private fun JsonObject.costingOption(
+        costing: String,
+        key: String,
+    ): Double =
+        getValue("costing_options")
+            .jsonObject
+            .getValue(costing)
+            .jsonObject
+            .getValue(key)
+            .jsonPrimitive
+            .double
 
     private fun JsonObject.string(key: String): String = getValue(key).jsonPrimitive.content
 

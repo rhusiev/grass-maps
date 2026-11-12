@@ -42,7 +42,7 @@ internal object ValhallaRequest {
         return buildJsonObject {
             put("costing", profile.costing)
             putJsonObject("costing_options") {
-                put(profile.costing, profile.costingOptions)
+                put(profile.costing, ValhallaProfiles.costingOptions(request.profile, request.options))
             }
             put("units", "kilometers")
             put("language", "uk-UA")

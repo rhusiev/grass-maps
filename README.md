@@ -350,10 +350,11 @@ stage real oblast packs use, and its manifest records each file's size and
 sha256. Its search section is the seven files the reader maps plus the
 `features` component, built in one pass from the authored
 `tools/pipeline/fixture-places.tsv`, so the four fixture places carry canonical
-OSM ids and tag maps instead of a stand-in marker. `plugin-api` publishes the
-shared paged-provider contract suite as test fixtures; `PagedProviderContractSuite`
-covers limits, paging, ordering, concurrency and cancellation. See
-`tools/pipeline/README.md`.
+OSM ids and tag maps instead of a stand-in marker. Its `elevation.bin` is a real
+3 arcsec GLO-30 grid, so `RegionElevation` and the Valhalla grade path read real
+heights. `plugin-api` publishes the shared paged-provider contract suite as test
+fixtures; `PagedProviderContractSuite` covers limits, paging, ordering,
+concurrency and cancellation. See `tools/pipeline/README.md`.
 
 `test-data/search/coordinate-notations.tsv` is the T-0206 coordinate vector set:
 18 accepted notations with their points and 13 refused near misses with their
@@ -953,7 +954,7 @@ method list, the token handling and the CLI examples.
 
 ## Routing seam
 
-`RoutingEngine` in `plugin-api` is the engine contract (1.1.0). `plugins/valhalla`
+`RoutingEngine` in `plugin-api` is the engine contract (1.2.0). `plugins/valhalla`
 is the v1 provider: it binds the contract to valhalla-mobile 0.6.4 and keeps
 every library type inside that module. The engine reads the pack directory from
 the host's `RoutingPackAccess` service. It inspects that directory on the first
@@ -976,9 +977,16 @@ startup.
 `annotate` fills the segment attributes after the route is already returned:
 the routed line goes back to Valhalla's `trace_attributes` with `map_snap`, is
 cut into one segment per graph edge, and carries `surface`, `highway`,
-`sac_scale` and `access`; `grade` is sampled from the mounted region DEM because
-the phase-A pack has no elevation. The profile mapping, the seeded 100x3
-validation and its derived length tolerance are in `test-data/routing/`.
+`sac_scale` and `access`; `grade` is sampled from the mounted region DEM. The
+phase-A pack has no elevation, so the T-0301 runs kept `use_hills` inert; the
+T-0308 Lviv pack bakes GLO-30 grades into its edges. The per-profile options,
+the hilliness mapping, the Lviv pack build and the 10-route ascent measurement
+are in `test-data/routing/` and `tools/pipeline/`.
+
+`RouteRequest.options` carries the chosen profile's hilliness preference; the
+planner reads it from `RoutingOptionsSettings` through `RoutingOptionsAccess`,
+so a bike change cannot leak into walk. `plugins/valhalla` maps
+`Hilliness.AvoidHills` to `use_hills: 0.0` for that request's costing only.
 
 `plugins/direct-engine` is the second `routing.engine` provider (T-0305), and
 the proof that the engine seam is real: the planner and the follower consume

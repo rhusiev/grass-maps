@@ -28,6 +28,7 @@ class RoutePlannerPlugin : Plugin {
                 engines = context.services.routingEngines,
                 clock = context.services.clock,
                 history = context.services.routeHistory,
+                options = context.services.routingOptions,
             )
         session.loadHistory()
         context.addCommand(BeginRoutePlanCommand(session))

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.route_warnings.name">Попередження на маршруті</string>
+    <string name="plugin.route_warnings.description">Показує броди, сходи, бар\'єри, залізничні переїзди та приватні дороги на запланованому маршруті.</string>
+</resources>

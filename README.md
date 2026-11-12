@@ -430,6 +430,7 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/track-layer` | the imported-track line layer and the controller that keeps it on the map | `plugin-api` |
 | `plugins/contours` | the contour overlay for the Standard and Touring variants and the one-row layers panel that toggles it | `plugin-api`, `plugin-ui-api` |
 | `plugins/route-relations` | the hiking relation geometry assembler, the shared-way lane assignment, the OSMC waymark mapping and the `MapHost` layers over an inline GeoJSON source | `plugin-api` |
+| `plugins/route-warnings` | the warning list for fords, steps, barriers, railway crossings and private ways, with its profile filter and distance order | `plugin-api` |
 
 ## Place card
 
@@ -1619,6 +1620,54 @@ The file is an authored stand-in until the OSM extraction writes it; the
 manifest says so. The tests read it through the real `RegionReader`, drive the
 real schedule, and bridge the cues into the real `AlertHost` for the all-off
 and typed-banner cases.
+
+## Route warnings
+
+Route warnings are T-0409. `RouteWarningScanner` in
+`plugins/route-warnings` answers one list for a planned route and a profile,
+ordered by distance along the route. The list names five kinds: a ford, steps,
+a barrier, a railway crossing and a private way. There is no screen yet; the
+plugin exposes the list and its tests, and the design backlog owns the surface.
+
+The ford, the barrier and the railway crossing are region features, read
+through the same `RegionAccess.wayAlertFeatures` corridor query as the way
+alerts, not from Valhalla tiles. The 30 m corridor is the way-alert one, for
+the same reason: metre-level noise in both lines, and a parallel railway or a
+service road one street away stays out. Steps and a private way are route
+attributes: they come from the route's annotated segments, where the T-0301
+`trace_attributes` pass puts `highway=steps` and `access=private`. The region
+component does not carry either one.
+
+| Kind | Walk | Hike | Bike | Source |
+|---|---|---|---|---|
+| Ford | yes | yes | yes | region node or way |
+| Steps | yes | yes | yes | route segment `highway=steps` |
+| Barrier | yes | yes | no | region node |
+| Railway crossing | no | yes | yes | region node |
+| Private way | yes | yes | yes | route segment `access=private` |
+
+A barrier is dropped for a bike because the region component keeps gates,
+stiles and similar passable barriers but drops bollards and kerbs, and it does
+not carry the barrier's own value. A bike can open a gate or lift the bike over
+a stile, so the bike list leaves the whole kind out instead of warning on every
+openable gate. A railway crossing is not listed for walk because the product
+scope gives crossing warnings to bike and hike, the same split the way-alert
+distances use. Car is outside v1 and is invalid input to the scanner.
+
+Each warning carries its kind, its distance along the route, the OSM element
+type and id when a region feature supplied it, and the profiles it applies to.
+Steps and private ways have no OSM id, because a route segment does not carry
+the way id. A region node is listed once even when the route meets it twice, and
+a run of consecutive segments of the same kind is one warning, because the
+engine cuts one OSM way into one segment per graph edge.
+
+The committed test region already has the three region features: the ford at
+`49.9510, 23.9440`, the gate at `49.9510, 23.9460` and the shared railway
+crossing at `49.9515, 23.9460`. Steps and private access are made by the test
+route's own segments, so the fixture needed no new file and no authored feature
+is presented as extracted. `RouteWarningScannerTest` drives the real
+`RegionReader` over that package for the five-kind order, the two profile
+filters, the repeated-node case, the empty route and the region failure.
 
 ## Hiking route relations
 

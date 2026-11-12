@@ -1,0 +1,15 @@
+{
+  "id": "route.warnings",
+  "name": "plugin.route_warnings.name",
+  "description": "plugin.route_warnings.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.route.warnings.RouteWarningsPlugin",
+  "contributes": {},
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": ["way-alerts"]
+  },
+  "activation": []
+}

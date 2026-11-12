@@ -52,10 +52,14 @@ class TestRegionFixtureTest {
     }
 
     @Test
-    fun elevationIsMarkedAsAStandIn() {
+    fun elevationIsARealGrid() {
         val component = requireNotNull(region.manifest.component("elevation")) { "elevation component missing" }
-        assertTrue("elevation must be marked as a stand-in until its real format lands", component.standIn)
-        assertTrue("elevation placeholder is empty", Files.size(region.file(component)) > 0)
+        assertFalse("the elevation component must come from the GLO-30 pipeline", component.standIn)
+        assertEquals("elevation-grid", component.format)
+        assertEquals(1, component.formatVersion)
+        val bytes = Files.readAllBytes(region.file(component))
+        assertEquals("GRME", String(bytes.copyOfRange(0, 4), Charsets.US_ASCII))
+        assertTrue("the elevation grid has no index", bytes.size > 32)
     }
 
     @Test

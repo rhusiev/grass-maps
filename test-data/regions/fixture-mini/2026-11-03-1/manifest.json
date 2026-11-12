@@ -18,6 +18,16 @@
     "contoursSource": {
       "archive": "lviv-90m-20m.pmtiles",
       "sha256": "01a8876116a5c7bf3129abf5a24539ebaaf74535b4e4f45681cbb44883c0445f"
+    },
+    "elevationSource": {
+      "dataset": "Copernicus DEM GLO-30",
+      "resample": "3 arcsec cells, mean of the 1 arcsec source pixels covering each cell",
+      "tiles": [
+        {
+          "tile": "Copernicus_DSM_COG_10_N49_00_E023_00_DEM.tif",
+          "sha256": "e030442d44792670d568e2491fdeffddaaeaad3abe14c5ddf1d66dc7e2ae977c"
+        }
+      ]
     }
   },
   "components": [
@@ -52,12 +62,12 @@
     {
       "kind": "elevation",
       "file": "elevation.bin",
-      "format": "stand-in",
+      "format": "elevation-grid",
       "formatVersion": 1,
       "version": "2026-11-03-1",
-      "bytes": 102,
-      "sha256": "6bd344ccd04072e837f40765f678cd0961035dafd3b7f4c597be2bc309f307b7",
-      "standIn": true
+      "bytes": 667,
+      "sha256": "804862f6592db1393250345167f2978768c06d52ff75fb2d21c663967349b519",
+      "standIn": false
     },
     {
       "kind": "search-terms",

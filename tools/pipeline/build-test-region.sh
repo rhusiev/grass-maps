@@ -13,6 +13,7 @@
 #   --pmtiles PATH          pmtiles CLI (default <bench>/tools/pmtiles)
 #   --map-source PATH       vector tile archive (default <bench>/data/ukraine-final.pmtiles)
 #   --contours-source PATH  contour archive (default <bench>/data/lviv-90m-20m.pmtiles)
+#   --dem-source DIR        GLO-30 tiles (default <bench>/data/dem)
 #   --out DIR               package directory (default test-data/regions/<region>/<version>)
 #
 # The output is deterministic: re-running against the same archives produces
@@ -34,6 +35,7 @@ BENCH="${GRASS_MAPS_BENCH:-/hdd/drive/Projects/Life/grass-maps-bench}"
 PMTILES=""
 MAP_SOURCE=""
 CONTOURS_SOURCE=""
+DEM_SOURCE=""
 OUT="$ROOT/test-data/regions/$REGION_ID/$REGION_VERSION"
 
 while [[ $# -gt 0 ]]; do
@@ -42,6 +44,7 @@ while [[ $# -gt 0 ]]; do
         --pmtiles) PMTILES="$2"; shift 2 ;;
         --map-source) MAP_SOURCE="$2"; shift 2 ;;
         --contours-source) CONTOURS_SOURCE="$2"; shift 2 ;;
+        --dem-source) DEM_SOURCE="$2"; shift 2 ;;
         --out) OUT="$2"; shift 2 ;;
         -h | --help) sed -n '2,/^$/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "build-test-region.sh: unknown argument: $1" >&2; exit 2 ;;
@@ -51,6 +54,7 @@ done
 PMTILES="${PMTILES:-$BENCH/tools/pmtiles}"
 MAP_SOURCE="${MAP_SOURCE:-$BENCH/data/ukraine-final.pmtiles}"
 CONTOURS_SOURCE="${CONTOURS_SOURCE:-$BENCH/data/lviv-90m-20m.pmtiles}"
+DEM_SOURCE="${DEM_SOURCE:-$BENCH/data/dem}"
 
 for tool in python3 sha256sum; do
     command -v "$tool" >/dev/null 2>&1 || {
@@ -82,6 +86,10 @@ require_file "$PMTILES" "pmtiles CLI"
 require_file "$MAP_SOURCE" "map source archive"
 require_file "$CONTOURS_SOURCE" "contours source archive"
 require_file "$SEARCH_SOURCE" "fixture place list"
+[[ -d "$DEM_SOURCE" ]] || {
+    echo "build-test-region.sh: missing DEM source directory: $DEM_SOURCE" >&2
+    exit 1
+}
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -102,10 +110,10 @@ for tile_file in map.pmtiles contours.pmtiles; do
     }
 done
 
-printf '%s\n' \
-    "Grass Maps test region stand-in: elevation.bin" \
-    "Not a GLO-30 int16 grid. See tools/pipeline/README.md." \
-    >"$work/elevation.bin"
+printf '%s\n' "Elevation grid"
+
+python3 "$ROOT/tools/pipeline/build-elevation.py" grid \
+    --source "$DEM_SOURCE" --bbox "$BBOX" --out "$work/elevation.bin"
 
 # The way-alert component is authored until the OSM extraction writes it from
 # railway=level_crossing, tunnel=* and hazard/ford/barrier tags. It is a real
@@ -157,9 +165,10 @@ contours_source_sha="$(sha256sum "$CONTOURS_SOURCE" | cut -d' ' -f1)"
 python3 - "$work" "$REGION_ID" "$REGION_VERSION" "$osm_timestamp" "$BBOX" \
     "$(basename "$MAP_SOURCE")" "$map_source_sha" "$MAP_MIN_ZOOM" "$MAP_MAX_ZOOM" \
     "$(basename "$CONTOURS_SOURCE")" "$contours_source_sha" \
-    "$CONTOURS_MIN_ZOOM" "$CONTOURS_MAX_ZOOM" <<'PY'
+    "$CONTOURS_MIN_ZOOM" "$CONTOURS_MAX_ZOOM" "$DEM_SOURCE" <<'PY'
 import hashlib
 import json
+import math
 import pathlib
 import sys
 
@@ -177,6 +186,7 @@ import sys
     contours_archive_sha,
     contours_min_zoom,
     contours_max_zoom,
+    dem_source,
 ) = sys.argv[1:]
 
 work = pathlib.Path(work)
@@ -184,6 +194,23 @@ work = pathlib.Path(work)
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def dem_tiles():
+    west, south, east, north = (float(value) for value in bbox.split(","))
+    last_lat = math.ceil(north) - 1
+    last_lon = math.ceil(east) - 1
+    return [
+        {
+            "tile": f"Copernicus_DSM_COG_10_N{latitude:02d}_00_E{longitude:03d}_00_DEM.tif",
+            "sha256": digest(
+                pathlib.Path(dem_source)
+                / f"Copernicus_DSM_COG_10_N{latitude:02d}_00_E{longitude:03d}_00_DEM.tif"
+            ),
+        }
+        for latitude in range(int(south), last_lat + 1)
+        for longitude in range(int(west), last_lon + 1)
+    ]
 
 
 def component(kind, file, fmt, fmt_version, zooms, stand_in):
@@ -213,11 +240,16 @@ manifest = {
         "bbox": [float(value) for value in bbox.split(",")],
         "mapSource": {"archive": map_archive, "sha256": map_archive_sha},
         "contoursSource": {"archive": contours_archive, "sha256": contours_archive_sha},
+        "elevationSource": {
+            "dataset": "Copernicus DEM GLO-30",
+            "resample": "3 arcsec cells, mean of the 1 arcsec source pixels covering each cell",
+            "tiles": dem_tiles(),
+        },
     },
     "components": [
         component("map", "map.pmtiles", "pmtiles", 3, [int(map_min_zoom), int(map_max_zoom)], False),
         component("contours", "contours.pmtiles", "pmtiles", 3, [int(contours_min_zoom), int(contours_max_zoom)], False),
-        component("elevation", "elevation.bin", "stand-in", 1, None, True),
+        component("elevation", "elevation.bin", "elevation-grid", 1, None, False),
         # The search segment is the eight files a version-2 reader maps, stored
         # unpacked until the single-file search.idx container lands. `format.bin`
         # declares the section version; the committed package predates it and is

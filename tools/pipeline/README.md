@@ -15,15 +15,17 @@ tools/pipeline/build-test-region.sh
 ```
 
 The defaults read `/hdd/drive/Projects/Life/grass-maps-bench`; set
-`GRASS_MAPS_BENCH` or pass `--bench`, `--map-source`, `--contours-source` and
-`--pmtiles` when the bench repository lives elsewhere. The search section and
-its feature component come from `cargo run --bin build-section`, so the script
-also needs the Rust toolchain; set `CARGO_HOME` to its real path when it is
-reached through a symlink. The output is deterministic: the same source
-archives and the same builder produce the same bytes and the same manifest.
-The committed package predates the version-2 search section, so re-running the
-script now writes `format.bin` and a version-2 manifest and does not reproduce
-the committed bytes until the package is regenerated and committed.
+`GRASS_MAPS_BENCH` or pass `--bench`, `--map-source`, `--contours-source`,
+`--dem-source` and `--pmtiles` when the bench repository lives elsewhere. The
+search section and its feature component come from `cargo run --bin
+build-section`, so the script also needs the Rust toolchain; set `CARGO_HOME` to
+its real path when it is reached through a symlink. The output is deterministic:
+the same source archives and the same builder produce the same bytes and the
+same manifest. The committed package predates the version-2 search section, so
+re-running the script now writes `format.bin` and a version-2 manifest and does
+not reproduce the committed bytes until the package is regenerated and
+committed. The elevation component is already regenerated: only it and its
+manifest entry changed when T-0308 replaced the stand-in.
 
 The package is committed because tests must run without the bench repository or
 a multi-gigabyte download. The manifest records each file's size and sha256;
@@ -35,7 +37,7 @@ a multi-gigabyte download. The manifest records each file's size and sha256;
 |---|---|---|
 | `map.pmtiles` | `ukraine-final.pmtiles`, Protomaps basemap profile, z12-14 | no |
 | `contours.pmtiles` | `lviv-90m-20m.pmtiles`, Copernicus GLO-30 contours, z9-14 | no |
-| `elevation.bin` | generated marker file | yes |
+| `elevation.bin` | Copernicus GLO-30, 3 arcsec cells (one bbox tile in the fixture) | no |
 | `format.bin`, `terms.fst`, `postings.bin`, `places.bin`, `context.bin`, `entities.bin`, `kinds.bin`, `strings.bin` | the search section, built by `rust/grass-core` from `fixture-places.tsv`; a version-2 build writes `format.bin`, the committed version-1 package has no such file | no |
 | `features.bin` | the feature component, built in the same pass | no |
 | `way-alerts.geojson` | authored GeoJSON with one railway crossing, one tunnel, one hazard and one off-corridor hazard; the OSM extract that will write it from `railway=level_crossing`, `tunnel=*` and `hazard`/`ford`/`barrier` tags is not built yet | yes |
@@ -46,10 +48,121 @@ place has roads, paths and land cover but no dense city centre. `map.pmtiles`
 starts at z12 instead of the product's z8 because the z8 tile would dominate the
 fixture's size while adding nothing a unit test needs.
 
-The elevation stand-in exists so the manifest and mount checks have something to
-read. It is not in the real GLO-30 format; the manifest marks it
-`"standIn": true`, and a test asserts that flag so nobody mistakes it for real
-data. It is replaced when the elevation pipeline lands.
+The elevation grid is real data. `tools/pipeline/build-elevation.py grid`
+samples the GLO-30 COG tiles and writes the component; the manifest marks it
+`"standIn": false` and records the source tiles and their sha256. The section
+below gives the format and the resample rule.
+
+### Elevation grid (T-0308)
+
+Source: Copernicus DEM GLO-30, the 1-degree COG tiles named
+`Copernicus_DSM_COG_10_N{lat}_00_E{lon}_00_DEM.tif`, downloaded from
+`https://copernicus-dem-30m.s3.amazonaws.com` by the bench `fetch-dem.sh`. The
+same tiles built the contours, so map, contours and heights share one surface.
+GLO-30 is a surface model: it measures tree canopy and buildings, which biases
+heights in forest and inflates ascent. The licence is free and redistributable;
+`ATTRIBUTION.md` records it.
+
+Resample: a 3 arcsec cell is the mean of the GLO-30 samples whose centres fall
+inside it, with no-data samples skipped and the result rounded to the nearest
+int16 metre. At 49 N a cell covers 3x3 source samples; where GLO-30 stores
+1/2400-degree longitude spacing at 50 N it covers 2x2. Contours used the same
+90 m average, so a contour line and the grid agree on the surface.
+
+`elevation.bin` format version 1, little-endian:
+
+| Bytes | Field |
+|---|---|
+| 0-3 | magic `GRME` |
+| 4-5 | uint16 version, 1 |
+| 6-7 | uint16 header bytes, 32 |
+| 8-11 | uint32 tile count |
+| 12-15 | uint32 index offset, 32 |
+| 16-19 | uint32 index entry bytes, 32 |
+| 20-23 | uint32 flags, 0 |
+| 24-31 | reserved, 0 |
+
+One entry per tile, 32 bytes:
+
+| Bytes | Field |
+|---|---|
+| 0-3 | int32 west, microdegrees |
+| 4-7 | int32 south, microdegrees |
+| 8-11 | int32 east, microdegrees |
+| 12-15 | int32 north, microdegrees |
+| 16-17 | uint16 rows |
+| 18-19 | uint16 columns |
+| 20-23 | uint32 data offset |
+| 24-27 | uint32 data bytes |
+| 28-29 | uint16 encoding, 1 = zlib deflate with horizontal predictor |
+| 30-31 | int16 no-data value, -32768 |
+
+A tile is a rectangle of cells: the first cell is the north-west cell and row 0
+is the northern edge. Cell count is `(east-west)*1200` by
+`(north-south)*1200`; a 1-degree tile is 1200x1200. The predictor stores the
+first cell of each row as a uint16 and every later cell as `(value - previous)
+mod 65536`; the whole array is then zlib-compressed. The reader inflates the
+payload, accumulates the predictor per row and bilinearly samples the four
+cell centres around a position, returning null when a corner is no-data.
+
+The fixture component is 667 bytes (`23.940,49.940,23.960,49.960`, 24x24
+cells); it is built in under a second. A whole-oblast grid is the same rule per
+1-degree tile; the bench 90 m GeoTIFF for Lviv oblast is 2.2 MiB, and this
+container is expected to land in the same range because it adds an index and
+uses the same deflate predictor.
+
+`tools/pipeline/build-elevation.py hgt` writes the other consumer: 1 arcsec
+`.hgt` tiles for Valhalla's Skadi sampler, 3601x3601 int16 big-endian nodes per
+1-degree cell. A node is the bilinear GLO-30 sample at that node, edges clamped.
+`valhalla_build_tiles` reads these tiles when `additional_data.elevation`
+points at their directory.
+
+### Valhalla pack with elevation (T-0308)
+
+`build-valhalla-pack.sh` builds the Lviv pack with GLO-30 grades:
+
+```sh
+tools/pipeline/build-valhalla-pack.sh \
+  --pbf /hdd/drive/Projects/Life/grass-maps-bench/data/ukraine-latest.osm.pbf \
+  --polygon /hdd/drive/Projects/Life/grass-maps-bench/data/lviv-oblast.geojson \
+  --dem-source /hdd/drive/Projects/Life/grass-maps-bench/data/dem \
+  --timezones /hdd/drive/Projects/Life/grass-maps-bench/data/valhalla/timezones.sqlite \
+  --out /hdd/t-0308-hills/valhalla-lviv-elev
+```
+
+It extracts the oblast with `osmium extract --polygon`, builds admins from the
+full extract so boundary relations stay whole, and runs `valhalla_build_tiles`
+with `additional_data.elevation` pointing at the HGT directory. Valhalla adds
+edge grades in that pass (79 tiles: "Adding elevation to 79 tiles"). The
+`--timezones` path reuses the global database from the phase-A pack, so the
+build makes no network request; `valhalla_build_timezones` would otherwise
+download its polygon. The HGT directory is build input, not a second runtime
+source: the script removes it and clears `additional_data.elevation` from the
+shipped config, because the region package serves heights from
+`elevation.bin`.
+
+Measured on 2026-11-12, 8 cores, `gm-data` slot, the phase-A Ukraine PBF
+(883,214,645 B) and the 12 GLO-30 tiles:
+
+| Step | Time |
+|---|---|
+| HGT tiles, 12 cells, 297 MB | about 40 s (3 s per tile measured) |
+| graph build with elevation | 17 s warm, 34 s on the first run |
+| tar extract | 2 s |
+| whole script | 80 s with the phase-A timezone DB, 158 s on the first run |
+
+| Output | Size |
+|---|---|
+| `tiles/` (79 files) | 71,639,512 B |
+| `tiles.tar` | 71,792,640 B |
+| `admins.sqlite` | 12,537,856 B |
+| `timezones.sqlite` | 123,133,952 B |
+| pack with `tiles/` and `tiles.tar` | 267 MB |
+| pack with `tiles.tar` only (what a phone needs) | 207 MB |
+
+`tiles.tar` sha256 `f3510b096d87ff0b1eeda508b41f4d9eecbf3bf68e9f0dcb271509a797a31836`.
+The phase-A country pack is untouched; this is a separate Lviv output under
+`/hdd`.
 
 ### Way-alert features (T-0319)
 
@@ -427,10 +540,8 @@ Built here rather than reused:
 
 - the search section and its feature component, from the authored place list
   through `rust/grass-core`'s `build-section`
-
-Stand-in:
-
-- the elevation grid: no GLO-30 resample step is run here
+- the elevation grid, from the GLO-30 source tiles through
+  `build-elevation.py grid`
 
 No routing data is included: routing is a country-level pack in the design, and
 the fixture has no engine graph.
@@ -439,8 +550,9 @@ the fixture has no engine graph.
 
 `manifest.json` follows `data-formats.md` section 2: region, version, package
 format, OSM timestamp, and per component the format and its version, size,
-sha256 and stand-in flag. `pipeline` records the source archive sha256 and the
-bounding box, so the package can be traced back to the bench build.
+sha256 and stand-in flag. `pipeline` records the source archive sha256, the
+bounding box and the GLO-30 tile hashes, so the package can be traced back to
+the bench build.
 
 ### Licensing
 

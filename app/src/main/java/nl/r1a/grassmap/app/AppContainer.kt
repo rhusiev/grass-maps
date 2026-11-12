@@ -371,6 +371,10 @@ class AppContainer(
         mountedRegionDirectory?.let(::RegionReader) ?: NoRegionAccess
     }
 
+    /** The mounted region's components for feature wiring outside this container. */
+    val regionData: RegionAccess
+        get() = regionAccess
+
     /**
      * The mounted region's DEM heights (T-0308). The grid is opened on the
      * first query; a package without the component or with the old stand-in

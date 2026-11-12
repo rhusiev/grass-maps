@@ -8,6 +8,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -33,7 +34,9 @@ import nl.r1a.grassmap.plugin.api.provider.Route
 import org.maplibre.compose.expressions.ast.Expression
 import org.maplibre.compose.expressions.dsl.const
 import org.maplibre.compose.expressions.dsl.textOffset
+import org.maplibre.compose.expressions.value.BooleanValue
 import org.maplibre.compose.expressions.value.ColorValue
+import org.maplibre.compose.expressions.value.DpOffsetValue
 import org.maplibre.compose.expressions.value.DpPaddingValue
 import org.maplibre.compose.expressions.value.DpValue
 import org.maplibre.compose.expressions.value.ExpressionValue
@@ -41,6 +44,8 @@ import org.maplibre.compose.expressions.value.FloatValue
 import org.maplibre.compose.expressions.value.FormattedValue
 import org.maplibre.compose.expressions.value.IconRotationAlignment
 import org.maplibre.compose.expressions.value.ImageValue
+import org.maplibre.compose.expressions.value.LineCap
+import org.maplibre.compose.expressions.value.LineJoin
 import org.maplibre.compose.expressions.value.ListValue
 import org.maplibre.compose.expressions.value.StringValue
 import org.maplibre.compose.expressions.value.SymbolAnchor
@@ -92,8 +97,15 @@ internal fun ComposedMapLayers(session: MapHostState) {
     for (slot in LayerSlot.entries) {
         for ((layer, layerSlot) in compiled) {
             if (layerSlot != slot) continue
-            val source = layer.source?.let { sources[it] }
-            StyleLayerNode(layer, source)
+            key(layer.id, layer.data) {
+                val source =
+                    if (layer.data != null) {
+                        rememberGeoJsonSource(GeoJsonData.JsonString(layer.data))
+                    } else {
+                        layer.source?.let { sources[it] }
+                    }
+                StyleLayerNode(layer, source)
+            }
         }
         when (slot) {
             LayerSlot.Overlays -> TrackLineSlot(session.tracks.value)
@@ -435,6 +447,9 @@ private fun StyleLayerNode(
                 dasharray = layer.expression<VectorValue<Number>>("line-dasharray"),
                 width = layer.expression<DpValue>("line-width") ?: const(1.dp),
                 gapWidth = layer.expression<DpValue>("line-gap-width") ?: const(0.dp),
+                offset = layer.expression<DpValue>("line-offset") ?: const(0.dp),
+                cap = layer.expression<LineCap>("line-cap") ?: const(LineCap.Butt),
+                join = layer.expression<LineJoin>("line-join") ?: const(LineJoin.Miter),
             )
         }
 
@@ -457,11 +472,21 @@ private fun StyleLayerNode(
                         ?: const(SymbolZOrder.Auto),
                 iconImage = layer.expression<ImageValue?>("icon-image"),
                 iconColor = layer.expression<ColorValue>("icon-color") ?: const(Color.Black),
+                iconHaloColor = layer.expression<ColorValue>("icon-halo-color") ?: const(Color.Transparent),
+                iconHaloWidth = layer.expression<DpValue>("icon-halo-width") ?: const(0.dp),
+                iconOpacity = layer.expression<FloatValue>("icon-opacity") ?: const(1f),
                 iconSize = layer.expression<FloatValue>("icon-size") ?: const(1f),
                 iconRotate = layer.expression<FloatValue>("icon-rotate") ?: const(0f),
                 iconRotationAlignment =
                     layer.expression<IconRotationAlignment>("icon-rotation-alignment")
                         ?: const(IconRotationAlignment.Auto),
+                iconAnchor = layer.expression<SymbolAnchor>("icon-anchor") ?: const(SymbolAnchor.Center),
+                iconOffset =
+                    layer.expression<DpOffsetValue>("icon-offset")
+                        ?: const(DpOffset(0.dp, 0.dp)),
+                iconAllowOverlap = layer.expression<BooleanValue>("icon-allow-overlap") ?: const(false),
+                iconIgnorePlacement =
+                    layer.expression<BooleanValue>("icon-ignore-placement") ?: const(false),
                 iconPadding =
                     layer.expression<DpPaddingValue>("icon-padding")
                         ?: const(DpPadding(2.dp, 2.dp, 2.dp, 2.dp)),

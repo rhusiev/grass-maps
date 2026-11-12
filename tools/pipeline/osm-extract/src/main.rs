@@ -9,9 +9,13 @@
 //! Usage:
 //!   osm-extract --pbf <file.osm.pbf> --out <places.tsv>
 //!               [--bbox west,south,east,north] [--no-places | --no-addresses]
+//!   osm-extract --pbf <file.osm.pbf> --way-alerts --out <way-alerts.geojson>
+//!               [--bbox west,south,east,north]
+//!   osm-extract --pbf <file.osm.pbf> --route-relations --out <relations.json>
+//!               [--bbox west,south,east,north]
 //!
-//! The output is the nine-column TSV `rust/grass-core`'s builder reads. See
-//! `tools/pipeline/README.md` for the documented runs and their measurements.
+//! The place output is the nine-column TSV `rust/grass-core`'s builder reads.
+//! See `tools/pipeline/README.md` for the documented runs and measurements.
 
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
@@ -185,6 +189,21 @@ const SKIPPED_BARRIER_VALUES: [&str; 7] = [
 /// Railway node values that mark infrastructure rather than a crossing. A node
 /// shared by a rail way and a highway way at one of these is a mapping
 /// coincidence, not a place to warn about (T-0319A).
+/// States a route relation can carry while it is not a route a person walks
+/// today. `state=proposed` is the common form; the others appear on abandoned
+/// trails that still have their relation (T-0418).
+const SKIPPED_ROUTE_STATES: [&str; 5] = [
+    "proposed",
+    "abandoned",
+    "disused",
+    "construction",
+    "planned",
+];
+
+/// The route relation component this extractor writes.
+const ROUTE_RELATIONS_FORMAT: &str = "grass-maps-route-relations";
+const ROUTE_RELATIONS_VERSION: u32 = 1;
+
 const NON_CROSSING_RAILWAY_NODE_VALUES: [&str; 13] = [
     "signal",
     "switch",
@@ -263,6 +282,7 @@ struct Options {
     places: bool,
     addresses: bool,
     way_alerts: bool,
+    route_relations: bool,
 }
 
 #[derive(Default)]
@@ -334,6 +354,41 @@ struct WayAlertFeature {
     coordinates: Vec<(f64, f64)>,
 }
 
+/// A way member of a route relation, in relation order. A node member is not
+/// part of the geometry and is skipped (T-0418).
+struct RouteMember {
+    way_id: i64,
+    role: String,
+}
+
+struct RouteRelation {
+    id: i64,
+    network: Option<String>,
+    reference: Option<String>,
+    name: Option<String>,
+    osmc_symbol: Option<String>,
+    colour: Option<String>,
+    distance: Option<String>,
+    members: Vec<RouteMember>,
+}
+
+struct RouteWay {
+    id: i64,
+    refs: Vec<i64>,
+}
+
+#[derive(Default)]
+struct RouteRelationStats {
+    relations: u64,
+    ways: u64,
+    skipped_route: u64,
+    skipped_state: u64,
+    skipped_no_members: u64,
+    skipped_missing_ways: u64,
+    skipped_outside: u64,
+    ways_without_coordinates: u64,
+}
+
 fn main() -> ExitCode {
     let options = match parse_arguments() {
         Ok(options) => options,
@@ -368,6 +423,37 @@ fn main() -> ExitCode {
             }
         };
     }
+    if options.route_relations {
+        return match run_route_relations(&options) {
+            Ok(stats) => {
+                eprintln!(
+                    "osm-extract: route-relations: {} hiking relations, {} member ways \
+                     ({} skipped: {} not route=hiking, {} proposed or retired, \
+                     {} without way members, {} without any complete member way, \
+                     {} outside the bbox; {} member ways without coordinates)",
+                    stats.relations,
+                    stats.ways,
+                    stats.skipped_route
+                        + stats.skipped_state
+                        + stats.skipped_no_members
+                        + stats.skipped_missing_ways
+                        + stats.skipped_outside,
+                    stats.skipped_route,
+                    stats.skipped_state,
+                    stats.skipped_no_members,
+                    stats.skipped_missing_ways,
+                    stats.skipped_outside,
+                    stats.ways_without_coordinates,
+                );
+                ExitCode::SUCCESS
+            }
+            Err(message) => {
+                eprintln!("osm-extract: {message}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+
     match run(&options) {
         Ok(stats) => {
             eprintln!(
@@ -401,6 +487,7 @@ fn parse_arguments() -> Result<Options, String> {
     let mut places = true;
     let mut addresses = true;
     let mut way_alerts = false;
+    let mut route_relations = false;
     let mut arguments = std::env::args().skip(1);
     while let Some(argument) = arguments.next() {
         match argument.as_str() {
@@ -410,11 +497,14 @@ fn parse_arguments() -> Result<Options, String> {
             "--no-places" => places = false,
             "--no-addresses" => addresses = false,
             "--way-alerts" => way_alerts = true,
+            "--route-relations" => route_relations = true,
             "-h" | "--help" => {
                 return Err(
                     "usage: osm-extract --pbf <file.osm.pbf> --out <places.tsv> \
                             [--bbox west,south,east,north] [--no-places | --no-addresses]\n\
                             osm-extract --pbf <file.osm.pbf> --way-alerts --out <way-alerts.geojson> \
+                            [--bbox west,south,east,north]\n\
+                            osm-extract --pbf <file.osm.pbf> --route-relations --out <relations.json> \
                             [--bbox west,south,east,north]"
                         .to_owned(),
                 );
@@ -424,12 +514,16 @@ fn parse_arguments() -> Result<Options, String> {
     }
     let pbf = pbf.ok_or("--pbf is required")?;
     let out = out.ok_or("--out is required")?;
-    if way_alerts && (!places || !addresses) {
+    if way_alerts && route_relations {
+        return Err("--way-alerts and --route-relations cannot be combined".to_owned());
+    }
+    if (way_alerts || route_relations) && (!places || !addresses) {
         return Err(
-            "--way-alerts cannot be combined with --no-places or --no-addresses".to_owned(),
+            "--way-alerts and --route-relations cannot be combined with --no-places or --no-addresses"
+                .to_owned(),
         );
     }
-    if !way_alerts && !places && !addresses {
+    if !way_alerts && !route_relations && !places && !addresses {
         return Err("nothing to write: both --no-places and --no-addresses were given".to_owned());
     }
     Ok(Options {
@@ -439,6 +533,7 @@ fn parse_arguments() -> Result<Options, String> {
         places,
         addresses,
         way_alerts,
+        route_relations,
     })
 }
 
@@ -802,6 +897,255 @@ fn run_way_alerts(options: &Options) -> Result<WayAlertStats, String> {
         .flush()
         .map_err(|error| format!("{}: {error}", options.out.display()))?;
     Ok(stats)
+}
+
+fn run_route_relations(options: &Options) -> Result<RouteRelationStats, String> {
+    let mut stats = RouteRelationStats::default();
+    let mut relations: Vec<RouteRelation> = Vec::new();
+    let mut needed_ways: HashSet<i64> = HashSet::new();
+
+    // First pass: the hiking relations and their way members. Node members
+    // (guideposts, route markers) are not geometry and are skipped.
+    read_elements(&options.pbf, |element| {
+        let Element::Relation(relation) = element else {
+            return;
+        };
+        let tags = collect_tags(relation.tags());
+        if tag(&tags, "type") != Some("route") {
+            return;
+        }
+        if tag(&tags, "route") != Some("hiking") {
+            stats.skipped_route += 1;
+            return;
+        }
+        if route_state_is_skipped(&tags) {
+            stats.skipped_state += 1;
+            return;
+        }
+        let mut members: Vec<RouteMember> = Vec::new();
+        for member in relation.members() {
+            if member.member_type != osmpbf::RelMemberType::Way {
+                continue;
+            }
+            members.push(RouteMember {
+                way_id: member.member_id,
+                role: member.role().unwrap_or("").to_owned(),
+            });
+        }
+        if members.is_empty() {
+            stats.skipped_no_members += 1;
+            return;
+        }
+        for member in &members {
+            needed_ways.insert(member.way_id);
+        }
+        relations.push(RouteRelation {
+            id: relation.id(),
+            network: tag(&tags, "network").map(str::to_owned),
+            reference: tag(&tags, "ref").map(str::to_owned),
+            name: tag(&tags, "name").map(str::to_owned),
+            osmc_symbol: tag(&tags, "osmc:symbol").map(str::to_owned),
+            colour: tag(&tags, "colour").map(str::to_owned),
+            distance: tag(&tags, "distance").map(str::to_owned),
+            members,
+        });
+    })?;
+
+    // Second pass: the member ways, and the nodes their geometry needs.
+    let mut ways: Vec<RouteWay> = Vec::new();
+    let mut needed_nodes: HashSet<i64> = HashSet::new();
+    read_elements(&options.pbf, |element| {
+        let Element::Way(way) = element else {
+            return;
+        };
+        if !needed_ways.contains(&way.id()) {
+            return;
+        }
+        let refs: Vec<i64> = way.refs().collect();
+        needed_nodes.extend(refs.iter().copied());
+        ways.push(RouteWay { id: way.id(), refs });
+    })?;
+
+    // Third pass: node coordinates for every member way.
+    let mut coordinates: HashMap<i64, (f64, f64)> = HashMap::with_capacity(needed_nodes.len());
+    read_elements(&options.pbf, |element| {
+        let (id, lon, lat) = match element {
+            Element::Node(node) => (node.id(), node.lon(), node.lat()),
+            Element::DenseNode(node) => (node.id(), node.lon(), node.lat()),
+            _ => return,
+        };
+        if needed_nodes.contains(&id) {
+            coordinates.insert(id, (lon, lat));
+        }
+    })?;
+
+    let mut way_geometry: HashMap<i64, Vec<(f64, f64)>> = HashMap::with_capacity(ways.len());
+    for way in &ways {
+        let mut points: Vec<(f64, f64)> = Vec::with_capacity(way.refs.len());
+        let mut complete = true;
+        for reference in &way.refs {
+            match coordinates.get(reference) {
+                Some(&point) => points.push(point),
+                None => {
+                    complete = false;
+                    break;
+                }
+            }
+        }
+        if !complete || points.len() < 2 {
+            stats.ways_without_coordinates += 1;
+            continue;
+        }
+        way_geometry.insert(way.id, points);
+    }
+
+    // A relation keeps only the way members with usable geometry. It is
+    // skipped when none is left or when every point falls outside the bbox.
+    let mut kept: Vec<RouteRelation> = Vec::with_capacity(relations.len());
+    for mut relation in relations {
+        relation
+            .members
+            .retain(|member| way_geometry.contains_key(&member.way_id));
+        if relation.members.is_empty() {
+            stats.skipped_missing_ways += 1;
+            continue;
+        }
+        let inside = relation.members.iter().any(|member| {
+            way_geometry.get(&member.way_id).is_some_and(|points| {
+                points
+                    .iter()
+                    .any(|(lon, lat)| contains(&options.bbox, *lon, *lat))
+            })
+        });
+        if !inside && options.bbox.is_some() {
+            stats.skipped_outside += 1;
+            continue;
+        }
+        kept.push(relation);
+    }
+    kept.sort_unstable_by_key(|relation| relation.id);
+
+    let mut used_ways: HashSet<i64> = HashSet::new();
+    for relation in &kept {
+        for member in &relation.members {
+            used_ways.insert(member.way_id);
+        }
+    }
+    let mut way_ids: Vec<i64> = used_ways.into_iter().collect();
+    way_ids.sort_unstable();
+    stats.relations = kept.len() as u64;
+    stats.ways = way_ids.len() as u64;
+
+    let mut writer = BufWriter::new(
+        File::create(&options.out)
+            .map_err(|error| format!("{}: {error}", options.out.display()))?,
+    );
+    write_route_relation_document(&mut writer, &kept, &way_ids, &way_geometry)
+        .map_err(|error| format!("{}: {error}", options.out.display()))?;
+    writer
+        .flush()
+        .map_err(|error| format!("{}: {error}", options.out.display()))?;
+    Ok(stats)
+}
+
+/// A retired, planned or abandoned route is not a route a person walks today.
+/// `state=proposed` is the common form; `proposed=yes` covers the older style.
+fn route_state_is_skipped(tags: &[(String, String)]) -> bool {
+    tag(tags, "state").is_some_and(|value| SKIPPED_ROUTE_STATES.contains(&value))
+        || has_significant_value(tags, "proposed")
+}
+
+fn write_route_relation_document(
+    writer: &mut impl Write,
+    relations: &[RouteRelation],
+    way_ids: &[i64],
+    way_geometry: &HashMap<i64, Vec<(f64, f64)>>,
+) -> std::io::Result<()> {
+    writeln!(writer, "{{")?;
+    writeln!(writer, "  \"format\": \"{ROUTE_RELATIONS_FORMAT}\",")?;
+    writeln!(writer, "  \"version\": {ROUTE_RELATIONS_VERSION},")?;
+    writeln!(writer, "  \"ways\": [")?;
+    for (index, way_id) in way_ids.iter().enumerate() {
+        let separator = if index + 1 == way_ids.len() { "" } else { "," };
+        write!(writer, "    {{\"id\":{way_id},\"coordinates\":[")?;
+        if let Some(points) = way_geometry.get(way_id) {
+            for (point_index, (lon, lat)) in points.iter().enumerate() {
+                if point_index > 0 {
+                    write!(writer, ",")?;
+                }
+                write!(writer, "[{lon:.7},{lat:.7}]")?;
+            }
+        }
+        writeln!(writer, "]}}{separator}")?;
+    }
+    writeln!(writer, "  ],")?;
+    writeln!(writer, "  \"relations\": [")?;
+    for (index, relation) in relations.iter().enumerate() {
+        let separator = if index + 1 == relations.len() {
+            ""
+        } else {
+            ","
+        };
+        write!(
+            writer,
+            "    {{\"id\":{},\"type\":\"route\",\"route\":\"hiking\"",
+            relation.id
+        )?;
+        write_optional_string(writer, "network", &relation.network)?;
+        write_optional_string(writer, "ref", &relation.reference)?;
+        write_optional_string(writer, "name", &relation.name)?;
+        write_optional_string(writer, "osmcSymbol", &relation.osmc_symbol)?;
+        write_optional_string(writer, "colour", &relation.colour)?;
+        if let Some(distance) = relation.distance.as_deref().and_then(parse_distance) {
+            write!(writer, ",\"distanceMeters\":{distance}")?;
+        }
+        write!(writer, ",\"members\":[")?;
+        for (member_index, member) in relation.members.iter().enumerate() {
+            if member_index > 0 {
+                write!(writer, ",")?;
+            }
+            write!(writer, "{{\"way\":{},\"role\":", member.way_id)?;
+            write_json_string(writer, &member.role)?;
+            write!(writer, "}}")?;
+        }
+        writeln!(writer, "]}}{separator}")?;
+    }
+    writeln!(writer, "  ]")?;
+    writeln!(writer, "}}")?;
+    Ok(())
+}
+
+fn write_optional_string(
+    writer: &mut impl Write,
+    key: &str,
+    value: &Option<String>,
+) -> std::io::Result<()> {
+    if let Some(value) = value.as_deref().filter(|value| !value.is_empty()) {
+        write!(writer, ",\"{key}\":")?;
+        write_json_string(writer, value)?;
+    }
+    Ok(())
+}
+
+fn write_json_string(writer: &mut impl Write, value: &str) -> std::io::Result<()> {
+    write!(writer, "\"")?;
+    for character in value.chars() {
+        match character {
+            '"' => write!(writer, "\\\"")?,
+            '\\' => write!(writer, "\\\\")?,
+            '\n' => write!(writer, "\\n")?,
+            '\r' => write!(writer, "\\r")?,
+            '\t' => write!(writer, "\\t")?,
+            control if control < ' ' => write!(writer, "\\u{:04x}", control as u32)?,
+            other => write!(writer, "{other}")?,
+        }
+    }
+    write!(writer, "\"")
+}
+
+fn parse_distance(value: &str) -> Option<f64> {
+    let parsed = value.trim().parse::<f64>().ok()?;
+    (parsed.is_finite() && parsed >= 0.0).then_some(parsed)
 }
 
 impl WayAlertStats {
@@ -1866,6 +2210,7 @@ mod tests {
             places: true,
             addresses: true,
             way_alerts: true,
+            route_relations: false,
         };
         let stats = run_way_alerts(&options).expect("way-alert extraction");
         let text = std::fs::read_to_string(&out).expect("read the component");
@@ -1893,5 +2238,87 @@ mod tests {
         assert!(text.contains("\"kind\":\"hazard\",\"osmType\":\"way\",\"osmId\":9011"));
         assert!(text.contains("\"type\":\"LineString\""));
         assert!(text.contains("\"type\":\"Point\""));
+    }
+
+    #[test]
+    fn a_proposed_or_retired_route_is_skipped() {
+        assert!(route_state_is_skipped(&vec![(
+            "state".to_owned(),
+            "proposed".to_owned()
+        )]));
+        assert!(route_state_is_skipped(&vec![(
+            "proposed".to_owned(),
+            "yes".to_owned()
+        )]));
+        assert!(!route_state_is_skipped(&vec![(
+            "state".to_owned(),
+            "".to_owned()
+        )]));
+        assert!(!route_state_is_skipped(&vec![(
+            "proposed".to_owned(),
+            "no".to_owned()
+        )]));
+    }
+
+    #[test]
+    fn a_relation_name_with_quotes_is_json_escaped() {
+        let mut buffer = Vec::new();
+        write_json_string(&mut buffer, "Шлях \"Гора\"\n").expect("write");
+        assert_eq!(
+            String::from_utf8(buffer).expect("utf8"),
+            "\"Шлях \\\"Гора\\\"\\n\""
+        );
+    }
+
+    #[test]
+    fn the_fixture_pbf_produces_the_expected_hiking_relations() {
+        let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let root = manifest.join("../../..");
+        let out = std::env::temp_dir().join(format!(
+            "osm-extract-route-relations-{}.json",
+            std::process::id()
+        ));
+        let options = Options {
+            pbf: root.join("test-data/regions/fixture-mini/hiking-relations.osm.pbf"),
+            out: out.clone(),
+            bbox: Some(parse_bbox("23.940,49.940,23.960,49.960").expect("fixture bbox")),
+            places: true,
+            addresses: true,
+            way_alerts: false,
+            route_relations: true,
+        };
+        let stats = run_route_relations(&options).expect("route relation extraction");
+        let text = std::fs::read_to_string(&out).expect("read the component");
+        std::fs::remove_file(&out).ok();
+
+        assert_eq!(stats.relations, 3);
+        assert_eq!(stats.ways, 3);
+        assert_eq!(stats.skipped_route, 2, "one bus and one foot route");
+        assert_eq!(stats.skipped_state, 1);
+        assert_eq!(stats.skipped_no_members, 1);
+        assert_eq!(stats.skipped_missing_ways, 0);
+
+        for present in [9101, 9102, 9107] {
+            assert!(
+                text.contains(&format!(
+                    "\"id\":{present},\"type\":\"route\",\"route\":\"hiking\""
+                )),
+                "{present}"
+            );
+        }
+        for absent in [9103, 9104, 9105, 9106] {
+            assert!(
+                !text.contains(&format!("\"id\":{absent},")),
+                "{absent} must be skipped"
+            );
+        }
+        assert!(text.contains("\"osmcSymbol\":\"red:white:red_bar\""));
+        assert!(text.contains("\"network\":\"rwn\""));
+        assert!(
+            text.contains(
+                "\"members\":[{\"way\":896757861,\"role\":\"\"},{\"way\":306496773,\"role\":\"\"}]"
+            ),
+            "member order must be the relation's order: {text}"
+        );
     }
 }

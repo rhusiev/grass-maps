@@ -44,6 +44,7 @@ packages a byte-for-byte copy of `contours.pmtiles` as
 | `format.bin`, `terms.fst`, `postings.bin`, `places.bin`, `context.bin`, `entities.bin`, `kinds.bin`, `strings.bin` | the search section, built by `rust/grass-core` from `fixture-places.tsv`; a version-2 build writes `format.bin`, the committed version-1 package has no such file | no |
 | `features.bin` | the feature component, built in the same pass | no |
 | `way-alerts.geojson` | extracted by `osm-extract --way-alerts` from the fixture's own small OSM extract `test-data/regions/fixture-mini/way-alerts.osm.pbf`: two crossings, one tunnel, three hazards, one ford and one gate | no |
+| `relations.json` | extracted by `osm-extract --route-relations` from the fixture's own `test-data/regions/fixture-mini/hiking-relations.osm.pbf`: two parallel hiking routes sharing a track, one route without a symbol, and the bus, proposed, node-only and foot relations that prove the skips | no |
 
 The bounding box is `23.940,49.940,23.960,49.960` (about 1.5 km around
 Ivano-Frankove, Lviv oblast). It is rural, so its z12-14 tiles stay small; the
@@ -227,6 +228,86 @@ prove the skips. The manifest marks the component `standIn: false` and records
 the PBF sha256, bbox, extraction version and counts under
 `pipeline.wayAlertSource`.
 
+### Hiking route relations (T-0418)
+
+`relations.json` is the region's hiking-route component. It is not GeoJSON.
+The document holds each member way's geometry once and each relation's ordered
+way members, because two routes that share a path must draw side by side and a
+later relation chart (T-0420) needs the membership, not only a merged line.
+
+```json
+{
+  "format": "grass-maps-route-relations",
+  "version": 1,
+  "ways": [{"id": 896757861, "coordinates": [[23.9472208, 49.9448998]]}],
+  "relations": [{
+    "id": 9101, "type": "route", "route": "hiking", "network": "lwn", "ref": "ЛГ",
+    "name": "Лісова Гряда", "osmcSymbol": "red:white:red_bar",
+    "colour": "red", "distanceMeters": 495.8,
+    "members": [{"way": 896757861, "role": ""}]
+  }]
+}
+```
+
+`coordinates` are `[longitude, latitude]` WGS84 degrees, seven decimals, in the
+way's own direction. `members` is the relation's own order; `role` is the OSM
+role and may be empty. Every member way exists in `ways`; the reader treats a
+missing one as corrupt data. `network` is mapped to `iwn`, `nwn`, `rwn` or `lwn`
+by the app, and a relation without the tag draws as `lwn`.
+
+Selection rules, exact. `tools/pipeline/build-route-relations.sh` runs
+`osm-extract --route-relations`:
+
+- keep a relation with `type=route` and `route=hiking`
+- skip `state=proposed`, `abandoned`, `disused`, `construction` or `planned`,
+  and any relation with `proposed=*` other than `no`/`none`
+- skip a relation with no way members; node members (guideposts, route markers)
+  are not geometry
+- skip a member way whose nodes are incomplete (a way at the clip edge), and
+  skip the relation when no complete member way remains
+- skip a relation with no point inside the bbox
+- skip every other route value, including `route=bus`, `route=bicycle` and
+  `route=foot`. Cycling is T-0419; `route=foot` had 48 relations in the
+  2026-11-04 Ukraine extract and is not in this layer yet
+- skip every relation whose `type` is not `route`
+
+The output is deterministic for one PBF and one bbox: ways and relations are
+sorted by id, members keep relation order, and coordinates are rounded to seven
+decimals. The plugin assembles each relation by walking its members in order
+and reversing a way whose far end is nearer the previous member's end. A member
+that does not meet its neighbour is a real gap and stays a separate line.
+
+Measured on 2026-11-12, 8 cores, `gm-data` slot, the phase-A Ukraine PBF
+(883,214,645 B, sha256 `ff46165a…`) and the `22.5,48.9,25.2,50.6` map bbox:
+
+| Run | Relations | Ways | Bytes | Extract time | Peak RSS |
+|---|---|---|---|---|---|
+| Fixture input, bbox `23.94,49.94,23.96,49.96` | 3 | 3 | 5,714 | 0.07 s | 3.3 MB |
+| Lviv bbox, from the 78,434,355 B bbox extract | 87 | 2,360 | 1,049,166 | 5.09 s | 18.9 MB |
+| Skole probe, bbox `23.505,49.018,23.53,49.035` | 6 | 61 | 30,438 | 10.63 s | 18.8 MB |
+
+The whole Ukraine extract has 545 `route=hiking` relations and 75 distinct
+`osmc:symbol` values; 355 are `lwn`, 120 `rwn`, 21 `nwn`, 3 `iwn`, 42 have no
+`network`, and 4 carry an `lcn` or `rcn` value on a hiking route (drawn as
+local). 164 have no `osmc:symbol` and draw a band without a waymark.
+
+The fixture's input is `test-data/regions/fixture-mini/hiking-relations.osm`
+(1,950 B PBF beside it). Its ways are real tracks from the fixture bbox
+(896757861 and 306496773 for the two parallel routes, 225670351 for the route
+without a symbol); the relations are authored to exercise the rules: 9101 and
+9102 share a way, 9103 is a bus, 9104 is proposed, 9105 has only a node member
+and 9106 is `route=foot`. The real extractor produces the committed bytes.
+`regions.RegionReader` reads the component; the `route.relations` plugin
+assembles it and draws it.
+
+The `osmc:symbol` grammar is `waycolor:background[:foreground[:foreground2]
+[:text:textcolor]]`. The plugin draws the background plate and the main
+foreground shape from the Standard sprite's `osmc_*` glyphs, tinted per
+feature. `foreground2` and the text suffix are not drawn yet. The 18 plates and
+shapes are authored in this repository (Apache-2.0) from the documented
+grammar; the Waymarked Trails shield renderer was checked and rejected because
+it is GPL-3.0, and no part of it is copied.
+
 ### Lviv region pack (T-0319A)
 
 `build-lviv-region.sh` builds a complete `ua-46` pack beside the existing one.
@@ -254,6 +335,7 @@ script, 118,544,428 B (113 MiB). The way-alert step alone is 5.3 s over the
 | `features.bin` | 13,657,687 |
 | `elevation.bin`, 12 cells | 3,852,712 |
 | `way-alerts.geojson` | 2,921,155 |
+| `relations.json` | 1,049,166 |
 
 The Lviv way-alert extraction reads the bbox extract
 `22.5,48.9,25.2,50.6` (the map bbox) and finds 18,009 features: 3,343 railway
@@ -269,8 +351,19 @@ provenance without the pack.
 
 The component is large because the bbox includes neighbouring oblasts inside the
 map rectangle; it is the same area the map covers. The test region package is
-121,689 B on disk; `TestRegionFixtureTest` fails if its components grow past
+122,429 B on disk; `TestRegionFixtureTest` fails if its components grow past
 1 MiB.
+
+The T-0418 pack is a separate output at
+`/hdd/t-0418-hiking-relations/lviv-region/ua-46/2026-11-12-1`; the T-0319A pack
+above was not touched. It adds `relations.json`, 1,049,166 B, to the same
+components and records `pipeline.routeRelationSource` with the same PBF digest,
+bbox, `osm-extract 0.1.0 route-relations v1` and 87 relations / 2,360 ways. The
+whole pack is 115 MiB and took 109 s clean, 174 s while the check gate and an emulator shared the machine, on 2026-11-12 with 8 cores and `gm-data`. The
+relations step is 5.09 s over the bbox extract. A 30,438 B Skole probe
+(`23.505,49.018,23.53,49.035`, 6 relations, 61 ways) is committed under
+`test-data/regions/lviv-hiking-relations/` with its provenance and a copy of
+the new pack manifest.
 
 ### Search section and features
 

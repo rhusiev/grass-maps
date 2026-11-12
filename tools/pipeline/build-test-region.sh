@@ -16,6 +16,9 @@
 #   --dem-source DIR        GLO-30 tiles (default <bench>/data/dem)
 #   --way-alerts-source PBF OSM input for the way-alert component (default
 #                           test-data/regions/fixture-mini/way-alerts.osm.pbf)
+#   --route-relations-source PBF
+#                           OSM input for the route-relation component (default
+#                           test-data/regions/fixture-mini/hiking-relations.osm.pbf)
 #   --out DIR               package directory (default test-data/regions/<region>/<version>)
 #
 # The output is deterministic: re-running against the same archives produces
@@ -33,6 +36,7 @@ readonly CONTOURS_MIN_ZOOM=9
 readonly CONTOURS_MAX_ZOOM=14
 readonly SEARCH_SOURCE="$ROOT/tools/pipeline/fixture-places.tsv"
 readonly WAY_ALERTS_SOURCE="$ROOT/test-data/regions/fixture-mini/way-alerts.osm.pbf"
+readonly ROUTE_RELATIONS_SOURCE="$ROOT/test-data/regions/fixture-mini/hiking-relations.osm.pbf"
 
 BENCH="${GRASS_MAPS_BENCH:-/hdd/drive/Projects/Life/grass-maps-bench}"
 PMTILES=""
@@ -40,6 +44,7 @@ MAP_SOURCE=""
 CONTOURS_SOURCE=""
 DEM_SOURCE=""
 WAY_ALERTS_PBF="$WAY_ALERTS_SOURCE"
+ROUTE_RELATIONS_PBF="$ROUTE_RELATIONS_SOURCE"
 OUT="$ROOT/test-data/regions/$REGION_ID/$REGION_VERSION"
 
 while [[ $# -gt 0 ]]; do
@@ -50,6 +55,7 @@ while [[ $# -gt 0 ]]; do
         --contours-source) CONTOURS_SOURCE="$2"; shift 2 ;;
         --dem-source) DEM_SOURCE="$2"; shift 2 ;;
         --way-alerts-source) WAY_ALERTS_PBF="$2"; shift 2 ;;
+        --route-relations-source) ROUTE_RELATIONS_PBF="$2"; shift 2 ;;
         --out) OUT="$2"; shift 2 ;;
         -h | --help) sed -n '2,/^$/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "build-test-region.sh: unknown argument: $1" >&2; exit 2 ;;
@@ -91,6 +97,7 @@ require_file "$PMTILES" "pmtiles CLI"
 require_file "$MAP_SOURCE" "map source archive"
 require_file "$CONTOURS_SOURCE" "contours source archive"
 require_file "$SEARCH_SOURCE" "fixture place list"
+require_file "$ROUTE_RELATIONS_PBF" "fixture hiking-relation extract"
 [[ -d "$DEM_SOURCE" ]] || {
     echo "build-test-region.sh: missing DEM source directory: $DEM_SOURCE" >&2
     exit 1
@@ -129,6 +136,13 @@ echo "Extracting way alerts: $WAY_ALERTS_PBF"
 "$ROOT/tools/pipeline/build-way-alerts.sh" \
     --pbf "$WAY_ALERTS_PBF" --bbox "$BBOX" --out "$work/way-alerts.geojson"
 
+# The route-relation component follows the same rule: the fixture's own small
+# OSM input carries the parallel routes and the skips the tests name, and the
+# real extractor produces the committed bytes.
+echo "Extracting hiking relations: $ROUTE_RELATIONS_PBF"
+"$ROOT/tools/pipeline/build-route-relations.sh" \
+    --pbf "$ROUTE_RELATIONS_PBF" --bbox "$BBOX" --out "$work/relations.json"
+
 echo "Building the search section and feature component: $SEARCH_SOURCE"
 "$CARGO" run --quiet --release --locked \
     --manifest-path "$ROOT/rust/grass-core/Cargo.toml" \
@@ -148,7 +162,8 @@ python3 - "$work" "$REGION_ID" "$REGION_VERSION" "$osm_timestamp" "$BBOX" \
     "$(basename "$MAP_SOURCE")" "$map_source_sha" "$MAP_MIN_ZOOM" "$MAP_MAX_ZOOM" \
     "$(basename "$CONTOURS_SOURCE")" "$contours_source_sha" \
     "$CONTOURS_MIN_ZOOM" "$CONTOURS_MAX_ZOOM" "$DEM_SOURCE" \
-    "$(basename "$WAY_ALERTS_PBF")" "$(sha256sum "$WAY_ALERTS_PBF" | cut -d' ' -f1)" <<'PY'
+    "$(basename "$WAY_ALERTS_PBF")" "$(sha256sum "$WAY_ALERTS_PBF" | cut -d' ' -f1)" \
+    "$(basename "$ROUTE_RELATIONS_PBF")" "$(sha256sum "$ROUTE_RELATIONS_PBF" | cut -d' ' -f1)" <<'PY'
 import hashlib
 import json
 import math
@@ -173,6 +188,8 @@ from collections import Counter
     dem_source,
     way_alerts_archive,
     way_alerts_archive_sha,
+    route_relations_archive,
+    route_relations_archive_sha,
 ) = sys.argv[1:]
 
 work = pathlib.Path(work)
@@ -188,6 +205,18 @@ def way_alert_counts():
     return {
         kind: kinds.get(kind, 0)
         for kind in ("railway_crossing", "tunnel", "hazard", "ford", "barrier")
+    }
+
+
+def route_relation_counts():
+    document = json.loads((work / "relations.json").read_text())
+    relations = document["relations"]
+    networks = Counter(relation.get("network", "none") for relation in relations)
+    return {
+        "relations": len(relations),
+        "ways": len(document["ways"]),
+        "networks": dict(sorted(networks.items())),
+        "withOsmcSymbol": sum(1 for relation in relations if "osmcSymbol" in relation),
     }
 
 
@@ -247,6 +276,13 @@ manifest = {
             "extraction": "osm-extract 0.1.0 way-alerts v1",
             "features": way_alert_counts(),
         },
+        "routeRelationSource": {
+            "archive": route_relations_archive,
+            "sha256": route_relations_archive_sha,
+            "bbox": [float(value) for value in bbox.split(",")],
+            "extraction": "osm-extract 0.1.0 route-relations v1",
+            "features": route_relation_counts(),
+        },
     },
     "components": [
         component("map", "map.pmtiles", "pmtiles", 3, [int(map_min_zoom), int(map_max_zoom)], False),
@@ -268,6 +304,7 @@ manifest = {
         # Extracted from the fixture's own small OSM input; see the extraction
         # step above. The Lviv pack reads the Ukraine PBF instead.
         component("way-alerts", "way-alerts.geojson", "way-alerts-geojson", 1, None, False),
+        component("relations", "relations.json", "route-relations-json", 1, None, False),
     ],
 }
 

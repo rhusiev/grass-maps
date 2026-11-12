@@ -1,0 +1,44 @@
+{
+  "region": "ua-46",
+  "extraction": "osm-extract 0.1.0 route-relations v1",
+  "source": {
+    "archive": "ukraine-latest.osm.pbf",
+    "sha256": "ff46165a08b21fc4271aa6d5f199e55d0c9b786bcfd8f50e0f7c31f82248347f",
+    "bbox": [
+      22.5,
+      48.9,
+      25.2,
+      50.6
+    ]
+  },
+  "features": {
+    "relations": 87,
+    "ways": 2360,
+    "networks": {
+      "iwn": 1,
+      "lwn": 53,
+      "none": 7,
+      "nwn": 6,
+      "rwn": 20
+    },
+    "withOsmcSymbol": 78
+  },
+  "probe": {
+    "bbox": [
+      23.505,
+      49.018,
+      23.53,
+      49.035
+    ],
+    "file": "relations.json",
+    "sha256": "699e7a51ecd7f438fe01195c85d7ae7d9cf80cbb3335c4f0066f17f0e95e853a",
+    "features": {
+      "relations": 6,
+      "ways": 61,
+      "networks": {
+        "lwn": 6
+      },
+      "withOsmcSymbol": 5
+    }
+  }
+}

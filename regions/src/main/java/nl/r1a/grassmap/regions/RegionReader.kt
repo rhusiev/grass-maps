@@ -15,6 +15,8 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.RegionAccess
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.RouteRelations
+import nl.r1a.grassmap.plugin.api.model.RouteRelationsJson
 import nl.r1a.grassmap.plugin.api.model.WayAlertElementType
 import nl.r1a.grassmap.plugin.api.model.WayAlertFeature
 import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
@@ -56,6 +58,9 @@ class RegionReader(
     @Volatile
     private var loaded: Outcome<List<WayAlertFeature>>? = null
 
+    @Volatile
+    private var loadedRelations: Outcome<RouteRelations>? = null
+
     override suspend fun wayAlertFeatures(
         route: Route,
         corridorMeters: Double,
@@ -81,49 +86,106 @@ class RegionReader(
         }
     }
 
+    override suspend fun routeRelations(): Outcome<RouteRelations> =
+        withContext(Dispatchers.IO) {
+            loadedRelations?.let { return@withContext it }
+            loadMutex.withLock {
+                loadedRelations ?: readRelations().also { loadedRelations = it }
+            }
+        }
+
     private fun read(): Outcome<List<WayAlertFeature>> {
+        val manifest =
+            when (val outcome = manifest()) {
+                is Outcome.Failure -> return outcome
+                is Outcome.Success -> outcome.value
+            }
+        val component =
+            manifest.components.firstOrNull { it.kind == COMPONENT_KIND }
+                ?: return Outcome.Success(emptyList())
+        val text =
+            when (val outcome = componentText(manifest, component, COMPONENT_FORMAT, COMPONENT_FORMAT_VERSION)) {
+                is Outcome.Failure -> return outcome
+                is Outcome.Success -> outcome.value
+            }
+        return parse(text)
+    }
+
+    private fun readRelations(): Outcome<RouteRelations> {
+        val manifest =
+            when (val outcome = manifest()) {
+                is Outcome.Failure -> return outcome
+                is Outcome.Success -> outcome.value
+            }
+        val component =
+            manifest.components.firstOrNull { it.kind == RELATIONS_COMPONENT_KIND }
+                ?: return Outcome.Success(RouteRelations.EMPTY)
+        val text =
+            when (
+                val outcome =
+                    componentText(
+                        manifest,
+                        component,
+                        RELATIONS_COMPONENT_FORMAT,
+                        RELATIONS_COMPONENT_FORMAT_VERSION,
+                    )
+            ) {
+                is Outcome.Failure -> return outcome
+                is Outcome.Success -> outcome.value
+            }
+        return RouteRelationsJson.decode(text)
+    }
+
+    /**
+     * The manifest, or the reason this mount cannot be read. Both components
+     * share it, so a region with a bad manifest reports one typed failure.
+     */
+    private fun manifest(): Outcome<RegionManifest> {
         val region = directory.parentFile?.name
         val version = directory.name
         if (region.isNullOrBlank() || version.isBlank()) {
-            return corrupt()
+            return Outcome.Failure(AppError.CorruptData)
         }
         val manifestFile = File(directory, RegionIdentifiers.MANIFEST_FILE)
         val manifestBytes =
             try {
                 if (!manifestFile.isFile || Files.isSymbolicLink(manifestFile.toPath())) {
-                    return corrupt()
+                    return Outcome.Failure(AppError.CorruptData)
                 }
                 manifestFile.readBytes()
             } catch (exception: IOException) {
-                return corrupt()
+                return Outcome.Failure(AppError.CorruptData)
             } catch (exception: SecurityException) {
-                return corrupt()
+                return Outcome.Failure(AppError.CorruptData)
             }
-        val manifest =
-            when (val parsed = RegionManifestParser.parse(manifestBytes, region, version)) {
-                is Outcome.Failure -> return parsed
-                is Outcome.Success -> parsed.value
-            }
-        val component = manifest.components.firstOrNull { it.kind == COMPONENT_KIND } ?: return Outcome.Success(emptyList())
-        if (component.format != COMPONENT_FORMAT || component.formatVersion != COMPONENT_FORMAT_VERSION) {
+        return RegionManifestParser.parse(manifestBytes, region, version)
+    }
+
+    /** The component's text, after its format, version and size are checked. */
+    private fun componentText(
+        manifest: RegionManifest,
+        component: RegionComponent,
+        format: String,
+        formatVersion: Int,
+    ): Outcome<String> {
+        if (component.format != format || component.formatVersion != formatVersion) {
             return Outcome.Failure(AppError.Unsupported)
         }
         if (component.bytes <= 0L || component.bytes > MAX_COMPONENT_BYTES) {
-            return corrupt()
+            return Outcome.Failure(AppError.CorruptData)
         }
         val file = File(directory, component.file)
-        val text =
-            try {
-                if (!file.isFile || Files.isSymbolicLink(file.toPath()) || file.length() != component.bytes) {
-                    return corrupt()
-                }
-                file.readText()
-            } catch (exception: IOException) {
-                return corrupt()
-            } catch (exception: SecurityException) {
-                return corrupt()
+        return try {
+            if (!file.isFile || Files.isSymbolicLink(file.toPath()) || file.length() != component.bytes) {
+                Outcome.Failure(AppError.CorruptData)
+            } else {
+                Outcome.Success(file.readText())
             }
-        return parse(text)
+        } catch (exception: IOException) {
+            Outcome.Failure(AppError.CorruptData)
+        } catch (exception: SecurityException) {
+            Outcome.Failure(AppError.CorruptData)
+        }
     }
 
     private fun parse(text: String): Outcome<List<WayAlertFeature>> {
@@ -235,6 +297,11 @@ class RegionReader(
         const val COMPONENT_KIND: String = "way-alerts"
         const val COMPONENT_FORMAT: String = "way-alerts-geojson"
         const val COMPONENT_FORMAT_VERSION: Int = 1
+
+        /** The hiking route relations component (T-0418). */
+        const val RELATIONS_COMPONENT_KIND: String = "relations"
+        const val RELATIONS_COMPONENT_FORMAT: String = "route-relations-json"
+        const val RELATIONS_COMPONENT_FORMAT_VERSION: Int = 1
 
         private const val FEATURE_COLLECTION = "FeatureCollection"
         private const val FEATURE = "Feature"

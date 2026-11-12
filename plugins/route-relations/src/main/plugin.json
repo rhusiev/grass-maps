@@ -1,0 +1,15 @@
+{
+  "id": "route.relations",
+  "name": "plugin.route_relations.name",
+  "description": "plugin.route_relations.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.route.relations.RouteRelationsPlugin",
+  "contributes": {},
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": ["relations"]
+  },
+  "activation": []
+}

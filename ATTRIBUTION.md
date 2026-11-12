@@ -13,11 +13,12 @@ first product asset lands.
 | Photon public geocoder (`photon.komoot.io`) | Apache-2.0 (service software); ODbL-1.0 (results) | Online place search (T-0212); used under the public instance's fair-use terms, results are © OpenStreetMap contributors, and the search screen names both |
 | `test-data/regions/fixture-mini` map tiles | ODbL-1.0 | © OpenStreetMap contributors; extracted from the bench Ukraine build |
 | `test-data/regions/fixture-mini/way-alerts.osm.pbf` and `test-data/regions/lviv-way-alerts` | ODbL-1.0 | © OpenStreetMap contributors; the fixture's authored OSM input and the central-Lviv probe extracted from the 2026-11-04 Geofabrik Ukraine extract (sha256 `ff46165a…`) |
+| `test-data/regions/fixture-mini/hiking-relations.osm.pbf` and `test-data/regions/lviv-hiking-relations` | ODbL-1.0 | © OpenStreetMap contributors; the fixture's hiking-route input (real way geometry from the fixture bbox, authored route relations) and the Skole probe extracted from the same Ukraine extract (sha256 `ff46165a…`) |
 | `test-data/regions/fixture-mini` contours | Copernicus DEM GLO-30 terms | © DLR e.V. and © Airbus Defence and Space GmbH, provided under Copernicus by the EU and ESA |
 | `test-data/regions/fixture-mini` elevation grid | Copernicus DEM GLO-30 terms | © DLR e.V. and © Airbus Defence and Space GmbH, provided under Copernicus by the EU and ESA |
 | `test-data/map-goldens` screenshots | ODbL-1.0 / Copernicus DEM GLO-30 terms | Rendered captures of the `fixture-mini` map tiles and contours for the T-0102 fixture and T-0108 Standard style golden tests |
 | Noto fonts | SIL OFL 1.1 | map labels and UI text; `app/src/main/assets/fonts` uses the Protomaps basemaps-assets Noto Sans glyph PBFs |
-| `app/src/main/assets/sprites` Standard sprite | Apache-2.0 | one single-colour SDF sheet shared by the light and dark Standard variants; of its 39 glyphs, 37 are Google Material Symbols Rounded and 2 are Osmic, all vendored unmodified, and the 15 shield frames are authored here. The per-icon source, licence, commit and sha256 are listed below |
+| `app/src/main/assets/sprites` Standard sprite | Apache-2.0 | one single-colour SDF sheet shared by the light and dark Standard variants; of its 57 glyphs, 37 are Google Material Symbols Rounded, 2 are Osmic, and 18 are route-relation OSMC plates and shapes authored here; the vendored glyphs are unmodified, and the 15 shield frames are authored here. The per-icon source, licence, commit and sha256 are listed below |
 | valhalla-mobile | MIT | Android/iOS wrapper around the Valhalla engine, used by `plugins/valhalla` |
 | Ferrostar core | BSD-3-Clause | Rust route-following core with UniFFI Kotlin bindings, used by `navigation`; the `core` artifact only, no UI or map binding |
 | Valhalla routing engine | MIT | C++ engine packaged inside valhalla-mobile; routing tiles are OSM-derived data (ODbL-1.0) |
@@ -42,16 +43,19 @@ sheet. `tools/sprites/build_sdf_sprite.py` builds the sheet from the SVGs under
 `tools/sprites/`; `tools/sprites/sources.json` is the machine-readable copy of
 this table.
 
-Thirty-seven of the 39 glyphs are Google Material Symbols Rounded,
+Thirty-seven of the 57 glyphs are Google Material Symbols Rounded,
 Apache-2.0, taken from commit `10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7`
 (2026-10-23) of
 <https://github.com/google/material-design-icons>. Each file is the weight-400
 `fill1` 24 px variant, vendored byte-for-byte, except `electronics`, which uses
 the outlined `tv` because the filled TV collapses into a solid block at map
 size. The URL in each row is the exact file at that commit; the sha256 is of
-the file as vendored. The other two glyphs, `animal` and `bench`, are Osmic,
-CC0-1.0, listed after the table. The 15 road-shield frames are authored in
-this repository and are Apache-2.0 like the rest of it.
+the file as vendored. Two more glyphs, `animal` and `bench`, are Osmic,
+CC0-1.0, listed after the table. The 18 `osmc_*` plates and shapes are authored
+in this repository for the hiking route-relation layer (T-0418) from the
+documented `osmc:symbol` grammar; no third-party OSMC symbol asset is copied,
+and they are Apache-2.0 like the rest of it. The 15 road-shield frames are
+authored here too.
 
 | Icon | Material symbol | Source path | Licence | Commit | sha256 |
 |---|---|---|---|---|---|
@@ -113,6 +117,37 @@ files stay traceable to their upstream.
 `stadium` used the Material `stadium` glyph at `476a666` and now uses the
 Material `sports_soccer` glyph. The same review chose it, because the `stadium`
 glyph reads as an empty bowl at 13 px.
+
+### Route-relation OSMC glyphs
+
+The eighteen `osmc_*` glyphs were authored for T-0418. They draw the
+background plate and foreground shape that an `osmc:symbol` value names, so the
+hiking route layer needs no artefact from a differently licensed shield set.
+The Waymarked Trails shield renderer (`waymarkedtrails-shields`) was checked
+and not used: its repository is GPL-3.0. These shapes are plain geometry
+written here, not a copy or a trace of that work, and the OSMC grammar they
+implement is the documented tag value.
+
+| Icon | Source path | Licence |
+|---|---|---|
+| `osmc_bg_square` | `tools/sprites/icons/osmc_bg_square.svg` | Apache-2.0 (this repository) |
+| `osmc_bg_round` | `tools/sprites/icons/osmc_bg_round.svg` | Apache-2.0 (this repository) |
+| `osmc_bg_circle` | `tools/sprites/icons/osmc_bg_circle.svg` | Apache-2.0 (this repository) |
+| `osmc_bg_frame` | `tools/sprites/icons/osmc_bg_frame.svg` | Apache-2.0 (this repository) |
+| `osmc_fg_bar` | `tools/sprites/icons/osmc_fg_bar.svg` | Apache-2.0 (this repository) |
+| `osmc_fg_corner` | `tools/sprites/icons/osmc_fg_corner.svg` | Apache-2.0 (this repository) |
+| `osmc_fg_backslash` | `tools/sprites/icons/osmc_fg_backslash.svg` | Apache-2.0 (this repository) |
+| `osmc_fg_slash` | `tools/sprites/icons/osmc_fg_slash.svg` | Apache-2.0 (this repository) |
+| `osmc_fg_diamond` | `tools/sprites/icons/osmc_fg_diamond.svg` | Apache-2.0 (this repository) |
+| `osmc_fg_dot` | `tools/sprites/icons/osmc_fg_dot.svg` | Apache-2.0 (this repository) |
+| `osmc_fg_cross` | `tools/sprites/icons/osmc_fg_cross.svg` | Apache-2.0 (this repository) |
+| `osmc_fg_x` | `tools/sprites/icons/osmc_fg_x.svg` | Apache-2.0 (this repository) |
+| `osmc_fg_triangle` | `tools/sprites/icons/osmc_fg_triangle.svg` | Apache-2.0 (this repository) |
+| `osmc_fg_triangle_turned` | `tools/sprites/icons/osmc_fg_triangle_turned.svg` | Apache-2.0 (this repository) |
+| `osmc_fg_stripe` | `tools/sprites/icons/osmc_fg_stripe.svg` | Apache-2.0 (this repository) |
+| `osmc_fg_lower` | `tools/sprites/icons/osmc_fg_lower.svg` | Apache-2.0 (this repository) |
+| `osmc_fg_rectangle` | `tools/sprites/icons/osmc_fg_rectangle.svg` | Apache-2.0 (this repository) |
+| `osmc_fg_right` | `tools/sprites/icons/osmc_fg_right.svg` | Apache-2.0 (this repository) |
 
 ### Shield frames
 

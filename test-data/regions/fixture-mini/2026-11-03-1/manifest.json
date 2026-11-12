@@ -46,6 +46,27 @@
         "ford": 1,
         "barrier": 1
       }
+    },
+    "routeRelationSource": {
+      "archive": "hiking-relations.osm.pbf",
+      "sha256": "917bfb50d1e309e7b81288af88913737642afaa6d005e4df8955343578fd4fd7",
+      "bbox": [
+        23.94,
+        49.94,
+        23.96,
+        49.96
+      ],
+      "extraction": "osm-extract 0.1.0 route-relations v1",
+      "features": {
+        "relations": 3,
+        "ways": 3,
+        "networks": {
+          "lwn": 1,
+          "nwn": 1,
+          "rwn": 1
+        },
+        "withOsmcSymbol": 2
+      }
     }
   },
   "components": [
@@ -165,6 +186,16 @@
       "version": "2026-11-03-1",
       "bytes": 345,
       "sha256": "ae6049b473f43333bc6f949e13ba753b3ca9ccfd41159ef06930f79589f73a45",
+      "standIn": false
+    },
+    {
+      "kind": "relations",
+      "file": "relations.json",
+      "format": "route-relations-json",
+      "formatVersion": 1,
+      "version": "2026-11-03-1",
+      "bytes": 5714,
+      "sha256": "869b74da39ba5e9540359f29253ffe324a12f1ac9ee7ee5fdc09f5cbe0e14f63",
       "standIn": false
     },
     {

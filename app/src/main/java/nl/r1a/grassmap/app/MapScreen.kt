@@ -99,6 +99,7 @@ import nl.r1a.grassmap.plugins.point.info.PointInfoContract
 import nl.r1a.grassmap.plugins.point.info.PointInfoLabel
 import nl.r1a.grassmap.plugins.point.info.SelectedPointValue
 import nl.r1a.grassmap.plugins.route.planner.RoutePlannerContract
+import nl.r1a.grassmap.plugins.route.relations.RouteRelationsMapController
 import nl.r1a.grassmap.routing.selectedRoute
 import nl.r1a.grassmap.ui.shell.ControlBarLabels
 import nl.r1a.grassmap.ui.shell.ControlButton
@@ -179,13 +180,14 @@ internal fun MapScreen(
             sourceResolver = { loaded.sources.uri(it) },
             ageLabel = ageLabel,
         )
-    BindMapSession(container.mapSession, surface)
+    BindMapSession(container, container.mapSession, surface)
     MapContent(container, surface, loaded, harness)
 }
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
 private fun BindMapSession(
+    container: AppContainer,
     session: MapSessionHolder,
     surface: MapSurface,
 ) {
@@ -195,6 +197,15 @@ private fun BindMapSession(
     }
     LaunchedEffect(session, surface.host) {
         surface.host.camera.collect { camera -> session.recordCamera(camera) }
+    }
+    LaunchedEffect(session, surface.host) {
+        withContext(Dispatchers.IO) {
+            RouteRelationsMapController(
+                mapHost = surface.host,
+                load = { container.regionData.routeRelations() },
+                onLog = { message -> Log.i(TAG, message) },
+            ).refresh()
+        }
     }
 }
 

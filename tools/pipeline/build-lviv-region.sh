@@ -18,7 +18,7 @@
 #   --dem-source DIR   GLO-30 COG tiles (default <bench>/data/dem)
 #   --bbox BOX         west,south,east,north (default 22.5,48.9,25.2,50.6)
 #   --version VALUE    package version (default 2026-11-12-1)
-#   --out DIR          version directory (default /hdd/t-0319a-way-alerts/
+#   --out DIR          version directory (default /hdd/t-0418-hiking-relations/
 #                      lviv-region/ua-46/<version>)
 #   --work DIR         scratch directory (default <out>.work)
 #   --keep-work        keep the OSM extract and search TSV after the build
@@ -59,7 +59,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-OUT="${OUT:-/hdd/t-0319a-way-alerts/lviv-region/$REGION_ID/$VERSION}"
+OUT="${OUT:-/hdd/t-0418-hiking-relations/lviv-region/$REGION_ID/$VERSION}"
 WORK="${WORK:-$OUT.work}"
 
 for tool in python3 podman sha256sum; do
@@ -145,6 +145,11 @@ echo "Extracting way alerts"
     --pbf "$WORK/region.osm.pbf" --bbox "$BBOX" \
     --out "$WORK/pack/way-alerts.geojson" --extractor "$EXTRACTOR"
 
+echo "Extracting hiking route relations"
+"$ROOT/tools/pipeline/build-route-relations.sh" \
+    --pbf "$WORK/region.osm.pbf" --bbox "$BBOX" \
+    --out "$WORK/pack/relations.json" --extractor "$EXTRACTOR"
+
 echo "Extracting the search places"
 "$EXTRACTOR" --pbf "$WORK/region.osm.pbf" --out "$WORK/places.tsv"
 echo "Building the search section and feature component"
@@ -217,6 +222,18 @@ def way_alert_counts():
     }
 
 
+def route_relation_counts():
+    document = json.loads((pack / "relations.json").read_text())
+    relations = document["relations"]
+    networks = Counter(relation.get("network", "none") for relation in relations)
+    return {
+        "relations": len(relations),
+        "ways": len(document["ways"]),
+        "networks": dict(sorted(networks.items())),
+        "withOsmcSymbol": sum(1 for relation in relations if "osmcSymbol" in relation),
+    }
+
+
 def dem_tiles():
     west, south, east, north = (float(value) for value in bbox.split(","))
     return [
@@ -261,6 +278,13 @@ manifest = {
             "extraction": extractor_version,
             "features": way_alert_counts(),
         },
+        "routeRelationSource": {
+            "archive": osm_archive,
+            "sha256": osm_archive_sha,
+            "bbox": [float(value) for value in bbox.split(",")],
+            "extraction": "osm-extract 0.1.0 route-relations v1",
+            "features": route_relation_counts(),
+        },
     },
     "components": [
         component(
@@ -288,6 +312,7 @@ manifest = {
         component("search-strings", "strings.bin", "search-section", 2),
         component("features", "features.bin", "place-features", 1),
         component("way-alerts", "way-alerts.geojson", "way-alerts-geojson", 1),
+        component("relations", "relations.json", "route-relations-json", 1),
     ],
 }
 

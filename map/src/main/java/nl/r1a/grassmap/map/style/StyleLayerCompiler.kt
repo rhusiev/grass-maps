@@ -21,12 +21,27 @@ internal object StyleLayerCompiler {
     private val FILL_PROPERTIES = setOf("fill-color", "fill-opacity")
 
     private val LINE_PROPERTIES =
-        setOf("line-color", "line-width", "line-gap-width", "line-dasharray", "line-opacity")
+        setOf(
+            "line-color",
+            "line-width",
+            "line-gap-width",
+            "line-offset",
+            "line-dasharray",
+            "line-opacity",
+            "line-cap",
+            "line-join",
+        )
 
     private val SYMBOL_PROPERTIES =
         setOf(
+            "icon-allow-overlap",
             "icon-color",
+            "icon-halo-color",
+            "icon-halo-width",
+            "icon-ignore-placement",
             "icon-image",
+            "icon-offset",
+            "icon-opacity",
             "icon-padding",
             "icon-rotate",
             "icon-rotation-alignment",
@@ -82,15 +97,26 @@ internal object StyleLayerCompiler {
             }
         }
         val filter = spec.filter?.let { StyleExpression.filter(it) }
+        val data = spec.data
 
-        if (spec.type == LayerType.Background && spec.source != null) {
+        if (spec.type == LayerType.Background && (spec.source != null || data != null)) {
             throw StyleCompileException("Background layer ${spec.id} cannot have a source")
+        }
+        if (data != null && spec.source != null) {
+            throw StyleCompileException("Layer ${spec.id} names both a source and inline data")
+        }
+        if (data != null && spec.sourceLayer != null) {
+            throw StyleCompileException("Layer ${spec.id} names a source layer for inline data")
+        }
+        if (data != null && data.isBlank()) {
+            throw StyleCompileException("Layer ${spec.id} has empty inline data")
         }
         return CompiledLayer(
             id = spec.id.value,
             type = spec.type,
             source = spec.source,
             sourceLayer = spec.sourceLayer.orEmpty(),
+            data = data,
             minZoom = spec.minZoom,
             maxZoom = spec.maxZoom,
             filter = filter,
@@ -132,6 +158,7 @@ internal data class CompiledLayer(
     val type: LayerType,
     val source: SourceId?,
     val sourceLayer: String,
+    val data: String?,
     val minZoom: Float,
     val maxZoom: Float,
     val filter: Expression<BooleanValue>?,

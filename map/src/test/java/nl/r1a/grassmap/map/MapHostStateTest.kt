@@ -70,6 +70,46 @@ class MapHostStateTest {
     }
 
     @Test
+    fun anInlineDataLayerIsAcceptedAndStored() {
+        val session = session()
+        val spec =
+            LayerSpec(
+                id = LayerId("relation-band"),
+                type = LayerType.Line,
+                data = """{"type":"FeatureCollection","features":[]}""",
+                paint = JsonObject(mapOf("line-color" to JsonPrimitive("#ffffff"))),
+            )
+
+        val result = session.addLayer(LayerSlot.Routes, spec, PluginId("route.relations"))
+
+        assertEquals(Outcome.Success(Unit), result)
+        assertEquals(
+            spec,
+            session.layers.value
+                .single()
+                .spec,
+        )
+    }
+
+    @Test
+    fun aLayerWithBothASourceAndInlineDataIsRejected() {
+        val session = session()
+        val spec =
+            LayerSpec(
+                id = LayerId("relation-band"),
+                type = LayerType.Line,
+                source = MapSourceIds.REGION,
+                data = """{"type":"FeatureCollection","features":[]}""",
+                paint = JsonObject(mapOf("line-color" to JsonPrimitive("#ffffff"))),
+            )
+
+        val result = session.addLayer(LayerSlot.Routes, spec, PluginId("route.relations"))
+
+        assertEquals(Outcome.Failure(AppError.InvalidInput), result)
+        assertTrue(session.layers.value.isEmpty())
+    }
+
+    @Test
     fun aLayerTypeThatIsNotRenderedYetIsRejected() {
         val session = session()
 

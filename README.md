@@ -354,7 +354,9 @@ OSM ids and tag maps instead of a stand-in marker. Its `elevation.bin` is a real
 3 arcsec GLO-30 grid, so `RegionElevation` and the Valhalla grade path read real
 heights. Its `way-alerts.geojson` is extracted from the fixture's own small OSM
 extract, so the reader and plugin read real pipeline output rather than an
-authored list. `plugin-api` publishes the shared paged-provider contract suite
+authored list. Its `relations.json` is extracted from the fixture's own hiking
+input, so the route-relation reader and layer tests read real pipeline output.
+`plugin-api` publishes the shared paged-provider contract suite
 as test fixtures; `PagedProviderContractSuite` covers limits, paging, ordering,
 concurrency and cancellation. See `tools/pipeline/README.md`.
 
@@ -427,6 +429,7 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/nav-simulator` | the simulated run at 5 km/h through the production navigation session, its start and stop commands and its status stream | `plugin-api`, `navigation`, `routing` |
 | `plugins/track-layer` | the imported-track line layer and the controller that keeps it on the map | `plugin-api` |
 | `plugins/contours` | the contour overlay for the Standard and Touring variants and the one-row layers panel that toggles it | `plugin-api`, `plugin-ui-api` |
+| `plugins/route-relations` | the hiking relation geometry assembler, the shared-way lane assignment, the OSMC waymark mapping and the `MapHost` layers over an inline GeoJSON source | `plugin-api` |
 
 ## Place card
 
@@ -1590,6 +1593,33 @@ The file is an authored stand-in until the OSM extraction writes it; the
 manifest says so. The tests read it through the real `RegionReader`, drive the
 real schedule, and bridge the cues into the real `AlertHost` for the all-off
 and typed-banner cases.
+
+## Hiking route relations
+
+Hiking route relations are T-0418. `RegionReader` reads the mounted region's
+`relations.json` component: each member way's geometry once, and each hiking
+relation's ordered way members with its `network`, `ref`, `name`, `colour` and
+`osmc:symbol`. A package without the component opens and draws nothing.
+
+`plugins/route-relations` assembles each relation by walking its members in
+relation order and reversing a way that points back against the previous
+member. Shared ways carry a lane rank and count, so two routes that share a
+path draw side by side instead of on top of each other. The band colours are
+the style's network colours (`iwn` `#d9483b`, `nwn` `#4a3fd6`, `rwn` `#e07a2f`,
+`lwn` `#6fbf3a`) at 0.55 opacity; a route without a network draws as local.
+
+The waymark is the `osmc:symbol` background plate and foreground shape, drawn
+from eighteen `osmc_*` SDF glyphs authored here and tinted per feature. The
+`foreground2` and text parts of the tag are not drawn yet. A route with a shape
+the layer does not carry keeps its band and draws no mark. The geometry comes
+from the component and `MapHost.addLayer` with an inline GeoJSON source, never
+from `queryRenderedFeatures`.
+
+The extraction rules and the measured Lviv and fixture runs are in
+`tools/pipeline/README.md`. The fixture carries two routes sharing one real
+track, and the golden cases `hiking-routes-z13` and `hiking-routes-z14` drive
+the same parser, assembler, symbol mapping and map layers through the debug
+`core.map.set_route_relations` command.
 
 ## Search seam
 

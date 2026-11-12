@@ -122,6 +122,32 @@ class TestRegionFixtureTest {
     }
 
     @Test
+    fun theHikingRelationsComponentIsExtracted() {
+        val component = requireNotNull(region.manifest.component("relations")) { "relations component missing" }
+
+        assertEquals("route-relations-json", component.format)
+        assertEquals(1, component.formatVersion)
+        assertFalse("the hiking-relation fixture must come from the extraction", component.standIn)
+        val document =
+            Json
+                .parseToJsonElement(String(Files.readAllBytes(region.file(component)), Charsets.UTF_8))
+                .jsonObject
+        assertEquals("grass-maps-route-relations", document.getValue("format").jsonPrimitive.content)
+        assertEquals(3, document.getValue("relations").jsonArray.size)
+        assertEquals(3, document.getValue("ways").jsonArray.size)
+        val ids =
+            document
+                .getValue("relations")
+                .jsonArray
+                .map {
+                    it.jsonObject
+                        .getValue("id")
+                        .jsonPrimitive.long
+                }
+        assertEquals(listOf(9101L, 9102L, 9107L), ids)
+    }
+
+    @Test
     fun thePackageStaysSmallEnoughForTests() {
         val totalBytes = region.manifest.components.sumOf { it.bytes }
         assertTrue("the fixture package grew past 1 MiB: $totalBytes", totalBytes < 1_048_576)

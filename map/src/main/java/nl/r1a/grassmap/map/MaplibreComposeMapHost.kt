@@ -146,6 +146,9 @@ internal class MapHostState(
         spec: LayerSpec,
         owner: PluginId,
     ): Outcome<Unit> {
+        if (spec.data != null && spec.source != null) {
+            return Outcome.Failure(AppError.InvalidInput)
+        }
         val report = StyleLayerCompiler.compileAll(listOf(SlottedLayer(slot, spec)))
         if (!report.isComplete) {
             return Outcome.Failure(AppError.Unsupported)

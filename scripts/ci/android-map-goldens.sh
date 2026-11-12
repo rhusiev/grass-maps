@@ -30,6 +30,7 @@
 #                          swiftshader_indirect to reproduce the CI renderer)
 #   GOLDEN_NO_LOCK=1       do not take the gm-emulator slot
 #   GOLDEN_SKIP_REBOOT=1   do not reboot after setting the dialog suppression
+#   GOLDEN_POSITIONS=a,b   capture or compare only these golden names
 #   GOLDEN_TIMEOUT         emulator run limit (default 25m)
 #
 # Every wait is bounded: a device that never boots or attaches fails the script.
@@ -113,6 +114,7 @@ APK="${APK:-$ROOT/app/build/outputs/apk/debug/app-debug.apk}"
 PORT="${GOLDEN_EMULATOR_PORT:-5580}"
 GPU="${GOLDEN_GPU_MODE:-host}"
 AVD="${GOLDEN_AVD_NAME:-grassmaps-bench}"
+GOLDEN_POSITIONS="${GOLDEN_POSITIONS:-}"
 
 export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/.local/share/android-sdk}}"
 export ANDROID_AVD_HOME="${ANDROID_AVD_HOME:-$HOME/dotfiles/local/share/android/avd}"
@@ -260,6 +262,9 @@ for style in "${styles[@]}"; do
     fi
     COMMAND=(python3 "$SCRIPT_DIR/map_goldens.py" capture --serial "$SERIAL" --profile "$PROFILE" --apk "$APK" --output "$run_output")
     COMMAND+=(--contours "$CONTOURS")
+    if [[ -n "$GOLDEN_POSITIONS" ]]; then
+        COMMAND+=(--positions "$GOLDEN_POSITIONS")
+    fi
     if [[ -n "$REGION_PACKAGE" ]]; then
         COMMAND+=(--region-package "$REGION_PACKAGE")
     fi
@@ -271,6 +276,9 @@ for style in "${styles[@]}"; do
     if [[ $UPDATE -eq 1 ]]; then
         COMPARE=(python3 "$SCRIPT_DIR/map_goldens.py" compare --profile "$PROFILE" --captured "$run_output" --reference "$run_reference" --update)
         COMPARE+=(--contours "$CONTOURS")
+        if [[ -n "$GOLDEN_POSITIONS" ]]; then
+            COMPARE+=(--positions "$GOLDEN_POSITIONS")
+        fi
         if [[ -n "$style" ]]; then
             COMPARE+=(--style "$style")
         fi
@@ -284,6 +292,9 @@ for style in "${styles[@]}"; do
     # emulator together make the channel's `adb forward` ambiguous.
     COMPARE=(python3 "$SCRIPT_DIR/map_goldens.py" compare --profile "$PROFILE" --captured "$run_output" --reference "$run_reference" --output "$run_output" --serial "$SERIAL")
     COMPARE+=(--contours "$CONTOURS")
+    if [[ -n "$GOLDEN_POSITIONS" ]]; then
+        COMPARE+=(--positions "$GOLDEN_POSITIONS")
+    fi
     if [[ -n "$style" ]]; then
         COMPARE+=(--style "$style")
     fi

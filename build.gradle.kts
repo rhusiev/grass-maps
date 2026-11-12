@@ -96,6 +96,7 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         ":plugins:way-alerts" to setOf(":plugin-api"),
         ":plugins:track-layer" to setOf(":plugin-api"),
         ":plugins:contours" to setOf(":plugin-api", ":plugin-ui-api"),
+        ":plugins:route-relations" to setOf(":plugin-api"),
     )
 // Test-only edges are separate so a test fixture cannot quietly become a
 // production dependency. :control's info-widgets edge is the accepted T-0113
@@ -121,6 +122,7 @@ val moduleTestDependencyAllowlist: Map<String, Set<String>> =
         // region's `contours` component through the real manifest reader. Test
         // only; the plugin's runtime classpath is :plugin-api plus UI.
         ":plugins:contours" to setOf(":plugin-api", ":regions", ":plugin-ui-api"),
+        ":plugins:route-relations" to setOf(":plugin-api"),
     )
 val moduleBoundaryViolations = objects.listProperty(String::class.java)
 

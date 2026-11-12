@@ -1,5 +1,5 @@
 {
-  "comment": "Source SVGs for app/src/main/assets/sprites. \"icons\" are vendored unmodified from the named upstream repository at the named commit: 37 of them are Google Material Symbols Rounded (Apache-2.0), and `animal` and `bench` are Osmic (CC0-1.0), kept because the 13 px icon review chose them over the Material replacements. \"shields\" are authored in this repository (Apache-2.0). Build with build_sdf_sprite.py.",
+  "comment": "Source SVGs for app/src/main/assets/sprites. \"icons\" are vendored unmodified from the named upstream repository at the named commit: 37 of them are Google Material Symbols Rounded (Apache-2.0), `animal` and `bench` are Osmic (CC0-1.0), and the 18 `osmc_*` route-relation plates and shapes are authored here (Apache-2.0), kept because the 13 px icon review chose them over the Material replacements. \"shields\" are authored in this repository (Apache-2.0). Build with build_sdf_sprite.py.",
   "icons": {
     "aerodrome": {
       "commit": "10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7",
@@ -388,6 +388,150 @@
       "sha256": "36de9fdf4f0dd9b9df0240bd3a88ad26a648bfbffe8fd53caf1de4a8f4114fb9",
       "size": 19,
       "url": "https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/pets/materialsymbolsrounded/pets_fill1_24px.svg"
+    },
+    "osmc_bg_circle": {
+      "licence": "Apache-2.0",
+      "path": "tools/sprites/icons/osmc_bg_circle.svg",
+      "repository": "this repository",
+      "sha256": "de6057e63e301bbf86e0a1537482a56efe52ff13b9f055f7f5d437c416381d9f",
+      "size": 24,
+      "note": "Authored for T-0418 from the documented osmc:symbol background and foreground grammar; no third-party symbol asset is copied"
+    },
+    "osmc_bg_frame": {
+      "licence": "Apache-2.0",
+      "path": "tools/sprites/icons/osmc_bg_frame.svg",
+      "repository": "this repository",
+      "sha256": "907edc55c6fe2e66696073b9a6ec8e88563d30352d435ee0527cea8ee5b9d446",
+      "size": 24,
+      "note": "Authored for T-0418 from the documented osmc:symbol background and foreground grammar; no third-party symbol asset is copied"
+    },
+    "osmc_bg_round": {
+      "licence": "Apache-2.0",
+      "path": "tools/sprites/icons/osmc_bg_round.svg",
+      "repository": "this repository",
+      "sha256": "a6679be2ceeeae9531b004e87b72512e218095811c97fc038c806f0c09e61f09",
+      "size": 24,
+      "note": "Authored for T-0418 from the documented osmc:symbol background and foreground grammar; no third-party symbol asset is copied"
+    },
+    "osmc_bg_square": {
+      "licence": "Apache-2.0",
+      "path": "tools/sprites/icons/osmc_bg_square.svg",
+      "repository": "this repository",
+      "sha256": "51b3f1d56cfb2b06a44bee45ed75fa671c7dbd80c201225a11693d100169315c",
+      "size": 24,
+      "note": "Authored for T-0418 from the documented osmc:symbol background and foreground grammar; no third-party symbol asset is copied"
+    },
+    "osmc_fg_backslash": {
+      "licence": "Apache-2.0",
+      "path": "tools/sprites/icons/osmc_fg_backslash.svg",
+      "repository": "this repository",
+      "sha256": "113d27d4f00e7027e110a907fd2a13f64ae520539688ef8ab1d63099d792515f",
+      "size": 24,
+      "note": "Authored for T-0418 from the documented osmc:symbol background and foreground grammar; no third-party symbol asset is copied"
+    },
+    "osmc_fg_bar": {
+      "licence": "Apache-2.0",
+      "path": "tools/sprites/icons/osmc_fg_bar.svg",
+      "repository": "this repository",
+      "sha256": "60ba81bedea17b2429b4d05065b3dbe68cbfe005362f02a756711e795b1f5831",
+      "size": 24,
+      "note": "Authored for T-0418 from the documented osmc:symbol background and foreground grammar; no third-party symbol asset is copied"
+    },
+    "osmc_fg_corner": {
+      "licence": "Apache-2.0",
+      "path": "tools/sprites/icons/osmc_fg_corner.svg",
+      "repository": "this repository",
+      "sha256": "a6dc92aaf49d692256803e8fd59c22717d110bc350adc49ced2ddc9ab20607ed",
+      "size": 24,
+      "note": "Authored for T-0418 from the documented osmc:symbol background and foreground grammar; no third-party symbol asset is copied"
+    },
+    "osmc_fg_cross": {
+      "licence": "Apache-2.0",
+      "path": "tools/sprites/icons/osmc_fg_cross.svg",
+      "repository": "this repository",
+      "sha256": "c46333b67556df80ebd00a8ca0957465bdc65e4255ad9b8b05013377a2550b04",
+      "size": 24,
+      "note": "Authored for T-0418 from the documented osmc:symbol background and foreground grammar; no third-party symbol asset is copied"
+    },
+    "osmc_fg_diamond": {
+      "licence": "Apache-2.0",
+      "path": "tools/sprites/icons/osmc_fg_diamond.svg",
+      "repository": "this repository",
+      "sha256": "5be249a97d658b1d18e7e6c762ac0482e30dcec1655e8101ca7ea7a61abb2e76",
+      "size": 24,
+      "note": "Authored for T-0418 from the documented osmc:symbol background and foreground grammar; no third-party symbol asset is copied"
+    },
+    "osmc_fg_dot": {
+      "licence": "Apache-2.0",
+      "path": "tools/sprites/icons/osmc_fg_dot.svg",
+      "repository": "this repository",
+      "sha256": "1a121539ba321fdf7c65c8aba3cef830148799874fc4f51f5d6dd7520e72fea2",
+      "size": 24,
+      "note": "Authored for T-0418 from the documented osmc:symbol background and foreground grammar; no third-party symbol asset is copied"
+    },
+    "osmc_fg_lower": {
+      "licence": "Apache-2.0",
+      "path": "tools/sprites/icons/osmc_fg_lower.svg",
+      "repository": "this repository",
+      "sha256": "858d6388fc15ba8561b1c7ba0d944e8d473d4c24b30dc6304c01e75940c00874",
+      "size": 24,
+      "note": "Authored for T-0418 from the documented osmc:symbol background and foreground grammar; no third-party symbol asset is copied"
+    },
+    "osmc_fg_rectangle": {
+      "licence": "Apache-2.0",
+      "path": "tools/sprites/icons/osmc_fg_rectangle.svg",
+      "repository": "this repository",
+      "sha256": "bd0cda210e1beab8ae6345fbee0541e172ffcb7e1ffb501e8ce07e6108651b7a",
+      "size": 24,
+      "note": "Authored for T-0418 from the documented osmc:symbol background and foreground grammar; no third-party symbol asset is copied"
+    },
+    "osmc_fg_right": {
+      "licence": "Apache-2.0",
+      "path": "tools/sprites/icons/osmc_fg_right.svg",
+      "repository": "this repository",
+      "sha256": "d500d59db12c711f85bd101657309cb8a08e30ebc7faf2c30cf4c401fd89b2d2",
+      "size": 24,
+      "note": "Authored for T-0418 from the documented osmc:symbol background and foreground grammar; no third-party symbol asset is copied"
+    },
+    "osmc_fg_slash": {
+      "licence": "Apache-2.0",
+      "path": "tools/sprites/icons/osmc_fg_slash.svg",
+      "repository": "this repository",
+      "sha256": "768b3868e8e2979f6a6feba21004db9f9ccbc64d9bb6cd2810ab1a0650dbe3a8",
+      "size": 24,
+      "note": "Authored for T-0418 from the documented osmc:symbol background and foreground grammar; no third-party symbol asset is copied"
+    },
+    "osmc_fg_stripe": {
+      "licence": "Apache-2.0",
+      "path": "tools/sprites/icons/osmc_fg_stripe.svg",
+      "repository": "this repository",
+      "sha256": "70d39b50e958d165ef9915e881c82f2bc0670d8d89ecd27acf39b433bfcf6561",
+      "size": 24,
+      "note": "Authored for T-0418 from the documented osmc:symbol background and foreground grammar; no third-party symbol asset is copied"
+    },
+    "osmc_fg_triangle": {
+      "licence": "Apache-2.0",
+      "path": "tools/sprites/icons/osmc_fg_triangle.svg",
+      "repository": "this repository",
+      "sha256": "a554f2267a6a32fb6596c2669431aac319d8ab34a6b2f6afd92a9125dd312fd9",
+      "size": 24,
+      "note": "Authored for T-0418 from the documented osmc:symbol background and foreground grammar; no third-party symbol asset is copied"
+    },
+    "osmc_fg_triangle_turned": {
+      "licence": "Apache-2.0",
+      "path": "tools/sprites/icons/osmc_fg_triangle_turned.svg",
+      "repository": "this repository",
+      "sha256": "649611c14ba52feb3d7a6ccea6cad20f6a375ad784a7ff851627fea02e09e68c",
+      "size": 24,
+      "note": "Authored for T-0418 from the documented osmc:symbol background and foreground grammar; no third-party symbol asset is copied"
+    },
+    "osmc_fg_x": {
+      "licence": "Apache-2.0",
+      "path": "tools/sprites/icons/osmc_fg_x.svg",
+      "repository": "this repository",
+      "sha256": "8a398682bb29bfac998cda16d17efe9c52541cdc2633a59f466bf7ce2669beed",
+      "size": 24,
+      "note": "Authored for T-0418 from the documented osmc:symbol background and foreground grammar; no third-party symbol asset is copied"
     }
   },
   "shields": {

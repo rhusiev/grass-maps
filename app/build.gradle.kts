@@ -185,6 +185,7 @@ dependencies {
     implementation(project(":plugins:way-alerts"))
     implementation(project(":plugins:track-layer"))
     implementation(project(":plugins:contours"))
+    implementation(project(":plugins:route-relations"))
 
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("org.jetbrains.compose.ui:ui:1.12.1")

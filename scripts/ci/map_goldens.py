@@ -187,15 +187,41 @@ ROUTE_POSITION_NAMES = frozenset(case[0] for cases in ROUTE_CASES.values() for c
 ROUTE_FIXTURE_PATH = ROOT / "test-data" / "map-goldens" / "route-turns.json"
 ROUTE_FIXTURE = ROUTE_FIXTURE_PATH.read_text(encoding="utf-8")
 
+# T-0418: two hiking routes sharing one fixture track, at an overview and a
+# waymark zoom. The component is the committed fixture-mini extraction, not an
+# authored drawing, so the capture exercises the real parser and assembler.
+ROUTE_RELATION_CASES = {
+    "standard": (
+        ("hiking-routes-z13", 49.9470, 23.9540, 13.0, 0.0, 0.0),
+        ("hiking-routes-z14", 49.9470, 23.9540, 14.0, 0.0, 0.0),
+    ),
+}
+ROUTE_RELATION_POSITION_NAMES = frozenset(
+    case[0] for cases in ROUTE_RELATION_CASES.values() for case in cases
+)
+ROUTE_RELATIONS_FIXTURE_PATH = (
+    ROOT / "test-data" / "regions" / "fixture-mini" / "2026-11-03-1" / "relations.json"
+)
+ROUTE_RELATIONS_FIXTURE = ROUTE_RELATIONS_FIXTURE_PATH.read_text(encoding="utf-8")
+
 
 def cases(profile: str) -> tuple[tuple[str, float, float, float, float, float], ...]:
     """The profile's fixed positions followed by its route positions."""
-    return tuple(POSITIONS[profile]) + ROUTE_CASES.get(profile, ())
+    return (
+        tuple(POSITIONS[profile])
+        + ROUTE_CASES.get(profile, ())
+        + ROUTE_RELATION_CASES.get(profile, ())
+    )
 
 
 def route_fixture_for(name: str) -> str | None:
     """The committed route for a route golden, or None for a plain one."""
     return ROUTE_FIXTURE if name in ROUTE_POSITION_NAMES else None
+
+
+def route_relations_fixture_for(name: str) -> str | None:
+    """The committed route-relation component for its goldens, else None."""
+    return ROUTE_RELATIONS_FIXTURE if name in ROUTE_RELATION_POSITION_NAMES else None
 
 
 class GoldenError(RuntimeError):
@@ -510,6 +536,33 @@ def invoke_route(
             if time.monotonic() >= deadline:
                 raise GoldenError(
                     f"route command did not answer within {CAMERA_READY_TIMEOUT_S:.0f}s"
+                ) from error
+        time.sleep(RETRY_PAUSE_S)
+
+
+def invoke_route_relations(
+    client: control_client.ControlClient,
+    component_json: str | None,
+) -> str:
+    """Apply or clear the fixed route-relation component before a golden.
+
+    It draws through the production parser, assembler and layer builder; the
+    command retries `not_ready` until the map surface has bound.
+    """
+    params: dict[str, object] = {
+        "relations": json.loads(component_json) if component_json else None,
+    }
+    deadline = time.monotonic() + CAMERA_READY_TIMEOUT_S
+    while True:
+        try:
+            return str(client.invoke("core.map.set_route_relations", params))
+        except control_client.ControlError as error:
+            if error.kind != "not_ready" or time.monotonic() >= deadline:
+                raise
+        except TimeoutError as error:
+            if time.monotonic() >= deadline:
+                raise GoldenError(
+                    f"route-relation command did not answer within {CAMERA_READY_TIMEOUT_S:.0f}s"
                 ) from error
         time.sleep(RETRY_PAUSE_S)
 
@@ -919,6 +972,7 @@ def capture(
     output: Path,
     style: str | None,
     contours: bool | None = None,
+    positions: tuple[tuple[str, float, float, float, float, float], ...] | None = None,
 ) -> dict[str, object]:
     if profile == "oblast" and not (output / "region.json").exists():
         raise GoldenError("oblast capture needs the installed region package")
@@ -946,12 +1000,18 @@ def capture(
         started = datetime.now(timezone.utc).isoformat()
         shots = []
         current_route: str | None = None
-        for name, lat, lon, zoom, bearing, tilt in cases(profile):
+        current_relations: str | None = None
+        selected = positions if positions is not None else cases(profile)
+        for name, lat, lon, zoom, bearing, tilt in selected:
             stage = name
             fixture = route_fixture_for(name)
             if fixture != current_route:
                 invoke_route(client, fixture)
                 current_route = fixture
+            relations = route_relations_fixture_for(name)
+            if relations != current_relations:
+                invoke_route_relations(client, relations)
+                current_relations = relations
             params = {
                 "lat": lat,
                 "lon": lon,
@@ -983,6 +1043,7 @@ def capture(
                 "conditions": conditions,
                 "camera_command": "core.map.set_camera",
                 "route_command": "core.map.set_route",
+                "route_relations_command": "core.map.set_route_relations",
                 "screenshot": "adb exec-out screencap -p",
                 "positions": shots,
             },
@@ -1271,9 +1332,15 @@ def compare(
     return document
 
 
-def update_reference(profile: str, captured: Path, reference: Path) -> None:
+def update_reference(
+    profile: str,
+    captured: Path,
+    reference: Path,
+    positions: tuple[tuple[str, float, float, float, float, float], ...] | None = None,
+) -> None:
     reference.mkdir(parents=True, exist_ok=True)
-    for name, *_ in cases(profile):
+    selected = positions if positions is not None else cases(profile)
+    for name, *_ in selected:
         source = captured / f"{name}.png"
         if not source.is_file():
             raise GoldenError(f"missing capture {source}")
@@ -1295,6 +1362,21 @@ def contours_flag(args: argparse.Namespace) -> bool | None:
     return value == "on"
 
 
+def selected_positions(
+    profile: str,
+    only: str | None,
+) -> tuple[tuple[str, float, float, float, float, float], ...] | None:
+    """The named cases, refusing a name the profile does not carry."""
+    if not only:
+        return None
+    wanted = tuple(name.strip() for name in only.split(",") if name.strip())
+    known = {case[0]: case for case in cases(profile)}
+    unknown = [name for name in wanted if name not in known]
+    if unknown:
+        raise GoldenError(f"unknown golden position(s) for {profile}: {', '.join(unknown)}")
+    return tuple(known[name] for name in wanted)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Capture and compare map goldens.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -1308,6 +1390,11 @@ def build_parser() -> argparse.ArgumentParser:
     capture_parser.add_argument("--style", choices=sorted(STYLE_IDS), default=None)
     capture_parser.add_argument("--contours", choices=["on", "off"], default=None)
     capture_parser.add_argument("--keep-data", action="store_true")
+    capture_parser.add_argument(
+        "--positions",
+        help="comma-separated golden names to capture; default is every case",
+        default=None,
+    )
 
     compare_parser = subparsers.add_parser("compare")
     compare_parser.add_argument("--serial", default=None)
@@ -1318,6 +1405,11 @@ def build_parser() -> argparse.ArgumentParser:
     compare_parser.add_argument("--reference", default=None)
     compare_parser.add_argument("--output", default=None)
     compare_parser.add_argument("--update", action="store_true")
+    compare_parser.add_argument(
+        "--positions",
+        help="comma-separated golden names to compare; default is every case",
+        default=None,
+    )
 
     return parser
 
@@ -1341,6 +1433,7 @@ def build_recapture(
 
         def recapture(name: str, params: dict[str, object]) -> dict[str, object]:
             invoke_route(client, route_fixture_for(name))
+            invoke_route_relations(client, route_relations_fixture_for(name))
             return capture_position(adb, client, captured, name, params)
 
         return recapture
@@ -1371,7 +1464,14 @@ def main() -> int:
                 metadata = install_region_package(adb, package)
                 (output / "region.json").parent.mkdir(parents=True, exist_ok=True)
                 (output / "region.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
-            capture(adb, args.profile, output, args.style, contours_flag(args))
+            capture(
+                adb,
+                args.profile,
+                output,
+                args.style,
+                contours=contours_flag(args),
+                positions=selected_positions(args.profile, args.positions),
+            )
             return 0
         reference = (
             Path(args.reference)
@@ -1380,7 +1480,12 @@ def main() -> int:
         )
         output = Path(args.output) if args.output else Path(args.captured)
         if args.update:
-            update_reference(args.profile, Path(args.captured), reference)
+            update_reference(
+                args.profile,
+                Path(args.captured),
+                reference,
+                positions=selected_positions(args.profile, args.positions),
+            )
             return 0
         captured = Path(args.captured)
         recapture = build_recapture(args, captured)
@@ -1391,6 +1496,7 @@ def main() -> int:
             output,
             args.style,
             recapture=recapture,
+            positions=selected_positions(args.profile, args.positions),
         )
         return 0 if document["result"] == "pass" else 1
     except GoldenError as error:

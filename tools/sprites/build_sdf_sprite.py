@@ -15,6 +15,10 @@ https://github.com/gmgeo/osmic.  They were redrawn in Material Symbols and then
 restored: at 13 px the Osmic glyphs read as the animal and the bench, and the
 Material replacements did not.
 
+The eighteen `osmc_*` glyphs are the background plates and foreground shapes an
+`osmc:symbol` value names.  They are authored here for the hiking route layer
+(T-0418), Apache-2.0, and no third-party OSMC symbol asset is copied.
+
 The 15 road-shield frames (`US:I-<n>char`, `NL:S-road-<n>char`,
 `generic_shield-<n>char`) are authored in this repository under `shields/`,
 because the open icon sets have no shield outline for these networks.  They

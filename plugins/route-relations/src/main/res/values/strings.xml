@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.route_relations.name">Hiking routes</string>
+    <string name="plugin.route_relations.description">Draws OSM hiking route relations with their waymark symbols, side by side where routes share a path.</string>
+</resources>

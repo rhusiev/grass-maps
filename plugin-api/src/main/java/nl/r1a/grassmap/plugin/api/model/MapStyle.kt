@@ -92,12 +92,19 @@ enum class LayerSlot {
 /**
  * One MapLibre style layer fragment. Values are style-spec JSON so a provider
  * stays free of map engine types; the host compiles them.
+ *
+ * A layer draws from [source], the mounted region or contour archive, or from
+ * [data], an inline GeoJSON `FeatureCollection`. [data] exists for geometry a
+ * plugin assembles itself, such as a route relation's member ways (T-0418);
+ * it is not a second base source and is never written to disk. Exactly one of
+ * the two is set, and a layer with [data] must not name [sourceLayer].
  */
 data class LayerSpec(
     val id: LayerId,
     val type: LayerType,
     val source: SourceId? = null,
     val sourceLayer: String? = null,
+    val data: String? = null,
     val minZoom: Float = 0f,
     val maxZoom: Float = 24f,
     val filter: JsonElement? = null,

@@ -12,7 +12,7 @@
 #                           /hdd/drive/Projects/Life/grass-maps-bench)
 #   --pmtiles PATH          pmtiles CLI (default <bench>/tools/pmtiles)
 #   --map-source PATH       vector tile archive (default <bench>/data/ukraine-final.pmtiles)
-#   --contours-source PATH  contour archive (default <bench>/data/lviv-90m-20m.pmtiles)
+#   --contours-source PATH  contour archive (default <bench>/data/lviv-90m-10m.pmtiles)
 #   --dem-source DIR        GLO-30 tiles (default <bench>/data/dem)
 #   --way-alerts-source PBF OSM input for the way-alert component (default
 #                           test-data/regions/fixture-mini/way-alerts.osm.pbf)
@@ -64,7 +64,7 @@ done
 
 PMTILES="${PMTILES:-$BENCH/tools/pmtiles}"
 MAP_SOURCE="${MAP_SOURCE:-$BENCH/data/ukraine-final.pmtiles}"
-CONTOURS_SOURCE="${CONTOURS_SOURCE:-$BENCH/data/lviv-90m-20m.pmtiles}"
+CONTOURS_SOURCE="${CONTOURS_SOURCE:-$BENCH/data/lviv-90m-10m.pmtiles}"
 DEM_SOURCE="${DEM_SOURCE:-$BENCH/data/dem}"
 
 for tool in python3 sha256sum; do
@@ -263,7 +263,14 @@ manifest = {
         "tool": "pmtiles extract",
         "bbox": [float(value) for value in bbox.split(",")],
         "mapSource": {"archive": map_archive, "sha256": map_archive_sha},
-        "contoursSource": {"archive": contours_archive, "sha256": contours_archive_sha},
+        "contoursSource": {
+            "archive": contours_archive,
+            "sha256": contours_archive_sha,
+            "intervalMeters": 10,
+            "dem": "Copernicus DEM GLO-30",
+            "resample": "3 arcsec cells, mean of the 1 arcsec source pixels covering each cell",
+            "detail": "10 m lines are resampled detail from the 90 m DEM, not 90 m ground truth",
+        },
         "elevationSource": {
             "dataset": "Copernicus DEM GLO-30",
             "resample": "3 arcsec cells, mean of the 1 arcsec source pixels covering each cell",

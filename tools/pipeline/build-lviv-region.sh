@@ -3,18 +3,23 @@
 # Builds a complete Lviv oblast region package with the real way-alert
 # component, beside the existing pack.
 #
-# The map and contour archives are copied from an existing pack, so their bytes
-# and provenance stay the ones that pack recorded. The search section, the
-# elevation grid and the way-alert component are built from the Ukraine OSM PBF
-# and the GLO-30 tiles in the bench repository. The result is a package the
+# The map archive is copied from an existing pack, so its bytes and provenance
+# stay the ones that pack recorded. The contour component is extracted from the
+# 10 m contour archive built from the 90 m GLO-30 surface. The search section,
+# the elevation grid and the way-alert component are built from the Ukraine OSM
+# PBF and the GLO-30 tiles in the bench repository. The result is a package the
 # current reader can mount: every component the manifest requires is present.
 #
 # Usage: tools/pipeline/build-lviv-region.sh [options]
 #   --bench DIR        bench repository (default $GRASS_MAPS_BENCH or
 #                      /hdd/drive/Projects/Life/grass-maps-bench)
 #   --pbf PATH         OSM extract (default <bench>/data/ukraine-latest.osm.pbf)
-#   --base-pack DIR    pack to copy map and contours from (default
+#   --base-pack DIR    pack to copy the map from (default
 #                      /hdd/t-0102-evidence/region/ua-46/2026-11-05-bench)
+#   --contours-source PATH
+#                      10 m contour archive (default
+#                      <bench>/data/lviv-90m-10m.pmtiles)
+#   --pmtiles PATH     pmtiles CLI (default <bench>/tools/pmtiles)
 #   --dem-source DIR   GLO-30 COG tiles (default <bench>/data/dem)
 #   --bbox BOX         west,south,east,north (default 22.5,48.9,25.2,50.6)
 #   --version VALUE    package version (default 2026-11-12-1)
@@ -36,6 +41,9 @@ readonly EXTRACTOR_VERSION="osm-extract 0.1.0 way-alerts v1"
 BENCH="${GRASS_MAPS_BENCH:-/hdd/drive/Projects/Life/grass-maps-bench}"
 PBF="$BENCH/data/ukraine-latest.osm.pbf"
 BASE_PACK="/hdd/t-0102-evidence/region/ua-46/2026-11-05-bench"
+CONTOURS_SOURCE="$BENCH/data/lviv-90m-10m.pmtiles"
+PMTILES="$BENCH/tools/pmtiles"
+CONTOURS_FILE="lviv-contours-10m.pmtiles"
 DEM_SOURCE="$BENCH/data/dem"
 BBOX="22.5,48.9,25.2,50.6"
 VERSION="2026-11-12-1"
@@ -48,6 +56,8 @@ while [[ $# -gt 0 ]]; do
         --bench) BENCH="$2"; shift 2 ;;
         --pbf) PBF="$2"; shift 2 ;;
         --base-pack) BASE_PACK="$2"; shift 2 ;;
+        --contours-source) CONTOURS_SOURCE="$2"; shift 2 ;;
+        --pmtiles) PMTILES="$2"; shift 2 ;;
         --dem-source) DEM_SOURCE="$2"; shift 2 ;;
         --bbox) BBOX="$2"; shift 2 ;;
         --version) VERSION="$2"; shift 2 ;;
@@ -80,6 +90,8 @@ require_file() {
 
 require_file "$PBF" "OSM extract"
 require_file "$BASE_PACK/manifest.json" "base manifest"
+require_file "$CONTOURS_SOURCE" "contour archive"
+require_file "$PMTILES" "pmtiles CLI"
 [[ -d "$DEM_SOURCE" ]] || {
     echo "build-lviv-region.sh: missing DEM source directory: $DEM_SOURCE" >&2
     exit 1
@@ -92,16 +104,7 @@ components = json.load(open(sys.argv[1]))["components"]
 print(next(component["file"] for component in components if component["kind"] == "map"))
 PY
 )"
-contours_file="$(
-    python3 - "$BASE_PACK/manifest.json" <<'PY'
-import json
-import sys
-components = json.load(open(sys.argv[1]))["components"]
-print(next(component["file"] for component in components if component["kind"] == "contours"))
-PY
-)"
 require_file "$BASE_PACK/$map_file" "base map"
-require_file "$BASE_PACK/$contours_file" "base contours"
 
 if [[ -n "${CARGO_HOME:-}" ]]; then
     CARGO_HOME="$(cd "$CARGO_HOME" && pwd -P)"
@@ -115,7 +118,8 @@ EXTRACTOR="$CARGO_TARGET_DIR/release/osm-extract"
 rm -rf "$WORK"
 mkdir -p "$WORK/pack"
 cp --reflink=auto "$BASE_PACK/$map_file" "$WORK/pack/$map_file"
-cp --reflink=auto "$BASE_PACK/$contours_file" "$WORK/pack/$contours_file"
+"$PMTILES" extract "$CONTOURS_SOURCE" "$WORK/pack/$CONTOURS_FILE" \
+    --bbox="$BBOX" --minzoom=9 --maxzoom=14 -q
 cp --reflink=auto "$(realpath "$PBF")" "$WORK/source.osm.pbf"
 
 started=$(date +%s)
@@ -163,7 +167,8 @@ python3 "$ROOT/tools/pipeline/build-elevation.py" grid \
 
 python3 - "$WORK/pack" "$BASE_PACK" "$REGION_ID" "$VERSION" "$osm_timestamp" "$BBOX" \
     "$(basename "$PBF")" "$(sha256sum "$PBF" | cut -d' ' -f1)" "$EXTRACTOR_VERSION" \
-    "$DEM_SOURCE" <<'PY'
+    "$DEM_SOURCE" "$(basename "$CONTOURS_SOURCE")" \
+    "$(sha256sum "$CONTOURS_SOURCE" | cut -d' ' -f1)" "$CONTOURS_FILE" <<'PY'
 import hashlib
 import json
 import math
@@ -182,6 +187,9 @@ from collections import Counter
     osm_archive_sha,
     extractor_version,
     dem_source,
+    contours_source_archive,
+    contours_source_sha,
+    contours_file,
 ) = sys.argv[1:]
 
 pack = pathlib.Path(pack)
@@ -249,7 +257,6 @@ def dem_tiles():
 
 
 map_component = base_components["map"]
-contours_component = base_components["contours"]
 manifest = {
     "region": region,
     "version": version,
@@ -260,7 +267,14 @@ manifest = {
         "basePack": str(base_pack),
         "bbox": [float(value) for value in bbox.split(",")],
         "mapSource": base_pipeline["mapSource"],
-        "contoursSource": base_pipeline["contoursSource"],
+        "contoursSource": {
+            "archive": contours_source_archive,
+            "sha256": contours_source_sha,
+            "intervalMeters": 10,
+            "dem": "Copernicus DEM GLO-30",
+            "resample": "3 arcsec cells, mean of the 1 arcsec source pixels covering each cell",
+            "detail": "10 m lines are resampled detail from the 90 m DEM, not 90 m ground truth",
+        },
         "elevationSource": {
             "dataset": "Copernicus DEM GLO-30",
             "resample": "3 arcsec cells, mean of the 1 arcsec source pixels covering each cell",
@@ -294,13 +308,7 @@ manifest = {
             map_component["formatVersion"],
             map_component.get("zoomLevels"),
         ),
-        component(
-            "contours",
-            contours_component["file"],
-            contours_component["format"],
-            contours_component["formatVersion"],
-            contours_component.get("zoomLevels"),
-        ),
+        component("contours", contours_file, "pmtiles", 3, [9, 14]),
         component("elevation", "elevation.bin", "elevation-grid", 1),
         component("search-format", "format.bin", "search-section", 2),
         component("search-terms", "terms.fst", "search-section", 2),

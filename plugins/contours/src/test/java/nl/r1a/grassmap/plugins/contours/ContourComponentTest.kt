@@ -104,6 +104,6 @@ class ContourComponentTest {
         const val FIXTURE_DIRECTORY = "../../test-data/regions/fixture-mini/2026-11-03-1"
         const val FIXTURE_REGION = "fixture-mini"
         const val FIXTURE_VERSION = "2026-11-03-1"
-        const val CONTOURS_BYTES = 23418L
+        const val CONTOURS_BYTES = 40899L
     }
 }

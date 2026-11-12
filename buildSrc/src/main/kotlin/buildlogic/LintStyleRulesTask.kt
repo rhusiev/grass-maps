@@ -22,7 +22,7 @@ internal object StyleRuleChecker {
     private const val MIN_LAYERS = 75
     private const val MAX_LAYERS = 85
     private const val MAX_SYMBOL_LAYERS = 15
-    private const val OVERLAY_LAYERS = 5
+    private const val OVERLAY_LAYERS = 4
     private val HALO_SOURCES = setOf("places", "roads")
     private val FORBIDDEN_PAINT = listOf("line-pattern", "fill-pattern", "line-gradient")
 

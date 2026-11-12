@@ -25,9 +25,9 @@ class ContoursAccessTest {
 
             assertTrue(layers is Outcome.Success)
             val published = (layers as Outcome.Success).value
-            assertEquals(5, published.size)
+            assertEquals(4, published.size)
             assertEquals(
-                listOf("contour-50", "contour-20", "contour-10", "contour-index", "contour-label"),
+                listOf("contour-50", "contour-10", "contour-index", "contour-label"),
                 published.map { it.spec.id.value },
             )
         }
@@ -40,12 +40,12 @@ class ContoursAccessTest {
 
             assertEquals(Outcome.Success(Unit), contours.apply(host, StyleId("standard"), enabled = true))
 
-            assertEquals(5, host.layers.size)
+            assertEquals(4, host.layers.size)
             assertTrue(host.layers.all { it.owner == CONTOURS_PLUGIN })
             assertEquals(CONTOURS_PLUGIN, host.removedOwners.single())
             assertEquals(
                 "contour-index",
-                host.layers[3]
+                host.layers[2]
                     .spec.id.value,
             )
         }

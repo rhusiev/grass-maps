@@ -36,7 +36,7 @@ internal class MapSources private constructor(
 
     companion object {
         const val LVIV_ARCHIVE = "lviv-protomaps.pmtiles"
-        const val CONTOURS_ARCHIVE = "lviv-contours-20m.pmtiles"
+        const val CONTOURS_ARCHIVE = "lviv-contours-10m.pmtiles"
         private const val FIXTURE_ASSET = "fixture-mini-map.pmtiles"
         private const val FIXTURE_FILE = "fixture-mini-map.pmtiles"
         private const val FIXTURE_CONTOURS_ASSET = "fixture-mini-contours.pmtiles"

@@ -39,7 +39,7 @@ packages a byte-for-byte copy of `contours.pmtiles` as
 | Component | Source | Stand-in |
 |---|---|---|
 | `map.pmtiles` | `ukraine-final.pmtiles`, Protomaps basemap profile, z12-14 | no |
-| `contours.pmtiles` | `lviv-90m-20m.pmtiles`, Copernicus GLO-30 contours, z9-14 | no |
+| `contours.pmtiles` | `lviv-90m-10m.pmtiles`, Copernicus GLO-30 10 m contours from the 90 m DEM, z9-14 | no |
 | `elevation.bin` | Copernicus GLO-30, 3 arcsec cells (one bbox tile in the fixture) | no |
 | `format.bin`, `terms.fst`, `postings.bin`, `places.bin`, `context.bin`, `entities.bin`, `kinds.bin`, `strings.bin` | the search section, built by `rust/grass-core` from `fixture-places.tsv`; a version-2 build writes `format.bin`, the committed version-1 package has no such file | no |
 | `features.bin` | the feature component, built in the same pass | no |
@@ -51,6 +51,10 @@ Ivano-Frankove, Lviv oblast). It is rural, so its z12-14 tiles stay small; the
 place has roads, paths and land cover but no dense city centre. `map.pmtiles`
 starts at z12 instead of the product's z8 because the z8 tile would dominate the
 fixture's size while adding nothing a unit test needs.
+
+The contour component is 10 m lines cut from the 90 m averaged GLO-30 surface.
+The 10 m spacing is resampled detail, not 90 m ground truth; it is finer than
+the DEM cell can resolve.
 
 The elevation grid is real data. `tools/pipeline/build-elevation.py grid`
 samples the GLO-30 COG tiles and writes the component; the manifest marks it
@@ -311,10 +315,11 @@ it is GPL-3.0, and no part of it is copied.
 ### Lviv region pack (T-0319A)
 
 `build-lviv-region.sh` builds a complete `ua-46` pack beside the existing one.
-It copies the map and contour bytes from
-`/hdd/t-0102-evidence/region/ua-46/2026-11-05-bench`, so their sha256 stay the
-ones that pack recorded, and builds the search section, elevation grid and
-way-alert component from the Ukraine PBF and the GLO-30 tiles:
+It copies the map bytes from
+`/hdd/t-0102-evidence/region/ua-46/2026-11-05-bench`, rebuilds the contour
+component from the 10 m contour archive, and builds the search section,
+elevation grid and way-alert component from the Ukraine PBF and the GLO-30
+tiles:
 
 ```sh
 tools/pipeline/build-lviv-region.sh --keep-work
@@ -322,15 +327,17 @@ tools/pipeline/build-lviv-region.sh --keep-work
 
 The output is
 `/hdd/t-0319a-way-alerts/lviv-region/ua-46/2026-11-12-1` with `current` beside
-it. Measured on 2026-11-12, 8 cores, `gm-data`, the phase-A Ukraine PBF
-(883,214,645 B, sha256 `ff46165a...`) and 12 GLO-30 tiles: 158 s for the whole
-script, 118,544,428 B (113 MiB). The way-alert step alone is 5.3 s over the
-78,434,355 B bbox extract, 17.8 MB peak RSS; the fixture extraction is 0.03 s.
+it. Measured on 2026-11-13, 8 cores, `gm-data`, the phase-A Ukraine PBF
+(883,214,645 B, sha256 `ff46165a...`) and 12 GLO-30 tiles: 89 s for the whole
+script with warm caches (238 s cold), 115,164,160 B (110 MiB) including the
+manifest. The contour step alone is `gdal_contour` 14.5 s and Planetiler 9.3 s.
+The way-alert step alone is 5.3 s over the 78,434,355 B bbox extract, 17.8 MB
+peak RSS; the fixture extraction is 0.03 s.
 
 | Component | Bytes |
 |---|---|
 | `lviv-protomaps.pmtiles` (copied from the 2026-11-05 pack) | 61,793,175 |
-| `lviv-contours-20m.pmtiles` (copied) | 23,594,544 |
+| `lviv-contours-10m.pmtiles` (rebuilt from `lviv-90m-10m.pmtiles`) | 19,164,271 |
 | search section, eight version-2 files | 12,717,602 |
 | `features.bin` | 13,657,687 |
 | `elevation.bin`, 12 cells | 3,852,712 |
@@ -716,7 +723,7 @@ OpenStreetMap contributors. `ATTRIBUTION.md` records the committed fixtures.
 Reused from the real pipeline:
 
 - the Planetiler vector tile build (`ukraine-final.pmtiles`)
-- the Copernicus GLO-30 contour build (`lviv-90m-20m.pmtiles`)
+- the Copernicus GLO-30 contour build (`lviv-90m-10m.pmtiles`, 10 m lines from the 90 m DEM)
 - the `pmtiles extract` split stage that real oblast packs use
 
 Built here rather than reused:

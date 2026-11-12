@@ -15,13 +15,13 @@ import org.junit.Test
 
 class ContourLayerTest {
     @Test
-    fun everyVariantDrawsThreeBandsAnIndexAndOneLabel() {
+    fun everyVariantDrawsTwoBandsAnIndexAndOneLabel() {
         val ids = ContourVariant.entries.map { it.styleId }
         for (id in ids) {
             val layers = ContourLayers.layers(id)
-            assertEquals("$id layer count", 5, layers.size)
+            assertEquals("$id layer count", 4, layers.size)
             assertEquals(
-                listOf("contour-50", "contour-20", "contour-10", "contour-index", "contour-label"),
+                listOf("contour-50", "contour-10", "contour-index", "contour-label"),
                 layers.map { it.spec.id.value },
             )
             assertTrue("$id overlays", layers.all { it.slot == LayerSlot.Overlays })
@@ -31,13 +31,12 @@ class ContourLayerTest {
     }
 
     @Test
-    fun standardShowsFiftyTwentyAndTenAtZ12To14() {
+    fun standardShowsOneHundredFiftyAndTenAtZ12To14() {
         val layers = ContourLayers.layers(StyleId("standard"))
 
-        assertEquals(12f to 13f, zoomOf(layers, "contour-50"))
-        assertEquals(13f to 14f, zoomOf(layers, "contour-20"))
-        assertEquals(14f to 24f, zoomOf(layers, "contour-10"))
         assertEquals(12f to 24f, zoomOf(layers, "contour-index"))
+        assertEquals(13f to 24f, zoomOf(layers, "contour-50"))
+        assertEquals(14f to 24f, zoomOf(layers, "contour-10"))
         assertEquals(14f to 24f, zoomOf(layers, "contour-label"))
     }
 
@@ -45,10 +44,9 @@ class ContourLayerTest {
     fun touringShowsEveryBandOneZoomEarlier() {
         val layers = ContourLayers.layers(StyleId("touring"))
 
-        assertEquals(11f to 12f, zoomOf(layers, "contour-50"))
-        assertEquals(12f to 13f, zoomOf(layers, "contour-20"))
-        assertEquals(13f to 24f, zoomOf(layers, "contour-10"))
         assertEquals(11f to 24f, zoomOf(layers, "contour-index"))
+        assertEquals(12f to 24f, zoomOf(layers, "contour-50"))
+        assertEquals(13f to 24f, zoomOf(layers, "contour-10"))
         assertEquals(13f to 24f, zoomOf(layers, "contour-label"))
     }
 
@@ -77,43 +75,63 @@ class ContourLayerTest {
     }
 
     @Test
-    fun indexAndBandLayersUseTheAuthoredWidthsAndOpacity() {
+    fun theFiftyMetreLinesAreThickerThanTheTenMetreLines() {
         val layers = ContourLayers.layers(StyleId("standard"))
 
         assertEquals(1.3f, paintFloat(layers, "contour-index", "line-width"))
         assertEquals(0.85f, paintFloat(layers, "contour-index", "line-opacity"))
-        assertEquals(1f, paintFloat(layers, "contour-50", "line-width"))
-        assertEquals(0.7f, paintFloat(layers, "contour-20", "line-opacity"))
-        assertEquals(0.8f, paintFloat(layers, "contour-10", "line-width"))
+        val fifty = paintFloat(layers, "contour-50", "line-width")
+        val ten = paintFloat(layers, "contour-10", "line-width")
+        assertEquals(1f, fifty)
+        assertEquals(0.6f, ten)
+        assertTrue("the 50 m line must be thicker than the 10 m line", fifty > ten)
+        assertEquals(0.7f, paintFloat(layers, "contour-50", "line-opacity"))
         assertEquals(0.55f, paintFloat(layers, "contour-10", "line-opacity"))
     }
 
     @Test
-    fun theIndexFilterComparesTheBooleanAgainstTrue() {
+    fun theIndexFilterIsTheHundredMetreIndex() {
         val index = ContourLayers.layers(StyleId("standard")).first { it.spec.id.value == "contour-index" }
-        val filter = index.spec.filter!!.jsonArray
+        val parts = index.spec.filter!!.jsonArray
 
-        assertEquals("==", (filter[0] as JsonPrimitive).content)
-        assertEquals("get", ((filter[1] as JsonArray)[0] as JsonPrimitive).content)
-        assertEquals("idx", ((filter[1] as JsonArray)[1] as JsonPrimitive).content)
-        assertEquals("true", (filter[2] as JsonPrimitive).content)
+        assertEquals("all", (parts[0] as JsonPrimitive).content)
+        val idx = parts[1] as JsonArray
+        assertEquals("==", (idx[0] as JsonPrimitive).content)
+        assertEquals("idx", ((idx[1] as JsonArray)[1] as JsonPrimitive).content)
+        assertEquals("true", (idx[2] as JsonPrimitive).content)
+        val hundred = parts[2] as JsonArray
+        assertEquals("100", (((hundred[1] as JsonArray)[2]) as JsonPrimitive).content)
     }
 
     @Test
-    fun aBandAcceptsOnlyNonIndexLinesWhoseElevationDividesByItsInterval() {
-        for (meters in listOf(50, 20, 10)) {
-            val layer = ContourLayers.layers(StyleId("standard")).first { it.spec.id.value == "contour-$meters" }
-            val parts = layer.spec.filter!!.jsonArray
-            assertEquals("all", (parts[0] as JsonPrimitive).content)
-            val notIndex = (parts[1] as JsonArray)
-            assertEquals("!=", (notIndex[0] as JsonPrimitive).content)
-            val modulo = (parts[2] as JsonArray)
-            assertEquals("==", (modulo[0] as JsonPrimitive).content)
-            val division = modulo[1] as JsonArray
-            assertEquals("%", (division[0] as JsonPrimitive).content)
-            assertEquals(meters.toString(), (division[2] as JsonPrimitive).content)
-            assertEquals("0", (modulo[2] as JsonPrimitive).content)
-        }
+    fun aFiftyMetreBandAcceptsOnlyNonIndexFifties() {
+        val layer = ContourLayers.layers(StyleId("standard")).first { it.spec.id.value == "contour-50" }
+        val parts = layer.spec.filter!!.jsonArray
+
+        assertEquals("all", (parts[0] as JsonPrimitive).content)
+        val notIndex = parts[1] as JsonArray
+        assertEquals("!=", (notIndex[0] as JsonPrimitive).content)
+        assertTrue(notIndex[1] is JsonArray)
+        val fifty = parts[2] as JsonArray
+        assertEquals("==", (fifty[0] as JsonPrimitive).content)
+        val division = fifty[1] as JsonArray
+        assertEquals("%", (division[0] as JsonPrimitive).content)
+        assertEquals("50", (division[2] as JsonPrimitive).content)
+        assertEquals("0", (fifty[2] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun aTenMetreBandExcludesTheFiftyMetreLines() {
+        val layer = ContourLayers.layers(StyleId("standard")).first { it.spec.id.value == "contour-10" }
+        val parts = layer.spec.filter!!.jsonArray
+
+        assertEquals("all", (parts[0] as JsonPrimitive).content)
+        val ten = parts[2] as JsonArray
+        assertEquals("==", (ten[0] as JsonPrimitive).content)
+        assertEquals("10", (((ten[1] as JsonArray)[2]) as JsonPrimitive).content)
+        val notFifty = parts[3] as JsonArray
+        assertEquals("!=", (notFifty[0] as JsonPrimitive).content)
+        assertEquals("50", (((notFifty[1] as JsonArray)[2]) as JsonPrimitive).content)
     }
 
     @Test

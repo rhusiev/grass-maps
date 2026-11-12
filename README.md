@@ -626,7 +626,7 @@ The map resolves its sources in a fixed order:
 1. exactly one installed region package whose `current` pointer, manifest and
    declared map/contours files validate, read from the app's region store;
 2. the whole-oblast archive `lviv-protomaps.pmtiles` (plus
-   `lviv-contours-20m.pmtiles`) pushed to the app's external files directory;
+   `lviv-contours-10m.pmtiles`) pushed to the app's external files directory;
 3. the small T-0015 fixture (`fixture-mini-map.pmtiles`) copied out of the
    debug assets.
 
@@ -677,7 +677,7 @@ size:
 The Standard and fixture profiles default to contours off, which is how their
 references stay valid; the script always passes that state to the app. The
 contour references in `test-data/map-goldens/contours/` are the fixture centre
-at z12, z13 and z14 with the committed 20 m archive on, in all four variants
+at z12, z13 and z14 with the committed 10 m archive on, in all four variants
 (`light`, `dark`, `touring-light`, `touring-dark`):
 
 ```sh
@@ -765,16 +765,16 @@ loop is unexercised on a device.
 (T-0417). The manifest declares the component need; the app mounts
 `contours.pmtiles` from the installed region, the pushed whole-oblast archive
 or the committed fixture. The plugin publishes one `map.layers` provider and no
-base style: it supplies five overlay layers in the `Overlays` slot, and the host
+base style: it supplies four overlay layers in the `Overlays` slot, and the host
 adds them under `map.contours` so turning the overlay off removes exactly those
-layers.
+layers. The ladder is cumulative: z12 adds the 100 m index, z13 adds the 50 m
+lines to it, and z14 adds the 10 m lines to both.
 
 | Layer | Standard | Touring | Width / opacity |
 |---|---|---|---|
-| `contour-50` | z12-z13 | z11-z12 | 1.0 dp / 0.7 |
-| `contour-20` | z13-z14 | z12-z13 | 1.0 dp / 0.7 |
-| `contour-10` | z14+ | z13+ | 0.8 dp / 0.55 |
-| `contour-index` | z12+ | z11+ | 1.3 dp / 0.85 |
+| `contour-index` (100 m) | z12+ | z11+ | 1.3 dp / 0.85 |
+| `contour-50` | z13+ | z12+ | 1.0 dp / 0.7 |
+| `contour-10` | z14+ | z13+ | 0.6 dp / 0.55 |
 | `contour-label` | z14+ | z13+ | 10 pt italic, 1.5 halo |
 
 The palette is map-style.md section 3: minor/index `#dcc2a6`/`#c9a27c` in
@@ -783,17 +783,31 @@ Touring light and `#24403a`/`#30554c` in Touring dark. Label text and halo come
 from the same section's label pair. The Touring contour references also use the
 Touring base palette and its one-zoom-earlier threshold from
 `plugins/style-standard`; T-0109 still owns the full Touring layer list, its
-dash ladder and the styles button. The band layers filter `ele` modulo 50, 20
-and 10, and each index layer filters the archive's Boolean `idx == true`, so one
-style serves a 50 m, 20 m or 10 m pack without new layers.
+dash ladder and the styles button. The 50 m band filters `ele % 50 == 0` and
+excludes the 100 m index; the 10 m band filters `ele % 10 == 0` and excludes the
+50 m lines, so the coarser line is never drawn twice. The index and label
+layers filter the archive's Boolean `idx == true`, which the pack sets only on
+100 m lines.
 
-The Lviv pack and the committed fixture are 20 m packs built from Copernicus
-DEM GLO-30 averaged to 90 m; the fixture manifest records
-`lviv-90m-20m.pmtiles` and its sha256. Those packs carry index lines at z12-z13
-and the 20 m lines at z14, so the z12 and z13 goldens show index lines and the
-z14 golden shows the 20 m band. The app packages a byte copy of the fixture
-component as `app/src/main/assets/fixture-mini-contours.pmtiles`;
-`FixtureContoursAssetTest` fails if the copy and
+The Lviv pack and the committed fixture are built from Copernicus DEM GLO-30
+averaged to 90 m, with `gdal_contour -i 10`. The pack stores 100 m index lines
+from z11, 50 m lines from z12 and all 10 m lines from z13; the style then draws
+100 / 50 / 10 m at z12 / z13 / z14 in Standard and one zoom earlier in Touring.
+The fixture manifest records `lviv-90m-10m.pmtiles` and its sha256, and the
+committed component is 40,899 B. The Lviv component is 19,164,271 B,
+`aee7e909…`; the full built archive is 20,858,533 B, `d5a1ba5d…`, with 207,208
+written features. Counted over the Lviv pack bbox, the archive holds 4,018
+features at z11, 9,352 at z12, 69,498 at z13 and 109,297 at z14 (tile-clipped
+records; a line crossing several tiles is counted once per tile). On 2026-11-12,
+8 cores under `gm-data`, `gdal_contour` took 14.5 s and Planetiler 9.3 s.
+
+The 10 m lines are resampled detail from the 90 m DEM, not 90 m ground truth:
+the 3 arcsec mean removes the 30 m source's tree and building noise but cannot
+recover detail finer than its cell. They are useful for shape and spacing, not
+for surveying. The same note belongs to any elevation or slope read from the
+grid. The app packages a byte copy of the fixture component as
+`app/src/main/assets/fixture-mini-contours.pmtiles`; `FixtureContoursAssetTest`
+fails if the copy and
 `test-data/regions/fixture-mini/2026-11-03-1/contours.pmtiles` diverge.
 
 The switch persists in `settings/contours.json` and defaults to on.
@@ -802,8 +816,7 @@ The switch persists in `settings/contours.json` and defaults to on.
 The golden harness passes `--ez map.contours.enabled true|false` at launch
 without writing the file, which keeps a capture deterministic. The standard and
 fixture golden profiles run with contours off so their references stay valid;
-the `contours` profile runs them on at the fixture centre in both light and
-dark.
+the `contours` profile runs them on at the fixture centre in all four variants.
 
 ## Map controls
 

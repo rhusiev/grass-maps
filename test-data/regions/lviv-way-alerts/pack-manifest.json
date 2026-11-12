@@ -17,8 +17,12 @@
       "sha256": "ffd8cbdb937edc219dc82c0f15b64d37b89f76af0df0b5f8312f9e29ac5280db"
     },
     "contoursSource": {
-      "archive": "lviv-contours-20m.pmtiles",
-      "sha256": "f82cc72d995efd69ed297874525aefc26f6117ee3e63f0e33d32895178937c8c"
+      "archive": "lviv-90m-10m.pmtiles",
+      "sha256": "d5a1ba5dbe28b5fbeccf6f65b04379282856f0c015b46fccc90129cc05bb9191",
+      "intervalMeters": 10,
+      "dem": "Copernicus DEM GLO-30",
+      "resample": "3 arcsec cells, mean of the 1 arcsec source pixels covering each cell",
+      "detail": "10 m lines are resampled detail from the 90 m DEM, not 90 m ground truth"
     },
     "elevationSource": {
       "dataset": "Copernicus DEM GLO-30",
@@ -120,12 +124,12 @@
     },
     {
       "kind": "contours",
-      "file": "lviv-contours-20m.pmtiles",
+      "file": "lviv-contours-10m.pmtiles",
       "format": "pmtiles",
       "formatVersion": 3,
       "version": "2026-11-12-1",
-      "bytes": 23594544,
-      "sha256": "f82cc72d995efd69ed297874525aefc26f6117ee3e63f0e33d32895178937c8c",
+      "bytes": 19164271,
+      "sha256": "aee7e90924f0e487af0118f4a8539a95e981861fc648a020b460de7f99c762f4",
       "standIn": false,
       "zoomLevels": [
         9,

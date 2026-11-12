@@ -31,7 +31,7 @@ class RegionManifestParserTest {
         assertEquals(13, manifest.components.size)
         assertEquals(listOf(23.94, 49.94, 23.96, 49.96), manifest.pipeline?.bbox)
         assertEquals(
-            setOf("ukraine-final.pmtiles", "lviv-90m-20m.pmtiles", "way-alerts.osm.pbf", "hiking-relations.osm.pbf"),
+            setOf("ukraine-final.pmtiles", "lviv-90m-10m.pmtiles", "way-alerts.osm.pbf", "hiking-relations.osm.pbf"),
             manifest.pipeline
                 ?.sources
                 ?.map { it.archive }

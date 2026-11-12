@@ -84,7 +84,10 @@ class RouteWarningScannerTest {
                 warnings[0].profiles,
             )
             assertEquals(setOf(RouteProfile.Walk, RouteProfile.Hike), warnings[1].profiles)
-            assertEquals(setOf(RouteProfile.Hike, RouteProfile.Bike), warnings[2].profiles)
+            assertEquals(
+                setOf(RouteProfile.Walk, RouteProfile.Hike, RouteProfile.Bike),
+                warnings[2].profiles,
+            )
             assertEquals(
                 setOf(RouteProfile.Walk, RouteProfile.Hike, RouteProfile.Bike),
                 warnings[3].profiles,
@@ -96,7 +99,7 @@ class RouteWarningScannerTest {
         }
 
     @Test
-    fun theWalkProfileDropsTheRailwayCrossing() =
+    fun theWalkProfileListsTheRailwayCrossing() =
         runTest {
             val warnings = warnings(profile = RouteProfile.Walk)
 
@@ -104,6 +107,7 @@ class RouteWarningScannerTest {
                 listOf(
                     RouteWarningKind.Ford,
                     RouteWarningKind.Barrier,
+                    RouteWarningKind.RailwayCrossing,
                     RouteWarningKind.Steps,
                     RouteWarningKind.PrivateWay,
                 ),

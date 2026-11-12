@@ -1643,16 +1643,18 @@ component does not carry either one.
 | Ford | yes | yes | yes | region node or way |
 | Steps | yes | yes | yes | route segment `highway=steps` |
 | Barrier | yes | yes | no | region node |
-| Railway crossing | no | yes | yes | region node |
+| Railway crossing | yes | yes | yes | region node |
 | Private way | yes | yes | yes | route segment `access=private` |
 
 A barrier is dropped for a bike because the region component keeps gates,
 stiles and similar passable barriers but drops bollards and kerbs, and it does
 not carry the barrier's own value. A bike can open a gate or lift the bike over
 a stile, so the bike list leaves the whole kind out instead of warning on every
-openable gate. A railway crossing is not listed for walk because the product
-scope gives crossing warnings to bike and hike, the same split the way-alert
-distances use. Car is outside v1 and is invalid input to the scanner.
+openable gate. A railway crossing applies to walk as well: the round-5
+navigation design gives walking crossing warnings, and a crossing is a hazard at
+any speed. The list has no alert distance of its own; the along-route distance
+is the only distance a warning carries. Car is outside v1 and is invalid input
+to the scanner.
 
 Each warning carries its kind, its distance along the route, the OSM element
 type and id when a region feature supplied it, and the profiles it applies to.

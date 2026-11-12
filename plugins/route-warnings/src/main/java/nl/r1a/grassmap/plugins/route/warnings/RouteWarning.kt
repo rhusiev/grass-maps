@@ -69,16 +69,17 @@ data class RouteWarning(
  * | Ford | yes | yes | yes |
  * | Steps | yes | yes | yes |
  * | Barrier | yes | yes | no |
- * | Railway crossing | no | yes | yes |
+ * | Railway crossing | yes | yes | yes |
  * | Private way | yes | yes | yes |
  *
  * A barrier is dropped for a bike because the region component keeps gates,
  * stiles and similar passable barriers but drops bollards and kerbs, and it
  * does not carry the barrier's own value. A bike can open a gate or lift the
  * bike over a stile, so the bike list does not warn on the whole kind rather
- * than warn on every openable gate. A railway crossing is not listed for walk
- * because the product scope gives crossing warnings to bike and hike, the same
- * split the way-alert distances use.
+ * than warn on every openable gate. A railway crossing applies to walk as well:
+ * the round-5 navigation design gives walking crossing warnings, and a crossing
+ * is a hazard at any speed. This list has no alert distance of its own; the
+ * along-route distance is the only distance a warning carries.
  */
 object RouteWarningPolicy {
     /** The corridor every region feature must lie in to be a route warning. */
@@ -99,7 +100,7 @@ object RouteWarningPolicy {
 
             RouteWarningKind.Barrier -> FOOT
 
-            RouteWarningKind.RailwayCrossing -> setOf(RouteProfile.Hike, RouteProfile.Bike)
+            RouteWarningKind.RailwayCrossing -> FOOT_AND_BIKE
         }
 
     fun appliesTo(

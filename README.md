@@ -1430,10 +1430,12 @@ frame, compared with the map goldens' 108x192 mean-RGB block grid and the same
 ```
 
 The goldens job runs the same script after the map sets. A live emulator replay
-with `core.nav.start` and `test-data/navigation/nav-route.json` is the
-end-to-end check: it shows the next and second turn, the next stop, current
-speed and an alert banner, and every control is reachable in the expanded and
-settings sheets.
+with `core.nav.start` and `test-data/navigation/nav-route.json` shows the next
+and second turn and the current speed; `screen-live-route.json` adds the next
+stop. The alert banner is exercised by the deterministic fixture and the alert
+host tests, because the debug replay's Lviv line has no mounted way-alert data.
+Every control is reachable in the expanded and settings sheets, and the pan
+recentre button is exercised on the emulator.
 
 ## Navigation service and location lifecycle
 

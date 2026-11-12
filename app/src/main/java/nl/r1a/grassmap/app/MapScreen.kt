@@ -54,6 +54,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nl.r1a.grassmap.alerts.AlertKind
+import nl.r1a.grassmap.alerts.AlertSettings
 import nl.r1a.grassmap.core.services.ButtonLayoutStore
 import nl.r1a.grassmap.core.services.DEFAULT_PROFILE
 import nl.r1a.grassmap.core.services.MapControlCommands
@@ -407,7 +408,13 @@ private fun MapContent(
             navigationCamera.resetCamera()
         }
     }
-    val navigationAlerts by container.navigationAlertBanners.state.collectAsState()
+    val navigationAlerts by
+        produceState(initialValue = NavigationAlertState(), navigationActive) {
+            if (navigationActive) {
+                value = NavigationAlertState()
+                container.navigationAlertBanners.state.collect { value = it }
+            }
+        }
     LaunchedEffect(navigationActive) {
         if (!navigationActive) {
             return@LaunchedEffect
@@ -417,7 +424,13 @@ private fun MapContent(
             container.navigationAlertBanners.onTick()
         }
     }
-    val alertSettings by container.alerts.settings.collectAsState()
+    val alertSettings by
+        produceState(initialValue = AlertSettings.ALL_OFF, navigationActive) {
+            if (navigationActive) {
+                value = AlertSettings.ALL_OFF
+                container.alerts.settings.collect { value = it }
+            }
+        }
     val speedCurrentFlow =
         remember(container) {
             container.streamAccess.subscribe<SpeedWidgetValue>(InfoWidgetsContract.speedCurrentStream)

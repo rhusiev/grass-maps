@@ -92,6 +92,7 @@ class DebugApplication : GrassMapsApplication() {
                     contours = { container.contours },
                     contoursEnabled = { container.contoursSettings.isEnabled() },
                 ),
+                ShowNavigationScreenCommand(session, container.navigationScreenFixture),
             ) + placeCardCommands { container } + favouritesListsCommands()
         }
 

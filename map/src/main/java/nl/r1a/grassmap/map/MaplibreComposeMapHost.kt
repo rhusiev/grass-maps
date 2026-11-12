@@ -10,6 +10,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -245,6 +247,7 @@ fun MapSurfaceView(
     distanceByTap: DistanceByTapSetting = DistanceByTapSetting { false },
     onDistanceMeasured: (Double) -> Unit = {},
     onPointSelected: (GeoPoint) -> Unit = {},
+    onManualPan: () -> Unit = {},
 ) {
     val interactions = remember { MapGestures.interactions() }
     val uiOptions = remember { MapGestures.uiOptions() }
@@ -252,6 +255,7 @@ fun MapSurfaceView(
     val setting = rememberUpdatedState(distanceByTap)
     val distanceSink = rememberUpdatedState(onDistanceMeasured)
     val selectionSink = rememberUpdatedState(onPointSelected)
+    val panSink = rememberUpdatedState(onManualPan)
     val projector = remember(surface) { surface.screenProjector() }
     MaplibreMap(
         modifier =
@@ -278,6 +282,25 @@ fun MapSurfaceView(
                 }.pointerInput(surface) {
                     detectLongPress { point ->
                         projector.geoPointAt(point)?.let { selected -> selectionSink.value(selected) }
+                    }
+                }.pointerInput(surface) {
+                    // Observe a one-finger drag for the navigation camera
+                    // without consuming it: the map's own pan still runs.
+                    awaitPointerEventScope {
+                        var panning = false
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            val pressed = event.changes.count { change -> change.pressed }
+                            if (event.type == PointerEventType.Move && pressed == 1) {
+                                val change = event.changes.first()
+                                if (change.previousPressed && change.position != change.previousPosition && !panning) {
+                                    panning = true
+                                    panSink.value()
+                                }
+                            } else if (pressed == 0) {
+                                panning = false
+                            }
+                        }
                     }
                 },
         state = surface.state,

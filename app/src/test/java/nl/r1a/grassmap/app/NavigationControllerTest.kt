@@ -140,7 +140,7 @@ class NavigationControllerTest {
         }
 
     @Test
-    fun arrivalEndsTheSessionAndStopsTheService() =
+    fun arrivalEndsTheSessionAndKeepsTheNotificationUntilDismissed() =
         runTest {
             val harness = harness(backgroundScope)
             harness.controller.start(ROUTE, RouteProfile.Walk).valueOrFail()
@@ -155,8 +155,27 @@ class NavigationControllerTest {
             advanceUntilIdle()
 
             assertEquals(NavigationPhase.Arrived, harness.controller.state.value.phase)
-            assertEquals(1, harness.service.stops)
+            assertEquals(0, harness.service.stops)
             assertFalse(harness.controller.isActive)
+
+            harness.controller.dismiss()
+            assertEquals(NavigationPhase.Idle, harness.controller.state.value.phase)
+            assertEquals(1, harness.service.stops)
+        }
+
+    @Test
+    fun dismissLeavesARunningSessionAlone() =
+        runTest {
+            val harness = harness(backgroundScope)
+            harness.controller.start(ROUTE, RouteProfile.Walk).valueOrFail()
+            runCurrent()
+
+            harness.controller.dismiss()
+
+            assertEquals(NavigationPhase.Following, harness.controller.state.value.phase)
+            harness.controller.stop()
+            runCurrent()
+            advanceUntilIdle()
         }
 
     private fun harness(

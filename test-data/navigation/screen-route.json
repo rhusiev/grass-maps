@@ -1,0 +1,44 @@
+{
+  "geometry": [
+    {"lat": 49.9500, "lon": 23.9500},
+    {"lat": 49.9490, "lon": 23.9480},
+    {"lat": 49.9470, "lon": 23.9450},
+    {"lat": 49.9450, "lon": 23.9420}
+  ],
+  "distanceMeters": 1200.0,
+  "durationSeconds": 960.0,
+  "segments": [
+    {"startIndex": 0, "endIndex": 2, "distanceMeters": 450.0, "durationSeconds": 360.0, "attributes": {}},
+    {"startIndex": 2, "endIndex": 4, "distanceMeters": 750.0, "durationSeconds": 600.0, "attributes": {}}
+  ],
+  "instructions": [
+    {
+      "text": "Continue along Pidvalna St",
+      "streetName": "Pidvalna St",
+      "distanceAlongRouteMeters": 0.0,
+      "durationSeconds": 120.0,
+      "maneuver": "8"
+    },
+    {
+      "text": "Turn left onto Pidvalna St",
+      "streetName": "Pidvalna St",
+      "distanceAlongRouteMeters": 180.0,
+      "durationSeconds": 120.0,
+      "maneuver": "15"
+    },
+    {
+      "text": "Turn right onto Ruska St",
+      "streetName": "Ruska St",
+      "distanceAlongRouteMeters": 620.0,
+      "durationSeconds": 240.0,
+      "maneuver": "10"
+    },
+    {
+      "text": "Arrive at the destination",
+      "streetName": null,
+      "distanceAlongRouteMeters": 1200.0,
+      "durationSeconds": 480.0,
+      "maneuver": "4"
+    }
+  ]
+}

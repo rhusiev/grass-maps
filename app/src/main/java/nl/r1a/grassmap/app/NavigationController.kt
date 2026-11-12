@@ -37,9 +37,10 @@ import java.util.Locale
  * A session is started with a route and a profile. It runs on [scope] while the
  * process lives; the navigation foreground service keeps the process and
  * location alive when the activity leaves the foreground. A session ends on
- * arrival, on a fix-flow failure or on [stop], and every ending stops and
- * removes the service, which is what releases location when the activity is
- * gone.
+ * arrival, on a fix-flow failure or on [stop]. Arrival ends the location
+ * session but keeps the notification's Stop action until [dismiss] or the
+ * notification's own Stop; every other ending stops and removes the service,
+ * which is what releases location when the activity is gone.
  *
  * Start is idempotent: a second start while a session exists changes nothing
  * and reports that no new session began. Stop is idempotent too, and stopping
@@ -111,6 +112,7 @@ class NavigationController(
                     activeRoute = route,
                     remainingDistanceMeters = route.distanceMeters,
                     remainingDurationSeconds = route.durationSeconds,
+                    profile = profile,
                 )
             val started =
                 scope.launch(start = CoroutineStart.LAZY) {
@@ -160,6 +162,23 @@ class NavigationController(
         val active = synchronized(lock) { job } ?: return false
         active.cancel()
         return true
+    }
+
+    /**
+     * Clears a finished trip's last state so the navigation screen closes on
+     * Done. A running session is left alone; End and Stop own that path.
+     */
+    fun dismiss() {
+        synchronized(lock) {
+            if (job != null) {
+                return
+            }
+            val current = mutableState.value
+            if (current.phase == NavigationPhase.Arrived || current.phase == NavigationPhase.Stopped) {
+                mutableState.value = NavigationState()
+                service.stop()
+            }
+        }
     }
 
     /**
@@ -265,12 +284,16 @@ class NavigationController(
             }
             control = null
             val current = mutableState.value
-            if (current.phase != NavigationPhase.Arrived) {
+            if (current.phase == NavigationPhase.Arrived) {
+                // The arrival notification keeps its Stop action until the user
+                // dismisses it; the location session itself has ended.
+                log("navigation-arrival-notification-kept")
+            } else {
                 mutableState.value = current.copy(phase = NavigationPhase.Stopped)
+                service.stop()
+                log("navigation-service-stop phase=${mutableState.value.phase}")
             }
-            service.stop()
             job = null
-            log("navigation-service-stop phase=${mutableState.value.phase}")
         }
     }
 

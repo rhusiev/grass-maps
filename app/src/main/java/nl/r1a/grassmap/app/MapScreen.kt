@@ -1,10 +1,12 @@
 package nl.r1a.grassmap.app
 
+import android.app.Activity
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +28,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +53,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import nl.r1a.grassmap.alerts.AlertKind
 import nl.r1a.grassmap.core.services.ButtonLayoutStore
 import nl.r1a.grassmap.core.services.DEFAULT_PROFILE
 import nl.r1a.grassmap.core.services.MapControlCommands
@@ -62,6 +66,9 @@ import nl.r1a.grassmap.map.MapSurfaceView
 import nl.r1a.grassmap.map.PuckAgeFormatter
 import nl.r1a.grassmap.map.prepareMapEngine
 import nl.r1a.grassmap.map.rememberMapSurface
+import nl.r1a.grassmap.navigation.NavigationCameraController
+import nl.r1a.grassmap.navigation.NavigationPhase
+import nl.r1a.grassmap.navigation.RouteRelation
 import nl.r1a.grassmap.places.SEARCH_SCREEN_COMMAND
 import nl.r1a.grassmap.places.SearchScreenSession
 import nl.r1a.grassmap.places.SearchScreenStatus
@@ -84,13 +91,23 @@ import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleId
 import nl.r1a.grassmap.plugin.api.model.StyleSpec
+import nl.r1a.grassmap.plugin.api.model.TrackingMode
 import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.model.WebMercator
 import nl.r1a.grassmap.plugin.api.provider.MapLayerContract
 import nl.r1a.grassmap.plugin.api.provider.MapLayerProvider
 import nl.r1a.grassmap.plugin.api.provider.PlaceSource
+import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue
+import nl.r1a.grassmap.plugin.ui.api.NavigationScreenStatus
 import nl.r1a.grassmap.plugins.contours.ContoursLayerPanel
 import nl.r1a.grassmap.plugins.favourites.ui.FavouritesUiContract
+import nl.r1a.grassmap.plugins.guidance.ui.GuidanceInput
+import nl.r1a.grassmap.plugins.guidance.ui.GuidancePanelContent
+import nl.r1a.grassmap.plugins.guidance.ui.GuidanceStatus
+import nl.r1a.grassmap.plugins.guidance.ui.guidancePanel
+import nl.r1a.grassmap.plugins.info.widgets.InfoWidgetsContract
 import nl.r1a.grassmap.plugins.map.controls.CameraMode
 import nl.r1a.grassmap.plugins.map.controls.ScaleBar
 import nl.r1a.grassmap.plugins.map.controls.ScaleBarReading
@@ -106,12 +123,16 @@ import nl.r1a.grassmap.ui.shell.ControlButton
 import nl.r1a.grassmap.ui.shell.FavouritesListsHost
 import nl.r1a.grassmap.ui.shell.MapControlBar
 import nl.r1a.grassmap.ui.shell.MapScaleBar
+import nl.r1a.grassmap.ui.shell.NavigationAlertSwitch
+import nl.r1a.grassmap.ui.shell.NavigationScreenHost
+import nl.r1a.grassmap.ui.shell.NavigationSheet
 import nl.r1a.grassmap.ui.shell.PlaceCardHost
 import nl.r1a.grassmap.ui.shell.RoutePlanPanel
 import nl.r1a.grassmap.ui.shell.SearchScreenHost
 import nl.r1a.grassmap.ui.shell.routePlanTurns
 import nl.r1a.grassmap.ui.shell.routeTurnStep
 import java.io.File
+import java.time.ZoneId
 import java.util.Locale
 
 private val STYLE_PLUGIN = PluginId("style.standard")
@@ -131,6 +152,7 @@ private const val LABEL_CLEAR_FONT_SP = 18
 private const val LABEL_CLEAR_PADDING_DP = 4
 private const val CLEAR_GLYPH = "×"
 private const val DISTANCE_BADGE_MILLIS = 4_000L
+private const val BANNER_TICK_MILLIS = 1_000L
 private const val CONTOURS_PANEL_TOP_DP = 80
 private const val METRE_DECIMALS = 1
 private const val KILOMETRE_DECIMALS = 2
@@ -351,9 +373,172 @@ private fun MapContent(
         val active = store ?: return@LaunchedEffect
         layout = withContext(Dispatchers.IO) { active.load(DEFAULT_PROFILE) }
     }
+    val navigationState by container.navigation.state.collectAsState()
+    val navigationFixture by container.navigationScreenFixture.state.collectAsState()
+    val activeNavigation = navigationFixture?.state ?: navigationState
+    val navigationActive = navigationFixture != null || activeNavigation.phase.isActiveNavigation()
+    val navigationCamera =
+        remember(surface) {
+            NavigationCameraController(
+                host = { surface.host },
+                log = { message -> Log.i(TAG, message) },
+            )
+        }
+    val navigationCameraSettings by navigationCamera.settings.collectAsState()
+    LaunchedEffect(navigationCamera) {
+        container.navigation.state.collect { state -> navigationCamera.onState(state) }
+    }
+    LaunchedEffect(navigationActive) {
+        if (navigationActive) {
+            // A new trip starts from the profile defaults; the sheet's camera
+            // and alert changes are this-trip overrides.
+            navigationCamera.setAutoZoom(true)
+            navigationCamera.setAutoCentre(true)
+            navigationCamera.setTilt(true)
+            AlertKind.entries.forEach { kind -> container.alerts.setEnabled(kind, false) }
+            surface.host.setTrackingMode(TrackingMode.Free).onFailure { error ->
+                Log.w(TAG, "navigation tracking not set: $error")
+            }
+        } else {
+            container.locationController.syncToHost()
+            navigationCamera.resetCamera()
+        }
+    }
+    val navigationAlerts by container.navigationAlertBanners.state.collectAsState()
+    LaunchedEffect(navigationActive) {
+        if (!navigationActive) {
+            return@LaunchedEffect
+        }
+        while (true) {
+            delay(BANNER_TICK_MILLIS)
+            container.navigationAlertBanners.onTick()
+        }
+    }
+    val alertSettings by container.alerts.settings.collectAsState()
+    val speedCurrentFlow =
+        remember(container) {
+            container.streamAccess.subscribe<SpeedWidgetValue>(InfoWidgetsContract.speedCurrentStream)
+        }
+    val speedAverageFlow =
+        remember(container) {
+            container.streamAccess.subscribe<SpeedWidgetValue>(InfoWidgetsContract.speedAverageStream)
+        }
+    val speedMaxFlow =
+        remember(container) {
+            container.streamAccess.subscribe<SpeedWidgetValue>(InfoWidgetsContract.speedMaxStream)
+        }
+    val speedCurrent by
+        produceState(initialValue = SpeedWidgetValue(null), navigationActive) {
+            if (navigationActive) {
+                value = SpeedWidgetValue(null)
+                speedCurrentFlow.collect { value = it }
+            }
+        }
+    val speedAverage by
+        produceState(initialValue = SpeedWidgetValue(null), navigationActive) {
+            if (navigationActive) {
+                value = SpeedWidgetValue(null)
+                speedAverageFlow.collect { value = it }
+            }
+        }
+    val speedMax by
+        produceState(initialValue = SpeedWidgetValue(null), navigationActive) {
+            if (navigationActive) {
+                value = SpeedWidgetValue(null)
+                speedMaxFlow.collect { value = it }
+            }
+        }
+    var navigationSheet by remember { mutableStateOf(NavigationSheet.Collapsed) }
+    var navigationDestination by rememberSaveable { mutableStateOf<String?>(null) }
+    var navigationNextStop by rememberSaveable { mutableStateOf<String?>(null) }
+    var cameraPanned by remember { mutableStateOf(false) }
+    LaunchedEffect(navigationActive, navigationFixture) {
+        if (!navigationActive) {
+            navigationSheet = NavigationSheet.Collapsed
+            cameraPanned = false
+        } else {
+            navigationFixture?.let { fixture -> navigationSheet = fixture.sheet }
+        }
+    }
+    LaunchedEffect(navigationCameraSettings.autoCentre) {
+        if (navigationCameraSettings.autoCentre) {
+            cameraPanned = false
+        }
+    }
+    LaunchedEffect(cameraPanned, navigationCameraSettings.autoCentre) {
+        if (cameraPanned && navigationCameraSettings.autoCentre) {
+            delay(NavigationCameraController.RECENTRE_DELAY_MILLIS)
+            cameraPanned = false
+        }
+    }
+    val guidance =
+        remember(activeNavigation, container.strings) {
+            val route = activeNavigation.activeRoute
+            if (route == null) {
+                null
+            } else {
+                val total = route.distanceMeters
+                val along = (total - activeNavigation.remainingDistanceMeters).coerceIn(0.0, total)
+                val status =
+                    when {
+                        activeNavigation.phase == NavigationPhase.Arrived -> GuidanceStatus.Arrived
+                        activeNavigation.relation == RouteRelation.OffRoute -> GuidanceStatus.OffRoute
+                        else -> GuidanceStatus.Following
+                    }
+                guidancePanel(GuidanceInput(route, along, status), container.strings)
+            }
+        }
+    val navigationScreen =
+        remember(
+            activeNavigation,
+            guidance,
+            speedCurrent,
+            speedAverage,
+            speedMax,
+            navigationAlerts,
+            navigationFixture,
+            navigationCameraSettings,
+            alertSettings,
+            navigationDestination,
+            navigationNextStop,
+        ) {
+            val fixture = navigationFixture
+            navigationScreenState(
+                NavigationScreenInput(
+                    state = activeNavigation,
+                    panel = guidance,
+                    speedCurrentMetersPerSecond =
+                        fixture?.speedCurrentMetersPerSecond ?: speedCurrent.speedMetersPerSecond,
+                    speedAverageMetersPerSecond =
+                        fixture?.speedAverageMetersPerSecond ?: speedAverage.speedMetersPerSecond,
+                    speedMaxMetersPerSecond =
+                        fixture?.speedMaxMetersPerSecond ?: speedMax.speedMetersPerSecond,
+                    alerts = fixture?.alerts ?: navigationAlerts.banners.map { it.banner },
+                    destination = fixture?.destination ?: navigationDestination,
+                    nextStopName = fixture?.nextStopName ?: navigationNextStop,
+                    signalLost = fixture?.signalLost ?: navigationAlerts.signalLost,
+                    camera = navigationCameraSettings,
+                    alertSettings = alertSettings,
+                ),
+                container.strings,
+                Locale.getDefault(),
+                ZoneId.systemDefault(),
+            ).copy(recentreVisible = cameraPanned)
+        }
+    val dark = navigationFixture?.dark ?: isSystemInDarkTheme()
+    val activity = context as? Activity
+    DisposableEffect(navigationActive, navigationScreen.status) {
+        if (!navigationActive || activity == null) {
+            onDispose { }
+        } else {
+            activity.setNavigationStatusBar(navigationScreen.status)
+            onDispose { activity.restoreStatusBar() }
+        }
+    }
     val drawnRoute = remember(plan.selected) { plan.selectedRoute() }
-    LaunchedEffect(drawnRoute) {
-        surface.host.setRoute(drawnRoute).onFailure { error ->
+    val routeToDraw = if (navigationActive) activeNavigation.activeRoute else drawnRoute
+    LaunchedEffect(routeToDraw) {
+        surface.host.setRoute(routeToDraw).onFailure { error ->
             Log.w(TAG, "route not drawn: $error")
         }
     }
@@ -381,8 +566,14 @@ private fun MapContent(
                     scope.launch { setPlanPoint(container, role, point, label = null) }
                 }
             },
+            onManualPan = {
+                if (navigationActive) {
+                    cameraPanned = true
+                    navigationCamera.onManualPan()
+                }
+            },
         )
-        if (selectedRows.isNotEmpty()) {
+        if (!navigationActive && selectedRows.isNotEmpty()) {
             SelectedPointLabel(
                 rows = selectedRows,
                 clearDescription = stringResource(R.string.point_info_clear_description),
@@ -394,78 +585,86 @@ private fun MapContent(
                         .padding(BAR_PADDING_DP.dp),
             )
         }
-        ContoursLayerPanel(
-            enabled = contoursEnabled,
-            onEnabledChange = { enabled ->
-                scope.launch {
-                    withContext(Dispatchers.IO) {
-                        container.contoursSettings.setEnabled(enabled)
-                    }.onFailure { error ->
-                        Log.w(TAG, "contour toggle not saved: $error")
-                    }
-                }
-            },
-            modifier =
-                Modifier
-                    .align(Alignment.TopStart)
-                    .statusBarsPadding()
-                    .padding(top = CONTOURS_PANEL_TOP_DP.dp, start = BAR_PADDING_DP.dp),
-        )
-        MapScaleOverlay(
-            surface = surface,
-            settings = unitStore,
-            modifier =
-                Modifier
-                    .align(Alignment.BottomEnd)
-                    .navigationBarsPadding()
-                    .padding(BAR_PADDING_DP.dp),
-        )
-        MapControlBar(
-            layout = controlButtons(layout, context, cameraMode),
-            labels = controlBarLabels(context),
-            isEditing = isEditing,
-            onInvoke = { id ->
-                scope.launch {
-                    container.commandBus.invoke(id).onFailure { error ->
-                        Log.w(TAG, "control $id failed: $error")
-                        if (error == AppError.PermissionDenied) {
-                            Toast.makeText(context, R.string.location_permission_denied, Toast.LENGTH_LONG).show()
+        if (!navigationActive) {
+            ContoursLayerPanel(
+                enabled = contoursEnabled,
+                onEnabledChange = { enabled ->
+                    scope.launch {
+                        withContext(Dispatchers.IO) {
+                            container.contoursSettings.setEnabled(enabled)
+                        }.onFailure { error ->
+                            Log.w(TAG, "contour toggle not saved: $error")
                         }
                     }
-                }
-            },
-            onMove = onMove@{ id, delta ->
-                val activeWriter = writer ?: return@onMove
-                val moved = moveControl(layout, id, delta)
-                if (moved == layout) {
-                    return@onMove
-                }
-                layout = moved
-                scope.launch {
-                    activeWriter.saveLatest().onFailure { error ->
-                        Log.w(TAG, "layout not saved: $error")
-                    }
-                }
-            },
-            onEditingChange = { isEditing = it },
-            modifier =
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .statusBarsPadding()
-                    .padding(BAR_PADDING_DP.dp),
-        )
-        distance?.let { shown ->
-            DistanceBadge(
-                text = formatDistance(context, shown),
+                },
                 modifier =
                     Modifier
-                        .align(Alignment.BottomCenter)
+                        .align(Alignment.TopStart)
+                        .statusBarsPadding()
+                        .padding(top = CONTOURS_PANEL_TOP_DP.dp, start = BAR_PADDING_DP.dp),
+            )
+        }
+        if (!navigationActive) {
+            MapScaleOverlay(
+                surface = surface,
+                settings = unitStore,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomEnd)
                         .navigationBarsPadding()
                         .padding(BAR_PADDING_DP.dp),
             )
-            LaunchedEffect(shown) {
-                delay(DISTANCE_BADGE_MILLIS)
-                distance = null
+        }
+        if (!navigationActive) {
+            MapControlBar(
+                layout = controlButtons(layout, context, cameraMode),
+                labels = controlBarLabels(context),
+                isEditing = isEditing,
+                onInvoke = { id ->
+                    scope.launch {
+                        container.commandBus.invoke(id).onFailure { error ->
+                            Log.w(TAG, "control $id failed: $error")
+                            if (error == AppError.PermissionDenied) {
+                                Toast.makeText(context, R.string.location_permission_denied, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                },
+                onMove = onMove@{ id, delta ->
+                    val activeWriter = writer ?: return@onMove
+                    val moved = moveControl(layout, id, delta)
+                    if (moved == layout) {
+                        return@onMove
+                    }
+                    layout = moved
+                    scope.launch {
+                        activeWriter.saveLatest().onFailure { error ->
+                            Log.w(TAG, "layout not saved: $error")
+                        }
+                    }
+                },
+                onEditingChange = { isEditing = it },
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .statusBarsPadding()
+                        .padding(BAR_PADDING_DP.dp),
+            )
+        }
+        if (!navigationActive) {
+            distance?.let { shown ->
+                DistanceBadge(
+                    text = formatDistance(context, shown),
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding()
+                            .padding(BAR_PADDING_DP.dp),
+                )
+                LaunchedEffect(shown) {
+                    delay(DISTANCE_BADGE_MILLIS)
+                    distance = null
+                }
             }
         }
         bundle.sources.regionProblem?.let { problem ->
@@ -484,7 +683,7 @@ private fun MapContent(
                 )
             }
         }
-        if (container.devToolsVisible) {
+        if (container.devToolsVisible && !navigationActive) {
             DevToolsPanel(
                 container = container,
                 modifier =
@@ -494,204 +693,280 @@ private fun MapContent(
                         .padding(BAR_PADDING_DP.dp),
             )
         }
-        SearchScreenHost(
-            hits = searchState.hits,
-            loading = searchState.status == SearchScreenStatus.LOADING,
-            failed = searchState.status == SearchScreenStatus.FAILED,
-            camera = searchCamera,
-            viewport = viewport,
-            anchorOffset = screenOffset,
-            onQueryChange = { text ->
-                searchSequence[0] += 1
-                val sequence = searchSequence[0]
-                scope.launch {
-                    container.commandBus
-                        .invoke(
-                            SEARCH_SCREEN_COMMAND,
-                            searchKeystrokeParams(
-                                query = text,
-                                sequence = sequence,
-                                index = SearchScreenSession.DEFAULT_INDEX,
-                                limit = SearchScreenSession.DEFAULT_LIMIT,
-                                position = searchCamera.center,
-                                positionAllowed = positionAllowed,
-                            ),
-                        ).onFailure { error ->
-                            if (error != AppError.Cancelled) {
-                                Log.w(TAG, "search keystroke failed: $error")
-                            }
-                        }
-                }
-            },
-            onSelect = { placeId ->
-                val hit = searchState.hits.firstOrNull { it.id == placeId }
-                val role = plan.pickingRole
-                if (hit != null && role != null) {
+        if (!navigationActive) {
+            SearchScreenHost(
+                hits = searchState.hits,
+                loading = searchState.status == SearchScreenStatus.LOADING,
+                failed = searchState.status == SearchScreenStatus.FAILED,
+                camera = searchCamera,
+                viewport = viewport,
+                anchorOffset = screenOffset,
+                onQueryChange = { text ->
+                    searchSequence[0] += 1
+                    val sequence = searchSequence[0]
                     scope.launch {
-                        setPlanPoint(container, role, hit.position, label = hit.name)
+                        container.commandBus
+                            .invoke(
+                                SEARCH_SCREEN_COMMAND,
+                                searchKeystrokeParams(
+                                    query = text,
+                                    sequence = sequence,
+                                    index = SearchScreenSession.DEFAULT_INDEX,
+                                    limit = SearchScreenSession.DEFAULT_LIMIT,
+                                    position = searchCamera.center,
+                                    positionAllowed = positionAllowed,
+                                ),
+                            ).onFailure { error ->
+                                if (error != AppError.Cancelled) {
+                                    Log.w(TAG, "search keystroke failed: $error")
+                                }
+                            }
                     }
-                } else {
+                },
+                onSelect = { placeId ->
+                    val hit = searchState.hits.firstOrNull { it.id == placeId }
+                    val role = plan.pickingRole
+                    if (hit != null && role != null) {
+                        scope.launch {
+                            setPlanPoint(container, role, hit.position, label = hit.name)
+                        }
+                    } else {
+                        scope.launch {
+                            if (hit != null) {
+                                surface.host.animateCamera(CameraUpdate(center = hit.position)).onFailure { error ->
+                                    Log.w(TAG, "search result camera move failed: $error")
+                                }
+                            }
+                            // A coordinate row is a point, not a place: there is no card
+                            // behind it, so the map moves and no card is opened (T-0206).
+                            // An online row has no offline record either, so it moves the
+                            // map and opens no card (T-0212).
+                            if (hit?.isCoordinate != true && hit?.source != PlaceSource.ONLINE) {
+                                container.showPlaceCard(SearchScreenSession.DEFAULT_INDEX, placeId).onFailure { error ->
+                                    Log.w(TAG, "search result card failed: $error")
+                                }
+                            }
+                        }
+                    }
+                },
+                onClear = {
                     scope.launch {
-                        if (hit != null) {
-                            surface.host.animateCamera(CameraUpdate(center = hit.position)).onFailure { error ->
-                                Log.w(TAG, "search result camera move failed: $error")
+                        container.commandBus
+                            .invoke(SEARCH_SCREEN_COMMAND, buildJsonObject { put("clear", true) })
+                            .onFailure { error -> Log.w(TAG, "search clear failed: $error") }
+                    }
+                },
+                modifier = Modifier.fillMaxSize(),
+                cardModifier =
+                    Modifier
+                        .statusBarsPadding()
+                        .padding(BAR_PADDING_DP.dp),
+                onlineSearchEnabled = onlineSearchEnabled,
+                positionAllowed = positionAllowed,
+                onEnableOnlineSearch = {
+                    scope.launch {
+                        container.setOnlineSearchEnabled(true).onFailure { error ->
+                            Log.w(TAG, "online search switch failed: $error")
+                        }
+                        onlineSearchEnabled = container.onlineSearchEnabled
+                    }
+                },
+                onAllowPosition = { allowed ->
+                    scope.launch {
+                        withContext(Dispatchers.IO) {
+                            container.onlineSearchSettings.setPositionAllowed(allowed)
+                        }.onFailure { error ->
+                            Log.w(TAG, "position allowance not saved: $error")
+                        }
+                    }
+                },
+            )
+        }
+        if (!navigationActive) {
+            PlaceCardHost(
+                card = placeCard,
+                strings = container.strings,
+                onClose = { PlaceCardSession.hide() },
+                onAction = { link ->
+                    container.platformActions.launch(link).onFailure { error ->
+                        Log.w(TAG, "place card action ${link.action} failed: $error")
+                    }
+                },
+            )
+        }
+        if (!navigationActive) {
+            RoutePlanPanel(
+                state = plan,
+                strings = container.strings,
+                recent = recentRoutes,
+                turnIndex = turnIndex,
+                parseCoordinate = container.coordinateParser,
+                onStartPoint = { point, label ->
+                    scope.launch { setPlanPoint(container, RoutePlanRole.Start, point, label) }
+                },
+                onDestinationPoint = { point, label ->
+                    scope.launch { setPlanPoint(container, RoutePlanRole.Destination, point, label) }
+                },
+                onAddVia = { point, label ->
+                    scope.launch {
+                        invokePlannerCommand(
+                            container,
+                            RoutePlannerContract.addVia,
+                            routeStopParams(RoutePlanPoint(point, label)),
+                        )
+                    }
+                },
+                onRemoveVia = { index ->
+                    scope.launch {
+                        invokePlannerCommand(
+                            container,
+                            RoutePlannerContract.removeVia,
+                            buildJsonObject { put("index", index) },
+                        )
+                    }
+                },
+                onMoveVia = { from, to ->
+                    scope.launch {
+                        invokePlannerCommand(
+                            container,
+                            RoutePlannerContract.moveVia,
+                            buildJsonObject {
+                                put("from", from)
+                                put("to", to)
+                            },
+                        )
+                    }
+                },
+                onTurnChange = { index ->
+                    turnIndex = index
+                    turnRequest += 1
+                },
+                onReuse = { entry ->
+                    scope.launch {
+                        invokePlannerCommand(
+                            container,
+                            RoutePlannerContract.reuseHistory,
+                            buildJsonObject { put("index", recentRoutes.indexOf(entry)) },
+                        )
+                    }
+                },
+                onUndo = {
+                    scope.launch {
+                        invokePlannerCommand(container, RoutePlannerContract.undo, JsonObject(emptyMap()))
+                    }
+                },
+                onRedo = {
+                    scope.launch {
+                        invokePlannerCommand(container, RoutePlannerContract.redo, JsonObject(emptyMap()))
+                    }
+                },
+                onSwap = {
+                    scope.launch {
+                        invokePlannerCommand(container, RoutePlannerContract.swap, JsonObject(emptyMap()))
+                    }
+                },
+                onSelectAlternative = { index ->
+                    scope.launch {
+                        invokePlannerCommand(
+                            container,
+                            RoutePlannerContract.select,
+                            buildJsonObject { put("index", index) },
+                        )
+                    }
+                },
+                onStart = {
+                    scope.launch {
+                        val selected = plan.selected
+                        if (selected == null) {
+                            return@launch
+                        }
+                        val route =
+                            Route(
+                                geometry = selected.geometry,
+                                distanceMeters = selected.distanceMeters,
+                                durationSeconds = selected.durationSeconds,
+                                segments = selected.segments,
+                                instructions = selected.instructions,
+                            )
+                        when (val outcome = container.navigation.start(route, RouteProfile.Walk)) {
+                            is Outcome.Failure -> {
+                                Toast.makeText(context, R.string.route_planner_start_unavailable, Toast.LENGTH_LONG).show()
+                                Log.w(TAG, "route start failed: ${outcome.error}")
+                            }
+
+                            is Outcome.Success -> {
+                                navigationDestination = plan.destination?.label?.takeIf { it.isNotBlank() }
+                                navigationNextStop =
+                                    plan.vias
+                                        .firstOrNull()
+                                        ?.label
+                                        ?.takeIf { it.isNotBlank() }
+                                navigationSheet = NavigationSheet.Collapsed
+                                invokePlannerCommand(container, RoutePlannerContract.clear, JsonObject(emptyMap()))
                             }
                         }
-                        // A coordinate row is a point, not a place: there is no card
-                        // behind it, so the map moves and no card is opened (T-0206).
-                        // An online row has no offline record either, so it moves the
-                        // map and opens no card (T-0212).
-                        if (hit?.isCoordinate != true && hit?.source != PlaceSource.ONLINE) {
-                            container.showPlaceCard(SearchScreenSession.DEFAULT_INDEX, placeId).onFailure { error ->
-                                Log.w(TAG, "search result card failed: $error")
+                    }
+                },
+                onClose = {
+                    scope.launch {
+                        invokePlannerCommand(container, RoutePlannerContract.clear, JsonObject(emptyMap()))
+                    }
+                },
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding(),
+            )
+        }
+        if (navigationActive) {
+            NavigationScreenHost(
+                state = navigationScreen,
+                strings = container.strings,
+                sheet = navigationSheet,
+                dark = dark,
+                turnCard = { modifier ->
+                    GuidancePanelContent(navigationScreen.turn, container.strings, modifier)
+                },
+                onSheetChange = { sheet -> navigationSheet = sheet },
+                onEnd = {
+                    container.navigation.stop()
+                    container.navigationScreenFixture.clear()
+                    navigationSheet = NavigationSheet.Collapsed
+                },
+                onPause = { container.navigation.pause() },
+                onResume = { container.navigation.resume() },
+                onDone = {
+                    container.navigation.dismiss()
+                    container.navigationScreenFixture.clear()
+                    navigationSheet = NavigationSheet.Collapsed
+                },
+                onRecentre = {
+                    cameraPanned = false
+                    navigationCamera.clearPan()
+                    activeNavigation.fix?.position?.let { position ->
+                        scope.launch {
+                            surface.host.animateCamera(CameraUpdate(center = position)).onFailure { error ->
+                                Log.w(TAG, "navigation recentre rejected: $error")
                             }
                         }
                     }
-                }
-            },
-            onClear = {
-                scope.launch {
-                    container.commandBus
-                        .invoke(SEARCH_SCREEN_COMMAND, buildJsonObject { put("clear", true) })
-                        .onFailure { error -> Log.w(TAG, "search clear failed: $error") }
-                }
-            },
-            modifier = Modifier.fillMaxSize(),
-            cardModifier =
-                Modifier
-                    .statusBarsPadding()
-                    .padding(BAR_PADDING_DP.dp),
-            onlineSearchEnabled = onlineSearchEnabled,
-            positionAllowed = positionAllowed,
-            onEnableOnlineSearch = {
-                scope.launch {
-                    container.setOnlineSearchEnabled(true).onFailure { error ->
-                        Log.w(TAG, "online search switch failed: $error")
-                    }
-                    onlineSearchEnabled = container.onlineSearchEnabled
-                }
-            },
-            onAllowPosition = { allowed ->
-                scope.launch {
-                    withContext(Dispatchers.IO) {
-                        container.onlineSearchSettings.setPositionAllowed(allowed)
-                    }.onFailure { error ->
-                        Log.w(TAG, "position allowance not saved: $error")
-                    }
-                }
-            },
-        )
-        PlaceCardHost(
-            card = placeCard,
-            strings = container.strings,
-            onClose = { PlaceCardSession.hide() },
-            onAction = { link ->
-                container.platformActions.launch(link).onFailure { error ->
-                    Log.w(TAG, "place card action ${link.action} failed: $error")
-                }
-            },
-        )
-        RoutePlanPanel(
-            state = plan,
-            strings = container.strings,
-            recent = recentRoutes,
-            turnIndex = turnIndex,
-            parseCoordinate = container.coordinateParser,
-            onStartPoint = { point, label ->
-                scope.launch { setPlanPoint(container, RoutePlanRole.Start, point, label) }
-            },
-            onDestinationPoint = { point, label ->
-                scope.launch { setPlanPoint(container, RoutePlanRole.Destination, point, label) }
-            },
-            onAddVia = { point, label ->
-                scope.launch {
-                    invokePlannerCommand(
-                        container,
-                        RoutePlannerContract.addVia,
-                        routeStopParams(RoutePlanPoint(point, label)),
-                    )
-                }
-            },
-            onRemoveVia = { index ->
-                scope.launch {
-                    invokePlannerCommand(
-                        container,
-                        RoutePlannerContract.removeVia,
-                        buildJsonObject { put("index", index) },
-                    )
-                }
-            },
-            onMoveVia = { from, to ->
-                scope.launch {
-                    invokePlannerCommand(
-                        container,
-                        RoutePlannerContract.moveVia,
-                        buildJsonObject {
-                            put("from", from)
-                            put("to", to)
-                        },
-                    )
-                }
-            },
-            onTurnChange = { index ->
-                turnIndex = index
-                turnRequest += 1
-            },
-            onReuse = { entry ->
-                scope.launch {
-                    invokePlannerCommand(
-                        container,
-                        RoutePlannerContract.reuseHistory,
-                        buildJsonObject { put("index", recentRoutes.indexOf(entry)) },
-                    )
-                }
-            },
-            onUndo = {
-                scope.launch {
-                    invokePlannerCommand(container, RoutePlannerContract.undo, JsonObject(emptyMap()))
-                }
-            },
-            onRedo = {
-                scope.launch {
-                    invokePlannerCommand(container, RoutePlannerContract.redo, JsonObject(emptyMap()))
-                }
-            },
-            onSwap = {
-                scope.launch {
-                    invokePlannerCommand(container, RoutePlannerContract.swap, JsonObject(emptyMap()))
-                }
-            },
-            onSelectAlternative = { index ->
-                scope.launch {
-                    invokePlannerCommand(
-                        container,
-                        RoutePlannerContract.select,
-                        buildJsonObject { put("index", index) },
-                    )
-                }
-            },
-            onStart = {
-                scope.launch {
-                    container.commandBus.invoke(RoutePlannerContract.start).onFailure { error ->
-                        if (error == AppError.Unsupported) {
-                            Toast.makeText(context, R.string.route_planner_start_unavailable, Toast.LENGTH_LONG).show()
-                        } else {
-                            Log.w(TAG, "route start failed: $error")
-                        }
-                    }
-                }
-            },
-            onClose = {
-                scope.launch {
-                    invokePlannerCommand(container, RoutePlannerContract.clear, JsonObject(emptyMap()))
-                }
-            },
-            modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding(),
-        )
-        if (listsVisible) {
+                },
+                onCameraAutoZoom = navigationCamera::setAutoZoom,
+                onCameraAutoCentre = navigationCamera::setAutoCentre,
+                onCameraTilt = { enabled -> scope.launch { navigationCamera.setTilt(enabled) } },
+                onAlertSwitch = { switch, enabled ->
+                    container.alerts.setEnabled(switch.toAlertKind(), enabled)
+                },
+                onResetToProfile = {
+                    navigationCamera.setAutoZoom(true)
+                    navigationCamera.setAutoCentre(true)
+                    scope.launch { navigationCamera.setTilt(true) }
+                    AlertKind.entries.forEach { kind -> container.alerts.setEnabled(kind, false) }
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        if (listsVisible && !navigationActive) {
             val listsFlow =
                 remember(container) {
                     container.streamAccess.subscribe<FavouriteListsState>(FavouritesUiContract.listsStream)
@@ -1137,4 +1412,46 @@ private suspend fun loadBundle(
             )
         }
     return (result as? Outcome.Success)?.value
+}
+
+/** The phases that keep the navigation screen on top of the map. */
+private fun NavigationPhase.isActiveNavigation(): Boolean =
+    this == NavigationPhase.Following ||
+        this == NavigationPhase.Rerouting ||
+        this == NavigationPhase.Paused ||
+        this == NavigationPhase.Arrived
+
+/** The alert host switch a navigation-screen chip owns. */
+private fun NavigationAlertSwitch.toAlertKind(): AlertKind =
+    when (this) {
+        NavigationAlertSwitch.Signal -> AlertKind.SignalLost
+        NavigationAlertSwitch.Reroute -> AlertKind.Rerouted
+        NavigationAlertSwitch.OffRoute -> AlertKind.OffRoute
+        NavigationAlertSwitch.Arrival -> AlertKind.Arrived
+        NavigationAlertSwitch.Tunnel -> AlertKind.Tunnel
+        NavigationAlertSwitch.Crossing -> AlertKind.RailwayCrossing
+        NavigationAlertSwitch.Hazard -> AlertKind.Hazard
+    }
+
+/** The round 5 status bar follows the card's own state colour. */
+@Suppress("DEPRECATION")
+private fun Activity.setNavigationStatusBar(status: NavigationScreenStatus) {
+    val color =
+        when (status) {
+            NavigationScreenStatus.Following,
+            NavigationScreenStatus.Arrived,
+            -> android.graphics.Color.rgb(30, 127, 83)
+
+            NavigationScreenStatus.OffRoute -> android.graphics.Color.rgb(138, 90, 0)
+
+            NavigationScreenStatus.Paused -> android.graphics.Color.rgb(95, 99, 104)
+        }
+    window.statusBarColor = color
+    window.decorView.systemUiVisibility = 0
+}
+
+@Suppress("DEPRECATION")
+private fun Activity.restoreStatusBar() {
+    window.statusBarColor = android.graphics.Color.BLACK
+    window.decorView.systemUiVisibility = 0
 }

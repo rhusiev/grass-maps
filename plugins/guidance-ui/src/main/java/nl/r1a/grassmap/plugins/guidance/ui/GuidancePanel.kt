@@ -57,6 +57,8 @@ data class GuidancePanelEntry(
     val detail: String? = null,
     val distanceMeters: Double? = null,
     val durationSeconds: Double? = null,
+    val streetName: String? = null,
+    val maneuver: String? = null,
 )
 
 /** A status the panel reports beside its facts, never instead of one. */
@@ -101,6 +103,7 @@ object GuidanceStrings {
     const val MINUTES = "guidance_panel_minutes"
     const val HOURS = "guidance_panel_hours"
     const val HOURS_MINUTES = "guidance_panel_hours_minutes"
+    const val SCREEN_THEN = "guidance_screen_then"
 }
 
 /**
@@ -204,6 +207,8 @@ private fun turnEntry(
         detail = strings.resolve(format, listOf(distanceText(distance, strings, locale), durationText(seconds, strings))),
         distanceMeters = distance,
         durationSeconds = seconds,
+        streetName = turn.streetName,
+        maneuver = turn.maneuver,
     )
 }
 
@@ -261,6 +266,13 @@ private fun distanceText(
     meters: Double,
     strings: Strings,
     locale: Locale,
+): String = guidanceDistanceText(meters, strings, locale)
+
+/** The distance the panel and the navigation screen format, in the user's units. */
+fun guidanceDistanceText(
+    meters: Double,
+    strings: Strings,
+    locale: Locale = Locale.getDefault(),
 ): String =
     if (meters < METRES_PER_KILOMETRE) {
         strings.resolve(GuidanceStrings.METRES, listOf(round(meters).toLong().toString()))
@@ -272,6 +284,12 @@ private fun distanceText(
     }
 
 private fun durationText(
+    seconds: Double,
+    strings: Strings,
+): String = guidanceDurationText(seconds, strings)
+
+/** The duration the panel and the navigation screen format. */
+fun guidanceDurationText(
     seconds: Double,
     strings: Strings,
 ): String {

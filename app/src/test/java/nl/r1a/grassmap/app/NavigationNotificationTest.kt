@@ -71,6 +71,22 @@ class NavigationNotificationTest {
         assertEquals("Navigation stopped", stopped.title)
     }
 
+    @Test
+    fun theNotificationOffersStopAloneAfterArrival() {
+        assertEquals(
+            listOf(NavigationNotificationAction.Stop),
+            navigationNotificationActions(NavigationPhase.Arrived),
+        )
+        assertEquals(
+            listOf(NavigationNotificationAction.Resume, NavigationNotificationAction.Stop),
+            navigationNotificationActions(NavigationPhase.Paused),
+        )
+        assertEquals(
+            listOf(NavigationNotificationAction.Pause, NavigationNotificationAction.Stop),
+            navigationNotificationActions(NavigationPhase.Following),
+        )
+    }
+
     private fun content(state: NavigationState): NavigationNotificationContent =
         navigationNotificationContent(state, TestStrings, Locale.ROOT)
 

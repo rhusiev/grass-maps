@@ -177,22 +177,42 @@ class NavigationService : Service() {
                 .setOnlyAlertOnce(true)
                 .setShowWhen(false)
         content.text?.let { builder.setContentText(it) }
-        builder.addAction(
-            action(
-                icon = if (content.paused) android.R.drawable.ic_media_play else android.R.drawable.ic_media_pause,
-                title = getString(if (content.paused) R.string.nav_notification_resume else R.string.nav_notification_pause),
-                action = if (content.paused) ACTION_RESUME else ACTION_PAUSE,
-                requestCode = PAUSE_ACTION_REQUEST,
-            ),
-        )
-        builder.addAction(
-            action(
-                icon = android.R.drawable.ic_menu_close_clear_cancel,
-                title = getString(R.string.nav_notification_stop),
-                action = ACTION_STOP,
-                requestCode = STOP_ACTION_REQUEST,
-            ),
-        )
+        for (action in navigationNotificationActions(state.phase)) {
+            when (action) {
+                NavigationNotificationAction.Pause -> {
+                    builder.addAction(
+                        action(
+                            icon = android.R.drawable.ic_media_pause,
+                            title = getString(R.string.nav_notification_pause),
+                            action = ACTION_PAUSE,
+                            requestCode = PAUSE_ACTION_REQUEST,
+                        ),
+                    )
+                }
+
+                NavigationNotificationAction.Resume -> {
+                    builder.addAction(
+                        action(
+                            icon = android.R.drawable.ic_media_play,
+                            title = getString(R.string.nav_notification_resume),
+                            action = ACTION_RESUME,
+                            requestCode = PAUSE_ACTION_REQUEST,
+                        ),
+                    )
+                }
+
+                NavigationNotificationAction.Stop -> {
+                    builder.addAction(
+                        action(
+                            icon = android.R.drawable.ic_menu_close_clear_cancel,
+                            title = getString(R.string.nav_notification_stop),
+                            action = ACTION_STOP,
+                            requestCode = STOP_ACTION_REQUEST,
+                        ),
+                    )
+                }
+            }
+        }
         return builder.build()
     }
 

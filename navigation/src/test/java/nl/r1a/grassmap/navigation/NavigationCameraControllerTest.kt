@@ -163,17 +163,13 @@ class NavigationCameraControllerTest {
         }
 
     @Test
-    fun tiltIsFlatByDefaultThenOnAtFortyFiveDegreesAndOffAgain() =
+    fun tiltIsOnAtFortyFiveByDefaultThenOffAndOnAgain() =
         runTest {
             val drive = Drive()
             val host = RecordingMapHost()
             val controller = controller(host)
-            assertFalse(controller.settings.value.tilt)
-            controller.onState(following(drive.first()))
-            assertTrue(host.tilts().isEmpty())
-
-            controller.setTilt(true)
             assertTrue(controller.settings.value.tilt)
+            controller.onState(following(drive.first()))
             assertEquals(listOf(NavigationCameraController.TILT_DEGREES), host.tilts())
 
             controller.setTilt(false)
@@ -186,6 +182,63 @@ class NavigationCameraControllerTest {
             val tiltsAfterOff = host.tilts()
             controller.onState(following(drive.at(speedKmh = 5.0)))
             assertEquals(tiltsAfterOff, host.tilts())
+
+            controller.setTilt(true)
+            assertEquals(
+                listOf(
+                    NavigationCameraController.TILT_DEGREES,
+                    NavigationCameraController.FLAT_DEGREES,
+                    NavigationCameraController.TILT_DEGREES,
+                ),
+                host.tilts(),
+            )
+        }
+
+    @Test
+    fun resettingAtTheEndFlattensTheCameraAndANewTripTiltsItAgain() =
+        runTest {
+            val drive = Drive()
+            val host = RecordingMapHost()
+            val controller = controller(host)
+            controller.onState(following(drive.first()))
+            assertEquals(listOf(NavigationCameraController.TILT_DEGREES), host.tilts())
+
+            controller.resetCamera()
+            assertEquals(
+                listOf(NavigationCameraController.TILT_DEGREES, NavigationCameraController.FLAT_DEGREES),
+                host.tilts(),
+            )
+
+            controller.onState(following(drive.at(speedKmh = 5.0)))
+            assertEquals(
+                listOf(
+                    NavigationCameraController.TILT_DEGREES,
+                    NavigationCameraController.FLAT_DEGREES,
+                    NavigationCameraController.TILT_DEGREES,
+                ),
+                host.tilts(),
+            )
+        }
+
+    @Test
+    fun clearingThePanAfterARecentreFollowsTheNextFixAtOnce() =
+        runTest {
+            val drive = Drive()
+            val clock = FakeClock()
+            val host = RecordingMapHost()
+            val controller = controller(host, clock)
+            controller.onState(following(drive.first()))
+            val initialCentres = host.centres()
+            controller.onManualPan()
+
+            clock.nowMillis = NavigationCameraController.RECENTRE_DELAY_MILLIS - 1L
+            controller.onState(following(drive.at(speedKmh = 5.0)))
+            assertEquals(initialCentres, host.centres())
+
+            controller.clearPan()
+            val due = drive.at(speedKmh = 5.0)
+            controller.onState(following(due))
+            assertEquals(initialCentres + due.position, host.centres())
         }
 
     @Test

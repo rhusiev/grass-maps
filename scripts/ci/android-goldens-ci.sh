@@ -28,4 +28,7 @@ if ! GOLDEN_SKIP_REBOOT=1 ./scripts/ci/android-map-goldens.sh --profile fixture 
     --output "$ROOT/build/map-goldens/fixture" "$APK"; then
     status=1
 fi
+if ! GOLDEN_SKIP_REBOOT=1 ./scripts/ci/android-navigation-goldens.sh "$APK"; then
+    status=1
+fi
 exit "$status"

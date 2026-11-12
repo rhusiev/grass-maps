@@ -23,6 +23,8 @@ data class RouteTurnStep(
     val distanceMeters: Double,
     val durationSeconds: Double,
     val position: GeoPoint,
+    val streetName: String? = null,
+    val maneuver: String? = null,
 )
 
 /**
@@ -65,6 +67,8 @@ fun routeTurns(
             distanceMeters = instruction.distanceAlongRouteMeters,
             durationSeconds = instruction.durationSeconds,
             position = pointAlong(geometry, instruction.distanceAlongRouteMeters),
+            streetName = instruction.streetName,
+            maneuver = instruction.maneuver,
         )
     }
 }

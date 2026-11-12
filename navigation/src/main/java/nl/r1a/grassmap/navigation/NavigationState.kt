@@ -3,6 +3,7 @@ package nl.r1a.grassmap.navigation
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 
 /**
  * Where the session is in its own lifecycle. Off-route is a relation, not a
@@ -66,6 +67,7 @@ data class NavigationState(
     val routeRevision: Long = 0,
     val rerouteCount: Int = 0,
     val lastRerouteMillis: Long? = null,
+    val profile: RouteProfile? = null,
 )
 
 /** Evidence from one completed replay or live session. */

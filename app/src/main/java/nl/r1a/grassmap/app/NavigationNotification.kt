@@ -29,6 +29,38 @@ object NavigationNotificationStrings {
     const val STOPPED = "nav_notification_stopped"
 }
 
+/** One action the navigation notification offers. */
+enum class NavigationNotificationAction {
+    Pause,
+    Resume,
+    Stop,
+}
+
+/**
+ * The actions the round 5 notification offers in [phase]: Pause and Stop while
+ * guidance runs, Resume and Stop while paused, and Stop alone after arrival.
+ * The service builds exactly this list, so the lock screen cannot offer a resume
+ * of a trip that already ended.
+ */
+fun navigationNotificationActions(phase: NavigationPhase): List<NavigationNotificationAction> =
+    when (phase) {
+        NavigationPhase.Arrived -> {
+            listOf(NavigationNotificationAction.Stop)
+        }
+
+        NavigationPhase.Paused -> {
+            listOf(NavigationNotificationAction.Resume, NavigationNotificationAction.Stop)
+        }
+
+        NavigationPhase.Idle,
+        NavigationPhase.Following,
+        NavigationPhase.Rerouting,
+        NavigationPhase.Stopped,
+        -> {
+            listOf(NavigationNotificationAction.Pause, NavigationNotificationAction.Stop)
+        }
+    }
+
 fun navigationNotificationContent(
     state: NavigationState,
     strings: Strings,

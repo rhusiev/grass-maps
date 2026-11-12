@@ -56,6 +56,7 @@ class GuidanceStringsTest {
                 GuidanceStrings.MINUTES,
                 GuidanceStrings.HOURS,
                 GuidanceStrings.HOURS_MINUTES,
+                GuidanceStrings.SCREEN_THEN,
             )
     }
 }

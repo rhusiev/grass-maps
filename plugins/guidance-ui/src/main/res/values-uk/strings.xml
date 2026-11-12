@@ -13,4 +13,5 @@
     <string name="guidance_panel_minutes">%1$s хв</string>
     <string name="guidance_panel_hours">%1$s год</string>
     <string name="guidance_panel_hours_minutes">%1$s год %2$s хв</string>
+    <string name="guidance_screen_then">Потім</string>
 </resources>

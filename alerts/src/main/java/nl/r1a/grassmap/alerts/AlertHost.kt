@@ -16,6 +16,7 @@ import nl.r1a.grassmap.navigation.NavigationPhase
 import nl.r1a.grassmap.navigation.NavigationState
 import nl.r1a.grassmap.navigation.RouteRelation
 import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
 import nl.r1a.grassmap.plugin.api.model.WayAlertKey
 
 /**
@@ -177,6 +178,7 @@ class AlertHost(
         fixTimeMillis: Long,
         distanceToFeatureMeters: Double,
         key: WayAlertKey,
+        featureKind: WayAlertFeatureKind? = null,
     ) {
         require(kind == AlertKind.Tunnel || kind == AlertKind.RailwayCrossing || kind == AlertKind.Hazard) {
             "a way alert carries a way-alert kind"
@@ -195,6 +197,7 @@ class AlertHost(
             kind = kind,
             fixTimeMillis = fixTimeMillis,
             featureDistanceMeters = distanceToFeatureMeters,
+            featureKind = featureKind,
         )
     }
 
@@ -204,10 +207,11 @@ class AlertHost(
         routeDistanceMeters: Double? = null,
         gapMillis: Long? = null,
         featureDistanceMeters: Double? = null,
+        featureKind: WayAlertFeatureKind? = null,
     ) {
         sequence += 1
         val effects = listOf(AlertEffect.Sound(kind), AlertEffect.Vibration(kind))
-        val banner = AlertBanner(kind, severityOf(kind), routeDistanceMeters, gapMillis, featureDistanceMeters)
+        val banner = AlertBanner(kind, severityOf(kind), routeDistanceMeters, gapMillis, featureDistanceMeters, featureKind)
         mutableEvents.tryEmit(
             AlertEvent(
                 sequence = sequence,

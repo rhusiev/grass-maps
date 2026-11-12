@@ -405,7 +405,7 @@ application ID is `nl.r1a.grassmap`.
 | `planner` | the start/end plan, its intermediate stops, its undo and redo history, its reuse commands and its state and history streams; the shell draws the preview and the turn stepper from it | `plugin-api`, `routing` |
 | `places` | place and search provider hosts, favourites store | `plugin-api` |
 | `tracks` | GPX import and export, the track file store and sidecars, analysis engine | `plugin-api` |
-| `ui-shell` | screens, bottom bar and sheet, configurable button and widget grid, command palette, theme, strings | `plugin-api`, `plugin-ui-api` |
+| `ui-shell` | screens, the navigation screen, bottom bar and sheet, configurable button and widget grid, command palette, theme, strings | `plugin-api`, `plugin-ui-api` |
 | `control` | JSON-RPC control channel and MCP server, peer auth, allowlist, privacy switch | `core`, `plugin-api` |
 | `devtools` | debug harness: benchmark hooks, GPX replay, screenshot and state probes | `core`, `control`, `plugin-api` |
 | `app` | composition root, Android entry points, foreground service, manifest, resources | every module |
@@ -425,7 +425,7 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/coordinates` | the coordinate notation parser the search field reads, and the vectors it shares with the formatters | `plugin-api` |
 | `plugins/valhalla` | the v1 `routing.engine` provider: profile mapping, the native Valhalla adapter, the async segment attributes | `plugin-api` |
 | `plugins/direct-engine` | the second `routing.engine` provider: one geodesic per leg with the haversine length, its leg segments and its honest empty capabilities | `plugin-api` |
-| `plugins/guidance-ui` | the guidance panel's four facts and its Compose chrome, drawn from the navigation state the app holds | `plugin-api`, `plugin-ui-api` |
+| `plugins/guidance-ui` | the guidance panel's four facts and its Compose turn card, drawn from the navigation state the app holds | `plugin-api`, `plugin-ui-api` |
 | `plugins/nav-simulator` | the simulated run at 5 km/h through the production navigation session, its start and stop commands and its status stream | `plugin-api`, `navigation`, `routing` |
 | `plugins/track-layer` | the imported-track line layer and the controller that keeps it on the map | `plugin-api` |
 | `plugins/contours` | the contour overlay for the Standard and Touring variants and the one-row layers panel that toggles it | `plugin-api`, `plugin-ui-api` |
@@ -1323,15 +1323,17 @@ and turning the switch back on releases the pan at the next fix. A paused or
 ended session drops the speed interval, so the time spent paused cannot read as
 a very slow speed and drop the zoom.
 
-Tilt is off by default in v1. With it on the pitch is 45 degrees; turning it off
-writes 0 degrees and restores the flat camera. The pitch gesture stays disabled
-(T-0104), so this is the only way the navigation camera pitches.
+Tilt is on by default in round 5. With it on the pitch is 45 degrees; turning it
+off writes 0 degrees and restores the flat camera. The pitch gesture stays
+disabled (T-0104), so the navigation screen's camera sheet is the only way the
+navigation camera pitches.
 
-The controller does not set a tracking mode. The screen that binds it must leave
-the host in `TrackingMode.Free`, otherwise the host's own follow loop and this
-controller both write the centre. No screen binds the three switches or calls
-`onManualPan` yet, so the controls are not user-reachable until the navigation
-screen wires them to a settings surface and the pan gesture.
+The controller does not set a tracking mode. The screen that binds it leaves the
+host in `TrackingMode.Free`, otherwise the host's own follow loop and this
+controller both write the centre. The navigation screen (T-0320) binds the three
+switches and reports a one-finger map drag through `onManualPan`; the
+`clearPan()` call after the screen's own recentre keeps the next fix on the
+position.
 
 ## Guidance panel
 
@@ -1346,10 +1348,10 @@ The stop rows are absent when the route has no via.
 guidance status, and it reads no camera, location or clock. The app maps a
 published `NavigationState` onto `GuidanceInput` (`alongMeters` is the route
 total minus the remaining distance), derives the panel once per state and
-remembers it. `GuidancePanelContent` then only draws that model, so a camera or
-gesture frame cannot recompute guidance and the panel is not on the map's draw
-path. The app does not show the panel yet: no live navigation state reaches the
-screen, and the wiring belongs to the task that owns the navigation screen.
+remembers it. `GuidancePanelContent` then only draws the round 5 turn card from
+that model, so a camera or gesture frame cannot recompute guidance and the panel
+is not on the map's draw path. The navigation screen hosts it at the top of the
+map; the app derives the panel once per published state.
 
 Turns come from `routeTurns` in `plugin-ui-api`, the same enumeration the
 planner's turn stepper walks, so one route has one turn order. A turn passed by
@@ -1371,6 +1373,68 @@ are compared with a route model the test computes from `Route.instructions` and
 `Route.segments` in its own arithmetic; the worst mismatch is 0 for all four
 facts over all 20 points. Results are in `test-data/location/README.md`.
 
+## Navigation screen
+
+The navigation screen is T-0320. It appears for `Following`, `Rerouting`,
+`Paused` and `Arrived`, and `Done` on the arrival card calls
+`NavigationController.dismiss()`, which clears the finished state. Starting a
+route from the planner starts the live session directly; the planner's own Start
+command still answers `Unsupported`, so the screen is reached through the
+planner, `core.nav.start` or the debug replay.
+
+The round 5 layout is `ui-shell`'s `NavigationScreenHost`: the read-only turn
+card at the top (`plugins/guidance-ui`), the next-stop and current-speed glass
+chips under it, up to two alert banners, and the floating bar with End, the ETA
+and the expand chevron. The chevron opens the trip sheet: destination, next
+stop, current/average/max speed, the Camera and alerts row, and End and Pause at
+the bottom. Camera and alerts open one tap further and change this trip only;
+Reset to profile restores auto zoom, auto-centre and 3D, and turns every alert
+switch off. A manual map pan shows the recentre button above the bar and leaves
+the camera free for five seconds when auto-centre is on.
+
+The screen state is derived once per published `NavigationState` by
+`navigationScreenState` in `app`: it reads the guidance panel, the three speed
+streams, the active alert banners and the live camera and alert settings, and
+never reads the map camera or an alert stream itself. The speed readout is whole
+km/h from 10 km/h and one decimal below; it is a dash while paused or after a
+lost fix. The ETA reads the state's remaining distance, remaining duration and
+`etaEpochMillis`, not the clock. The turn card is the same green/amber/grey
+canon as round 3; off route, paused and arrival replace the turn facts with
+their own title and strip, and a lost fix dims the last known turn. The status
+bar takes the card's colour while the screen is open.
+
+The screen's strings live in `ui-shell` and `plugins/guidance-ui`, in English and
+Ukrainian. The round 5 copy the app did not have is in the two bundles: Off
+route, Finding a new route…, Keep going - the new route starts where you are,
+Last known turn - waiting for GPS, No guidance, alerts or rerouting until you
+resume, Recenter, Camera and alerts, Auto zoom, Auto-center, 3D view, Reset to
+profile, the speed labels, and the alert names for railway crossing, tunnel,
+ford, barrier, hazard, lost and regained GPS and a recalculated route.
+
+`core.nav.show_screen` is a debug-only command for deterministic captures. It
+draws the committed `test-data/navigation/screen-route.json` and fills the
+screen with one fixed state (`following`, `offroute`, `paused`, `arrived`), an
+optional trip sheet, a speed, a list of alert kinds and the dark flag. The
+screen is the production composable; only the input state is fixed, so this is
+a fixture, not a static screenshot. Clearing it returns the screen to the live
+session.
+
+The goldens are `test-data/navigation-goldens/light|dark/following.png` and
+`expanded.png`, captured at 1080x1920 on the API 29 AVD. Each is the whole
+frame, compared with the map goldens' 108x192 mean-RGB block grid and the same
+5 % tolerance. Capture or compare with:
+
+```sh
+./scripts/ci/android-navigation-goldens.sh            # compare
+./scripts/ci/android-navigation-goldens.sh --update   # recapture
+```
+
+The goldens job runs the same script after the map sets. A live emulator replay
+with `core.nav.start` and `test-data/navigation/nav-route.json` is the
+end-to-end check: it shows the next and second turn, the next stop, current
+speed and an alert banner, and every control is reachable in the expanded and
+settings sheets.
+
 ## Navigation service and location lifecycle
 
 `NavigationController` in `app` owns the one live session (T-0314). It starts
@@ -1381,14 +1445,17 @@ foreground service and `dumpsys activity services` reports `isForeground=true`
 with type `0x8`.
 
 The notification shows the next turn's text as its title and the distance to it
-as its text. Its two actions pause or resume guidance and stop navigation. It is
-public and ongoing, so it survives the lock screen. Pausing publishes
-`NavigationPhase.Paused`; the session drops every fix before the follower and
-before the reroute gate, so guidance stops and no reroute can start. An arrival
-or a stop is terminal: a pause that lands after that phase is published leaves
-it unchanged. Resuming continues from the next fix; a fix that arrived during
-the pause is never replayed. A paused session that is stopped ends in `Stopped`,
-never in `Arrived`, because no arrival can be detected while fixes are dropped.
+as its text. It offers Pause and Stop while guidance runs, Resume and Stop while
+paused, and only Stop after arrival. It is public and ongoing, so it survives
+the lock screen. Pausing publishes `NavigationPhase.Paused`; the session drops
+every fix before the follower and before the reroute gate, so guidance stops and
+no reroute can start. An arrival or a stop is terminal: a pause that lands after
+that phase is published leaves it unchanged. Arrival ends the location session
+but keeps the notification's Stop action until the screen's Done or the
+notification's Stop; every other ending removes the service. Resuming continues
+from the next fix; a fix that arrived during the pause is never replayed. A
+paused session that is stopped ends in `Stopped`, never in `Arrived`, because no
+arrival can be detected while fixes are dropped.
 
 The control commands `core.nav.start`, `core.nav.pause`, `core.nav.resume` and
 `core.nav.stop` drive the controller. `core.nav.start` takes a route in the
@@ -1452,11 +1519,12 @@ an episode waits for the next episode instead of replaying a past one.
 
 `AlertEvent` carries an `AlertBanner`, the effects, a per-host sequence number
 and the fix time that decided it. The banner holds the kind, the severity, the
-replacement route's own distance for a reroute, and the gap length for a lost
-signal. It holds no text: the screen resolves the kind through i18n and formats
-the distance with the unit system. The event is `@Serializable`, so
-`AlertEvent.serializer()` is the stream's serializer for the control channel and
-a future screen.
+replacement route's own distance for a reroute, the gap length for a lost
+signal, the way feature's distance and its own `WayAlertFeatureKind`, so a ford
+and a barrier get their own copy while sharing the hazard switch. It holds no
+text: the screen resolves the kind through i18n and formats the distance with
+the unit system. The event is `@Serializable`, so `AlertEvent.serializer()` is
+the stream's serializer for the control channel and the navigation screen.
 
 Sound and vibration are values, not platform calls: `AlertEffect.Sound` and
 `AlertEffect.Vibration` each carry the alert kind, and the host forwards them to
@@ -1472,8 +1540,10 @@ it emits no event and no effect while the session still reports the off-route
 fixes, the reroute and the arrival. With the reroute switch on it emits one
 notice carrying the replacement's distance; with the signal switch on it emits
 lost then regained once. The host tests cover the 10 s boundary, a 9.999 s gap,
-a repeated arrival, off-route episodes and the JSON round trip. No screen renders
-a banner yet, no live session is wired to a host, and way alerts are T-0319.
+a repeated arrival, off-route episodes and the JSON round trip. The navigation
+screen collects the alert stream through `NavigationAlertBanners`, which keeps
+at most two banners, clears a way alert once its feature is behind and gives an
+info banner four seconds and a warning eight. Way alerts are T-0319.
 
 ## Turn beeps
 

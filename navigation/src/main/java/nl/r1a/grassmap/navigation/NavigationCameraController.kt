@@ -28,13 +28,13 @@ import nl.r1a.grassmap.plugin.api.model.LocationFix
  * it. A second pan restarts the delay. The delay is measured from the pan, not
  * from a fix, so a stopped source still waits the same time.
  *
- * Tilt is off by default in v1. [setTilt] on pitches the camera to
+ * Tilt is on by default in round 5. [setTilt] on pitches the camera to
  * [TILT_DEGREES] and off restores [FLAT_DEGREES].
  *
  * The controller does not set a tracking mode. A screen that binds it must
  * leave the host in `TrackingMode.Free`, or the host's own follow loop and this
- * controller will both write the centre. The navigation screen is not part of
- * this task, so the switches are not user-reachable yet.
+ * controller will both write the centre. The navigation screen (T-0320) binds
+ * the switches and reports a pan through [onManualPan].
  */
 class NavigationCameraController(
     private val host: () -> MapHost?,
@@ -102,6 +102,29 @@ class NavigationCameraController(
     /** Reports a manual pan; a later pan restarts the recentre delay. */
     fun onManualPan() {
         pannedAtMillis = clockMillis()
+    }
+
+    /**
+     * Clears the pan state after the screen recentred the camera itself, so the
+     * next fix keeps the camera on the position instead of waiting out another
+     * delay.
+     */
+    fun clearPan() {
+        pannedAtMillis = null
+    }
+
+    /**
+     * Resets the camera state at the end of a trip: the next session measures a
+     * fresh speed interval and applies its own tilt instead of trusting the
+     * pitch left by the finished trip. The held switches are unchanged.
+     */
+    suspend fun resetCamera() {
+        previousFix = null
+        hasMeasuredInterval = false
+        pannedAtMillis = null
+        appliedZoom = null
+        val map = host() ?: return
+        applyTilt(map, FLAT_DEGREES)
     }
 
     /** Turns auto zoom on or off; off leaves the current zoom where it is. */

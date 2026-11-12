@@ -524,6 +524,7 @@ class NavigationSession(
             routeRevision = revision,
             rerouteCount = rerouteCount,
             lastRerouteMillis = lastRerouteMillis,
+            profile = profile,
         )
     }
 

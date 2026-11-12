@@ -30,3 +30,14 @@ geometry as the replay, with turns at 40 m and 60 m so the walking beep
 distances (15 m) produce two beeps at 25 m and 45 m before the replay loops.
 It is started with `core.nav.start` after `core.nav.beeps` turns the mode on,
 or replayed by `core.nav.beep_probe` with the same route and profile.
+
+`screen-route.json` is the T-0320 navigation screen fixture. It is a 1.2 km walk
+with a 450 m intermediate stop, a turn at 180 m and a second at 620 m, so the
+screen shows the round 5 values (180 m, Pidvalna St, then Ruska St, 450 m,
+4 min). `core.nav.show_screen` draws it and fills the deterministic screen
+state; the navigation goldens capture that state in light and dark.
+
+`screen-live-route.json` is the same committed mock-walk line split at a 172.5 m
+intermediate stop. The debug replay still follows those fixes, so
+`core.nav.start` on this route shows a real next-stop distance and time on the
+live screen without changing the T-0314 route fixture.

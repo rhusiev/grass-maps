@@ -13,4 +13,5 @@
     <string name="guidance_panel_minutes">%1$s min</string>
     <string name="guidance_panel_hours">%1$s h</string>
     <string name="guidance_panel_hours_minutes">%1$s h %2$s min</string>
+    <string name="guidance_screen_then">Then</string>
 </resources>

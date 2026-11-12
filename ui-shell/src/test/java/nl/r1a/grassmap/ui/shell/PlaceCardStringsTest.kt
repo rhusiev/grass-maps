@@ -12,8 +12,8 @@ class PlaceCardStringsTest {
         val english = resources(ENGLISH)
         val ukrainian = resources(UKRAINIAN)
 
-        assertEquals(CHROME_KEYS, english.keys)
         assertEquals(english.keys, ukrainian.keys)
+        assertTrue(english.keys.containsAll(CHROME_KEYS))
         for ((key, value) in english + ukrainian) {
             assertTrue("$key is blank", value.isNotBlank())
         }

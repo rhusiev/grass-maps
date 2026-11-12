@@ -149,6 +149,13 @@ class AppContainer(
     val mapSession: MapSessionHolder = MapSessionHolder()
 
     /**
+     * The deterministic navigation screen fixture the debug command fills
+     * (T-0320). It is null in a release build; the live navigation state is the
+     * only screen source unless a debug command explicitly shows a fixture.
+     */
+    internal val navigationScreenFixture: NavigationScreenFixtureStore = NavigationScreenFixtureStore()
+
+    /**
      * The point the map long press selected (T-0112). The gesture writes it
      * and `plugins/point-info` reads it; both share the process-wide store, so
      * a recomposition or a rebuilt surface keeps the selection.
@@ -343,6 +350,22 @@ class AppContainer(
     }
 
     /**
+     * The round 5 banner rules over the alert host's stream (T-0320). It is
+     * attached once for the process, so an alert emitted between two screen
+     * frames is still on the screen when the navigation screen collects it.
+     */
+    internal val navigationAlertBanners: NavigationAlertBanners by lazy {
+        NavigationAlertBanners().also { presenter ->
+            processScope.launch {
+                alerts.events.collect { event -> presenter.onEvent(event, navigation.state.value) }
+            }
+            processScope.launch {
+                navigation.state.collect { state -> presenter.onState(state) }
+            }
+        }
+    }
+
+    /**
      * The mounted region's directory, read once. Both region readers use it so
      * the mount is resolved once and an invalid mount is logged once.
      */
@@ -402,6 +425,7 @@ class AppContainer(
                         fixTimeMillis = cue.fixTimeMillis,
                         distanceToFeatureMeters = cue.distanceAheadMeters,
                         key = cue.key,
+                        featureKind = cue.feature.kind,
                     )
                 },
             log = { message -> Log.i(WAY_ALERTS_TAG, message) },

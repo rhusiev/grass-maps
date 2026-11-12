@@ -1,5 +1,7 @@
 package nl.r1a.grassmap.plugin.api.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * One OpenStreetMap feature a way alert can announce (T-0319).
  *
@@ -7,6 +9,7 @@ package nl.r1a.grassmap.plugin.api.model
  * (T-0409) will name them; the way-alert switches group both under the hazard
  * switch, as the product scope does.
  */
+@Serializable
 enum class WayAlertFeatureKind {
     RailwayCrossing,
     Tunnel,

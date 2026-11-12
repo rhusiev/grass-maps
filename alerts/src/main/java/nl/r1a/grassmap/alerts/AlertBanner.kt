@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.alerts
 
 import kotlinx.serialization.Serializable
+import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
 
 /**
  * What a screen draws for one alert. It carries no text: the screen resolves
@@ -12,7 +13,9 @@ import kotlinx.serialization.Serializable
  * triggered [AlertKind.SignalLost], measured between the two fixes that
  * bracket it. [featureDistanceMeters] is how far ahead the way feature was
  * when a way alert fired, for [AlertKind.Tunnel], [AlertKind.RailwayCrossing]
- * and [AlertKind.Hazard].
+ * and [AlertKind.Hazard]. [featureKind] keeps the region feature's own kind, so
+ * a ford and a barrier get their own banner text even though both share the
+ * hazard switch.
  */
 @Serializable
 data class AlertBanner(
@@ -21,6 +24,7 @@ data class AlertBanner(
     val routeDistanceMeters: Double? = null,
     val gapMillis: Long? = null,
     val featureDistanceMeters: Double? = null,
+    val featureKind: WayAlertFeatureKind? = null,
 ) {
     init {
         require(routeDistanceMeters == null || (routeDistanceMeters.isFinite() && routeDistanceMeters >= 0.0)) {

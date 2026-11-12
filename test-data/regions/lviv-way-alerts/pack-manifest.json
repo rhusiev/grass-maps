@@ -2,7 +2,7 @@
   "region": "ua-46",
   "version": "2026-11-12-1",
   "packageFormat": 1,
-  "osmTimestamp": "2026-11-05T15:33:00Z",
+  "osmTimestamp": "2026-11-03T21:24:23Z",
   "pipeline": {
     "tool": "pmtiles extract",
     "basePack": "/hdd/t-0102-evidence/region/ua-46/2026-11-05-bench",

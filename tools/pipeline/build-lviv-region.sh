@@ -127,7 +127,7 @@ podman run --rm -v "$WORK":/data:Z \
     --output /data/region.osm.pbf /data/source.osm.pbf
 
 osm_timestamp="$(
-    podman run --rm -v "$WORK":/data:Z "$OSMIUM_IMAGE" osmium fileinfo -e /data/region.osm.pbf 2>/dev/null |
+    podman run --rm -v "$WORK":/data:Z "$OSMIUM_IMAGE" osmium fileinfo -e /data/source.osm.pbf 2>/dev/null |
         awk -F= '/osmosis_replication_timestamp=/ {print $2; exit}'
 )"
 if [[ -z "$osm_timestamp" ]]; then

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- T-0410: the share staging directory. A track export is written under
+     cache/shared-tracks and exposed to the receiving app by one read grant;
+     no other app-private path is reachable through the provider. -->
+<paths>
+    <cache-path name="shared_tracks" path="shared-tracks/" />
+</paths>

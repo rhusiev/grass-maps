@@ -15,10 +15,15 @@ data class TrackSegment(
     val points: List<TrackPoint>,
 )
 
-/** An ordered track: one or more segments read from one file. */
+/**
+ * An ordered track: one or more segments read from one file. [style] is the
+ * library's presentation, absent on an import; an export writes it as a
+ * namespaced GPX extension and the sidecar stays the store's source of truth.
+ */
 data class Track(
     val name: String? = null,
     val segments: List<TrackSegment>,
+    val style: TrackStyle? = null,
 )
 
 /** A route read from a file. A route is not a travelled track yet (T-0411). */

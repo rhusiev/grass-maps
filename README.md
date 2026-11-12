@@ -412,7 +412,7 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/example` | example of a first-party plugin module | `plugin-api` |
 | `plugins/style-standard` | the Standard and Touring light and dark palettes and their one-zoom-earlier Touring threshold, as a `MapLayerProvider` | `plugin-api` |
 | `plugins/synthetic-data` | the synthetic elevation `DataSource` and its real contour overlay | `plugin-api` |
-| `plugins/gpx` | GPX 1.0/1.1 as a `FileFormat` provider | `plugin-api` |
+| `plugins/gpx` | GPX 1.0/1.1 import and export as a `FileFormat` provider | `plugin-api` |
 | `plugins/info-widgets` | the altitude, coordinates, GPS info and current / average / max speed widget data providers | `plugin-api` |
 | `plugins/dev-tools` | the release development-tools panel and its GPX replay start/stop commands | `plugin-api` |
 | `plugins/map-controls` | the free, follow and heading camera mode, the compass reset, the position-marker offset seam and the scale-bar layout | `plugin-api` |
@@ -421,7 +421,7 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/online-search` | the opt-in `places.search` provider over the public Photon geocoder, behind the online-search switch | `plugin-api` |
 | `plugins/favourites-ui` | the favourites lists state, the create, move, recolour, Home and Work commands, and the browsing search, sorts and description rendering | `plugin-api` |
 | `plugins/links` | the pure `geo:` and osm.org link parsers, including the osm.org short-link decoder | `plugin-api` |
-| `plugins/share` | the decimal, DMS and DDM coordinate notations, the osm.org and `geo:` link builders, and the copy, share and open-in commands | `plugin-api` |
+| `plugins/share` | the decimal, DMS and DDM coordinate notations, the osm.org and `geo:` link builders, the copy, share and open-in commands, and track export file names and MIME types | `plugin-api` |
 | `plugins/coordinates` | the coordinate notation parser the search field reads, and the vectors it shares with the formatters | `plugin-api` |
 | `plugins/valhalla` | the v1 `routing.engine` provider: profile mapping, the native Valhalla adapter, the async segment attributes | `plugin-api` |
 | `plugins/direct-engine` | the second `routing.engine` provider: one geodesic per leg with the haversine length, its leg segments and its honest empty capabilities | `plugin-api` |
@@ -473,15 +473,28 @@ it.
 
 ## Sharing seam
 
-`PlatformActions` in `plugin-api` is the platform seam for sharing (T-0210).
-It has three calls: copy text to the clipboard, share text, and open a URI. The
-contract carries no Android type, so `plugins/share` asks for the effect and
-`app` performs it. `AndroidPlatformActions` is the only file that names a
-`ClipboardManager` or an `Intent`. It starts the system chooser for share and
-`ACTION_VIEW` for a URI. A URI that no app handles is `Unsupported`. The text of
-a share is never logged. `openUri` also parses the scheme itself and builds an
-intent only for `http`, `https`, `tel`, `mailto` and `geo`; every other scheme
-is `Unsupported` before an intent exists.
+`PlatformActions` in `plugin-api` is the platform seam for sharing (T-0210,
+T-0410). It has five calls: copy text to the clipboard, share text, share a
+file, save a file through the system document picker, and open a URI. The
+contract carries no Android type, so `plugins/share` and the track export ask
+for the effect and `app` performs it. `AndroidPlatformActions` is the only
+place that names a `ClipboardManager`, an `Intent` or a `FileProvider`. It
+starts the system chooser for text and files and `ACTION_VIEW` for a URI. A URI
+that no app handles is `Unsupported`. The text and the bytes of a share are
+never logged. `openUri` also parses the scheme itself and builds an intent only
+for `http`, `https`, `tel`, `mailto` and `geo`; every other scheme is
+`Unsupported` before an intent exists.
+
+A shared track is written to `cache/shared-tracks/` and exposed by the one
+main-manifest `FileProvider` at `${applicationId}.track.files`; the send intent
+grants read on that URI alone. A saved track goes through
+`ACTION_CREATE_DOCUMENT`:
+`MainActivity` binds the picker launcher, `DocumentSaveCoordinator` owns the
+pending answer across an activity recreation, and the chosen `content:` URI is
+written with `ContentResolver.openOutputStream`. No storage permission is
+declared. The authority, the single `cache-path` and the permission absence are
+checked by `TrackExportManifestTest`; the launcher/writer seam is checked
+without Android by `DocumentSaveCoordinatorTest`.
 
 `plugins/share` owns the three coordinate notations and the link builders as
 pure functions:
@@ -1914,7 +1927,7 @@ main UI has a favourites entry point.
 members (extensions, MIME types, entity kinds) let the host choose a provider
 without activating it. `importFile(bytes, cancel)` returns the tracks, routes
 and waypoints it could read plus one warning per skipped part, so a partly
-broken file still imports. `export` is a typed `Unsupported` until T-0410.
+broken file still imports. `export(entities, cancel)` writes GPX 1.1 (T-0410).
 
 `plugins/gpx` (`file.gpx`) implements GPX 1.0 and 1.1 for tracks, routes and
 waypoints. It reads element names without a namespace or prefix assumption and
@@ -1922,6 +1935,21 @@ hardens the XML parser against doctypes and external entities. A point with
 missing or out-of-range coordinates is skipped with a structural locator such
 as `trk[0]/trkseg[1]/trkpt[4]`; a broken elevation or time only clears that
 field. A document that is not well-formed XML at all is `CorruptData`.
+Export writes the elements GPX 1.1 defines, in schema order, and keeps a stored
+track's colour and width as `<grassmap:colour>` and `<grassmap:widthDp>` inside
+`<trk><extensions>`. That namespace is
+`https://grassmaps.app/gpx/1`, the same one favourites use. The importer ignores
+it, so a round-trip returns the same geometry, names, elevations and times; the
+sidecar stays the store's source of truth for styling. A document the writer
+cannot represent (out-of-range coordinates, a non-finite elevation, an empty
+segment or a control character in a name) is `InvalidInput` instead of a file
+that lost data. Tests cover every fixture in both directions, multi-track list
+export, escaping, cancellation and the refusal cases.
+
+The official `gpx.xsd` is not vendored: it is absent from the repository and
+says nothing about a licence on topografix.com, so adding it would be a user
+decision. `GpxSchema11` instead encodes the schema's sequence, cardinality,
+simple-type and namespace rules and validates every exported document.
 
 `tracks` owns the import path: resolve the provider through `ProviderRegistry`
 in `app`, read the document, store every track it contains and compute each
@@ -2007,6 +2035,13 @@ exactly. The other half of the milestone, 10 real tracks against OsmAnd, has no
 data in the repository: `test-data/tracks/osmand-oracle/README.md` lists what
 is missing, and `TrackStatisticsOracleTest` reads `oracle.json` and is skipped
 while it is empty. It rejects a partial list of fewer than 10 tracks.
+
+`TrackExport` in `app` turns one stored track or a selected list into one
+`PlatformFile` through the resolved `file.format` provider, and hands it to
+`PlatformActions.shareFile` or `PlatformActions.saveFile`. `plugins/share`
+names the file (a track name, or `grass-maps-tracks.gpx` for a list) and picks
+the extension-specific MIME type. The track library screen is T-0414, which
+will call this path; no screen or debug-only action invents a host for it now.
 
 The debug channel exposes `core.track.import_test`:
 

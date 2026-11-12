@@ -88,5 +88,8 @@ invented.
   `file.gpx` provider and a `FileTrackStore` in a temporary directory.
 - `plugins/gpx/src/test/.../GpxFixtureShapeTest` covers the non-track entities:
   waypoints, routes, GPX 1.0 and the UTF-8 name.
+- `plugins/gpx/src/test/.../GpxExportTest` exports every file back to GPX 1.1,
+  validates the document shape and imports it again; `GpxSchema11` is the
+  structural schema check.
 - `tracks/src/test/.../FileTrackStoreTest` covers the store itself with a tiny
   test document format, so a store defect is not hidden behind the parser.

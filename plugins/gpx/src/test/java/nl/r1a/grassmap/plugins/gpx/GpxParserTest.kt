@@ -136,10 +136,10 @@ class GpxParserTest {
         }
 
     @Test
-    fun exportIsUnsupportedUntilTheExportTask() =
+    fun anEmptyExportIsInvalidInput() =
         runTest {
             assertEquals(
-                Outcome.Failure(AppError.Unsupported),
+                Outcome.Failure(AppError.InvalidInput),
                 GpxFormat().export(ImportedEntities(), CancellationHandle.None),
             )
         }

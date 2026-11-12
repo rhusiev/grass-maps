@@ -1,7 +1,6 @@
 package nl.r1a.grassmap.plugins.gpx
 
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.FileEntityKind
 import nl.r1a.grassmap.plugin.api.model.ImportResult
@@ -13,7 +12,8 @@ import nl.r1a.grassmap.plugin.api.provider.ProviderContract
 /**
  * GPX 1.0 and 1.1 behind the `file.format` contract. Reading is lenient: a
  * point with unusable coordinates is skipped and reported, so the rest of the
- * document still imports. Export lands in T-0410.
+ * document still imports. Export writes GPX 1.1 and keeps a stored track's
+ * style in the `grassmap` extension namespace (T-0410).
  */
 internal class GpxFormat : FileFormat {
     override val contract: ProviderContract = FileFormatContract.REFERENCE
@@ -33,7 +33,7 @@ internal class GpxFormat : FileFormat {
     override suspend fun export(
         entities: ImportedEntities,
         cancellation: CancellationHandle,
-    ): Outcome<ByteArray> = Outcome.Failure(AppError.Unsupported)
+    ): Outcome<ByteArray> = GpxWriter.write(entities, cancellation)
 
     private companion object {
         const val EXTENSION = "gpx"

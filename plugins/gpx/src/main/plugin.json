@@ -14,7 +14,7 @@
           "extensions": ["gpx"],
           "mimeTypes": ["application/gpx+xml", "application/xml"],
           "entityKinds": ["track", "route", "waypoint"],
-          "export": false
+          "export": true
         }
       }
     ]

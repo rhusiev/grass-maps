@@ -133,6 +133,8 @@ class AppContainer(
     private val favouritesBackupDebounceMillis: Long = FavouritesBackupRecorder.DEFAULT_DEBOUNCE_MILLIS,
     /** Clipboard, share-sheet and `ACTION_VIEW` effects (T-0210). */
     val platformActions: PlatformActions = NoPlatformActions,
+    /** The system document picker behind [PlatformActions.saveFile] (T-0410). */
+    val documentSaver: DocumentSaveCoordinator = DocumentSaveCoordinator(),
     /** The navigation foreground service (T-0314); absent in tests. */
     private val navigationService: NavigationServiceHandle = NoNavigationServiceHandle,
     /** The audio backend for turn beeps (T-0318); the app wires the Android one. */
@@ -487,6 +489,15 @@ class AppContainer(
      */
     val tracks: TrackAccess by lazy {
         TrackAccess(providerRegistry, GeneratedPlugins.providers, tracksRoot = tracksRootProvider())
+    }
+
+    /**
+     * One track or a selected list as a GPX file for the save or share path
+     * (T-0410). The track library UI (T-0414) is its caller; no screen exists
+     * yet.
+     */
+    val trackExport: TrackExport by lazy {
+        TrackExport(tracks, platformActions)
     }
 
     /**

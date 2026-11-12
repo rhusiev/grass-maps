@@ -72,6 +72,9 @@ class TrackAccess internal constructor(
     /** Re-reads the library directory; harmless for the in-memory store. */
     suspend fun reload(): Outcome<Unit> = store.reload()
 
+    /** Resolves the enabled file format for an extension (T-0410 export). */
+    internal suspend fun formatFor(extension: String): Outcome<FileFormat> = resolve(extension)
+
     /** Reads one stored document with the format that wrote it. */
     private suspend fun readDocument(bytes: ByteArray): Outcome<List<Track>> {
         val format =

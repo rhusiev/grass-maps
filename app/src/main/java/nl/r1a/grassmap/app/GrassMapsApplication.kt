@@ -35,6 +35,7 @@ import java.io.IOException
 open class GrassMapsApplication : Application() {
     val container: AppContainer by lazy {
         val location = locationSource()
+        val documentSaver = DocumentSaveCoordinator(ContentResolverDocumentWriter(this))
         AppContainer(
             strings = AndroidStrings(this),
             locationSource = location,
@@ -63,7 +64,8 @@ open class GrassMapsApplication : Application() {
             routeHistoryFileProvider = { File(filesDir, ROUTE_HISTORY_PATH) },
             routingOptionsFileProvider = { File(filesDir, ROUTING_OPTIONS_SETTINGS_PATH) },
             favouritesRootProvider = { filesDir },
-            platformActions = AndroidPlatformActions(this),
+            platformActions = AndroidPlatformActions(this, documentSaver),
+            documentSaver = documentSaver,
             navigationService = AndroidNavigationServiceHandle(this),
             beepSink = AndroidBeepSink(this),
             alertEffectSink = AndroidAlertEffects(this),

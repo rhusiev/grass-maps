@@ -2,7 +2,9 @@ package nl.r1a.grassmap.app
 
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.host.DocumentSaveResult
 import nl.r1a.grassmap.plugin.api.host.PlatformActions
+import nl.r1a.grassmap.plugin.api.host.PlatformFile
 import nl.r1a.grassmap.plugin.api.model.PlaceCardAction
 import nl.r1a.grassmap.plugin.api.model.PlaceCardLink
 import org.junit.Assert.assertEquals
@@ -128,6 +130,16 @@ class PlaceCardLauncherTest {
             calls += "share:$text"
             return Outcome.Success(Unit)
         }
+
+        override suspend fun shareFile(
+            file: PlatformFile,
+            subject: String?,
+        ): Outcome<Unit> {
+            calls += "file:${file.fileName}"
+            return Outcome.Success(Unit)
+        }
+
+        override suspend fun saveFile(file: PlatformFile): Outcome<DocumentSaveResult> = Outcome.Success(DocumentSaveResult.SAVED)
 
         override fun openUri(uri: String): Outcome<Unit> {
             calls += "open:$uri"

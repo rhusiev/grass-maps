@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.app
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -55,6 +56,22 @@ class MainActivity : ComponentActivity() {
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
+    /**
+     * The system document picker for an export (T-0410). The coordinator keeps
+     * the bytes and the pending answer, so a recreation still completes the
+     * save; a dismissal is a null URI, not an error.
+     */
+    private val saveDocumentLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val uri =
+                if (result.resultCode == Activity.RESULT_OK) {
+                    result.data?.data?.toString()
+                } else {
+                    null
+                }
+            container.documentSaver.complete(uri)
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val application = application as GrassMapsApplication
@@ -65,6 +82,9 @@ class MainActivity : ComponentActivity() {
                 container.contoursOverride = launch.getBooleanExtra(ContoursSettings.EXTRA_ENABLED, false)
             }
         container.locationPermission.bind(this) { requestLocationPermission() }
+        container.documentSaver.bind(this) { file ->
+            runOnUiThread { saveDocumentLauncher.launch(AndroidDocumentIntents.createDocument(file)) }
+        }
         bindLocationToLifecycle()
         requestNotificationPermissionWhileNavigating()
         if (savedInstanceState == null) {
@@ -83,6 +103,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         container.locationPermission.unbind(this)
+        container.documentSaver.unbind(this)
         super.onDestroy()
     }
 

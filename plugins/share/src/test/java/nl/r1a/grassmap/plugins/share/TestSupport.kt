@@ -7,8 +7,10 @@ import nl.r1a.grassmap.plugin.api.contract.PluginContext
 import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.contract.StreamId
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.host.DocumentSaveResult
 import nl.r1a.grassmap.plugin.api.host.ElevationAccess
 import nl.r1a.grassmap.plugin.api.host.PlatformActions
+import nl.r1a.grassmap.plugin.api.host.PlatformFile
 import nl.r1a.grassmap.plugin.api.host.PluginServices
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
@@ -39,6 +41,22 @@ internal class RecordingActions : PlatformActions {
     ): Outcome<Unit> {
         calls += "share:$subject:$text"
         return result
+    }
+
+    override suspend fun shareFile(
+        file: PlatformFile,
+        subject: String?,
+    ): Outcome<Unit> {
+        calls += "file:$subject:${file.fileName}:${file.mimeType}:${file.bytes.size}"
+        return result
+    }
+
+    override suspend fun saveFile(file: PlatformFile): Outcome<DocumentSaveResult> {
+        calls += "save:${file.fileName}:${file.mimeType}:${file.bytes.size}"
+        return when (val current = result) {
+            is Outcome.Success -> Outcome.Success(DocumentSaveResult.SAVED)
+            is Outcome.Failure -> current
+        }
     }
 
     override fun openUri(uri: String): Outcome<Unit> {

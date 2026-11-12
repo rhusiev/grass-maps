@@ -58,6 +58,20 @@
                 <data android:pathPrefix="/go/" />
             </intent-filter>
         </activity>
+        <!-- T-0410: the only FileProvider in the main app. It exposes the
+             cache directory a shared track is staged in, one file at a time,
+             with a read grant on the send intent. No storage permission is
+             declared and no other directory is reachable. -->
+        <provider
+            android:name="nl.r1a.grassmap.app.TrackFileProvider"
+            android:authorities="${applicationId}.track.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/track_file_paths" />
+        </provider>
+
         <!-- T-0314: guidance runs here while the activity is not in the
              foreground. It starts and stops with a navigation session, never on
              its own; stopWithTask stays false so navigation survives a task

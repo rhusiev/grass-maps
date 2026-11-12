@@ -34,11 +34,13 @@ import nl.r1a.grassmap.plugin.api.host.NoDevToolsAccess
 import nl.r1a.grassmap.plugin.api.host.NoElevationAccess
 import nl.r1a.grassmap.plugin.api.host.NoFavouritesListsAccess
 import nl.r1a.grassmap.plugin.api.host.NoPlatformActions
+import nl.r1a.grassmap.plugin.api.host.NoRegionAccess
 import nl.r1a.grassmap.plugin.api.host.NoRouteHistoryAccess
 import nl.r1a.grassmap.plugin.api.host.NoRoutingEngines
 import nl.r1a.grassmap.plugin.api.host.NoRoutingPacks
 import nl.r1a.grassmap.plugin.api.host.PlatformActions
 import nl.r1a.grassmap.plugin.api.host.PluginServices
+import nl.r1a.grassmap.plugin.api.host.RegionAccess
 import nl.r1a.grassmap.plugin.api.host.RouteHistoryAccess
 import nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess
 import nl.r1a.grassmap.plugin.api.host.RoutingPackAccess
@@ -82,6 +84,7 @@ class PluginHost(
     private val locationService: LocationService = InertLocationService,
     private val networkGate: NetworkGate = NoNetworkGate,
     private val elevationAccess: ElevationAccess = NoElevationAccess,
+    private val regionAccess: RegionAccess = NoRegionAccess,
     private val cameraFlow: Flow<Camera> = emptyFlow(),
     private val devToolsAccess: DevToolsAccess = NoDevToolsAccess,
     private val favouritesListsAccess: FavouritesListsAccess = NoFavouritesListsAccess,
@@ -512,6 +515,8 @@ class PluginHost(
         override val network: NetworkGate = this@PluginHost.networkGate
 
         override val elevation: ElevationAccess = elevationAccess
+
+        override val region: RegionAccess = regionAccess
 
         override val camera: Flow<Camera> = cameraFlow
 

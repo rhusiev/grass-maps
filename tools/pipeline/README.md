@@ -38,6 +38,7 @@ a multi-gigabyte download. The manifest records each file's size and sha256;
 | `elevation.bin` | generated marker file | yes |
 | `format.bin`, `terms.fst`, `postings.bin`, `places.bin`, `context.bin`, `entities.bin`, `kinds.bin`, `strings.bin` | the search section, built by `rust/grass-core` from `fixture-places.tsv`; a version-2 build writes `format.bin`, the committed version-1 package has no such file | no |
 | `features.bin` | the feature component, built in the same pass | no |
+| `way-alerts.geojson` | authored GeoJSON with one railway crossing, one tunnel, one hazard and one off-corridor hazard; the OSM extract that will write it from `railway=level_crossing`, `tunnel=*` and `hazard`/`ford`/`barrier` tags is not built yet | yes |
 
 The bounding box is `23.940,49.940,23.960,49.960` (about 1.5 km around
 Ivano-Frankove, Lviv oblast). It is rural, so its z12-14 tiles stay small; the
@@ -49,6 +50,24 @@ The elevation stand-in exists so the manifest and mount checks have something to
 read. It is not in the real GLO-30 format; the manifest marks it
 `"standIn": true`, and a test asserts that flag so nobody mistakes it for real
 data. It is replaced when the elevation pipeline lands.
+
+### Way-alert features (T-0319)
+
+`way-alerts.geojson` is a GeoJSON `FeatureCollection` read by
+`regions.RegionReader` and the way-alert plugin. Each feature carries `kind`
+(`railway_crossing`, `tunnel`, `hazard`, `ford` or `barrier`), `osmType`
+(`node` or `way`) and `osmId`; a node is a `Point`, a tunnel is a
+`LineString`. The four authored features sit on, or just off, the straight
+synthetic test route from `49.949, 23.943` to `49.949, 23.953`: a crossing at
+`23.947`, a tunnel from `23.949` to `23.951`, a hazard at `23.952` and a
+second hazard `167 m` north of the line, outside the `30 m` corridor.
+
+The component is a stand-in because the region pipeline does not extract way
+features from the OSM PBF yet. When it does, it will select
+`railway=level_crossing` nodes, `tunnel=*` ways and `hazard=*`/`ford=*`/
+`barrier=*` nodes into the same file, and the manifest's `standIn` flag will
+turn false. Keeping the authored file means the JVM tests exercise the real
+reader and query rather than a fake source.
 
 ### Search section and features
 

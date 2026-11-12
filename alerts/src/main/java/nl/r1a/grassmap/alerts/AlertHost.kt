@@ -16,6 +16,7 @@ import nl.r1a.grassmap.navigation.NavigationPhase
 import nl.r1a.grassmap.navigation.NavigationState
 import nl.r1a.grassmap.navigation.RouteRelation
 import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmap.plugin.api.model.WayAlertKey
 
 /**
  * The alert seam (T-0317): it reads the navigation state and the fix flow and
@@ -71,6 +72,8 @@ class AlertHost(
     private var lastRouteRevision: Long? = null
     private var arrived = false
     private var sequence = 0L
+    private val announcedWayAlerts = mutableSetOf<WayAlertKey>()
+    private var wayAlertRevision: Long? = null
 
     /** Turns [kind] on, sharing its switch with the kind's other half. */
     fun enable(kind: AlertKind) {
@@ -116,12 +119,15 @@ class AlertHost(
         val revision = state.routeRevision
         val previousRevision = lastRouteRevision
         lastRouteRevision = revision
-        if (previousRevision != null && revision != previousRevision && fixTimeMillis != null && mutableSettings.value.reroute) {
-            announce(
-                AlertKind.Rerouted,
-                fixTimeMillis = fixTimeMillis,
-                routeDistanceMeters = state.activeRoute?.distanceMeters,
-            )
+        if (previousRevision != null && revision != previousRevision) {
+            announcedWayAlerts.clear()
+            if (fixTimeMillis != null && mutableSettings.value.reroute) {
+                announce(
+                    AlertKind.Rerouted,
+                    fixTimeMillis = fixTimeMillis,
+                    routeDistanceMeters = state.activeRoute?.distanceMeters,
+                )
+            }
         }
 
         val isOffRoute = state.relation == RouteRelation.OffRoute
@@ -155,15 +161,53 @@ class AlertHost(
             }
         }
 
+    /**
+     * Announces one way alert (T-0319): a tunnel, a railway crossing or a
+     * hazard/ford/barrier found on the route. [key] is the feature's identity
+     * inside [key]'s route revision, so the same feature is announced once and
+     * a reroute, which changes the revision, re-arms it.
+     *
+     * A switch that is off drops the alert; the key is not recorded, so
+     * enabling the switch does not replay a feature that is already behind.
+     * The plugin's schedule has already latched the feature by then.
+     */
+    @Synchronized
+    fun onWayAlert(
+        kind: AlertKind,
+        fixTimeMillis: Long,
+        distanceToFeatureMeters: Double,
+        key: WayAlertKey,
+    ) {
+        require(kind == AlertKind.Tunnel || kind == AlertKind.RailwayCrossing || kind == AlertKind.Hazard) {
+            "a way alert carries a way-alert kind"
+        }
+        if (!mutableSettings.value.isEnabled(kind)) {
+            return
+        }
+        if (wayAlertRevision != key.routeRevision) {
+            announcedWayAlerts.clear()
+            wayAlertRevision = key.routeRevision
+        }
+        if (!announcedWayAlerts.add(key)) {
+            return
+        }
+        announce(
+            kind = kind,
+            fixTimeMillis = fixTimeMillis,
+            featureDistanceMeters = distanceToFeatureMeters,
+        )
+    }
+
     private fun announce(
         kind: AlertKind,
         fixTimeMillis: Long,
         routeDistanceMeters: Double? = null,
         gapMillis: Long? = null,
+        featureDistanceMeters: Double? = null,
     ) {
         sequence += 1
         val effects = listOf(AlertEffect.Sound(kind), AlertEffect.Vibration(kind))
-        val banner = AlertBanner(kind, severityOf(kind), routeDistanceMeters, gapMillis)
+        val banner = AlertBanner(kind, severityOf(kind), routeDistanceMeters, gapMillis, featureDistanceMeters)
         mutableEvents.tryEmit(
             AlertEvent(
                 sequence = sequence,
@@ -180,6 +224,8 @@ class AlertHost(
         when (kind) {
             AlertKind.SignalLost, AlertKind.OffRoute -> AlertSeverity.Warning
             AlertKind.SignalRegained, AlertKind.Rerouted, AlertKind.Arrived -> AlertSeverity.Info
+            AlertKind.Tunnel -> AlertSeverity.Info
+            AlertKind.RailwayCrossing, AlertKind.Hazard -> AlertSeverity.Warning
         }
 
     companion object {

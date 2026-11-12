@@ -51,4 +51,5 @@ include(
     ":plugins:valhalla",
     ":plugins:direct-engine",
     ":plugins:nav-simulator",
+    ":plugins:way-alerts",
 )

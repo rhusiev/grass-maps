@@ -182,6 +182,7 @@ dependencies {
     implementation(project(":plugins:valhalla"))
     implementation(project(":plugins:direct-engine"))
     implementation(project(":plugins:nav-simulator"))
+    implementation(project(":plugins:way-alerts"))
 
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("org.jetbrains.compose.ui:ui:1.12.1")

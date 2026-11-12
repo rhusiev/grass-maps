@@ -107,6 +107,38 @@ printf '%s\n' \
     "Not a GLO-30 int16 grid. See tools/pipeline/README.md." \
     >"$work/elevation.bin"
 
+# The way-alert component is authored until the OSM extraction writes it from
+# railway=level_crossing, tunnel=* and hazard/ford/barrier tags. It is a real
+# GeoJSON component with one of each feature near the fixture's synthetic test
+# route (T-0319), so the committed bytes are deterministic without the PBF.
+cat >"$work/way-alerts.geojson" <<'GEOJSON'
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "kind": "railway_crossing", "osmType": "node", "osmId": 9001 },
+      "geometry": { "type": "Point", "coordinates": [23.947, 49.949] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "tunnel", "osmType": "way", "osmId": 9002 },
+      "geometry": { "type": "LineString", "coordinates": [[23.949, 49.949], [23.951, 49.949]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "hazard", "osmType": "node", "osmId": 9003 },
+      "geometry": { "type": "Point", "coordinates": [23.952, 49.949] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "hazard", "osmType": "node", "osmId": 9004 },
+      "geometry": { "type": "Point", "coordinates": [23.947, 49.9505] }
+    }
+  ]
+}
+GEOJSON
+
 echo "Building the search section and feature component: $SEARCH_SOURCE"
 "$CARGO" run --quiet --release --locked \
     --manifest-path "$ROOT/rust/grass-core/Cargo.toml" \
@@ -199,6 +231,8 @@ manifest = {
         component("search-kinds", "kinds.bin", "search-section", 2, None, False),
         component("search-strings", "strings.bin", "search-section", 2, None, False),
         component("features", "features.bin", "place-features", 1, None, False),
+        # Authored until the OSM extract writes it; see the GeoJSON block above.
+        component("way-alerts", "way-alerts.geojson", "way-alerts-geojson", 1, None, True),
     ],
 }
 

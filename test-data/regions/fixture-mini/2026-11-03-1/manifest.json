@@ -138,6 +138,16 @@
       "bytes": 345,
       "sha256": "ae6049b473f43333bc6f949e13ba753b3ca9ccfd41159ef06930f79589f73a45",
       "standIn": false
+    },
+    {
+      "kind": "way-alerts",
+      "file": "way-alerts.geojson",
+      "format": "way-alerts-geojson",
+      "formatVersion": 1,
+      "version": "2026-11-03-1",
+      "bytes": 829,
+      "sha256": "e97ae26ee7afdda9815f56b7724bdc1c87bc4f3a92e1de07eb8fd0ed2911835e",
+      "standIn": true
     }
   ]
 }

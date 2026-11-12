@@ -25,6 +25,13 @@ interface PluginServices {
     /** Terrain height from the mounted region data. */
     val elevation: ElevationAccess
 
+    /**
+     * Way-alert features from the mounted region data (T-0319). Empty until a
+     * region with the way-alert component is mounted, so a package without it
+     * still opens.
+     */
+    val region: RegionAccess get() = NoRegionAccess
+
     /** The camera, empty until a map surface is bound. */
     val camera: Flow<Camera>
 

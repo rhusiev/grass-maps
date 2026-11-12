@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.way_alerts.name">Оповіщення про перешкоди</string>
+    <string name="plugin.way_alerts.description">Попереджає про залізничні переїзди, тунелі, небезпеки, броди та бар\'єри на маршруті.</string>
+</resources>

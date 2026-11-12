@@ -1,0 +1,25 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "kind": "railway_crossing", "osmType": "node", "osmId": 9001 },
+      "geometry": { "type": "Point", "coordinates": [23.947, 49.949] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "tunnel", "osmType": "way", "osmId": 9002 },
+      "geometry": { "type": "LineString", "coordinates": [[23.949, 49.949], [23.951, 49.949]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "hazard", "osmType": "node", "osmId": 9003 },
+      "geometry": { "type": "Point", "coordinates": [23.952, 49.949] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "hazard", "osmType": "node", "osmId": 9004 },
+      "geometry": { "type": "Point", "coordinates": [23.947, 49.9505] }
+    }
+  ]
+}

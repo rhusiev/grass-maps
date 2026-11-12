@@ -1,0 +1,15 @@
+{
+  "id": "way.alerts",
+  "name": "plugin.way_alerts.name",
+  "description": "plugin.way_alerts.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.way.alerts.WayAlertsPlugin",
+  "contributes": {},
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": ["way-alerts"]
+  },
+  "activation": []
+}

@@ -12,6 +12,8 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
+import nl.r1a.grassmap.alerts.AlertHost
+import nl.r1a.grassmap.alerts.AlertKind
 import nl.r1a.grassmap.alerts.BeepHost
 import nl.r1a.grassmap.core.services.MockGpxLocationSource
 import nl.r1a.grassmap.navigation.FerrostarRouteFollower
@@ -35,6 +37,7 @@ import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteRequest
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
+import nl.r1a.grassmap.plugins.way.alerts.WayAlertHost
 import nl.r1a.grassmap.routing.RouteJson
 
 /** The debug trigger that proves the navigation seam on a replay. */
@@ -54,6 +57,9 @@ internal val NAV_STOP_COMMAND: CommandId = CommandId("core.nav.stop")
 
 /** Turns the T-0318 turn-beep mode on or off. */
 internal val NAV_BEEPS_COMMAND: CommandId = CommandId("core.nav.beeps")
+
+/** Turns the T-0319 way alerts on or off, all three or one kind. */
+internal val NAV_WAY_ALERTS_COMMAND: CommandId = CommandId("core.nav.way_alerts")
 
 private const val TAG = "GrassMapsNav"
 private const val AREA_FIXTURE = "fixture"
@@ -253,15 +259,18 @@ internal fun navCommands(
     engine: suspend () -> RoutingEngine?,
     navigation: NavigationController,
     beeps: () -> BeepHost,
+    wayAlerts: () -> WayAlertHost,
+    alerts: () -> AlertHost,
 ): List<Command<*, *>> =
     listOf(
         TestFollowCommand(session, engine),
-        StartNavigationCommand(navigation, beeps),
+        StartNavigationCommand(navigation, beeps, wayAlerts),
         PauseNavigationCommand(navigation),
         ResumeNavigationCommand(navigation),
         StopNavigationCommand(navigation),
         BeepsCommand(beeps),
         BeepProbeCommand(beeps),
+        WayAlertsCommand(alerts),
     )
 
 /**
@@ -276,6 +285,7 @@ internal fun navCommands(
 internal class StartNavigationCommand(
     private val navigation: NavigationController,
     private val beeps: () -> BeepHost,
+    private val wayAlerts: () -> WayAlertHost,
 ) : Command<JsonElement, String>(
         id = NAV_START_COMMAND,
         paramsSerializer = JsonElement.serializer(),
@@ -290,6 +300,8 @@ internal class StartNavigationCommand(
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
         val selection = parse(params) ?: return Outcome.Failure(AppError.InvalidInput)
         beeps().setProfile(selection.profile)
+        wayAlerts().setProfile(selection.profile)
+        wayAlerts().reset()
         return when (val outcome = navigation.start(selection.route, selection.profile)) {
             is Outcome.Failure -> {
                 outcome
@@ -439,5 +451,52 @@ internal class BeepsCommand(
                     "threshold_m=${host.thresholdMeters}",
             ),
         )
+    }
+}
+
+/**
+ * Turns the T-0319 way alerts on or off. `kind` is `all` (the default),
+ * `tunnel`, `railway_crossing` or `hazard`; `all` touches the three switches
+ * the way alerts own and leaves the T-0317 switches alone.
+ */
+internal class WayAlertsCommand(
+    private val alerts: () -> AlertHost,
+) : Command<JsonElement, String>(
+        id = NAV_WAY_ALERTS_COMMAND,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = String.serializer(),
+        doc = "Turns way alerts on or off. Parameters: enabled, optional kind (all, tunnel, railway_crossing, hazard).",
+        policy =
+            CommandPolicy(
+                allowlistedForControl = true,
+                dispatcher = CommandDispatcher.DEFAULT,
+            ),
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
+        val objectValue = params as? JsonObject ?: return Outcome.Failure(AppError.InvalidInput)
+        val enabled =
+            (objectValue["enabled"] as? JsonPrimitive)?.booleanOrNull
+                ?: return Outcome.Failure(AppError.InvalidInput)
+        val kindName = (objectValue["kind"] as? JsonPrimitive)?.contentOrNull?.lowercase() ?: KIND_ALL
+        val kinds =
+            when (kindName) {
+                KIND_ALL -> listOf(AlertKind.Tunnel, AlertKind.RailwayCrossing, AlertKind.Hazard)
+                KIND_TUNNEL -> listOf(AlertKind.Tunnel)
+                KIND_CROSSING -> listOf(AlertKind.RailwayCrossing)
+                KIND_HAZARD -> listOf(AlertKind.Hazard)
+                else -> return Outcome.Failure(AppError.InvalidInput)
+            }
+        val host = alerts()
+        kinds.forEach { kind -> host.setEnabled(kind, enabled) }
+        return Outcome.Success(
+            CommandResult("enabled=$enabled kinds=${kinds.joinToString(",") { it.name.lowercase() }}"),
+        )
+    }
+
+    private companion object {
+        const val KIND_ALL = "all"
+        const val KIND_TUNNEL = "tunnel"
+        const val KIND_CROSSING = "railway_crossing"
+        const val KIND_HAZARD = "hazard"
     }
 }

@@ -9,6 +9,9 @@ import nl.r1a.grassmap.navigation.NavigationState
 import nl.r1a.grassmap.navigation.RouteRelation
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmap.plugin.api.model.WayAlertElementType
+import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
+import nl.r1a.grassmap.plugin.api.model.WayAlertKey
 import nl.r1a.grassmap.plugin.api.provider.Route
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -167,6 +170,125 @@ class AlertHostTest {
         assertFalse(json.isEmpty())
         assertTrue(json.contains("\"type\":\"sound\""))
         assertTrue(json.contains("\"kind\":\"Rerouted\""))
+    }
+
+    @Test
+    fun eachWayAlertHasItsOwnOffByDefaultSwitch() {
+        val settings = AlertSettings.ALL_OFF
+
+        assertFalse(settings.isEnabled(AlertKind.Tunnel))
+        assertFalse(settings.isEnabled(AlertKind.RailwayCrossing))
+        assertFalse(settings.isEnabled(AlertKind.Hazard))
+        assertTrue(AlertKind.entries.none { settings.isEnabled(it) })
+
+        val hazardOnly = settings.with(AlertKind.Hazard, true)
+
+        assertTrue(hazardOnly.isEnabled(AlertKind.Hazard))
+        assertFalse(hazardOnly.isEnabled(AlertKind.Tunnel))
+        assertFalse(hazardOnly.isEnabled(AlertKind.RailwayCrossing))
+        assertFalse(hazardOnly.isEnabled(AlertKind.OffRoute))
+    }
+
+    @Test
+    fun aDisabledWayAlertEmitsNoEventAndNoEffect() =
+        runTest {
+            val sink = RecordingEffectSink()
+            val host = AlertHost(AlertSettings.ALL_OFF, sink)
+            val events = collectAlerts(host)
+
+            host.onWayAlert(
+                kind = AlertKind.Hazard,
+                fixTimeMillis = 1_000L,
+                distanceToFeatureMeters = 80.0,
+                key = WayAlertKey(0L, WayAlertElementType.Node, 9003L),
+            )
+
+            assertTrue(events.isEmpty())
+            assertTrue(sink.effects.isEmpty())
+        }
+
+    @Test
+    fun aWayAlertCarriesItsFeatureDistanceAndEffects() =
+        runTest {
+            val sink = RecordingEffectSink()
+            val host = AlertHost(AlertSettings(hazard = true), sink)
+            val events = collectAlerts(host)
+
+            host.onWayAlert(
+                kind = AlertKind.Hazard,
+                fixTimeMillis = 1_000L,
+                distanceToFeatureMeters = 79.5,
+                key = WayAlertKey(3L, WayAlertElementType.Node, 9003L),
+            )
+
+            assertEquals(listOf(AlertKind.Hazard), events.map { it.kind })
+            assertEquals(79.5, events.single().banner.featureDistanceMeters ?: -1.0, 0.001)
+            assertEquals(AlertSeverity.Warning, events.single().banner.severity)
+            assertEquals(
+                listOf(
+                    AlertEffect.Sound(AlertKind.Hazard),
+                    AlertEffect.Vibration(AlertKind.Hazard),
+                ),
+                sink.effects,
+            )
+        }
+
+    @Test
+    fun theSameWayAlertKeyIsAnnouncedOnce() =
+        runTest {
+            val host = AlertHost(AlertSettings(railwayCrossing = true))
+            val events = collectAlerts(host)
+            val key = WayAlertKey(0L, WayAlertElementType.Node, 9001L)
+
+            host.onWayAlert(AlertKind.RailwayCrossing, 1_000L, 140.0, key)
+            host.onWayAlert(AlertKind.RailwayCrossing, 1_000L, 120.0, key)
+
+            assertEquals(listOf(AlertKind.RailwayCrossing), events.map { it.kind })
+        }
+
+    @Test
+    fun aRerouteRearmsTheSameFeature() =
+        runTest {
+            val host = AlertHost(AlertSettings(hazard = true))
+            val events = collectAlerts(host)
+            val fix = fix(0L)
+            val firstKey = WayAlertKey(0L, WayAlertElementType.Node, 9003L)
+
+            host.onState(state(fix = fix, revision = 0L))
+            host.onWayAlert(AlertKind.Hazard, 1_000L, 90.0, firstKey)
+            host.onState(state(fix = fix, revision = 1L))
+            host.onWayAlert(
+                AlertKind.Hazard,
+                2_000L,
+                90.0,
+                WayAlertKey(1L, WayAlertElementType.Node, 9003L),
+            )
+
+            assertEquals(listOf(AlertKind.Hazard, AlertKind.Hazard), events.map { it.kind })
+        }
+
+    @Test
+    fun aTunnelIsAnInfoBanner() =
+        runTest {
+            val host = AlertHost(AlertSettings(tunnel = true))
+            val events = collectAlerts(host)
+
+            host.onWayAlert(
+                AlertKind.Tunnel,
+                1_000L,
+                190.0,
+                WayAlertKey(0L, WayAlertElementType.Way, 9002L),
+            )
+
+            assertEquals(AlertSeverity.Info, events.single().banner.severity)
+        }
+
+    @Test
+    fun fordAndBarrierFeaturesUseTheHazardAlertKind() {
+        assertEquals(AlertKind.Hazard, AlertKind.forWayFeature(WayAlertFeatureKind.Ford))
+        assertEquals(AlertKind.Hazard, AlertKind.forWayFeature(WayAlertFeatureKind.Barrier))
+        assertEquals(AlertKind.Tunnel, AlertKind.forWayFeature(WayAlertFeatureKind.Tunnel))
+        assertEquals(AlertKind.RailwayCrossing, AlertKind.forWayFeature(WayAlertFeatureKind.RailwayCrossing))
     }
 
     private fun fix(timeMillis: Long): LocationFix =

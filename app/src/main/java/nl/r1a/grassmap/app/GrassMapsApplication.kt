@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.withContext
+import nl.r1a.grassmap.alerts.AndroidAlertEffects
 import nl.r1a.grassmap.alerts.AndroidBeepSink
 import nl.r1a.grassmap.core.services.AndroidHeadingSource
 import nl.r1a.grassmap.core.services.AndroidLocationSource
@@ -62,6 +63,7 @@ open class GrassMapsApplication : Application() {
             platformActions = AndroidPlatformActions(this),
             navigationService = AndroidNavigationServiceHandle(this),
             beepSink = AndroidBeepSink(this),
+            alertEffectSink = AndroidAlertEffects(this),
         )
     }
 

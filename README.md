@@ -1427,11 +1427,73 @@ The live path is also wired: `AppContainer` attaches the host to
 session starts. On the g32 probe the live replay did not deliver fixes to that
 controller, so the device evidence comes from the probe command; the live
 attachment itself was not exercised on the phone. What remains: a screen that
-exposes the beep mode and its distance, T-0319 way alerts, and the real
-music-app pause behaviour. The pause mode only requests focus; whether a
+exposes the beep mode and its distance, the way alerts described next, and the
+real music-app pause behaviour. The pause mode only requests focus; whether a
 particular player pauses on the loss is the player's decision, so it was not
 measured here. The duck request is visible in `dumpsys audio`; whether music is
 audibly quieter needs a player that is actually playing.
+
+## Way alerts
+
+Way alerts are T-0319. They come from the mounted region, not from Valhalla:
+the engine does not return hazards, fords or barriers, and T-0301 verified its
+tiles do not carry them. `RegionReader` in `regions` reads the
+`way-alerts.geojson` component and answers a corridor query along the active
+route. A package without the component is valid and reports no features.
+
+The kinds are a railway crossing, a tunnel and a hazard. A ford or a barrier
+node uses the hazard kind and the hazard switch. Each kind has its own switch,
+and all three are off by default, like the T-0317 alerts. The product scope
+gives crossings and hazards to bike and hike, and tunnels to bike only;
+walking and driving get no way alerts, so their distance is null and the
+feature is skipped.
+
+The corridor is 30 m wide and the warning is 20 to 40 seconds of travel before
+the feature:
+
+| Feature | Hike, 5 km/h | Bike, 18 km/h |
+|---|---|---|
+| Railway crossing | 50 m, 36 s | 150 m, 30 s |
+| Tunnel | - | 200 m, 40 s |
+| Hazard, ford, barrier | 30 m, 22 s | 100 m, 20 s |
+
+The corridor is also the answer to "close enough to matter": the route line
+and the OSM geometry both carry metre-level noise, a barrier at the verge is
+still on the route, and 30 m keeps a parallel railway or a service road one
+street away out of the result. The distance is wider than a turn beep because
+the rider must see the feature, not only react to a maneuver.
+
+`WayAlertSchedule` in `plugins/way-alerts` queries the region on each route
+revision change and caches the hits. A feature is announced on the first state
+that puts it ahead of the rider at or inside the distance for the active
+profile; a feature first seen inside the distance is announced at once, because
+it is a hazard on the road, not a maneuver the rider can anticipate. A paused
+phase keeps the cache and the announcements and emits nothing. A terminal phase
+clears both, so a new trip starts clean even when its route revision starts at
+zero again.
+
+The once-per-feature key is
+`WayAlertKey(routeRevision, elementType, osmId)`. The element type keeps a node
+and a way with the same numeric id apart. A feature is announced once per
+revision; a reroute changes the revision and re-arms every feature on the
+replacement route. The device feature off the corridor is never returned by
+the reader, so it cannot alert at all.
+
+`AlertHost.onWayAlert` is the typed path: it checks the switch for the kind,
+drops a key it has already announced in this revision, and emits the same
+`AlertEvent` as the other alerts. The banner carries `featureDistanceMeters`
+next to the kind and severity, and the effects are the usual sound and
+vibration for the kind. `core.nav.way_alerts` turns the switches on or off on a
+device; its parameters are `enabled` and an optional `kind` (`all`, `tunnel`,
+`railway_crossing`, `hazard`).
+
+The committed test region has a crossing at `23.947`, a tunnel from `23.949` to
+`23.951` and a hazard at `23.952` on the straight synthetic test route from
+`49.949, 23.943` to `49.949, 23.953`, plus a second hazard 167 m north of it.
+The file is an authored stand-in until the OSM extraction writes it; the
+manifest says so. The tests read it through the real `RegionReader`, drive the
+real schedule, and bridge the cues into the real `AlertHost` for the all-off
+and typed-banner cases.
 
 ## Search seam
 
@@ -1816,6 +1878,15 @@ v3 header. Its result is `None`, `Mounted` or `Invalid` with a typed
 `CorruptContours`, `MultipleRegions`). More than one installed region is
 reported, not guessed; the two-oblast resolver is T-0503. It never hashes a
 whole file, so it is safe to call while the map is starting.
+
+The way-alert component is optional, so an older package still mounts and
+opens. `RegionReader` (T-0319) reads `way-alerts.geojson` from the mounted
+version on its first query, off Main, and answers the route corridor query the
+way-alert plugin uses. A manifest without the component is a success with no
+features; a present but unreadable component is `CorruptData` and an unknown
+format version is `Unsupported`. The mount does not hash the component; the
+installer already verified every declared file, and the reader checks the
+declared size before it reads.
 
 The debug trigger is `core.region.download_test`, allowlisted for the control
 channel only:

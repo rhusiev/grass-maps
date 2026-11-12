@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.way_alerts.name">Way alerts</string>
+    <string name="plugin.way_alerts.description">Warns about railway crossings, tunnels, hazards, fords and barriers on the route.</string>
+</resources>

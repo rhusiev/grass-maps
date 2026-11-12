@@ -82,6 +82,16 @@ class TestRegionFixtureTest {
     }
 
     @Test
+    fun theWayAlertsComponentIsTheAuthoredStandIn() {
+        val component = requireNotNull(region.manifest.component("way-alerts")) { "way-alerts component missing" }
+
+        assertEquals("way-alerts-geojson", component.format)
+        assertEquals(1, component.formatVersion)
+        assertTrue("the way-alert fixture is authored until the pipeline builds it", component.standIn)
+        assertTrue("way-alerts component is empty", Files.size(region.file(component)) > 0)
+    }
+
+    @Test
     fun corruptedFeaturesAreDetected() {
         val copy = Files.createTempDirectory("test-region-features-")
         try {

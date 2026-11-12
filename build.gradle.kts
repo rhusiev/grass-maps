@@ -93,6 +93,7 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         // follower, and reads a passed route through the shared JSON form. It
         // changes no navigation policy and reaches no core internals.
         ":plugins:nav-simulator" to setOf(":plugin-api", ":navigation", ":routing"),
+        ":plugins:way-alerts" to setOf(":plugin-api"),
     )
 // Test-only edges are separate so a test fixture cannot quietly become a
 // production dependency. :control's info-widgets edge is the accepted T-0113
@@ -110,6 +111,10 @@ val moduleTestDependencyAllowlist: Map<String, Set<String>> =
         // T-0310: the guidance panel's acceptance feeds the real session's
         // published state into the panel. Test only.
         ":plugins:guidance-ui" to setOf(":navigation"),
+        // T-0319: the way-alert acceptance reads the committed region through
+        // the real reader and bridges its cues into the real alert host. Test
+        // only; the plugin module itself depends on :plugin-api alone.
+        ":plugins:way-alerts" to setOf(":plugin-api", ":regions", ":alerts"),
     )
 val moduleBoundaryViolations = objects.listProperty(String::class.java)
 

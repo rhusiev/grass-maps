@@ -5,8 +5,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import nl.r1a.grassmap.alerts.AlertEffectSink
+import nl.r1a.grassmap.alerts.AlertHost
+import nl.r1a.grassmap.alerts.AlertKind
 import nl.r1a.grassmap.alerts.BeepHost
 import nl.r1a.grassmap.alerts.BeepSink
+import nl.r1a.grassmap.alerts.NoopAlertEffectSink
 import nl.r1a.grassmap.alerts.NoopBeepSink
 import nl.r1a.grassmap.app.generated.GeneratedPlugins
 import nl.r1a.grassmap.app.generated.GeneratedStreams
@@ -45,7 +50,9 @@ import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.NoPlatformActions
+import nl.r1a.grassmap.plugin.api.host.NoRegionAccess
 import nl.r1a.grassmap.plugin.api.host.PlatformActions
+import nl.r1a.grassmap.plugin.api.host.RegionAccess
 import nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
@@ -69,11 +76,16 @@ import nl.r1a.grassmap.plugins.map.controls.PositionOffsetFraction
 import nl.r1a.grassmap.plugins.map.controls.PositionOffsetProvider
 import nl.r1a.grassmap.plugins.point.info.PointInfo
 import nl.r1a.grassmap.plugins.point.info.SelectedPointStore
+import nl.r1a.grassmap.plugins.way.alerts.WayAlertHost
+import nl.r1a.grassmap.plugins.way.alerts.WayAlertSink
 import nl.r1a.grassmap.regions.GateNetworkAccess
 import nl.r1a.grassmap.regions.HttpDownloadTransport
 import nl.r1a.grassmap.regions.NetworkAccess
 import nl.r1a.grassmap.regions.RegionDownloader
+import nl.r1a.grassmap.regions.RegionMount
+import nl.r1a.grassmap.regions.RegionMountResolver
 import nl.r1a.grassmap.regions.RegionPaths
+import nl.r1a.grassmap.regions.RegionReader
 import nl.r1a.grassmap.routing.RouteHistorySetting
 import nl.r1a.grassmap.routing.RouteHistoryStore
 import java.io.File
@@ -116,6 +128,8 @@ class AppContainer(
     private val navigationService: NavigationServiceHandle = NoNavigationServiceHandle,
     /** The audio backend for turn beeps (T-0318); the app wires the Android one. */
     private val beepSink: BeepSink = NoopBeepSink,
+    /** The tone and vibration backend for alerts (T-0317); Noop by default. */
+    private val alertEffectSink: AlertEffectSink = NoopAlertEffectSink,
 ) {
     private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val backupScope: CoroutineScope = favouritesBackupScope ?: processScope
@@ -282,6 +296,63 @@ class AppContainer(
     val beeps: BeepHost by lazy {
         BeepHost(sink = beepSink).also { host ->
             host.attach(processScope, navigation.state)
+        }
+    }
+
+    /**
+     * The alert host (T-0317). Way alerts (T-0319) are the first producer; its
+     * switches stay off until `core.nav.way_alerts` turns them on.
+     */
+    val alerts: AlertHost by lazy {
+        AlertHost(effectSink = alertEffectSink)
+    }
+
+    /**
+     * The mounted region's way-alert features (T-0319). The reader opens the
+     * component on the first query, off Main; an older package without it is a
+     * success with no features, and an unmounted region is the inert source.
+     */
+    private val regionAccess: RegionAccess by lazy {
+        val root = regionsRoot ?: return@lazy NoRegionAccess
+        when (val mount = RegionMountResolver(root).resolve()) {
+            is RegionMount.Mounted -> {
+                RegionReader(mount.region.directory)
+            }
+
+            is RegionMount.Invalid -> {
+                Log.w(WAY_ALERTS_TAG, "region mount invalid: ${mount.problem}")
+                NoRegionAccess
+            }
+
+            RegionMount.None -> {
+                NoRegionAccess
+            }
+        }
+    }
+
+    /**
+     * Way alerts over the live navigation state (T-0319). The schedule asks
+     * the region for the features on each route revision and the sink bridges
+     * a due cue into the alert host's typed banner and effect path. The first
+     * access starts the collector; `core.nav.start` sets the profile.
+     */
+    val wayAlerts: WayAlertHost by lazy {
+        WayAlertHost(
+            region = regionAccess,
+            sink =
+                WayAlertSink { cue ->
+                    alerts.onWayAlert(
+                        kind = AlertKind.forWayFeature(cue.feature.kind),
+                        fixTimeMillis = cue.fixTimeMillis,
+                        distanceToFeatureMeters = cue.distanceAheadMeters,
+                        key = cue.key,
+                    )
+                },
+            log = { message -> Log.i(WAY_ALERTS_TAG, message) },
+        ).also { host ->
+            processScope.launch {
+                navigation.state.collect { state -> host.onState(state.toWayAlertState()) }
+            }
         }
     }
 
@@ -457,7 +528,7 @@ class AppContainer(
     private val hostCommands: List<Command<*, *>> by lazy {
         mapCommands(mapSession, locationController, locationPermission, cameraModes) +
             routeCommands(mapSession, routingEngine, { dataSources }) +
-            navCommands(mapSession, routingEngine, navigation, { beeps }) +
+            navCommands(mapSession, routingEngine, navigation, { beeps }, { wayAlerts }, { alerts }) +
             searchCommands { places } +
             searchScreenCommands(searchScreen, searchHistory) { message -> Log.i(SEARCH_TAG, message) } +
             searchHistoryCommands(searchHistory) +
@@ -540,6 +611,7 @@ class AppContainer(
         const val LINKS_TAG = "GrassMapsLinks"
         const val FAVOURITES_TAG = "GrassMapsFavourites"
         const val NAVIGATION_TAG = "GrassMapsNavigation"
+        const val WAY_ALERTS_TAG = "GrassMapsWayAlerts"
         const val ROUTING_PACK_DIRECTORY = "valhalla"
         val ROUTING_ENGINE_PLUGIN = PluginId("valhalla")
         val ONLINE_SEARCH_PLUGIN = PluginId("online.search")

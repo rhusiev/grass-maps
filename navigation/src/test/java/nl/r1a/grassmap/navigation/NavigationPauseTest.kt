@@ -81,6 +81,46 @@ class NavigationPauseTest {
         }
 
     @Test
+    fun pauseAfterArrivalKeepsTheTerminalPhase() =
+        runTest {
+            val fixes = Channel<LocationFix>(Channel.UNLIMITED)
+            val session = session()
+            val run = launch { session.run(ROUTE, fixes.receiveAsFlow()) }
+            fixes.send(fix(0, SOUTH))
+            fixes.send(fix(1, END))
+
+            runCurrent()
+
+            assertEquals(NavigationPhase.Arrived, session.state.value.phase)
+
+            session.control.pause()
+
+            runCurrent()
+
+            assertEquals(
+                "a pause after arrival must not replace the terminal phase",
+                NavigationPhase.Arrived,
+                session.state.value.phase,
+            )
+
+            session.control.resume()
+
+            runCurrent()
+
+            assertEquals(
+                "a resume after arrival must not restore guidance",
+                NavigationPhase.Arrived,
+                session.state.value.phase,
+            )
+
+            fixes.send(fix(2, END))
+
+            runCurrent()
+            run.join()
+            assertEquals(NavigationPhase.Arrived, session.state.value.phase)
+        }
+
+    @Test
     fun pausedFixesCannotStartARerouteAndTheSameFixesDoAfterResume() =
         runTest {
             val fixes = Channel<LocationFix>(Channel.UNLIMITED)

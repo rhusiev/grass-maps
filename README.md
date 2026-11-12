@@ -1280,10 +1280,11 @@ The notification shows the next turn's text as its title and the distance to it
 as its text. Its two actions pause or resume guidance and stop navigation. It is
 public and ongoing, so it survives the lock screen. Pausing publishes
 `NavigationPhase.Paused`; the session drops every fix before the follower and
-before the reroute gate, so guidance stops and no reroute can start. Resuming
-continues from the next fix; a fix that arrived during the pause is never
-replayed. A paused session that is stopped ends in `Stopped`, never in
-`Arrived`, because no arrival can be detected while fixes are dropped.
+before the reroute gate, so guidance stops and no reroute can start. An arrival
+or a stop is terminal: a pause that lands after that phase is published leaves
+it unchanged. Resuming continues from the next fix; a fix that arrived during
+the pause is never replayed. A paused session that is stopped ends in `Stopped`,
+never in `Arrived`, because no arrival can be detected while fixes are dropped.
 
 The control commands `core.nav.start`, `core.nav.pause`, `core.nav.resume` and
 `core.nav.stop` drive the controller. `core.nav.start` takes a route in the

@@ -123,7 +123,9 @@ class NavigationSession(
                     launch {
                         control.paused.collect { paused ->
                             val current = mutableState.value
-                            if (paused && current.phase != NavigationPhase.Paused) {
+                            // Arrival and the watcher cancel are not atomic: a
+                            // pause between them must not replace the terminal phase.
+                            if (paused && current.phase != NavigationPhase.Paused && !isTerminal(current.phase)) {
                                 log(
                                     "navigation-paused fixes=$fixCount " +
                                         "remaining_m=${format(current.remainingDistanceMeters)}",
@@ -576,13 +578,15 @@ class NavigationSession(
     private fun publish(state: NavigationState) {
         val paused = control.paused.value
         val phase =
-            if (paused && state.phase != NavigationPhase.Arrived && state.phase != NavigationPhase.Stopped) {
+            if (paused && !isTerminal(state.phase)) {
                 NavigationPhase.Paused
             } else {
                 state.phase
             }
         mutableState.value = state.copy(phase = phase)
     }
+
+    private fun isTerminal(phase: NavigationPhase): Boolean = phase == NavigationPhase.Arrived || phase == NavigationPhase.Stopped
 
     private fun format(value: Double?): String = if (value == null) "-" else String.format(Locale.ROOT, "%.1f", value)
 

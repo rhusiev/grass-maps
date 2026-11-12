@@ -82,6 +82,7 @@ class NavigationService : Service() {
 
             ACTION_STOP -> {
                 controller.stop()
+                controller.dismiss()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }

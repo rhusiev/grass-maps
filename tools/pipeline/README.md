@@ -29,7 +29,10 @@ manifest entry changed when T-0308 replaced the stand-in.
 
 The package is committed because tests must run without the bench repository or
 a multi-gigabyte download. The manifest records each file's size and sha256;
-`TestRegionFixtureTest` fails when a committed byte changes.
+`TestRegionFixtureTest` fails when a committed byte changes. The app also
+packages a byte-for-byte copy of `contours.pmtiles` as
+`app/src/main/assets/fixture-mini-contours.pmtiles` for the contour goldens;
+`FixtureContoursAssetTest` holds the two copies together.
 
 ### What the package contains
 

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.map_contours.name">Ізолінії</string>
+    <string name="plugin.map_contours.description">Малює горизонталі з компонента рельєфу регіону.</string>
+    <string name="map_contours_panel_title">Шари</string>
+    <string name="map_contours_toggle">Ізолінії</string>
+    <string name="map_contours_on">Увімкнено</string>
+    <string name="map_contours_off">Вимкнено</string>
+</resources>

@@ -53,4 +53,5 @@ include(
     ":plugins:nav-simulator",
     ":plugins:way-alerts",
     ":plugins:track-layer",
+    ":plugins:contours",
 )

@@ -59,6 +59,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val application = application as GrassMapsApplication
         val harness = application.mapHarness(this)
+        intent
+            ?.takeIf { it.hasExtra(ContoursSettings.EXTRA_ENABLED) }
+            ?.let { launch ->
+                container.contoursOverride = launch.getBooleanExtra(ContoursSettings.EXTRA_ENABLED, false)
+            }
         container.locationPermission.bind(this) { requestLocationPermission() }
         bindLocationToLifecycle()
         requestNotificationPermissionWhileNavigating()

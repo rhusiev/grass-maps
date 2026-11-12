@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.app
 
+import android.util.Log
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.builtins.serializer
@@ -33,6 +34,8 @@ internal val SET_STYLE_COMMAND: CommandId = CommandId("core.map.set_style")
 internal class SetStyleCommand(
     private val session: MapSessionHolder,
     private val providers: () -> ProviderRegistry,
+    private val contours: () -> ContoursAccess,
+    private val contoursEnabled: () -> Boolean,
     private val idleTimeoutMillis: Long = DEFAULT_IDLE_TIMEOUT_MS,
 ) : Command<JsonElement, String>(
         id = SET_STYLE_COMMAND,
@@ -70,6 +73,10 @@ internal class SetStyleCommand(
                 if (appliedLayers is Outcome.Failure) {
                     return appliedLayers
                 }
+                when (val overlay = contours().apply(host, style.id, contoursEnabled())) {
+                    is Outcome.Success -> Unit
+                    is Outcome.Failure -> Log.w(TAG, "contour layers not applied: ${overlay.error}")
+                }
                 val loaded =
                     withTimeoutOrNull(idleTimeoutMillis) {
                         host.events.first { event -> event is MapEvent.StyleLoaded }
@@ -91,6 +98,7 @@ internal class SetStyleCommand(
 
     private companion object {
         val STYLE_PLUGIN = PluginId("style.standard")
+        const val TAG = "GrassMapsStyle"
         const val DEFAULT_IDLE_TIMEOUT_MS = 10_000L
     }
 }

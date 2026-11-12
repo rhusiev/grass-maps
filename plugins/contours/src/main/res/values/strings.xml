@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.map_contours.name">Contours</string>
+    <string name="plugin.map_contours.description">Draws contour lines from the region contours component.</string>
+    <string name="map_contours_panel_title">Layers</string>
+    <string name="map_contours_toggle">Contours</string>
+    <string name="map_contours_on">On</string>
+    <string name="map_contours_off">Off</string>
+</resources>

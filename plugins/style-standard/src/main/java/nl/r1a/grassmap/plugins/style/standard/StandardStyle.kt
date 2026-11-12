@@ -26,7 +26,9 @@ import nl.r1a.grassmap.plugin.api.model.StyleId
  * have the same layers, the same draw order and the same cost.
  *
  * Layers are split across the logical sources by zoom: `world` for z0-z7 and
- * `region` for z8-z14. Contour overlays are added to every variant.
+ * `region` for z8-z14. The contour overlay is a separate plugin
+ * (`plugins/contours`) so the layers panel can turn it off and on without
+ * touching the base style.
  *
  * Symbol text and halo colours are palette values written as `rgb()` arrays.
  * The current text path renders a hex text colour with its green channel
@@ -36,6 +38,7 @@ import nl.r1a.grassmap.plugin.api.model.StyleId
 internal class StandardStyle private constructor(
     private val baseStyleJson: String,
     private val variantPalettes: Map<StyleId, JsonObject>,
+    private val variantZoomOffsets: Map<StyleId, Float>,
     private val layers: List<JsonObject>,
 ) {
     fun baseStyle(): String = baseStyleJson
@@ -44,27 +47,30 @@ internal class StandardStyle private constructor(
 
     fun layersFor(styleId: StyleId): List<SlottedLayer> {
         val palette = variantPalettes[styleId] ?: return emptyList()
+        val offset = variantZoomOffsets[styleId] ?: 0f
         val result = mutableListOf<SlottedLayer>()
         for (layer in layers) {
-            result += splitBySource(resolve(layer, palette) as? JsonObject ?: continue)
+            result += splitBySource(resolve(layer, palette) as? JsonObject ?: continue, offset)
         }
-        result += contourOverlay(palette)
         return result
     }
 
-    private fun splitBySource(layer: JsonObject): List<SlottedLayer> {
+    private fun splitBySource(
+        layer: JsonObject,
+        zoomOffset: Float,
+    ): List<SlottedLayer> {
         val type = layerType(layer) ?: return emptyList()
         val id = layer.string("id") ?: return emptyList()
         if (type == LayerType.Background) {
             return listOf(
                 SlottedLayer(
                     LayerSlot.Base,
-                    layer.toSpec(type, id, null, 0f, 24f),
+                    layer.toSpec(type, id, null, 0f, MAX_ZOOM),
                 ),
             )
         }
-        val minZoom = layer.number("minzoom") ?: 0f
-        val maxZoom = layer.number("maxzoom") ?: 24f
+        val minZoom = shiftedMin(layer.number("minzoom") ?: 0f, zoomOffset)
+        val maxZoom = shiftedMax(layer.number("maxzoom") ?: MAX_ZOOM, zoomOffset)
         val result = mutableListOf<SlottedLayer>()
         if (minZoom < REGION_START_ZOOM) {
             result +=
@@ -95,49 +101,15 @@ internal class StandardStyle private constructor(
         return result
     }
 
-    private fun contourOverlay(palette: JsonObject): List<SlottedLayer> {
-        val minor = palette["contour_minor"] ?: return emptyList()
-        val index = palette["contour_index"] ?: return emptyList()
-        return listOf(
-            contour("contour-index", 11f, 1.3f, 0.85f, index),
-            contour("contour-20", 13f, 1.0f, 0.7f, minor),
-            contour("contour-10", 14f, 0.8f, 0.55f, minor),
-        )
-    }
+    private fun shiftedMin(
+        zoom: Float,
+        offset: Float,
+    ): Float = (zoom + offset).coerceAtLeast(0f)
 
-    private fun contour(
-        id: String,
-        minZoom: Float,
-        width: Float,
-        opacity: Float,
-        color: JsonElement,
-    ): SlottedLayer =
-        SlottedLayer(
-            slot = LayerSlot.Overlays,
-            spec =
-                LayerSpec(
-                    id = LayerId(id),
-                    type = LayerType.Line,
-                    source = MapSourceIds.CONTOURS,
-                    sourceLayer = "contours",
-                    minZoom = minZoom,
-                    maxZoom = 14f,
-                    filter =
-                        JsonArray(
-                            listOf(
-                                JsonPrimitive("=="),
-                                JsonPrimitive("idx"),
-                                JsonPrimitive(id == "contour-index"),
-                            ),
-                        ),
-                    paint =
-                        buildJsonObject {
-                            put("line-color", color)
-                            put("line-width", width)
-                            put("line-opacity", opacity)
-                        },
-                ),
-        )
+    private fun shiftedMax(
+        zoom: Float,
+        offset: Float,
+    ): Float = if (zoom >= MAX_ZOOM) MAX_ZOOM else (zoom + offset).coerceAtLeast(0f)
 
     private fun JsonObject.toSpec(
         type: LayerType,
@@ -160,6 +132,7 @@ internal class StandardStyle private constructor(
 
     companion object {
         private const val REGION_START_ZOOM = 8f
+        private const val MAX_ZOOM = 24f
         private const val TOKEN_PREFIX = "@"
 
         fun parse(json: String): StandardStyle {
@@ -173,16 +146,21 @@ internal class StandardStyle private constructor(
                 }
             val palettes = root["palettes"]?.jsonObject ?: JsonObject(emptyMap())
             val styles = root["styles"]?.jsonObject ?: JsonObject(emptyMap())
+            val zoomOffsets = root["zoomOffsets"]?.jsonObject ?: JsonObject(emptyMap())
             val resolved = linkedMapOf<StyleId, JsonObject>()
+            val offsets = linkedMapOf<StyleId, Float>()
             for ((id, paletteName) in styles) {
                 val name = (paletteName as? JsonPrimitive)?.contentOrNull ?: continue
                 val palette = palettes[name]?.jsonObject ?: continue
-                resolved[StyleId(id)] = palette
+                val styleId = StyleId(id)
+                resolved[styleId] = palette
+                offsets[styleId] = (zoomOffsets[id] as? JsonPrimitive)?.floatOrNull ?: 0f
             }
             val layers = (root["layers"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
             return StandardStyle(
                 baseStyleJson = base.toString(),
                 variantPalettes = resolved,
+                variantZoomOffsets = offsets,
                 layers = layers,
             )
         }

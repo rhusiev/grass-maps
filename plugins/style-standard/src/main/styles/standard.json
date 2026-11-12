@@ -4,7 +4,9 @@
   "sprite": "asset://sprites/standard",
   "styles": {
     "standard": "light",
-    "standard-dark": "dark"
+    "standard-dark": "dark",
+    "touring": "touring",
+    "touring-dark": "touring-dark"
   },
   "palettes": {
     "light": {
@@ -79,9 +81,7 @@
         51,
         51,
         51
-      ],
-      "contour_minor": "#dcc2a6",
-      "contour_index": "#c9a27c"
+      ]
     },
     "dark": {
       "area_land": "#161c26",
@@ -155,9 +155,155 @@
         227,
         230,
         234
+      ]
+    },
+    "touring": {
+      "area_land": "#f3eee8",
+      "area_water": "#b9d3f5",
+      "area_forest": "#b9d8ab",
+      "area_park": "#d4eeb4",
+      "area_grass": "#d4eeb4",
+      "area_farmland": "#ebedd2",
+      "area_residential": "#dde0db",
+      "area_industrial": "#e8d6d8",
+      "area_hospital": "#f2d7d5",
+      "area_school": "#f0e3c8",
+      "area_beach": "#f5e7bf",
+      "area_aerodrome": "#e6e2dc",
+      "area_pier": "#d9d4cf",
+      "area_runway": "#cfcac4",
+      "area_snow": "#ffffff",
+      "area_sand": "#e8e2cc",
+      "area_building": "#c7b8b6",
+      "boundary": "#a8999a",
+      "road_motorway": "#f2ea3a",
+      "road_motorway_casing": "#d93a2f",
+      "road_trunk": "#e4e4e4",
+      "road_trunk_casing": "#d93a2f",
+      "road_primary": "#ff8faa",
+      "road_primary_casing": "#6e6e6e",
+      "road_secondary": "#ffd38a",
+      "road_secondary_casing": "#6e6e6e",
+      "road_tertiary": "#fff88a",
+      "road_tertiary_casing": "#6e6e6e",
+      "road_residential": "#ffffff",
+      "road_residential_casing": "#7a7a7a",
+      "road_service": "#ffffff",
+      "road_path": "#1f1a17",
+      "road_track": "#8a5a12",
+      "road_cycleway": "#1f4fe0",
+      "road_rail": "#767676",
+      "label_text": [
+        "rgb",
+        17,
+        17,
+        17
       ],
-      "contour_minor": "#2e343c",
-      "contour_index": "#3e4650"
+      "label_halo": [
+        "rgb",
+        243,
+        238,
+        232
+      ],
+      "water_label": [
+        "rgb",
+        31,
+        95,
+        153
+      ],
+      "poi_label": [
+        "rgb",
+        90,
+        58,
+        26
+      ],
+      "poi_icon": "#5a3a1a",
+      "address_label": [
+        "rgb",
+        110,
+        110,
+        110
+      ],
+      "shield_label": [
+        "rgb",
+        17,
+        17,
+        17
+      ]
+    },
+    "touring-dark": {
+      "area_land": "#10201f",
+      "area_water": "#22306a",
+      "area_forest": "#0f2420",
+      "area_park": "#173a2e",
+      "area_grass": "#173a2e",
+      "area_farmland": "#173a2e",
+      "area_residential": "#2f3434",
+      "area_industrial": "#34383a",
+      "area_hospital": "#3a343a",
+      "area_school": "#34383a",
+      "area_beach": "#2e2b22",
+      "area_aerodrome": "#2a3034",
+      "area_pier": "#3a3a3a",
+      "area_runway": "#3a3a3a",
+      "area_snow": "#2b3442",
+      "area_sand": "#2b2c26",
+      "area_building": "#4f4547",
+      "boundary": "#6a5e60",
+      "road_motorway": "#c9c23a",
+      "road_motorway_casing": "#a3302a",
+      "road_trunk": "#d9d9d9",
+      "road_trunk_casing": "#a3302a",
+      "road_primary": "#d97790",
+      "road_primary_casing": "#3e3e3e",
+      "road_secondary": "#d9b373",
+      "road_secondary_casing": "#3e3e3e",
+      "road_tertiary": "#cfca6e",
+      "road_tertiary_casing": "#3e3e3e",
+      "road_residential": "#a3a3a3",
+      "road_residential_casing": "#3e3e3e",
+      "road_service": "#a3a3a3",
+      "road_path": "#9a9a9a",
+      "road_track": "#c08a3a",
+      "road_cycleway": "#6f8cff",
+      "road_rail": "#6a6a6a",
+      "label_text": [
+        "rgb",
+        242,
+        242,
+        242
+      ],
+      "label_halo": [
+        "rgb",
+        16,
+        32,
+        31
+      ],
+      "water_label": [
+        "rgb",
+        159,
+        180,
+        240
+      ],
+      "poi_label": [
+        "rgb",
+        224,
+        196,
+        154
+      ],
+      "poi_icon": "#e0c49a",
+      "address_label": [
+        "rgb",
+        154,
+        154,
+        154
+      ],
+      "shield_label": [
+        "rgb",
+        242,
+        242,
+        242
+      ]
     }
   },
   "layers": [
@@ -12857,5 +13003,9 @@
       "minzoom": 0,
       "maxzoom": 24
     }
-  ]
+  ],
+  "zoomOffsets": {
+    "touring": -1,
+    "touring-dark": -1
+  }
 }

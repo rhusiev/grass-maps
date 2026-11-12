@@ -117,14 +117,50 @@ class MapSourcesTest {
         assertEquals("none", sources.regionName)
     }
 
+    @Test
+    fun theFixtureBringsItsOwnContourArchive() {
+        val fixture = file("fixture.pmtiles")
+        val contours = file("fixture-contours.pmtiles")
+
+        val sources =
+            resolve(
+                mount = { RegionMount.None },
+                fixture = { fixture.toFile() },
+                contoursFixture = { contours.toFile() },
+            )
+
+        assertEquals(pmtiles(fixture), sources.uri(MapSourceIds.REGION))
+        assertEquals(pmtiles(contours), sources.uri(MapSourceIds.CONTOURS))
+        assertTrue(sources.hasContours)
+    }
+
+    @Test
+    fun aPushedContourArchiveIsNotReplacedByTheFixtureOne() {
+        val archive = file("external/${MapSources.LVIV_ARCHIVE}")
+        val contours = file("external/${MapSources.CONTOURS_ARCHIVE}")
+        val fixtureContours = file("fixture-contours.pmtiles")
+
+        val sources =
+            resolve(
+                mount = { RegionMount.None },
+                fixture = { file("fixture.pmtiles").toFile() },
+                contoursFixture = { fixtureContours.toFile() },
+            )
+
+        assertEquals(pmtiles(archive), sources.uri(MapSourceIds.REGION))
+        assertEquals(pmtiles(contours), sources.uri(MapSourceIds.CONTOURS))
+    }
+
     private fun resolve(
         mount: () -> RegionMount,
         fixture: () -> java.io.File?,
+        contoursFixture: () -> java.io.File? = { null },
     ): MapSources =
         MapSources.resolve(
             regionsRoot = root.resolve("regions").toFile(),
             directories = listOf(external.toFile()),
             fixture = fixture,
+            contoursFixture = contoursFixture,
             mount = { mount() },
         )
 

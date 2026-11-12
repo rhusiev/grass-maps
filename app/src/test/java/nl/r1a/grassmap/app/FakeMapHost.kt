@@ -39,6 +39,7 @@ internal class FakeMapHost(
     val locations = mutableListOf<LocationFix?>()
     val trackingModes = mutableListOf<TrackingMode>()
     val layers = mutableListOf<AddedLayer>()
+    val removedOwners = mutableListOf<PluginId>()
     val routes = mutableListOf<Route?>()
     val tracks = mutableListOf<List<MapTrack>>()
 
@@ -58,7 +59,11 @@ internal class FakeMapHost(
         return Outcome.Success(Unit)
     }
 
-    override suspend fun removeLayers(owner: PluginId): Outcome<Unit> = Outcome.Success(Unit)
+    override suspend fun removeLayers(owner: PluginId): Outcome<Unit> {
+        removedOwners += owner
+        layers.removeAll { it.owner == owner }
+        return Outcome.Success(Unit)
+    }
 
     override suspend fun removeLayer(layer: LayerId): Outcome<Unit> = Outcome.Success(Unit)
 

@@ -1,17 +1,11 @@
 package nl.r1a.grassmap.plugins.style.standard
 
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonPrimitive
 import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerType
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
 import nl.r1a.grassmap.plugin.api.model.StyleId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -19,12 +13,14 @@ class StandardMapLayerProviderTest {
     private val provider = StandardMapLayerProvider()
     private val light = StyleId("standard")
     private val dark = StyleId("standard-dark")
+    private val touringLight = StyleId("touring")
+    private val touringDark = StyleId("touring-dark")
 
     @Test
-    fun standardHasLightAndDarkVariantsOverOneBaseDocument() {
+    fun fourVariantsShareOneBaseDocument() {
         val styles = provider.styles()
 
-        assertEquals(listOf(light, dark), styles.map { it.id })
+        assertEquals(listOf(light, dark, touringLight, touringDark), styles.map { it.id })
         assertEquals(styles[0].baseStyleJson, styles[1].baseStyleJson)
         assertEquals(StandardStyle.sources, styles[0].sources)
     }
@@ -45,33 +41,37 @@ class StandardMapLayerProviderTest {
     }
 
     @Test
-    fun contoursAreAnOverlayOnTheContoursSource() {
-        for (styleId in listOf(light, dark)) {
-            val contours = provider.layers(styleId).filter { it.slot == LayerSlot.Overlays }
+    fun theBaseStyleAddsNoOverlayLayers() {
+        for (styleId in listOf(light, dark, touringLight, touringDark)) {
+            val overlays = provider.layers(styleId).filter { it.slot == LayerSlot.Overlays }
 
-            assertTrue(contours.isNotEmpty())
-            assertTrue(contours.all { it.spec.source == MapSourceIds.CONTOURS })
+            assertTrue("$styleId: contours are the contour plugin's layers", overlays.isEmpty())
         }
     }
 
     @Test
-    fun contourFiltersUseTheArchivesBooleanIndex() {
-        val contours = provider.layers(light).filter { it.slot == LayerSlot.Overlays }
-        val filters = contours.associate { it.spec.id.value to it.spec.filter }
+    fun touringStartsEachLayerOneZoomEarlier() {
+        val standardLayer =
+            provider.layers(light).first {
+                it.spec.id.value
+                    .endsWith("__region") && it.spec.minZoom == 13f
+            }
+        val touringLayer = provider.layers(touringLight).first { it.spec.id == standardLayer.spec.id }
 
-        assertEquals(
-            JsonArray(listOf(JsonPrimitive("=="), JsonPrimitive("idx"), JsonPrimitive(true))),
-            filters["contour-index"],
+        assertEquals(12f, touringLayer.spec.minZoom)
+        assertEquals(standardLayer.spec.maxZoom, touringLayer.spec.maxZoom)
+    }
+
+    @Test
+    fun touringLightAndDarkShareLayerIdsButSwapPaletteColours() {
+        val lightLayers = provider.layers(touringLight)
+        val darkLayers = provider.layers(touringDark)
+
+        assertEquals(lightLayers.map { it.spec.id }, darkLayers.map { it.spec.id })
+        assertNotEquals(
+            lightLayers.map { it.spec.paint },
+            darkLayers.map { it.spec.paint },
         )
-        assertEquals(
-            JsonArray(listOf(JsonPrimitive("=="), JsonPrimitive("idx"), JsonPrimitive(false))),
-            filters["contour-20"],
-        )
-        assertEquals(JsonArray(listOf(JsonPrimitive("=="), JsonPrimitive("idx"), JsonPrimitive(false))), filters["contour-10"])
-        for ((id, filter) in filters) {
-            val value = requireNotNull(filter).jsonArray[2].jsonPrimitive
-            assertNotNull("$id must compare a JSON boolean, not a number", value.booleanOrNull)
-        }
     }
 
     @Test
@@ -89,18 +89,10 @@ class StandardMapLayerProviderTest {
     @Test
     fun everyColourTokenIsResolved() {
         val paints =
-            listOf(light, dark).flatMap { styleId ->
+            listOf(light, dark, touringLight, touringDark).flatMap { styleId ->
                 provider.layers(styleId).map { it.spec.paint.toString() }
             }
 
         assertTrue(paints.none { it.contains("\"@") })
-    }
-
-    @Test
-    fun darkContoursUseTheDarkPalette() {
-        val lightContour = provider.layers(light).first { it.spec.id.value == "contour-20" }
-        val darkContour = provider.layers(dark).first { it.spec.id.value == "contour-20" }
-
-        assertNotEquals(lightContour.spec.paint, darkContour.spec.paint)
     }
 }

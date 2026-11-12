@@ -14,15 +14,15 @@ import org.gradle.api.tasks.TaskAction
  *
  * The document holds one layer list and a palette per variant. Every check runs
  * against each resolved variant, so a dark palette cannot silently change the
- * layer count or the fill mode. Layer counts include the shared contour
- * overlays, which the provider adds to every variant.
+ * layer count or the fill mode. Layer counts include the overlay plugins'
+ * contour layers, which the contours provider adds to every variant.
  */
 internal object StyleRuleChecker {
     private const val TOKEN_PREFIX = "@"
     private const val MIN_LAYERS = 75
     private const val MAX_LAYERS = 85
     private const val MAX_SYMBOL_LAYERS = 15
-    private const val OVERLAY_LAYERS = 3
+    private const val OVERLAY_LAYERS = 5
     private val HALO_SOURCES = setOf("places", "roads")
     private val FORBIDDEN_PAINT = listOf("line-pattern", "fill-pattern", "line-gradient")
 

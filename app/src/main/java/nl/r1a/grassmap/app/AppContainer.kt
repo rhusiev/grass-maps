@@ -124,6 +124,7 @@ class AppContainer(
     private val searchHistoryFileProvider: () -> File? = { null },
     private val searchHistorySettingsFileProvider: () -> File? = { null },
     private val onlineSearchSettingsFileProvider: () -> File? = { null },
+    private val contoursSettingsFileProvider: () -> File? = { null },
     private val routeHistoryFileProvider: () -> File? = { null },
     private val routingOptionsFileProvider: () -> File? = { null },
     private val favouritesRootProvider: () -> File? = { null },
@@ -194,6 +195,22 @@ class AppContainer(
      * resolve it off Main.
      */
     val onlineSearchSettings: OnlineSearchSettings by lazy { OnlineSearchSettings(onlineSearchSettingsFileProvider()) }
+
+    /**
+     * The golden harness's launch override, applied when the settings object is
+     * first resolved. It is not persisted: a capture must not rewrite the
+     * user's saved layer choice.
+     */
+    @Volatile
+    var contoursOverride: Boolean? = null
+
+    /**
+     * The contour layer switch (T-0417). Construction reads the settings file,
+     * so the map bundle and the layers panel resolve it off Main.
+     */
+    val contoursSettings: ContoursSettings by lazy {
+        ContoursSettings(contoursSettingsFileProvider(), override = { contoursOverride })
+    }
 
     /**
      * The per-profile routing options (T-0308). Construction reads the settings
@@ -652,6 +669,11 @@ class AppContainer(
     /** The synthetic DataSource; the route command reads its cost modifiers. */
     val dataSources: DataSourceAccess by lazy {
         DataSourceAccess(providerRegistry)
+    }
+
+    /** The contour overlay provider; the map adds and removes its layers. */
+    val contours: ContoursAccess by lazy {
+        ContoursAccess(providerRegistry)
     }
 
     private companion object {

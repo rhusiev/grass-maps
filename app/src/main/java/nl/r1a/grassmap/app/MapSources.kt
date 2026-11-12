@@ -16,7 +16,8 @@ import java.io.File
  * 1. exactly one installed region package whose pointer, manifest and
  *    map/contours files validate, from the app's region store;
  * 2. the whole-oblast archive pushed to the app's files directory;
- * 3. the small T-0015 fixture copied out of the debug assets.
+ * 3. the small T-0015 fixture (`fixture-mini-map.pmtiles`) copied out of the
+ *    debug assets, with its own `fixture-mini-contours.pmtiles` component.
  *
  * An installed region that fails to mount is not silently ignored: the map
  * still opens on the next source, and [regionProblem] carries the typed reason
@@ -38,6 +39,8 @@ internal class MapSources private constructor(
         const val CONTOURS_ARCHIVE = "lviv-contours-20m.pmtiles"
         private const val FIXTURE_ASSET = "fixture-mini-map.pmtiles"
         private const val FIXTURE_FILE = "fixture-mini-map.pmtiles"
+        private const val FIXTURE_CONTOURS_ASSET = "fixture-mini-contours.pmtiles"
+        private const val FIXTURE_CONTOURS_FILE = "fixture-mini-contours.pmtiles"
         private const val NO_SOURCE = "none"
 
         private val LVIV_CAMERA = Camera(center = GeoPoint(49.8419, 24.0316), zoom = 12.5)
@@ -50,7 +53,8 @@ internal class MapSources private constructor(
             resolve(
                 regionsRoot = regionsRoot,
                 directories = listOfNotNull(context.getExternalFilesDir(null), context.filesDir),
-                fixture = { copyFixture(context) },
+                fixture = { copyAsset(context, FIXTURE_ASSET, FIXTURE_FILE) },
+                contoursFixture = { copyAsset(context, FIXTURE_CONTOURS_ASSET, FIXTURE_CONTOURS_FILE) },
             )
 
         /**
@@ -61,6 +65,7 @@ internal class MapSources private constructor(
             regionsRoot: File?,
             directories: List<File>,
             fixture: () -> File?,
+            contoursFixture: () -> File? = { null },
             mount: (File) -> RegionMount = { root -> RegionMountResolver(root).resolve() },
         ): MapSources {
             val mountResult = regionsRoot?.let(mount) ?: RegionMount.None
@@ -83,8 +88,9 @@ internal class MapSources private constructor(
                 )
             }
             val lviv = directories.map { File(it, LVIV_ARCHIVE) }.firstOrNull { it.isUsable() }
-            val contours = directories.map { File(it, CONTOURS_ARCHIVE) }.firstOrNull { it.isUsable() }
+            val pushedContours = directories.map { File(it, CONTOURS_ARCHIVE) }.firstOrNull { it.isUsable() }
             val region = lviv ?: fixture()
+            val contours = pushedContours ?: if (lviv == null) contoursFixture() else null
             val uris =
                 buildMap {
                     region?.let { put(MapSourceIds.REGION, pmtilesUri(it)) }
@@ -106,14 +112,18 @@ internal class MapSources private constructor(
             )
         }
 
-        private fun copyFixture(context: Context): File? {
-            val target = File(context.filesDir, FIXTURE_FILE)
+        private fun copyAsset(
+            context: Context,
+            asset: String,
+            name: String,
+        ): File? {
+            val target = File(context.filesDir, name)
             if (target.isUsable()) {
                 return target
             }
             return runCatching {
-                val partial = File(context.filesDir, "$FIXTURE_FILE.part")
-                context.assets.open(FIXTURE_ASSET).use { input ->
+                val partial = File(context.filesDir, "$name.part")
+                context.assets.open(asset).use { input ->
                     partial.outputStream().use { output -> input.copyTo(output) }
                 }
                 check(partial.renameTo(target)) { "Cannot move $partial to $target" }

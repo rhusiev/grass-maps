@@ -95,6 +95,7 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         ":plugins:nav-simulator" to setOf(":plugin-api", ":navigation", ":routing"),
         ":plugins:way-alerts" to setOf(":plugin-api"),
         ":plugins:track-layer" to setOf(":plugin-api"),
+        ":plugins:contours" to setOf(":plugin-api", ":plugin-ui-api"),
     )
 // Test-only edges are separate so a test fixture cannot quietly become a
 // production dependency. :control's info-widgets edge is the accepted T-0113
@@ -116,6 +117,10 @@ val moduleTestDependencyAllowlist: Map<String, Set<String>> =
         // the real reader and bridges its cues into the real alert host. Test
         // only; the plugin module itself depends on :plugin-api alone.
         ":plugins:way-alerts" to setOf(":plugin-api", ":regions", ":alerts"),
+        // T-0417: the contour acceptance parses and validates the committed
+        // region's `contours` component through the real manifest reader. Test
+        // only; the plugin's runtime classpath is :plugin-api plus UI.
+        ":plugins:contours" to setOf(":plugin-api", ":regions", ":plugin-ui-api"),
     )
 val moduleBoundaryViolations = objects.listProperty(String::class.java)
 

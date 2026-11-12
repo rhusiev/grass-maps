@@ -170,6 +170,68 @@ class StandardPositionsTest(unittest.TestCase):
         )
 
 
+class ContoursPositionsTest(unittest.TestCase):
+    def test_three_fixture_positions_at_the_contour_zooms(self) -> None:
+        positions = map_goldens.POSITIONS["contours"]
+
+        self.assertEqual(3, len(positions))
+        self.assertEqual({12.0, 13.0, 14.0}, {position[3] for position in positions})
+        self.assertEqual(
+            ["contours-center-z12", "contours-center-z13", "contours-center-z14"],
+            [position[0] for position in positions],
+        )
+
+    def test_the_contours_reference_is_separate_from_standard(self) -> None:
+        self.assertEqual(
+            map_goldens.default_reference("contours", "dark"),
+            map_goldens.ROOT / "test-data" / "map-goldens" / "contours" / "dark",
+        )
+
+
+class StyleVariantTest(unittest.TestCase):
+    def test_four_variants_map_to_four_style_ids(self) -> None:
+        self.assertEqual(
+            {
+                "light": "standard",
+                "dark": "standard-dark",
+                "touring-light": "touring",
+                "touring-dark": "touring-dark",
+            },
+            map_goldens.STYLE_IDS,
+        )
+
+
+class ContoursLaunchTest(unittest.TestCase):
+    def test_on_passes_the_enable_extra(self) -> None:
+        adb = mock.Mock()
+
+        map_goldens.launch(adb, True)
+
+        command = adb.shell.call_args.args
+        self.assertIn("--ez", command)
+        self.assertIn(map_goldens.CONTOURS_EXTRA, command)
+        self.assertIn("true", command)
+
+    def test_off_passes_the_disable_extra(self) -> None:
+        adb = mock.Mock()
+
+        map_goldens.launch(adb, False)
+
+        self.assertIn("false", adb.shell.call_args.args)
+
+    def test_no_override_leaves_the_saved_switch_alone(self) -> None:
+        adb = mock.Mock()
+
+        map_goldens.launch(adb, None)
+
+        self.assertNotIn("--ez", adb.shell.call_args.args)
+
+    def test_the_flag_maps_on_to_true_and_off_to_false(self) -> None:
+        self.assertTrue(map_goldens.contours_flag(mock.Mock(contours="on")))
+        self.assertFalse(map_goldens.contours_flag(mock.Mock(contours="off")))
+        self.assertIsNone(map_goldens.contours_flag(mock.Mock(contours=None)))
+
+
 class InvokeCameraTest(unittest.TestCase):
     def test_socket_timeout_is_retried(self) -> None:
         client = FakeClient([TimeoutError("timed out"), "lat=1.0 idle=true"])

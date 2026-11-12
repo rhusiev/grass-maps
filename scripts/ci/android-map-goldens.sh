@@ -13,9 +13,14 @@
 # Usage:
 #   ./scripts/ci/android-map-goldens.sh --profile fixture [--update] [APK]
 #   ./scripts/ci/android-map-goldens.sh --profile standard [--style light|dark|both] [--update] [APK]
+#   ./scripts/ci/android-map-goldens.sh --profile contours [--style all|both|touring] [--update] [APK]
 #   ./scripts/ci/android-map-goldens.sh --profile oblast \
 #       --region-package /hdd/t-0102-evidence/region/ua-46/2026-11-05-bench \
 #       --output /hdd/t-0102-evidence/oblast [APK]
+#
+# The fixture and standard profiles run with contours off, which keeps their
+# existing references valid; the contours profile runs with the fixture's
+# committed contour archive on. --contours on|off overrides either default.
 #
 # Environment:
 #   GOLDEN_SERIAL          use this device instead of booting an AVD
@@ -42,6 +47,7 @@ OUTPUT=""
 REFERENCE=""
 REGION_PACKAGE=""
 STYLE=""
+CONTOURS=""
 UPDATE=0
 APK=""
 
@@ -52,6 +58,7 @@ while [[ $# -gt 0 ]]; do
         --reference) REFERENCE="$2"; shift 2 ;;
         --region-package) REGION_PACKAGE="$2"; shift 2 ;;
         --style) STYLE="$2"; shift 2 ;;
+        --contours) CONTOURS="$2"; shift 2 ;;
         --update) UPDATE=1; shift ;;
         -h | --help)
             sed -n '2,/^$/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
@@ -69,20 +76,28 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -n "$PROFILE" ]] || {
-    echo "android-map-goldens.sh: --profile fixture|oblast is required" >&2
+    echo "android-map-goldens.sh: --profile standard|contours|fixture|oblast is required" >&2
     exit 2
 }
-if [[ "$PROFILE" == "standard" ]]; then
+if [[ "$PROFILE" == "standard" || "$PROFILE" == "contours" ]]; then
     STYLE="${STYLE:-both}"
 fi
-if [[ -n "$STYLE" && "$PROFILE" != "standard" ]]; then
-    echo "android-map-goldens.sh: --style applies to --profile standard" >&2
+if [[ -n "$STYLE" && "$PROFILE" != "standard" && "$PROFILE" != "contours" ]]; then
+    echo "android-map-goldens.sh: --style applies to --profile standard or contours" >&2
     exit 2
 fi
-case "$STYLE" in
-    ""|light|dark|both) ;;
+case "$CONTOURS" in
+    "") [[ "$PROFILE" == "contours" ]] && CONTOURS="on" || CONTOURS="off" ;;
+    on|off) ;;
     *)
-        echo "android-map-goldens.sh: --style must be light, dark or both" >&2
+        echo "android-map-goldens.sh: --contours must be on or off" >&2
+        exit 2
+        ;;
+esac
+case "$STYLE" in
+    ""|light|dark|both|touring|touring-light|touring-dark|all) ;;
+    *)
+        echo "android-map-goldens.sh: --style must be light, dark, both, touring, touring-light, touring-dark or all" >&2
         exit 2
         ;;
 esac
@@ -160,8 +175,8 @@ else
         fail "the Android emulator is not installed under $ANDROID_HOME"
     [[ -d "$ANDROID_AVD_HOME" ]] || fail "the AVD directory does not exist: $ANDROID_AVD_HOME"
     SERIAL="emulator-$PORT"
-    emulator_log="$OUTPUT/emulator-$PORT.log"
-    mkdir -p "$OUTPUT"
+    emulator_log="${OUTPUT:-$ROOT/build/map-goldens}/emulator-$PORT.log"
+    mkdir -p "$(dirname "$emulator_log")"
     echo "== booting $AVD as $SERIAL ($GPU) ==" >&2
     "$ANDROID_HOME/emulator/emulator" -avd "$AVD" -port "$PORT" \
         -no-window -no-audio -no-boot-anim -no-snapshot -gpu "$GPU" \
@@ -227,6 +242,8 @@ styles=()
 case "$STYLE" in
     "") styles=("") ;;
     both) styles=(light dark) ;;
+    touring) styles=(touring-light touring-dark) ;;
+    all) styles=(light dark touring-light touring-dark) ;;
     *) styles=("$STYLE") ;;
 esac
 
@@ -242,6 +259,7 @@ for style in "${styles[@]}"; do
         run_reference="${REFERENCE:-$ROOT/test-data/map-goldens/$PROFILE}"
     fi
     COMMAND=(python3 "$SCRIPT_DIR/map_goldens.py" capture --serial "$SERIAL" --profile "$PROFILE" --apk "$APK" --output "$run_output")
+    COMMAND+=(--contours "$CONTOURS")
     if [[ -n "$REGION_PACKAGE" ]]; then
         COMMAND+=(--region-package "$REGION_PACKAGE")
     fi
@@ -252,6 +270,7 @@ for style in "${styles[@]}"; do
 
     if [[ $UPDATE -eq 1 ]]; then
         COMPARE=(python3 "$SCRIPT_DIR/map_goldens.py" compare --profile "$PROFILE" --captured "$run_output" --reference "$run_reference" --update)
+        COMPARE+=(--contours "$CONTOURS")
         if [[ -n "$style" ]]; then
             COMPARE+=(--style "$style")
         fi
@@ -264,6 +283,7 @@ for style in "${styles[@]}"; do
     # so it needs the serial the capture used: without it a phone and the
     # emulator together make the channel's `adb forward` ambiguous.
     COMPARE=(python3 "$SCRIPT_DIR/map_goldens.py" compare --profile "$PROFILE" --captured "$run_output" --reference "$run_reference" --output "$run_output" --serial "$SERIAL")
+    COMPARE+=(--contours "$CONTOURS")
     if [[ -n "$style" ]]; then
         COMPARE+=(--style "$style")
     fi

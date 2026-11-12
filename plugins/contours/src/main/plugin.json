@@ -1,0 +1,27 @@
+{
+  "id": "map.contours",
+  "name": "plugin.map_contours.name",
+  "description": "plugin.map_contours.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.contours.ContoursPlugin",
+  "contributes": {
+    "providers": [
+      {
+        "contract": "map.layers",
+        "version": "1.0.0",
+        "capabilities": {
+          "styles": ["standard", "standard-dark", "touring", "touring-dark"]
+        }
+      }
+    ]
+  },
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": ["contours"]
+  },
+  "activation": [
+    "provider"
+  ]
+}

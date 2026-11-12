@@ -408,7 +408,7 @@ application ID is `nl.r1a.grassmap`.
 | `devtools` | debug harness: benchmark hooks, GPX replay, screenshot and state probes | `core`, `control`, `plugin-api` |
 | `app` | composition root, Android entry points, foreground service, manifest, resources | every module |
 | `plugins/example` | example of a first-party plugin module | `plugin-api` |
-| `plugins/style-standard` | the Standard light and dark map styles as a `MapLayerProvider` | `plugin-api` |
+| `plugins/style-standard` | the Standard and Touring light and dark palettes and their one-zoom-earlier Touring threshold, as a `MapLayerProvider` | `plugin-api` |
 | `plugins/synthetic-data` | the synthetic elevation `DataSource` and its real contour overlay | `plugin-api` |
 | `plugins/gpx` | GPX 1.0/1.1 as a `FileFormat` provider | `plugin-api` |
 | `plugins/info-widgets` | the altitude, coordinates, GPS info and current / average / max speed widget data providers | `plugin-api` |
@@ -426,6 +426,7 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/guidance-ui` | the guidance panel's four facts and its Compose chrome, drawn from the navigation state the app holds | `plugin-api`, `plugin-ui-api` |
 | `plugins/nav-simulator` | the simulated run at 5 km/h through the production navigation session, its start and stop commands and its status stream | `plugin-api`, `navigation`, `routing` |
 | `plugins/track-layer` | the imported-track line layer and the controller that keeps it on the map | `plugin-api` |
+| `plugins/contours` | the contour overlay for the Standard and Touring variants and the one-row layers panel that toggles it | `plugin-api`, `plugin-ui-api` |
 
 ## Place card
 
@@ -595,11 +596,14 @@ variant switch updates layers in place instead of reloading the style. A base
 style carries sources and glyphs but no layers; the consumer applies the
 provider's layers with `applyStyleDiff`, and only `setStyle` may reload.
 `plugins/style-standard/src/main/styles/standard.json` holds one layer list and
-a palette per variant; the provider resolves the palette tokens and returns
-`standard` (light) and `standard-dark`. Symbol text and halo colours in that
-palette are `rgb()` arrays: the current text path drops the green channel from
-a hex text colour, so the style avoids that form until the render path is
-fixed. The authored Touring style and the style switch are T-0109.
+four palettes; the provider resolves the palette tokens and returns
+`standard` (light), `standard-dark`, `touring` and `touring-dark`, all over the
+same base document. `zoomOffsets` starts every Touring layer one zoom earlier,
+which is the threshold half of map-style.md section 1. The full authored
+Touring layer list, its dash ladder and the styles button remain T-0109.
+Symbol text and halo colours in the palettes are `rgb()` arrays: the current
+text path drops the green channel from a hex text colour, so the style avoids
+that form until the render path is fixed.
 
 The map resolves its sources in a fixed order:
 
@@ -652,6 +656,16 @@ size:
 
 ```sh
 ./scripts/ci/android-map-goldens.sh --profile standard --style both --update
+```
+
+The Standard and fixture profiles default to contours off, which is how their
+references stay valid; the script always passes that state to the app. The
+contour references in `test-data/map-goldens/contours/` are the fixture centre
+at z12, z13 and z14 with the committed 20 m archive on, in all four variants
+(`light`, `dark`, `touring-light`, `touring-dark`):
+
+```sh
+./scripts/ci/android-map-goldens.sh --profile contours --style all --update
 ```
 
 The T-0015 fixture goldens in `test-data/map-goldens/fixture/` keep the T-0102
@@ -728,6 +742,52 @@ point, computed with Vincenty's WGS84 inverse formula; the label shows the two
 rows and clears the selection. The device hold cannot be injected by the
 emulator harness used in CI, so the recogniser is a unit test and the pointer
 loop is unexercised on a device.
+
+## Contours
+
+`plugins/contours` draws the region's `contours` component as a map overlay
+(T-0417). The manifest declares the component need; the app mounts
+`contours.pmtiles` from the installed region, the pushed whole-oblast archive
+or the committed fixture. The plugin publishes one `map.layers` provider and no
+base style: it supplies five overlay layers in the `Overlays` slot, and the host
+adds them under `map.contours` so turning the overlay off removes exactly those
+layers.
+
+| Layer | Standard | Touring | Width / opacity |
+|---|---|---|---|
+| `contour-50` | z12-z13 | z11-z12 | 1.0 dp / 0.7 |
+| `contour-20` | z13-z14 | z12-z13 | 1.0 dp / 0.7 |
+| `contour-10` | z14+ | z13+ | 0.8 dp / 0.55 |
+| `contour-index` | z12+ | z11+ | 1.3 dp / 0.85 |
+| `contour-label` | z14+ | z13+ | 10 pt italic, 1.5 halo |
+
+The palette is map-style.md section 3: minor/index `#dcc2a6`/`#c9a27c` in
+Standard light, `#2e343c`/`#3e4650` in Standard dark, `#d6b48e`/`#bf9364` in
+Touring light and `#24403a`/`#30554c` in Touring dark. Label text and halo come
+from the same section's label pair. The Touring contour references also use the
+Touring base palette and its one-zoom-earlier threshold from
+`plugins/style-standard`; T-0109 still owns the full Touring layer list, its
+dash ladder and the styles button. The band layers filter `ele` modulo 50, 20
+and 10, and each index layer filters the archive's Boolean `idx == true`, so one
+style serves a 50 m, 20 m or 10 m pack without new layers.
+
+The Lviv pack and the committed fixture are 20 m packs built from Copernicus
+DEM GLO-30 averaged to 90 m; the fixture manifest records
+`lviv-90m-20m.pmtiles` and its sha256. Those packs carry index lines at z12-z13
+and the 20 m lines at z14, so the z12 and z13 goldens show index lines and the
+z14 golden shows the 20 m band. The app packages a byte copy of the fixture
+component as `app/src/main/assets/fixture-mini-contours.pmtiles`;
+`FixtureContoursAssetTest` fails if the copy and
+`test-data/regions/fixture-mini/2026-11-03-1/contours.pmtiles` diverge.
+
+The switch persists in `settings/contours.json` and defaults to on.
+`ContoursSettings` reads it off Main; the one-row layers panel in the app calls
+`setEnabled`, and `ContoursAccess.apply` removes and re-adds the owned layers.
+The golden harness passes `--ez map.contours.enabled true|false` at launch
+without writing the file, which keeps a capture deterministic. The standard and
+fixture golden profiles run with contours off so their references stay valid;
+the `contours` profile runs them on at the fixture centre in both light and
+dark.
 
 ## Map controls
 
@@ -843,9 +903,9 @@ that seam. Its elevation attributes and its two cost modifiers are authored
 T-0023 fixtures over the fixture-mini bbox, not region data. Its map layer is
 real: a line layer on the `contours` source, source-layer `contours`, in the
 overlays slot, filtering the archive's index lines with `idx == true` (the
-archive stores a Boolean; an integer comparison matches nothing, which also
-leaves the T-0020 style contour layers blank). The drawn contours are real and
-the attributes remain synthetic.
+archive stores a Boolean; an integer comparison matches nothing). It draws over
+the shipped contour overlay when both are on, which is acceptable for this
+debug seam. The drawn contours are real and the attributes remain synthetic.
 
 `app` resolves the provider through `ProviderRegistry` off Main and adds the
 layer under `PluginId("data.synthetic")`; a missing provider or a rejected layer

@@ -85,7 +85,12 @@ class DebugApplication : GrassMapsApplication() {
             listOf(
                 SetCameraCommand(session),
                 SetRouteCommand(session),
-                SetStyleCommand(session, providers = { container.providerRegistry }),
+                SetStyleCommand(
+                    session,
+                    providers = { container.providerRegistry },
+                    contours = { container.contours },
+                    contoursEnabled = { container.contoursSettings.isEnabled() },
+                ),
             ) + placeCardCommands { container } + favouritesListsCommands()
         }
 

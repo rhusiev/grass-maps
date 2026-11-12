@@ -89,6 +89,7 @@ import nl.r1a.grassmap.plugin.api.model.WebMercator
 import nl.r1a.grassmap.plugin.api.provider.MapLayerContract
 import nl.r1a.grassmap.plugin.api.provider.MapLayerProvider
 import nl.r1a.grassmap.plugin.api.provider.PlaceSource
+import nl.r1a.grassmap.plugins.contours.ContoursLayerPanel
 import nl.r1a.grassmap.plugins.favourites.ui.FavouritesUiContract
 import nl.r1a.grassmap.plugins.map.controls.CameraMode
 import nl.r1a.grassmap.plugins.map.controls.ScaleBar
@@ -129,6 +130,7 @@ private const val LABEL_CLEAR_FONT_SP = 18
 private const val LABEL_CLEAR_PADDING_DP = 4
 private const val CLEAR_GLYPH = "×"
 private const val DISTANCE_BADGE_MILLIS = 4_000L
+private const val CONTOURS_PANEL_TOP_DP = 80
 private const val METRE_DECIMALS = 1
 private const val KILOMETRE_DECIMALS = 2
 private const val WHOLE_VALUE_MIN = 1.0
@@ -297,6 +299,7 @@ private fun MapContent(
             allowed.collect { value = it }
         }
     val searchCamera by surface.host.camera.collectAsState()
+    val contoursEnabled by container.contoursSettings.enabled.collectAsState()
     val planFlow =
         remember(container) {
             container.streamAccess.subscribe<RoutePlanState>(RoutePlannerContract.stateStream)
@@ -380,6 +383,23 @@ private fun MapContent(
                         .padding(BAR_PADDING_DP.dp),
             )
         }
+        ContoursLayerPanel(
+            enabled = contoursEnabled,
+            onEnabledChange = { enabled ->
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        container.contoursSettings.setEnabled(enabled)
+                    }.onFailure { error ->
+                        Log.w(TAG, "contour toggle not saved: $error")
+                    }
+                }
+            },
+            modifier =
+                Modifier
+                    .align(Alignment.TopStart)
+                    .statusBarsPadding()
+                    .padding(top = CONTOURS_PANEL_TOP_DP.dp, start = BAR_PADDING_DP.dp),
+        )
         MapScaleOverlay(
             surface = surface,
             settings = unitStore,
@@ -736,6 +756,12 @@ private fun MapContent(
             "map-ready region=${bundle.sources.regionName} contours=${bundle.sources.hasContours}",
         )
     }
+    LaunchedEffect(surface.host, bundle.style.id, contoursEnabled) {
+        when (val contours = container.contours.apply(surface.host, bundle.style.id, contoursEnabled)) {
+            is Outcome.Success -> Log.i(TAG, "contour layers ready enabled=$contoursEnabled")
+            is Outcome.Failure -> Log.w(TAG, "contour layers not applied: ${contours.error}")
+        }
+    }
 }
 
 /**
@@ -1081,6 +1107,9 @@ private suspend fun loadBundle(
     container: AppContainer,
     context: Context,
 ): MapBundle? {
+    // Resolve the layer switch on the caller's IO dispatcher before the screen
+    // collects it, so a settings read never lands on Main.
+    container.contoursSettings.isEnabled()
     val sources = MapSources.resolve(context, container.regionsRoot)
     val result =
         container.providerRegistry.invoke(STYLE_PLUGIN, MapLayerContract.REFERENCE) { provider ->

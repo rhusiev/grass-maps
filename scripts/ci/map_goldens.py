@@ -122,7 +122,11 @@ DEVICE_REGION_STAGE = "/data/local/tmp/grass-map-golden-region"
 STYLE_IDS = {
     "light": "standard",
     "dark": "standard-dark",
+    "touring-light": "touring",
+    "touring-dark": "touring-dark",
 }
+# The launch extra the app reads for the golden capture (ContoursSettings).
+CONTOURS_EXTRA = "map.contours.enabled"
 
 # Ten fixture places at three zooms. The fixture is the CI map (T-0015), so the
 # style goldens stay small and need no region archive.
@@ -145,6 +149,14 @@ POSITIONS = {
         (f"{name}-z{int(zoom)}", lat, lon, zoom, 0.0, 0.0)
         for name, lat, lon in STANDARD_PLACES
         for zoom in STANDARD_ZOOMS
+    ),
+    # T-0417: one fixture place at the three contour zooms. The archive has
+    # index lines at z12-z13 and the 20 m lines at z14, so the three images
+    # cover every band the committed fixture can draw.
+    "contours": (
+        ("contours-center-z12", 49.9500, 23.9500, 12.0, 0.0, 0.0),
+        ("contours-center-z13", 49.9500, 23.9500, 13.0, 0.0, 0.0),
+        ("contours-center-z14", 49.9500, 23.9500, 14.0, 0.0, 0.0),
     ),
     "fixture": (
         ("fixture-center-z12", 49.9500, 23.9500, 12.0, 0.0, 0.0),
@@ -410,9 +422,9 @@ def clear_app_data(adb: Adb) -> None:
     adb.shell("am", "force-stop", PACKAGE, timeout_s=30, check=False)
 
 
-def launch(adb: Adb) -> str:
+def launch(adb: Adb, contours: bool | None = None) -> str:
     adb.shell("am", "force-stop", PACKAGE, timeout_s=30, check=False)
-    return adb.shell(
+    command = [
         "am",
         "start",
         "-W",
@@ -420,8 +432,14 @@ def launch(adb: Adb) -> str:
         LAUNCH_FLAGS,
         "-n",
         f"{PACKAGE}/{ACTIVITY}",
-        timeout_s=120,
-    )
+    ]
+    if contours is not None:
+        command += [
+            "--ez",
+            CONTOURS_EXTRA,
+            "true" if contours else "false",
+        ]
+    return adb.shell(*command, timeout_s=120)
 
 
 def wait_for_channel(adb: Adb) -> control_client.ControlClient:
@@ -900,6 +918,7 @@ def capture(
     profile: str,
     output: Path,
     style: str | None,
+    contours: bool | None = None,
 ) -> dict[str, object]:
     if profile == "oblast" and not (output / "region.json").exists():
         raise GoldenError("oblast capture needs the installed region package")
@@ -915,7 +934,7 @@ def capture(
     camera_result = None
     try:
         adb.logcat("-c", timeout_s=15)
-        launch(adb)
+        launch(adb, contours)
         client = wait_for_channel(adb)
         # Let the first render spike finish before the first camera move; the
         # swiftshader renderer is still catching up when `am start -W` returns.
@@ -957,6 +976,7 @@ def capture(
                 "schema": SCHEMA,
                 "profile": profile,
                 "style": style,
+                "contours": contours,
                 "device_serial": adb.serial,
                 "started": started,
                 "captured": datetime.now(timezone.utc).isoformat(),
@@ -1267,6 +1287,14 @@ def default_reference(profile: str, style: str | None) -> Path:
     return path / style if style else path
 
 
+def contours_flag(args: argparse.Namespace) -> bool | None:
+    """The launch override: None leaves the app's saved switch alone."""
+    value = getattr(args, "contours", None)
+    if value is None:
+        return None
+    return value == "on"
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Capture and compare map goldens.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -1278,6 +1306,7 @@ def build_parser() -> argparse.ArgumentParser:
     capture_parser.add_argument("--output", required=True)
     capture_parser.add_argument("--region-package", default=None)
     capture_parser.add_argument("--style", choices=sorted(STYLE_IDS), default=None)
+    capture_parser.add_argument("--contours", choices=["on", "off"], default=None)
     capture_parser.add_argument("--keep-data", action="store_true")
 
     compare_parser = subparsers.add_parser("compare")
@@ -1285,6 +1314,7 @@ def build_parser() -> argparse.ArgumentParser:
     compare_parser.add_argument("--profile", choices=sorted(POSITIONS), required=True)
     compare_parser.add_argument("--captured", required=True)
     compare_parser.add_argument("--style", choices=sorted(STYLE_IDS), default=None)
+    compare_parser.add_argument("--contours", choices=["on", "off"], default=None)
     compare_parser.add_argument("--reference", default=None)
     compare_parser.add_argument("--output", default=None)
     compare_parser.add_argument("--update", action="store_true")
@@ -1341,7 +1371,7 @@ def main() -> int:
                 metadata = install_region_package(adb, package)
                 (output / "region.json").parent.mkdir(parents=True, exist_ok=True)
                 (output / "region.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
-            capture(adb, args.profile, output, args.style)
+            capture(adb, args.profile, output, args.style, contours_flag(args))
             return 0
         reference = (
             Path(args.reference)

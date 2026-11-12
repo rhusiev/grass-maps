@@ -27,6 +27,7 @@ import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerType
 import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
+import nl.r1a.grassmap.plugin.api.model.MapTrack
 import nl.r1a.grassmap.plugin.api.model.SourceId
 import nl.r1a.grassmap.plugin.api.provider.Route
 import org.maplibre.compose.expressions.ast.Expression
@@ -95,11 +96,48 @@ internal fun ComposedMapLayers(session: MapHostState) {
             StyleLayerNode(layer, source)
         }
         when (slot) {
+            LayerSlot.Overlays -> TrackLineSlot(session.tracks.value)
             LayerSlot.Routes -> RouteLayerSlot(session)
             LayerSlot.Markers -> MarkerLayerSlot(session, styleReady)
             else -> Unit
         }
     }
+}
+
+/**
+ * The stored tracks in the overlays slot, one line per track. The colour and
+ * width come from each track's sidecar, so the layer draws the library and
+ * never chooses a style of its own. A track with no segment of two points has
+ * no line and is skipped.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+@MaplibreComposable
+private fun TrackLineSlot(tracks: List<MapTrack>) {
+    for (track in tracks) {
+        if (!TrackGeoJson.isDrawable(track)) continue
+        val line = remember(track) { trackLine(track) }
+        key(track.id) {
+            TrackLineNode(track, line)
+        }
+    }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+@MaplibreComposable
+private fun TrackLineNode(
+    track: MapTrack,
+    line: TrackLine,
+) {
+    val source = rememberGeoJsonSource(GeoJsonData.JsonString(TrackGeoJson.featureCollection(track)))
+    LineLayer(
+        id = line.layerId,
+        source = source,
+        color = const(line.colour),
+        opacity = const(1f),
+        width = const(line.widthDp),
+    )
 }
 
 /**

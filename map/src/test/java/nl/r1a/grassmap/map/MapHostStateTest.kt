@@ -15,6 +15,7 @@ import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerSpec
 import nl.r1a.grassmap.plugin.api.model.LayerType
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
+import nl.r1a.grassmap.plugin.api.model.MapTrack
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleId
@@ -230,6 +231,22 @@ class MapHostStateTest {
 
         assertEquals(Outcome.Failure(AppError.Unsupported), result)
         assertEquals(before, session.layers.value)
+    }
+
+    @Test
+    fun updateTracksReplacesTheDrawnLibrary() {
+        val session = session()
+        val first = MapTrack(id = "a", segments = listOf(listOf(GeoPoint(0.0, 0.0))))
+        val second = MapTrack(id = "b", segments = listOf(listOf(GeoPoint(1.0, 1.0))))
+
+        session.updateTracks(listOf(first))
+        assertEquals(listOf(first), session.tracks.value)
+
+        session.updateTracks(listOf(first, second))
+        assertEquals(2, session.tracks.value.size)
+
+        session.updateTracks(emptyList())
+        assertTrue(session.tracks.value.isEmpty())
     }
 
     private fun session(): MapHostState = MapHostState(style(LOADED_STYLE), Camera(center = GeoPoint(0.0, 0.0), zoom = 1.0)) { null }

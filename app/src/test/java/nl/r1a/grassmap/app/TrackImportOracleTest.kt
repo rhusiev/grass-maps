@@ -48,7 +48,8 @@ class TrackImportOracleTest {
             val tracks = trackAccess()
 
             val imported = success(tracks.import(FIXTURE_NAME, fixture(), CancellationHandle.None))
-            val analysis = imported.record.analysis
+            val record = imported.tracks.single()
+            val analysis = record.analysis
 
             assertEquals(60, analysis.pointCount)
             assertEquals(ASCENT_METERS, analysis.ascentMeters, ELEVATION_TOLERANCE_METERS)
@@ -57,17 +58,17 @@ class TrackImportOracleTest {
             assertEquals(297.6, analysis.maxElevationMeters ?: 0.0, 0.0)
             assertEquals(DISTANCE_METERS, analysis.distanceMeters, DISTANCE_TOLERANCE_METERS)
             assertTrue(imported.warnings.isEmpty())
-            assertEquals("Mock walk around Lviv", imported.record.name)
+            assertEquals("Mock walk around Lviv", record.name)
         }
 
     @Test
     fun theStoredTrackIsReadableBackThroughTheStore() =
         runTest {
             val tracks = trackAccess()
-            val imported = success(tracks.import(FIXTURE_NAME, fixture(), CancellationHandle.None))
+            val imported = success(tracks.import(FIXTURE_NAME, fixture(), CancellationHandle.None)).tracks.single()
 
-            assertEquals(imported.record, success(tracks.stored(imported.record.id)))
-            assertEquals(listOf(imported.record), tracks.storedTracks())
+            assertEquals(imported, success(tracks.stored(imported.id)))
+            assertEquals(listOf(imported), tracks.storedTracks())
         }
 
     @Test

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="OsmAnd 4.9.10" xmlns="http://www.topografix.com/GPX/1/1"
+     xmlns:osmand="https://osmand.net">
+  <metadata><name>Damaged export</name></metadata>
+  <trk>
+    <name>Partially damaged walk</name>
+    <trkseg>
+      <trkpt lat="49.87000" lon="24.06100"><ele>460.0</ele><time>2026-08-14T10:00:00Z</time></trkpt>
+      <trkpt lat="49.87010" lon="24.06105"><ele>461.0</ele><time>2026-08-14T10:00:05Z</time></trkpt>
+      <trkpt lon="24.06110"><ele>462.0</ele><time>2026-08-14T10:00:10Z</time></trkpt>
+      <trkpt lat="not-a-number" lon="24.06115"><ele>463.0</ele></trkpt>
+      <trkpt lat="95.50000" lon="200.00000"><ele>464.0</ele></trkpt>
+      <trkpt lat="49.87040" lon="24.06120"><ele>oops</ele><time>yesterday</time></trkpt>
+      <trkpt lat="49.87050" lon="24.06125"><ele>463.0</ele><time>2026-08-14T10:00:25Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+    </trkseg>
+  </trk>
+  <trk>
+    <name>Empty second track</name>
+    <trkseg></trkseg>
+  </trk>
+</gpx>

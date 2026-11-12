@@ -402,7 +402,7 @@ application ID is `nl.r1a.grassmap`.
 | `alerts` | alert sources, scheduling, sound, vibration and banner output | `navigation`, `plugin-api` |
 | `planner` | the start/end plan, its intermediate stops, its undo and redo history, its reuse commands and its state and history streams; the shell draws the preview and the turn stepper from it | `plugin-api`, `routing` |
 | `places` | place and search provider hosts, favourites store | `plugin-api` |
-| `tracks` | GPX import and export, track store, analysis engine | `plugin-api` |
+| `tracks` | GPX import and export, the track file store and sidecars, analysis engine | `plugin-api` |
 | `ui-shell` | screens, bottom bar and sheet, configurable button and widget grid, command palette, theme, strings | `plugin-api`, `plugin-ui-api` |
 | `control` | JSON-RPC control channel and MCP server, peer auth, allowlist, privacy switch | `core`, `plugin-api` |
 | `devtools` | debug harness: benchmark hooks, GPX replay, screenshot and state probes | `core`, `control`, `plugin-api` |
@@ -425,6 +425,7 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/direct-engine` | the second `routing.engine` provider: one geodesic per leg with the haversine length, its leg segments and its honest empty capabilities | `plugin-api` |
 | `plugins/guidance-ui` | the guidance panel's four facts and its Compose chrome, drawn from the navigation state the app holds | `plugin-api`, `plugin-ui-api` |
 | `plugins/nav-simulator` | the simulated run at 5 km/h through the production navigation session, its start and stop commands and its status stream | `plugin-api`, `navigation`, `routing` |
+| `plugins/track-layer` | the imported-track line layer and the controller that keeps it on the map | `plugin-api` |
 
 ## Place card
 
@@ -582,6 +583,12 @@ maplibre-compose 0.20 (OpenGL) and no other module imports that library. A
 Compose layer nodes and draws the layers in fixed slots. The logical source IDs
 are `world` (z0-z7), `region` (z8-z14) and `contours` (z9-z14). The host
 resolves each ID to a mounted archive and skips layers whose source is absent.
+
+`MapHost.setTracks(List<MapTrack>)` draws the stored tracks. `map` turns the
+list into one GeoJSON `MultiLineString` per track in the `Overlays` slot, so a
+segment gap is never crossed and a pan or a zoom never rebuilds the geometry
+from Compose. The track layer (T-0401) is its only caller; the route, puck and
+markers stay on their own host calls.
 
 The Standard light and dark variants share one `BaseStyle.Json` document, so a
 variant switch updates layers in place instead of reloading the style. A base
@@ -1820,9 +1827,48 @@ as `trk[0]/trkseg[1]/trkpt[4]`; a broken elevation or time only clears that
 field. A document that is not well-formed XML at all is `CorruptData`.
 
 `tracks` owns the import path: resolve the provider through `ProviderRegistry`
-in `app`, read the document, store the first track keyed by the SHA-256 of its
-bytes, and compute the profile. T-0027 stores in memory; the file store,
-folders and undo are T-0401/T-0414.
+in `app`, read the document, store every track it contains and compute each
+profile. T-0401 adds the file store behind that path:
+
+- a document is `<sha256>.gpx` under the app's private `tracks/` directory,
+  written exactly as it arrived;
+- a sidecar `<id>.json` sits beside it with the styling (`colour`, `widthDp`),
+  the cached profile, the document index and the hash it belongs to;
+- the id is the document hash. A document with several tracks appends
+  `:<index>` to every track, so one file stays one file and each track keeps a
+  stable id.
+
+The GPX is the source of truth for geometry; a reload reads it again and
+refuses a sidecar whose document hash no longer matches the file. A save writes
+a hidden `.<name>.part` sibling, flushes it and moves it over the target
+atomically, so an interrupted write leaves the previous file intact. Importing
+the same bytes again updates the same records and keeps their colour. A missing
+or corrupt sidecar, a hash mismatch or a document the format rejects skips that
+one track and logs it; the rest of the library still loads. Every call returns
+a typed `Outcome`, and file I/O runs on `Dispatchers.IO`.
+
+`ImportReport` carries the stored records and the skipped parts. The warning
+line is `<locator>: <what happened>`, for example
+`trk[0]/trkseg[0]/trkpt[2]: missing coordinates` or
+`trk[0]/trkseg[1]: empty segment dropped`. That line is log and test text:
+the library screen (T-0414) writes its own localized sentence from the stable
+code and locator.
+
+`MapHost.setTracks` draws the library. `plugins/track-layer` owns the
+controller: it collects the store's drawable list and writes it to the bound
+host, which draws one line per track in the overlays slot. The colour and width
+come from the sidecar, and a new track gets a deterministic palette colour
+derived from its hash, so the same file draws the same colour on every device.
+A segment with fewer than two points has no line. No track screen exists yet;
+T-0414 owns the library UI and T-0416 the share-sheet import.
+
+Twenty committed fixtures under `test-data/tracks` cover OsmAnd, Garmin and
+Strava exports, a GPX 1.0 file with a default namespace, waypoints and routes,
+multi-segment and multi-track documents, absent elevation and time, a UTF-8
+name, and two damaged documents. `TrackFixturesTest` imports each one through
+the real `file.gpx` provider and the file store and asserts its track, segment
+and point counts, ascent, descent and elevation range; the damaged files also
+assert the exact warning lines.
 
 The profile is Kotlin in `tracks` for T-0027, not the Rust core. `tracks` may
 depend only on `:plugin-api` (module map and plugin boundary rule), the only
@@ -1847,7 +1893,8 @@ tools/control/grassctl.py invoke core.track.import_test '{"path":"mock-walk.gpx"
 ```
 
 It reads a debug asset or an absolute path, imports through `file.gpx`, stores
-the track and logs the profile. No tracks UI exists yet.
+every track and logs one profile line per track plus the warning lines. No
+tracks UI exists yet.
 
 ## Regions seam
 

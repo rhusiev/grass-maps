@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="StravaGPX" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">
+  <rte><name>Saved Route Plan</name>
+    <rtept lat="49.868" lon="24.059">
+      <ele>440.0</ele>
+    </rtept>
+    <rtept lat="49.869" lon="24.06">
+      <ele>445.0</ele>
+    </rtept>
+    <rtept lat="49.87" lon="24.061">
+      <ele>450.0</ele>
+    </rtept>
+  </rte>
+  <trk><name>Saved Route</name>
+    <trkseg>
+      <trkpt lat="49.868000" lon="24.059000">
+        <ele>440.0</ele>
+        <time>2026-08-14T07:41:03Z</time>
+        <extensions>
+          <gpxtpx:TrackPointExtension>
+            <gpxtpx:hr>140</gpxtpx:hr>
+          </gpxtpx:TrackPointExtension>
+          <power>200</power>
+        </extensions>
+      </trkpt>
+      <trkpt lat="49.868100" lon="24.059050">
+        <ele>441.0</ele>
+        <time>2026-08-14T07:41:04Z</time>
+        <extensions>
+          <gpxtpx:TrackPointExtension>
+            <gpxtpx:hr>141</gpxtpx:hr>
+          </gpxtpx:TrackPointExtension>
+          <power>201</power>
+        </extensions>
+      </trkpt>
+      <trkpt lat="49.868200" lon="24.059100">
+        <ele>442.0</ele>
+        <time>2026-08-14T07:41:05Z</time>
+        <extensions>
+          <gpxtpx:TrackPointExtension>
+            <gpxtpx:hr>142</gpxtpx:hr>
+          </gpxtpx:TrackPointExtension>
+          <power>202</power>
+        </extensions>
+      </trkpt>
+      <trkpt lat="49.868300" lon="24.059150">
+        <ele>444.0</ele>
+        <time>2026-08-14T07:41:06Z</time>
+        <extensions>
+          <gpxtpx:TrackPointExtension>
+            <gpxtpx:hr>143</gpxtpx:hr>
+          </gpxtpx:TrackPointExtension>
+          <power>203</power>
+        </extensions>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

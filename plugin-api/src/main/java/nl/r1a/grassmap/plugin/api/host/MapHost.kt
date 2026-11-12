@@ -11,6 +11,7 @@ import nl.r1a.grassmap.plugin.api.model.LayerId
 import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerSpec
 import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmap.plugin.api.model.MapTrack
 import nl.r1a.grassmap.plugin.api.model.ScreenOffset
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleSpec
@@ -77,6 +78,14 @@ interface MapHost {
      * null. The line is not a Compose overlay, so it follows the map.
      */
     suspend fun setRoute(route: Route?): Outcome<Unit>
+
+    /**
+     * Draws [tracks] in the overlays slot, replacing every track the map drew
+     * before, or clears them when the list is empty. A host that cannot draw
+     * tracks reports [nl.r1a.grassmap.plugin.api.error.AppError.Unsupported]
+     * and leaves the map unchanged.
+     */
+    suspend fun setTracks(tracks: List<MapTrack>): Outcome<Unit>
 
     suspend fun setPositionOffset(offset: ScreenOffset): Outcome<Unit>
 }

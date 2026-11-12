@@ -46,6 +46,7 @@ open class GrassMapsApplication : Application() {
             searchFilesProvider = { getExternalFilesDir(null) ?: filesDir },
             assetReader = { path -> readAsset(path) },
             regionsRootProvider = { File(filesDir, REGIONS_DIRECTORY) },
+            tracksRootProvider = { File(filesDir, TRACKS_DIRECTORY) },
             diagnosticsRootProvider = { File(filesDir, DIAGNOSTICS_DIRECTORY) },
             deviceInfoProvider = { deviceInfo() },
             debuggable = { isDebuggable() },
@@ -190,6 +191,7 @@ open class GrassMapsApplication : Application() {
     private companion object {
         const val TAG = "GrassMapsDevTools"
         const val REGIONS_DIRECTORY = "regions"
+        const val TRACKS_DIRECTORY = "tracks"
         const val DIAGNOSTICS_DIRECTORY = "diagnostics"
         const val PERMISSION_DIRECTORY = "location"
         const val PERMISSION_FILE = "permission-asked"

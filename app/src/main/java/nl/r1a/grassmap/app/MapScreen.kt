@@ -225,6 +225,14 @@ private fun MapContent(
             Log.w(TAG, "position offset rejected: $error")
         }
     }
+    LaunchedEffect(container.tracks) {
+        container.tracks.reload().onFailure { error ->
+            Log.w(TAG, "track library not loaded: $error")
+        }
+    }
+    LaunchedEffect(surface.host, container.trackLayer) {
+        container.trackLayer.run()
+    }
     LaunchedEffect(cameraMode, container) {
         if (cameraMode != CameraMode.Heading) {
             return@LaunchedEffect
@@ -235,6 +243,7 @@ private fun MapContent(
     }
     LaunchedEffect(container.locationController, surface.host) {
         container.locationController.syncToHost()
+
         // A link parked before this surface bound is replayed when the
         // collection starts, after the follow recentre, so it wins the first
         // frame. A link delivered while the surface stays bound arrives on the

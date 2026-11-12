@@ -1,0 +1,15 @@
+{
+  "id": "track.layer",
+  "name": "plugin.track_layer.name",
+  "description": "plugin.track_layer.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.track.layer.TrackLayerPlugin",
+  "contributes": {},
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": []
+  },
+  "activation": []
+}

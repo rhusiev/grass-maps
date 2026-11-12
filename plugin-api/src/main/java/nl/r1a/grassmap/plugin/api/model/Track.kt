@@ -75,3 +75,34 @@ data class ImportResult(
     val entities: ImportedEntities,
     val warnings: List<ImportWarning> = emptyList(),
 )
+
+/**
+ * The styling a stored track carries in its sidecar (T-0401). [colour] is a
+ * `#RRGGBB` string so the sidecar stays readable and has no platform type.
+ */
+data class TrackStyle(
+    val colour: String = DEFAULT_COLOUR,
+    val widthDp: Float = DEFAULT_WIDTH_DP,
+) {
+    /** True when [colour] is a plain `#RRGGBB` value and the width is drawable. */
+    fun isValid(): Boolean = COLOUR_PATTERN.matches(colour) && widthDp > 0f && widthDp.isFinite()
+
+    companion object {
+        const val DEFAULT_COLOUR: String = "#1E88E5"
+        const val DEFAULT_WIDTH_DP: Float = 4f
+
+        private val COLOUR_PATTERN = Regex("^#[0-9A-Fa-f]{6}$")
+    }
+}
+
+/**
+ * One stored track as the map draws it: styled segments, no analysis. The
+ * elevation profile stays on the store's sidecar and never reaches the layer.
+ * A segment with fewer than two points cannot form a line.
+ */
+data class MapTrack(
+    val id: String,
+    val name: String? = null,
+    val style: TrackStyle = TrackStyle(),
+    val segments: List<List<GeoPoint>>,
+)

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="OsmAnd 4.9.10" xmlns="http://www.topografix.com/GPX/1/1" xmlns:osmand="https://osmand.net">
+  <trk><name>Track without timestamps</name>
+    <trkseg>
+      <trkpt lat="49.848000" lon="24.038000">
+        <ele>340.0</ele>
+        <extensions>
+          <osmand:speed>1.2</osmand:speed>
+        </extensions>
+      </trkpt>
+      <trkpt lat="49.848100" lon="24.038000">
+        <ele>341.0</ele>
+        <extensions>
+          <osmand:speed>1.3</osmand:speed>
+        </extensions>
+      </trkpt>
+      <trkpt lat="49.848200" lon="24.038000">
+        <ele>342.0</ele>
+        <extensions>
+          <osmand:speed>1.4</osmand:speed>
+        </extensions>
+      </trkpt>
+      <trkpt lat="49.848300" lon="24.038000">
+        <ele>343.0</ele>
+        <extensions>
+          <osmand:speed>1.5</osmand:speed>
+        </extensions>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

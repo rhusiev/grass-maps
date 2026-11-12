@@ -14,6 +14,7 @@ import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.tracks.StoredTrack
 import java.io.File
 import java.io.IOException
 import java.util.Locale
@@ -63,19 +64,29 @@ internal class TrackImportTestCommand(
                     return outcome
                 }
             }
-        val analysis = imported.record.analysis
+        val stored = tracks().storedTracks().size
         val summary =
-            "track id=${imported.record.id.value.take(ID_PREFIX)} name=\"${imported.record.name.orEmpty()}\" " +
-                "points=${analysis.pointCount} distance_m=${meters(analysis.distanceMeters)} " +
-                "ascent_m=${meters(analysis.ascentMeters)} descent_m=${meters(analysis.descentMeters)} " +
-                "min_ele_m=${analysis.minElevationMeters?.let(::meters) ?: "none"} " +
-                "max_ele_m=${analysis.maxElevationMeters?.let(::meters) ?: "none"} " +
-                "stored=${tracks().storedTracks().size} warnings=${imported.warnings.size}"
-        log(summary)
-        imported.warnings.forEach { warning ->
-            log("warning code=${warning.code} at=${warning.detail.orEmpty()}")
-        }
+            imported.tracks.joinToString(separator = "\n") { record ->
+                describe(record, stored, imported.warnings.size)
+            }
+        summary.lines().forEach { line -> log(line) }
+        imported.warningLines().forEach { line -> log("warning $line") }
         return Outcome.Success(CommandResult(summary))
+    }
+
+    private fun describe(
+        record: StoredTrack,
+        stored: Int,
+        warnings: Int,
+    ): String {
+        val analysis = record.analysis
+        return "track id=${record.id.value.take(ID_PREFIX)} index=${record.trackIndex} " +
+            "name=\"${record.name.orEmpty()}\" points=${analysis.pointCount} " +
+            "distance_m=${meters(analysis.distanceMeters)} " +
+            "ascent_m=${meters(analysis.ascentMeters)} descent_m=${meters(analysis.descentMeters)} " +
+            "min_ele_m=${analysis.minElevationMeters?.let(::meters) ?: "none"} " +
+            "max_ele_m=${analysis.maxElevationMeters?.let(::meters) ?: "none"} " +
+            "stored=$stored warnings=$warnings"
     }
 
     private fun load(path: String): Outcome<ByteArray> {

@@ -94,6 +94,7 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         // changes no navigation policy and reaches no core internals.
         ":plugins:nav-simulator" to setOf(":plugin-api", ":navigation", ":routing"),
         ":plugins:way-alerts" to setOf(":plugin-api"),
+        ":plugins:track-layer" to setOf(":plugin-api"),
     )
 // Test-only edges are separate so a test fixture cannot quietly become a
 // production dependency. :control's info-widgets edge is the accepted T-0113

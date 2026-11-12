@@ -15,6 +15,7 @@ import nl.r1a.grassmap.plugin.api.model.LayerId
 import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerSpec
 import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmap.plugin.api.model.MapTrack
 import nl.r1a.grassmap.plugin.api.model.ScreenOffset
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleSpec
@@ -39,6 +40,7 @@ internal class FakeMapHost(
     val trackingModes = mutableListOf<TrackingMode>()
     val layers = mutableListOf<AddedLayer>()
     val routes = mutableListOf<Route?>()
+    val tracks = mutableListOf<List<MapTrack>>()
 
     override val camera: StateFlow<Camera> = cameraState
     override val events: Flow<MapEvent> = emptyFlow()
@@ -91,6 +93,11 @@ internal class FakeMapHost(
 
     override suspend fun setRoute(route: Route?): Outcome<Unit> {
         routes += route
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun setTracks(tracks: List<MapTrack>): Outcome<Unit> {
+        this.tracks += tracks
         return Outcome.Success(Unit)
     }
 

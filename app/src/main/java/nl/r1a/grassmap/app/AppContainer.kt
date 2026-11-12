@@ -80,6 +80,7 @@ import nl.r1a.grassmap.plugins.map.controls.PositionOffsetFraction
 import nl.r1a.grassmap.plugins.map.controls.PositionOffsetProvider
 import nl.r1a.grassmap.plugins.point.info.PointInfo
 import nl.r1a.grassmap.plugins.point.info.SelectedPointStore
+import nl.r1a.grassmap.plugins.track.layer.TrackLayer
 import nl.r1a.grassmap.plugins.way.alerts.WayAlertHost
 import nl.r1a.grassmap.plugins.way.alerts.WayAlertSink
 import nl.r1a.grassmap.regions.GateNetworkAccess
@@ -109,6 +110,7 @@ class AppContainer(
     private val searchFilesProvider: () -> File? = { null },
     private val assetReader: (String) -> ByteArray? = { null },
     private val regionsRootProvider: () -> File? = { null },
+    private val tracksRootProvider: () -> File? = { null },
     private val diagnosticsRootProvider: () -> File? = { null },
     private val deviceInfoProvider: () -> DeviceInfo = { DeviceInfo.UNKNOWN },
     private val debuggable: () -> Boolean = { false },
@@ -458,9 +460,24 @@ class AppContainer(
         SearchScreenSession { request -> mergedSearch.search(request) }
     }
 
-    /** The track import path over the generated `file.gpx` provider. */
+    /**
+     * The track library over the generated `file.gpx` provider (T-0401). Under
+     * [tracksRootProvider] the store persists; without a root it is memory-only.
+     */
     val tracks: TrackAccess by lazy {
-        TrackAccess(providerRegistry, GeneratedPlugins.providers)
+        TrackAccess(providerRegistry, GeneratedPlugins.providers, tracksRoot = tracksRootProvider())
+    }
+
+    /**
+     * The map layer over the track library (T-0401). The plugin module owns the
+     * controller; the app gives it the store's drawable list and the bound map.
+     */
+    val trackLayer: TrackLayer by lazy {
+        TrackLayer(
+            tracks = tracks.drawn,
+            host = { mapSession.hostOrNull() },
+            log = { message -> Log.w(TRACK_LAYER_TAG, message) },
+        )
     }
 
     /**
@@ -645,6 +662,7 @@ class AppContainer(
         const val FAVOURITES_TAG = "GrassMapsFavourites"
         const val NAVIGATION_TAG = "GrassMapsNavigation"
         const val WAY_ALERTS_TAG = "GrassMapsWayAlerts"
+        const val TRACK_LAYER_TAG = "GrassMapsTracks"
         const val ROUTING_PACK_DIRECTORY = "valhalla"
         val ROUTING_ENGINE_PLUGIN = PluginId("valhalla")
         val ONLINE_SEARCH_PLUGIN = PluginId("online.search")

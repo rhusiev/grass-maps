@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Garmin Connect"
+     xmlns="http://www.topografix.com/GPX/1/1"
+     xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">
+  <trk>
+    <name>No segments at all</name>
+  </trk>
+  <trk>
+    <name>One usable segment</name>
+    <trkseg></trkseg>
+    <trkseg>
+      <trkpt lat="49.87100" lon="24.06200"><ele>470.0</ele></trkpt>
+      <trkpt lat="49.87110" lon="24.06205"><ele>471.0</ele></trkpt>
+      <trkpt lat="49.87120" lon="24.06210"><ele>472.0</ele></trkpt>
+    </trkseg>
+    <trkseg>
+      <trkpt lon="24.06215"><ele>473.0</ele></trkpt>
+      <trkpt lat="49.87130" lon="24.06220"><ele>474.0</ele></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

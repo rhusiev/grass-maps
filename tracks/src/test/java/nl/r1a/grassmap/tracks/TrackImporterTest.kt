@@ -36,16 +36,17 @@ class TrackImporterTest {
                     is Outcome.Failure -> throw AssertionError("import failed: ${outcome.error}")
                 }
 
+            val record = imported.tracks.single()
             assertEquals(listOf("gpx"), requested)
-            assertEquals("Mock walk", imported.record.name)
-            assertEquals(2, imported.record.analysis.pointCount)
-            assertEquals(5.0, imported.record.analysis.ascentMeters, 1e-9)
-            assertEquals(64, imported.record.id.value.length)
+            assertEquals("Mock walk", record.name)
+            assertEquals(2, record.analysis.pointCount)
+            assertEquals(5.0, record.analysis.ascentMeters, 1e-9)
+            assertEquals(64, record.id.value.length)
             assertEquals(
                 listOf(ImportWarning(ImportWarningCode.InvalidTime, "trk[0]/trkseg[0]/trkpt[1]")),
                 imported.warnings,
             )
-            assertEquals(Outcome.Success(imported.record), store.get(imported.record.id))
+            assertEquals(Outcome.Success(record), store.get(record.id))
             assertEquals(1, importer.storedTracks().size)
         }
 
@@ -58,7 +59,8 @@ class TrackImporterTest {
             val first = success(importer.importFile("walk.gpx", BYTES, CancellationHandle.None))
             val second = success(importer.importFile("walk.gpx", BYTES, CancellationHandle.None))
 
-            assertEquals(first.record.id, second.record.id)
+            assertEquals(first.tracks.single().id, second.tracks.single().id)
+            assertEquals(first.tracks.single().style, second.tracks.single().style)
             assertEquals(1, store.all().size)
         }
 
@@ -134,6 +136,73 @@ class TrackImporterTest {
             )
         }
 
+    @Test
+    fun aMultiTrackDocumentStoresOneRecordPerTrack() =
+        runTest {
+            val store = InMemoryTrackStore()
+            val importer =
+                TrackImporter(
+                    resolver(mutableListOf()) {
+                        format(
+                            ImportResult(
+                                entities =
+                                    ImportedEntities(
+                                        tracks =
+                                            listOf(
+                                                track("Morning"),
+                                                track("Evening"),
+                                            ),
+                                    ),
+                            ),
+                        )
+                    },
+                    store,
+                )
+
+            val imported = success(importer.importFile("two.gpx", BYTES, CancellationHandle.None))
+
+            assertEquals(listOf("Morning", "Evening"), imported.tracks.map { it.name })
+            assertEquals(listOf(0, 1), imported.tracks.map { it.trackIndex })
+            assertEquals(
+                66,
+                imported.tracks[0]
+                    .id.value.length,
+            )
+            assertEquals(
+                imported.tracks[0]
+                    .id.value
+                    .removeSuffix(":0") + ":1",
+                imported.tracks[1].id.value,
+            )
+            assertEquals(2, store.all().size)
+        }
+
+    @Test
+    fun theWarningLinesNameTheSkippedParts() =
+        runTest {
+            val skipped =
+                listOf(
+                    ImportWarning(ImportWarningCode.MissingCoordinates, "trk[0]/trkseg[0]/trkpt[2]"),
+                    ImportWarning(ImportWarningCode.OutOfRangeCoordinates, "trk[0]/trkseg[0]/trkpt[4]"),
+                    ImportWarning(ImportWarningCode.InvalidElevation, "trk[0]/trkseg[0]/trkpt[5]"),
+                    ImportWarning(ImportWarningCode.EmptySegment, "trk[0]/trkseg[1]"),
+                    ImportWarning(ImportWarningCode.EmptyTrack, "trk[1]"),
+                    ImportWarning(ImportWarningCode.EmptyRoute, "rte[0]"),
+                )
+
+            assertEquals(
+                listOf(
+                    "trk[0]/trkseg[0]/trkpt[2]: missing coordinates",
+                    "trk[0]/trkseg[0]/trkpt[4]: coordinates outside WGS84",
+                    "trk[0]/trkseg[0]/trkpt[5]: unreadable elevation, point kept",
+                    "trk[0]/trkseg[1]: empty segment dropped",
+                    "trk[1]: empty track dropped",
+                    "rte[0]: empty route dropped",
+                ),
+                skipped.map { warning -> warning.describe() },
+            )
+        }
+
     private fun resolver(
         requested: MutableList<String>,
         format: () -> FileFormat,
@@ -143,7 +212,7 @@ class TrackImporterTest {
             Outcome.Success(format())
         }
 
-    private fun success(outcome: Outcome<ImportedTrack>): ImportedTrack =
+    private fun success(outcome: Outcome<ImportReport>): ImportReport =
         when (outcome) {
             is Outcome.Success -> outcome.value
             is Outcome.Failure -> throw AssertionError("unexpected failure: ${outcome.error}")
@@ -161,6 +230,20 @@ class TrackImporterTest {
                 cancellation: CancellationHandle,
             ): Outcome<ImportResult> = Outcome.Success(result)
         }
+
+    private fun track(name: String): Track =
+        Track(
+            name = name,
+            segments =
+                listOf(
+                    TrackSegment(
+                        listOf(
+                            TrackPoint(GeoPoint(49.84, 24.03), 296.0, 0L),
+                            TrackPoint(GeoPoint(49.84001, 24.03), 301.0, null),
+                        ),
+                    ),
+                ),
+        )
 
     private fun importResult(): ImportResult =
         ImportResult(

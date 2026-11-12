@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.0" creator="Oregon 700" xmlns="http://www.topografix.com/GPX/1/0">
+  <trk><name>Oregon track</name>
+    <trkseg>
+      <trkpt lat="49.859000" lon="24.050000">
+        <ele>400.0</ele>
+        <time>2026-08-14T07:41:03Z</time>
+      </trkpt>
+      <trkpt lat="49.859100" lon="24.050050">
+        <ele>402.0</ele>
+        <time>2026-08-14T07:41:04Z</time>
+      </trkpt>
+      <trkpt lat="49.859200" lon="24.050100">
+        <ele>401.0</ele>
+        <time>2026-08-14T07:41:05Z</time>
+      </trkpt>
+      <trkpt lat="49.859300" lon="24.050150">
+        <ele>403.0</ele>
+        <time>2026-08-14T07:41:06Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

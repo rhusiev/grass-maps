@@ -18,6 +18,7 @@ import nl.r1a.grassmap.plugin.api.model.LayerId
 import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerSpec
 import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmap.plugin.api.model.MapTrack
 import nl.r1a.grassmap.plugin.api.model.ScreenOffset
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleSpec
@@ -238,6 +239,8 @@ class CameraModeControllerTest {
         override suspend fun setLocation(fix: LocationFix?): Outcome<Unit> = Outcome.Success(Unit)
 
         override suspend fun setRoute(route: Route?): Outcome<Unit> = Outcome.Success(Unit)
+
+        override suspend fun setTracks(tracks: List<MapTrack>): Outcome<Unit> = Outcome.Success(Unit)
 
         override suspend fun setPositionOffset(offset: ScreenOffset): Outcome<Unit> = Outcome.Success(Unit)
     }

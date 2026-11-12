@@ -44,6 +44,7 @@ import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerSpec
 import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.MapSource
+import nl.r1a.grassmap.plugin.api.model.MapTrack
 import nl.r1a.grassmap.plugin.api.model.ScreenOffset
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.SourceId
@@ -91,6 +92,12 @@ internal class MapHostState(
     var puckWriteCount: Long = 0
         private set
     val route = mutableStateOf<Route?>(null)
+
+    /**
+     * The stored tracks the map draws in the overlays slot (T-0401). The list is
+     * replaced as a whole, so a library change never leaves a stale line.
+     */
+    val tracks = mutableStateOf<List<MapTrack>>(emptyList())
     val camera = MutableStateFlow(initialCamera)
     private val motion = PuckMotion()
     var loadedStyleId: StyleId = initialStyle.id
@@ -192,6 +199,13 @@ internal class MapHostState(
 
     fun updateRoute(route: Route?) {
         this.route.value = route
+    }
+
+    /** Replaces the drawn tracks; an unchanged list is not a new map write. */
+    fun updateTracks(next: List<MapTrack>) {
+        if (tracks.value != next) {
+            tracks.value = next
+        }
     }
 
     fun updatePositionOffset(offset: ScreenOffset) {
@@ -451,6 +465,12 @@ class MaplibreComposeMapHost internal constructor(
     override suspend fun setRoute(route: Route?): Outcome<Unit> =
         withContext(Dispatchers.Main.immediate) {
             session.updateRoute(route)
+            Outcome.Success(Unit)
+        }
+
+    override suspend fun setTracks(tracks: List<MapTrack>): Outcome<Unit> =
+        withContext(Dispatchers.Main.immediate) {
+            session.updateTracks(tracks)
             Outcome.Success(Unit)
         }
 

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="OsmAnd 4.9.10" xmlns="http://www.topografix.com/GPX/1/1" xmlns:osmand="https://osmand.net">
+  <trk><name>Single point</name>
+    <trkseg>
+      <trkpt lat="49.849000" lon="24.039000">
+        <ele>350.0</ele>
+        <time>2026-08-14T07:41:03Z</time>
+        <extensions>
+          <osmand:speed>1.2</osmand:speed>
+        </extensions>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

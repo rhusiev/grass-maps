@@ -151,6 +151,7 @@ object RegionManifestParser {
             listOfNotNull(
                 parseSource("mapSource", json["mapSource"]),
                 parseSource("contoursSource", json["contoursSource"]),
+                parseSource("wayAlertSource", json["wayAlertSource"]),
             )
         return PackagePipeline(bbox = bbox, sources = sources)
     }

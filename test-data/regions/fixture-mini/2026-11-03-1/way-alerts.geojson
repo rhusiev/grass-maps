@@ -1,25 +1,13 @@
 {
   "type": "FeatureCollection",
   "features": [
-    {
-      "type": "Feature",
-      "properties": { "kind": "railway_crossing", "osmType": "node", "osmId": 9001 },
-      "geometry": { "type": "Point", "coordinates": [23.947, 49.949] }
-    },
-    {
-      "type": "Feature",
-      "properties": { "kind": "tunnel", "osmType": "way", "osmId": 9002 },
-      "geometry": { "type": "LineString", "coordinates": [[23.949, 49.949], [23.951, 49.949]] }
-    },
-    {
-      "type": "Feature",
-      "properties": { "kind": "hazard", "osmType": "node", "osmId": 9003 },
-      "geometry": { "type": "Point", "coordinates": [23.952, 49.949] }
-    },
-    {
-      "type": "Feature",
-      "properties": { "kind": "hazard", "osmType": "node", "osmId": 9004 },
-      "geometry": { "type": "Point", "coordinates": [23.947, 49.9505] }
-    }
+    {"type":"Feature","properties":{"kind":"railway_crossing","osmType":"node","osmId":9001},"geometry":{"type":"Point","coordinates":[23.9470000,49.9490000]}},
+    {"type":"Feature","properties":{"kind":"railway_crossing","osmType":"node","osmId":9007},"geometry":{"type":"Point","coordinates":[23.9460000,49.9515000]}},
+    {"type":"Feature","properties":{"kind":"tunnel","osmType":"way","osmId":9002},"geometry":{"type":"LineString","coordinates":[[23.9490000,49.9490000],[23.9510000,49.9490000]]}},
+    {"type":"Feature","properties":{"kind":"hazard","osmType":"node","osmId":9003},"geometry":{"type":"Point","coordinates":[23.9520000,49.9490000]}},
+    {"type":"Feature","properties":{"kind":"hazard","osmType":"node","osmId":9004},"geometry":{"type":"Point","coordinates":[23.9470000,49.9505000]}},
+    {"type":"Feature","properties":{"kind":"hazard","osmType":"way","osmId":9011},"geometry":{"type":"LineString","coordinates":[[23.9430000,49.9512000],[23.9440000,49.9512000]]}},
+    {"type":"Feature","properties":{"kind":"ford","osmType":"node","osmId":9010},"geometry":{"type":"Point","coordinates":[23.9440000,49.9510000]}},
+    {"type":"Feature","properties":{"kind":"barrier","osmType":"node","osmId":9005},"geometry":{"type":"Point","coordinates":[23.9460000,49.9510000]}}
   ]
 }

@@ -152,6 +152,51 @@ class RegionReaderTest {
         return (outcome as? Outcome.Success)?.value ?: error("the fixture query failed: $outcome")
     }
 
+    @Test
+    fun theReaderReadsTheLvivExtraction() =
+        runTest {
+            val component =
+                TestRegions.repositoryRoot().resolve("test-data/regions/lviv-way-alerts/way-alerts.geojson")
+            val directory = packageWith(String(Files.readAllBytes(component), Charsets.UTF_8))
+            try {
+                val crossing =
+                    hitsOf(
+                        directory,
+                        CORRIDOR_METERS,
+                        routeOf(GeoPoint(49.8432638, 24.0226514), GeoPoint(49.8432638, 24.0230514)),
+                    ).single { it.feature.osmId == 30508730L }
+                assertEquals(WayAlertFeatureKind.RailwayCrossing, crossing.feature.kind)
+
+                val tunnel =
+                    hitsOf(
+                        directory,
+                        CORRIDOR_METERS,
+                        routeOf(GeoPoint(49.8429774, 24.0223819), GeoPoint(49.8431053, 24.0224582)),
+                    ).single { it.feature.kind == WayAlertFeatureKind.Tunnel }
+                assertEquals(770843895L, tunnel.feature.osmId)
+                assertEquals(2, tunnel.feature.geometry.size)
+
+                val hazard =
+                    hitsOf(
+                        directory,
+                        CORRIDOR_METERS,
+                        routeOf(GeoPoint(49.8371076, 24.0218212), GeoPoint(49.8368417, 24.021362)),
+                    ).single { it.feature.kind == WayAlertFeatureKind.Hazard }
+                assertEquals(160911208L, hazard.feature.osmId)
+            } finally {
+                directory.deleteRecursively()
+            }
+        }
+
+    private suspend fun hitsOf(
+        directory: File,
+        corridorMeters: Double,
+        route: Route,
+    ): List<WayAlertHit> {
+        val outcome = RegionReader(directory).wayAlertFeatures(route, corridorMeters)
+        return (outcome as? Outcome.Success)?.value ?: error("the fixture query failed: $outcome")
+    }
+
     private fun routeOf(vararg points: GeoPoint): Route =
         Route(
             geometry = points.toList(),

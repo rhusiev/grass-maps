@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Authored OSM input for the committed way-alert fixture (T-0319A).
+
+  The fixture bbox around Ivano-Frankove has two real fords but no mapped
+  railway crossing, tunnel or hazard, so the committed component cannot come
+  from the Ukraine extract and still carry the features the reader and plugin
+  tests name. This small extract is the fixture's own OSM input: the real
+  `osm-extract` way-alert stage reads it, and the committed
+  `way-alerts.geojson` is its output. The Lviv component comes from the real
+  Ukraine PBF; see tools/pipeline/README.md.
+
+  Convert to PBF with:
+    osmium cat way-alerts.osm -o way-alerts.osm.pbf
+-->
+<osm version="0.6" generator="grass-maps fixture" upload="false">
+  <node id="9001" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9490000" lon="23.9470000">
+    <tag k="railway" v="level_crossing"/>
+  </node>
+  <node id="9003" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9490000" lon="23.9520000">
+    <tag k="hazard" v="ice"/>
+  </node>
+  <node id="9004" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9505000" lon="23.9470000">
+    <tag k="hazard" v="flooding"/>
+  </node>
+  <node id="9005" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9510000" lon="23.9460000">
+    <tag k="barrier" v="gate"/>
+  </node>
+  <node id="9006" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9510000" lon="23.9450000">
+    <tag k="barrier" v="bollard"/>
+  </node>
+  <node id="9007" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9515000" lon="23.9460000"/>
+  <node id="9010" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9510000" lon="23.9440000">
+    <tag k="ford" v="yes"/>
+  </node>
+
+  <node id="9101" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9490000" lon="23.9490000"/>
+  <node id="9102" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9490000" lon="23.9510000"/>
+  <node id="9201" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9515000" lon="23.9450000"/>
+  <node id="9202" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9515000" lon="23.9470000"/>
+  <node id="9301" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9520000" lon="23.9460000"/>
+  <node id="9302" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9508000" lon="23.9460000"/>
+  <node id="9401" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9512000" lon="23.9430000"/>
+  <node id="9402" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9512000" lon="23.9440000"/>
+  <node id="9501" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9514000" lon="23.9420000"/>
+  <node id="9502" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9514000" lon="23.9430000"/>
+  <node id="9601" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9516000" lon="23.9410000"/>
+  <node id="9602" version="1" timestamp="2026-11-12T00:00:00Z" lat="49.9516000" lon="23.9420000"/>
+
+  <way id="9002" version="1" timestamp="2026-11-12T00:00:00Z">
+    <nd ref="9101"/>
+    <nd ref="9102"/>
+    <tag k="highway" v="path"/>
+    <tag k="tunnel" v="yes"/>
+  </way>
+  <way id="9008" version="1" timestamp="2026-11-12T00:00:00Z">
+    <nd ref="9201"/>
+    <nd ref="9007"/>
+    <nd ref="9202"/>
+    <tag k="railway" v="rail"/>
+  </way>
+  <way id="9009" version="1" timestamp="2026-11-12T00:00:00Z">
+    <nd ref="9301"/>
+    <nd ref="9007"/>
+    <nd ref="9302"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="9011" version="1" timestamp="2026-11-12T00:00:00Z">
+    <nd ref="9401"/>
+    <nd ref="9402"/>
+    <tag k="highway" v="track"/>
+    <tag k="hazard" v="slippery"/>
+  </way>
+  <way id="9012" version="1" timestamp="2026-11-12T00:00:00Z">
+    <nd ref="9501"/>
+    <nd ref="9502"/>
+    <tag k="highway" v="footway"/>
+    <tag k="tunnel" v="building_passage"/>
+  </way>
+  <way id="9013" version="1" timestamp="2026-11-12T00:00:00Z">
+    <nd ref="9601"/>
+    <nd ref="9602"/>
+    <tag k="waterway" v="stream"/>
+    <tag k="tunnel" v="culvert"/>
+  </way>
+</osm>

@@ -40,7 +40,7 @@ a multi-gigabyte download. The manifest records each file's size and sha256;
 | `elevation.bin` | Copernicus GLO-30, 3 arcsec cells (one bbox tile in the fixture) | no |
 | `format.bin`, `terms.fst`, `postings.bin`, `places.bin`, `context.bin`, `entities.bin`, `kinds.bin`, `strings.bin` | the search section, built by `rust/grass-core` from `fixture-places.tsv`; a version-2 build writes `format.bin`, the committed version-1 package has no such file | no |
 | `features.bin` | the feature component, built in the same pass | no |
-| `way-alerts.geojson` | authored GeoJSON with one railway crossing, one tunnel, one hazard and one off-corridor hazard; the OSM extract that will write it from `railway=level_crossing`, `tunnel=*` and `hazard`/`ford`/`barrier` tags is not built yet | yes |
+| `way-alerts.geojson` | extracted by `osm-extract --way-alerts` from the fixture's own small OSM extract `test-data/regions/fixture-mini/way-alerts.osm.pbf`: two crossings, one tunnel, three hazards, one ford and one gate | no |
 
 The bounding box is `23.940,49.940,23.960,49.960` (about 1.5 km around
 Ivano-Frankove, Lviv oblast). It is rural, so its z12-14 tiles stay small; the
@@ -164,23 +164,110 @@ Measured on 2026-11-12, 8 cores, `gm-data` slot, the phase-A Ukraine PBF
 The phase-A country pack is untouched; this is a separate Lviv output under
 `/hdd`.
 
-### Way-alert features (T-0319)
+### Way-alert features (T-0319A)
 
 `way-alerts.geojson` is a GeoJSON `FeatureCollection` read by
 `regions.RegionReader` and the way-alert plugin. Each feature carries `kind`
 (`railway_crossing`, `tunnel`, `hazard`, `ford` or `barrier`), `osmType`
-(`node` or `way`) and `osmId`; a node is a `Point`, a tunnel is a
-`LineString`. The four authored features sit on, or just off, the straight
-synthetic test route from `49.949, 23.943` to `49.949, 23.953`: a crossing at
-`23.947`, a tunnel from `23.949` to `23.951`, a hazard at `23.952` and a
-second hazard `167 m` north of the line, outside the `30 m` corridor.
+(`node` or `way`) and `osmId`; a node is a `Point`, a way a `LineString`.
 
-The component is a stand-in because the region pipeline does not extract way
-features from the OSM PBF yet. When it does, it will select
-`railway=level_crossing` nodes, `tunnel=*` ways and `hazard=*`/`ford=*`/
-`barrier=*` nodes into the same file, and the manifest's `standIn` flag will
-turn false. Keeping the authored file means the JVM tests exercise the real
-reader and query rather than a fake source.
+The component is real extraction output. `tools/pipeline/build-way-alerts.sh`
+builds `osm-extract` and runs its `--way-alerts` mode over an OSM extract; the
+region build calls it. The same command writes the 1,341 B fixture component
+and the 2,921,155 B Lviv component.
+
+Selection rules, exact:
+
+- `railway_crossing`: a node with `railway=level_crossing` or
+  `railway=tram_level_crossing`; or a node shared by a `railway=rail` or
+  `railway=narrow_gauge` way and a travel `highway=*` way. The shared-node rule
+  covers the convention where the crossing is the intersection of the two ways
+  and carries no tag of its own. A way with `bridge=*` or `tunnel=*` (other than
+  `no`) is grade-separated and does not contribute a shared node. A shared node
+  whose own `railway` tag is `signal`, `switch`, `buffer_stop`, `station`,
+  `halt`, `stop`, `derail`, `milestone`, `traverser`, `turntable`,
+  `water_tower`, `roundhouse` or `junction` is infrastructure, not a crossing,
+  and is skipped.
+- `tunnel`: a way with `tunnel=*` on a travel `highway=*` way. `no`,
+  `building_passage`, `culvert`, `floodway`, `canal` and `pipe` are skipped: a
+  building passage and a water culvert are not a passage a rider goes through,
+  and a railway or waterway tunnel is not on the route. `tunnel=yes`,
+  `covered`, `cave`, `flooded` and any other value are kept.
+- `hazard`: a node or a travel-highway way with `hazard=*`, other than `no` or
+  `none`. A hazard on a waterway or a pipeline is not on the route and is
+  skipped.
+- `ford`: a node or a travel-highway way with `ford=*`, other than `no` or
+  `none`. `ford=yes`, `seasonal` and `stepping_stones` are kept.
+- `barrier`: a node with `barrier=*`, other than `no`, `none`, `kerb`,
+  `bollard`, `entrance`, `height_restrictor` and `width_restrictor`. A bollard
+  or a kerb is passable by a bike and a building entrance is not a barrier on
+  the route.
+
+A node with several alert tags is one feature, strongest first: crossing,
+hazard, ford, barrier. The travel highway values are `motorway`, `trunk`,
+`primary`, `secondary`, `tertiary`, `unclassified`, `residential`,
+`living_street`, `service`, `track`, `path`, `footway`, `cycleway`, `bridleway`,
+`pedestrian`, `steps`, `corridor`, `road`, `escape`, `busway`, `bus_guideway`
+and their `_link` forms. A `construction`, `proposed` or `platform` value is
+not a route.
+
+The fixture's own OSM input is
+`test-data/regions/fixture-mini/way-alerts.osm` (614 B PBF beside it). The
+fixture bbox has two real fords in the Ukraine extract but no mapped railway
+crossing, tunnel or hazard, so a fixture component that keeps the three features
+the reader and plugin tests name cannot come from that extract. The authored
+input is the fixture's own source, and the real extractor produces the committed
+bytes from it. It carries eight features: crossings 9001 and 9007 (the second
+from the shared-node rule), tunnel 9002, hazards 9003, 9004 and 9011, ford 9010
+and gate 9005. The bollard 9006, the building passage 9012 and the culvert 9013
+prove the skips. The manifest marks the component `standIn: false` and records
+the PBF sha256, bbox, extraction version and counts under
+`pipeline.wayAlertSource`.
+
+### Lviv region pack (T-0319A)
+
+`build-lviv-region.sh` builds a complete `ua-46` pack beside the existing one.
+It copies the map and contour bytes from
+`/hdd/t-0102-evidence/region/ua-46/2026-11-05-bench`, so their sha256 stay the
+ones that pack recorded, and builds the search section, elevation grid and
+way-alert component from the Ukraine PBF and the GLO-30 tiles:
+
+```sh
+tools/pipeline/build-lviv-region.sh --keep-work
+```
+
+The output is
+`/hdd/t-0319a-way-alerts/lviv-region/ua-46/2026-11-12-1` with `current` beside
+it. Measured on 2026-11-12, 8 cores, `gm-data`, the phase-A Ukraine PBF
+(883,214,645 B, sha256 `ff46165a...`) and 12 GLO-30 tiles: 158 s for the whole
+script, 118,544,428 B (113 MiB). The way-alert step alone is 5.3 s over the
+78,434,355 B bbox extract, 17.8 MB peak RSS; the fixture extraction is 0.03 s.
+
+| Component | Bytes |
+|---|---|
+| `lviv-protomaps.pmtiles` (copied from the 2026-11-05 pack) | 61,793,175 |
+| `lviv-contours-20m.pmtiles` (copied) | 23,594,544 |
+| search section, eight version-2 files | 12,717,602 |
+| `features.bin` | 13,657,687 |
+| `elevation.bin`, 12 cells | 3,852,712 |
+| `way-alerts.geojson` | 2,921,155 |
+
+The Lviv way-alert extraction reads the bbox extract
+`22.5,48.9,25.2,50.6` (the map bbox) and finds 18,009 features: 3,343 railway
+crossings, 680 tunnels, 51 hazards, 4,109 fords and 9,826 barriers. The
+component's sha256 is
+`c19a15e26dd0e009f87d69ae4afbb9454369d0d183ada147c37ee9f199b5303d`. The
+manifest's `pipeline.wayAlertSource` records the source PBF and digest, the
+bbox, `osm-extract 0.1.0 way-alerts v1` and the same counts. A 22,866 B probe
+of central Lviv (`24.018,49.834,24.028,49.845`, 135 features) is committed under
+`test-data/regions/lviv-way-alerts/` with its provenance and a copy of the pack
+manifest, so JVM tests read real extracted Lviv bytes and parse the pack
+provenance without the pack.
+
+The component is large because the bbox includes neighbouring oblasts inside the
+map rectangle; it is the same area the map covers. The test region package is
+121,689 B on disk; `TestRegionFixtureTest` fails if its components grow past
+1 MiB.
 
 ### Search section and features
 

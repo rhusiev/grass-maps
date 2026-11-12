@@ -14,6 +14,8 @@
 #   --map-source PATH       vector tile archive (default <bench>/data/ukraine-final.pmtiles)
 #   --contours-source PATH  contour archive (default <bench>/data/lviv-90m-20m.pmtiles)
 #   --dem-source DIR        GLO-30 tiles (default <bench>/data/dem)
+#   --way-alerts-source PBF OSM input for the way-alert component (default
+#                           test-data/regions/fixture-mini/way-alerts.osm.pbf)
 #   --out DIR               package directory (default test-data/regions/<region>/<version>)
 #
 # The output is deterministic: re-running against the same archives produces
@@ -30,12 +32,14 @@ readonly MAP_MAX_ZOOM=14
 readonly CONTOURS_MIN_ZOOM=9
 readonly CONTOURS_MAX_ZOOM=14
 readonly SEARCH_SOURCE="$ROOT/tools/pipeline/fixture-places.tsv"
+readonly WAY_ALERTS_SOURCE="$ROOT/test-data/regions/fixture-mini/way-alerts.osm.pbf"
 
 BENCH="${GRASS_MAPS_BENCH:-/hdd/drive/Projects/Life/grass-maps-bench}"
 PMTILES=""
 MAP_SOURCE=""
 CONTOURS_SOURCE=""
 DEM_SOURCE=""
+WAY_ALERTS_PBF="$WAY_ALERTS_SOURCE"
 OUT="$ROOT/test-data/regions/$REGION_ID/$REGION_VERSION"
 
 while [[ $# -gt 0 ]]; do
@@ -45,6 +49,7 @@ while [[ $# -gt 0 ]]; do
         --map-source) MAP_SOURCE="$2"; shift 2 ;;
         --contours-source) CONTOURS_SOURCE="$2"; shift 2 ;;
         --dem-source) DEM_SOURCE="$2"; shift 2 ;;
+        --way-alerts-source) WAY_ALERTS_PBF="$2"; shift 2 ;;
         --out) OUT="$2"; shift 2 ;;
         -h | --help) sed -n '2,/^$/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "build-test-region.sh: unknown argument: $1" >&2; exit 2 ;;
@@ -115,37 +120,14 @@ printf '%s\n' "Elevation grid"
 python3 "$ROOT/tools/pipeline/build-elevation.py" grid \
     --source "$DEM_SOURCE" --bbox "$BBOX" --out "$work/elevation.bin"
 
-# The way-alert component is authored until the OSM extraction writes it from
-# railway=level_crossing, tunnel=* and hazard/ford/barrier tags. It is a real
-# GeoJSON component with one of each feature near the fixture's synthetic test
-# route (T-0319), so the committed bytes are deterministic without the PBF.
-cat >"$work/way-alerts.geojson" <<'GEOJSON'
-{
-  "type": "FeatureCollection",
-  "features": [
-    {
-      "type": "Feature",
-      "properties": { "kind": "railway_crossing", "osmType": "node", "osmId": 9001 },
-      "geometry": { "type": "Point", "coordinates": [23.947, 49.949] }
-    },
-    {
-      "type": "Feature",
-      "properties": { "kind": "tunnel", "osmType": "way", "osmId": 9002 },
-      "geometry": { "type": "LineString", "coordinates": [[23.949, 49.949], [23.951, 49.949]] }
-    },
-    {
-      "type": "Feature",
-      "properties": { "kind": "hazard", "osmType": "node", "osmId": 9003 },
-      "geometry": { "type": "Point", "coordinates": [23.952, 49.949] }
-    },
-    {
-      "type": "Feature",
-      "properties": { "kind": "hazard", "osmType": "node", "osmId": 9004 },
-      "geometry": { "type": "Point", "coordinates": [23.947, 49.9505] }
-    }
-  ]
-}
-GEOJSON
+# The way-alert component is the real extraction output. Its input is the
+# fixture's own small OSM extract, not the Ukraine PBF: the fixture bbox has two
+# real fords but no mapped crossing, tunnel or hazard, so the reader and plugin
+# tests need a known feature set. The Lviv pack extracts from the real PBF; the
+# same command and schema produce both.
+echo "Extracting way alerts: $WAY_ALERTS_PBF"
+"$ROOT/tools/pipeline/build-way-alerts.sh" \
+    --pbf "$WAY_ALERTS_PBF" --bbox "$BBOX" --out "$work/way-alerts.geojson"
 
 echo "Building the search section and feature component: $SEARCH_SOURCE"
 "$CARGO" run --quiet --release --locked \
@@ -165,12 +147,14 @@ contours_source_sha="$(sha256sum "$CONTOURS_SOURCE" | cut -d' ' -f1)"
 python3 - "$work" "$REGION_ID" "$REGION_VERSION" "$osm_timestamp" "$BBOX" \
     "$(basename "$MAP_SOURCE")" "$map_source_sha" "$MAP_MIN_ZOOM" "$MAP_MAX_ZOOM" \
     "$(basename "$CONTOURS_SOURCE")" "$contours_source_sha" \
-    "$CONTOURS_MIN_ZOOM" "$CONTOURS_MAX_ZOOM" "$DEM_SOURCE" <<'PY'
+    "$CONTOURS_MIN_ZOOM" "$CONTOURS_MAX_ZOOM" "$DEM_SOURCE" \
+    "$(basename "$WAY_ALERTS_PBF")" "$(sha256sum "$WAY_ALERTS_PBF" | cut -d' ' -f1)" <<'PY'
 import hashlib
 import json
 import math
 import pathlib
 import sys
+from collections import Counter
 
 (
     work,
@@ -187,6 +171,8 @@ import sys
     contours_min_zoom,
     contours_max_zoom,
     dem_source,
+    way_alerts_archive,
+    way_alerts_archive_sha,
 ) = sys.argv[1:]
 
 work = pathlib.Path(work)
@@ -194,6 +180,15 @@ work = pathlib.Path(work)
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def way_alert_counts():
+    document = json.loads((work / "way-alerts.geojson").read_text())
+    kinds = Counter(feature["properties"]["kind"] for feature in document["features"])
+    return {
+        kind: kinds.get(kind, 0)
+        for kind in ("railway_crossing", "tunnel", "hazard", "ford", "barrier")
+    }
 
 
 def dem_tiles():
@@ -245,6 +240,13 @@ manifest = {
             "resample": "3 arcsec cells, mean of the 1 arcsec source pixels covering each cell",
             "tiles": dem_tiles(),
         },
+        "wayAlertSource": {
+            "archive": way_alerts_archive,
+            "sha256": way_alerts_archive_sha,
+            "bbox": [float(value) for value in bbox.split(",")],
+            "extraction": "osm-extract 0.1.0 way-alerts v1",
+            "features": way_alert_counts(),
+        },
     },
     "components": [
         component("map", "map.pmtiles", "pmtiles", 3, [int(map_min_zoom), int(map_max_zoom)], False),
@@ -263,8 +265,9 @@ manifest = {
         component("search-kinds", "kinds.bin", "search-section", 2, None, False),
         component("search-strings", "strings.bin", "search-section", 2, None, False),
         component("features", "features.bin", "place-features", 1, None, False),
-        # Authored until the OSM extract writes it; see the GeoJSON block above.
-        component("way-alerts", "way-alerts.geojson", "way-alerts-geojson", 1, None, True),
+        # Extracted from the fixture's own small OSM input; see the extraction
+        # step above. The Lviv pack reads the Ukraine PBF instead.
+        component("way-alerts", "way-alerts.geojson", "way-alerts-geojson", 1, None, False),
     ],
 }
 

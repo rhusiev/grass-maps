@@ -1,0 +1,38 @@
+{
+  "region": "ua-46",
+  "extraction": "osm-extract 0.1.0 way-alerts v1",
+  "source": {
+    "archive": "ukraine-latest.osm.pbf",
+    "sha256": "ff46165a08b21fc4271aa6d5f199e55d0c9b786bcfd8f50e0f7c31f82248347f",
+    "bbox": [
+      22.5,
+      48.9,
+      25.2,
+      50.6
+    ]
+  },
+  "features": {
+    "railway_crossing": 3343,
+    "tunnel": 680,
+    "hazard": 51,
+    "ford": 4109,
+    "barrier": 9826
+  },
+  "probe": {
+    "bbox": [
+      24.018,
+      49.834,
+      24.028,
+      49.845
+    ],
+    "file": "way-alerts.geojson",
+    "sha256": "aa449a7a1c5ae1e3b9d3dd55894db7dce82bf385dc3ce451eeed687588605f63",
+    "features": {
+      "railway_crossing": 45,
+      "tunnel": 22,
+      "hazard": 2,
+      "ford": 0,
+      "barrier": 66
+    }
+  }
+}

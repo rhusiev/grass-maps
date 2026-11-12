@@ -9,6 +9,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -30,11 +31,17 @@ class RegionManifestParserTest {
         assertEquals(12, manifest.components.size)
         assertEquals(listOf(23.94, 49.94, 23.96, 49.96), manifest.pipeline?.bbox)
         assertEquals(
-            setOf("ukraine-final.pmtiles", "lviv-90m-20m.pmtiles"),
+            setOf("ukraine-final.pmtiles", "lviv-90m-20m.pmtiles", "way-alerts.osm.pbf"),
             manifest.pipeline
                 ?.sources
                 ?.map { it.archive }
                 ?.toSet(),
+        )
+        val wayAlertSource = manifest.pipeline?.sources?.single { it.role == "wayAlertSource" }
+        assertEquals("way-alerts.osm.pbf", wayAlertSource?.archive)
+        assertEquals(
+            "041e431574f322a7fdfe385ff83635135d6cd905efd34cfefc8c7200469ef8cc",
+            wayAlertSource?.sha256,
         )
         val map = manifest.components.single { it.kind == "map" }
         assertEquals("map.pmtiles", map.file)
@@ -44,6 +51,22 @@ class RegionManifestParserTest {
         val features = manifest.components.single { it.kind == "features" }
         assertEquals("place-features", features.format)
         assertEquals(1, features.formatVersion)
+    }
+
+    @Test
+    fun theLvivPackManifestParsesWithItsWayAlertProvenance() {
+        val file =
+            TestRegions.repositoryRoot().resolve("test-data/regions/lviv-way-alerts/pack-manifest.json")
+        val manifest = success(RegionManifestParser.parse(Files.readAllBytes(file), "ua-46", "2026-11-12-1"))
+
+        assertEquals(13, manifest.components.size)
+        val wayAlerts = manifest.components.single { it.kind == "way-alerts" }
+        assertEquals(2_921_155L, wayAlerts.bytes)
+        assertEquals("c19a15e26dd0e009f87d69ae4afbb9454369d0d183ada147c37ee9f199b5303d", wayAlerts.sha256)
+        assertFalse(wayAlerts.standIn)
+        val source = manifest.pipeline?.sources?.single { it.role == "wayAlertSource" }
+        assertEquals("ukraine-latest.osm.pbf", source?.archive)
+        assertEquals("ff46165a08b21fc4271aa6d5f199e55d0c9b786bcfd8f50e0f7c31f82248347f", source?.sha256)
     }
 
     @Test

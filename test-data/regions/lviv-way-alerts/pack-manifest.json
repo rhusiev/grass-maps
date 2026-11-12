@@ -1,0 +1,246 @@
+{
+  "region": "ua-46",
+  "version": "2026-11-12-1",
+  "packageFormat": 1,
+  "osmTimestamp": "2026-11-05T15:33:00Z",
+  "pipeline": {
+    "tool": "pmtiles extract",
+    "basePack": "/hdd/t-0102-evidence/region/ua-46/2026-11-05-bench",
+    "bbox": [
+      22.5,
+      48.9,
+      25.2,
+      50.6
+    ],
+    "mapSource": {
+      "archive": "lviv-protomaps.pmtiles",
+      "sha256": "ffd8cbdb937edc219dc82c0f15b64d37b89f76af0df0b5f8312f9e29ac5280db"
+    },
+    "contoursSource": {
+      "archive": "lviv-contours-20m.pmtiles",
+      "sha256": "f82cc72d995efd69ed297874525aefc26f6117ee3e63f0e33d32895178937c8c"
+    },
+    "elevationSource": {
+      "dataset": "Copernicus DEM GLO-30",
+      "resample": "3 arcsec cells, mean of the 1 arcsec source pixels covering each cell",
+      "tiles": [
+        {
+          "tile": "Copernicus_DSM_COG_10_N48_00_E022_00_DEM.tif",
+          "sha256": "46d72f1340cd34a0bd83aafdcbd19237a42877e8390f2412f0a5d31da36e7aa6"
+        },
+        {
+          "tile": "Copernicus_DSM_COG_10_N48_00_E023_00_DEM.tif",
+          "sha256": "9dd2a57bd0351bc864e94a579063a6086f427a5b7b1f52f459aec9f3ee189926"
+        },
+        {
+          "tile": "Copernicus_DSM_COG_10_N48_00_E024_00_DEM.tif",
+          "sha256": "8ddb72793d52f83751ecf797948d3f7393e6f10734ee9f813ac4705eda194e9e"
+        },
+        {
+          "tile": "Copernicus_DSM_COG_10_N48_00_E025_00_DEM.tif",
+          "sha256": "d79947db2740ff175314539abd8ebc439cecef27915edfac142c390e16ca0a22"
+        },
+        {
+          "tile": "Copernicus_DSM_COG_10_N49_00_E022_00_DEM.tif",
+          "sha256": "607533fa3cc51896eb9108c802d0ef3aeccadc9a3feeb183d09f0f136a0643f7"
+        },
+        {
+          "tile": "Copernicus_DSM_COG_10_N49_00_E023_00_DEM.tif",
+          "sha256": "e030442d44792670d568e2491fdeffddaaeaad3abe14c5ddf1d66dc7e2ae977c"
+        },
+        {
+          "tile": "Copernicus_DSM_COG_10_N49_00_E024_00_DEM.tif",
+          "sha256": "6809ccab9771d583457b799f230bb8355281a7e7f411acb90054622e91bc95fa"
+        },
+        {
+          "tile": "Copernicus_DSM_COG_10_N49_00_E025_00_DEM.tif",
+          "sha256": "3eae1209fb22f7ba0099464b57f35437404ad4975c3a78cda016b0b51c179687"
+        },
+        {
+          "tile": "Copernicus_DSM_COG_10_N50_00_E022_00_DEM.tif",
+          "sha256": "1129057faaa579a58d5a3f20c06651f49ce7a697d58a670b77901554be60c6b7"
+        },
+        {
+          "tile": "Copernicus_DSM_COG_10_N50_00_E023_00_DEM.tif",
+          "sha256": "bfd49a2486b35e43b7217d0c24f0004be58ed5765fceb0f6182c5d2a0dfe52ad"
+        },
+        {
+          "tile": "Copernicus_DSM_COG_10_N50_00_E024_00_DEM.tif",
+          "sha256": "9443c050315d7cb03db198527b075504f3d0bd73cac93022d59700814dcd8d53"
+        },
+        {
+          "tile": "Copernicus_DSM_COG_10_N50_00_E025_00_DEM.tif",
+          "sha256": "9553bef5a08b72109d10b689cb836471c23c7de6741719365c6e73dc599a1594"
+        }
+      ]
+    },
+    "searchSource": {
+      "archive": "ukraine-latest.osm.pbf",
+      "sha256": "ff46165a08b21fc4271aa6d5f199e55d0c9b786bcfd8f50e0f7c31f82248347f",
+      "bbox": [
+        22.5,
+        48.9,
+        25.2,
+        50.6
+      ]
+    },
+    "wayAlertSource": {
+      "archive": "ukraine-latest.osm.pbf",
+      "sha256": "ff46165a08b21fc4271aa6d5f199e55d0c9b786bcfd8f50e0f7c31f82248347f",
+      "bbox": [
+        22.5,
+        48.9,
+        25.2,
+        50.6
+      ],
+      "extraction": "osm-extract 0.1.0 way-alerts v1",
+      "features": {
+        "railway_crossing": 3343,
+        "tunnel": 680,
+        "hazard": 51,
+        "ford": 4109,
+        "barrier": 9826
+      }
+    }
+  },
+  "components": [
+    {
+      "kind": "map",
+      "file": "lviv-protomaps.pmtiles",
+      "format": "pmtiles",
+      "formatVersion": 3,
+      "version": "2026-11-12-1",
+      "bytes": 61793175,
+      "sha256": "ffd8cbdb937edc219dc82c0f15b64d37b89f76af0df0b5f8312f9e29ac5280db",
+      "standIn": false,
+      "zoomLevels": [
+        8,
+        14
+      ]
+    },
+    {
+      "kind": "contours",
+      "file": "lviv-contours-20m.pmtiles",
+      "format": "pmtiles",
+      "formatVersion": 3,
+      "version": "2026-11-12-1",
+      "bytes": 23594544,
+      "sha256": "f82cc72d995efd69ed297874525aefc26f6117ee3e63f0e33d32895178937c8c",
+      "standIn": false,
+      "zoomLevels": [
+        9,
+        14
+      ]
+    },
+    {
+      "kind": "elevation",
+      "file": "elevation.bin",
+      "format": "elevation-grid",
+      "formatVersion": 1,
+      "version": "2026-11-12-1",
+      "bytes": 3852712,
+      "sha256": "f1f88d1161514626dfb098c050d1345ccb51a534bcca0c1d94c6b1934393a477",
+      "standIn": false
+    },
+    {
+      "kind": "search-format",
+      "file": "format.bin",
+      "format": "search-section",
+      "formatVersion": 2,
+      "version": "2026-11-12-1",
+      "bytes": 10,
+      "sha256": "6b66fde6bc42531e03f21af816bb9c80cccc285fd27b723ab1230c85615b84eb",
+      "standIn": false
+    },
+    {
+      "kind": "search-terms",
+      "file": "terms.fst",
+      "format": "search-section",
+      "formatVersion": 2,
+      "version": "2026-11-12-1",
+      "bytes": 621750,
+      "sha256": "be0355483da7993120ba8ec821a487e7e5afa6c39f5154c4cbc0e19563c5ca28",
+      "standIn": false
+    },
+    {
+      "kind": "search-postings",
+      "file": "postings.bin",
+      "format": "search-section",
+      "formatVersion": 2,
+      "version": "2026-11-12-1",
+      "bytes": 2133780,
+      "sha256": "833203311ec3dc7212336ad6b1edb540b97825f8e69c33a327c0563b10a4b159",
+      "standIn": false
+    },
+    {
+      "kind": "search-places",
+      "file": "places.bin",
+      "format": "search-section",
+      "formatVersion": 2,
+      "version": "2026-11-12-1",
+      "bytes": 3434480,
+      "sha256": "4e8b1b6ff32d43ac3523c59a8fd9321ea4b1b275852158d6a44527f36ed720c5",
+      "standIn": false
+    },
+    {
+      "kind": "search-context",
+      "file": "context.bin",
+      "format": "search-section",
+      "formatVersion": 2,
+      "version": "2026-11-12-1",
+      "bytes": 437177,
+      "sha256": "6ec2a78e980e31cf04f233f195c67d9becca28a17ce147643f4430bc09659970",
+      "standIn": false
+    },
+    {
+      "kind": "search-entities",
+      "file": "entities.bin",
+      "format": "search-section",
+      "formatVersion": 2,
+      "version": "2026-11-12-1",
+      "bytes": 8980,
+      "sha256": "aad86ecbf2c899f6ab9f4a2aaf3b746def6d97abdb5c17b91a382317f9c023ef",
+      "standIn": false
+    },
+    {
+      "kind": "search-kinds",
+      "file": "kinds.bin",
+      "format": "search-section",
+      "formatVersion": 2,
+      "version": "2026-11-12-1",
+      "bytes": 3468,
+      "sha256": "1bf4ef846d5fc7e010bdfef043ae0bc69968f8e43f7fbd325469eb2d02a2b314",
+      "standIn": false
+    },
+    {
+      "kind": "search-strings",
+      "file": "strings.bin",
+      "format": "search-section",
+      "formatVersion": 2,
+      "version": "2026-11-12-1",
+      "bytes": 6077957,
+      "sha256": "004d8d74b935db171b43c7884483d8d1c1bbc5ea73393f4430d81b25c56cddf0",
+      "standIn": false
+    },
+    {
+      "kind": "features",
+      "file": "features.bin",
+      "format": "place-features",
+      "formatVersion": 1,
+      "version": "2026-11-12-1",
+      "bytes": 13657687,
+      "sha256": "9c7f33d79e9ba7d27d1d044152489ffc1b5922f82960f784e067fdade0db1b90",
+      "standIn": false
+    },
+    {
+      "kind": "way-alerts",
+      "file": "way-alerts.geojson",
+      "format": "way-alerts-geojson",
+      "formatVersion": 1,
+      "version": "2026-11-12-1",
+      "bytes": 2921155,
+      "sha256": "c19a15e26dd0e009f87d69ae4afbb9454369d0d183ada147c37ee9f199b5303d",
+      "standIn": false
+    }
+  ]
+}

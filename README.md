@@ -352,8 +352,10 @@ sha256. Its search section is the seven files the reader maps plus the
 `tools/pipeline/fixture-places.tsv`, so the four fixture places carry canonical
 OSM ids and tag maps instead of a stand-in marker. Its `elevation.bin` is a real
 3 arcsec GLO-30 grid, so `RegionElevation` and the Valhalla grade path read real
-heights. `plugin-api` publishes the shared paged-provider contract suite as test
-fixtures; `PagedProviderContractSuite` covers limits, paging, ordering,
+heights. Its `way-alerts.geojson` is extracted from the fixture's own small OSM
+extract, so the reader and plugin read real pipeline output rather than an
+authored list. `plugin-api` publishes the shared paged-provider contract suite
+as test fixtures; `PagedProviderContractSuite` covers limits, paging, ordering,
 concurrency and cancellation. See `tools/pipeline/README.md`.
 
 `test-data/search/coordinate-notations.tsv` is the T-0206 coordinate vector set:
@@ -1462,7 +1464,10 @@ node uses the hazard kind and the hazard switch. Each kind has its own switch,
 and all three are off by default, like the T-0317 alerts. The product scope
 gives crossings and hazards to bike and hike, and tunnels to bike only;
 walking and driving get no way alerts, so their distance is null and the
-feature is skipped.
+feature is skipped. The component is extracted from OSM (T-0319A):
+`osm-extract --way-alerts` writes it from the region's PBF, the fixture uses its
+own small OSM input, and the Lviv pack carries 18,009 extracted features. A
+package without the component still opens and reports no features.
 
 The corridor is 30 m wide and the warning is 20 to 40 seconds of travel before
 the feature:

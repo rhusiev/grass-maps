@@ -1,5 +1,10 @@
 package nl.r1a.grassmap.plugin.api.testing.fixture
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -86,13 +91,40 @@ class TestRegionFixtureTest {
     }
 
     @Test
-    fun theWayAlertsComponentIsTheAuthoredStandIn() {
+    fun theWayAlertsComponentIsExtracted() {
         val component = requireNotNull(region.manifest.component("way-alerts")) { "way-alerts component missing" }
 
         assertEquals("way-alerts-geojson", component.format)
         assertEquals(1, component.formatVersion)
-        assertTrue("the way-alert fixture is authored until the pipeline builds it", component.standIn)
+        assertFalse("the way-alert fixture must come from the extraction", component.standIn)
         assertTrue("way-alerts component is empty", Files.size(region.file(component)) > 0)
+
+        val document =
+            Json
+                .parseToJsonElement(String(Files.readAllBytes(region.file(component)), Charsets.UTF_8))
+                .jsonObject
+        val features = document.getValue("features").jsonArray
+        assertEquals(8, features.size)
+        val ids =
+            features.map {
+                it.jsonObject
+                    .getValue("properties")
+                    .jsonObject
+                    .getValue("osmId")
+                    .jsonPrimitive
+                    .long
+            }
+        assertEquals(
+            listOf(9001L, 9007L, 9002L, 9003L, 9004L, 9011L, 9010L, 9005L),
+            ids,
+        )
+        assertFalse("a bollard must not warn a bike", ids.contains(9006L))
+    }
+
+    @Test
+    fun thePackageStaysSmallEnoughForTests() {
+        val totalBytes = region.manifest.components.sumOf { it.bytes }
+        assertTrue("the fixture package grew past 1 MiB: $totalBytes", totalBytes < 1_048_576)
     }
 
     @Test

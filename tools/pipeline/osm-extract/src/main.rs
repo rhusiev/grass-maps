@@ -119,6 +119,88 @@ const BRAND_KEYS: [&str; 6] = [
 /// The tag prefix of a name in another language, e.g. `name:pl` (T-0205).
 const NAME_LANGUAGE_PREFIX: &str = "name:";
 
+/// Highway values a person can travel on. A tunnel, ford or hazard on any other
+/// value (a construction site, a platform, a traffic-signal node tag) is not a
+/// feature a route passes through (T-0319A).
+const TRAVEL_HIGHWAY_VALUES: [&str; 26] = [
+    "motorway",
+    "motorway_link",
+    "trunk",
+    "trunk_link",
+    "primary",
+    "primary_link",
+    "secondary",
+    "secondary_link",
+    "tertiary",
+    "tertiary_link",
+    "unclassified",
+    "residential",
+    "living_street",
+    "service",
+    "track",
+    "path",
+    "footway",
+    "cycleway",
+    "bridleway",
+    "pedestrian",
+    "steps",
+    "corridor",
+    "road",
+    "escape",
+    "busway",
+    "bus_guideway",
+];
+
+/// Railway way values that cross a road at grade. Trams and light rail run
+/// along streets and share nodes with the highway for long stretches, so they
+/// are not a crossing by themselves; a tagged `railway=level_crossing` node
+/// still carries a tram crossing (T-0319A).
+const RAIL_WAY_VALUES: [&str; 2] = ["rail", "narrow_gauge"];
+
+/// Tunnel values that are not a passage a rider goes through: a building
+/// passage, a water culvert, a floodway or a pipe. `tunnel=no` is not a tunnel
+/// at all (T-0319A).
+const SKIPPED_TUNNEL_VALUES: [&str; 6] = [
+    "no",
+    "building_passage",
+    "culvert",
+    "floodway",
+    "canal",
+    "pipe",
+];
+
+/// Barriers a bike or a walker passes without a warning: a kerb, a bollard, a
+/// building entrance, or a restriction that only limits height or width. Every
+/// other barrier is a point where the route can be blocked (T-0319A).
+const SKIPPED_BARRIER_VALUES: [&str; 7] = [
+    "no",
+    "none",
+    "kerb",
+    "bollard",
+    "entrance",
+    "height_restrictor",
+    "width_restrictor",
+];
+
+/// Railway node values that mark infrastructure rather than a crossing. A node
+/// shared by a rail way and a highway way at one of these is a mapping
+/// coincidence, not a place to warn about (T-0319A).
+const NON_CROSSING_RAILWAY_NODE_VALUES: [&str; 13] = [
+    "signal",
+    "switch",
+    "buffer_stop",
+    "station",
+    "halt",
+    "stop",
+    "derail",
+    "milestone",
+    "traverser",
+    "turntable",
+    "water_tower",
+    "roundhouse",
+    "junction",
+];
+
 fn is_brand_key(key: &str) -> bool {
     BRAND_KEYS.contains(&key)
 }
@@ -180,6 +262,7 @@ struct Options {
     bbox: Option<BoundingBox>,
     places: bool,
     addresses: bool,
+    way_alerts: bool,
 }
 
 #[derive(Default)]
@@ -195,6 +278,62 @@ struct Stats {
     ways_without_coordinates: u64,
 }
 
+/// One feature the way-alert extraction writes (T-0319A).
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+enum WayAlertKind {
+    RailwayCrossing,
+    Tunnel,
+    Hazard,
+    Ford,
+    Barrier,
+}
+
+impl WayAlertKind {
+    fn as_str(self) -> &'static str {
+        match self {
+            WayAlertKind::RailwayCrossing => "railway_crossing",
+            WayAlertKind::Tunnel => "tunnel",
+            WayAlertKind::Hazard => "hazard",
+            WayAlertKind::Ford => "ford",
+            WayAlertKind::Barrier => "barrier",
+        }
+    }
+}
+
+#[derive(Default)]
+struct WayAlertStats {
+    railway_crossings: u64,
+    tunnels: u64,
+    hazards: u64,
+    fords: u64,
+    barriers: u64,
+    shared_crossings: u64,
+    skipped_tunnels: u64,
+    skipped_barriers: u64,
+    skipped_shared_nodes: u64,
+    ways_without_coordinates: u64,
+}
+
+struct NodeAlert {
+    id: i64,
+    lon: f64,
+    lat: f64,
+    kind: WayAlertKind,
+}
+
+struct WayAlert {
+    id: i64,
+    kind: WayAlertKind,
+    refs: Vec<i64>,
+}
+
+struct WayAlertFeature {
+    kind: WayAlertKind,
+    element_type: &'static str,
+    id: i64,
+    coordinates: Vec<(f64, f64)>,
+}
+
 fn main() -> ExitCode {
     let options = match parse_arguments() {
         Ok(options) => options,
@@ -203,6 +342,32 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     };
+    if options.way_alerts {
+        return match run_way_alerts(&options) {
+            Ok(stats) => {
+                eprintln!(
+                    "osm-extract: way-alerts: {} railway crossings, {} tunnels, {} hazards, \
+                     {} fords, {} barriers ({} shared crossings, {} skipped tunnels, \
+                     {} skipped barriers, {} skipped shared nodes, {} ways without coordinates)",
+                    stats.railway_crossings,
+                    stats.tunnels,
+                    stats.hazards,
+                    stats.fords,
+                    stats.barriers,
+                    stats.shared_crossings,
+                    stats.skipped_tunnels,
+                    stats.skipped_barriers,
+                    stats.skipped_shared_nodes,
+                    stats.ways_without_coordinates,
+                );
+                ExitCode::SUCCESS
+            }
+            Err(message) => {
+                eprintln!("osm-extract: {message}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     match run(&options) {
         Ok(stats) => {
             eprintln!(
@@ -235,6 +400,7 @@ fn parse_arguments() -> Result<Options, String> {
     let mut bbox = None;
     let mut places = true;
     let mut addresses = true;
+    let mut way_alerts = false;
     let mut arguments = std::env::args().skip(1);
     while let Some(argument) = arguments.next() {
         match argument.as_str() {
@@ -243,10 +409,13 @@ fn parse_arguments() -> Result<Options, String> {
             "--bbox" => bbox = Some(parse_bbox(&next(&mut arguments, "--bbox")?)?),
             "--no-places" => places = false,
             "--no-addresses" => addresses = false,
+            "--way-alerts" => way_alerts = true,
             "-h" | "--help" => {
                 return Err(
                     "usage: osm-extract --pbf <file.osm.pbf> --out <places.tsv> \
-                            [--bbox west,south,east,north] [--no-places | --no-addresses]"
+                            [--bbox west,south,east,north] [--no-places | --no-addresses]\n\
+                            osm-extract --pbf <file.osm.pbf> --way-alerts --out <way-alerts.geojson> \
+                            [--bbox west,south,east,north]"
                         .to_owned(),
                 );
             }
@@ -255,7 +424,12 @@ fn parse_arguments() -> Result<Options, String> {
     }
     let pbf = pbf.ok_or("--pbf is required")?;
     let out = out.ok_or("--out is required")?;
-    if !places && !addresses {
+    if way_alerts && (!places || !addresses) {
+        return Err(
+            "--way-alerts cannot be combined with --no-places or --no-addresses".to_owned(),
+        );
+    }
+    if !way_alerts && !places && !addresses {
         return Err("nothing to write: both --no-places and --no-addresses were given".to_owned());
     }
     Ok(Options {
@@ -264,6 +438,7 @@ fn parse_arguments() -> Result<Options, String> {
         bbox,
         places,
         addresses,
+        way_alerts,
     })
 }
 
@@ -458,6 +633,300 @@ fn run(options: &Options) -> Result<Stats, String> {
         .flush()
         .map_err(|error| format!("{}: {error}", options.out.display()))?;
     Ok(stats)
+}
+
+fn run_way_alerts(options: &Options) -> Result<WayAlertStats, String> {
+    let mut stats = WayAlertStats::default();
+    let mut rail_nodes: HashSet<i64> = HashSet::new();
+    let mut ways: Vec<WayAlert> = Vec::new();
+    let mut needed: HashSet<i64> = HashSet::new();
+
+    // First pass: the rail nodes that a highway way may share, and the ways
+    // that carry a tunnel, hazard or ford.
+    read_elements(&options.pbf, |element| {
+        let Element::Way(way) = element else {
+            return;
+        };
+        let tags = collect_tags(way.tags());
+        let refs: Vec<i64> = way.refs().collect();
+        if is_rail_way(&tags) && !is_grade_separated(&tags) {
+            rail_nodes.extend(refs.iter().copied());
+        }
+        match way_alert_kind(&tags) {
+            Some(kind) => {
+                needed.extend(refs.iter().copied());
+                ways.push(WayAlert {
+                    id: way.id(),
+                    kind,
+                    refs,
+                });
+            }
+            None => {
+                if tag(&tags, "tunnel").is_some_and(|value| value != "no") {
+                    stats.skipped_tunnels += 1;
+                }
+            }
+        }
+    })?;
+
+    // Second pass: a node shared by a railway way and a highway way is a level
+    // crossing where the region maps it that way. A road or rail way that is
+    // grade-separated (a bridge or a tunnel) cannot share a crossing node.
+    let mut shared: HashSet<i64> = HashSet::new();
+    read_elements(&options.pbf, |element| {
+        let Element::Way(way) = element else {
+            return;
+        };
+        let tags = collect_tags(way.tags());
+        if !is_travel_highway(&tags) || is_grade_separated(&tags) {
+            return;
+        }
+        for reference in way.refs() {
+            if rail_nodes.contains(&reference) {
+                shared.insert(reference);
+            }
+        }
+    })?;
+    needed.extend(shared.iter().copied());
+
+    // Third pass: node coordinates for the way geometries and the shared
+    // crossings, plus the tagged point features inside the box.
+    let mut coordinates: HashMap<i64, (f64, f64)> = HashMap::with_capacity(needed.len());
+    let mut nodes: Vec<NodeAlert> = Vec::new();
+    let mut shared_tags: HashMap<i64, Vec<(String, String)>> = HashMap::new();
+    read_elements(&options.pbf, |element| {
+        let (id, lon, lat, tags) = match element {
+            Element::Node(node) => (node.id(), node.lon(), node.lat(), collect_tags(node.tags())),
+            Element::DenseNode(node) => {
+                (node.id(), node.lon(), node.lat(), collect_tags(node.tags()))
+            }
+            _ => return,
+        };
+        if needed.contains(&id) {
+            coordinates.insert(id, (lon, lat));
+            if shared.contains(&id) {
+                shared_tags.insert(id, tags.clone());
+            }
+        }
+        if !contains(&options.bbox, lon, lat) {
+            return;
+        }
+        if let Some(kind) = node_alert_kind(&tags) {
+            nodes.push(NodeAlert { id, lon, lat, kind });
+        } else if tag(&tags, "barrier").is_some() {
+            stats.skipped_barriers += 1;
+        }
+    })?;
+
+    let tagged: HashSet<i64> = nodes.iter().map(|node| node.id).collect();
+    let mut features: Vec<WayAlertFeature> = Vec::with_capacity(nodes.len() + ways.len());
+    for node in nodes {
+        stats.record(node.kind);
+        features.push(WayAlertFeature {
+            kind: node.kind,
+            element_type: "node",
+            id: node.id,
+            coordinates: vec![(node.lon, node.lat)],
+        });
+    }
+
+    let mut shared_ids: Vec<i64> = shared
+        .into_iter()
+        .filter(|id| !tagged.contains(id))
+        .collect();
+    shared_ids.sort_unstable();
+    for id in shared_ids {
+        let Some(&(lon, lat)) = coordinates.get(&id) else {
+            stats.ways_without_coordinates += 1;
+            continue;
+        };
+        if !contains(&options.bbox, lon, lat) {
+            continue;
+        }
+        let tags = shared_tags.get(&id).map(Vec::as_slice).unwrap_or(&[]);
+        if has_non_crossing_railway_tag(tags) {
+            stats.skipped_shared_nodes += 1;
+            continue;
+        }
+        stats.shared_crossings += 1;
+        stats.record(WayAlertKind::RailwayCrossing);
+        features.push(WayAlertFeature {
+            kind: WayAlertKind::RailwayCrossing,
+            element_type: "node",
+            id,
+            coordinates: vec![(lon, lat)],
+        });
+    }
+
+    ways.sort_unstable_by_key(|way| (way.kind, way.id));
+    for way in &ways {
+        let mut points: Vec<(f64, f64)> = Vec::with_capacity(way.refs.len());
+        let mut complete = true;
+        for reference in &way.refs {
+            match coordinates.get(reference) {
+                Some(&point) => points.push(point),
+                None => {
+                    complete = false;
+                    break;
+                }
+            }
+        }
+        if !complete || points.len() < 2 {
+            stats.ways_without_coordinates += 1;
+            continue;
+        }
+        if !points
+            .iter()
+            .any(|(lon, lat)| contains(&options.bbox, *lon, *lat))
+        {
+            continue;
+        }
+        stats.record(way.kind);
+        features.push(WayAlertFeature {
+            kind: way.kind,
+            element_type: "way",
+            id: way.id,
+            coordinates: points,
+        });
+    }
+
+    features
+        .sort_unstable_by_key(|feature| (feature.kind, feature.element_type == "way", feature.id));
+    let mut writer = BufWriter::new(
+        File::create(&options.out)
+            .map_err(|error| format!("{}: {error}", options.out.display()))?,
+    );
+    write_way_alert_collection(&mut writer, &features)
+        .map_err(|error| format!("{}: {error}", options.out.display()))?;
+    writer
+        .flush()
+        .map_err(|error| format!("{}: {error}", options.out.display()))?;
+    Ok(stats)
+}
+
+impl WayAlertStats {
+    fn record(&mut self, kind: WayAlertKind) {
+        match kind {
+            WayAlertKind::RailwayCrossing => self.railway_crossings += 1,
+            WayAlertKind::Tunnel => self.tunnels += 1,
+            WayAlertKind::Hazard => self.hazards += 1,
+            WayAlertKind::Ford => self.fords += 1,
+            WayAlertKind::Barrier => self.barriers += 1,
+        }
+    }
+}
+
+/// Every kind a point feature can carry, strongest first. A node with several
+/// tags (a ford at a gate) is one feature: a crossing, then a hazard, then a
+/// ford, then a barrier (T-0319A).
+fn node_alert_kind(tags: &[(String, String)]) -> Option<WayAlertKind> {
+    if tag(tags, "railway")
+        .is_some_and(|value| value == "level_crossing" || value == "tram_level_crossing")
+    {
+        return Some(WayAlertKind::RailwayCrossing);
+    }
+    if has_significant_value(tags, "hazard") {
+        return Some(WayAlertKind::Hazard);
+    }
+    if has_significant_value(tags, "ford") {
+        return Some(WayAlertKind::Ford);
+    }
+    if tag(tags, "barrier")
+        .is_some_and(|value| !value.trim().is_empty() && !SKIPPED_BARRIER_VALUES.contains(&value))
+    {
+        return Some(WayAlertKind::Barrier);
+    }
+    None
+}
+
+/// A tunnel, hazard or ford is a way feature only when a travel highway carries
+/// it. A hazard node is not a way.
+fn way_alert_kind(tags: &[(String, String)]) -> Option<WayAlertKind> {
+    if !is_travel_highway(tags) {
+        return None;
+    }
+    if tag(tags, "tunnel")
+        .is_some_and(|value| !value.trim().is_empty() && !is_skipped_tunnel(value))
+    {
+        return Some(WayAlertKind::Tunnel);
+    }
+    if has_significant_value(tags, "hazard") {
+        return Some(WayAlertKind::Hazard);
+    }
+    if has_significant_value(tags, "ford") {
+        return Some(WayAlertKind::Ford);
+    }
+    None
+}
+
+fn has_significant_value(tags: &[(String, String)], key: &str) -> bool {
+    tag(tags, key).is_some_and(|value| {
+        let value = value.trim();
+        !value.is_empty() && value != "no" && value != "none"
+    })
+}
+
+fn is_skipped_tunnel(value: &str) -> bool {
+    SKIPPED_TUNNEL_VALUES.contains(&value)
+}
+
+fn is_travel_highway(tags: &[(String, String)]) -> bool {
+    tag(tags, "highway").is_some_and(|value| TRAVEL_HIGHWAY_VALUES.contains(&value))
+}
+
+fn is_rail_way(tags: &[(String, String)]) -> bool {
+    tag(tags, "railway").is_some_and(|value| RAIL_WAY_VALUES.contains(&value))
+}
+
+fn is_grade_separated(tags: &[(String, String)]) -> bool {
+    tag(tags, "bridge").is_some_and(|value| value != "no")
+        || tag(tags, "tunnel").is_some_and(|value| value != "no")
+}
+
+fn has_non_crossing_railway_tag(tags: &[(String, String)]) -> bool {
+    tag(tags, "railway").is_some_and(|value| NON_CROSSING_RAILWAY_NODE_VALUES.contains(&value))
+}
+
+fn write_way_alert_collection(
+    writer: &mut impl Write,
+    features: &[WayAlertFeature],
+) -> std::io::Result<()> {
+    writeln!(writer, "{{")?;
+    writeln!(writer, "  \"type\": \"FeatureCollection\",")?;
+    writeln!(writer, "  \"features\": [")?;
+    for (index, feature) in features.iter().enumerate() {
+        let separator = if index + 1 == features.len() { "" } else { "," };
+        let geometry = if feature.element_type == "node" {
+            "Point"
+        } else {
+            "LineString"
+        };
+        write!(
+            writer,
+            "    {{\"type\":\"Feature\",\"properties\":{{\"kind\":\"{}\",\"osmType\":\"{}\",\"osmId\":{}}},\"geometry\":{{\"type\":\"{}\",\"coordinates\":",
+            feature.kind.as_str(),
+            feature.element_type,
+            feature.id,
+            geometry,
+        )?;
+        if feature.element_type == "node" {
+            let (lon, lat) = feature.coordinates[0];
+            write!(writer, "[{lon:.7},{lat:.7}]")?;
+        } else {
+            write!(writer, "[")?;
+            for (index, (lon, lat)) in feature.coordinates.iter().enumerate() {
+                if index > 0 {
+                    write!(writer, ",")?;
+                }
+                write!(writer, "[{lon:.7},{lat:.7}]")?;
+            }
+            write!(writer, "]")?;
+        }
+        writeln!(writer, "}}}}{separator}")?;
+    }
+    writeln!(writer, "  ]")?;
+    writeln!(writer, "}}")?;
+    Ok(())
 }
 
 fn read_elements(path: &Path, mut visit: impl FnMut(Element<'_>)) -> Result<(), String> {
@@ -856,10 +1325,7 @@ fn is_latin_or_cyrillic(value: &str) -> bool {
 /// brand. When the brand is in the name the row is already findable, so the
 /// operator's legal name ("ТОВ АТБ") is not added as noise.
 fn brand_values(tags: &[(String, String)], name: &str) -> Vec<String> {
-    let keys: &[&str] = if BRAND_TAG_KEYS
-        .iter()
-        .any(|key| tag(tags, key).is_some())
-    {
+    let keys: &[&str] = if BRAND_TAG_KEYS.iter().any(|key| tag(tags, key).is_some()) {
         &BRAND_TAG_KEYS
     } else {
         &OPERATOR_TAG_KEYS
@@ -1166,7 +1632,11 @@ mod tests {
         ];
         assert_eq!(
             name_language_values(&tags, "Золочів"),
-            vec!["Zolochiv".to_owned(), "Złoczów".to_owned(), "Золочев".to_owned()],
+            vec![
+                "Zolochiv".to_owned(),
+                "Złoczów".to_owned(),
+                "Золочев".to_owned()
+            ],
         );
         assert_eq!(
             place_aliases(&tags, "Золочів"),
@@ -1272,5 +1742,156 @@ mod tests {
         assert!(text.contains("Стрийська 1a"), "{text}");
         assert!(text.contains("вулиця Стрийська 1-А"), "{text}");
         assert_eq!(stats.addresses, 1);
+    }
+
+    fn tags(pairs: &[(&str, &str)]) -> Vec<(String, String)> {
+        pairs
+            .iter()
+            .map(|(key, value)| ((*key).to_owned(), (*value).to_owned()))
+            .collect()
+    }
+
+    #[test]
+    fn a_tram_crossing_and_a_level_crossing_are_both_railway_crossings() {
+        assert_eq!(
+            node_alert_kind(&tags(&[("railway", "level_crossing")])),
+            Some(WayAlertKind::RailwayCrossing),
+        );
+        assert_eq!(
+            node_alert_kind(&tags(&[("railway", "tram_level_crossing")])),
+            Some(WayAlertKind::RailwayCrossing),
+        );
+        assert_eq!(
+            node_alert_kind(&tags(&[("railway", "rail")])),
+            None,
+            "a rail node alone is not a crossing",
+        );
+    }
+
+    #[test]
+    fn a_node_with_several_alert_tags_is_one_feature_strongest_first() {
+        assert_eq!(
+            node_alert_kind(&tags(&[("ford", "yes"), ("barrier", "gate")])),
+            Some(WayAlertKind::Ford),
+        );
+        assert_eq!(
+            node_alert_kind(&tags(&[("hazard", "flooding"), ("ford", "yes")])),
+            Some(WayAlertKind::Hazard),
+        );
+        assert_eq!(node_alert_kind(&tags(&[("hazard", "no")])), None);
+        assert_eq!(node_alert_kind(&tags(&[("ford", "no")])), None);
+    }
+
+    #[test]
+    fn bike_passable_barriers_are_not_a_warning() {
+        assert_eq!(
+            node_alert_kind(&tags(&[("barrier", "gate")])),
+            Some(WayAlertKind::Barrier),
+        );
+        assert_eq!(
+            node_alert_kind(&tags(&[("barrier", "lift_gate")])),
+            Some(WayAlertKind::Barrier),
+        );
+        for skipped in ["bollard", "kerb", "entrance", "height_restrictor", "no"] {
+            assert_eq!(
+                node_alert_kind(&tags(&[("barrier", skipped)])),
+                None,
+                "{skipped} must not warn a bike",
+            );
+        }
+    }
+
+    #[test]
+    fn a_tunnel_needs_a_travel_highway_and_is_not_a_building_or_a_culvert() {
+        assert_eq!(
+            way_alert_kind(&tags(&[("highway", "path"), ("tunnel", "yes")])),
+            Some(WayAlertKind::Tunnel),
+        );
+        assert_eq!(
+            way_alert_kind(&tags(&[("highway", "footway"), ("tunnel", "covered")])),
+            Some(WayAlertKind::Tunnel),
+        );
+        for skipped in [
+            "building_passage",
+            "culvert",
+            "floodway",
+            "canal",
+            "pipe",
+            "no",
+        ] {
+            assert_eq!(
+                way_alert_kind(&tags(&[("highway", "path"), ("tunnel", skipped)])),
+                None,
+                "{skipped} is not a passage a rider goes through",
+            );
+        }
+        assert_eq!(
+            way_alert_kind(&tags(&[("highway", "construction"), ("tunnel", "yes")])),
+            None,
+        );
+        assert_eq!(
+            way_alert_kind(&tags(&[("waterway", "stream"), ("tunnel", "culvert")])),
+            None,
+        );
+    }
+
+    #[test]
+    fn a_hazard_or_a_ford_is_a_way_feature_on_a_travel_highway() {
+        assert_eq!(
+            way_alert_kind(&tags(&[("highway", "secondary"), ("hazard", "turns")])),
+            Some(WayAlertKind::Hazard),
+        );
+        assert_eq!(
+            way_alert_kind(&tags(&[("highway", "track"), ("ford", "yes")])),
+            Some(WayAlertKind::Ford),
+        );
+        assert_eq!(
+            way_alert_kind(&tags(&[("hazard", "yes"), ("waterway", "stream")])),
+            None,
+        );
+    }
+
+    #[test]
+    fn the_fixture_pbf_produces_the_expected_way_alert_features() {
+        let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let root = manifest.join("../../..");
+        let out = std::env::temp_dir().join(format!(
+            "osm-extract-way-alerts-{}.geojson",
+            std::process::id()
+        ));
+        let options = Options {
+            pbf: root.join("test-data/regions/fixture-mini/way-alerts.osm.pbf"),
+            out: out.clone(),
+            bbox: Some(parse_bbox("23.940,49.940,23.960,49.960").expect("fixture bbox")),
+            places: true,
+            addresses: true,
+            way_alerts: true,
+        };
+        let stats = run_way_alerts(&options).expect("way-alert extraction");
+        let text = std::fs::read_to_string(&out).expect("read the component");
+        std::fs::remove_file(&out).ok();
+
+        assert_eq!(stats.railway_crossings, 2, "a tagged and a shared crossing");
+        assert_eq!(stats.shared_crossings, 1);
+        assert_eq!(stats.tunnels, 1);
+        assert_eq!(stats.hazards, 3, "two nodes and one way");
+        assert_eq!(stats.fords, 1);
+        assert_eq!(stats.barriers, 1);
+        assert_eq!(stats.skipped_tunnels, 2);
+        assert_eq!(stats.skipped_barriers, 1);
+
+        for present in [9001, 9002, 9003, 9004, 9005, 9007, 9010, 9011] {
+            assert!(text.contains(&format!("\"osmId\":{present}")), "{present}");
+        }
+        for absent in [9006, 9012, 9013] {
+            assert!(
+                !text.contains(&format!("\"osmId\":{absent}")),
+                "{absent} must be skipped",
+            );
+        }
+        assert!(text.contains("\"kind\":\"tunnel\",\"osmType\":\"way\",\"osmId\":9002"));
+        assert!(text.contains("\"kind\":\"hazard\",\"osmType\":\"way\",\"osmId\":9011"));
+        assert!(text.contains("\"type\":\"LineString\""));
+        assert!(text.contains("\"type\":\"Point\""));
     }
 }

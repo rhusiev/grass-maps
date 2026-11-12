@@ -28,6 +28,24 @@
           "sha256": "e030442d44792670d568e2491fdeffddaaeaad3abe14c5ddf1d66dc7e2ae977c"
         }
       ]
+    },
+    "wayAlertSource": {
+      "archive": "way-alerts.osm.pbf",
+      "sha256": "041e431574f322a7fdfe385ff83635135d6cd905efd34cfefc8c7200469ef8cc",
+      "bbox": [
+        23.94,
+        49.94,
+        23.96,
+        49.96
+      ],
+      "extraction": "osm-extract 0.1.0 way-alerts v1",
+      "features": {
+        "railway_crossing": 2,
+        "tunnel": 1,
+        "hazard": 3,
+        "ford": 1,
+        "barrier": 1
+      }
     }
   },
   "components": [
@@ -155,9 +173,9 @@
       "format": "way-alerts-geojson",
       "formatVersion": 1,
       "version": "2026-11-03-1",
-      "bytes": 829,
-      "sha256": "e97ae26ee7afdda9815f56b7724bdc1c87bc4f3a92e1de07eb8fd0ed2911835e",
-      "standIn": true
+      "bytes": 1341,
+      "sha256": "867110b63cf81a97ca6da210d28690ecef6fd05fc02a2c70e44885787ede8392",
+      "standIn": false
     }
   ]
 }

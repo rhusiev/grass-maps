@@ -1001,12 +1001,20 @@ choosing the direct engine, as a fallback when no pack is mounted or as a
 setting, is not wired yet.
 
 `MapHost.setRoute(Route?)` draws the route as one GeoJSON `LineString` in the
-`Routes` slot, using the same source pattern as the location puck. The app's
-debug control channel exposes `core.route.test_walk`, which routes a short walk
+`Routes` slot, using the same source pattern as the location puck. One turn
+arrow per turning maneuver is a second layer in that slot (T-0311): the existing
+`arrow` SDF sprite is the token, drawn white with the route green as a 1.5 dp
+halo at 0.4 of its 31 dp cell. An arrow sits at the maneuver's distance along
+the geometry and points along the segment that leaves that point; start,
+arrival, continue, keep-straight, ferry and transit instructions get none. A
+via adds a leg and a new route revision replaces the whole set. The app's debug
+control channel exposes `core.route.test_walk`, which routes a short walk
 in the fixture area or in Lviv and, with `{"modifiers": true}`, asks the
 synthetic DataSource for cost modifiers and routes again. Valhalla takes a
 multiplier as `linear_cost_factors`; when the synthetic line has no graph edges
-near it, the adapter retries with `exclude_polygons` around the same line.
+near it, the adapter retries with `exclude_polygons` around the same line. The
+debug-only `core.map.set_route` draws a committed `RouteJson` fixture for the
+T-0311 goldens; those capture points plan no route and mount no routing pack.
 
 `routing.RoutePlanner` is the planning state (T-0302), with intermediate stops
 (T-0303): a start, its vias in visit order and a destination go in as one

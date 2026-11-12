@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
@@ -166,8 +167,54 @@ private fun RouteLine(route: Route?) {
         opacity = const(1f),
         width = const(ROUTE_WIDTH_DP.dp),
     )
+    RouteArrows(route)
     RouteEnd(route.geometry.first(), ROUTE_START_LAYER_ID)
     RouteEnd(route.geometry.last(), ROUTE_END_LAYER_ID)
+}
+
+/**
+ * One arrow per turn maneuver, drawn by the map as a symbol layer in the routes
+ * slot. The arrows are a GeoJSON point source re-keyed with the route, never a
+ * Compose overlay: a pan, a zoom or a puck frame does not redraw them.
+ *
+ * The `arrow` SDF sprite already in the style is the token. It is white with
+ * the route colour as a 1.5 dp halo, 0.4 of its 31 dp cell, so it reads above
+ * the 5 dp line without hiding it. Icon padding and the default collision rule
+ * hide an arrow that would cover the next one; the route fixture spaces its
+ * turns so every turn has its own arrow at the golden zooms.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+@MaplibreComposable
+private fun RouteArrows(route: Route) {
+    val arrows = remember(route) { route.turnArrows() }
+    if (arrows.isEmpty()) return
+    val source = rememberGeoJsonSource(GeoJsonData.JsonString(arrows.toArrowFeatureCollection()))
+    SymbolLayer(
+        id = ROUTE_ARROW_LAYER_ID,
+        source = source,
+        placement = const(SymbolPlacement.Point),
+        iconImage = const(ROUTE_ARROW_ICON).cast(),
+        iconSize = const(ROUTE_ARROW_SIZE),
+        iconColor = const(ROUTE_ARROW_COLOR),
+        iconHaloColor = const(ROUTE_COLOR),
+        iconHaloWidth = const(ROUTE_ARROW_HALO_DP.dp),
+        iconRotate =
+            StyleExpression
+                .expression(
+                    buildJsonArray {
+                        add("get")
+                        add(BEARING_PROPERTY)
+                    },
+                ).cast(),
+        iconRotationAlignment = const(IconRotationAlignment.Map),
+        iconAnchor = const(SymbolAnchor.Center),
+        iconPadding =
+            const(
+                DpPadding(ROUTE_ARROW_PADDING_DP.dp, ROUTE_ARROW_PADDING_DP.dp, ROUTE_ARROW_PADDING_DP.dp, ROUTE_ARROW_PADDING_DP.dp),
+            ),
+        iconAllowOverlap = const(false),
+    )
 }
 
 @Suppress("ktlint:standard:function-naming")
@@ -278,13 +325,19 @@ private val ACCURACY_COLOR = Color(0x221E88E5)
 private val ACCURACY_STROKE_COLOR = Color(0x551E88E5)
 
 private const val ROUTE_LAYER_ID = "core.route.line"
+private const val ROUTE_ARROW_LAYER_ID = "core.route.arrows"
 private const val ROUTE_START_LAYER_ID = "core.route.start"
 private const val ROUTE_END_LAYER_ID = "core.route.end"
 private const val ROUTE_WIDTH_DP = 5
 private const val ROUTE_END_RADIUS_DP = 6
 private const val ROUTE_END_STROKE_DP = 2
 private const val MIN_ROUTE_POINTS = 2
+private const val ROUTE_ARROW_ICON = "arrow"
+private const val ROUTE_ARROW_SIZE = 0.4f
+private const val ROUTE_ARROW_HALO_DP = 1.5
+private const val ROUTE_ARROW_PADDING_DP = 4
 private val ROUTE_COLOR = Color(0xFF2E7D32)
+private val ROUTE_ARROW_COLOR = Color.White
 
 @Composable
 @MaplibreComposable

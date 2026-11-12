@@ -84,6 +84,7 @@ class DebugApplication : GrassMapsApplication() {
         { session ->
             listOf(
                 SetCameraCommand(session),
+                SetRouteCommand(session),
                 SetStyleCommand(session, providers = { container.providerRegistry }),
             ) + placeCardCommands { container } + favouritesListsCommands()
         }

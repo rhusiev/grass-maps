@@ -1,0 +1,72 @@
+{
+  "geometry": [
+    {
+      "lat": 49.95,
+      "lon": 23.9486
+    },
+    {
+      "lat": 49.95,
+      "lon": 23.9503
+    },
+    {
+      "lat": 49.9524,
+      "lon": 23.9503
+    },
+    {
+      "lat": 49.9524,
+      "lon": 23.9519
+    },
+    {
+      "lat": 49.9539,
+      "lon": 23.9519
+    }
+  ],
+  "distanceMeters": 669.766,
+  "durationSeconds": 558.139,
+  "segments": [
+    {
+      "startIndex": 0,
+      "endIndex": 5,
+      "distanceMeters": 669.766,
+      "durationSeconds": 558.139,
+      "attributes": {}
+    }
+  ],
+  "instructions": [
+    {
+      "text": "Walk east along the lane",
+      "streetName": null,
+      "distanceAlongRouteMeters": 0.0,
+      "durationSeconds": 101.361,
+      "maneuver": "1"
+    },
+    {
+      "text": "Turn left onto the north lane",
+      "streetName": null,
+      "distanceAlongRouteMeters": 121.633,
+      "durationSeconds": 222.39,
+      "maneuver": "15"
+    },
+    {
+      "text": "Turn right onto the east lane",
+      "streetName": null,
+      "distanceAlongRouteMeters": 388.501,
+      "durationSeconds": 95.394,
+      "maneuver": "10"
+    },
+    {
+      "text": "Turn left onto the north lane",
+      "streetName": null,
+      "distanceAlongRouteMeters": 502.974,
+      "durationSeconds": 138.994,
+      "maneuver": "15"
+    },
+    {
+      "text": "Arrive at the destination",
+      "streetName": null,
+      "distanceAlongRouteMeters": 669.766,
+      "durationSeconds": 0.0,
+      "maneuver": "4"
+    }
+  ]
+}

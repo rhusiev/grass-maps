@@ -162,6 +162,29 @@ POSITIONS = {
     ),
 }
 
+# T-0311: the same fixed route on the Standard fixture, at a driving overview
+# zoom and at a walking zoom. The route and its turn maneuvers are committed so
+# the capture needs no routing pack.
+ROUTE_CASES = {
+    "standard": (
+        ("route-turns-z14", 49.9520, 23.9502, 14.0, 0.0, 0.0),
+        ("route-turns-z15", 49.9520, 23.9502, 15.0, 0.0, 0.0),
+    ),
+}
+ROUTE_POSITION_NAMES = frozenset(case[0] for cases in ROUTE_CASES.values() for case in cases)
+ROUTE_FIXTURE_PATH = ROOT / "test-data" / "map-goldens" / "route-turns.json"
+ROUTE_FIXTURE = ROUTE_FIXTURE_PATH.read_text(encoding="utf-8")
+
+
+def cases(profile: str) -> tuple[tuple[str, float, float, float, float, float], ...]:
+    """The profile's fixed positions followed by its route positions."""
+    return tuple(POSITIONS[profile]) + ROUTE_CASES.get(profile, ())
+
+
+def route_fixture_for(name: str) -> str | None:
+    """The committed route for a route golden, or None for a plain one."""
+    return ROUTE_FIXTURE if name in ROUTE_POSITION_NAMES else None
+
 
 class GoldenError(RuntimeError):
     """A capture or comparison step failed."""
@@ -392,6 +415,32 @@ def invoke_camera(
             if time.monotonic() >= deadline:
                 raise GoldenError(
                     f"camera command did not answer within {CAMERA_READY_TIMEOUT_S:.0f}s"
+                ) from error
+        time.sleep(RETRY_PAUSE_S)
+
+
+def invoke_route(
+    client: control_client.ControlClient,
+    route_json: str | None,
+) -> str:
+    """Apply the fixed route, or clear it, before a golden position.
+
+    The command draws through the same route layer the product uses. It retries
+    `not_ready` until the map surface has bound, and a socket timeout is retried
+    because the call is idempotent.
+    """
+    params: dict[str, object] = {"route": json.loads(route_json) if route_json else None}
+    deadline = time.monotonic() + CAMERA_READY_TIMEOUT_S
+    while True:
+        try:
+            return str(client.invoke("core.map.set_route", params))
+        except control_client.ControlError as error:
+            if error.kind != "not_ready" or time.monotonic() >= deadline:
+                raise
+        except TimeoutError as error:
+            if time.monotonic() >= deadline:
+                raise GoldenError(
+                    f"route command did not answer within {CAMERA_READY_TIMEOUT_S:.0f}s"
                 ) from error
         time.sleep(RETRY_PAUSE_S)
 
@@ -826,8 +875,13 @@ def capture(
             print(f"selected style {style} -> {selected}", file=sys.stderr)
         started = datetime.now(timezone.utc).isoformat()
         shots = []
-        for name, lat, lon, zoom, bearing, tilt in POSITIONS[profile]:
+        current_route: str | None = None
+        for name, lat, lon, zoom, bearing, tilt in cases(profile):
             stage = name
+            fixture = route_fixture_for(name)
+            if fixture != current_route:
+                invoke_route(client, fixture)
+                current_route = fixture
             params = {
                 "lat": lat,
                 "lon": lon,
@@ -857,6 +911,7 @@ def capture(
                 "captured": datetime.now(timezone.utc).isoformat(),
                 "conditions": conditions,
                 "camera_command": "core.map.set_camera",
+                "route_command": "core.map.set_route",
                 "screenshot": "adb exec-out screencap -p",
                 "positions": shots,
             },
@@ -1068,7 +1123,7 @@ def compare(
     recapture: Callable[[str, dict[str, object]], dict[str, object]] | None = None,
     positions: tuple[tuple[str, float, float, float, float, float], ...] | None = None,
 ) -> dict[str, object]:
-    selected = positions if positions is not None else POSITIONS[profile]
+    selected = positions if positions is not None else cases(profile)
     results = []
     for name, lat, lon, zoom, bearing, tilt in selected:
         params: dict[str, object] = {
@@ -1147,7 +1202,7 @@ def compare(
 
 def update_reference(profile: str, captured: Path, reference: Path) -> None:
     reference.mkdir(parents=True, exist_ok=True)
-    for name, *_ in POSITIONS[profile]:
+    for name, *_ in cases(profile):
         source = captured / f"{name}.png"
         if not source.is_file():
             raise GoldenError(f"missing capture {source}")
@@ -1205,6 +1260,7 @@ def build_recapture(
             invoke_style(client, args.style)
 
         def recapture(name: str, params: dict[str, object]) -> dict[str, object]:
+            invoke_route(client, route_fixture_for(name))
             return capture_position(adb, client, captured, name, params)
 
         return recapture

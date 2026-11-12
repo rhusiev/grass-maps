@@ -1,5 +1,6 @@
 """Unit tests for the timeout-tolerant parts of the map golden capture."""
 
+import json
 import sys
 import tempfile
 import unittest
@@ -114,6 +115,18 @@ class StandardPositionsTest(unittest.TestCase):
         self.assertEqual({12.0, 13.0, 14.0}, {position[3] for position in positions})
         self.assertEqual(30, len({position[0] for position in positions}))
 
+    def test_route_positions_extend_the_standard_capture(self) -> None:
+        positions = map_goldens.cases("standard")
+
+        self.assertEqual(32, len(positions))
+        self.assertEqual(32, len({position[0] for position in positions}))
+        self.assertEqual(
+            {"route-turns-z14", "route-turns-z15"},
+            set(map_goldens.ROUTE_POSITION_NAMES),
+        )
+        self.assertIsNotNone(map_goldens.route_fixture_for("route-turns-z15"))
+        self.assertIsNone(map_goldens.route_fixture_for("place-a-z12"))
+
     def test_style_reference_paths_are_separate(self) -> None:
         self.assertEqual(
             map_goldens.default_reference("standard", "dark"),
@@ -165,6 +178,30 @@ class InvokeCameraTest(unittest.TestCase):
             map_goldens.invoke_camera(client, {})
 
         self.assertEqual(client.calls, 1)
+
+
+class RouteFixtureTest(unittest.TestCase):
+    def test_the_fixed_route_has_three_turns_between_start_and_arrival(self) -> None:
+        route = json.loads(map_goldens.ROUTE_FIXTURE)
+        maneuvers = [instruction["maneuver"] for instruction in route["instructions"]]
+
+        self.assertEqual(["1", "15", "10", "15", "4"], maneuvers)
+        self.assertGreaterEqual(len(route["geometry"]), 4)
+        distances = [instruction["distanceAlongRouteMeters"] for instruction in route["instructions"]]
+        self.assertEqual(sorted(distances), distances)
+        self.assertAlmostEqual(route["distanceMeters"], distances[-1], places=3)
+
+
+class InvokeRouteTest(unittest.TestCase):
+    def test_not_ready_is_retried(self) -> None:
+        not_ready = control_client.ControlError(-32000, "not ready", {"kind": "not_ready"})
+        client = FakeClient([not_ready, "route=set points=5 distance_m=669.822"])
+
+        with mock.patch.object(map_goldens.time, "sleep"):
+            result = map_goldens.invoke_route(client, map_goldens.ROUTE_FIXTURE)
+
+        self.assertIn("route=set", result)
+        self.assertEqual(client.calls, 2)
 
 
 class CapturePositionTest(unittest.TestCase):

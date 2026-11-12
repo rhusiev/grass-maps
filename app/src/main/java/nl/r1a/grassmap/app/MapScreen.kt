@@ -385,11 +385,13 @@ private fun MapContent(
             )
         }
     val navigationCameraSettings by navigationCamera.settings.collectAsState()
+    var navigationWasActive by remember { mutableStateOf(false) }
     LaunchedEffect(navigationCamera) {
         container.navigation.state.collect { state -> navigationCamera.onState(state) }
     }
     LaunchedEffect(navigationActive) {
         if (navigationActive) {
+            navigationWasActive = true
             // A new trip starts from the profile defaults; the sheet's camera
             // and alert changes are this-trip overrides.
             navigationCamera.setAutoZoom(true)
@@ -399,7 +401,8 @@ private fun MapContent(
             surface.host.setTrackingMode(TrackingMode.Free).onFailure { error ->
                 Log.w(TAG, "navigation tracking not set: $error")
             }
-        } else {
+        } else if (navigationWasActive) {
+            navigationWasActive = false
             container.locationController.syncToHost()
             navigationCamera.resetCamera()
         }

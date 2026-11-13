@@ -2138,6 +2138,14 @@ segment or a control character in a name) is `InvalidInput` instead of a file
 that lost data. Tests cover every fixture in both directions, multi-track list
 export, escaping, cancellation and the refusal cases.
 
+A waypoint keeps its `<name>`, its `<desc>` and its coordinates (T-0411). The
+symbol and the type have no field, because this build has no icon vocabulary:
+an import drops `<sym>` and `<type>` and an export writes neither, so
+`garmin-waypoints-route.gpx` loses the `Trail Head` symbol its author chose and
+keeps everything else. A description is kept as written, line breaks included,
+and a control character in it is `InvalidInput` rather than a document that
+cannot be parsed again.
+
 The official `gpx.xsd` is not vendored: it is absent from the repository and
 says nothing about a licence on topografix.com, so adding it would be a user
 decision. `GpxSchema11` instead encodes the schema's sequence, cardinality,
@@ -2150,11 +2158,20 @@ profile. T-0401 adds the file store behind that path:
 - a document is `<sha256>.gpx` under the app's private `tracks/` directory,
   written exactly as it arrived;
 - a sidecar `<id>.json` sits beside it with the styling (`colour`, `widthDp`),
-  the cached profile, the document index and the hash it belongs to, plus the
-  library metadata of T-0414: the name, the description and the folder id;
-- the id is the document hash. A document with several tracks appends
-  `:<index>` to every track, so one file stays one file and each track keeps a
-  stable id.
+  the cached profile, the document index, the record's `kind` and the hash it
+  belongs to, plus the library metadata of T-0414: the name, the description
+  and the folder id;
+- the id is the document hash. A document with several records appends
+  `:<index>` to every one, so one file stays one file and each record keeps a
+  stable id. The record order is every `<trk>` first, then every `<rte>`;
+- a saved route also has `<id>.route.json`, its recompute sidecar (T-0411).
+
+A record is a `<trk>` or a `<rte>`. `TrackKind` says which, it comes from the
+element family the record was read from, and the library sidecar stores it, so
+a row can say `Route` without guessing from a name. An older sidecar has no
+`kind` and reads as a track. The document's `<wpt>` entries are parsed on every
+load and carried on each record the document produced, so an export writes them
+back; a document holding several records contributes each waypoint once.
 
 The GPX is the source of truth for geometry; a reload reads it again and
 refuses a sidecar whose document hash no longer matches the file. A save writes
@@ -2220,7 +2237,42 @@ and untappable.
 Two follow-ups are open for the library. The one-tap delete has no confirmation
 because the design's undo snackbar is the canon; a confirm is a product
 decision if the undo is judged too easy to miss. The screen's only entry is the
-debug command until T-0415 adds the map entry.
+debug command until T-0415 adds the map entry. A route has no in-UI Save yet:
+`TrackAccess.savePlannedRoute` is the whole path and the route preview's action
+row belongs to the planner and `ui-shell`, so the preview gains that control in
+its own change.
+
+A planned route is saved as its own document (T-0411). `PlannedRouteSaver` takes
+the route the planner is showing - `RoutePlanState.toPlannedRoute` reads the
+selected option's geometry and the effective options, so a one-route override is
+saved with the route rather than the profile default - and writes a document
+holding one `<rte>` with one `<rtept>` per geometry point, never a `<trk>`: a
+plan drawn as a recording would be a lie the file could not take back. The record
+is `TrackKind.Route`, the id is the document hash like every other record, and a
+save of an unchanged route updates one record instead of adding a second.
+
+`<id>.route.json` is the recompute sidecar, a second file on purpose. It carries
+`version`, `profile`, the three option steps, `start`, `destination` and `vias`,
+and the chain in visit order is what the engine receives. The option keys and
+values are the shared wire spellings of `RouteOptions` and `RoutePreference`, so
+this file and the planner's state stream cannot drift. It is a separate file
+because the library sidecar decides whether a record exists: losing this one
+costs the recompute and never the track.
+
+`PlannedRouteRecomputer` asks the engine for the line again and falls back to the
+stored line when there is no engine in the build, no sidecar, a sidecar this
+build cannot read (another `version`, an unknown profile or option, a
+coordinate outside WGS84) or an engine that answers with no route. Opening a
+saved route therefore never fails on a routing problem, and a missing or broken
+sidecar is the diminished state the requirement asks for rather than a failed
+open. The record kind also decides an export's element, so a saved route leaves
+as a `<rte>` and comes back as a route.
+
+The library row names a saved route: its `meta` line starts with `Route` and the
+`Route` string is a normal localized string. A travelled or imported track needs
+no label - it is what the library is - and its row stays as it was. The kind is
+`TrackKind` on the sidecar, on `TrackSummary`, on `TrackLibraryEntry` and on the
+row, so nothing derives it from a name.
 
 Twenty committed fixtures under `test-data/tracks` cover OsmAnd, Garmin and
 Strava exports, a GPX 1.0 file with a default namespace, waypoints and routes,
@@ -2228,7 +2280,10 @@ multi-segment and multi-track documents, absent elevation and time, a UTF-8
 name, and two damaged documents. `TrackFixturesTest` imports each one through
 the real `file.gpx` provider and the file store and asserts its track, segment
 and point counts, ascent, descent and elevation range; the damaged files also
-assert the exact warning lines.
+assert the exact warning lines. The three documents that hold a `<rte>` beside a
+`<trk>` contribute two records each since T-0411, and the table's sums include
+the route's authored heights: a route adds no segment boundary and no
+timestamp.
 
 The profile is Kotlin in `tracks` for T-0027, not the Rust core. `tracks` may
 depend only on `:plugin-api` (module map and plugin boundary rule), the only

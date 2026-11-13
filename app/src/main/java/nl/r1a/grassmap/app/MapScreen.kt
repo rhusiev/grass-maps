@@ -468,10 +468,13 @@ private fun MapContent(
     var navigationDestination by rememberSaveable { mutableStateOf<String?>(null) }
     var navigationNextStop by rememberSaveable { mutableStateOf<String?>(null) }
     var cameraPanned by remember { mutableStateOf(false) }
+    var panSequence by remember { mutableIntStateOf(0) }
     LaunchedEffect(navigationActive, navigationFixture) {
         if (!navigationActive) {
             navigationSheet = NavigationSheet.Collapsed
             cameraPanned = false
+            navigationDestination = null
+            navigationNextStop = null
         } else {
             navigationFixture?.let { fixture -> navigationSheet = fixture.sheet }
         }
@@ -481,7 +484,7 @@ private fun MapContent(
             cameraPanned = false
         }
     }
-    LaunchedEffect(cameraPanned, navigationCameraSettings.autoCentre) {
+    LaunchedEffect(cameraPanned, navigationCameraSettings.autoCentre, panSequence) {
         if (cameraPanned && navigationCameraSettings.autoCentre) {
             delay(NavigationCameraController.RECENTRE_DELAY_MILLIS)
             cameraPanned = false
@@ -585,6 +588,7 @@ private fun MapContent(
             onManualPan = {
                 if (navigationActive) {
                     cameraPanned = true
+                    panSequence += 1
                     navigationCamera.onManualPan()
                 }
             },

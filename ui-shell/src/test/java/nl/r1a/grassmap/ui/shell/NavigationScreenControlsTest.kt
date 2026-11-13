@@ -39,6 +39,7 @@ class NavigationScreenControlsTest {
 
         assertTrue(paused.contains(NavigationControl.Resume))
         assertFalse(paused.contains(NavigationControl.Pause))
+        assertFalse(paused.contains(NavigationControl.Eta))
         assertTrue(controls.contains(NavigationControl.Eta))
     }
 

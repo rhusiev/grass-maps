@@ -74,13 +74,14 @@ fun navigationControls(
     when (sheet) {
         NavigationSheet.Collapsed -> {
             controls += NavigationControl.End
-            controls += NavigationControl.Eta
             controls += NavigationControl.Expand
             if (state.recentreVisible) {
                 controls += NavigationControl.Recentre
             }
             if (state.status == NavigationScreenStatus.Paused) {
                 controls += NavigationControl.Resume
+            } else {
+                controls += NavigationControl.Eta
             }
         }
 

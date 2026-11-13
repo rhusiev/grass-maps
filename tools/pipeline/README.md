@@ -319,7 +319,7 @@ of a bicycle relation is a guidepost without a number. The Lviv cycling probe
 records that gap; its node list is empty.
 
 The fixture's input is `test-data/regions/fixture-mini/route-relations.osm`
-(2,223 B PBF beside it). Its ways are real tracks from the fixture bbox
+(2,228 B PBF beside it). Its ways are real tracks from the fixture bbox
 (896757861 and 306496773 for the parallel hiking and cycling routes, 225670351
 for the symbol-less hiking route and the national cycling route); the relations
 and node tags are authored to exercise the rules: 9101 and 9102 share a way,

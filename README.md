@@ -2258,6 +2258,67 @@ tools/control/grassctl.py invoke core.track.import_test '{"path":"mock-walk.gpx"
 It reads a debug asset or an absolute path, imports through `file.gpx`, stores
 every track and logs one profile line per track plus the warning lines.
 
+### Share-sheet import
+
+Another app can share a GPX to Grass Maps (T-0416). The activity declares one
+`ACTION_SEND` filter with `DEFAULT` and two MIME types: `application/gpx+xml`
+and `application/octet-stream`. Android's MIME map has no entry for the `gpx`
+extension, so a file manager or a messenger sends the document as
+`application/octet-stream`. Without that second type the row never appears for
+a real file. The cost is that the app also appears for another binary share; it
+then reads the document and refuses it with a notice instead of guessing.
+
+`TrackShareIntent` in `app` is the rule and names no Android type. The stream
+extra names the document, the data URI is the fallback a sender uses instead,
+and only a `content:` or `file:` URI is a document. `geo:` and `https:` links
+stay on the link path, so `ACTION_VIEW` can share the rule without changing
+T-0211. The activity is `singleTop`, so a share that arrives while it runs
+reaches `onNewIntent` and the same import.
+
+`ContentResolverSharedReader` opens the URI through the grant the intent
+carries. The app declares no storage permission and never resolves a filesystem
+path. The provider's display name names the document; a name without an
+extension gets `.gpx` when the sender typed the share as GPX. The read is
+bounded at 64 MiB, and the parse and the store write run on `Dispatchers.IO`,
+never on Main.
+
+`TrackShareImport` imports through the same `TrackAccess` the library uses, so
+the document hash stays the track id: sharing the same file twice updates one
+record and keeps its colour. `MapScreen` draws the result in the round-6
+`t-imported` notice: a dark line at the bottom of the map that names the
+imported track, counts the parts a partial document skipped, and offers Open,
+which shows the existing analysis panel. The notice clears itself after 8
+seconds and a failed import says what could not be read and offers no action.
+The strings are English and Ukrainian.
+
+The acceptance is an `ACTION_SEND` over `adb`:
+
+```sh
+adb push test-data/location/mock-walk.gpx \
+    /sdcard/Android/data/nl.r1a.grassmap/files/share/mock-walk.gpx
+adb shell am start -a android.intent.action.SEND -c android.intent.category.DEFAULT \
+    -t application/gpx+xml \
+    --eu android.intent.extra.STREAM \
+    file:///sdcard/Android/data/nl.r1a.grassmap/files/share/mock-walk.gpx
+```
+
+The file goes into the app's own external files directory, which it reads
+without a permission. The import logs one line,
+`GrassMapsTracks: share import name="mock-walk.gpx" tracks=1 skipped=0 ids=...`,
+and the notice appears on the map. Adding
+`-n nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity` starts this app directly
+when another installed app also handles the share; that form skips the filter
+resolution the first form exercises. `TrackShareImportTest` covers the rule,
+the real `file.gpx` import and the duplicate update without a device, and
+`TrackShareWiringTest` holds the manifest filter and the string keys.
+
+The change ships no completed device run. The merged manifest in the debug APK
+carries the filter (`aapt2 dump xmltree` shows both MIME types), but the local
+API 29 emulator cannot boot on this machine - it dies with `SIGSEGV` about a
+minute into boot under every GPU mode tried - so the two `adb` commands stay
+unexercised until a device or a runner makes them. The notice has no device
+visual for the same reason.
+
 ## Elevation chart
 
 The chart behind Details plots the analysis engine's own profile (T-0404).

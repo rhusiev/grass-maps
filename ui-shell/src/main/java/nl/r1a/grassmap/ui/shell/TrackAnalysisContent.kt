@@ -7,11 +7,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,12 +29,16 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
+import nl.r1a.grassmap.plugin.ui.api.ElevationChartClimb
+import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartState
 import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.roundToLong
 
 /**
@@ -63,6 +72,34 @@ data class TrackAnalysisDisplay(
     val tiles: List<TrackAnalysisTile>,
     val meta: String?,
     val detailsLabel: String,
+)
+
+/**
+ * One row of the climb list (T-0405): the ordinal badge, the climb's range as
+ * its title, its gain, its average grade and its time.
+ *
+ * [badgeBin] is the chart's slope bin for the climb's grade, so the badge takes
+ * the same palette colour the chart uses for that slope. [range] is what a tap
+ * selects on the chart.
+ */
+data class TrackClimbRow(
+    val ordinal: Int,
+    val title: String,
+    val ascent: String,
+    val grade: String,
+    val duration: String?,
+    val selected: Boolean,
+    val badgeBin: Int,
+    val range: ElevationChartRange,
+)
+
+/**
+ * The selected range's row under the chart: its distance range, the engine's
+ * gains and time, and the Clear action.
+ */
+data class TrackRangeRow(
+    val text: String,
+    val clearLabel: String,
 )
 
 /**
@@ -142,9 +179,94 @@ private fun metaLine(
 }
 
 /**
+ * The selected range's row, or null when the chart has no selection. The values
+ * are the engine's range statistics; the shell only formats them.
+ */
+fun trackAnalysisRangeRow(
+    state: ElevationChartState,
+    strings: Strings,
+    locale: Locale = Locale.getDefault(),
+): TrackRangeRow? {
+    val selection = state.selection ?: return null
+    val parts = mutableListOf<String>()
+    parts += strings.resolve(ASCENT_VALUE_KEY, listOf(selection.ascentMeters.roundToLong().toString()))
+    if (selection.descentMeters > 0.0) {
+        parts += strings.resolve(DESCENT_VALUE_KEY, listOf(selection.descentMeters.roundToLong().toString()))
+    }
+    selection.durationMillis?.let { duration ->
+        parts += durationLabel(duration.toDouble(), strings)
+    }
+    val range = rangeText(selection.range.startMeters, selection.range.endMeters, strings, locale)
+    return TrackRangeRow(
+        text = (listOf(range) + parts).joinToString(META_SEPARATOR),
+        clearLabel = strings.resolve(RANGE_CLEAR_KEY),
+    )
+}
+
+/**
+ * The climb list: one row per climb the engine found, in distance order. The
+ * row's title is the climb's own range because a track carries no climb names;
+ * the ordinal badge is the design's numbering, not invented text.
+ */
+fun trackAnalysisClimbRows(
+    state: ElevationChartState,
+    strings: Strings,
+    locale: Locale = Locale.getDefault(),
+): List<TrackClimbRow> =
+    state.climbs.mapIndexed { index, climb ->
+        TrackClimbRow(
+            ordinal = index + 1,
+            title = rangeText(climb.startMeters, climb.endMeters, strings, locale),
+            ascent = strings.resolve(ASCENT_VALUE_KEY, listOf(climb.ascentMeters.roundToLong().toString())),
+            grade = strings.resolve(GRADE_VALUE_KEY, listOf(climb.averageGradePercent.roundToLong().toString())),
+            duration = climb.durationMillis?.let { duration -> durationLabel(duration.toDouble(), strings) },
+            selected = isSelected(state, climb),
+            badgeBin = elevationSlopeBin(climb.averageGradePercent),
+            range = climb.range,
+        )
+    }
+
+private fun isSelected(
+    state: ElevationChartState,
+    climb: ElevationChartClimb,
+): Boolean {
+    val range = state.selection?.range ?: return false
+    return abs(range.startMeters - climb.startMeters) <= RANGE_MATCH_METERS &&
+        abs(range.endMeters - climb.endMeters) <= RANGE_MATCH_METERS
+}
+
+/**
+ * The design's distance range: both ends in kilometres when the range reaches a
+ * kilometre, otherwise both in metres, with one unit at the end.
+ */
+private fun rangeText(
+    startMeters: Double,
+    endMeters: Double,
+    strings: Strings,
+    locale: Locale,
+): String =
+    if (endMeters >= METRES_PER_KILOMETRE) {
+        strings.resolve(
+            RANGE_KILOMETRES_KEY,
+            listOf(kilometres(startMeters, locale), kilometres(endMeters, locale)),
+        )
+    } else {
+        strings.resolve(
+            RANGE_METRES_KEY,
+            listOf(startMeters.roundToLong().toString(), endMeters.roundToLong().toString()),
+        )
+    }
+
+private fun kilometres(
+    metres: Double,
+    locale: Locale,
+): String = String.format(locale, "%.1f", metres / METRES_PER_KILOMETRE)
+
+/**
  * The track analysis panel: the name, the four statistics, the meta line and
- * the elevation chart behind the Details toggle. The chart's axis chips stay by
- * the chart. Nothing here moves a control to the top of the screen.
+ * the elevation chart behind the Details toggle. With [onRange] the chart is a
+ * range selector, and the selected range's row and the climb list sit under it
+ * (T-0405). Nothing here moves a control to the top of the screen.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -154,6 +276,7 @@ fun TrackAnalysisPanel(
     strings: Strings,
     dark: Boolean,
     onAxis: (ElevationChartAxis) -> Unit,
+    onRange: (ElevationChartRange?) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -225,7 +348,36 @@ fun TrackAnalysisPanel(
                     strings = strings,
                     dark = dark,
                     onAxis = onAxis,
+                    onRange = onRange,
                 )
+                val rangeRow = trackAnalysisRangeRow(chart, strings)
+                if (rangeRow != null) {
+                    RangeRow(row = rangeRow, onClear = { onRange(null) })
+                }
+                val climbs = trackAnalysisClimbRows(chart, strings)
+                if (climbs.isNotEmpty()) {
+                    BasicText(
+                        text = strings.resolve(CLIMBS_TITLE_KEY),
+                        style =
+                            TextStyle(
+                                color = ROUTE_STATUS_COLOR,
+                                fontSize = CLIMBS_TITLE_FONT_SP.sp,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                        modifier = Modifier.padding(top = CLIMBS_TITLE_TOP_DP.dp),
+                    )
+                    Column(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = CLIMB_LIST_MAX_HEIGHT_DP.dp)
+                                .verticalScroll(rememberScrollState()),
+                    ) {
+                        climbs.forEach { row ->
+                            ClimbRow(row = row, dark = dark, onClick = { onRange(row.range) })
+                        }
+                    }
+                }
             }
         }
     }
@@ -260,7 +412,112 @@ private fun TrackTile(
     }
 }
 
+/** The selected range's line and its Clear action, as the design places them under the chart. */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun RangeRow(
+    row: TrackRangeRow,
+    onClear: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
+    ) {
+        BasicText(
+            text = row.text,
+            modifier = Modifier.weight(1f),
+            style = TextStyle(color = ROUTE_STATUS_COLOR, fontSize = ROW_FONT_SP.sp),
+        )
+        BasicText(
+            text = row.clearLabel,
+            style =
+                TextStyle(
+                    color = ROUTE_ACTION_COLOR,
+                    fontSize = ROW_FONT_SP.sp,
+                    fontWeight = FontWeight.SemiBold,
+                ),
+            modifier = Modifier.clickable(onClick = onClear).padding(horizontal = CLEAR_PADDING_HORIZONTAL_DP.dp),
+        )
+    }
+}
+
+/**
+ * One climb row: the design's badge, the climb's range, its gain, its grade and
+ * its time. A tapped row selects its range on the chart.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun ClimbRow(
+    row: TrackClimbRow,
+    dark: Boolean,
+    onClick: () -> Unit,
+) {
+    val palette = elevationChartPalette(dark)
+    val badge = palette.slope[row.badgeBin.coerceIn(0, palette.slope.lastIndex)]
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    if (row.selected) CLIMB_SELECTED_BACKGROUND else Color.Transparent,
+                    RoundedCornerShape(CLIMB_CORNER_DP.dp),
+                ).clickable(onClick = onClick)
+                .padding(horizontal = CLIMB_PADDING_HORIZONTAL_DP.dp, vertical = CLIMB_PADDING_VERTICAL_DP.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(CLIMB_GAP_DP.dp),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(CLIMB_BADGE_DP.dp)
+                    .background(badge, RoundedCornerShape(CLIMB_BADGE_CORNER_DP.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            BasicText(
+                text = row.ordinal.toString(),
+                style =
+                    TextStyle(
+                        color = elevationBadgeInk(badge),
+                        fontSize = CLIMB_BADGE_FONT_SP.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+            )
+        }
+        BasicText(
+            text = row.title,
+            modifier = Modifier.weight(1f),
+            style = TextStyle(color = ROUTE_VALUE_COLOR, fontSize = CLIMB_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
+        )
+        BasicText(
+            text = row.ascent,
+            modifier = Modifier.width(CLIMB_ASCENT_WIDTH_DP.dp),
+            style = TextStyle(color = ROUTE_VALUE_COLOR, fontSize = CLIMB_FONT_SP.sp),
+        )
+        BasicText(
+            text = row.grade,
+            modifier = Modifier.width(CLIMB_GRADE_WIDTH_DP.dp),
+            style = TextStyle(color = ROUTE_VALUE_COLOR, fontSize = CLIMB_FONT_SP.sp),
+        )
+        row.duration?.let { duration ->
+            BasicText(
+                text = duration,
+                modifier = Modifier.width(CLIMB_TIME_WIDTH_DP.dp),
+                style =
+                    TextStyle(
+                        color = ROUTE_STATUS_COLOR,
+                        fontSize = CLIMB_FONT_SP.sp,
+                        textAlign = TextAlign.End,
+                    ),
+            )
+        }
+    }
+}
+
 private val TILE_BACKGROUND = Color(0xFF2E2E2E)
+
+/** The tone a selected climb row takes on the panel's dark card. */
+private val CLIMB_SELECTED_BACKGROUND = Color(0x1FFFFFFF)
 
 private const val PANEL_CORNER_DP = 12
 private const val PANEL_PADDING_DP = 12
@@ -280,6 +537,25 @@ private const val META_SEPARATOR = " · "
 private const val NO_VALUE = "-"
 private const val MILLIS_PER_SECOND = 1_000.0
 private const val CLOSE_GLYPH = "\u00D7"
+private const val ROW_FONT_SP = 12
+private const val ROW_GAP_DP = 8
+private const val CLEAR_PADDING_HORIZONTAL_DP = 6
+private const val CLIMBS_TITLE_FONT_SP = 11
+private const val CLIMBS_TITLE_TOP_DP = 4
+private const val CLIMB_LIST_MAX_HEIGHT_DP = 192
+private const val CLIMB_CORNER_DP = 10
+private const val CLIMB_PADDING_HORIZONTAL_DP = 8
+private const val CLIMB_PADDING_VERTICAL_DP = 4
+private const val CLIMB_GAP_DP = 9
+private const val CLIMB_BADGE_DP = 20
+private const val CLIMB_BADGE_CORNER_DP = 6
+private const val CLIMB_BADGE_FONT_SP = 11
+private const val CLIMB_FONT_SP = 12
+private const val CLIMB_ASCENT_WIDTH_DP = 52
+private const val CLIMB_GRADE_WIDTH_DP = 32
+private const val CLIMB_TIME_WIDTH_DP = 46
+private const val RANGE_MATCH_METERS = 1.0
+private const val METRES_PER_KILOMETRE = 1_000.0
 
 private const val DISTANCE_KEY = "track_analysis_distance"
 private const val ASCENT_KEY = "track_analysis_ascent"
@@ -295,3 +571,10 @@ private const val UNTITLED_KEY = "track_analysis_untitled"
 private const val TRACK_CLOSE_KEY = "track_analysis_close"
 private const val DETAILS_SHOW_KEY = "elevation_chart_details_show"
 private const val DETAILS_HIDE_KEY = "elevation_chart_details_hide"
+private const val RANGE_KILOMETRES_KEY = "elevation_chart_range_kilometres"
+private const val RANGE_METRES_KEY = "elevation_chart_range_metres"
+private const val ASCENT_VALUE_KEY = "elevation_chart_range_ascent"
+private const val DESCENT_VALUE_KEY = "elevation_chart_range_descent"
+private const val GRADE_VALUE_KEY = "elevation_chart_range_grade"
+private const val RANGE_CLEAR_KEY = "elevation_chart_range_clear"
+private const val CLIMBS_TITLE_KEY = "elevation_chart_climbs_title"

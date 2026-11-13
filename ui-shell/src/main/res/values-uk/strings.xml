@@ -117,6 +117,13 @@
     <string name="elevation_chart_minutes">%1$s хв</string>
     <string name="elevation_chart_hours">%1$s год</string>
     <string name="elevation_chart_hours_minutes">%1$s год %2$s хв</string>
+    <string name="elevation_chart_range_kilometres">%1$s-%2$s км</string>
+    <string name="elevation_chart_range_metres">%1$s-%2$s м</string>
+    <string name="elevation_chart_range_ascent">\u2191%1$s м</string>
+    <string name="elevation_chart_range_descent">\u2193%1$s м</string>
+    <string name="elevation_chart_range_grade">%1$s%%</string>
+    <string name="elevation_chart_range_clear">Очистити</string>
+    <string name="elevation_chart_climbs_title">Підйоми · торкніться, щоб вибрати</string>
 
     <string name="track_analysis_distance">Відстань</string>
     <string name="track_analysis_ascent">Підйом</string>

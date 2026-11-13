@@ -117,6 +117,13 @@
     <string name="elevation_chart_minutes">%1$s min</string>
     <string name="elevation_chart_hours">%1$s h</string>
     <string name="elevation_chart_hours_minutes">%1$s h %2$s min</string>
+    <string name="elevation_chart_range_kilometres">%1$s-%2$s km</string>
+    <string name="elevation_chart_range_metres">%1$s-%2$s m</string>
+    <string name="elevation_chart_range_ascent">\u2191%1$s m</string>
+    <string name="elevation_chart_range_descent">\u2193%1$s m</string>
+    <string name="elevation_chart_range_grade">%1$s%%</string>
+    <string name="elevation_chart_range_clear">Clear</string>
+    <string name="elevation_chart_climbs_title">Climbs · tap one to select it</string>
 
     <string name="track_analysis_distance">Distance</string>
     <string name="track_analysis_ascent">Ascent</string>

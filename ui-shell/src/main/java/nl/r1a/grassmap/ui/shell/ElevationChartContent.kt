@@ -17,9 +17,9 @@ import kotlin.math.roundToLong
  * Everything here is derived from ElevationChartState, which holds the
  * analysis engine's own samples. A chart point keeps its engine elevation and
  * only gains a position along the chosen axis, so the drawing cannot disagree
- * with the profile behind it. The chart is read-only: no drag, no tap, no
- * selection yet. The surface strips and climb markers of the round-10 design
- * belong to T-0405 and T-0406.
+ * with the profile behind it. The chart itself only draws; the drag gesture,
+ * the selected band and the range and climb rows belong to the shell
+ * (T-0405). The surface strips and their stripes are T-0406.
  */
 
 /** One labelled grid line, at a fraction of the plot's width or height. */
@@ -50,6 +50,12 @@ data class ElevationChartPosition(
     val y: Float,
 )
 
+/** The selected range as two fractions across the plot, for the selection overlay. */
+data class ElevationChartBand(
+    val startFraction: Float,
+    val endFraction: Float,
+)
+
 /** One profile's drawing values, ready for the composable. */
 data class ElevationChartContent(
     val title: String,
@@ -61,6 +67,7 @@ data class ElevationChartContent(
     val xTicks: List<ElevationChartTick>,
     val minElevationMeters: Double,
     val maxElevationMeters: Double,
+    val band: ElevationChartBand? = null,
 )
 
 /**
@@ -104,6 +111,7 @@ fun elevationChartContent(
         xTicks = axisTicks(state, axis, strings, locale, zone),
         minElevationMeters = minElevation,
         maxElevationMeters = maxElevation,
+        band = band(state),
     )
 }
 
@@ -137,6 +145,85 @@ fun elevationChartX(
         return null
     }
     return ((value - start) / span).toFloat().coerceIn(0f, 1f)
+}
+
+/**
+ * The ground distance under [fraction] across the plot, the inverse of
+ * [elevationChartX] (T-0405).
+ *
+ * A drag works on the chosen axis, so the distance is interpolated between the
+ * two samples that bracket the touched position. That is the drawn line's own
+ * position, not a second reading of the track.
+ */
+fun elevationDistanceAt(
+    state: ElevationChartState,
+    fraction: Float,
+): Double? {
+    val points = state.points
+    if (points.size < MINIMUM_POINTS) {
+        return null
+    }
+    val target = fraction.coerceIn(0f, 1f)
+    val xs = points.indices.map { index -> elevationChartX(state, index) ?: return null }
+    if (target <= xs.first()) {
+        return points.first().distanceMeters
+    }
+    for (index in 0 until points.lastIndex) {
+        val start = xs[index]
+        val end = xs[index + 1]
+        if (target <= end) {
+            val span = end - start
+            val share = if (span <= 0f) 0f else (target - start) / span
+            return points[index].distanceMeters +
+                (points[index + 1].distanceMeters - points[index].distanceMeters) * share
+        }
+    }
+    return points.last().distanceMeters
+}
+
+/**
+ * The fraction where [distanceMeters] sits across the plot, the sampled inverse
+ * of [elevationDistanceAt]. The sample distances are the profile's own, so the
+ * position follows the drawn line on any axis.
+ */
+fun elevationChartXAtDistance(
+    state: ElevationChartState,
+    distanceMeters: Double,
+): Float? {
+    val points = state.points
+    if (points.size < MINIMUM_POINTS) {
+        return null
+    }
+    if (distanceMeters <= points.first().distanceMeters) {
+        return elevationChartX(state, 0)
+    }
+    for (index in 1 until points.size) {
+        val before = points[index - 1]
+        val after = points[index]
+        if (distanceMeters > after.distanceMeters) {
+            continue
+        }
+        val start = elevationChartX(state, index - 1) ?: return null
+        val end = elevationChartX(state, index) ?: return null
+        val span = after.distanceMeters - before.distanceMeters
+        if (span <= 0.0) {
+            return end
+        }
+        val share = ((distanceMeters - before.distanceMeters) / span).toFloat().coerceIn(0f, 1f)
+        return start + (end - start) * share
+    }
+    return elevationChartX(state, points.lastIndex)
+}
+
+/** The selected range as plot fractions, or null when there is no usable range. */
+private fun band(state: ElevationChartState): ElevationChartBand? {
+    val range = state.selection?.range ?: return null
+    val start = elevationChartXAtDistance(state, range.startMeters) ?: return null
+    val end = elevationChartXAtDistance(state, range.endMeters) ?: return null
+    if (end - start <= 0f) {
+        return null
+    }
+    return ElevationChartBand(startFraction = start, endFraction = end)
 }
 
 /** The first and last value of [state]'s effective axis, null when one is missing. */
@@ -393,7 +480,7 @@ private fun distanceLabel(
         strings.resolve(KILOMETRES_KEY, listOf(text))
     }
 
-private fun durationLabel(
+internal fun durationLabel(
     milliseconds: Double,
     strings: Strings,
 ): String {

@@ -4,25 +4,37 @@ import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.ElevationAccess
 import nl.r1a.grassmap.plugin.api.model.RoutePlanOption
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
+import nl.r1a.grassmap.plugin.ui.api.ElevationChartClimb
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartPoint
+import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
+import nl.r1a.grassmap.plugin.ui.api.ElevationChartRangeStats
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartState
 import nl.r1a.grassmap.tracks.ElevationProfile
 import nl.r1a.grassmap.tracks.ElevationProfiler
+import nl.r1a.grassmap.tracks.ElevationSegments
 import nl.r1a.grassmap.tracks.StoredTrack
 import nl.r1a.grassmap.ui.shell.TrackAnalysisSummary
 import kotlin.math.ceil
 
 /**
- * The bridge between the analysis engine and the chart (T-0404).
+ * The bridge between the analysis engine and the chart (T-0404, T-0405).
  *
- * The engine owns the profile; the chart only maps it onto an axis. Every point
- * below is copied from [ElevationProfile] as it is, so the chart's values are
- * the engine's values. A profile is never built here and the terrain is never
- * sampled twice.
+ * The engine owns the profile, its ranges and its climbs; the chart only maps
+ * them onto an axis. Every point below is copied from [ElevationProfile] as it
+ * is, so the chart's values are the engine's values. A profile is never built
+ * here and the terrain is never sampled twice.
+ *
+ * The range a drag selects and the climbs the engine finds are engine-owned for
+ * the same reason: [ElevationSegments] reads the profile's own samples, and
+ * `ui-shell` cannot import `tracks`. The shell reports the dragged distances
+ * through a callback and the app answers with these values, so a second range
+ * model never appears in the UI.
  */
 internal fun elevationChartState(
     profile: ElevationProfile,
     axis: ElevationChartAxis = ElevationChartAxis.Distance,
+    selection: ElevationChartRangeStats? = null,
+    climbs: List<ElevationChartClimb> = emptyList(),
 ): ElevationChartState =
     ElevationChartState(
         points =
@@ -35,7 +47,42 @@ internal fun elevationChartState(
                 )
             },
         axis = axis,
+        selection = selection,
+        climbs = climbs,
     )
+
+/** The climbs the engine finds in [profile], in the chart's vocabulary. */
+internal fun elevationChartClimbs(profile: ElevationProfile): List<ElevationChartClimb> =
+    elevationSegments.climbs(profile).map { climb ->
+        ElevationChartClimb(
+            startMeters = climb.startMeters,
+            endMeters = climb.endMeters,
+            ascentMeters = climb.ascentMeters,
+            averageGradePercent = climb.averageGradePercent,
+            durationMillis = climb.durationMillis,
+        )
+    }
+
+/** The engine's statistics for [range], in the chart's vocabulary, or null when there is no range. */
+internal fun elevationChartSelection(
+    profile: ElevationProfile,
+    range: ElevationChartRange?,
+): ElevationChartRangeStats? {
+    if (range == null) {
+        return null
+    }
+    val engine = elevationSegments.range(profile, range.startMeters, range.endMeters) ?: return null
+    return ElevationChartRangeStats(
+        range = ElevationChartRange(engine.startMeters, engine.endMeters),
+        distanceMeters = engine.distanceMeters,
+        ascentMeters = engine.ascentMeters,
+        descentMeters = engine.descentMeters,
+        averageGradePercent = engine.averageGradePercent,
+        durationMillis = engine.durationMillis,
+    )
+}
+
+private val elevationSegments = ElevationSegments()
 
 /** The panel's statistics, copied from the engine's analysis of the same track. */
 internal fun trackAnalysisSummary(track: StoredTrack): TrackAnalysisSummary {

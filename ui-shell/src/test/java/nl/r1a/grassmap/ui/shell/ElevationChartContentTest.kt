@@ -4,6 +4,8 @@ import androidx.compose.ui.graphics.Color
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartPoint
+import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
+import nl.r1a.grassmap.plugin.ui.api.ElevationChartRangeStats
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -186,6 +188,70 @@ class ElevationChartContentTest {
         assertFalse(content.xTicks.isEmpty())
     }
 
+    @Test
+    fun aDragFractionMapsBackToTheDistanceItCovers() {
+        val distance = ElevationChartState(points = TIMED_POINTS)
+        val duration = ElevationChartState(points = TIMED_POINTS, axis = ElevationChartAxis.Duration)
+        val timeOfDay = ElevationChartState(points = TIMED_POINTS, axis = ElevationChartAxis.TimeOfDay)
+
+        assertEquals(0.0, elevationDistanceAt(distance, 0f) ?: -1.0, 1e-6)
+        assertEquals(500.0, elevationDistanceAt(distance, 0.5f) ?: -1.0, 1e-6)
+        assertEquals(1_000.0, elevationDistanceAt(distance, 1f) ?: -1.0, 1e-6)
+        assertEquals(500.0, elevationDistanceAt(duration, 0.5f) ?: -1.0, 1e-6)
+        assertEquals(500.0, elevationDistanceAt(timeOfDay, 0.5f) ?: -1.0, 1e-6)
+        assertEquals(250.0, elevationDistanceAt(distance, 0.25f) ?: -1.0, 1e-6)
+    }
+
+    @Test
+    fun aDistanceMapsOntoItsPlaceOnEveryAxis() {
+        val distance = ElevationChartState(points = TIMED_POINTS)
+        val duration = ElevationChartState(points = TIMED_POINTS, axis = ElevationChartAxis.Duration)
+
+        assertEquals(0.5, valueAt(elevationChartXAtDistance(distance, 500.0)), 1e-6)
+        assertEquals(0.25, valueAt(elevationChartXAtDistance(distance, 250.0)), 1e-6)
+        assertEquals(0.5, valueAt(elevationChartXAtDistance(duration, 500.0)), 1e-6)
+        assertEquals(0.0, valueAt(elevationChartXAtDistance(distance, -100.0)), 1e-6)
+        assertEquals(1.0, valueAt(elevationChartXAtDistance(distance, 9_000.0)), 1e-6)
+    }
+
+    @Test
+    fun theSelectedRangeDrawsTheBandWhereItLies() {
+        val state = ElevationChartState(points = TIMED_POINTS, selection = SELECTION)
+
+        val band = chart(state).band
+
+        assertEquals(0.25f, band?.startFraction ?: -1f, 1e-6f)
+        assertEquals(0.75f, band?.endFraction ?: -1f, 1e-6f)
+    }
+
+    @Test
+    fun theBandFollowsTheChosenAxis() {
+        val state =
+            ElevationChartState(
+                points = TIMED_POINTS,
+                axis = ElevationChartAxis.Duration,
+                selection = SELECTION,
+            )
+
+        val band = chart(state).band
+
+        assertEquals(0.25f, band?.startFraction ?: -1f, 1e-6f)
+        assertEquals(0.75f, band?.endFraction ?: -1f, 1e-6f)
+    }
+
+    @Test
+    fun anUnselectedChartHasNoBand() {
+        assertNull(chart(ElevationChartState(points = TIMED_POINTS)).band)
+    }
+
+    @Test
+    fun aClimbBadgeChoosesItsNumberByContrast() {
+        assertEquals(Color(0xFFFFFFFF), elevationBadgeInk(Color(0xFFD9473E)))
+        assertEquals(Color(0xFF202124), elevationBadgeInk(Color(0xFFEE8C80)))
+        assertEquals(Color(0xFFFFFFFF), elevationBadgeInk(Color(0xFF8F1D1A)))
+        assertEquals(Color(0xFF202124), elevationBadgeInk(Color(0xFFFFC4BC)))
+    }
+
     private fun chart(
         state: ElevationChartState,
         strings: Strings = MapStrings(ENGLISH),
@@ -249,6 +315,16 @@ class ElevationChartContentTest {
             listOf(
                 ElevationChartPoint(distanceMeters = 0.0, elevationMeters = 300.0),
                 ElevationChartPoint(distanceMeters = 1_000.0, elevationMeters = 320.0),
+            )
+
+        val SELECTION =
+            ElevationChartRangeStats(
+                range = ElevationChartRange(startMeters = 250.0, endMeters = 750.0),
+                distanceMeters = 500.0,
+                ascentMeters = 20.0,
+                descentMeters = 0.0,
+                averageGradePercent = 4.0,
+                durationMillis = 900_000L,
             )
 
         val ENGLISH =

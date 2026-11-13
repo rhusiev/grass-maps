@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,13 +16,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -30,14 +38,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
+import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartState
 import java.time.ZoneId
 import java.util.Locale
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.pow
 
 /**
  * The round-10 elevation chart (T-0404), drawn from the analysis engine's
- * profile. It is read-only and sits behind a Details toggle; the axis chips
- * stay beside the chart, as the design places them.
+ * profile. It sits behind a Details toggle; the axis chips stay beside the
+ * chart, as the design places them.
+ *
+ * With [onRange] the chart is also the range selector (T-0405): a drag across
+ * the plot reports the selected distance range, and the chart draws the band
+ * and its two handles for the range in [ElevationChartState.selection]. A
+ * chart without [onRange] stays read-only, as the route preview's does.
  *
  * Colours are the validated round-10 palette: seven slope colours from the
  * steepest descent to the steepest climb on the hike scale, a hairline grid and
@@ -55,6 +72,9 @@ internal data class ElevationChartPalette(
     val chipText: Color,
     val chipSelected: Color,
     val chipSelectedText: Color,
+    val bandFill: Color,
+    val bandBorder: Color,
+    val bandHandle: Color,
 )
 
 /** The validated round-10 chart palette for the given theme. */
@@ -81,6 +101,9 @@ private val LIGHT_PALETTE =
         chipText = Color(0xFF202124),
         chipSelected = Color(0xFF202124),
         chipSelectedText = Color(0xFFFFFFFF),
+        bandFill = Color(0x14202124),
+        bandBorder = Color(0x80202124),
+        bandHandle = Color(0xFF202124),
     )
 
 private val DARK_PALETTE =
@@ -104,6 +127,9 @@ private val DARK_PALETTE =
         chipText = Color(0xFFE8EAED),
         chipSelected = Color(0xFFFFFFFF),
         chipSelectedText = Color(0xFF202124),
+        bandFill = Color(0x1FFFFFFF),
+        bandBorder = Color(0x80E8EAED),
+        bandHandle = Color(0xFFE8EAED),
     )
 
 /**
@@ -120,12 +146,15 @@ fun ElevationChart(
     modifier: Modifier = Modifier,
     locale: Locale = Locale.getDefault(),
     zone: ZoneId = ZoneId.systemDefault(),
+    onRange: ((ElevationChartRange?) -> Unit)? = null,
 ) {
     val content = remember(state, strings, locale, zone) { elevationChartContent(state, strings, locale, zone) }
     if (content == null) {
         return
     }
     val palette = elevationChartPalette(dark)
+    val latestState by rememberUpdatedState(state)
+    val latestOnRange by rememberUpdatedState(onRange)
     Column(
         modifier =
             modifier
@@ -172,12 +201,37 @@ fun ElevationChart(
                     BasicText(text = tick.label, style = TextStyle(color = palette.label, fontSize = LABEL_FONT_SP.sp))
                 }
             }
+            val drag =
+                if (onRange == null) {
+                    Modifier
+                } else {
+                    Modifier.pointerInput(Unit) {
+                        var anchor: Float? = null
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                anchor = (offset.x / size.width).coerceIn(0f, 1f)
+                            },
+                            onDragCancel = { anchor = null },
+                            onDragEnd = { anchor = null },
+                            onDrag = { change, _ ->
+                                val start = anchor ?: return@detectDragGestures
+                                change.consume()
+                                val callback = latestOnRange ?: return@detectDragGestures
+                                val selected = selectedRange(latestState, start, change.position.x / size.width)
+                                if (selected != null) {
+                                    callback(selected)
+                                }
+                            },
+                        )
+                    }
+                }
             Canvas(
                 modifier =
                     Modifier
                         .weight(1f)
                         .height(PLOT_HEIGHT_DP.dp)
-                        .semantics { contentDescription = content.title },
+                        .semantics { contentDescription = content.title }
+                        .then(drag),
             ) {
                 val width = size.width
                 val height = size.height
@@ -213,6 +267,7 @@ fun ElevationChart(
                         }
                     }
                 drawPath(line, palette.line, style = Stroke(width = LINE_STROKE_PX))
+                content.band?.let { band -> drawBand(band, palette, width, height) }
             }
         }
         Row(
@@ -227,6 +282,94 @@ fun ElevationChart(
             }
         }
     }
+}
+
+/**
+ * The selected range's distance when a drag runs from [anchor] to [current],
+ * both fractions across the plot. Null when the drag is too short to be a
+ * range, which leaves the previous selection alone.
+ */
+private fun selectedRange(
+    state: ElevationChartState,
+    anchor: Float,
+    current: Float,
+): ElevationChartRange? {
+    val low = min(anchor.coerceIn(0f, 1f), current.coerceIn(0f, 1f))
+    val high = max(anchor.coerceIn(0f, 1f), current.coerceIn(0f, 1f))
+    if (high - low < MINIMUM_RANGE_SHARE) {
+        return null
+    }
+    val start = elevationDistanceAt(state, low) ?: return null
+    val end = elevationDistanceAt(state, high) ?: return null
+    if (end - start <= 0.0) {
+        return null
+    }
+    return ElevationChartRange(startMeters = start, endMeters = end)
+}
+
+/** The design's selection band: a faint fill, a dashed edge and a handle at each end. */
+private fun DrawScope.drawBand(
+    band: ElevationChartBand,
+    palette: ElevationChartPalette,
+    width: Float,
+    height: Float,
+) {
+    val left = (band.startFraction * width).coerceIn(0f, width)
+    val right = (band.endFraction * width).coerceIn(0f, width)
+    if (right - left <= 0f) {
+        return
+    }
+    drawRect(
+        color = palette.bandFill,
+        topLeft = Offset(left, 0f),
+        size = Size(right - left, height),
+    )
+    drawRect(
+        color = palette.bandBorder,
+        topLeft = Offset(left, 0f),
+        size = Size(right - left, height),
+        style =
+            Stroke(
+                width = BAND_BORDER_DP.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(DASH_ON_DP.dp.toPx(), DASH_OFF_DP.dp.toPx())),
+            ),
+    )
+    val handleWidth = HANDLE_WIDTH_DP.dp.toPx()
+    val handleHeight = HANDLE_HEIGHT_DP.dp.toPx()
+    val top = (height - handleHeight) / 2f
+    listOf(left, right).forEach { x ->
+        drawRoundRect(
+            color = palette.bandHandle,
+            topLeft = Offset((x - handleWidth / 2f).coerceIn(0f, width - handleWidth), top),
+            size = Size(handleWidth, handleHeight),
+            cornerRadius = CornerRadius(handleWidth / 2f),
+        )
+    }
+}
+
+/** The inverse contrast choice for a climb badge's number. */
+internal fun elevationBadgeInk(background: Color): Color =
+    if (contrastRatio(background, BADGE_INK_DARK) >= contrastRatio(background, BADGE_INK_LIGHT)) {
+        BADGE_INK_DARK
+    } else {
+        BADGE_INK_LIGHT
+    }
+
+private fun contrastRatio(
+    first: Color,
+    second: Color,
+): Double {
+    val a = relativeLuminance(first)
+    val b = relativeLuminance(second)
+    return (max(a, b) + 0.05) / (min(a, b) + 0.05)
+}
+
+private fun relativeLuminance(color: Color): Double =
+    LUMA_RED * linear(color.red) + LUMA_GREEN * linear(color.green) + LUMA_BLUE * linear(color.blue)
+
+private fun linear(channel: Float): Double {
+    val value = channel.toDouble()
+    return if (value <= LINEAR_THRESHOLD) value / LINEAR_SCALE else ((value + LINEAR_OFFSET) / LINEAR_DIVISOR).pow(GAMMA)
 }
 
 @Suppress("ktlint:standard:function-naming")
@@ -294,5 +437,25 @@ private const val CHIP_PADDING_VERTICAL_DP = 5
 private const val DETAILS_FONT_SP = 14
 private const val GRID_STROKE_PX = 1f
 private const val LINE_STROKE_PX = 1.6f
+private const val BAND_BORDER_DP = 1f
+private const val DASH_ON_DP = 3f
+private const val DASH_OFF_DP = 2f
+private const val HANDLE_WIDTH_DP = 6f
+private const val HANDLE_HEIGHT_DP = 18f
+
+/** A drag shorter than this share of the plot is a tap, not a range. */
+private const val MINIMUM_RANGE_SHARE = 0.02f
+
+/** The two number colours a climb badge chooses between, and the sRGB constants of the choice. */
+private val BADGE_INK_DARK = Color(0xFF202124)
+private val BADGE_INK_LIGHT = Color(0xFFFFFFFF)
+private const val LUMA_RED = 0.2126
+private const val LUMA_GREEN = 0.7152
+private const val LUMA_BLUE = 0.0722
+private const val LINEAR_THRESHOLD = 0.03928
+private const val LINEAR_SCALE = 12.92
+private const val LINEAR_OFFSET = 0.055
+private const val LINEAR_DIVISOR = 1.055
+private const val GAMMA = 2.4
 
 private val CHIP_SHAPE = RoundedCornerShape(20.dp)

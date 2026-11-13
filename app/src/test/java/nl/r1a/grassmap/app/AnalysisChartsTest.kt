@@ -10,7 +10,9 @@ import nl.r1a.grassmap.plugin.api.model.Track
 import nl.r1a.grassmap.plugin.api.model.TrackPoint
 import nl.r1a.grassmap.plugin.api.model.TrackSegment
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
+import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
 import nl.r1a.grassmap.tracks.ElevationProfiler
+import nl.r1a.grassmap.tracks.ElevationSegments
 import nl.r1a.grassmap.tracks.StoredTrack
 import nl.r1a.grassmap.tracks.TrackAnalyzer
 import nl.r1a.grassmap.tracks.TrackId
@@ -37,6 +39,51 @@ class AnalysisChartsTest {
             assertEquals(sample.timeOfDayMillis, point.timeOfDayMillis)
         }
         assertEquals(ElevationChartAxis.Distance, state.axis)
+        assertNull(state.selection)
+        assertTrue(state.climbs.isEmpty())
+    }
+
+    @Test
+    fun theChartStateCarriesTheEnginesRangeAndClimbs() {
+        val profile = ElevationProfiler().profile(TIMED_TRACK)
+        val climbs = elevationChartClimbs(profile)
+        val selection = elevationChartSelection(profile, ElevationChartRange(0.0, profile.distanceMeters))
+
+        val state = elevationChartState(profile, selection = selection, climbs = climbs)
+
+        assertEquals(selection, state.selection)
+        assertEquals(climbs, state.climbs)
+    }
+
+    @Test
+    fun theClimbsAreTheEnginesOwnSegments() {
+        val profile = ElevationProfiler().profile(TIMED_TRACK)
+        val engine = ElevationSegments().climbs(profile)
+
+        val climbs = elevationChartClimbs(profile)
+
+        assertEquals(1, climbs.size)
+        assertEquals(engine[0].startMeters, climbs[0].startMeters, 0.0)
+        assertEquals(engine[0].endMeters, climbs[0].endMeters, 0.0)
+        assertEquals(40.0, climbs[0].ascentMeters, 1e-9)
+        assertEquals(40.0 / profile.distanceMeters * 100.0, climbs[0].averageGradePercent, 1e-9)
+        assertEquals(1_200_000L, climbs[0].durationMillis)
+    }
+
+    @Test
+    fun theRangeSelectionIsTheEnginesOwnRange() {
+        val track = TIMED_TRACK
+        val analysis = TrackAnalyzer().analyze(track)
+        val profile = ElevationProfiler().profile(track)
+
+        val selection =
+            elevationChartSelection(profile, ElevationChartRange(0.0, profile.distanceMeters))
+
+        assertEquals(analysis.distanceMeters, selection?.distanceMeters ?: 0.0, 1e-9)
+        assertEquals(analysis.ascentMeters, selection?.ascentMeters ?: 0.0, 1e-9)
+        assertEquals(analysis.descentMeters, selection?.descentMeters ?: 0.0, 1e-9)
+        assertEquals(analysis.durationMillis, selection?.durationMillis)
+        assertNull(elevationChartSelection(profile, null))
     }
 
     @Test

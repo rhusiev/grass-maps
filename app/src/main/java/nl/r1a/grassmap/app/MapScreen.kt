@@ -105,6 +105,7 @@ import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
+import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
 import nl.r1a.grassmap.plugin.ui.api.NavigationScreenStatus
 import nl.r1a.grassmap.plugins.contours.ContoursLayerPanel
 import nl.r1a.grassmap.plugins.favourites.ui.FavouritesUiContract
@@ -385,6 +386,10 @@ private fun MapContent(
     // The share-sheet import's notice (T-0416).
     val trackShare by container.trackShare.notice.collectAsState()
     var analysisAxis by remember(analysisTrack) { mutableStateOf(ElevationChartAxis.Distance) }
+    // The range the user dragged on the analysis chart (T-0405). The shell
+    // reports distances; the engine answers with the statistics, so the chart
+    // never recomputes a second model.
+    var analysisRange by remember(analysisTrack) { mutableStateOf<ElevationChartRange?>(null) }
     val analysisProfile by
         produceState<ElevationProfile?>(null, analysisTrack) {
             val stored = analysisTrack
@@ -395,9 +400,22 @@ private fun MapContent(
             value = withContext(Dispatchers.Default) { ElevationProfiler().profile(stored.track) }
         }
     val analysisSummary = remember(analysisTrack) { analysisTrack?.let(::trackAnalysisSummary) }
+    val analysisClimbs =
+        remember(analysisProfile) {
+            elevationChartClimbs(analysisProfile ?: ElevationProfile())
+        }
+    val analysisSelection =
+        remember(analysisProfile, analysisRange) {
+            elevationChartSelection(analysisProfile ?: ElevationProfile(), analysisRange)
+        }
     val analysisChart =
-        remember(analysisProfile, analysisAxis) {
-            elevationChartState(analysisProfile ?: ElevationProfile(), analysisAxis)
+        remember(analysisProfile, analysisAxis, analysisSelection, analysisClimbs) {
+            elevationChartState(
+                profile = analysisProfile ?: ElevationProfile(),
+                axis = analysisAxis,
+                selection = analysisSelection,
+                climbs = analysisClimbs,
+            )
         }
     // One scan per produced route and profile (T-0409). The effect restarts on
     // a new selected route or a profile change, and a cancelled scan never
@@ -1057,6 +1075,7 @@ private fun MapContent(
                 strings = container.strings,
                 dark = isSystemInDarkTheme(),
                 onAxis = { axis -> analysisAxis = axis },
+                onRange = { range -> analysisRange = range },
                 onClose = { TrackAnalysisSession.hide() },
                 modifier =
                     Modifier

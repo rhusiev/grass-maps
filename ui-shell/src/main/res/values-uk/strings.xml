@@ -105,4 +105,29 @@
     <string name="nav_screen_alert_reroute">Перерахунок</string>
     <string name="nav_screen_alert_arrival">Прибуття</string>
     <string name="nav_screen_alert_arrived">Ви прибули</string>
+
+    <string name="elevation_chart_title">Висота</string>
+    <string name="elevation_chart_axis_distance">Відстань</string>
+    <string name="elevation_chart_axis_duration">Тривалість</string>
+    <string name="elevation_chart_axis_time_of_day">Час доби</string>
+    <string name="elevation_chart_details_show">Показати подробиці</string>
+    <string name="elevation_chart_details_hide">Сховати подробиці</string>
+    <string name="elevation_chart_metres">%1$s м</string>
+    <string name="elevation_chart_kilometres">%1$s км</string>
+    <string name="elevation_chart_minutes">%1$s хв</string>
+    <string name="elevation_chart_hours">%1$s год</string>
+    <string name="elevation_chart_hours_minutes">%1$s год %2$s хв</string>
+
+    <string name="track_analysis_distance">Відстань</string>
+    <string name="track_analysis_ascent">Підйом</string>
+    <string name="track_analysis_moving">У русі</string>
+    <string name="track_analysis_speed">Швидкість</string>
+    <string name="track_analysis_speed_value">%1$s км/год</string>
+    <string name="track_analysis_metres">%1$s м</string>
+    <string name="track_analysis_total">Загалом %1$s</string>
+    <string name="track_analysis_stopped">зупинки %1$s</string>
+    <string name="track_analysis_max_speed">макс. %1$s</string>
+    <string name="track_analysis_descent">\u2193%1$s м</string>
+    <string name="track_analysis_untitled">Трек</string>
+    <string name="track_analysis_close">Закрити аналіз</string>
 </resources>

@@ -38,6 +38,8 @@ import nl.r1a.grassmap.plugin.api.model.routePointEntry
 import nl.r1a.grassmap.plugin.api.provider.CoordinateParser
 import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
+import nl.r1a.grassmap.plugin.ui.api.ElevationChartState
 import nl.r1a.grassmap.plugin.ui.api.RouteTurnStep
 import java.util.Locale
 
@@ -64,6 +66,10 @@ private const val RECENT_LIMIT = 5
  * The preview card is [routePlanPreview] and nothing else. Undo, redo, swap, the
  * close control, the stop rows, the coordinate field and the turn stepper are
  * controls around it, not extra preview rows.
+ *
+ * The elevation chart (T-0404) sits under the preview, behind the Details
+ * toggle, with its axis chips beside it. It plots the analysis engine's profile
+ * of the selected route and never samples the terrain again.
  *
  * The design also draws a warning marker on the route line. That marker is not
  * built: the map host has no marker set, and the composed-layers compiler
@@ -95,10 +101,14 @@ fun RoutePlanPanel(
     onApplyPreferences: (RouteOptions) -> Unit,
     onResetPreferences: () -> Unit,
     warnings: List<RouteWarningRow> = emptyList(),
+    chart: ElevationChartState = ElevationChartState(),
+    onChartAxis: (ElevationChartAxis) -> Unit = {},
+    dark: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     if (state.status == RoutePlanStatus.Idle) return
     val preview = routePlanPreview(state, strings)
+    var detailsExpanded by remember(state.selected) { mutableStateOf(false) }
     var preferencesVisible by remember { mutableStateOf(false) }
     var warningsVisible by remember { mutableStateOf(false) }
     Column(
@@ -170,6 +180,21 @@ fun RoutePlanPanel(
                 }
                 if (preview != null) {
                     PreviewCard(preview = preview, onStart = onStart)
+                }
+                if (chart.isDrawable) {
+                    AnalysisDetailsToggle(
+                        expanded = detailsExpanded,
+                        strings = strings,
+                        onClick = { detailsExpanded = !detailsExpanded },
+                    )
+                    if (detailsExpanded) {
+                        ElevationChart(
+                            state = chart,
+                            strings = strings,
+                            dark = dark,
+                            onAxis = onChartAxis,
+                        )
+                    }
                 }
                 TurnStepper(
                     turns = routePlanTurns(state, strings),

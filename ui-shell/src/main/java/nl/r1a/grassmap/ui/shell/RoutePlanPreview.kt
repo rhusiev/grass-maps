@@ -87,7 +87,7 @@ fun routePlanAlternativeText(
     strings: Strings,
 ): String = durationText(durationSeconds, strings)
 
-private fun durationText(
+internal fun durationText(
     seconds: Double,
     strings: Strings,
 ): String {

@@ -105,4 +105,29 @@
     <string name="nav_screen_alert_reroute">Reroute</string>
     <string name="nav_screen_alert_arrival">Arrival</string>
     <string name="nav_screen_alert_arrived">You have arrived</string>
+
+    <string name="elevation_chart_title">Elevation</string>
+    <string name="elevation_chart_axis_distance">Distance</string>
+    <string name="elevation_chart_axis_duration">Duration</string>
+    <string name="elevation_chart_axis_time_of_day">Time of day</string>
+    <string name="elevation_chart_details_show">Show details</string>
+    <string name="elevation_chart_details_hide">Hide details</string>
+    <string name="elevation_chart_metres">%1$s m</string>
+    <string name="elevation_chart_kilometres">%1$s km</string>
+    <string name="elevation_chart_minutes">%1$s min</string>
+    <string name="elevation_chart_hours">%1$s h</string>
+    <string name="elevation_chart_hours_minutes">%1$s h %2$s min</string>
+
+    <string name="track_analysis_distance">Distance</string>
+    <string name="track_analysis_ascent">Ascent</string>
+    <string name="track_analysis_moving">Moving</string>
+    <string name="track_analysis_speed">Speed</string>
+    <string name="track_analysis_speed_value">%1$s km/h</string>
+    <string name="track_analysis_metres">%1$s m</string>
+    <string name="track_analysis_total">Total %1$s</string>
+    <string name="track_analysis_stopped">stopped %1$s</string>
+    <string name="track_analysis_max_speed">max %1$s</string>
+    <string name="track_analysis_descent">\u2193%1$s m</string>
+    <string name="track_analysis_untitled">Track</string>
+    <string name="track_analysis_close">Close the analysis</string>
 </resources>

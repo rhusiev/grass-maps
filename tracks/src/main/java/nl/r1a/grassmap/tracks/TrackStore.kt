@@ -128,8 +128,9 @@ interface TrackStore {
 
     /**
      * Removes a track but keeps its sidecar and document for
-     * [restoreFromTrash]. The removal is process-scoped; it is the library
-     * screen's one-step undo, not a quarantine that survives a restart.
+     * [restoreFromTrash]. The parked files survive a reload; the token is
+     * process-scoped, and this is the library screen's one-step undo rather
+     * than a quarantine that an older build reads back.
      */
     suspend fun removeToTrash(id: TrackId): Outcome<TrackRemoval>
 
@@ -259,7 +260,13 @@ class InMemoryTrackStore(
 
     override suspend fun restoreFromTrash(removal: TrackRemoval): Outcome<Unit> =
         mutex.withLock {
-            val trashed = trash.remove(removal.token) ?: return@withLock Outcome.Failure(AppError.NotFound)
+            val trashed = trash[removal.token] ?: return@withLock Outcome.Failure(AppError.NotFound)
+            if (tracks.containsKey(trashed.record.id)) {
+                // A re-import after the delete owns the id now; the old receipt
+                // must not overwrite the newer record.
+                return@withLock Outcome.Failure(AppError.InvalidInput)
+            }
+            trash.remove(removal.token)
             tracks[trashed.record.id] = trashed.record
             savedAt[trashed.record.id] = trashed.savedAtMillis
             if (trashed.source != null) {

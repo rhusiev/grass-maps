@@ -282,16 +282,30 @@ class FileTrackStore(
                     } ?: return@withContext Outcome.Failure(AppError.NotFound)
                 val sidecar = TrackSidecarJson.decode(sidecarText) ?: return@withContext Outcome.Failure(AppError.CorruptData)
                 val target = File(root, sidecarFileName(TrackId(sidecar.id)))
+                if (target.exists()) {
+                    // The same document was imported again after the delete.
+                    // Restoring would overwrite that newer record, so the
+                    // old receipt no longer applies.
+                    return@withContext Outcome.Failure(AppError.InvalidInput)
+                }
+                // The document goes back first and the sidecar last: the
+                // sidecar is what makes the track visible, so a failed move
+                // leaves a receipt that can still be retried.
+                val documents = directory.listFiles().orEmpty().filter { it.isFile && it.name.endsWith(DOCUMENT_SUFFIX) }
+                for (document in documents) {
+                    val restored = File(root, documentFileName(sidecar.documentHash))
+                    if (!restored.exists() && !moveFile(document, restored)) {
+                        return@withContext writeFailure("cannot restore the document of ${sidecar.id}")
+                    }
+                }
                 if (!moveFile(parked.single(), target)) {
                     return@withContext writeFailure("cannot restore the sidecar of ${sidecar.id}")
                 }
-                directory.listFiles().orEmpty().filter { it.isFile && it.name.endsWith(DOCUMENT_SUFFIX) }.forEach { document ->
-                    val restored = File(root, documentFileName(sidecar.documentHash))
-                    if (!restored.exists() && !moveFile(document, restored)) {
-                        log("track ${sidecar.id}: the document could not be restored")
-                    }
+                // Only this token's own directory may go: a second delete has
+                // its own parked token, and its undo must survive this one.
+                if (directory.listFiles().orEmpty().isEmpty()) {
+                    directory.delete()
                 }
-                clearTrash(directory)
                 records.clear()
                 sidecars.clear()
                 loaded = false
@@ -324,7 +338,6 @@ class FileTrackStore(
                 ?.filter { it.isFile && it.name.endsWith(SIDECAR_SUFFIX) && !it.name.startsWith(TEMPORARY_PREFIX) }
                 .orEmpty()
                 .sortedBy { it.name }
-        clearTrash()
         for (file in files) {
             val sidecar = readSidecar(file) ?: continue
             val id = TrackId(sidecar.id)
@@ -454,18 +467,6 @@ class FileTrackStore(
     private fun sidecarFile(id: TrackId): File = File(root, sidecarFileName(id))
 
     private fun trashDirectory(token: String): File = File(root, TRASH_DIRECTORY + "/" + token)
-
-    /** A restart starts with an empty trash; a deletion undo lasts one session. */
-    private fun clearTrash(except: File? = null) {
-        val directory = File(root, TRASH_DIRECTORY)
-        val entries = directory.listFiles().orEmpty()
-        for (entry in entries) {
-            if (except != null && entry.absolutePath == except.absolutePath) {
-                continue
-            }
-            entry.deleteRecursively()
-        }
-    }
 
     private fun moveFile(
         from: File,

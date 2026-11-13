@@ -55,3 +55,16 @@ interface Logger {
         message: String,
     ) = log(LogLevel.ERROR, tag, message)
 }
+
+/**
+ * The sink a host without diagnostics uses: it drops every record. A plugin
+ * reads [nl.r1a.grassmap.plugin.api.host.PluginServices.logger] without
+ * knowing whether the host wired one.
+ */
+object NoLogger : Logger {
+    override fun log(
+        level: LogLevel,
+        tag: String,
+        message: String,
+    ) = Unit
+}

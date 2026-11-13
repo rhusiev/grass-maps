@@ -61,7 +61,9 @@ import nl.r1a.grassmap.plugin.api.provider.Provider
 import nl.r1a.grassmap.plugin.api.provider.ProviderContract
 import nl.r1a.grassmap.plugin.api.service.Clock
 import nl.r1a.grassmap.plugin.api.service.LocationService
+import nl.r1a.grassmap.plugin.api.service.Logger
 import nl.r1a.grassmap.plugin.api.service.NetworkGate
+import nl.r1a.grassmap.plugin.api.service.NoLogger
 import nl.r1a.grassmap.plugin.api.service.NoNetworkGate
 import nl.r1a.grassmap.plugin.api.widget.WidgetDescriptor
 import java.util.concurrent.ConcurrentHashMap
@@ -95,6 +97,7 @@ class PluginHost(
     private val routingEngines: RoutingEngineAccess = NoRoutingEngines,
     private val routeHistoryAccess: RouteHistoryAccess = NoRouteHistoryAccess,
     private val routingOptionsAccess: RoutingOptionsAccess = NoRoutingOptionsAccess,
+    private val logger: Logger = NoLogger,
 ) {
     private val factories: Map<PluginId, PluginFactory> = plugins.associateBy { it.manifest.id }
     private val streamOwners: Map<StreamId, PluginId> = streams.associate { it.id to it.pluginId }
@@ -524,6 +527,8 @@ class PluginHost(
         override val camera: Flow<Camera> = cameraFlow
 
         override val clock: Clock = Clock { clockMillis() }
+
+        override val logger: Logger = this@PluginHost.logger
 
         override val devTools: DevToolsAccess = devToolsAccess
 

@@ -4,7 +4,9 @@ import kotlinx.coroutines.flow.Flow
 import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.service.Clock
 import nl.r1a.grassmap.plugin.api.service.LocationService
+import nl.r1a.grassmap.plugin.api.service.Logger
 import nl.r1a.grassmap.plugin.api.service.NetworkGate
+import nl.r1a.grassmap.plugin.api.service.NoLogger
 import nl.r1a.grassmap.plugin.api.service.NoNetworkGate
 
 /**
@@ -37,6 +39,13 @@ interface PluginServices {
 
     /** Wall-clock time, for cadence checks and fix ages. */
     val clock: Clock
+
+    /**
+     * The platform log sink (T-0409). Inert unless the host wires one, so a
+     * plugin can report an outcome without knowing whether it runs in a release
+     * or a debug build.
+     */
+    val logger: Logger get() = NoLogger
 
     /**
      * The only path to the network. A plugin that needs it names the privacy

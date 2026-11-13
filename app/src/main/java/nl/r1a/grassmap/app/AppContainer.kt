@@ -67,6 +67,8 @@ import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngineContract
 import nl.r1a.grassmap.plugin.api.service.Clock
 import nl.r1a.grassmap.plugin.api.service.HeadingSource
+import nl.r1a.grassmap.plugin.api.service.LogLevel
+import nl.r1a.grassmap.plugin.api.service.Logger
 import nl.r1a.grassmap.plugin.api.service.NetworkGate
 import nl.r1a.grassmap.plugin.api.service.NetworkSwitches
 import nl.r1a.grassmap.plugin.api.service.PrivacySwitches
@@ -667,6 +669,28 @@ class AppContainer(
      */
     val devToolsVisible: Boolean = aiControlEnabled()
 
+    /**
+     * The log sink plugins report through (T-0409), so a plugin outcome lands
+     * beside the app's own lines under the same platform log.
+     */
+    private val pluginLogger: Logger =
+        object : Logger {
+            override fun log(
+                level: LogLevel,
+                tag: String,
+                message: String,
+            ) {
+                val priority =
+                    when (level) {
+                        LogLevel.DEBUG -> Log.DEBUG
+                        LogLevel.INFO -> Log.INFO
+                        LogLevel.WARN -> Log.WARN
+                        LogLevel.ERROR -> Log.ERROR
+                    }
+                Log.println(priority, "GrassMaps/$tag", message)
+            }
+        }
+
     val pluginHost: PluginHost by lazy {
         PluginHost(
             plugins = GeneratedPlugins.plugins,
@@ -689,6 +713,7 @@ class AppContainer(
             routeHistoryAccess = routeHistory,
             routingOptionsAccess = RoutingOptionsAccess { profile -> routingOptionsSettings.forProfile(profile) },
             elevationAccess = elevationAccess,
+            logger = pluginLogger,
         )
     }
 

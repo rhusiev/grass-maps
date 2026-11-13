@@ -124,6 +124,18 @@
     <string name="elevation_chart_range_grade">%1$s%%</string>
     <string name="elevation_chart_range_clear">Clear</string>
     <string name="elevation_chart_climbs_title">Climbs · tap one to select it</string>
+    <string name="elevation_chart_surface_title">Surface</string>
+    <string name="elevation_chart_way_type_title">Way type</string>
+    <string name="elevation_chart_surface_asphalt">Asphalt</string>
+    <string name="elevation_chart_surface_paving">Paving</string>
+    <string name="elevation_chart_surface_ground">Ground</string>
+    <string name="elevation_chart_surface_gravel">Gravel</string>
+    <string name="elevation_chart_way_street">Street</string>
+    <string name="elevation_chart_way_footway">Footway</string>
+    <string name="elevation_chart_way_path">Path</string>
+    <string name="elevation_chart_way_track">Track</string>
+    <string name="elevation_chart_way_steps">Steps</string>
+    <string name="elevation_chart_strip_share">%1$s%% %2$s</string>
 
     <string name="track_analysis_distance">Distance</string>
     <string name="track_analysis_ascent">Ascent</string>

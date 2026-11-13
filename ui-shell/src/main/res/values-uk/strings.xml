@@ -124,6 +124,18 @@
     <string name="elevation_chart_range_grade">%1$s%%</string>
     <string name="elevation_chart_range_clear">Очистити</string>
     <string name="elevation_chart_climbs_title">Підйоми · торкніться, щоб вибрати</string>
+    <string name="elevation_chart_surface_title">Поверхня</string>
+    <string name="elevation_chart_way_type_title">Тип шляху</string>
+    <string name="elevation_chart_surface_asphalt">Асфальт</string>
+    <string name="elevation_chart_surface_paving">Бруківка</string>
+    <string name="elevation_chart_surface_ground">Грунт</string>
+    <string name="elevation_chart_surface_gravel">Гравій</string>
+    <string name="elevation_chart_way_street">Вулиця</string>
+    <string name="elevation_chart_way_footway">Пішохідна</string>
+    <string name="elevation_chart_way_path">Стежка</string>
+    <string name="elevation_chart_way_track">Ґрунтівка</string>
+    <string name="elevation_chart_way_steps">Сходи</string>
+    <string name="elevation_chart_strip_share">%1$s%% %2$s</string>
 
     <string name="track_analysis_distance">Відстань</string>
     <string name="track_analysis_ascent">Підйом</string>

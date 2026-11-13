@@ -22,6 +22,8 @@ import nl.r1a.grassmap.tracks.TrackDocumentReader
 import nl.r1a.grassmap.tracks.TrackElevationCorrection
 import nl.r1a.grassmap.tracks.TrackId
 import nl.r1a.grassmap.tracks.TrackImporter
+import nl.r1a.grassmap.tracks.TrackMetadata
+import nl.r1a.grassmap.tracks.TrackRemoval
 import nl.r1a.grassmap.tracks.TrackStore
 import nl.r1a.grassmap.tracks.TrackSummary
 import java.io.File
@@ -76,6 +78,18 @@ class TrackAccess internal constructor(
         id: TrackId,
         style: TrackStyle,
     ): Outcome<Unit> = store.setStyle(id, style)
+
+    /** Replaces the library metadata on one sidecar; the GPX document is untouched. */
+    suspend fun setMetadata(
+        id: TrackId,
+        metadata: TrackMetadata,
+    ): Outcome<Unit> = store.setMetadata(id, metadata)
+
+    /** Removes a track but keeps it for [restoreFromTrash] (T-0414 undo). */
+    suspend fun removeToTrash(id: TrackId): Outcome<TrackRemoval> = store.removeToTrash(id)
+
+    /** Puts a removed track, its metadata and its folder back. */
+    suspend fun restoreFromTrash(removal: TrackRemoval): Outcome<Unit> = store.restoreFromTrash(removal)
 
     suspend fun remove(id: TrackId): Outcome<Unit> = store.remove(id)
 

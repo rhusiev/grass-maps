@@ -39,6 +39,7 @@ import nl.r1a.grassmap.plugin.api.host.NoRouteHistoryAccess
 import nl.r1a.grassmap.plugin.api.host.NoRoutingEngines
 import nl.r1a.grassmap.plugin.api.host.NoRoutingOptionsAccess
 import nl.r1a.grassmap.plugin.api.host.NoRoutingPacks
+import nl.r1a.grassmap.plugin.api.host.NoTrackLibraryAccess
 import nl.r1a.grassmap.plugin.api.host.PlatformActions
 import nl.r1a.grassmap.plugin.api.host.PluginServices
 import nl.r1a.grassmap.plugin.api.host.RegionAccess
@@ -48,6 +49,7 @@ import nl.r1a.grassmap.plugin.api.host.RoutingOptionsAccess
 import nl.r1a.grassmap.plugin.api.host.RoutingPackAccess
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
+import nl.r1a.grassmap.plugin.api.host.TrackLibraryAccess
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedStream
 import nl.r1a.grassmap.plugin.api.manifest.PluginFactory
@@ -92,6 +94,7 @@ class PluginHost(
     private val cameraFlow: Flow<Camera> = emptyFlow(),
     private val devToolsAccess: DevToolsAccess = NoDevToolsAccess,
     private val favouritesListsAccess: FavouritesListsAccess = NoFavouritesListsAccess,
+    private val trackLibraryAccess: TrackLibraryAccess = NoTrackLibraryAccess,
     private val platformActions: PlatformActions = NoPlatformActions,
     private val routingPacks: RoutingPackAccess = NoRoutingPacks,
     private val routingEngines: RoutingEngineAccess = NoRoutingEngines,
@@ -533,6 +536,8 @@ class PluginHost(
         override val devTools: DevToolsAccess = devToolsAccess
 
         override val favouritesLists: FavouritesListsAccess = favouritesListsAccess
+
+        override val trackLibrary: TrackLibraryAccess = trackLibraryAccess
 
         override val platformActions: PlatformActions = this@PluginHost.platformActions
 

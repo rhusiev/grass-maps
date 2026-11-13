@@ -92,6 +92,8 @@ import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleId
 import nl.r1a.grassmap.plugin.api.model.StyleSpec
+import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
+import nl.r1a.grassmap.plugin.api.model.TrackSort
 import nl.r1a.grassmap.plugin.api.model.TrackingMode
 import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.model.WebMercator
@@ -120,9 +122,11 @@ import nl.r1a.grassmap.plugins.point.info.PointInfoLabel
 import nl.r1a.grassmap.plugins.point.info.SelectedPointValue
 import nl.r1a.grassmap.plugins.route.planner.RoutePlannerContract
 import nl.r1a.grassmap.plugins.route.relations.RouteRelationsMapController
+import nl.r1a.grassmap.plugins.track.library.TrackLibraryContract
 import nl.r1a.grassmap.routing.selectedRoute
 import nl.r1a.grassmap.tracks.ElevationProfile
 import nl.r1a.grassmap.tracks.ElevationProfiler
+import nl.r1a.grassmap.tracks.TrackId
 import nl.r1a.grassmap.ui.shell.ControlBarLabels
 import nl.r1a.grassmap.ui.shell.ControlButton
 import nl.r1a.grassmap.ui.shell.FavouritesListsHost
@@ -136,6 +140,7 @@ import nl.r1a.grassmap.ui.shell.RoutePlanPanel
 import nl.r1a.grassmap.ui.shell.SearchScreenHost
 import nl.r1a.grassmap.ui.shell.TrackAnalysisPanel
 import nl.r1a.grassmap.ui.shell.TrackImportNoticeBar
+import nl.r1a.grassmap.ui.shell.TrackLibraryHost
 import nl.r1a.grassmap.ui.shell.routePlanTurns
 import nl.r1a.grassmap.ui.shell.routeTurnStep
 import nl.r1a.grassmap.ui.shell.trackImportNotice
@@ -333,6 +338,8 @@ private fun MapContent(
     val placeCard by PlaceCardSession.card.collectAsState()
     val listsVisible by FavouritesListsSession.visible.collectAsState()
     val listsQuerySequence = remember { longArrayOf(0L) }
+    val libraryVisible by TrackLibraryScreen.visible.collectAsState()
+    val libraryQuerySequence = remember { longArrayOf(0L) }
     val searchState by container.searchScreen.state.collectAsState()
     val searchSequence = remember { longArrayOf(0L) }
     var onlineSearchEnabled by remember { mutableStateOf(container.onlineSearchEnabled) }
@@ -1163,6 +1170,107 @@ private fun MapContent(
                 onClose = { FavouritesListsSession.hide() },
             )
         }
+        if (libraryVisible && !navigationActive) {
+            val libraryFlow =
+                remember(container) {
+                    container.streamAccess.subscribe<TrackLibraryState>(TrackLibraryContract.stateStream)
+                }
+            val libraryState by libraryFlow.collectAsState(initial = TrackLibraryState())
+            TrackLibraryHost(
+                state = libraryState,
+                strings = container.strings,
+                dark = isSystemInDarkTheme(),
+                onClose = { TrackLibraryScreen.hide() },
+                onCreateFolder = { name ->
+                    scope.launch {
+                        invokeTrackLibraryCommand(container, TrackLibraryContract.createFolder, listParams("name" to name))
+                    }
+                },
+                onRenameFolder = { folderId, name ->
+                    scope.launch {
+                        invokeTrackLibraryCommand(
+                            container,
+                            TrackLibraryContract.renameFolder,
+                            listParams("folderId" to folderId, "name" to name),
+                        )
+                    }
+                },
+                onEditTrack = { trackId, name, description, folderId ->
+                    scope.launch {
+                        invokeTrackLibraryCommand(
+                            container,
+                            TrackLibraryContract.editTrack,
+                            listParams(
+                                "trackId" to trackId,
+                                "name" to name,
+                                "description" to description,
+                                "folderId" to folderId.orEmpty(),
+                            ),
+                        )
+                    }
+                },
+                onMoveTrack = { trackId, folderId ->
+                    scope.launch {
+                        invokeTrackLibraryCommand(
+                            container,
+                            TrackLibraryContract.moveTrack,
+                            listParams("trackId" to trackId, "folderId" to folderId.orEmpty()),
+                        )
+                    }
+                },
+                onDeleteTrack = { trackId ->
+                    scope.launch {
+                        invokeTrackLibraryCommand(container, TrackLibraryContract.deleteTrack, listParams("trackId" to trackId))
+                    }
+                },
+                onShare = { trackId ->
+                    scope.launch {
+                        when (val file = container.trackExport.fileFor(TrackId(trackId))) {
+                            is Outcome.Failure -> {
+                                Log.w(TAG, "track share failed: ${file.error}")
+                            }
+
+                            is Outcome.Success -> {
+                                container.trackExport.share(file.value).onFailure { error ->
+                                    Log.w(TAG, "track share rejected: $error")
+                                }
+                            }
+                        }
+                    }
+                },
+                onUndo = {
+                    scope.launch {
+                        invokeTrackLibraryCommand(container, TrackLibraryContract.undo, JsonObject(emptyMap()))
+                    }
+                },
+                onQueryChange = { query ->
+                    libraryQuerySequence[0] += 1
+                    val sequence = libraryQuerySequence[0]
+                    scope.launch {
+                        invokeTrackLibraryCommand(
+                            container,
+                            TrackLibraryContract.setQuery,
+                            listParams("query" to query, "sequence" to sequence.toString()),
+                        )
+                    }
+                },
+                onSortChange = { sort: TrackSort ->
+                    scope.launch {
+                        invokeTrackLibraryCommand(container, TrackLibraryContract.setSort, listParams("sort" to sort.wireName))
+                    }
+                },
+                onSelectFolder = { folderId ->
+                    scope.launch {
+                        invokeTrackLibraryCommand(
+                            container,
+                            TrackLibraryContract.selectFolder,
+                            listParams("folderId" to folderId.orEmpty()),
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
     }
     LaunchedEffect(surface.host, bundle) {
         launch(start = CoroutineStart.UNDISPATCHED) { harness.run(surface, bundle) }
@@ -1547,6 +1655,17 @@ private fun listParams(vararg pairs: Pair<String, String>): JsonObject =
     buildJsonObject {
         pairs.forEach { (key, value) -> put(key, value) }
     }
+
+/** Runs one track library command and logs a typed failure; the screen keeps its state. */
+private suspend fun invokeTrackLibraryCommand(
+    container: AppContainer,
+    id: CommandId,
+    params: JsonObject,
+) {
+    container.commandBus.invoke(id, params).onFailure { error ->
+        Log.w(TAG, "track library command $id failed: $error")
+    }
+}
 
 private suspend fun loadBundle(
     container: AppContainer,

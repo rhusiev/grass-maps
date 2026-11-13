@@ -428,6 +428,7 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/guidance-ui` | the guidance panel's four facts and its Compose turn card, drawn from the navigation state the app holds | `plugin-api`, `plugin-ui-api` |
 | `plugins/nav-simulator` | the simulated run at 5 km/h through the production navigation session, its start and stop commands and its status stream | `plugin-api`, `navigation`, `routing` |
 | `plugins/track-layer` | the imported-track line layer and the controller that keeps it on the map | `plugin-api` |
+| `plugins/track-library` | the track library state, its folder definitions, the rename, describe, move and delete actions with one-step undo, and the four fixed orders and name search | `plugin-api` |
 | `plugins/contours` | the contour overlay for the Standard and Touring variants and the one-row layers panel that toggles it | `plugin-api`, `plugin-ui-api` |
 | `plugins/route-relations` | the hiking relation geometry assembler, the shared-way lane assignment, the OSMC waymark mapping and the `MapHost` layers over an inline GeoJSON source | `plugin-api` |
 | `plugins/route-warnings` | the warning list for fords, steps, barriers, railway crossings and private ways, with its profile filter and distance order | `plugin-api` |
@@ -2138,7 +2139,8 @@ profile. T-0401 adds the file store behind that path:
 - a document is `<sha256>.gpx` under the app's private `tracks/` directory,
   written exactly as it arrived;
 - a sidecar `<id>.json` sits beside it with the styling (`colour`, `widthDp`),
-  the cached profile, the document index and the hash it belongs to;
+  the cached profile, the document index and the hash it belongs to, plus the
+  library metadata of T-0414: the name, the description and the folder id;
 - the id is the document hash. A document with several tracks appends
   `:<index>` to every track, so one file stays one file and each track keeps a
   stable id.
@@ -2164,8 +2166,20 @@ controller: it collects the store's drawable list and writes it to the bound
 host, which draws one line per track in the overlays slot. The colour and width
 come from the sidecar, and a new track gets a deterministic palette colour
 derived from its hash, so the same file draws the same colour on every device.
-A segment with fewer than two points has no line. No track screen exists yet;
-T-0414 owns the library UI and T-0416 the share-sheet import.
+A segment with fewer than two points has no line.
+
+The library screen (T-0414) is `TrackLibraryHost` in `ui-shell`, drawn from the
+`track.library` plugin's state. `plugins/track-library` owns the folder filter,
+the name search and the four fixed orders (newest, name, distance, duration),
+and the screen draws its rows and action sheets. `StoreTrackLibrary` in `app`
+is the only writer: a rename, description or folder change rewrites that
+track's sidecar, and the folder definitions live in `.library.json` beside the
+documents. The GPX document is never rewritten. A delete parks the sidecar and
+document in a process-scoped `.trash` directory, so its receipt restores the
+track to the same folder; the same scoped receipt stack reverses folder and
+track changes one step at a time. The debug channel opens the screen with
+`core.track.library_show` until the map's track selection grows an entry
+(T-0415); T-0416 owns the share-sheet import.
 
 Twenty committed fixtures under `test-data/tracks` cover OsmAnd, Garmin and
 Strava exports, a GPX 1.0 file with a default namespace, waypoints and routes,
@@ -2246,8 +2260,8 @@ while it is empty. It rejects a partial list of fewer than 10 tracks.
 `PlatformFile` through the resolved `file.format` provider, and hands it to
 `PlatformActions.shareFile` or `PlatformActions.saveFile`. `plugins/share`
 names the file (a track name, or `grass-maps-tracks.gpx` for a list) and picks
-the extension-specific MIME type. The track library screen is T-0414, which
-will call this path; no screen or debug-only action invents a host for it now.
+the extension-specific MIME type. The track library screen's Share action calls
+this path for one track (T-0414).
 
 The debug channel exposes `core.track.import_test`:
 

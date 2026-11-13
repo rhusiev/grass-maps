@@ -62,6 +62,12 @@ class TrackAccess internal constructor(
     /** The tracks the map draws, current after every import, remove and style change. */
     val drawn: StateFlow<List<MapTrack>> = store.drawn
 
+    /**
+     * Increases after every write to the library, including the share import
+     * and a reload. The library plugin reloads its screen state on it (T-0416).
+     */
+    val revision: StateFlow<Long> = store.revision
+
     suspend fun import(
         fileName: String?,
         bytes: ByteArray,

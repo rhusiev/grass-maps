@@ -2163,7 +2163,9 @@ atomically, so an interrupted write leaves the previous file intact. Importing
 the same bytes again updates the same records and keeps their colour. A missing
 or corrupt sidecar, a hash mismatch or a document the format rejects skips that
 one track and logs it; the rest of the library still loads. Every call returns
-a typed `Outcome`, and file I/O runs on `Dispatchers.IO`.
+a typed `Outcome`, and file I/O runs on `Dispatchers.IO`. Every successful write
+raises the store's revision, so a view that caches the library reloads instead
+of keeping a snapshot.
 
 `ImportReport` carries the stored records and the skipped parts. The warning
 line is `<locator>: <what happened>`, for example
@@ -2201,9 +2203,11 @@ every parked token, so two deletes undo in reverse order and each restores its
 track to the same folder. The same scoped receipt stack reverses folder and
 track changes one step at a time. A folder index the build cannot read leaves
 each sidecar's folder id in place, so only the folder name is unresolved and a
-later edit cannot unfil the track. The debug channel opens the screen with
-`core.track.library_show` until the map's track selection grows an entry
-(T-0415); T-0416 owns the share-sheet import.
+later edit cannot unfil the track. The state follows the store's revision,
+which rises after every write, so a track that the share-sheet import stores
+appears on an already open library without a restart. The debug channel opens
+the screen with `core.track.library_show` until the map's track selection grows
+an entry (T-0415); T-0416 owns the share-sheet import.
 
 The library screen draws edge to edge, so the scrolling content clears the
 window's status-bar inset and both overlay bars are anchored to the bottom edge.
@@ -2342,7 +2346,10 @@ on `Dispatchers.IO`, never on Main.
 
 `TrackShareImport` imports through the same `TrackAccess` the library uses, so
 the document hash stays the track id: sharing the same file twice updates one
-record and keeps its colour. `MapScreen` draws the result in the round-6
+record and keeps its colour. That write raises the store's revision, and the
+`track.library` plugin reloads its state from it, so the imported track shows
+on an open library and the notice names the same record. `MapScreen` draws the
+result in the round-6
 `t-imported` notice: a dark line at the bottom of the map that names the
 imported track, counts the parts a partial document skipped, and offers Open,
 which shows the existing analysis panel. The notice clears itself after 8

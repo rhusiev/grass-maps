@@ -1,8 +1,13 @@
 package nl.r1a.grassmap.plugin.api.host
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
+
+/** The revision a build without a track library reports; it never changes. */
+private val NO_LIBRARY_REVISION = MutableStateFlow(0L)
 
 /** One applied track library action: the new screen state and its undo receipt. */
 data class TrackLibraryChange(
@@ -32,6 +37,14 @@ enum class TrackLibraryUndo {
  */
 interface TrackLibraryAccess {
     suspend fun state(): Outcome<TrackLibraryState>
+
+    /**
+     * Increases after every write to the library, whatever wrote it: this
+     * access, the share-sheet import (T-0416), or a reload. A screen that
+     * caches the state reloads when the number changes instead of keeping the
+     * snapshot it read at activation.
+     */
+    val revision: StateFlow<Long> get() = NO_LIBRARY_REVISION
 
     suspend fun createFolder(name: String): Outcome<TrackLibraryChange>
 

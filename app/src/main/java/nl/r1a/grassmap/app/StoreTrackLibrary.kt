@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.app
 
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import nl.r1a.grassmap.plugin.api.error.AppError
@@ -37,6 +38,10 @@ class StoreTrackLibrary(
     private val mutex = Mutex()
     private val pending = LinkedHashMap<String, Pending>()
     private var nextReceipt: Long = 1
+
+    /** The store's revision, so a share import reloads the cached screen state. */
+    override val revision: StateFlow<Long>
+        get() = tracks().revision
 
     override suspend fun state(): Outcome<TrackLibraryState> =
         mutex.withLock {

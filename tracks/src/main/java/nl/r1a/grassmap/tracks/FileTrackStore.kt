@@ -54,8 +54,11 @@ class FileTrackStore(
     private val sidecars = LinkedHashMap<TrackId, TrackSidecar>()
     private var loaded = false
     private val drawnState = MutableStateFlow<List<MapTrack>>(emptyList())
+    private val revisionState = MutableStateFlow(0L)
 
     override val drawn: StateFlow<List<MapTrack>> = drawnState.asStateFlow()
+
+    override val revision: StateFlow<Long> = revisionState.asStateFlow()
 
     override suspend fun save(
         track: StoredTrack,
@@ -440,6 +443,7 @@ class FileTrackStore(
 
     private fun publish() {
         drawnState.value = records.values.sortedBy { it.id.value }.map { it.toMapTrack() }
+        revisionState.value = revisionState.value + 1
     }
 
     private fun writeAtomically(

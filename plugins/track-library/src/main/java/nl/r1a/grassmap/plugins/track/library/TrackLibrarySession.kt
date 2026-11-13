@@ -1,8 +1,10 @@
 package nl.r1a.grassmap.plugins.track.library
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -39,12 +41,20 @@ class TrackLibrarySession(
     private var sort: TrackSort = TrackSort.NEWEST
     private var origin: GeoPoint? = null
     private var selectedListId: String? = null
+    private var loadedRevision: Long = NEVER_LOADED
 
     val state: StateFlow<TrackLibraryState> = current.asStateFlow()
 
     /** Loads the persisted library; a missing library leaves the empty state. */
     suspend fun load(): Outcome<Unit> =
         mutex.withLock {
+            // The revision is read before the state, so a write that lands
+            // after this point is seen by the next emission even when it
+            // arrives before the state read finishes.
+            val revision = access.revision.value
+            if (revision == loadedRevision) {
+                return@withLock Outcome.Success(Unit)
+            }
             when (val outcome = access.state()) {
                 is Outcome.Failure -> {
                     outcome
@@ -52,10 +62,24 @@ class TrackLibrarySession(
 
                 is Outcome.Success -> {
                     publish(outcome.value)
+                    loadedRevision = revision
                     Outcome.Success(Unit)
                 }
             }
         }
+
+    /**
+     * Reloads the persisted library on every host revision, so a write from a
+     * path this session does not own reaches the screen. The share-sheet
+     * import (T-0416) is that path: it stores the track through the host access
+     * directly, and without this the screen keeps the snapshot read at
+     * activation until the process restarts.
+     */
+    fun refreshOnWrite(scope: CoroutineScope) {
+        scope.launch {
+            access.revision.collect { load() }
+        }
+    }
 
     suspend fun createFolder(name: String): Outcome<TrackLibraryState> = mutate { access.createFolder(name) }
 
@@ -217,5 +241,8 @@ class TrackLibrarySession(
 
     private companion object {
         const val MAX_RECEIPTS = 20
+
+        /** A revision no store reports, so the first [load] always reads. */
+        const val NEVER_LOADED = -1L
     }
 }

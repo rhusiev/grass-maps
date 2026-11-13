@@ -156,6 +156,14 @@ interface TrackStore {
 
     /** The tracks the map draws, current after every save, remove and style change. */
     val drawn: StateFlow<List<MapTrack>>
+
+    /**
+     * Increases after every write that changes the library. A reader that
+     * cached [summaries] reloads when it sees a new value, so a write from a
+     * path the reader does not own - the share-sheet import (T-0416) is one -
+     * still reaches it.
+     */
+    val revision: StateFlow<Long>
 }
 
 /** The import path over [TrackStore]; T-0401 owns the file store, T-0414 the UI. */
@@ -169,8 +177,11 @@ class InMemoryTrackStore(
     private val trash = LinkedHashMap<String, TrashedTrack>()
     private var nextTrashToken = 1L
     private val drawnState = MutableStateFlow<List<MapTrack>>(emptyList())
+    private val revisionState = MutableStateFlow(0L)
 
     override val drawn: StateFlow<List<MapTrack>> = drawnState.asStateFlow()
+
+    override val revision: StateFlow<Long> = revisionState.asStateFlow()
 
     override suspend fun save(
         track: StoredTrack,
@@ -297,6 +308,7 @@ class InMemoryTrackStore(
 
     private fun publish() {
         drawnState.value = ordered().map { it.toMapTrack() }
+        revisionState.value = revisionState.value + 1
     }
 
     private fun ordered(): List<StoredTrack> = tracks.values.sortedBy { it.id.value }

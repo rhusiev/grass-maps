@@ -400,7 +400,7 @@ application ID is `nl.r1a.grassmap`.
 | `map` | the `MapHost` implementation, style composer, layer slots, gestures, camera, location puck | `plugin-api` |
 | `regions` | catalogue, download, verify, mount, update, source resolver, routing pack handling | `plugin-api` |
 | `routing` | route model, the `routing.engine` contract seam, its stable JSON form, the start/end planner state machine, and the reuse history store | `plugin-api` |
-| `navigation` | route follower, off-route detection, reroute policy, guidance | `routing`, `plugin-api` |
+| `navigation` | route follower, off-route detection, reroute policy, guidance, following a track | `routing`, `plugin-api` |
 | `alerts` | alert sources, scheduling, sound, vibration and banner output | `navigation`, `plugin-api` |
 | `planner` | the start/end plan, its intermediate stops, its undo and redo history, its reuse commands and its state and history streams; the shell draws the preview and the turn stepper from it | `plugin-api`, `routing` |
 | `places` | place and search provider hosts, favourites store | `plugin-api` |
@@ -2541,6 +2541,67 @@ which a precomputed state cannot carry, so the panel reports the dragged
 distances through a callback and `app` answers with `ElevationSegments`' own
 statistics. That keeps one range model, in the engine, and the callback is the
 host seam the earlier note expected; no `plugins/analysis-ui` module is created.
+
+### Following a track
+
+A track can be followed as the guidance route (T-0412). The analysis card's
+Follow track action asks where to start, because a line has a direction the file
+chose and the user may be nowhere near its first point. The sheet is the round-6
+`t-follow-start` design: the track's name and size, then From the start, From
+the end reversed, and From the nearest point, each with the walk to its join,
+then Start. From the nearest point is selected when the sheet opens and is the
+default the design names.
+
+`plugin-api` carries the vocabulary: `TrackFollowStart` (`Start`, `Reversed`,
+`Nearest`) and `TrackFollowPlan`, the three options with their join points and
+walk distances. `navigation` builds them in `trackFollowPlan` and
+`trackFollowRoute`. Both measure with the module's own `PolylineLocator`, which
+is now public, so a followed track's distances are in the same space
+`GeometryRouteFollower` reports remaining distance in; nothing here is a second
+follower.
+
+The three choices are three cuts of one line. From the start keeps the file's
+geometry whole. Reversed reverses it, so the first point is the track's last and
+the first bearing is the opposite one. From the nearest point projects the fix
+onto the line, cuts the line there and keeps the file's direction, so the part
+already behind the user is not guided again. A fix before the start clamps to
+the first point; a fix after the end clamps to the last and leaves nothing to
+walk, and the route keeps that last point twice so the session can start and
+arrive at once instead of refusing a one-point line.
+
+The route carries one line and no legs and no instructions, which is what a
+track actually stores. `RouteProgress` therefore counts the duration down
+uniformly over the line, and the navigation screen shows remaining distance,
+time and ETA with no turn card: a track without turns still follows the line.
+The duration is the track's own moving time from the analysis, or its wall-clock
+span when no step counted as moving, scaled to the part followed. A track
+without timestamps has no measured pace and falls back to 1.25 m/s, 4.5 km/h;
+that figure is chosen, not derived, and reversing a track reuses the same pace
+because the file carries one direction's timing.
+
+The app wiring is `TrackFollow.kt`: `StoredTrack.followLine()` joins every
+segment in file order, the position comes from `CameraModeController.position`,
+and Start hands the route to `NavigationController.start` with the Walk profile
+and the track's name as the destination label. A followed track starts with
+reroute off, because its line is the guidance the user asked for: a road route
+computed from the current position would abandon the track. While the user is
+still walking to the join point they are off that line, so the session reports
+off route instead of rerouting, and nothing leads them there yet except the
+sheet's walk distance. The track store is not touched;
+following reads the record the analysis card already loaded. A track with fewer
+than two points, or one whose points all sit on one spot, has no plan, so the
+card logs the refusal instead of opening a sheet with three dead choices.
+
+`TrackFollowTest` in `navigation` covers the plan and the three cuts, the
+position before the start and after the end, the two timing sources and the
+fallback, and the empty, short and zero-length lines. It also replays a 600 m
+dog-leg through the production `NavigationSession` with the geometry follower
+and asserts the trip stays on route, the remaining distance only shrinks and the
+run arrives. `FollowTrackContentTest` in `ui-shell` holds the prompt, the three
+rows, their walk hints, the default and the Ukrainian copy; `TrackFollowWiringTest`
+in `app` holds the segment join, the pace taken from the analysis and the
+refusal of a one-point track. No device screenshot of the sheet exists yet, and
+the light and dark palettes have content tests only.
 
 ## Slope-aware time models
 

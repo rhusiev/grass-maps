@@ -553,6 +553,15 @@ class AppContainer(
     }
 
     /**
+     * The share-sheet import and its notice (T-0416). The activity hands it the
+     * URI another app sent; it imports through the same [tracks] the library
+     * uses, so a duplicate file updates the record its hash already names.
+     */
+    internal val trackShare: TrackShareImport by lazy {
+        TrackShareImport(tracks = { tracks })
+    }
+
+    /**
      * The map layer over the track library (T-0401). The plugin module owns the
      * controller; the app gives it the store's drawable list and the bound map.
      */

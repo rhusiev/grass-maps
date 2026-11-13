@@ -139,6 +139,14 @@
     <string name="route_preview_hours_minutes">%1$s h %2$s min</string>
     <string name="route_preview_metres">%1$s m</string>
     <string name="route_preview_kilometres">%1$s km</string>
+    <string name="track_import_one">Imported %1$s</string>
+    <string name="track_import_one_unnamed">Imported 1 track</string>
+    <string name="track_import_many">Imported %1$s tracks</string>
+    <string name="track_import_skipped_one">1 part skipped</string>
+    <string name="track_import_skipped_many">%1$s parts skipped</string>
+    <string name="track_import_open">Open</string>
+    <string name="track_import_not_a_track">This file is not a track Grass Maps can read</string>
+    <string name="track_import_unreadable">The file could not be opened</string>
     <string name="nav_notification_channel_name">Navigation</string>
     <string name="nav_notification_channel_description">Shows the next turn while navigation runs and keeps location active</string>
     <string name="nav_notification_starting">Starting navigation</string>

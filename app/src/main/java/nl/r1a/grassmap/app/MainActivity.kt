@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
@@ -40,6 +41,10 @@ import nl.r1a.grassmap.plugins.links.LinkTarget
  * instance that would take the map host away from the first. A link the router
  * refuses, and an element link with no coordinates, answer with a message
  * instead of leaving the map unchanged and silent.
+ *
+ * A share from another app's sheet takes the same two entry points and is
+ * imported before the link path (T-0416): its `content:` or `file:` URI is a
+ * document, which the link router never opens.
  */
 class MainActivity : ComponentActivity() {
     private val container: AppContainer by lazy { (application as GrassMapsApplication).container }
@@ -88,7 +93,9 @@ class MainActivity : ComponentActivity() {
         bindLocationToLifecycle()
         requestNotificationPermissionWhileNavigating()
         if (savedInstanceState == null) {
-            openLink(intent?.dataString)
+            if (!importSharedDocument(intent)) {
+                openLink(intent?.dataString)
+            }
         }
         setContent {
             MapScreen(container = container, harness = harness)
@@ -98,13 +105,53 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        openLink(intent.dataString)
+        if (!importSharedDocument(intent)) {
+            openLink(intent.dataString)
+        }
     }
 
     override fun onDestroy() {
         container.locationPermission.unbind(this)
         container.documentSaver.unbind(this)
         super.onDestroy()
+    }
+
+    /**
+     * Imports a GPX another app shared to this one (T-0416), and answers
+     * whether this intent was one. The URI is read through the grant the intent
+     * carries, never a storage permission, and the import runs off Main. A
+     * first intent and a share that reaches the running instance take the same
+     * path, because the activity is `singleTop`.
+     */
+    private fun importSharedDocument(intent: Intent?): Boolean {
+        if (intent == null) {
+            return false
+        }
+        val uri =
+            TrackShareIntent.documentUri(
+                action = intent.action,
+                streamUri = streamUriOf(intent),
+                dataUri = intent.dataString,
+            ) ?: return false
+        lifecycleScope.launch {
+            container.trackShare.import(uri, ContentResolverSharedReader(this@MainActivity))
+        }
+        return true
+    }
+
+    /** The stream extra a share carries; the clip data holds it when the sender set one. */
+    private fun streamUriOf(intent: Intent): String? {
+        val clipped =
+            intent.clipData
+                ?.takeIf { data -> data.itemCount > 0 }
+                ?.getItemAt(0)
+                ?.uri
+        if (clipped != null) {
+            return clipped.toString()
+        }
+        @Suppress("DEPRECATION")
+        val stream = intent.getParcelableExtra(Intent.EXTRA_STREAM) as? Uri
+        return stream?.toString()
     }
 
     /** Parks the link's camera move, or tells the user why the map will not move. */

@@ -140,6 +140,14 @@
     <string name="route_preview_hours_minutes">%1$s год %2$s хв</string>
     <string name="route_preview_metres">%1$s м</string>
     <string name="route_preview_kilometres">%1$s км</string>
+    <string name="track_import_one">Імпортовано %1$s</string>
+    <string name="track_import_one_unnamed">Імпортовано 1 трек</string>
+    <string name="track_import_many">Імпортовано треків: %1$s</string>
+    <string name="track_import_skipped_one">Пропущено 1 частину</string>
+    <string name="track_import_skipped_many">Пропущено частин: %1$s</string>
+    <string name="track_import_open">Відкрити</string>
+    <string name="track_import_not_a_track">Цей файл не є треком, який Grass Maps може прочитати</string>
+    <string name="track_import_unreadable">Не вдалося відкрити файл</string>
     <string name="nav_notification_channel_name">Навігація</string>
     <string name="nav_notification_channel_description">Показує наступний поворот під час навігації та не дає вимкнути місцеположення</string>
     <string name="nav_notification_starting">Запуск навігації</string>

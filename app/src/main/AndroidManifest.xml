@@ -28,6 +28,20 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- T-0416: a GPX another app shares to Grass Maps. Android's MIME
+                 map has no entry for the gpx extension, so a file manager or a
+                 messenger sends the document as application/octet-stream;
+                 both types are declared or the row never appears for a real
+                 file. The app reads the URI through the grant the share intent
+                 carries, so no storage permission is declared, and a document
+                 that is not a track answers with a notice instead of being
+                 silently ignored. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/gpx+xml" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
             <!-- T-0211: geo: links and osm.org pages from other apps. The app
                  offers itself as the default maps app through this filter. -->
             <intent-filter>

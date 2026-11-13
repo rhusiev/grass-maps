@@ -135,8 +135,10 @@ import nl.r1a.grassmap.ui.shell.PlaceCardHost
 import nl.r1a.grassmap.ui.shell.RoutePlanPanel
 import nl.r1a.grassmap.ui.shell.SearchScreenHost
 import nl.r1a.grassmap.ui.shell.TrackAnalysisPanel
+import nl.r1a.grassmap.ui.shell.TrackImportNoticeBar
 import nl.r1a.grassmap.ui.shell.routePlanTurns
 import nl.r1a.grassmap.ui.shell.routeTurnStep
+import nl.r1a.grassmap.ui.shell.trackImportNotice
 import java.io.File
 import java.time.ZoneId
 import java.util.Locale
@@ -158,6 +160,7 @@ private const val LABEL_CLEAR_FONT_SP = 18
 private const val LABEL_CLEAR_PADDING_DP = 4
 private const val CLEAR_GLYPH = "×"
 private const val DISTANCE_BADGE_MILLIS = 4_000L
+private const val TRACK_IMPORT_NOTICE_MILLIS = 8_000L
 private const val BANNER_TICK_MILLIS = 1_000L
 private const val CONTOURS_PANEL_TOP_DP = 80
 private const val METRE_DECIMALS = 1
@@ -371,6 +374,8 @@ private fun MapContent(
     // The track analysis panel (T-0404), opened by the control command until the
     // map's track selection opens it (T-0415).
     val analysisTrack by TrackAnalysisSession.track.collectAsState()
+    // The share-sheet import's notice (T-0416).
+    val trackShare by container.trackShare.notice.collectAsState()
     var analysisAxis by remember(analysisTrack) { mutableStateOf(ElevationChartAxis.Distance) }
     val analysisProfile by
         produceState<ElevationProfile?>(null, analysisTrack) {
@@ -762,6 +767,23 @@ private fun MapContent(
                     TAG,
                     "region-needs-redownload region=${bundle.sources.problemRegion ?: "unknown"} problem=$problem",
                 )
+            }
+        }
+        val share = trackShare
+        if (share != null && !navigationActive) {
+            val notice = remember(share.outcome, container.strings) { trackImportNotice(share.outcome, container.strings) }
+            TrackImportNoticeBar(
+                notice = notice,
+                onOpen = { container.trackShare.openImported() },
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(BAR_PADDING_DP.dp),
+            )
+            LaunchedEffect(share.sequence) {
+                delay(TRACK_IMPORT_NOTICE_MILLIS)
+                container.trackShare.dismiss(share.sequence)
             }
         }
         if (container.devToolsVisible && !navigationActive) {

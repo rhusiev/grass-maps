@@ -2209,6 +2209,32 @@ no timing, one point has no time span, and a track without elevation has no
 elevation range. `TrackStatisticsPolicy` holds the thresholds. They are chosen,
 not derived from OsmAnd.
 
+`TrackElevationCorrection` fills a missing height from the mounted region's DEM
+(T-0403). Only a point without a height is sampled; a height in the file is
+never replaced, and a point outside the DEM, in a grid gap, or behind a failed
+read keeps no height and is counted. The step takes an `ElevationAccess` and
+does no I/O of its own, so a test scripts the source. With no region mounted it
+returns the track unchanged and reports `NoDem`. The importer corrects before
+it computes the profile, and the store corrects again when it reloads a
+document, because the GPX stays the source of truth and the correction is
+derived from the DEM mounted now rather than written into the file. Each
+`StoredTrack` carries an `ElevationCorrectionReport`: the source, the counts of
+filled, kept and unfilled points, and the failed reads. A corrected profile
+differs from the cached one, so the first load after the correction rewrites
+the sidecar once with the DEM heights.
+
+`test-data/tracks/fixture-mini-stripped.gpx` is a seven-point track at cell
+centres of the committed fixture-mini grid, heights stripped except the first,
+which stays 1000.0 m, plus one point outside the tile. The app test
+`TrackElevationCorrectionOracleTest` imports it through the real `file.gpx`
+provider, the file store and `RegionElevation`, and compares the filled heights
+with the committed cell values within 1.0 m, the oracle's `elevationMeters`
+tolerance. It also asserts the real height is untouched, the outside point
+stays empty, and the same result comes back after a reload. That tolerance is
+chosen, not derived, as `test-data/tracks/osmand-oracle/README.md` records; the
+test proves the correction preserves the DEM's answer, not that the grid agrees
+with the field.
+
 `test-data/tracks/generate-fixtures.py` prints the per-track statistics oracle,
 and `TrackFixturesTest.everyTimedFixtureHasItsExpectedStatistics` asserts it
 exactly. The other half of the milestone, 10 real tracks against OsmAnd, has no

@@ -32,6 +32,8 @@ data class StoredTrack(
     val style: TrackStyle = TrackStyle(),
     val trackIndex: Int = 0,
     val elevation: ElevationCorrectionReport? = null,
+    val description: String? = null,
+    val listId: String? = null,
 ) {
     /** The drawable form the map layer reads; geometry only, no profile. */
     fun toMapTrack(): MapTrack =
@@ -54,6 +56,27 @@ data class TrackSummary(
     val analysis: TrackAnalysis,
     val savedAtMillis: Long,
     val trackIndex: Int = 0,
+    val description: String? = null,
+    val listId: String? = null,
+)
+
+/**
+ * The library metadata a sidecar carries beside the imported document
+ * (T-0414). [description] is stored as it arrived and may carry simple HTML,
+ * so a renderer sanitises it before a screen draws it. [listId] is the folder
+ * the track belongs to, or null when it is unfiled. The GPX document is never
+ * rewritten for a metadata change.
+ */
+data class TrackMetadata(
+    val name: String?,
+    val description: String?,
+    val listId: String?,
+)
+
+/** One removed track parked for its one-step undo (T-0414). */
+@JvmInline
+value class TrackRemoval(
+    val token: String,
 )
 
 /**
@@ -91,8 +114,27 @@ interface TrackStore {
         style: TrackStyle,
     ): Outcome<Unit>
 
+    /**
+     * Replaces the name, description and folder of one track and rewrites its
+     * sidecar. The stored document is untouched.
+     */
+    suspend fun setMetadata(
+        id: TrackId,
+        metadata: TrackMetadata,
+    ): Outcome<Unit>
+
     /** Removes a track and its document when no other track uses that document. */
     suspend fun remove(id: TrackId): Outcome<Unit>
+
+    /**
+     * Removes a track but keeps its sidecar and document for
+     * [restoreFromTrash]. The removal is process-scoped; it is the library
+     * screen's one-step undo, not a quarantine that survives a restart.
+     */
+    suspend fun removeToTrash(id: TrackId): Outcome<TrackRemoval>
+
+    /** Puts a removed track, its metadata and its folder back. */
+    suspend fun restoreFromTrash(removal: TrackRemoval): Outcome<Unit>
 
     /** Re-reads a directory-backed store; an in-memory store has nothing to do. */
     suspend fun reload(): Outcome<Unit>
@@ -102,10 +144,15 @@ interface TrackStore {
 }
 
 /** The import path over [TrackStore]; T-0401 owns the file store, T-0414 the UI. */
-class InMemoryTrackStore : TrackStore {
+class InMemoryTrackStore(
+    private val clock: () -> Long = { 0L },
+) : TrackStore {
     private val mutex = Mutex()
     private val tracks = LinkedHashMap<TrackId, StoredTrack>()
     private val savedAt = mutableMapOf<TrackId, Long>()
+    private val sources = mutableMapOf<TrackId, ByteArray>()
+    private val trash = LinkedHashMap<String, TrashedTrack>()
+    private var nextTrashToken = 1L
     private val drawnState = MutableStateFlow<List<MapTrack>>(emptyList())
 
     override val drawn: StateFlow<List<MapTrack>> = drawnState.asStateFlow()
@@ -115,9 +162,18 @@ class InMemoryTrackStore : TrackStore {
         source: ByteArray?,
     ): Outcome<StoredTrack> =
         mutex.withLock {
-            val effective = track.withPreservedStyle(tracks[track.id])
+            val existing = tracks[track.id]
+            val effective =
+                track.withPreservedStyle(existing).copy(
+                    name = existing?.name ?: track.name,
+                    description = existing?.description ?: track.description,
+                    listId = existing?.listId ?: track.listId,
+                )
             tracks[track.id] = effective
-            savedAt.putIfAbsent(track.id, 0L)
+            savedAt[track.id] = clock()
+            if (source != null) {
+                sources[track.id] = source
+            }
             publish()
             Outcome.Success(effective)
         }
@@ -139,6 +195,8 @@ class InMemoryTrackStore : TrackStore {
                     analysis = track.analysis,
                     savedAtMillis = savedAt[track.id] ?: 0L,
                     trackIndex = track.trackIndex,
+                    description = track.description,
+                    listId = track.listId,
                 )
             }
         }
@@ -157,12 +215,56 @@ class InMemoryTrackStore : TrackStore {
             Outcome.Success(Unit)
         }
 
+    override suspend fun setMetadata(
+        id: TrackId,
+        metadata: TrackMetadata,
+    ): Outcome<Unit> =
+        mutex.withLock {
+            if (!metadata.isValid()) {
+                return@withLock Outcome.Failure(AppError.InvalidInput)
+            }
+            val existing = tracks[id] ?: return@withLock Outcome.Failure(AppError.NotFound)
+            val cleaned = metadata.cleaned()
+            tracks[id] =
+                existing.copy(
+                    name = cleaned.name,
+                    description = cleaned.description,
+                    listId = cleaned.listId,
+                )
+            publish()
+            Outcome.Success(Unit)
+        }
+
     override suspend fun remove(id: TrackId): Outcome<Unit> =
         mutex.withLock {
             if (tracks.remove(id) == null) {
                 return@withLock Outcome.Failure(AppError.NotFound)
             }
             savedAt.remove(id)
+            sources.remove(id)
+            publish()
+            Outcome.Success(Unit)
+        }
+
+    override suspend fun removeToTrash(id: TrackId): Outcome<TrackRemoval> =
+        mutex.withLock {
+            val record = tracks.remove(id) ?: return@withLock Outcome.Failure(AppError.NotFound)
+            val saved = savedAt.remove(id) ?: 0L
+            val source = sources.remove(id)
+            val token = "memory:" + nextTrashToken++
+            trash[token] = TrashedTrack(record, saved, source)
+            publish()
+            Outcome.Success(TrackRemoval(token))
+        }
+
+    override suspend fun restoreFromTrash(removal: TrackRemoval): Outcome<Unit> =
+        mutex.withLock {
+            val trashed = trash.remove(removal.token) ?: return@withLock Outcome.Failure(AppError.NotFound)
+            tracks[trashed.record.id] = trashed.record
+            savedAt[trashed.record.id] = trashed.savedAtMillis
+            if (trashed.source != null) {
+                sources[trashed.record.id] = trashed.source
+            }
             publish()
             Outcome.Success(Unit)
         }
@@ -174,7 +276,40 @@ class InMemoryTrackStore : TrackStore {
     }
 
     private fun ordered(): List<StoredTrack> = tracks.values.sortedBy { it.id.value }
+
+    private data class TrashedTrack(
+        val record: StoredTrack,
+        val savedAtMillis: Long,
+        val source: ByteArray?,
+    )
 }
+
+/**
+ * A metadata value is bounded before it reaches a sidecar. The name is trimmed
+ * to null when blank; the description keeps its markup but not an unbounded
+ * size; a blank folder id means unfiled.
+ */
+internal fun TrackMetadata.isValid(): Boolean =
+    name.orEmpty().length <= MAX_TRACK_NAME_LENGTH &&
+        description.orEmpty().length <= MAX_TRACK_DESCRIPTION_LENGTH &&
+        listId.orEmpty().length <= MAX_TRACK_LIST_ID_LENGTH
+
+internal fun TrackMetadata.cleaned(): TrackMetadata =
+    TrackMetadata(
+        name = name.cleanedName(),
+        description = description.cleanedDescription(),
+        listId = listId.cleanedListId(),
+    )
+
+internal fun String?.cleanedName(): String? = this?.trim()?.takeIf { it.isNotEmpty() }
+
+internal fun String?.cleanedDescription(): String? = this?.takeIf { it.isNotEmpty() }
+
+internal fun String?.cleanedListId(): String? = this?.trim()?.takeIf { it.isNotEmpty() }
+
+internal const val MAX_TRACK_NAME_LENGTH: Int = 200
+internal const val MAX_TRACK_DESCRIPTION_LENGTH: Int = 20_000
+internal const val MAX_TRACK_LIST_ID_LENGTH: Int = 200
 
 internal fun StoredTrack.withPreservedStyle(existing: StoredTrack?): StoredTrack =
     when {

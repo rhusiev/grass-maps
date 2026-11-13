@@ -26,6 +26,8 @@ internal data class TrackSidecar(
     val savedAtMillis: Long,
     val style: TrackStyle,
     val analysis: TrackAnalysis,
+    val description: String? = null,
+    val listId: String? = null,
 )
 
 /**
@@ -41,6 +43,8 @@ internal object TrackSidecarJson {
     private const val DOCUMENT_HASH = "documentHash"
     private const val TRACK_INDEX = "trackIndex"
     private const val NAME = "name"
+    private const val DESCRIPTION = "description"
+    private const val LIST_ID = "listId"
     private const val SAVED_AT = "savedAtMillis"
     private const val STYLE = "style"
     private const val COLOUR = "colour"
@@ -64,6 +68,8 @@ internal object TrackSidecarJson {
             put(DOCUMENT_HASH, sidecar.documentHash)
             put(TRACK_INDEX, sidecar.trackIndex)
             put(NAME, sidecar.name)
+            put(DESCRIPTION, sidecar.description)
+            put(LIST_ID, sidecar.listId)
             put(SAVED_AT, sidecar.savedAtMillis)
             put(
                 STYLE,
@@ -117,6 +123,8 @@ internal object TrackSidecarJson {
             savedAtMillis = savedAtMillis,
             style = style,
             analysis = analysis,
+            description = root.string(DESCRIPTION),
+            listId = root.string(LIST_ID),
         )
     }
 

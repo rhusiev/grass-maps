@@ -80,16 +80,27 @@ class FileTrackStore(
                 } else if (!document.isFile) {
                     return@withContext Outcome.Failure(AppError.InvalidInput)
                 }
-                val effective = track.copy(style = existing?.style ?: track.style)
+                // An existing record keeps the user's name, description and
+                // folder, exactly as it keeps the style: re-importing the same
+                // document must not undo a rename or move (T-0414).
+                val effective =
+                    track.copy(
+                        style = existing?.style ?: track.style,
+                        name = existing?.name ?: track.name,
+                        description = existing?.description ?: track.description,
+                        listId = existing?.listId ?: track.listId,
+                    )
                 val sidecar =
                     TrackSidecar(
                         id = track.id.value,
                         documentHash = documentHash,
                         trackIndex = track.trackIndex,
-                        name = track.name,
+                        name = effective.name,
                         savedAtMillis = clock(),
                         style = effective.style,
                         analysis = effective.analysis,
+                        description = effective.description,
+                        listId = effective.listId,
                     )
                 if (!writeAtomically(sidecarFile(track.id), TrackSidecarJson.encode(sidecar).toByteArray())) {
                     return@withContext writeFailure("cannot write the sidecar of ${track.id.value}")
@@ -129,6 +140,8 @@ class FileTrackStore(
                         analysis = sidecar.analysis,
                         savedAtMillis = sidecar.savedAtMillis,
                         trackIndex = sidecar.trackIndex,
+                        description = sidecar.description,
+                        listId = sidecar.listId,
                     )
                 }
             }
@@ -151,6 +164,40 @@ class FileTrackStore(
                     return@withContext writeFailure("cannot rewrite the sidecar of ${id.value}")
                 }
                 records[id] = record.copy(style = style)
+                sidecars[id] = updated
+                publish()
+                Outcome.Success(Unit)
+            }
+        }
+
+    override suspend fun setMetadata(
+        id: TrackId,
+        metadata: TrackMetadata,
+    ): Outcome<Unit> =
+        mutex.withLock {
+            withContext(Dispatchers.IO) {
+                load()
+                if (!metadata.isValid()) {
+                    return@withContext Outcome.Failure(AppError.InvalidInput)
+                }
+                val record = records[id] ?: return@withContext Outcome.Failure(AppError.NotFound)
+                val sidecar = sidecars[id] ?: return@withContext Outcome.Failure(AppError.NotFound)
+                val cleaned = metadata.cleaned()
+                val updated =
+                    sidecar.copy(
+                        name = cleaned.name,
+                        description = cleaned.description,
+                        listId = cleaned.listId,
+                    )
+                if (!writeAtomically(sidecarFile(id), TrackSidecarJson.encode(updated).toByteArray())) {
+                    return@withContext writeFailure("cannot rewrite the sidecar of ${id.value}")
+                }
+                records[id] =
+                    record.copy(
+                        name = cleaned.name,
+                        description = cleaned.description,
+                        listId = cleaned.listId,
+                    )
                 sidecars[id] = updated
                 publish()
                 Outcome.Success(Unit)
@@ -182,6 +229,78 @@ class FileTrackStore(
             }
         }
 
+    override suspend fun removeToTrash(id: TrackId): Outcome<TrackRemoval> =
+        mutex.withLock {
+            withContext(Dispatchers.IO) {
+                load()
+                val sidecar = sidecars[id] ?: return@withContext Outcome.Failure(AppError.NotFound)
+                val token = TRASH_PREFIX + id.value.replace(':', '_') + "-" + clock()
+                val directory = trashDirectory(token)
+                if (!directory.isDirectory && !directory.mkdirs()) {
+                    return@withContext writeFailure("cannot create the trash directory for ${id.value}")
+                }
+                val sidecarFile = sidecarFile(id)
+                if (!moveFile(sidecarFile, File(directory, sidecarFile.name))) {
+                    return@withContext writeFailure("cannot park the sidecar of ${id.value}")
+                }
+                records.remove(id)
+                sidecars.remove(id)
+                val documentStillUsed = sidecars.values.any { other -> other.documentHash == sidecar.documentHash }
+                if (!documentStillUsed) {
+                    val document = File(root, documentFileName(sidecar.documentHash))
+                    if (document.exists() && !moveFile(document, File(directory, document.name))) {
+                        log("track ${id.value}: the document could not be parked")
+                    }
+                }
+                publish()
+                Outcome.Success(TrackRemoval(token))
+            }
+        }
+
+    override suspend fun restoreFromTrash(removal: TrackRemoval): Outcome<Unit> =
+        mutex.withLock {
+            withContext(Dispatchers.IO) {
+                load()
+                val directory = trashDirectory(removal.token)
+                if (!directory.isDirectory) {
+                    return@withContext Outcome.Failure(AppError.NotFound)
+                }
+                val parked =
+                    directory
+                        .listFiles()
+                        ?.filter { it.isFile && it.name.endsWith(SIDECAR_SUFFIX) }
+                        .orEmpty()
+                val sidecarText =
+                    parked.singleOrNull()?.let { file ->
+                        try {
+                            file.readText()
+                        } catch (exception: IOException) {
+                            null
+                        } catch (exception: SecurityException) {
+                            null
+                        }
+                    } ?: return@withContext Outcome.Failure(AppError.NotFound)
+                val sidecar = TrackSidecarJson.decode(sidecarText) ?: return@withContext Outcome.Failure(AppError.CorruptData)
+                val target = File(root, sidecarFileName(TrackId(sidecar.id)))
+                if (!moveFile(parked.single(), target)) {
+                    return@withContext writeFailure("cannot restore the sidecar of ${sidecar.id}")
+                }
+                directory.listFiles().orEmpty().filter { it.isFile && it.name.endsWith(DOCUMENT_SUFFIX) }.forEach { document ->
+                    val restored = File(root, documentFileName(sidecar.documentHash))
+                    if (!restored.exists() && !moveFile(document, restored)) {
+                        log("track ${sidecar.id}: the document could not be restored")
+                    }
+                }
+                clearTrash(directory)
+                records.clear()
+                sidecars.clear()
+                loaded = false
+                load()
+                publish()
+                Outcome.Success(Unit)
+            }
+        }
+
     override suspend fun reload(): Outcome<Unit> =
         mutex.withLock {
             withContext(Dispatchers.IO) {
@@ -205,6 +324,7 @@ class FileTrackStore(
                 ?.filter { it.isFile && it.name.endsWith(SIDECAR_SUFFIX) && !it.name.startsWith(TEMPORARY_PREFIX) }
                 .orEmpty()
                 .sortedBy { it.name }
+        clearTrash()
         for (file in files) {
             val sidecar = readSidecar(file) ?: continue
             val id = TrackId(sidecar.id)
@@ -250,6 +370,8 @@ class FileTrackStore(
                     style = sidecar.style,
                     trackIndex = sidecar.trackIndex,
                     elevation = corrected.report,
+                    description = sidecar.description,
+                    listId = sidecar.listId,
                 )
             sidecars[id] = sidecar
             if (analysis != sidecar.analysis) {
@@ -331,6 +453,35 @@ class FileTrackStore(
 
     private fun sidecarFile(id: TrackId): File = File(root, sidecarFileName(id))
 
+    private fun trashDirectory(token: String): File = File(root, TRASH_DIRECTORY + "/" + token)
+
+    /** A restart starts with an empty trash; a deletion undo lasts one session. */
+    private fun clearTrash(except: File? = null) {
+        val directory = File(root, TRASH_DIRECTORY)
+        val entries = directory.listFiles().orEmpty()
+        for (entry in entries) {
+            if (except != null && entry.absolutePath == except.absolutePath) {
+                continue
+            }
+            entry.deleteRecursively()
+        }
+    }
+
+    private fun moveFile(
+        from: File,
+        to: File,
+    ): Boolean =
+        try {
+            Files.move(from.toPath(), to.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            true
+        } catch (exception: IOException) {
+            log("cannot move $from to $to: ${exception.message}")
+            false
+        } catch (exception: SecurityException) {
+            log("cannot move $from to $to: ${exception.message}")
+            false
+        }
+
     private fun writeFailure(detail: String): Outcome.Failure {
         log(detail)
         return Outcome.Failure(AppError.Internal(ERROR_ID, detail))
@@ -342,6 +493,8 @@ class FileTrackStore(
         const val TEMPORARY_PREFIX = "."
         const val TEMPORARY_SUFFIX = ".part"
         const val ERROR_ID = "tracks.store"
+        const val TRASH_DIRECTORY = ".trash"
+        const val TRASH_PREFIX = "track-"
 
         fun sidecarFileName(id: TrackId): String = id.value + SIDECAR_SUFFIX
 

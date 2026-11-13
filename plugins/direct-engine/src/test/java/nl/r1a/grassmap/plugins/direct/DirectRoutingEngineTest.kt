@@ -8,6 +8,8 @@ import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.provider.RouteModifier
 import nl.r1a.grassmap.plugin.api.provider.RouteModifierKind
+import nl.r1a.grassmap.plugin.api.provider.RouteOptions
+import nl.r1a.grassmap.plugin.api.provider.RoutePreference
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteRequest
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngineContract
@@ -94,6 +96,29 @@ class DirectRoutingEngineTest {
             val request = requestOf(listOf(LVIV, TERNOPIL)).copy(modifiers = listOf(modifier))
 
             assertEquals(Outcome.Failure(AppError.Unsupported), engine.route(request, CancellationHandle.None))
+        }
+
+    @Test
+    fun preferencesDoNotChangeAGeodesicBecauseThereIsNoCosting() =
+        runTest {
+            val plain = engine.routeTo(listOf(LVIV, TERNOPIL)).single()
+            val request =
+                requestOf(listOf(LVIV, TERNOPIL)).copy(
+                    options =
+                        RouteOptions(
+                            hills = RoutePreference.Avoid,
+                            busyRoads = RoutePreference.DontMind,
+                            roughSurfaces = RoutePreference.Avoid,
+                        ),
+                )
+
+            val preferred =
+                when (val outcome = engine.route(request, CancellationHandle.None)) {
+                    is Outcome.Success -> outcome.value.single()
+                    is Outcome.Failure -> throw AssertionError("expected a route, got ${outcome.error}")
+                }
+
+            assertEquals(plain, preferred)
         }
 
     @Test

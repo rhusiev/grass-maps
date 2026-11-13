@@ -6,8 +6,8 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
-import nl.r1a.grassmap.plugin.api.provider.Hilliness
 import nl.r1a.grassmap.plugin.api.provider.RouteOptions
+import nl.r1a.grassmap.plugin.api.provider.RoutePreference
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 
 /**
@@ -89,33 +89,83 @@ internal object ValhallaProfiles {
         }
 
     /**
-     * The costing options for one request: the tuned profile document, with the
-     * user's hilliness preference applied when it is not the default.
+     * The costing options for one request: the tuned profile document with the
+     * three preferences applied when a step is not [RoutePreference.Normal]
+     * (T-0421).
      *
-     * Valhalla reads `use_hills` as willingness to take a hill, 0 to 1. Full
-     * avoidance is 0.0; the profile documents keep their tuned values (0.5
-     * walk, 0.9 hike, 0.4 bike) when the preference is unset. The setting is
-     * applied only to the profile in the request, so another profile's options
-     * cannot appear in this body.
+     * Valhalla reads `use_hills`, `use_roads`, `use_living_streets` and
+     * `use_tracks` as willingness, 0 to 1, and `avoid_bad_surfaces` as
+     * avoidance, 0 to 1. `Normal` keeps the profile's tuned value or, when the
+     * profile does not name the key, Valhalla's own default. The steps are a
+     * cost preference, not an access rule: an avoided way is still used when no
+     * other route exists.
+     *
+     * The mapping is:
+     * - hills: `use_hills` 0.0 / tuned / 1.0 for walk, hike and bike
+     * - busy roads: bike `use_roads` 0.0 / tuned / 1.0; walk and hike
+     *   `use_living_streets` 1.0 / tuned / 0.0
+     * - rough surfaces: bike `avoid_bad_surfaces` 1.0 / tuned / 0.0; walk and
+     *   hike `use_tracks` 0.0 / tuned / 1.0
+     *
+     * Pedestrian costing has no `use_roads` or `avoid_bad_surfaces`, so the on
+     * foot steps use the closest pedestrian option instead of a key Valhalla
+     * ignores. Car is out of v1 and keeps its profile.
+     *
+     * The setting is applied only to the profile in the request, so another
+     * profile's options cannot appear in this body.
      */
     fun costingOptions(
         profile: RouteProfile,
         options: RouteOptions,
     ): JsonObject {
         val base = of(profile).costingOptions
-        if (options.hilliness == Hilliness.Default) {
+        val overrides = mutableMapOf<String, JsonPrimitive>()
+        when (profile) {
+            RouteProfile.Walk, RouteProfile.Hike -> {
+                applyPreference(overrides, USE_HILLS_KEY, options.hills, avoid = 0.0, dontMind = 1.0)
+                applyPreference(overrides, USE_LIVING_STREETS_KEY, options.busyRoads, avoid = 1.0, dontMind = 0.0)
+                applyPreference(overrides, USE_TRACKS_KEY, options.roughSurfaces, avoid = 0.0, dontMind = 1.0)
+            }
+
+            RouteProfile.Bike -> {
+                applyPreference(overrides, USE_HILLS_KEY, options.hills, avoid = 0.0, dontMind = 1.0)
+                applyPreference(overrides, USE_ROADS_KEY, options.busyRoads, avoid = 0.0, dontMind = 1.0)
+                applyPreference(overrides, AVOID_BAD_SURFACES_KEY, options.roughSurfaces, avoid = 1.0, dontMind = 0.0)
+            }
+
+            RouteProfile.Car -> {
+                Unit
+            }
+        }
+        if (overrides.isEmpty()) {
             return base
         }
-        val avoided =
-            when (profile) {
-                RouteProfile.Walk, RouteProfile.Hike, RouteProfile.Bike -> FULL_HILL_AVOIDANCE
-                RouteProfile.Car -> return base
-            }
-        return JsonObject(base + ("use_hills" to JsonPrimitive(avoided)))
+        return JsonObject(base + overrides)
     }
 
-    /** Valhalla's `use_hills` value for the strongest hill avoidance. */
-    private const val FULL_HILL_AVOIDANCE = 0.0
+    /**
+     * Applies one step to one key. [avoid] and [dontMind] are the values in the
+     * direction the key reads, which is not the same direction for every key.
+     */
+    private fun applyPreference(
+        overrides: MutableMap<String, JsonPrimitive>,
+        key: String,
+        preference: RoutePreference,
+        avoid: Double,
+        dontMind: Double,
+    ) {
+        when (preference) {
+            RoutePreference.Avoid -> overrides[key] = JsonPrimitive(avoid)
+            RoutePreference.Normal -> Unit
+            RoutePreference.DontMind -> overrides[key] = JsonPrimitive(dontMind)
+        }
+    }
+
+    private const val USE_HILLS_KEY = "use_hills"
+    private const val USE_ROADS_KEY = "use_roads"
+    private const val USE_LIVING_STREETS_KEY = "use_living_streets"
+    private const val USE_TRACKS_KEY = "use_tracks"
+    private const val AVOID_BAD_SURFACES_KEY = "avoid_bad_surfaces"
 
     /** The committed document, compared verbatim by the profile test. */
     fun document(): JsonObject =

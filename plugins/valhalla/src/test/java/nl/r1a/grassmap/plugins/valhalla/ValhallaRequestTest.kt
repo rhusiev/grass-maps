@@ -7,9 +7,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.provider.Hilliness
 import nl.r1a.grassmap.plugin.api.provider.RouteModifier
 import nl.r1a.grassmap.plugin.api.provider.RouteOptions
+import nl.r1a.grassmap.plugin.api.provider.RoutePreference
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteRequest
 import nl.r1a.grassmap.plugin.api.provider.TravelDirection
@@ -143,7 +143,7 @@ class ValhallaRequestTest {
         val body =
             parse(
                 ValhallaRequest.build(
-                    request(profile = RouteProfile.Bike, options = RouteOptions(Hilliness.AvoidHills)),
+                    request(profile = RouteProfile.Bike, options = RouteOptions(hills = RoutePreference.Avoid)),
                 ),
             )
 
@@ -152,7 +152,7 @@ class ValhallaRequestTest {
     }
 
     @Test
-    fun theDefaultHillinessLeavesTheTunedProfileValue() {
+    fun normalHillsLeaveTheTunedProfileValue() {
         val body = parse(ValhallaRequest.build(request(profile = RouteProfile.Bike)))
 
         assertEquals(0.4, body.costingOption("bicycle", "use_hills"), 0.0)
@@ -163,7 +163,7 @@ class ValhallaRequestTest {
         val walkBefore = ValhallaRequest.build(request(profile = RouteProfile.Walk))
         val bikeAvoid =
             ValhallaRequest.build(
-                request(profile = RouteProfile.Bike, options = RouteOptions(Hilliness.AvoidHills)),
+                request(profile = RouteProfile.Bike, options = RouteOptions(hills = RoutePreference.Avoid)),
             )
         val walkAfter = ValhallaRequest.build(request(profile = RouteProfile.Walk))
 

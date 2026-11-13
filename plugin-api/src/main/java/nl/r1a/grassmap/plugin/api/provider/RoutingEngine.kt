@@ -46,7 +46,9 @@ interface RoutingEngine : Provider {
 
 object RoutingEngineContract {
     const val NAME: String = "routing.engine"
-    const val VERSION: String = "1.2.0"
+
+    /** 1.3.0 replaces the two-state hilliness with three independent preferences (T-0421). */
+    const val VERSION: String = "1.3.0"
 
     val REFERENCE: ProviderContract = ProviderContract(NAME, VERSION)
 }
@@ -56,6 +58,7 @@ object RoutingEngineContract {
  * accepts in [RoutingCapabilities.profiles]; v1 ships walk, bike and hike, and
  * [Car] is kept for the engine that declares it later.
  */
+@Serializable
 enum class RouteProfile {
     Walk,
     Bike,
@@ -103,8 +106,9 @@ object RouteAttributes {
  * One route request. [waypoints] are ordered breaks. [alternatives] counts the
  * extra routes beyond the primary one. [modifiers] are engine-neutral effects
  * translated by the engine; a kind outside [RoutingCapabilities.modifierKinds]
- * is invalid input. [options] are the chosen profile's preferences (T-0308),
- * already read from the per-profile settings by the caller.
+ * is invalid input. [options] are the chosen profile's preferences (T-0308,
+ * three steps in T-0421), already read from the per-profile settings or from a
+ * one-route override by the caller.
  */
 data class RouteRequest(
     val waypoints: List<GeoPoint>,

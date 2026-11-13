@@ -2,6 +2,8 @@ package nl.r1a.grassmap.plugin.api.model
 
 import kotlinx.serialization.Serializable
 import nl.r1a.grassmap.plugin.api.provider.RouteInstruction
+import nl.r1a.grassmap.plugin.api.provider.RouteOptions
+import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteSegment
 
 /**
@@ -90,6 +92,12 @@ data class RoutePlanOption(
  * They report the plan's own edit history, not the command bus's global undo:
  * one edit is one change to the waypoint chain, and the route a request
  * produced is part of that edit, so undo returns the line the user saw.
+ *
+ * [profilePreferences] are the profile defaults read for the last request and
+ * [overridePreferences] is the one-route override, null while the route follows
+ * the profile. [preferences] is what the request actually carried. Keeping the
+ * two sources apart lets the preview mark each profile default and reset this
+ * route without writing the profile (T-0421).
  */
 @Serializable
 data class RoutePlanState(
@@ -103,7 +111,14 @@ data class RoutePlanState(
     val failure: RoutePlanFailure? = null,
     val undoAvailable: Boolean = false,
     val redoAvailable: Boolean = false,
+    val profile: RouteProfile = RouteProfile.Walk,
+    val profilePreferences: RouteOptions = RouteOptions(),
+    val overridePreferences: RouteOptions? = null,
 ) {
+    /** The preferences the last route request carried. */
+    val preferences: RouteOptions
+        get() = overridePreferences ?: profilePreferences
+
     /** The selected route, or null before a request succeeds. */
     val selected: RoutePlanOption?
         get() = options.getOrNull(selectedIndex)

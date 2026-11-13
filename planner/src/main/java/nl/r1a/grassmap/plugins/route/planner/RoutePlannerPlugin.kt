@@ -37,6 +37,8 @@ class RoutePlannerPlugin : Plugin {
         context.addCommand(RemoveRoutePlanViaCommand(session))
         context.addCommand(MoveRoutePlanViaCommand(session))
         context.addCommand(PlanRouteCommand(session))
+        context.addCommand(SetRoutePlanPreferencesCommand(session))
+        context.addCommand(ResetRoutePlanPreferencesCommand(session))
         context.addCommand(SwapRoutePlanCommand(session))
         context.addCommand(SelectRoutePlanOptionCommand(session))
         context.addCommand(StartRoutePlanCommand(session))

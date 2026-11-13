@@ -41,23 +41,40 @@ phase-A pack, which carries no elevation, so `use_hills` and `max_grade` had no
 effect there; the values stay in the document because they are the mapping the
 T-0308 elevation pack needs.
 
-## Hills and per-profile options (T-0308)
+## Route preferences (T-0308, three steps in T-0421)
 
-The user's hilliness preference is a per-profile setting, not a global switch.
-`RouteOptions.hilliness` travels on the request; `plugins/valhalla` applies it
+The preferences are per-profile settings, not a global switch.
+`RouteOptions` carries three independent steps - hills, busy roads and rough
+surfaces - each `Avoid`, `Normal` or `DontMind`. `plugins/valhalla` applies them
 only to the costing named by that request, so setting bike to avoid hills cannot
-change the walk body. The mapping is:
+change the walk body. `Normal` keeps the tuned profile value or, when the
+profile does not name the key, Valhalla's own default.
 
-| Preference | walk | hike | bike |
-|---|---|---|---|
-| `Default` | tuned 0.5 | tuned 0.9 | tuned 0.4 |
-| `AvoidHills` | 0.0 | 0.0 | 0.0 |
+`use_hills`, `use_roads`, `use_living_streets` and `use_tracks` read as
+willingness, 0 to 1. `avoid_bad_surfaces` reads as avoidance, 0 to 1.
 
-Valhalla reads `use_hills` as willingness to take a climb, 0 to 1, so 0.0 is
-full avoidance. The settings model is `RoutingOptionsSettings`, one entry per
-profile, defaulting every unset profile to `RouteOptions()`. The planner reads
-it through `RoutingOptionsAccess`; the profile is still the one the planner was
-built with, so this task does not add a profile picker.
+| Attribute | Profile | Avoid | Normal | Don't mind |
+|---|---|---|---|---|
+| Hills | walk / hike / bike | `use_hills` 0.0 | tuned 0.5 / 0.9 / 0.4 | `use_hills` 1.0 |
+| Busy roads | bike | `use_roads` 0.0 | tuned 0.3 | `use_roads` 1.0 |
+| Busy roads | walk / hike | `use_living_streets` 1.0 | Valhalla default | `use_living_streets` 0.0 |
+| Rough surfaces | bike | `avoid_bad_surfaces` 1.0 | tuned 0.5 | `avoid_bad_surfaces` 0.0 |
+| Rough surfaces | walk / hike | `use_tracks` 0.0 | Valhalla default | `use_tracks` 1.0 |
+| Any | car | unchanged | unchanged | unchanged |
+
+Pedestrian costing has no `use_roads` or `avoid_bad_surfaces`, so the on-foot
+steps name the closest pedestrian options instead of keys Valhalla would ignore.
+Car is out of v1 and keeps its profile. The direct engine has no costing, so a
+preference never moves its geodesic; it accepts the request unchanged.
+
+The settings model is `RoutingOptionsSettings`, one entry per profile,
+defaulting every unset profile to `RouteOptions()`. The planner reads it through
+`RoutingOptionsAccess`; the profile is still the one the planner was built with,
+so this task does not add a profile picker. The route preview override travels in
+`RoutePlanState.overridePreferences`, never in the settings file, and `clear()`
+drops it with the plan. `ValhallaPreferencesTest` checks every step on every
+profile, and `RoutePlannerOptionsTest` checks a disagreeing override and the
+profile default after a reset.
 
 The Lviv pack used for the measurement is built with
 `tools/pipeline/build-valhalla-pack.sh`: an osmium polygon extract of Lviv

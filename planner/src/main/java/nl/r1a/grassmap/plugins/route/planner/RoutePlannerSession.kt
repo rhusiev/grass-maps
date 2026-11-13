@@ -12,6 +12,7 @@ import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanRole
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteRequest
 import nl.r1a.grassmap.plugin.api.service.Clock
@@ -70,6 +71,12 @@ class RoutePlannerSession(
     ): Outcome<RoutePlanState> = planner.moveVia(from, to)
 
     suspend fun plan(): Outcome<RoutePlanState> = planner.plan()
+
+    /** Applies one-route preferences; the profile settings are not touched (T-0421). */
+    suspend fun setPreferences(options: RouteOptions): Outcome<RoutePlanState> = planner.setPreferences(options)
+
+    /** Returns the route to the profile defaults (T-0421). */
+    suspend fun resetPreferences(): Outcome<RoutePlanState> = planner.resetPreferences()
 
     suspend fun swap(): Outcome<RoutePlanState> = planner.swap()
 

@@ -15,6 +15,7 @@ import nl.r1a.grassmap.plugin.api.host.NoRouteHistoryAccess
 import nl.r1a.grassmap.plugin.api.host.PluginServices
 import nl.r1a.grassmap.plugin.api.host.RouteHistoryAccess
 import nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess
+import nl.r1a.grassmap.plugin.api.host.RoutingOptionsAccess
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
 import nl.r1a.grassmap.plugin.api.model.Camera
@@ -25,6 +26,7 @@ import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.provider.Provider
 import nl.r1a.grassmap.plugin.api.provider.ProviderContract
 import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteRequest
 import nl.r1a.grassmap.plugin.api.provider.RoutingCapabilities
@@ -74,6 +76,7 @@ internal class FakeServices(
     override val routingEngines: RoutingEngineAccess,
     override val clock: Clock = Clock { FakeEngine.NOW_MILLIS },
     override val routeHistory: RouteHistoryAccess = NoRouteHistoryAccess,
+    override val routingOptions: RoutingOptionsAccess = RoutingOptionsAccess { RouteOptions() },
 ) : PluginServices {
     override val streams: StreamAccess =
         object : StreamAccess {

@@ -15,9 +15,13 @@ import nl.r1a.grassmap.plugin.api.model.RouteHistoryEntry
 import nl.r1a.grassmap.plugin.api.model.RoutePlanFailure
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
+import nl.r1a.grassmap.plugin.api.provider.RouteOptions
+import nl.r1a.grassmap.plugin.api.provider.RoutePreference
+import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -426,6 +430,81 @@ class RoutePlannerPluginTest {
             assertEquals(RoutePlanStatus.Idle, context.state().value.status)
         }
 
+    @Test
+    fun thePreferenceCommandsApplyAndResetOneRoute() =
+        runTest {
+            val engine = FakeEngine()
+            val profileDefaults = RouteOptions(hills = RoutePreference.Avoid)
+            val context = context(engine, options = profileDefaults)
+            RoutePlannerPlugin().activate(context)
+            context.command(RoutePlannerContract.begin).invokeRaw(JsonObject(emptyMap()))
+            context.command(RoutePlannerContract.setPoint).invokeRaw(point("start", 49.8290, 23.9520))
+            context.command(RoutePlannerContract.setPoint).invokeRaw(point("destination", 49.8420, 24.0320))
+            assertEquals(profileDefaults, engine.requests.last().options)
+
+            val override =
+                RouteOptions(
+                    hills = RoutePreference.DontMind,
+                    busyRoads = RoutePreference.Avoid,
+                    roughSurfaces = RoutePreference.Normal,
+                )
+            val applied =
+                invoke(
+                    context,
+                    RoutePlannerContract.setPreferences,
+                    buildJsonObject {
+                        put("hills", "dont_mind")
+                        put("busy_roads", "avoid")
+                        put("rough_surfaces", "normal")
+                    },
+                )
+
+            assertEquals(override, engine.requests.last().options)
+            assertEquals(profileDefaults, applied.profilePreferences)
+            assertEquals(override, applied.overridePreferences)
+            assertEquals(override, applied.preferences)
+            assertEquals(RoutePlanStatus.Ready, applied.status)
+
+            val reset = invoke(context, RoutePlannerContract.resetPreferences, JsonObject(emptyMap()))
+
+            assertEquals(profileDefaults, engine.requests.last().options)
+            assertNull(reset.overridePreferences)
+            assertEquals(profileDefaults, reset.preferences)
+        }
+
+    @Test
+    fun aPreferenceCommandWithAnUnknownOrMissingStepIsInvalidInput() =
+        runTest {
+            val engine = FakeEngine()
+            val context = context(engine)
+            RoutePlannerPlugin().activate(context)
+            context.command(RoutePlannerContract.begin).invokeRaw(JsonObject(emptyMap()))
+            context.command(RoutePlannerContract.setPoint).invokeRaw(point("start", 49.8290, 23.9520))
+            context.command(RoutePlannerContract.setPoint).invokeRaw(point("destination", 49.8420, 24.0320))
+            val before = engine.requests.size
+
+            assertEquals(
+                Outcome.Failure(AppError.InvalidInput),
+                context
+                    .command(RoutePlannerContract.setPreferences)
+                    .invokeRaw(
+                        buildJsonObject {
+                            put("hills", "sometimes")
+                            put("busy_roads", "normal")
+                            put("rough_surfaces", "normal")
+                        },
+                    ),
+            )
+            assertEquals(
+                Outcome.Failure(AppError.InvalidInput),
+                context
+                    .command(RoutePlannerContract.setPreferences)
+                    .invokeRaw(buildJsonObject { put("hills", "avoid") }),
+            )
+            assertEquals(before, engine.requests.size)
+            assertNull(context.state().value.overridePreferences)
+        }
+
     private suspend fun invoke(
         context: RecordingContext,
         id: CommandId,
@@ -442,7 +521,15 @@ class RoutePlannerPluginTest {
         engine: FakeEngine = FakeEngine(),
         access: RoutingEngineAccess = RoutingEngineAccess { Outcome.Success(engine) },
         history: RouteHistoryAccess = MemoryHistory(),
-    ): RecordingContext = RecordingContext(FakeServices(routingEngines = access, routeHistory = history))
+        options: RouteOptions = RouteOptions(),
+    ): RecordingContext =
+        RecordingContext(
+            FakeServices(
+                routingEngines = access,
+                routeHistory = history,
+                routingOptions = { profile -> if (profile == RouteProfile.Walk) options else RouteOptions() },
+            ),
+        )
 
     private class MemoryHistory : RouteHistoryAccess {
         private val entries = mutableListOf<RouteHistoryEntry>()

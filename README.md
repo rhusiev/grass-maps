@@ -1060,7 +1060,7 @@ method list, the token handling and the CLI examples.
 
 ## Routing seam
 
-`RoutingEngine` in `plugin-api` is the engine contract (1.2.0). `plugins/valhalla`
+`RoutingEngine` in `plugin-api` is the engine contract (1.3.0). `plugins/valhalla`
 is the v1 provider: it binds the contract to valhalla-mobile 0.6.4 and keeps
 every library type inside that module. The engine reads the pack directory from
 the host's `RoutingPackAccess` service. It inspects that directory on the first
@@ -1086,13 +1086,21 @@ cut into one segment per graph edge, and carries `surface`, `highway`,
 `sac_scale` and `access`; `grade` is sampled from the mounted region DEM. The
 phase-A pack has no elevation, so the T-0301 runs kept `use_hills` inert; the
 T-0308 Lviv pack bakes GLO-30 grades into its edges. The per-profile options,
-the hilliness mapping, the Lviv pack build and the 10-route ascent measurement
+the preference mapping, the Lviv pack build and the 10-route ascent measurement
 are in `test-data/routing/` and `tools/pipeline/`.
 
-`RouteRequest.options` carries the chosen profile's hilliness preference; the
-planner reads it from `RoutingOptionsSettings` through `RoutingOptionsAccess`,
-so a bike change cannot leak into walk. `plugins/valhalla` maps
-`Hilliness.AvoidHills` to `use_hills: 0.0` for that request's costing only.
+`RouteRequest.options` carries the chosen profile's three preferences (hills,
+busy roads and rough surfaces, each Avoid, Normal or Don't mind). The planner
+reads the profile defaults from `RoutingOptionsSettings` through
+`RoutingOptionsAccess`, so a bike change cannot leak into walk. A route preview
+can override the three values for that route only; the override lives in
+`RoutePlanState.overridePreferences` and is dropped by `clear()`, so the stored
+profile is never written. `plugins/valhalla` maps each step to its costing for
+the request's profile only (the table is in `test-data/routing/README.md` and
+`ValhallaPreferencesTest`); the direct engine has no costing, so its geodesic
+does not change. The app logs the values the request carried as
+`route-preferences` beside the existing route summary; values only, no points
+or labels.
 
 `plugins/direct-engine` is the second `routing.engine` provider (T-0305), and
 the proof that the engine seam is real: the planner and the follower consume

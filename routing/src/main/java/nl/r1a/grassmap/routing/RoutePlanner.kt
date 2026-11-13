@@ -49,6 +49,12 @@ import java.util.concurrent.atomic.AtomicLong
  * bounded; the planner asks no engine when it restores one, because the line the
  * user saw is what undo must return and a second request could return another
  * route.
+ *
+ * Routing preferences are per profile (T-0308) with three independent steps
+ * (T-0421). [setPreferences] keeps an override for this plan only and
+ * [resetPreferences] returns to the profile on the next request; neither writes
+ * the settings model. [clear] drops the override with the plan, so the next
+ * route starts from the profile again.
  */
 class RoutePlanner(
     private val requestRoute: suspend (RouteRequest, CancellationHandle) -> Outcome<List<Route>>,
@@ -64,7 +70,7 @@ class RoutePlanner(
 
     private val mutex = Mutex()
     private val ticket = AtomicLong(0)
-    private val _state = MutableStateFlow(RoutePlanState())
+    private val _state = MutableStateFlow(RoutePlanState(profile = profile))
     private val undoStack = ArrayDeque<RoutePlanState>()
     private val redoStack = ArrayDeque<RoutePlanState>()
     private val _recent = MutableStateFlow<List<RouteHistoryEntry>>(emptyList())
@@ -298,6 +304,44 @@ class RoutePlanner(
         return request(snapshot)
     }
 
+    /**
+     * Applies [options] to this plan only and routes it again. The settings
+     * model is never written, so the profile keeps its defaults. A value equal
+     * to the profile defaults is stored as no override, which is what the
+     * preview's Reset action produces after the user picks every Normal.
+     */
+    suspend fun setPreferences(options: RouteOptions): Outcome<RoutePlanState> = revisePreferences(options)
+
+    /** Drops the one-route override and routes with the profile defaults again. */
+    suspend fun resetPreferences(): Outcome<RoutePlanState> = revisePreferences(null)
+
+    private suspend fun revisePreferences(override: RouteOptions?): Outcome<RoutePlanState> {
+        val current = _state.value
+        if (current.overridePreferences == override) {
+            return Outcome.Success(current)
+        }
+        val snapshot =
+            mutex.withLock {
+                ticket.incrementAndGet()
+                val currentState = _state.value
+                val profileDefaults = optionsForProfile(profile)
+                val nextOverride = override?.takeUnless { value -> value == profileDefaults }
+                rememberEdit(currentState)
+                val complete = currentState.start != null && currentState.destination != null
+                setState(
+                    currentState.copy(
+                        overridePreferences = nextOverride,
+                        status = if (complete) RoutePlanStatus.Planning else nextPickingStatus(currentState),
+                        options = emptyList(),
+                        selectedIndex = 0,
+                        failure = null,
+                    ),
+                )
+                _state.value
+            }
+        return if (snapshot.status == RoutePlanStatus.Planning) request(snapshot) else Outcome.Success(snapshot)
+    }
+
     /** Selects one returned alternative; the drawn line follows [state]. */
     suspend fun select(index: Int): Outcome<RoutePlanState> =
         mutex.withLock {
@@ -315,7 +359,7 @@ class RoutePlanner(
         return mutex.withLock {
             undoStack.clear()
             redoStack.clear()
-            setState(RoutePlanState())
+            setState(RoutePlanState(profile = profile))
             Outcome.Success(_state.value)
         }
     }
@@ -326,6 +370,8 @@ class RoutePlanner(
         }
         val mine = ticket.incrementAndGet()
         val cancellation = CancellationHandle { ticket.get() != mine }
+        val profilePreferences = optionsForProfile(profile)
+        val effective = snapshot.overridePreferences ?: profilePreferences
         val outcome =
             try {
                 requestRoute(
@@ -333,7 +379,7 @@ class RoutePlanner(
                         waypoints = snapshot.stops.map { stop -> stop.position },
                         profile = profile,
                         alternatives = alternatives,
-                        options = optionsForProfile(profile),
+                        options = effective,
                     ),
                     cancellation,
                 )
@@ -353,19 +399,25 @@ class RoutePlanner(
                             status = RoutePlanStatus.Failed,
                             options = emptyList(),
                             failure = failureOf(outcome.error),
+                            profilePreferences = profilePreferences,
+                            overridePreferences = snapshot.overridePreferences,
                         ),
                     )
                     outcome
                 }
 
                 is Outcome.Success -> {
-                    publishRoutes(outcome.value)
+                    publishRoutes(outcome.value, profilePreferences, snapshot.overridePreferences)
                 }
             }
         }
     }
 
-    private suspend fun publishRoutes(routes: List<Route>): Outcome<RoutePlanState> {
+    private suspend fun publishRoutes(
+        routes: List<Route>,
+        profilePreferences: RouteOptions,
+        overridePreferences: RouteOptions?,
+    ): Outcome<RoutePlanState> {
         val usable = routes.filter { route -> route.geometry.size >= MIN_ROUTE_POINTS }
         if (usable.isEmpty()) {
             setState(
@@ -373,6 +425,8 @@ class RoutePlanner(
                     status = RoutePlanStatus.Failed,
                     options = emptyList(),
                     failure = RoutePlanFailure.NoRoute,
+                    profilePreferences = profilePreferences,
+                    overridePreferences = overridePreferences,
                 ),
             )
             return Outcome.Failure(AppError.NotFound)
@@ -397,6 +451,9 @@ class RoutePlanner(
                 selectedIndex = 0,
                 generation = generation,
                 failure = null,
+                profile = profile,
+                profilePreferences = profilePreferences,
+                overridePreferences = overridePreferences,
             ),
         )
         rememberRoute(_state.value)

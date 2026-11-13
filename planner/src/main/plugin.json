@@ -68,6 +68,26 @@
         "implementation": "nl.r1a.grassmap.plugins.route.planner.PlanRouteCommand"
       },
       {
+        "id": "route.planner.set_preferences",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "doc": "Applies one-route preferences. Parameters: hills, busy_roads and rough_surfaces, each avoid, normal or dont_mind.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.route.planner.SetRoutePlanPreferencesCommand"
+      },
+      {
+        "id": "route.planner.reset_preferences",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "doc": "Returns the route to the profile's routing preferences.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.route.planner.ResetRoutePlanPreferencesCommand"
+      },
+      {
         "id": "route.planner.swap",
         "params": "kotlinx.serialization.json.JsonElement",
         "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",

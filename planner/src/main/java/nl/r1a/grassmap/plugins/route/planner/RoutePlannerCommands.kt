@@ -15,6 +15,8 @@ import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanRole
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
+import nl.r1a.grassmap.plugin.api.provider.RouteOptions
+import nl.r1a.grassmap.plugin.api.provider.RoutePreference
 
 /**
  * The planner commands (T-0302). Each returns the state it produced, so the
@@ -149,6 +151,46 @@ class PlanRouteCommand(
         policy = PLANNER_POLICY,
     ) {
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<RoutePlanState>> = result(session.plan())
+}
+
+/**
+ * Applies the three one-route preferences and routes again. The profile keeps
+ * its stored values; closing the plan drops the override (T-0421).
+ */
+class SetRoutePlanPreferencesCommand(
+    private val session: RoutePlannerSession,
+) : Command<JsonElement, RoutePlanState>(
+        id = RoutePlannerContract.setPreferences,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = RoutePlanState.serializer(),
+        doc = "Applies one-route preferences. Parameters: hills, busy_roads and rough_surfaces, each avoid, normal or dont_mind.",
+        policy = PLANNER_POLICY,
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<RoutePlanState>> {
+        val hills = params.preference(PARAM_HILLS) ?: return Outcome.Failure(AppError.InvalidInput)
+        val busyRoads = params.preference(PARAM_BUSY_ROADS) ?: return Outcome.Failure(AppError.InvalidInput)
+        val roughSurfaces = params.preference(PARAM_ROUGH_SURFACES) ?: return Outcome.Failure(AppError.InvalidInput)
+        return result(session.setPreferences(RouteOptions(hills, busyRoads, roughSurfaces)))
+    }
+
+    private companion object {
+        const val PARAM_HILLS = "hills"
+        const val PARAM_BUSY_ROADS = "busy_roads"
+        const val PARAM_ROUGH_SURFACES = "rough_surfaces"
+    }
+}
+
+/** Drops the one-route preferences and routes with the profile defaults again. */
+class ResetRoutePlanPreferencesCommand(
+    private val session: RoutePlannerSession,
+) : Command<JsonElement, RoutePlanState>(
+        id = RoutePlannerContract.resetPreferences,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = RoutePlanState.serializer(),
+        doc = "Returns the route to the profile's routing preferences.",
+        policy = PLANNER_POLICY,
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<RoutePlanState>> = result(session.resetPreferences())
 }
 
 /** Swaps the two ends and routes the reversed pair. */
@@ -292,3 +334,5 @@ private fun JsonElement.integer(key: String): Int? {
     val json = this as? JsonObject ?: return null
     return (json[key] as? JsonPrimitive)?.intOrNull
 }
+
+private fun JsonElement.preference(key: String): RoutePreference? = RoutePreference.ofSerialized(text(key))

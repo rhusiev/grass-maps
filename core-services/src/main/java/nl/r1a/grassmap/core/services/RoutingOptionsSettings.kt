@@ -13,9 +13,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.provider.Hilliness
 import nl.r1a.grassmap.plugin.api.provider.ProfileRouteOptions
 import nl.r1a.grassmap.plugin.api.provider.RouteOptions
+import nl.r1a.grassmap.plugin.api.provider.RoutePreference
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import java.io.File
 import java.io.IOException
@@ -26,11 +26,14 @@ import java.io.IOException
  * bike cannot change what walk receives.
  *
  * The file holds only non-default profiles:
- * `{"profiles":{"bike":{"hilliness":"avoid_hills"}}}`. It lives beside the
- * other local settings until the versioned global settings file exists.
- * Construction reads the file, so resolve it off the Main thread. A missing,
- * unreadable or corrupt file reads as defaults, because a routing preference
- * must not stop the planner. A write is atomic.
+ * `{"profiles":{"bike":{"hills":"avoid","busy_roads":"normal","rough_surfaces":"dont_mind"}}}`.
+ * The keys and values are stable. A file from T-0308 that still carries the
+ * two-state `hilliness` key reads as `hills` (`avoid_hills` becomes `avoid`,
+ * `default` becomes `normal`), so an existing choice survives the upgrade.
+ * It lives beside the other local settings until the versioned global settings
+ * file exists. Construction reads the file, so resolve it off the Main thread.
+ * A missing, unreadable or corrupt file reads as defaults, because a routing
+ * preference must not stop the planner. A write is atomic.
  */
 class RoutingOptionsSettings(
     private val file: File? = null,
@@ -60,9 +63,13 @@ class RoutingOptionsSettings(
     private companion object {
         const val ERROR_ID = "core.services.routing_options_settings"
         const val PROFILES_KEY = "profiles"
-        const val HILLINESS_KEY = "hilliness"
-        const val DEFAULT_NAME = "default"
-        const val AVOID_HILLS_NAME = "avoid_hills"
+        const val HILLS_KEY = "hills"
+        const val BUSY_ROADS_KEY = "busy_roads"
+        const val ROUGH_SURFACES_KEY = "rough_surfaces"
+
+        /** The T-0308 key and values, read so an existing choice is not lost. */
+        const val LEGACY_HILLINESS_KEY = "hilliness"
+        const val LEGACY_AVOID_HILLS_NAME = "avoid_hills"
 
         fun document(options: ProfileRouteOptions): String =
             buildJsonObject {
@@ -70,7 +77,9 @@ class RoutingOptionsSettings(
                     for (profile in RouteProfile.entries) {
                         val profileOptions = options.byProfile[profile] ?: continue
                         putJsonObject(profileName(profile)) {
-                            put(HILLINESS_KEY, hillinessName(profileOptions.hilliness))
+                            put(HILLS_KEY, profileOptions.hills.serializedValue)
+                            put(BUSY_ROADS_KEY, profileOptions.busyRoads.serializedValue)
+                            put(ROUGH_SURFACES_KEY, profileOptions.roughSurfaces.serializedValue)
                         }
                     }
                 }
@@ -93,17 +102,11 @@ class RoutingOptionsSettings(
                 else -> null
             }
 
-        fun hillinessName(hilliness: Hilliness): String =
-            when (hilliness) {
-                Hilliness.Default -> DEFAULT_NAME
-                Hilliness.AvoidHills -> AVOID_HILLS_NAME
-            }
+        fun preferenceOf(name: String?): RoutePreference? = RoutePreference.ofSerialized(name)
 
-        fun hillinessOf(name: String?): Hilliness =
-            when (name) {
-                AVOID_HILLS_NAME -> Hilliness.AvoidHills
-                else -> Hilliness.Default
-            }
+        /** Reads the T-0308 key when the three-step key is absent. */
+        fun legacyHillinessOf(name: String?): RoutePreference =
+            if (name == LEGACY_AVOID_HILLS_NAME) RoutePreference.Avoid else RoutePreference.Normal
 
         fun load(file: File?): ProfileRouteOptions? {
             if (file == null || !file.isFile) {
@@ -116,10 +119,25 @@ class RoutingOptionsSettings(
                 for ((name, element) in profiles) {
                     val profile = profileOf(name) ?: continue
                     val entry = element as? JsonObject ?: continue
+                    val hillsName = (entry[HILLS_KEY] as? JsonPrimitive)?.contentOrNull
+                    val hills =
+                        if (hillsName == null) {
+                            legacyHillinessOf((entry[LEGACY_HILLINESS_KEY] as? JsonPrimitive)?.contentOrNull)
+                        } else {
+                            preferenceOf(hillsName) ?: RoutePreference.Normal
+                        }
                     options =
                         options.withProfile(
                             profile,
-                            RouteOptions(hillinessOf((entry[HILLINESS_KEY] as? JsonPrimitive)?.contentOrNull)),
+                            RouteOptions(
+                                hills = hills,
+                                busyRoads =
+                                    preferenceOf(
+                                        (entry[BUSY_ROADS_KEY] as? JsonPrimitive)?.contentOrNull,
+                                    ) ?: RoutePreference.Normal,
+                                roughSurfaces =
+                                    preferenceOf((entry[ROUGH_SURFACES_KEY] as? JsonPrimitive)?.contentOrNull) ?: RoutePreference.Normal,
+                            ),
                         )
                 }
                 options

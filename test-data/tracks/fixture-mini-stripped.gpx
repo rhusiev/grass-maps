@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Grass Maps" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>Fixture mini stripped walk</name>
+    <desc>Synthetic T-0403 fixture: cell centres of the committed fixture-mini DEM, heights stripped except the first point</desc>
+  </metadata>
+  <trk>
+    <name>Fixture mini stripped walk</name>
+    <trkseg>
+      <trkpt lat="49.9587500" lon="23.9412500">
+        <ele>1000.0</ele>
+      </trkpt>
+      <trkpt lat="49.9562500" lon="23.9454167"/>
+      <trkpt lat="49.9529167" lon="23.9479167"/>
+      <trkpt lat="49.9495833" lon="23.9520833"/>
+      <trkpt lat="49.9462500" lon="23.9554167"/>
+      <trkpt lat="49.9420833" lon="23.9570833"/>
+      <trkpt lat="49.8400000" lon="24.0300000"/>
+    </trkseg>
+  </trk>
+</gpx>

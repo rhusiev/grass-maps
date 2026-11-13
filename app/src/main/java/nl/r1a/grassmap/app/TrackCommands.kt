@@ -27,7 +27,8 @@ private const val DEFAULT_ASSET = "mock-walk.gpx"
 
 /**
  * Imports one GPX from an asset name or an absolute path through the real
- * `file.gpx` plugin, stores it and logs the elevation profile. No UI: T-0401
+ * `file.gpx` plugin, stores it and logs the elevation profile and the DEM
+ * correction that produced it (T-0403). No UI: T-0401
  * and T-0414 own the library, and the control channel is the only caller for
  * now.
  */
@@ -90,7 +91,11 @@ internal class TrackImportTestCommand(
             "moving_s=${analysis.movingTimeMillis?.let(::seconds) ?: "none"} " +
             "avg_speed_mps=${analysis.averageSpeedMetersPerSecond?.let(::speed) ?: "none"} " +
             "max_speed_mps=${analysis.maxSpeedMetersPerSecond?.let(::speed) ?: "none"} " +
-            "stored=$stored warnings=$warnings"
+            "stored=$stored warnings=$warnings " +
+            "ele_source=${record.elevation?.source ?: "none"} " +
+            "ele_filled=${record.elevation?.filledPoints ?: 0} " +
+            "ele_kept=${record.elevation?.keptPoints ?: 0} " +
+            "ele_unfilled=${record.elevation?.unfilledPoints ?: 0}"
     }
 
     private fun seconds(millis: Long): String = String.format(Locale.ROOT, "%.3f", millis / MILLIS_PER_SECOND)

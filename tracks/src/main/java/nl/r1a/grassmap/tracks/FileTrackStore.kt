@@ -34,6 +34,12 @@ import java.nio.file.StandardCopyOption
  *
  * The store is the single writer. [reload] re-reads the directory after another
  * component replaced it, such as a backup restore.
+ *
+ * The document keeps the heights as it arrived, so a loaded track is corrected
+ * again from [elevationCorrection] before its profile is recomputed (T-0403).
+ * The correction is derived from the DEM mounted now, not persisted, and a
+ * changed DEM therefore shows up on the next load. The first load of a library
+ * therefore samples the DEM once per point without a height.
  */
 class FileTrackStore(
     private val root: File,
@@ -41,6 +47,7 @@ class FileTrackStore(
     private val analyzer: TrackAnalyzer = TrackAnalyzer(),
     private val clock: () -> Long = System::currentTimeMillis,
     private val log: (String) -> Unit = {},
+    private val elevationCorrection: TrackElevationCorrection = TrackElevationCorrection(),
 ) : TrackStore {
     private val mutex = Mutex()
     private val records = LinkedHashMap<TrackId, StoredTrack>()
@@ -229,15 +236,20 @@ class FileTrackStore(
                     }
                 }
             val track = tracks.getOrNull(sidecar.trackIndex) ?: continue
-            val analysis = analyzer.analyze(track)
+            val corrected = elevationCorrection.correct(track)
+            val analysis = analyzer.analyze(corrected.track)
+            if (corrected.report.changed) {
+                log("track ${sidecar.id}: ${corrected.report.describe()}")
+            }
             records[id] =
                 StoredTrack(
                     id = id,
                     name = sidecar.name,
-                    track = track,
+                    track = corrected.track,
                     analysis = analysis,
                     style = sidecar.style,
                     trackIndex = sidecar.trackIndex,
+                    elevation = corrected.report,
                 )
             sidecars[id] = sidecar
             if (analysis != sidecar.analysis) {

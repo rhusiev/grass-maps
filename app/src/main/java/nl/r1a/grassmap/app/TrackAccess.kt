@@ -6,6 +6,7 @@ import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.error.map
+import nl.r1a.grassmap.plugin.api.host.ElevationAccess
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedProvider
 import nl.r1a.grassmap.plugin.api.model.MapTrack
 import nl.r1a.grassmap.plugin.api.model.Track
@@ -18,6 +19,7 @@ import nl.r1a.grassmap.tracks.ImportReport
 import nl.r1a.grassmap.tracks.InMemoryTrackStore
 import nl.r1a.grassmap.tracks.StoredTrack
 import nl.r1a.grassmap.tracks.TrackDocumentReader
+import nl.r1a.grassmap.tracks.TrackElevationCorrection
 import nl.r1a.grassmap.tracks.TrackId
 import nl.r1a.grassmap.tracks.TrackImporter
 import nl.r1a.grassmap.tracks.TrackStore
@@ -31,20 +33,28 @@ import java.io.File
  *
  * With a [tracksRoot] the library lives on disk under that directory (T-0401):
  * `<hash>.gpx` documents with `<id>.json` sidecars, written atomically. Without
- * one, such as in a unit test, it is process-scoped memory. The library UI is
- * T-0414; the debug command and the map layer are the callers for now.
+ * one, such as in a unit test, it is process-scoped memory. [elevation] is the
+ * mounted region's DEM of T-0403; null means no region is mounted, so a track
+ * keeps the heights it arrived with. The library UI is T-0414; the debug
+ * command and the map layer are its callers for now.
  */
 class TrackAccess internal constructor(
     private val registry: ProviderRegistry,
     private val providers: List<GeneratedProvider>,
     tracksRoot: File? = null,
+    elevation: ElevationAccess? = null,
 ) {
     private val reader = TrackDocumentReader { bytes -> readDocument(bytes) }
-    private val store: TrackStore = tracksRoot?.let { root -> FileTrackStore(root, reader) } ?: InMemoryTrackStore()
+    private val correction = TrackElevationCorrection(elevation)
+    private val store: TrackStore =
+        tracksRoot?.let { root ->
+            FileTrackStore(root, reader, elevationCorrection = correction)
+        } ?: InMemoryTrackStore()
     private val importer =
         TrackImporter(
             formats = FileFormatResolver { extension -> resolve(extension) },
             store = store,
+            elevationCorrection = correction,
         )
 
     /** The tracks the map draws, current after every import, remove and style change. */

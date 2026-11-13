@@ -7,6 +7,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.host.ElevationAccess
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.Track
 import nl.r1a.grassmap.plugin.api.model.TrackPoint
@@ -15,6 +16,7 @@ import nl.r1a.grassmap.plugin.api.model.TrackStyle
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -265,6 +267,99 @@ class FileTrackStoreTest {
             assertTrue(sidecar.readText().contains("\"durationMillis\":1000"))
         }
 
+    @Test
+    fun aLoadedTrackIsCorrectedFromTheDemAndItsProfileFollows() =
+        runTest {
+            val source = "stripped".toByteArray()
+            val stripped = strippedTrack()
+            val id = TrackIdentity.of(source, index = 0, count = 1)
+            val reader = TrackDocumentReader { Outcome.Success(listOf(stripped)) }
+            val correction = TrackElevationCorrection(ElevationAccess { Outcome.Success(300.0) })
+            val record =
+                StoredTrack(
+                    id = id,
+                    name = "Stripped",
+                    track = stripped,
+                    analysis = TrackAnalyzer().analyze(stripped),
+                    style = TrackPalette.styleFor(id),
+                )
+            // A save writes the document and the profile as they arrived; the
+            // correction happens when a store loads them, as at app start.
+            success(store(reader).save(record, source))
+
+            val reopened =
+                FileTrackStore(
+                    root = root,
+                    reader = reader,
+                    clock = { SAVED_AT_MILLIS },
+                    log = { message -> logs += message },
+                    elevationCorrection = correction,
+                )
+            assertEquals(Outcome.Success(Unit), reopened.reload())
+            val loaded = success(reopened.get(id))
+
+            assertEquals(
+                listOf(300.0, 300.0),
+                loaded.track.segments
+                    .single()
+                    .points
+                    .map { it.elevationMeters },
+            )
+            assertEquals(300.0, loaded.analysis.minElevationMeters ?: Double.NaN, 0.0)
+            assertEquals(300.0, loaded.analysis.maxElevationMeters ?: Double.NaN, 0.0)
+            assertEquals(ElevationSource.Dem, loaded.elevation?.source)
+            assertEquals(2, loaded.elevation?.filledPoints)
+            assertTrue(logs.any { message -> message.contains("elevation source=Dem filled=2") })
+            assertEquals(loaded.analysis, reopened.summaries().single().analysis)
+        }
+
+    @Test
+    fun aLoadedTrackStaysUnchangedWithoutAMountedDem() =
+        runTest {
+            val source = "no dem".toByteArray()
+            val stripped = strippedTrack()
+            val id = TrackIdentity.of(source, index = 0, count = 1)
+            val reader = TrackDocumentReader { Outcome.Success(listOf(stripped)) }
+            val record =
+                StoredTrack(
+                    id = id,
+                    name = "Stripped",
+                    track = stripped,
+                    analysis = TrackAnalyzer().analyze(stripped),
+                    style = TrackPalette.styleFor(id),
+                )
+            success(FileTrackStore(root = root, reader = reader, log = { message -> logs += message }).save(record, source))
+
+            val reopened =
+                FileTrackStore(
+                    root = root,
+                    reader = reader,
+                    clock = { SAVED_AT_MILLIS },
+                    log = { message -> logs += message },
+                )
+            assertEquals(Outcome.Success(Unit), reopened.reload())
+            val loaded = success(reopened.get(id))
+
+            assertEquals(stripped, loaded.track)
+            assertNull(loaded.analysis.minElevationMeters)
+            assertEquals(ElevationSource.NoDem, loaded.elevation?.source)
+            assertEquals(2, loaded.elevation?.unfilledPoints)
+            assertTrue(logs.none { message -> message.contains("elevation source=") })
+        }
+
+    private fun strippedTrack(): Track =
+        Track(
+            segments =
+                listOf(
+                    TrackSegment(
+                        listOf(
+                            TrackPoint(GeoPoint(49.84, 24.03)),
+                            TrackPoint(GeoPoint(49.8401, 24.03005)),
+                        ),
+                    ),
+                ),
+        )
+
     private fun withholdStatistics(text: String): String {
         val root = Json.parseToJsonElement(text).jsonObject
         val analysis = root.getValue("analysis").jsonObject
@@ -289,10 +384,12 @@ class FileTrackStoreTest {
         return kept.toString()
     }
 
-    private fun store(): FileTrackStore =
+    private fun store(): FileTrackStore = store(reader())
+
+    private fun store(reader: TrackDocumentReader): FileTrackStore =
         FileTrackStore(
             root = root,
-            reader = reader(),
+            reader = reader,
             clock = { SAVED_AT_MILLIS },
             log = { message -> logs += message },
         )

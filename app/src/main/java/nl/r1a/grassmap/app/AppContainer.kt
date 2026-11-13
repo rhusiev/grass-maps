@@ -413,12 +413,21 @@ class AppContainer(
     val routeWarnings: RouteWarningScanner by lazy { RouteWarningScanner(regionAccess) }
 
     /**
+     * The mounted region's DEM reader (T-0308), or null when no region is
+     * mounted. The track importer keeps the null, so its correction pass can
+     * report that the track kept its own heights (T-0403).
+     */
+    private val mountedElevation: RegionElevation? by lazy {
+        mountedRegionDirectory?.let(::RegionElevation)
+    }
+
+    /**
      * The mounted region's DEM heights (T-0308). The grid is opened on the
      * first query; a package without the component or with the old stand-in
      * reports no height, and an unmounted region is the inert source.
      */
     private val elevationAccess: ElevationAccess by lazy {
-        mountedRegionDirectory?.let(::RegionElevation) ?: NoElevationAccess
+        mountedElevation ?: NoElevationAccess
     }
 
     /**
@@ -522,9 +531,16 @@ class AppContainer(
     /**
      * The track library over the generated `file.gpx` provider (T-0401). Under
      * [tracksRootProvider] the store persists; without a root it is memory-only.
+     * A stripped height is filled from the mounted DEM when there is one
+     * (T-0403).
      */
     val tracks: TrackAccess by lazy {
-        TrackAccess(providerRegistry, GeneratedPlugins.providers, tracksRoot = tracksRootProvider())
+        TrackAccess(
+            providerRegistry,
+            GeneratedPlugins.providers,
+            tracksRoot = tracksRootProvider(),
+            elevation = mountedElevation,
+        )
     }
 
     /**

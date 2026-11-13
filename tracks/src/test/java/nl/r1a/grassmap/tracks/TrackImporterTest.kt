@@ -4,6 +4,7 @@ import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.host.ElevationAccess
 import nl.r1a.grassmap.plugin.api.model.FileEntityKind
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.ImportResult
@@ -178,6 +179,61 @@ class TrackImporterTest {
         }
 
     @Test
+    fun theImporterCorrectsTheHeightsBeforeProfiling() =
+        runTest {
+            val store = InMemoryTrackStore()
+            val importer =
+                TrackImporter(
+                    formats = resolver(mutableListOf()) { format(strippedResult()) },
+                    store = store,
+                    elevationCorrection =
+                        TrackElevationCorrection(
+                            ElevationAccess { position -> Outcome.Success(heightAt(position)) },
+                        ),
+                )
+
+            val record = success(importer.importFile("walk.gpx", BYTES, CancellationHandle.None)).tracks.single()
+
+            assertEquals(
+                listOf(296.0, 310.0),
+                record.track.segments
+                    .single()
+                    .points
+                    .map { it.elevationMeters },
+            )
+            assertEquals(296.0, record.analysis.minElevationMeters ?: Double.NaN, 0.0)
+            assertEquals(310.0, record.analysis.maxElevationMeters ?: Double.NaN, 0.0)
+            assertEquals(ElevationSource.Dem, record.elevation?.source)
+            assertEquals(1, record.elevation?.filledPoints)
+            assertEquals(1, record.elevation?.keptPoints)
+            assertEquals(Outcome.Success(record), store.get(record.id))
+        }
+
+    @Test
+    fun aDocumentImportedWithoutAMountedDemKeepsItsHeights() =
+        runTest {
+            val importer =
+                TrackImporter(
+                    formats = resolver(mutableListOf()) { format(strippedResult()) },
+                    store = InMemoryTrackStore(),
+                )
+
+            val record = success(importer.importFile("walk.gpx", BYTES, CancellationHandle.None)).tracks.single()
+
+            assertEquals(
+                listOf(296.0, null),
+                record.track.segments
+                    .single()
+                    .points
+                    .map { it.elevationMeters },
+            )
+            assertEquals(296.0, record.analysis.minElevationMeters ?: Double.NaN, 0.0)
+            assertEquals(296.0, record.analysis.maxElevationMeters ?: Double.NaN, 0.0)
+            assertEquals(ElevationSource.NoDem, record.elevation?.source)
+            assertEquals(1, record.elevation?.unfilledPoints)
+        }
+
+    @Test
     fun theWarningLinesNameTheSkippedParts() =
         runTest {
             val skipped =
@@ -245,6 +301,30 @@ class TrackImporterTest {
                 ),
         )
 
+    private fun heightAt(position: GeoPoint): Double = if (position.latitude > STRIPPED_LATITUDE) 310.0 else 300.0
+
+    private fun strippedResult(): ImportResult =
+        ImportResult(
+            entities =
+                ImportedEntities(
+                    tracks =
+                        listOf(
+                            Track(
+                                name = "Stripped",
+                                segments =
+                                    listOf(
+                                        TrackSegment(
+                                            listOf(
+                                                TrackPoint(GeoPoint(49.84, 24.03), 296.0, 0L),
+                                                TrackPoint(GeoPoint(49.84001, 24.03), null, null),
+                                            ),
+                                        ),
+                                    ),
+                            ),
+                        ),
+                ),
+        )
+
     private fun importResult(): ImportResult =
         ImportResult(
             entities =
@@ -272,6 +352,7 @@ class TrackImporterTest {
         )
 
     private companion object {
+        const val STRIPPED_LATITUDE = 49.84
         val BYTES = byteArrayOf(1, 2, 3, 4)
     }
 }

@@ -19,7 +19,11 @@ value class TrackId(
     override fun toString(): String = value
 }
 
-/** One imported track with the profile computed when it was stored. */
+/**
+ * One imported track with the profile computed when it was stored.
+ * [elevation] records the DEM correction pass that produced [track], or null
+ * when the caller built the record without one.
+ */
 data class StoredTrack(
     val id: TrackId,
     val name: String?,
@@ -27,6 +31,7 @@ data class StoredTrack(
     val analysis: TrackAnalysis,
     val style: TrackStyle = TrackStyle(),
     val trackIndex: Int = 0,
+    val elevation: ElevationCorrectionReport? = null,
 ) {
     /** The drawable form the map layer reads; geometry only, no profile. */
     fun toMapTrack(): MapTrack =

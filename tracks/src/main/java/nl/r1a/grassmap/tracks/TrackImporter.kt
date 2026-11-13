@@ -35,6 +35,9 @@ data class ImportReport(
  * it contains and compute each profile. A document with no track is
  * [AppError.Unsupported]; every skipped point stays a warning on the result.
  *
+ * A missing height is filled from [elevationCorrection] before the profile is
+ * computed, so the stored analysis includes the DEM heights (T-0403).
+ *
  * The id of each record is the document hash ([TrackIdentity]), so a repeated
  * import updates the same records and keeps their styling. A failed save stops
  * the import; records already written stay, and a retry is idempotent.
@@ -43,6 +46,7 @@ class TrackImporter(
     private val formats: FileFormatResolver,
     private val store: TrackStore,
     private val analyzer: TrackAnalyzer = TrackAnalyzer(),
+    private val elevationCorrection: TrackElevationCorrection = TrackElevationCorrection(),
 ) {
     suspend fun importFile(
         fileName: String?,
@@ -90,7 +94,7 @@ class TrackImporter(
         return Outcome.Success(ImportReport(tracks = records, warnings = result.warnings))
     }
 
-    private fun storedRecord(
+    private suspend fun storedRecord(
         fileName: String?,
         bytes: ByteArray,
         index: Int,
@@ -98,13 +102,15 @@ class TrackImporter(
         count: Int,
     ): StoredTrack {
         val id = TrackIdentity.of(bytes, index, count)
+        val corrected = elevationCorrection.correct(track)
         return StoredTrack(
             id = id,
             name = track.name ?: fileName,
-            track = track,
-            analysis = analyzer.analyze(track),
+            track = corrected.track,
+            analysis = analyzer.analyze(corrected.track),
             style = TrackPalette.styleFor(id),
             trackIndex = index,
+            elevation = corrected.report,
         )
     }
 

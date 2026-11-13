@@ -10,9 +10,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -101,6 +105,7 @@ fun TrackLibraryHost(
     var folderField by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf(state.browse.query) }
     val selectedRow = selectedLibraryRow(content.rows, selectedTrackId)
+    val navigationInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     LaunchedEffect(selectedTrackId, state.tracks.size) {
         if (sheet == LibrarySheet.EDIT || sheet == LibrarySheet.MOVE) {
@@ -122,11 +127,11 @@ fun TrackLibraryHost(
                         end = SCREEN_PADDING_DP.dp,
                         top = SCREEN_TOP_DP.dp,
                         bottom =
-                            when {
-                                selectedRow != null -> SELECTION_RESERVED_DP.dp
-                                content.undoMessage != null -> UNDO_RESERVED_DP.dp
-                                else -> 0.dp
-                            },
+                            trackLibraryBarReserveDp(
+                                selectionVisible = selectedRow != null,
+                                undoVisible = content.undoMessage != null,
+                                navigationInsetDp = navigationInset.value,
+                            ).dp,
                     ),
             verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
         ) {
@@ -184,52 +189,58 @@ fun TrackLibraryHost(
             }
             content.noMatches?.let { message -> Line(text = message, colors = colors, secondary = true) }
         }
-        if (content.undoMessage != null) {
-            UndoBar(
-                message = content.undoMessage,
-                undo = content.undo,
-                colors = colors,
-                onUndo = onUndo,
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = if (selectedRow != null) SELECTION_BAR_HEIGHT_DP.dp else 0.dp),
-            )
-        }
-        if (selectedRow != null) {
-            SelectionBar(
-                content = selection,
-                colors = colors,
-                onClose = { selectedTrackId = null },
-                onAction = { kind ->
-                    when (kind) {
-                        TrackSelectionActionKind.MOVE -> {
-                            sheet = LibrarySheet.MOVE
-                        }
+        if (content.undoMessage != null || selectedRow != null) {
+            Column(
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
+            ) {
+                if (content.undoMessage != null) {
+                    UndoBar(
+                        message = content.undoMessage,
+                        undo = content.undo,
+                        colors = colors,
+                        onUndo = onUndo,
+                        // The action bar below carries the inset when it is shown.
+                        modifier = if (selectedRow != null) Modifier else Modifier.navigationBarsPadding(),
+                    )
+                }
+                if (selectedRow != null) {
+                    SelectionBar(
+                        content = selection,
+                        colors = colors,
+                        onClose = { selectedTrackId = null },
+                        onAction = { kind ->
+                            when (kind) {
+                                TrackSelectionActionKind.MOVE -> {
+                                    sheet = LibrarySheet.MOVE
+                                }
 
-                        TrackSelectionActionKind.RENAME -> {
-                            nameField = selectedRow.name
-                            descriptionField =
-                                state.tracks
-                                    .firstOrNull { track -> track.id == selectedRow.id }
-                                    ?.description
-                                    .orEmpty()
-                            folderField = selectedRow.listId
-                            sheet = LibrarySheet.EDIT
-                        }
+                                TrackSelectionActionKind.RENAME -> {
+                                    nameField = selectedRow.name
+                                    descriptionField =
+                                        state.tracks
+                                            .firstOrNull { track -> track.id == selectedRow.id }
+                                            ?.description
+                                            .orEmpty()
+                                    folderField = selectedRow.listId
+                                    sheet = LibrarySheet.EDIT
+                                }
 
-                        TrackSelectionActionKind.SHARE -> {
-                            selectedTrackId = null
-                            onShare(selectedRow.id)
-                        }
+                                TrackSelectionActionKind.SHARE -> {
+                                    selectedTrackId = null
+                                    onShare(selectedRow.id)
+                                }
 
-                        TrackSelectionActionKind.DELETE -> {
-                            selectedTrackId = null
-                            onDeleteTrack(selectedRow.id)
-                        }
-                    }
-                },
-            )
+                                TrackSelectionActionKind.DELETE -> {
+                                    selectedTrackId = null
+                                    onDeleteTrack(selectedRow.id)
+                                }
+                            }
+                        },
+                    )
+                }
+            }
         }
         if (sheet != LibrarySheet.NONE) {
             Scrim(onClose = { sheet = LibrarySheet.NONE })
@@ -627,7 +638,8 @@ private fun Scrim(onClose: () -> Unit) {
 /**
  * The bar of the selected track: a close control that leaves the selection and
  * the four fixed actions Move, Rename, Share and Delete. Delete happens at once
- * and the library's Undo bar reverses it.
+ * and the library's Undo bar reverses it. It is a bottom action bar, so its
+ * surface reaches the screen edge and its content clears the navigation inset.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -642,6 +654,7 @@ private fun SelectionBar(
             Modifier
                 .fillMaxWidth()
                 .background(colors.surface)
+                .navigationBarsPadding()
                 .padding(horizontal = SCREEN_PADDING_DP.dp, vertical = SELECTION_BAR_PADDING_DP.dp),
         horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1002,6 +1015,24 @@ private enum class FolderSheetMode {
     RENAME,
 }
 
+/**
+ * The bottom padding the scrolling rows must clear for the overlay bars, in dp:
+ * the height of the bar stack, plus the window's navigation-bar inset, because
+ * the lowest bar draws its surface over that inset. Returns zero when no bar is
+ * shown, so the plain list reserves nothing.
+ */
+internal fun trackLibraryBarReserveDp(
+    selectionVisible: Boolean,
+    undoVisible: Boolean,
+    navigationInsetDp: Float,
+): Float =
+    when {
+        selectionVisible && undoVisible -> SELECTION_RESERVED_DP + UNDO_RESERVED_DP + ROW_GAP_DP + navigationInsetDp
+        selectionVisible -> SELECTION_RESERVED_DP + navigationInsetDp
+        undoVisible -> UNDO_RESERVED_DP + navigationInsetDp
+        else -> 0f
+    }
+
 private const val MOVE_TITLE_KEY = "track_library_action_move"
 private const val RENAME_FOLDER_TITLE_KEY = "track_library_rename_folder_title"
 private const val CREATE_FOLDER_TITLE_KEY = "track_library_create_folder_title"
@@ -1032,7 +1063,6 @@ private const val DOT_SIZE_DP = 12
 private const val DESCRIPTION_HEIGHT_DP = 120
 private const val UNDO_RESERVED_DP = 72
 private const val SELECTION_RESERVED_DP = 96
-private const val SELECTION_BAR_HEIGHT_DP = 64
 private const val SELECTION_BAR_PADDING_DP = 8
 private const val ACTION_PADDING_DP = 6
 private const val TITLE_FONT_SP = 21

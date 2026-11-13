@@ -2205,6 +2205,12 @@ later edit cannot unfil the track. The debug channel opens the screen with
 `core.track.library_show` until the map's track selection grows an entry
 (T-0415); T-0416 owns the share-sheet import.
 
+The library screen draws edge to edge, so both overlay bars are anchored to the
+bottom edge: the action bar's content clears the window's navigation-bar inset,
+the Undo notice stacks above it, and the rows reserve the height of both. A bar
+anchored anywhere else lands under a system bar, where its labels and touch
+targets are unreadable and untappable.
+
 Two follow-ups are open for the library. The one-tap delete has no confirmation
 because the design's undo snackbar is the canon; a confirm is a product
 decision if the undo is judged too easy to miss. The screen's only entry is the

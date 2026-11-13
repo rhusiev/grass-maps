@@ -1419,10 +1419,10 @@ screen is the production composable; only the input state is fixed, so this is
 a fixture, not a static screenshot. Clearing it returns the screen to the live
 session.
 
-The goldens are `test-data/navigation-goldens/light|dark/following.png` and
-`expanded.png`, captured at 1080x1920 on the API 29 AVD. Each is the whole
-frame, compared with the map goldens' 108x192 mean-RGB block grid and the same
-5 % tolerance. Capture or compare with:
+The goldens are `test-data/navigation-goldens/light|dark/following.png`,
+`expanded.png` and `alert.png`, captured at 1080x1920 on the API 29 AVD. Each is
+the whole frame, compared with the map goldens' 108x192 mean-RGB block grid over
+the full frame and the same 5 % tolerance. Capture or compare with:
 
 ```sh
 ./scripts/ci/android-navigation-goldens.sh            # compare
@@ -1432,10 +1432,12 @@ frame, compared with the map goldens' 108x192 mean-RGB block grid and the same
 The goldens job runs the same script after the map sets. A live emulator replay
 with `core.nav.start` and `test-data/navigation/nav-route.json` shows the next
 and second turn and the current speed; `screen-live-route.json` adds the next
-stop. The alert banner is exercised by the deterministic fixture and the alert
-host tests, because the debug replay's Lviv line has no mounted way-alert data.
-Every control is reachable in the expanded and settings sheets, and the pan
-recentre button is exercised on the emulator.
+stop. The alert banner is exercised by the alert golden, the deterministic
+fixture and the alert host tests, because the debug replay's Lviv line has no
+mounted way-alert data. The `ui-shell` control test covers the control set, not
+the composed screen (the module has no Compose UI test dependency); the device
+check covers the drawn controls, and the pan recentre button is exercised on
+the emulator.
 
 ## Navigation service and location lifecycle
 

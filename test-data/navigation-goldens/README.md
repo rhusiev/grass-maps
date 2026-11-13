@@ -1,9 +1,9 @@
 # Navigation screen goldens (T-0320)
 
-`light/` and `dark/` hold the navigation screen in the following and expanded
-states. Each image is the whole 1080x1920 frame, captured on the API 29 AVD,
-because the card and the bar are the subject; the map goldens' centre crop would
-remove them.
+`light/` and `dark/` hold the navigation screen in the following, expanded and
+alert states. Each image is the whole 1080x1920 frame, captured on the API 29
+AVD, because the card and the bar are the subject; the map goldens' centre crop
+would remove them.
 
 The state is deterministic: `core.map.set_camera` fixes the map, and the debug
 command `core.nav.show_screen` fills the production screen with
@@ -11,7 +11,8 @@ command `core.nav.show_screen` fills the production screen with
 navigation state, not a picture.
 
 The comparator is the map goldens' 108x192 mean-RGB block grid with the same
-32-per-channel delta and 5 % mismatch tolerance, applied to the full frame.
+32-per-channel delta and 5 % mismatch tolerance, applied to the full frame. The
+status-bar clock and icons are inside the tolerance.
 
 ```sh
 ./scripts/ci/android-navigation-goldens.sh --update

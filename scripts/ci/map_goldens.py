@@ -1191,8 +1191,14 @@ def comparison_window(width: int, height: int) -> tuple[int, int, int, int]:
     return left, top, window_width, window_height
 
 
-def block_grid(width: int, height: int, rgb: bytes) -> list[tuple[int, int, int]]:
-    left, top, window_width, window_height = comparison_window(width, height)
+def block_grid(
+    width: int,
+    height: int,
+    rgb: bytes,
+    window: tuple[int, int, int, int] | None = None,
+) -> list[tuple[int, int, int]]:
+    """The 108x192 block means over `window`, or the map comparison crop."""
+    left, top, window_width, window_height = window if window is not None else comparison_window(width, height)
     blocks = []
     for gy in range(GRID_HEIGHT):
         y0 = top + gy * window_height // GRID_HEIGHT
@@ -1213,11 +1219,15 @@ def block_grid(width: int, height: int, rgb: bytes) -> list[tuple[int, int, int]
     return blocks
 
 
-def compare_images(golden: Path, candidate: Path) -> dict[str, object]:
+def compare_images(
+    golden: Path,
+    candidate: Path,
+    window: tuple[int, int, int, int] | None = None,
+) -> dict[str, object]:
     golden_width, golden_height, golden_rgb = read_png(golden)
     candidate_width, candidate_height, candidate_rgb = read_png(candidate)
-    golden_blocks = block_grid(golden_width, golden_height, golden_rgb)
-    candidate_blocks = block_grid(candidate_width, candidate_height, candidate_rgb)
+    golden_blocks = block_grid(golden_width, golden_height, golden_rgb, window)
+    candidate_blocks = block_grid(candidate_width, candidate_height, candidate_rgb, window)
     mismatched = 0
     total_delta = 0
     diff = bytearray()

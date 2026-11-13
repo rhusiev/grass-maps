@@ -8,9 +8,9 @@ a published state does, not a picture. The map behind it is set by
 `core.map.set_camera`, and the theme is the system night mode plus the matching
 Standard style.
 
-Comparison uses the map goldens' 108x192 mean-block grid over the whole frame,
-not their centre crop: the navigation card and bar are the subject, so dropping
-the anchored overlays would remove it.
+Comparison uses the same 108x192 mean-block grid as the map goldens, applied to
+the whole frame: the turn card and the End/ETA/expand bar are the subject, so the
+map goldens' centre crop would remove them.
 
 Usage:
     navigation_goldens.py capture --serial emulator-5580 \
@@ -42,14 +42,19 @@ ROUTE = json.loads(ROUTE_PATH.read_text(encoding="utf-8"))
 STYLE_IDS = {"light": "standard", "dark": "standard-dark"}
 THEMES = ("light", "dark")
 CASES = (
-    ("following", "collapsed"),
-    ("expanded", "trip"),
+    ("following", "collapsed", ()),
+    ("expanded", "trip", ()),
+    ("alert", "collapsed", ("crossing",)),
 )
 CAMERA = {"lat": 49.9480, "lon": 23.9460, "zoom": 15.0, "bearing": 0.0, "tilt": 45.0}
 FIXTURE_SETTLE_S = 1.2
 
 
-def fixture_params(sheet: str, dark: bool) -> dict[str, object]:
+def fixture_params(
+    sheet: str,
+    dark: bool,
+    alerts: tuple[str, ...],
+) -> dict[str, object]:
     return {
         "route": ROUTE,
         "phase": "following",
@@ -58,7 +63,7 @@ def fixture_params(sheet: str, dark: bool) -> dict[str, object]:
         "along_m": 0.0,
         "destination": "Lviv Opera",
         "next_stop": "Svit Kavy",
-        "alerts": [],
+        "alerts": list(alerts),
         "dark": dark,
     }
 
@@ -108,9 +113,9 @@ def capture_theme(
     print(f"{theme}: selected style -> {style}", file=sys.stderr)
     g.invoke_camera(client, CAMERA)
     shots = []
-    for name, sheet in CASES:
+    for name, sheet, alerts in CASES:
         marker = f"navigation-screen-fixture phase=following sheet={sheet}"
-        result = invoke_fixture(client, fixture_params(sheet, dark=theme == "dark"))
+        result = invoke_fixture(client, fixture_params(sheet, theme == "dark", alerts))
         wait_for_fixture(adb, marker)
         time.sleep(FIXTURE_SETTLE_S)
         shot = g.capture_position(
@@ -175,7 +180,7 @@ def compare(
     failures = 0
     results = []
     for theme in THEMES:
-        for name, _ in CASES:
+        for name, _, _ in CASES:
             reference_path = reference / theme / f"{name}.png"
             captured_path = captured / theme / f"{name}.png"
             if not captured_path.exists():
@@ -197,7 +202,21 @@ def compare(
                 print(f"missing reference: {reference_path}", file=sys.stderr)
                 failures += 1
                 continue
-            result = g.compare_images(reference_path, captured_path)
+            reference_width, reference_height, _ = g.read_png(reference_path)
+            captured_width, captured_height, _ = g.read_png(captured_path)
+            if (reference_width, reference_height) != (captured_width, captured_height):
+                print(
+                    f"size mismatch for {theme}/{name}: {reference_width}x{reference_height} "
+                    f"vs {captured_width}x{captured_height}",
+                    file=sys.stderr,
+                )
+                failures += 1
+                continue
+            result = g.compare_images(
+                reference_path,
+                captured_path,
+                window=(0, 0, captured_width, captured_height),
+            )
             passed = bool(result["pass"])
             if not passed:
                 failures += 1
@@ -205,8 +224,7 @@ def compare(
             if output is not None:
                 diff_path = output / theme / f"{name}-diff.png"
                 diff_path.parent.mkdir(parents=True, exist_ok=True)
-                width, height, _ = g.read_png(captured_path)
-                g.write_png(diff_path, width, height, diff)
+                g.write_png(diff_path, g.GRID_WIDTH, g.GRID_HEIGHT, diff)
                 result["diff"] = str(diff_path)
             results.append(result)
             print(

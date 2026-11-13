@@ -2261,12 +2261,14 @@ every track and logs one profile line per track plus the warning lines.
 ### Share-sheet import
 
 Another app can share a GPX to Grass Maps (T-0416). The activity declares one
-`ACTION_SEND` filter with `DEFAULT` and two MIME types: `application/gpx+xml`
-and `application/octet-stream`. Android's MIME map has no entry for the `gpx`
-extension, so a file manager or a messenger sends the document as
-`application/octet-stream`. Without that second type the row never appears for
-a real file. The cost is that the app also appears for another binary share; it
-then reads the document and refuses it with a notice instead of guessing.
+`ACTION_SEND` filter with `DEFAULT` and four MIME types: `application/gpx+xml`,
+`application/octet-stream`, `application/xml` and `text/xml`. Android's MIME
+map has no entry for the `gpx` extension, so a file manager or a messenger
+sends the document as `application/octet-stream`, and a sender that types an
+XML document has the same GPX in hand. Without those types the row never
+appears for a real file. The cost is that the app also appears for another
+binary or XML share; it then reads the document and refuses it with a notice
+instead of guessing.
 
 `TrackShareIntent` in `app` is the rule and names no Android type. The stream
 extra names the document, the data URI is the fallback a sender uses instead,
@@ -2279,8 +2281,13 @@ reaches `onNewIntent` and the same import.
 carries. The app declares no storage permission and never resolves a filesystem
 path. The provider's display name names the document; a name without an
 extension gets `.gpx` when the sender typed the share as GPX. The read is
-bounded at 64 MiB, and the parse and the store write run on `Dispatchers.IO`,
-never on Main.
+bounded at 16 MiB, which is about 130 000 points or 36 hours at one point per
+second, and it stops before keeping a larger document. The bound matters
+because `file.gpx` builds a DOM at several times the document size, so a bigger
+share would spend the app's heap rather than the importer's own memory. An
+oversize document, like one that is empty or not a track, is `InvalidInput` and
+becomes the notice's "not a track" message. The parse and the store write run
+on `Dispatchers.IO`, never on Main.
 
 `TrackShareImport` imports through the same `TrackAccess` the library uses, so
 the document hash stays the track id: sharing the same file twice updates one
@@ -2289,37 +2296,63 @@ record and keeps its colour. `MapScreen` draws the result in the round-6
 imported track, counts the parts a partial document skipped, and offers Open,
 which shows the existing analysis panel. The notice clears itself after 8
 seconds and a failed import says what could not be read and offers no action.
-The strings are English and Ukrainian.
+The notice shares the bottom-centre slot with the distance badge and the
+region banner and the three stack, so a share that arrives over a banner draws
+below it. The strings are English and Ukrainian.
 
-The acceptance is an `ACTION_SEND` over `adb`:
+A share arrives as a URI, not a path, so the debug build declares its own
+provider (`nl.r1a.grassmap.share-test` in `src/debug/`, not exported and absent
+from release). It serves the committed `mock-walk.gpx` at three addresses:
+`walk` (a GPX document whose display name has no extension, so the provider's
+type names the format), `notes` (a document that is not a track) and
+`unreadable` (a read that throws `SecurityException`).
+
+The acceptance ran on the API 29 emulator with the debug APK:
 
 ```sh
-adb shell mkdir -p /sdcard/Android/data/nl.r1a.grassmap/files/share
-adb push test-data/location/mock-walk.gpx \
-    /sdcard/Android/data/nl.r1a.grassmap/files/share/mock-walk.gpx
-adb shell am start -a android.intent.action.SEND -c android.intent.category.DEFAULT \
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb shell cmd package query-activities -a android.intent.action.SEND \
+    -c android.intent.category.DEFAULT -t application/gpx+xml
+adb shell am start -W -n nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity \
+    -a android.intent.action.SEND -c android.intent.category.DEFAULT \
     -t application/gpx+xml \
-    --eu android.intent.extra.STREAM \
-    file:///sdcard/Android/data/nl.r1a.grassmap/files/share/mock-walk.gpx
+    --eu android.intent.extra.STREAM content://nl.r1a.grassmap.share-test/walk
+adb logcat -d | grep GrassMapsTracks
 ```
 
-The file goes into the app's own external files directory, which it reads
-without a permission; the first line creates the directory, because `adb push`
-does not. The import logs one line,
-`GrassMapsTracks: share import name="mock-walk.gpx" tracks=1 skipped=0 ids=...`,
-and the notice appears on the map. Adding
-`-n nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity` starts this app directly
-when another installed app also handles the share; that form skips the filter
-resolution the first form exercises. `TrackShareImportTest` covers the rule,
-the real `file.gpx` import and the duplicate update without a device, and
-`TrackShareWiringTest` holds the manifest filter and the string keys.
+`query-activities` lists the app's activity for the share. On the API 29 image
+it lists two activities, the app and the system Email composer, so `am start`
+without a component opens the system chooser; the documented command names the
+activity to make the check deterministic and does not change what the activity
+receives. The import logged
 
-The change ships no completed device run. The merged manifest in the debug APK
-carries the filter (`aapt2 dump xmltree` shows both MIME types), but the local
-API 29 emulator cannot boot on this machine - it dies with `SIGSEGV` about a
-minute into boot under every GPU mode tried - so the two `adb` commands stay
-unexercised until a device or a runner makes them. The notice has no device
-visual for the same reason.
+```
+I GrassMapsTracks: share import name="walk.gpx" tracks=1 skipped=0 ids=20ab81f65815
+```
+
+and `run-as nl.r1a.grassmap ls files/tracks` then held one
+`20ab81f65815...gpx` document and its `.json` sidecar. A second send logged the
+same id and the directory still held one document. No StrictMode violation was
+logged. The notice is at `/hdd/t-0416-evidence/share-notice.png` (local
+evidence, not committed); on the debug build the development-tools panel covers
+its left end.
+
+`ShareImportInstrumentedTest` in `app/src/androidTest` drives the same path
+through the activity without `adb`: it launches `MainActivity` with
+`ACTION_SEND` and the `content:` URI and asserts the notice, the stored track,
+the duplicate update, the non-track document and the provider that refuses the
+read. Run it with
+
+```sh
+adb shell am instrument -w -e class nl.r1a.grassmap.app.ShareImportInstrumentedTest \
+    nl.r1a.grassmap.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+The four tests passed on the same API 29 emulator. `TrackShareImportTest` and
+`SharedDocumentBytesTest` cover the rule, the real `file.gpx` import, the
+duplicate update and the size bound without a device, and
+`TrackShareWiringTest` holds the manifest filter, the debug-only provider and
+the string keys.
 
 ## Elevation chart
 

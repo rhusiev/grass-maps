@@ -180,8 +180,13 @@ class TrackFolderStore(
 
     private fun decode(text: String): List<TrackFolder> =
         try {
-            Json.decodeFromString<FolderIndex>(text).folders.filter { folder ->
-                folder.id.isNotBlank() && folder.name.isNotBlank() && folder.name.length <= MAX_NAME_LENGTH
+            val index = INDEX_JSON.decodeFromString<FolderIndex>(text)
+            if (index.schema != SCHEMA_VERSION) {
+                emptyList()
+            } else {
+                index.folders.filter { folder ->
+                    folder.id.isNotBlank() && folder.name.isNotBlank() && folder.name.length <= MAX_NAME_LENGTH
+                }
             }
         } catch (exception: SerializationException) {
             emptyList()
@@ -189,7 +194,8 @@ class TrackFolderStore(
             emptyList()
         }
 
-    private fun encode(): ByteArray = Json.encodeToString(FolderIndex(folders = folders.toList())).toByteArray()
+    private fun encode(): ByteArray =
+        INDEX_JSON.encodeToString(FolderIndex(schema = SCHEMA_VERSION, folders = folders.toList())).toByteArray()
 
     private fun persist(): Boolean {
         val target = file ?: return true
@@ -222,12 +228,19 @@ class TrackFolderStore(
     /** The one file the index is written to. */
     @Serializable
     private data class FolderIndex(
-        val schema: Int = 1,
+        val schema: Int,
         val folders: List<TrackFolder> = emptyList(),
     )
 
     companion object {
         const val MAX_NAME_LENGTH: Int = 80
+
+        /**
+         * A newer build may add a field to the index. An unknown field is
+         * ignored, so it cannot turn the folder names into an empty list; a
+         * schema this build does not know is refused instead of guessed.
+         */
+        private val INDEX_JSON: Json = Json { ignoreUnknownKeys = true }
 
         private const val SCHEMA_VERSION = 1
         private const val TEMPORARY_PREFIX = "."

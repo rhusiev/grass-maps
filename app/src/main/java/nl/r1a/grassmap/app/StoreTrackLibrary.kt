@@ -84,13 +84,18 @@ class StoreTrackLibrary(
         folderId: String?,
     ): Outcome<TrackLibraryChange> =
         mutex.withLock {
-            val target = folderId?.takeIf { id -> folders.find(id) != null }
-            if (folderId != null && target == null) {
-                return@withLock Outcome.Failure(AppError.NotFound)
-            }
             val summary =
                 tracks().summaries().firstOrNull { summary -> summary.id == TrackId(trackId) }
                     ?: return@withLock Outcome.Failure(AppError.NotFound)
+            // An unchanged folder id stays even when the folder index cannot
+            // resolve its name: a display fallback must never become a write.
+            val target =
+                when {
+                    folderId == summary.listId -> summary.listId
+                    folderId == null -> null
+                    folders.find(folderId) != null -> folderId
+                    else -> return@withLock Outcome.Failure(AppError.NotFound)
+                }
             val cleanedName = name?.trim()?.takeIf { it.isNotEmpty() }
             val cleanedDescription = description?.takeIf { it.isNotEmpty() }
             val metadata =
@@ -169,7 +174,19 @@ class StoreTrackLibrary(
             val action = pending[receipt] ?: return@withLock Outcome.Success(TrackLibraryUndo.NOT_APPLICABLE)
             when (val applied = applyUndo(action)) {
                 is Outcome.Failure -> {
-                    applied
+                    when (applied.error) {
+                        // The action no longer applies: the folder or track is
+                        // gone, or a re-import owns the id. Consume the
+                        // receipt instead of leaving a dead undo on the stack.
+                        AppError.NotFound, AppError.InvalidInput, AppError.CorruptData -> {
+                            pending.remove(receipt)
+                            Outcome.Success(TrackLibraryUndo.NOT_APPLICABLE)
+                        }
+
+                        else -> {
+                            applied
+                        }
+                    }
                 }
 
                 is Outcome.Success -> {
@@ -204,13 +221,14 @@ class StoreTrackLibrary(
     private suspend fun buildState(action: TrackLibraryAction): Outcome<TrackLibraryState> {
         val summaries = tracks().summaries()
         val folderList = folders.load()
-        val ids = folderList.map { folder -> folder.id }.toSet()
+        // The sidecar's folder id is kept even when the index cannot name it;
+        // only the display falls back to no folder name.
         val entries =
             summaries.map { summary ->
                 TrackLibraryEntry(
                     id = summary.id.value,
                     name = summary.name,
-                    listId = summary.listId?.takeIf { id -> id in ids },
+                    listId = summary.listId,
                     distanceMeters = summary.analysis.distanceMeters,
                     ascentMeters = summary.analysis.ascentMeters,
                     durationMillis = summary.analysis.durationMillis,

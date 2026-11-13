@@ -101,6 +101,24 @@ class TrackFolderStoreTest {
         }
 
     @Test
+    fun anUnknownFieldInTheIndexIsIgnoredSoTheFoldersSurvive() =
+        runTest {
+            index.parentFile?.mkdirs()
+            index.writeText("""{"schema":1,"folders":[{"id":"f1","name":"Hikes"}],"futureField":true}""")
+
+            assertEquals(listOf("Hikes"), TrackFolderStore(index).load().map { folder -> folder.name })
+        }
+
+    @Test
+    fun anIndexFromANewerSchemaIsNotGuessed() =
+        runTest {
+            index.parentFile?.mkdirs()
+            index.writeText("""{"schema":2,"folders":[{"id":"f1","name":"Hikes"}]}""")
+
+            assertTrue(TrackFolderStore(index).load().isEmpty())
+        }
+
+    @Test
     fun aStoreWithNoFileKeepsFoldersInMemory() =
         runTest {
             val store = TrackFolderStore(file = null, idSource = { "memory-1" })

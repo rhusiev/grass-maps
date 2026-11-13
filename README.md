@@ -2175,11 +2175,19 @@ and the screen draws its rows and action sheets. `StoreTrackLibrary` in `app`
 is the only writer: a rename, description or folder change rewrites that
 track's sidecar, and the folder definitions live in `.library.json` beside the
 documents. The GPX document is never rewritten. A delete parks the sidecar and
-document in a process-scoped `.trash` directory, so its receipt restores the
-track to the same folder; the same scoped receipt stack reverses folder and
-track changes one step at a time. The debug channel opens the screen with
+document in `.trash`; the in-memory token is process-scoped and a reload keeps
+every parked token, so two deletes undo in reverse order and each restores its
+track to the same folder. The same scoped receipt stack reverses folder and
+track changes one step at a time. A folder index the build cannot read leaves
+each sidecar's folder id in place, so only the folder name is unresolved and a
+later edit cannot unfil the track. The debug channel opens the screen with
 `core.track.library_show` until the map's track selection grows an entry
 (T-0415); T-0416 owns the share-sheet import.
+
+Two follow-ups are open for the library. The one-tap delete has no confirmation
+because the design's undo snackbar is the canon; a confirm is a product
+decision if the undo is judged too easy to miss. The screen's only entry is the
+debug command until T-0415 adds the map entry.
 
 Twenty committed fixtures under `test-data/tracks` cover OsmAnd, Garmin and
 Strava exports, a GPX 1.0 file with a default namespace, waypoints and routes,

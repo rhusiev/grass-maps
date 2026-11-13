@@ -36,6 +36,7 @@ import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
 import nl.r1a.grassmap.plugin.api.model.RoutePointEntry
 import nl.r1a.grassmap.plugin.api.model.routePointEntry
 import nl.r1a.grassmap.plugin.api.provider.CoordinateParser
+import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.ui.api.RouteTurnStep
 import java.util.Locale
@@ -52,13 +53,6 @@ private const val ACTION_FONT_SP = 15
 private const val STATUS_FONT_SP = 13
 private const val CONTROL_FONT_SP = 20
 private const val RECENT_LIMIT = 5
-private val PANEL_BACKGROUND = Color(0xF2202020)
-private val VALUE_COLOR = Color.White
-private val STATUS_COLOR = Color(0xFFBDBDBD)
-private val DISABLED_COLOR = Color(0xFF6E6E6E)
-private val CHIP_COLOR = Color(0xFF37474F)
-private val CHIP_SELECTED_COLOR = Color(0xFF2E7D32)
-private val ACTION_COLOR = Color(0xFF2E7D32)
 
 /**
  * The planning panel (T-0302, stops T-0303, controls and history T-0304): the
@@ -92,16 +86,19 @@ fun RoutePlanPanel(
     onSwap: () -> Unit,
     onStart: () -> Unit,
     onClose: () -> Unit,
+    onApplyPreferences: (RouteOptions) -> Unit,
+    onResetPreferences: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (state.status == RoutePlanStatus.Idle) return
     val preview = routePlanPreview(state, strings)
+    var preferencesVisible by remember { mutableStateOf(false) }
     Column(
         modifier =
             modifier
                 .padding(PANEL_PADDING_DP.dp)
                 .widthIn(max = PANEL_MAX_WIDTH_DP.dp)
-                .background(PANEL_BACKGROUND, RoundedCornerShape(PANEL_CORNER_DP.dp))
+                .background(ROUTE_PANEL_BACKGROUND, RoundedCornerShape(PANEL_CORNER_DP.dp))
                 .padding(PANEL_PADDING_DP.dp),
         verticalArrangement = Arrangement.spacedBy(PANEL_ROW_GAP_DP.dp),
     ) {
@@ -165,6 +162,29 @@ fun RoutePlanPanel(
                 }
                 if (preview != null) {
                     PreviewCard(preview = preview, onStart = onStart)
+                }
+                RoutePreferencesEntry(
+                    profilePreferences = state.profilePreferences,
+                    overridePreferences = state.overridePreferences,
+                    strings = strings,
+                    expanded = preferencesVisible,
+                    onClick = { preferencesVisible = !preferencesVisible },
+                )
+                if (preferencesVisible) {
+                    RoutePreferencesContent(
+                        profile = state.profile,
+                        profilePreferences = state.profilePreferences,
+                        overridePreferences = state.overridePreferences,
+                        strings = strings,
+                        onApply = { options ->
+                            preferencesVisible = false
+                            onApplyPreferences(options)
+                        },
+                        onReset = {
+                            preferencesVisible = false
+                            onResetPreferences()
+                        },
+                    )
                 }
                 TurnStepper(
                     turns = routePlanTurns(state, strings),
@@ -242,7 +262,7 @@ private fun ControlGlyph(
         text = glyph,
         style =
             TextStyle(
-                color = if (enabled) VALUE_COLOR else DISABLED_COLOR,
+                color = if (enabled) ROUTE_VALUE_COLOR else ROUTE_DISABLED_COLOR,
                 fontSize = CONTROL_FONT_SP.sp,
             ),
         modifier =
@@ -274,7 +294,7 @@ private fun CoordinateEntry(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .background(CHIP_COLOR, RoundedCornerShape(CHIP_CORNER_DP.dp))
+                    .background(ROUTE_CHIP_COLOR, RoundedCornerShape(CHIP_CORNER_DP.dp))
                     .padding(FIELD_PADDING_DP.dp)
                     .widthIn(min = FIELD_MIN_WIDTH_DP.dp),
         ) {
@@ -286,14 +306,14 @@ private fun CoordinateEntry(
                     refused = false
                 },
                 singleLine = true,
-                textStyle = TextStyle(color = VALUE_COLOR, fontSize = STATUS_FONT_SP.sp),
-                cursorBrush = SolidColor(VALUE_COLOR),
+                textStyle = TextStyle(color = ROUTE_VALUE_COLOR, fontSize = STATUS_FONT_SP.sp),
+                cursorBrush = SolidColor(ROUTE_VALUE_COLOR),
                 decorationBox = { inner ->
                     Box {
                         if (text.isEmpty()) {
                             BasicText(
                                 text = hint,
-                                style = TextStyle(color = STATUS_COLOR, fontSize = STATUS_FONT_SP.sp),
+                                style = TextStyle(color = ROUTE_STATUS_COLOR, fontSize = STATUS_FONT_SP.sp),
                             )
                         }
                         inner()
@@ -368,7 +388,7 @@ private fun StopList(
             ) {
                 BasicText(
                     text = stopText(stop),
-                    style = TextStyle(color = VALUE_COLOR, fontSize = STATUS_FONT_SP.sp),
+                    style = TextStyle(color = ROUTE_VALUE_COLOR, fontSize = STATUS_FONT_SP.sp),
                     modifier = Modifier.weight(1f),
                 )
                 if (isVia) {
@@ -418,13 +438,13 @@ private fun TurnStepper(
         )
         BasicText(
             text = strings.resolve(TURN_COUNTER_KEY, listOf((step.index + 1).toString(), turns.size.toString())),
-            style = TextStyle(color = STATUS_COLOR, fontSize = STATUS_FONT_SP.sp),
+            style = TextStyle(color = ROUTE_STATUS_COLOR, fontSize = STATUS_FONT_SP.sp),
         )
         BasicText(
             text = "${step.text} - ${routeTurnDistanceText(step.distanceMeters, strings)}",
             style =
                 TextStyle(
-                    color = VALUE_COLOR,
+                    color = ROUTE_VALUE_COLOR,
                     fontSize = STATUS_FONT_SP.sp,
                 ),
             modifier = Modifier.weight(1f).semantics { contentDescription = step.text },
@@ -458,7 +478,7 @@ private fun RecentRoutes(
             val text = "${stopText(entry.start)} - ${stopText(entry.destination)}"
             BasicText(
                 text = "$text - ${routePlanAlternativeText(entry.durationSeconds, strings)}",
-                style = TextStyle(color = VALUE_COLOR, fontSize = STATUS_FONT_SP.sp),
+                style = TextStyle(color = ROUTE_VALUE_COLOR, fontSize = STATUS_FONT_SP.sp),
                 modifier =
                     Modifier
                         .clickable { onReuse(entry) }
@@ -470,16 +490,17 @@ private fun RecentRoutes(
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
-private fun ActionChip(
+internal fun ActionChip(
     text: String,
     onClick: () -> Unit,
+    background: Color = ROUTE_CHIP_COLOR,
 ) {
     BasicText(
         text = text,
-        style = TextStyle(color = VALUE_COLOR, fontSize = STATUS_FONT_SP.sp, fontWeight = FontWeight.Bold),
+        style = TextStyle(color = ROUTE_VALUE_COLOR, fontSize = STATUS_FONT_SP.sp, fontWeight = FontWeight.Bold),
         modifier =
             Modifier
-                .background(CHIP_COLOR, RoundedCornerShape(CHIP_CORNER_DP.dp))
+                .background(background, RoundedCornerShape(CHIP_CORNER_DP.dp))
                 .clickable(onClick = onClick)
                 .padding(
                     horizontal = CHIP_PADDING_HORIZONTAL_DP.dp,
@@ -513,7 +534,7 @@ private fun AlternativeChips(
                 text = routePlanAlternativeText(option.durationSeconds, strings),
                 style =
                     TextStyle(
-                        color = VALUE_COLOR,
+                        color = ROUTE_VALUE_COLOR,
                         fontSize = STATUS_FONT_SP.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                     ),
@@ -521,7 +542,7 @@ private fun AlternativeChips(
                     Modifier
                         .semantics { contentDescription = description }
                         .background(
-                            if (selected) CHIP_SELECTED_COLOR else CHIP_COLOR,
+                            if (selected) ROUTE_CHIP_SELECTED_COLOR else ROUTE_CHIP_COLOR,
                             RoundedCornerShape(CHIP_CORNER_DP.dp),
                         ).clickable { onSelectAlternative(index) }
                         .padding(
@@ -558,7 +579,7 @@ private fun PreviewCard(
                 ),
             modifier =
                 Modifier
-                    .background(ACTION_COLOR, RoundedCornerShape(CHIP_CORNER_DP.dp))
+                    .background(ROUTE_ACTION_COLOR, RoundedCornerShape(CHIP_CORNER_DP.dp))
                     .clickable(onClick = onStart)
                     .padding(
                         horizontal = CHIP_PADDING_HORIZONTAL_DP.dp,
@@ -573,7 +594,7 @@ private fun PreviewCard(
 private fun ValueText(text: String) {
     BasicText(
         text = text,
-        style = TextStyle(color = VALUE_COLOR, fontSize = VALUE_FONT_SP.sp),
+        style = TextStyle(color = ROUTE_VALUE_COLOR, fontSize = VALUE_FONT_SP.sp),
     )
 }
 
@@ -585,7 +606,7 @@ private fun StatusLine(
 ) {
     BasicText(
         text = text,
-        style = TextStyle(color = STATUS_COLOR, fontSize = STATUS_FONT_SP.sp),
+        style = TextStyle(color = ROUTE_STATUS_COLOR, fontSize = STATUS_FONT_SP.sp),
         modifier = Modifier.semantics { contentDescription = description },
     )
 }

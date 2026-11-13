@@ -99,6 +99,7 @@ import nl.r1a.grassmap.plugin.api.provider.MapLayerContract
 import nl.r1a.grassmap.plugin.api.provider.MapLayerProvider
 import nl.r1a.grassmap.plugin.api.provider.PlaceSource
 import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue
 import nl.r1a.grassmap.plugin.ui.api.NavigationScreenStatus
@@ -565,6 +566,7 @@ private fun MapContent(
         if (plan.generation == 0L) {
             return@LaunchedEffect
         }
+        logRoutePreferences(plan.profile, plan.overridePreferences != null, plan.preferences)
         boundsOf(plan.selected?.geometry)?.let { bounds ->
             surface.host.fitBounds(bounds).onFailure { error ->
                 Log.w(TAG, "route not fitted: $error")
@@ -932,6 +934,25 @@ private fun MapContent(
                         invokePlannerCommand(container, RoutePlannerContract.clear, JsonObject(emptyMap()))
                     }
                 },
+                onApplyPreferences = { options ->
+                    logRoutePreferences(plan.profile, overridden = true, options)
+                    scope.launch {
+                        invokePlannerCommand(
+                            container,
+                            RoutePlannerContract.setPreferences,
+                            buildJsonObject {
+                                put("hills", options.hills.serializedValue)
+                                put("busy_roads", options.busyRoads.serializedValue)
+                                put("rough_surfaces", options.roughSurfaces.serializedValue)
+                            },
+                        )
+                    }
+                },
+                onResetPreferences = {
+                    scope.launch {
+                        invokePlannerCommand(container, RoutePlannerContract.resetPreferences, JsonObject(emptyMap()))
+                    }
+                },
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
@@ -1168,6 +1189,26 @@ private suspend fun invokePlannerCommand(
     container.commandBus.invoke(id, params).onFailure { error ->
         Log.w(TAG, "route planner $id failed: $error")
     }
+}
+
+/**
+ * Records the preferences a route request carried, in the route log the app
+ * already writes. Values are the stable settings spelling; no point, label or
+ * other user data is logged.
+ */
+private fun logRoutePreferences(
+    profile: RouteProfile,
+    overridden: Boolean,
+    options: RouteOptions,
+) {
+    Log.i(
+        TAG,
+        "route-preferences profile=${profile.name.lowercase()} " +
+            "source=${if (overridden) "route" else "profile"} " +
+            "hills=${options.hills.serializedValue} " +
+            "busy_roads=${options.busyRoads.serializedValue} " +
+            "rough_surfaces=${options.roughSurfaces.serializedValue}",
+    )
 }
 
 /** Moves one control by [delta] positions; an out-of-range move keeps the order. */

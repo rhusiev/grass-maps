@@ -2294,6 +2294,7 @@ The strings are English and Ukrainian.
 The acceptance is an `ACTION_SEND` over `adb`:
 
 ```sh
+adb shell mkdir -p /sdcard/Android/data/nl.r1a.grassmap/files/share
 adb push test-data/location/mock-walk.gpx \
     /sdcard/Android/data/nl.r1a.grassmap/files/share/mock-walk.gpx
 adb shell am start -a android.intent.action.SEND -c android.intent.category.DEFAULT \
@@ -2303,7 +2304,8 @@ adb shell am start -a android.intent.action.SEND -c android.intent.category.DEFA
 ```
 
 The file goes into the app's own external files directory, which it reads
-without a permission. The import logs one line,
+without a permission; the first line creates the directory, because `adb push`
+does not. The import logs one line,
 `GrassMapsTracks: share import name="mock-walk.gpx" tracks=1 skipped=0 ids=...`,
 and the notice appears on the map. Adding
 `-n nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity` starts this app directly

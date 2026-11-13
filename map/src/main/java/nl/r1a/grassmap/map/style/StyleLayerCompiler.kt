@@ -32,6 +32,14 @@ internal object StyleLayerCompiler {
             "line-join",
         )
 
+    private val CIRCLE_PROPERTIES =
+        setOf(
+            "circle-color",
+            "circle-radius",
+            "circle-stroke-color",
+            "circle-stroke-width",
+        )
+
     private val SYMBOL_PROPERTIES =
         setOf(
             "icon-allow-overlap",
@@ -73,13 +81,13 @@ internal object StyleLayerCompiler {
             LayerType.Background -> BACKGROUND_PROPERTIES
             LayerType.Fill -> FILL_PROPERTIES
             LayerType.Line -> LINE_PROPERTIES
+            LayerType.Circle -> CIRCLE_PROPERTIES
             LayerType.Symbol -> SYMBOL_PROPERTIES
             else -> emptySet()
         }
 
     fun compile(spec: LayerSpec): CompiledLayer {
         when (spec.type) {
-            LayerType.Circle,
             LayerType.Raster,
             LayerType.Hillshade,
             -> throw StyleCompileException("Layer type '${spec.type}' is not rendered yet")

@@ -453,6 +453,23 @@ private fun StyleLayerNode(
             )
         }
 
+        LayerType.Circle -> {
+            if (source == null) return
+            CircleLayer(
+                id = layer.id,
+                source = source,
+                sourceLayer = layer.sourceLayer,
+                minZoom = layer.minZoom,
+                maxZoom = layer.maxZoom,
+                filter = layer.filter,
+                color = layer.expression<ColorValue>("circle-color") ?: const(Color.Black),
+                radius = layer.expression<DpValue>("circle-radius") ?: const(5.dp),
+                strokeColor =
+                    layer.expression<ColorValue>("circle-stroke-color") ?: const(Color.Transparent),
+                strokeWidth = layer.expression<DpValue>("circle-stroke-width") ?: const(0.dp),
+            )
+        }
+
         LayerType.Symbol -> {
             if (source == null) return
             SymbolLayer(

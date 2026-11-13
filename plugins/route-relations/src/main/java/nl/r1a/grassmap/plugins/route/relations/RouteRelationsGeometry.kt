@@ -27,7 +27,7 @@ data class AssembledRoute(
 )
 
 /**
- * Assembles a relation's geometry from its ordered way members (T-0418).
+ * Assembles a relation's geometry from its ordered way members (T-0418, T-0419).
  *
  * Member order is the relation's own order. Each way's points are used in the
  * direction that starts nearest the previous member's last point, so a route

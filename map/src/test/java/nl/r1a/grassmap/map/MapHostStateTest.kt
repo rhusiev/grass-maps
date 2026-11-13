@@ -122,7 +122,7 @@ class MapHostStateTest {
                             LayerSlot.Markers,
                             LayerSpec(
                                 id = LayerId("marker"),
-                                type = LayerType.Circle,
+                                type = LayerType.Raster,
                                 source = MapSourceIds.REGION,
                             ),
                         ),
@@ -132,6 +132,34 @@ class MapHostStateTest {
 
         assertEquals(Outcome.Failure(AppError.Unsupported), result)
         assertTrue(session.layers.value.isEmpty())
+    }
+
+    @Test
+    fun aCircleLayerCarriesItsPlateAndRing() {
+        val session = session()
+        val spec =
+            LayerSpec(
+                id = LayerId("route.relations.node"),
+                type = LayerType.Circle,
+                data = """{"type":"FeatureCollection","features":[]}""",
+                paint =
+                    JsonObject(
+                        mapOf(
+                            "circle-color" to JsonPrimitive("#ffffff"),
+                            "circle-radius" to JsonPrimitive(5.5),
+                            "circle-stroke-color" to JsonPrimitive("#2e9e44"),
+                            "circle-stroke-width" to JsonPrimitive(2.2),
+                        ),
+                    ),
+            )
+
+        assertEquals(Outcome.Success(Unit), session.addLayer(LayerSlot.Routes, spec, PluginId("route.relations")))
+        assertEquals(
+            spec,
+            session.layers.value
+                .single()
+                .spec,
+        )
     }
 
     @Test

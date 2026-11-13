@@ -8,7 +8,7 @@ import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.RouteRelations
 
 /**
- * Draws the mounted region's hiking route relations (T-0418).
+ * Draws the mounted region's hiking and cycling route relations (T-0418, T-0419).
  *
  * The controller reads the component through [load], assembles the member
  * geometry, and adds the layers to the map's routes slot under the plugin's

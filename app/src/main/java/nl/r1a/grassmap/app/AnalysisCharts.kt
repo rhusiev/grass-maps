@@ -3,6 +3,8 @@ package nl.r1a.grassmap.app
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.ElevationAccess
 import nl.r1a.grassmap.plugin.api.model.RoutePlanOption
+import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartClimb
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartPoint
@@ -14,7 +16,11 @@ import nl.r1a.grassmap.tracks.ElevationProfile
 import nl.r1a.grassmap.tracks.ElevationProfiler
 import nl.r1a.grassmap.tracks.ElevationSegments
 import nl.r1a.grassmap.tracks.RouteStretches
+import nl.r1a.grassmap.tracks.SlopeTimeEstimator
 import nl.r1a.grassmap.tracks.StoredTrack
+import nl.r1a.grassmap.tracks.TimeEstimate
+import nl.r1a.grassmap.tracks.TimeModelKind
+import nl.r1a.grassmap.tracks.TravelMode
 import nl.r1a.grassmap.ui.shell.TrackAnalysisSummary
 import kotlin.math.ceil
 
@@ -112,6 +118,53 @@ internal fun elevationChartSelection(
 private val elevationSegments = ElevationSegments()
 
 private val routeStretches = RouteStretches()
+
+private val slopeTimeEstimator = SlopeTimeEstimator()
+
+/**
+ * The slope-aware time of a planned route (T-0407).
+ *
+ * The profile is the engine's own DEM profile and the model reads only its
+ * samples, so no geometry is measured twice. [RoutePlanOption.durationSeconds]
+ * is the existing flat estimate: a missing or flat profile keeps it unchanged,
+ * while a real grade replaces it with the Tobler or bike-power time. A car
+ * route has no model and keeps the engine's estimate.
+ */
+internal fun routeTimeEstimate(
+    profile: ElevationProfile,
+    option: RoutePlanOption,
+    routeProfile: RouteProfile,
+): TimeEstimate? {
+    val mode = routeProfile.travelMode() ?: return null
+    return slopeTimeEstimator.estimate(profile, mode, option.durationSeconds)
+}
+
+/** The display name of a time model, so the preview can say which one produced the time. */
+internal fun timeModelLabel(
+    kind: TimeModelKind,
+    strings: Strings,
+): String =
+    strings.resolve(
+        when (kind) {
+            TimeModelKind.ToblerWalk -> TIME_MODEL_TOBLER_WALK
+            TimeModelKind.ToblerHike -> TIME_MODEL_TOBLER_HIKE
+            TimeModelKind.BikePower -> TIME_MODEL_BIKE_POWER
+            TimeModelKind.Flat -> TIME_MODEL_FLAT
+        },
+    )
+
+private fun RouteProfile.travelMode(): TravelMode? =
+    when (this) {
+        RouteProfile.Walk -> TravelMode.Walk
+        RouteProfile.Hike -> TravelMode.Hike
+        RouteProfile.Bike -> TravelMode.Bike
+        RouteProfile.Car -> null
+    }
+
+private const val TIME_MODEL_TOBLER_WALK = "time_model_tobler_walk"
+private const val TIME_MODEL_TOBLER_HIKE = "time_model_tobler_hike"
+private const val TIME_MODEL_BIKE_POWER = "time_model_bike_power"
+private const val TIME_MODEL_FLAT = "time_model_flat"
 
 /** The panel's statistics, copied from the engine's analysis of the same track. */
 internal fun trackAnalysisSummary(track: StoredTrack): TrackAnalysisSummary {

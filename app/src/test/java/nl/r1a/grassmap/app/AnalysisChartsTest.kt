@@ -11,13 +11,18 @@ import nl.r1a.grassmap.plugin.api.model.Track
 import nl.r1a.grassmap.plugin.api.model.TrackPoint
 import nl.r1a.grassmap.plugin.api.model.TrackSegment
 import nl.r1a.grassmap.plugin.api.provider.RouteAttributes
+import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteSegment
+import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartStretch
+import nl.r1a.grassmap.tracks.ElevationProfile
 import nl.r1a.grassmap.tracks.ElevationProfiler
+import nl.r1a.grassmap.tracks.ElevationSample
 import nl.r1a.grassmap.tracks.ElevationSegments
 import nl.r1a.grassmap.tracks.StoredTrack
+import nl.r1a.grassmap.tracks.TimeModelKind
 import nl.r1a.grassmap.tracks.TrackAnalyzer
 import nl.r1a.grassmap.tracks.TrackId
 import org.junit.Assert.assertEquals
@@ -231,6 +236,74 @@ class AnalysisChartsTest {
             val profile = RouteElevation(elevation).profile(route) ?: error("no profile")
 
             assertTrue(elevationChartStretches(profile, route).isEmpty())
+        }
+
+    @Test
+    fun theRouteTimeUsesTheProfileAndTheProfileMode() {
+        val option = route(geometry(size = 2), durationSeconds = 720.0, arrivalEpochMillis = ARRIVAL)
+        val uphill = slopedProfile()
+
+        val walk = routeTimeEstimate(uphill, option, RouteProfile.Walk) ?: error("no walk estimate")
+        val hike = routeTimeEstimate(uphill, option, RouteProfile.Hike) ?: error("no hike estimate")
+        val bike = routeTimeEstimate(uphill, option, RouteProfile.Bike) ?: error("no bike estimate")
+
+        assertEquals(799.711639, walk.seconds, 1e-6)
+        assertEquals(TimeModelKind.ToblerWalk, walk.model)
+        assertEquals(888.568488, hike.seconds, 1e-6)
+        assertEquals(TimeModelKind.ToblerHike, hike.model)
+        assertEquals(474.752039, bike.seconds, 1e-6)
+        assertEquals(TimeModelKind.BikePower, bike.model)
+        assertNull(routeTimeEstimate(uphill, option, RouteProfile.Car))
+    }
+
+    @Test
+    fun aFlatOrMissingRouteProfileKeepsTheEngineDuration() {
+        val option = route(geometry(size = 2), durationSeconds = 1_140.0, arrivalEpochMillis = ARRIVAL)
+        val flat =
+            ElevationProfile(
+                samples = listOf(ElevationSample(0.0, 100.0), ElevationSample(1_000.0, 100.0)),
+            )
+
+        val flatEstimate = routeTimeEstimate(flat, option, RouteProfile.Walk) ?: error("no estimate")
+        val missingEstimate = routeTimeEstimate(ElevationProfile(), option, RouteProfile.Walk) ?: error("no estimate")
+
+        assertEquals(1_140.0, flatEstimate.seconds, 1e-6)
+        assertEquals(TimeModelKind.Flat, flatEstimate.model)
+        assertEquals(1_140.0, missingEstimate.seconds, 1e-6)
+        assertEquals(TimeModelKind.Flat, missingEstimate.model)
+    }
+
+    @Test
+    fun theTimeModelLabelIsTheUsersWordForTheModel() {
+        val strings = modelStrings()
+
+        assertEquals("Tobler walk", timeModelLabel(TimeModelKind.ToblerWalk, strings))
+        assertEquals("Tobler hike", timeModelLabel(TimeModelKind.ToblerHike, strings))
+        assertEquals("Bike power", timeModelLabel(TimeModelKind.BikePower, strings))
+        assertEquals("Flat speed", timeModelLabel(TimeModelKind.Flat, strings))
+    }
+
+    private fun slopedProfile(): ElevationProfile =
+        ElevationProfile(
+            samples = listOf(ElevationSample(0.0, 100.0), ElevationSample(1_000.0, 130.0)),
+        )
+
+    private fun modelStrings(): Strings =
+        object : Strings {
+            private val templates =
+                mapOf(
+                    "time_model_tobler_walk" to "Tobler walk",
+                    "time_model_tobler_hike" to "Tobler hike",
+                    "time_model_bike_power" to "Bike power",
+                    "time_model_flat" to "Flat speed",
+                )
+
+            override fun resolve(
+                key: String,
+                arguments: List<String>,
+            ): String = templates[key] ?: key
+
+            override fun contains(key: String): Boolean = key in templates
         }
 
     private fun route(

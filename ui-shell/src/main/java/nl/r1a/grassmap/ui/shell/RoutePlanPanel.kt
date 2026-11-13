@@ -69,7 +69,9 @@ private const val RECENT_LIMIT = 5
  *
  * The elevation chart (T-0404) sits under the preview, behind the Details
  * toggle, with its axis chips beside it. It plots the analysis engine's profile
- * of the selected route and never samples the terrain again.
+ * of the selected route and never samples the terrain again. [time] is the
+ * slope-aware estimate (T-0407); when present, the preview names its model and
+ * moves the arrival with it.
  *
  * The design also draws a warning marker on the route line. That marker is not
  * built: the map host has no marker set, and the composed-layers compiler
@@ -103,11 +105,12 @@ fun RoutePlanPanel(
     warnings: List<RouteWarningRow> = emptyList(),
     chart: ElevationChartState = ElevationChartState(),
     onChartAxis: (ElevationChartAxis) -> Unit = {},
+    time: RoutePreviewTime? = null,
     dark: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     if (state.status == RoutePlanStatus.Idle) return
-    val preview = routePlanPreview(state, strings)
+    val preview = routePlanPreview(state, strings, time = time)
     var detailsExpanded by remember(state.selected) { mutableStateOf(false) }
     var preferencesVisible by remember { mutableStateOf(false) }
     var warningsVisible by remember { mutableStateOf(false) }

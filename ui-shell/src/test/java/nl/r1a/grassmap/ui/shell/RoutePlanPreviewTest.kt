@@ -78,6 +78,59 @@ class RoutePlanPreviewTest {
     }
 
     @Test
+    fun thePreviewNamesTheModelThatProducedTheTime() {
+        val preview =
+            routePlanPreview(
+                READY,
+                strings(),
+                Locale.US,
+                ZoneId.of("UTC"),
+                time = RoutePreviewTime(seconds = 1_200.0, model = "Tobler walk"),
+            ) ?: error("no preview")
+
+        assertEquals("20 min · Tobler walk", preview.time)
+        assertEquals("22:33", preview.arrival)
+        assertEquals(4, preview.entries.size)
+    }
+
+    @Test
+    fun anEstimateThatEqualsTheRecordedDurationKeepsTheRecordedArrival() {
+        val preview =
+            routePlanPreview(
+                READY,
+                strings(),
+                Locale.US,
+                ZoneId.of("UTC"),
+                time = RoutePreviewTime(seconds = DURATION_SECONDS, model = "Flat speed"),
+            ) ?: error("no preview")
+
+        assertEquals("25 min · Flat speed", preview.time)
+        assertEquals("22:38", preview.arrival)
+    }
+
+    @Test
+    fun theModelNameDoesNotAddAPreviewField() {
+        val preview =
+            routePlanPreview(
+                READY,
+                strings(),
+                Locale.US,
+                ZoneId.of("UTC"),
+                time = RoutePreviewTime(seconds = 1_200.0, model = "Bike power"),
+            ) ?: error("no preview")
+
+        assertEquals(
+            listOf(
+                RoutePreviewField.Time,
+                RoutePreviewField.Distance,
+                RoutePreviewField.Arrival,
+                RoutePreviewField.Start,
+            ),
+            preview.entries.map { it.field },
+        )
+    }
+
+    @Test
     fun theAlternativeChipUsesTheSameDurationRule() {
         assertEquals("25 min", routePlanAlternativeText(1_482.0, strings()))
         assertEquals("2 h 3 min", routePlanAlternativeText(7_380.0, strings()))

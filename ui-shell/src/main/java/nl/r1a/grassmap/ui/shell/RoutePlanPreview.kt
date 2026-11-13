@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.ui.shell
 
+import nl.r1a.grassmap.plugin.api.model.RoutePlanOption
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.service.Strings
 import java.time.Instant
@@ -10,7 +11,8 @@ import java.util.Locale
 /**
  * The four things the preview shows, and nothing else: time, distance,
  * arrival and the Start action (T-0302). Elevation, slope, surface and way
- * detail belong to later tasks and must not be added here.
+ * detail belong to later tasks and must not be added here. The slope-aware
+ * model's name (T-0407) sits inside the Time text, so it is not a fifth field.
  */
 enum class RoutePreviewField {
     Time,
@@ -23,6 +25,16 @@ enum class RoutePreviewField {
 data class RoutePreviewEntry(
     val field: RoutePreviewField,
     val text: String,
+)
+
+/**
+ * A slope-aware time and the model that produced it (T-0407). The app computes
+ * it from the route's profile; the shell only formats the seconds and names the
+ * model beside them.
+ */
+data class RoutePreviewTime(
+    val seconds: Double,
+    val model: String,
 )
 
 /** The preview card. Construction fixes the list at four entries. */
@@ -56,29 +68,59 @@ data class RoutePreview(
  *
  * The arrival is formatted from the clock time the planner recorded, so every
  * view of one route shows the same arrival instead of drifting with the clock.
+ *
+ * [time] is the slope-aware estimate (T-0407). When present it replaces the
+ * engine's duration in the Time entry and moves the arrival by the same amount,
+ * so the two totals stay one answer. It also names the model beside the
+ * duration.
  */
 fun routePlanPreview(
     state: RoutePlanState,
     strings: Strings,
     locale: Locale = Locale.getDefault(),
     zone: ZoneId = ZoneId.systemDefault(),
+    time: RoutePreviewTime? = null,
 ): RoutePreview? {
     val option = state.selected ?: return null
+    val seconds = time?.seconds ?: option.durationSeconds
     return RoutePreview(
         entries =
             listOf(
-                RoutePreviewEntry(RoutePreviewField.Time, durationText(option.durationSeconds, strings)),
+                RoutePreviewEntry(RoutePreviewField.Time, timeText(seconds, time?.model, strings)),
                 RoutePreviewEntry(
                     RoutePreviewField.Distance,
                     distanceText(option.distanceMeters, strings, locale),
                 ),
                 RoutePreviewEntry(
                     RoutePreviewField.Arrival,
-                    ARRIVAL_FORMAT.format(Instant.ofEpochMilli(option.arrivalEpochMillis).atZone(zone)),
+                    ARRIVAL_FORMAT.format(Instant.ofEpochMilli(arrivalMillis(option, seconds)).atZone(zone)),
                 ),
                 RoutePreviewEntry(RoutePreviewField.Start, strings.resolve(START_KEY)),
             ),
     )
+}
+
+/**
+ * The arrival that belongs to [seconds]: the recorded arrival is the engine's
+ * departure plus its duration, so a different duration moves it by the
+ * difference. A fallback that equals the engine's duration keeps the recorded
+ * arrival exactly.
+ */
+private fun arrivalMillis(
+    option: RoutePlanOption,
+    seconds: Double,
+): Long {
+    val departure = option.arrivalEpochMillis - (option.durationSeconds * MILLIS_PER_SECOND).roundToLong()
+    return departure + (seconds * MILLIS_PER_SECOND).roundToLong()
+}
+
+private fun timeText(
+    seconds: Double,
+    model: String?,
+    strings: Strings,
+): String {
+    val duration = durationText(seconds, strings)
+    return if (model == null) duration else duration + MODEL_SEPARATOR + model
 }
 
 /** The text for one alternative, so the chips use the same duration rule. */
@@ -126,6 +168,8 @@ private val ARRIVAL_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:
 private const val SECONDS_PER_MINUTE = 60.0
 private const val MINUTES_PER_HOUR = 60L
 private const val METRES_PER_KILOMETRE = 1_000.0
+private const val MILLIS_PER_SECOND = 1_000.0
+private const val MODEL_SEPARATOR = " · "
 private const val START_KEY = "route_preview_start"
 private const val MINUTES_KEY = "route_preview_minutes"
 private const val HOURS_KEY = "route_preview_hours"

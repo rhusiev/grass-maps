@@ -139,6 +139,7 @@ import nl.r1a.grassmap.ui.shell.NavigationScreenHost
 import nl.r1a.grassmap.ui.shell.NavigationSheet
 import nl.r1a.grassmap.ui.shell.PlaceCardHost
 import nl.r1a.grassmap.ui.shell.RoutePlanPanel
+import nl.r1a.grassmap.ui.shell.RoutePreviewTime
 import nl.r1a.grassmap.ui.shell.SearchScreenHost
 import nl.r1a.grassmap.ui.shell.TrackAnalysisPanel
 import nl.r1a.grassmap.ui.shell.TrackImportNoticeBar
@@ -389,6 +390,20 @@ private fun MapContent(
     val routeChart =
         remember(routeProfile, chartAxis, routeStretchList) {
             elevationChartState(routeProfile, chartAxis, stretches = routeStretchList)
+        }
+    // The slope-aware ETA (T-0407): the same profile the chart draws, and the
+    // model's name beside the time. A missing profile keeps the engine's own
+    // duration through the flat fallback.
+    val routePreviewTime =
+        remember(routeProfile, plan.selected, plan.profile, container.strings) {
+            plan.selected?.let { option ->
+                routeTimeEstimate(routeProfile, option, plan.profile)?.let { estimate ->
+                    RoutePreviewTime(
+                        seconds = estimate.seconds,
+                        model = timeModelLabel(estimate.model, container.strings),
+                    )
+                }
+            }
         }
     // The track analysis panel (T-0404), opened by the control command until the
     // map's track selection opens it (T-0415).
@@ -1070,6 +1085,7 @@ private fun MapContent(
                 warnings = warningRows,
                 chart = routeChart,
                 onChartAxis = { axis -> chartAxis = axis },
+                time = routePreviewTime,
                 dark = isSystemInDarkTheme(),
                 modifier =
                     Modifier

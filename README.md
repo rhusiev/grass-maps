@@ -2409,11 +2409,24 @@ even stride, and returns no profile when the DEM cannot answer. The heights are
 the region's, not the routing engine's: Valhalla's `/route` carries no elevation.
 
 `ElevationChartState` in `plugin-ui-api` is the chart in the app's state: the
-engine's points and the chosen axis. `elevationChartContent` in `ui-shell` maps
-them onto the axis and nothing else. The Distance axis uses the sample distance,
-the Duration axis its elapsed time and the Time of day axis its timestamp, so
-the two time axes plot the engine's timing rather than an even division of the
-totals. The chart is read-only: no drag, no tap and no selection yet.
+engine's points, the chosen axis, the selected range with its statistics, and
+the climbs the engine found. `elevationChartContent` in `ui-shell` maps them onto
+the axis and nothing else. The Distance axis uses the sample distance, the
+Duration axis its elapsed time and the Time of day axis its timestamp, so the two
+time axes plot the engine's timing rather than an even division of the totals. A
+range dragged on the chart is held in distance: the touch position maps back
+through the chosen axis to a distance on the drawn line, so a drag on the
+Duration axis selects the same stretch the line covers.
+
+The analysis panel's chart is a range selector (T-0405); the route preview's
+chart stays a read-only drawing. A drag across the plot reports two distances
+through the `onRange` callback and draws the selected band and its two handles
+from `ElevationChartState.selection`. The band is the design's faint fill with a
+dashed edge and a handle at each end. A drag shorter than 2 % of the plot leaves
+the previous selection alone; the Clear action beside the range row removes it.
+The range row under the chart shows the engine's distance, ascent, descent and
+time, and no maximum grade: the design's `max 25 %` needs a slope window that is
+not defined, so it is not drawn.
 
 The drawing uses the round-10 chart palette: seven slope colours from -15 % to
 +15 % on the hike scale, the area under the line filled per segment with the
@@ -2423,6 +2436,43 @@ one per theme and the chip colours follow it. A route's chart sits under the
 preview behind a Details toggle, and a track's sits in the analysis panel behind
 the same toggle. The axis chips stay beside the chart.
 
+`ElevationSegments` in `tracks` owns the range and segment model, over the same
+profile the chart draws. A range sums the profile's own steps between its two
+ends and interpolates the ends along the drawn line; a step at a segment
+boundary (zero distance) adds nothing, which is the statistics' own rule. A
+range over a whole profile therefore equals `TrackAnalyzer`'s distance, ascent,
+descent and duration, and `ElevationSegmentsTest` checks exactly that on a
+synthetic track. A range's duration is the elapsed-time span of its ends and is
+absent when the profile has no complete timing.
+
+A climb is a maximal run of consecutive samples in which no step descends: a
+flat step keeps the run alive and a descending step of any size ends it. The run
+is listed when it gains at least 30 m at an average grade of at least 3 %. Both
+figures are chosen, not derived: 30 m sits just below the smallest climb the
+round-10 design draws (32 m) and 3 % is the floor the route-analysis research
+records for ClimbPro-style lists. A descent uses the same thresholds in the
+other direction. Because the profile is not smoothed, a single noisy descending
+step can split a climb, and the gains count the profile's raw steps rather than
+hand-picked key ranges; both are the engine's no-smoothing policy and neither is
+measured against real tracks yet. The model has descents, but the design has no
+descent rows, so the panel lists climbs only; a dragged range that loses height
+shows its descent in the range row. The climb list's rows are the design's
+numbering badge, the climb's range, its gain, its average grade and its time,
+and a tapped row selects that range on the chart. The list is capped at 192 dp
+and scrolls, so a track with many climbs does not push the panel past the
+screen. The row's title is the range, because a track carries no climb names:
+the design's names are summits, and the engine has no summit source to name them
+from. A badge takes the chart's slope colour for the climb's average grade and
+its number is the darker or lighter of the two ink colours with the higher
+contrast, which reproduces the design's white on the steeper badge and dark on
+the lighter ones.
+
+`ElevationSegmentsTest` holds the fixed expected list for a synthetic track: two
+climbs, their ends, gains, grades and times. Further tests cover a reversed drag,
+clamping to the profile, a segment boundary that adds no gain, an untimed
+profile, an empty, one-sample and flat profile, the two thresholds, a single
+descending step that ends a climb, and a sustained descent.
+
 `core.track.analysis` opens the track analysis panel, by id or for the newest
 stored track:
 
@@ -2431,16 +2481,21 @@ tools/control/grassctl.py invoke core.track.analysis '{"id":"<track id>"}'
 ```
 
 That command is the temporary entry point. The map's track selection opens the
-same panel in T-0415, and the track library screen is still T-0414. The way-type
-strips and their stripes belong to T-0406 and the climbs and range selection to
-T-0405; neither is drawn here. No device screenshot of the chart exists yet, and
-the route profile is unverified against a real routing pack.
+same panel in T-0415, and the track library screen is still T-0414. The surface
+and way-type strips and their stripes belong to T-0406 and are not drawn here.
+No device screenshot of the chart exists yet, the route profile is unverified
+against a real routing pack, the climb thresholds are chosen rather than
+measured against real tracks, and the drag gesture has only content tests until
+the chart is exercised on a device.
 
 The plugin boundary rule decides where the pieces live: `ui-shell` and a plugin
 may depend on `plugin-api` and `plugin-ui-api` but not on `tracks`, and a plugin
 cannot read the track store, so `app` maps the engine profile onto the chart
-state. T-0405's `plugins/analysis-ui` needs a host seam for range statistics, or
-the same app-side mapping, before the range selection can live in the plugin.
+state. The range selection needs the engine's arithmetic for an arbitrary drag,
+which a precomputed state cannot carry, so the panel reports the dragged
+distances through a callback and `app` answers with `ElevationSegments`' own
+statistics. That keeps one range model, in the engine, and the callback is the
+host seam the earlier note expected; no `plugins/analysis-ui` module is created.
 
 ## Regions seam
 

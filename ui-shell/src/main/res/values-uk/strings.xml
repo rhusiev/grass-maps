@@ -162,7 +162,7 @@
     <string name="track_library_name">Назва</string>
     <string name="track_library_folder">Тека</string>
     <string name="track_library_description">Опис</string>
-    <string name="track_library_description_note">HTML із GPX показується як текстове форматування; скрипти й зображення видаляються</string>
+    <string name="track_library_description_note">Ваш опис зберігається як текст; форматування на екрані спрощується</string>
     <string name="track_library_cancel">Скасувати</string>
     <string name="track_library_save">Зберегти</string>
     <string name="track_library_folder_name">Назва теки</string>

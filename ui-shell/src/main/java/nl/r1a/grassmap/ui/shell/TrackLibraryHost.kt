@@ -85,9 +85,7 @@ fun TrackLibraryHost(
     var descriptionField by remember { mutableStateOf("") }
     var folderField by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf(state.browse.query) }
-    val selectedRow =
-        content.rows.firstOrNull { row -> row.id == selectedTrackId }
-            ?: content.rows.firstOrNull { row -> state.tracks.any { track -> track.id == selectedTrackId } }
+    val selectedRow = selectedLibraryRow(content.rows, selectedTrackId)
 
     LaunchedEffect(selectedTrackId, state.tracks.size) {
         if (sheet == LibrarySheet.ACTIONS || sheet == LibrarySheet.EDIT || sheet == LibrarySheet.MOVE) {

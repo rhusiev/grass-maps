@@ -87,6 +87,17 @@ class TrackLibraryContentTest {
     }
 
     @Test
+    fun aSelectedTrackThatTheBrowseViewNoLongerHasBindsNoSheet() {
+        val filtered = STATE.copy(browse = STATE.browse.copy(rows = listOf(ROW)))
+        val rows = trackLibraryContent(filtered, strings(ENGLISH, APP_ENGLISH), Locale.ENGLISH).rows
+
+        assertEquals("t1", selectedLibraryRow(rows, "t1")?.id)
+        assertTrue(STATE.tracks.any { track -> track.id == "t2" })
+        assertNull(selectedLibraryRow(rows, "t2"))
+        assertNull(selectedLibraryRow(rows, null))
+    }
+
+    @Test
     fun theActionSheetOffersEditMoveShareAndDelete() {
         val content = trackActionSheetContent(content().rows.first(), strings(ENGLISH, APP_ENGLISH))
 
@@ -109,7 +120,7 @@ class TrackLibraryContentTest {
         assertEquals(listOf("Hikes"), edit.folders.filter { folder -> folder.selected }.map { folder -> folder.name })
         assertEquals("<b>Steep</b> steps", edit.description)
         assertEquals(
-            "HTML from the GPX is shown as text formatting; scripts and images are removed",
+            "Your description is stored as text; formatting is flattened on screen",
             edit.descriptionNote,
         )
     }

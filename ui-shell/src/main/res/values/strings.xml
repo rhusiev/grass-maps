@@ -162,7 +162,7 @@
     <string name="track_library_name">Name</string>
     <string name="track_library_folder">Folder</string>
     <string name="track_library_description">Description</string>
-    <string name="track_library_description_note">HTML from the GPX is shown as text formatting; scripts and images are removed</string>
+    <string name="track_library_description_note">Your description is stored as text; formatting is flattened on screen</string>
     <string name="track_library_cancel">Cancel</string>
     <string name="track_library_save">Save</string>
     <string name="track_library_folder_name">Folder name</string>

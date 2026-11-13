@@ -193,6 +193,16 @@ fun trackLibraryContent(
     )
 }
 
+/**
+ * The row a sheet may act on. A selected id that the current browse view no
+ * longer contains has no row, so the caller closes the sheet instead of
+ * binding it to a different track (T-0414).
+ */
+internal fun selectedLibraryRow(
+    rows: List<TrackLibraryRowContent>,
+    selectedId: String?,
+): TrackLibraryRowContent? = rows.firstOrNull { row -> row.id == selectedId }
+
 /** The action sheet of one row; [kind] decides what the shell does with a tap. */
 fun trackActionSheetContent(
     row: TrackLibraryRowContent,

@@ -3,6 +3,7 @@ package nl.r1a.grassmap.plugins.track.library
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.RichTextStyle
 import nl.r1a.grassmap.plugin.api.model.TrackFolderSummary
+import nl.r1a.grassmap.plugin.api.model.TrackKind
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryEntry
 import nl.r1a.grassmap.plugin.api.model.TrackSort
 import org.junit.Assert.assertEquals
@@ -125,6 +126,24 @@ class TrackLibraryBrowserTest {
                 ?.text,
         )
         assertNull(state.rows.first { row -> row.id == "c" }.description)
+    }
+
+    @Test
+    fun aSavedRouteKeepsItsKindOnTheRow() {
+        val route = TrackLibraryEntry(id = "r", name = "Kyivka loop", kind = TrackKind.Route, distanceMeters = 500.0)
+
+        val row =
+            TrackLibraryBrowser
+                .browse(
+                    tracks = listOf(route),
+                    folders = emptyList(),
+                    query = "",
+                    sort = TrackSort.NEWEST,
+                    selectedListId = null,
+                ).rows
+                .single()
+
+        assertEquals("the kind is data, not the name", TrackKind.Route, row.kind)
     }
 
     private fun rows(sort: TrackSort): List<String> =

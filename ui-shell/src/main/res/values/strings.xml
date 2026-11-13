@@ -192,6 +192,7 @@
     <string name="track_library_link_title">Open link?</string>
     <string name="track_library_link_open">Open</string>
     <string name="track_library_no_folder">No folder</string>
+    <string name="track_library_kind_route">Route</string>
     <string name="track_library_edit_title">Edit track</string>
     <string name="track_library_name">Name</string>
     <string name="track_library_folder">Folder</string>

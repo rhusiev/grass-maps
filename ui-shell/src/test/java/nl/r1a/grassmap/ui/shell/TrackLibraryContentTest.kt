@@ -5,6 +5,7 @@ import nl.r1a.grassmap.plugin.api.model.RichTextSpan
 import nl.r1a.grassmap.plugin.api.model.RichTextStyle
 import nl.r1a.grassmap.plugin.api.model.TrackBrowseState
 import nl.r1a.grassmap.plugin.api.model.TrackFolderSummary
+import nl.r1a.grassmap.plugin.api.model.TrackKind
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryAction
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryEntry
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryRow
@@ -183,6 +184,21 @@ class TrackLibraryContentTest {
                 Locale.forLanguageTag("uk"),
             ).rows.single().name,
         )
+    }
+
+    @Test
+    fun aSavedRouteSaysSoAndATrackStaysQuiet() {
+        val route = ROW.copy(id = "r1", name = "Kyivka loop", kind = TrackKind.Route, ascentMeters = 0.0, durationMillis = null)
+        val state =
+            STATE.copy(
+                tracks = STATE.tracks + TrackLibraryEntry(id = "r1", name = "Kyivka loop", kind = TrackKind.Route),
+                browse = STATE.browse.copy(rows = STATE.browse.rows + route),
+            )
+
+        val rows = trackLibraryContent(state, strings(ENGLISH, APP_ENGLISH), Locale.ENGLISH).rows
+
+        assertEquals("a travelled track needs no label", "7.5 km · ↑219 m · 2 h 41 min · 12 Oct", rows.first().meta)
+        assertEquals("a saved route says which it is", "Route · 7.5 km · 12 Oct", rows.last().meta)
     }
 
     private fun content(): TrackLibraryContent = trackLibraryContent(STATE, strings(ENGLISH, APP_ENGLISH), Locale.ENGLISH)

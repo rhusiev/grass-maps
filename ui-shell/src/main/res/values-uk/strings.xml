@@ -192,6 +192,7 @@
     <string name="track_library_link_title">Відкрити посилання?</string>
     <string name="track_library_link_open">Відкрити</string>
     <string name="track_library_no_folder">Без теки</string>
+    <string name="track_library_kind_route">Маршрут</string>
     <string name="track_library_edit_title">Редагувати трек</string>
     <string name="track_library_name">Назва</string>
     <string name="track_library_folder">Тека</string>

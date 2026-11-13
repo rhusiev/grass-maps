@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.ui.shell
 
 import nl.r1a.grassmap.plugin.api.model.RichText
+import nl.r1a.grassmap.plugin.api.model.TrackKind
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryAction
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryRow
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
@@ -306,6 +307,12 @@ private fun trackRowContent(
     locale: Locale,
 ): TrackLibraryRowContent {
     val parts = mutableListOf<String>()
+    // A saved route says so, because the library otherwise shows one kind of
+    // thing: a line. A travelled or imported track needs no label - it is the
+    // default - and the row stays quiet (T-0411).
+    if (row.kind == TrackKind.Route) {
+        parts += strings.resolve(TRACK_LIBRARY_KIND_ROUTE_KEY)
+    }
     if (row.distanceMeters > 0.0) {
         parts += distanceText(row.distanceMeters, strings, locale)
     }
@@ -393,6 +400,7 @@ internal const val TRACK_LIBRARY_LEAVE_SELECTION_KEY = "track_library_leave_sele
 internal const val TRACK_LIBRARY_LINK_TITLE_KEY = "track_library_link_title"
 internal const val TRACK_LIBRARY_LINK_OPEN_KEY = "track_library_link_open"
 internal const val TRACK_LIBRARY_NO_FOLDER_KEY = "track_library_no_folder"
+internal const val TRACK_LIBRARY_KIND_ROUTE_KEY = "track_library_kind_route"
 internal const val TRACK_LIBRARY_EDIT_TITLE_KEY = "track_library_edit_title"
 internal const val TRACK_LIBRARY_NAME_KEY = "track_library_name"
 internal const val TRACK_LIBRARY_FOLDER_KEY = "track_library_folder"

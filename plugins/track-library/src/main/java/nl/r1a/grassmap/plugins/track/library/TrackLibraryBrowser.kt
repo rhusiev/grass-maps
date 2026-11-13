@@ -114,6 +114,7 @@ internal object TrackLibraryBrowser {
             colour = track.colour,
             startLatitude = track.startLatitude,
             startLongitude = track.startLongitude,
+            kind = track.kind,
         )
 
     private fun order(

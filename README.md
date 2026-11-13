@@ -2256,8 +2256,63 @@ tools/control/grassctl.py invoke core.track.import_test '{"path":"mock-walk.gpx"
 ```
 
 It reads a debug asset or an absolute path, imports through `file.gpx`, stores
-every track and logs one profile line per track plus the warning lines. No
-tracks UI exists yet.
+every track and logs one profile line per track plus the warning lines.
+
+## Elevation chart
+
+The chart behind Details plots the analysis engine's own profile (T-0404).
+`ElevationProfiler` in `tracks` turns a track into `ElevationProfile`: one
+`ElevationSample` per point that carries a height, with the cumulative distance
+measured by the same haversine step as the statistics, the elapsed time since
+the first timestamp and the point's own timestamp. It does not interpolate,
+smooth or thin, so a chart point is an engine sample and not a second reading of
+the file. A point without a height adds no sample and keeps the distance; a
+segment boundary adds no distance. T-0403's correction runs before the profile,
+so a track whose heights the DEM filled charts those corrected heights. `hasElapsedTime` and `hasTimeOfDay` are true
+only when every sample carries the value and the last one moves forward, which
+is what offers the Duration and Time of day axes. A profile with fewer than two
+samples draws nothing.
+
+A planned route has no heights of its own, so `lineProfile` reads the mounted
+region's DEM at the route's geometry points and spreads the route's own duration
+over the distance, with the departure taken from the plan's recorded arrival.
+`RouteElevation` in `app` does that read, sampling at most 240 points with an
+even stride, and returns no profile when the DEM cannot answer. The heights are
+the region's, not the routing engine's: Valhalla's `/route` carries no elevation.
+
+`ElevationChartState` in `plugin-ui-api` is the chart in the app's state: the
+engine's points and the chosen axis. `elevationChartContent` in `ui-shell` maps
+them onto the axis and nothing else. The Distance axis uses the sample distance,
+the Duration axis its elapsed time and the Time of day axis its timestamp, so
+the two time axes plot the engine's timing rather than an even division of the
+totals. The chart is read-only: no drag, no tap and no selection yet.
+
+The drawing uses the round-10 chart palette: seven slope colours from -15 % to
++15 % on the hike scale, the area under the line filled per segment with the
+colour of that segment's slope, a hairline grid and a line over the fill. The
+light and dark palettes are the same roles in the two themes; `ui-shell` picks
+one per theme and the chip colours follow it. A route's chart sits under the
+preview behind a Details toggle, and a track's sits in the analysis panel behind
+the same toggle. The axis chips stay beside the chart.
+
+`core.track.analysis` opens the track analysis panel, by id or for the newest
+stored track:
+
+```sh
+tools/control/grassctl.py invoke core.track.analysis '{"id":"<track id>"}'
+```
+
+That command is the temporary entry point. The map's track selection opens the
+same panel in T-0415, and the track library screen is still T-0414. The way-type
+strips and their stripes belong to T-0406 and the climbs and range selection to
+T-0405; neither is drawn here. No device screenshot of the chart exists yet, and
+the route profile is unverified against a real routing pack.
+
+The plugin boundary rule decides where the pieces live: `ui-shell` and a plugin
+may depend on `plugin-api` and `plugin-ui-api` but not on `tracks`, and a plugin
+cannot read the track store, so `app` maps the engine profile onto the chart
+state. T-0405's `plugins/analysis-ui` needs a host seam for range statistics, or
+the same app-side mapping, before the range selection can live in the plugin.
 
 ## Regions seam
 

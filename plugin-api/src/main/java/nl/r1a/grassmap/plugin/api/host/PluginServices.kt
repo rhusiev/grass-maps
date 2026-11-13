@@ -67,6 +67,12 @@ interface PluginServices {
     val favouritesLists: FavouritesListsAccess get() = NoFavouritesListsAccess
 
     /**
+     * The track library actions behind `plugins/track-library` (T-0414).
+     * Inert until `app` wires the track store and its folder index.
+     */
+    val trackLibrary: TrackLibraryAccess get() = NoTrackLibraryAccess
+
+    /**
      * Clipboard, share-sheet and `ACTION_VIEW` effects behind `plugins/share`
      * (T-0210). Inert until `app` wires the Android implementation.
      */

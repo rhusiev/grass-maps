@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.track_library.name">Track library</string>
+    <string name="plugin.track_library.description">Folders, names, descriptions, search and four fixed orders for imported tracks.</string>
+</resources>

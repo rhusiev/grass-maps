@@ -1,0 +1,119 @@
+{
+  "id": "track.library",
+  "name": "plugin.track_library.name",
+  "description": "plugin.track_library.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.track.library.TrackLibraryPlugin",
+  "contributes": {
+    "commands": [
+      {
+        "id": "track.library.create_folder",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.TrackLibraryState",
+        "doc": "Creates a track folder. Parameter: name.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.track.library.CreateTrackFolderCommand"
+      },
+      {
+        "id": "track.library.rename_folder",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.TrackLibraryState",
+        "doc": "Renames a track folder. Parameters: folderId, name.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.track.library.RenameTrackFolderCommand"
+      },
+      {
+        "id": "track.library.edit_track",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.TrackLibraryState",
+        "doc": "Renames, describes and files a track. Parameters: trackId, name, description, and optionally folderId.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.track.library.EditTrackCommand"
+      },
+      {
+        "id": "track.library.move_track",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.TrackLibraryState",
+        "doc": "Moves a track to a folder. Parameters: trackId, and optionally folderId; an empty folderId unfiles it.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.track.library.MoveTrackCommand"
+      },
+      {
+        "id": "track.library.delete_track",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.TrackLibraryState",
+        "doc": "Deletes an imported track. Parameter: trackId.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.track.library.DeleteTrackCommand"
+      },
+      {
+        "id": "track.library.undo",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.TrackLibraryState",
+        "doc": "Undoes the latest track library action and returns the state.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.track.library.UndoTrackLibraryCommand"
+      },
+      {
+        "id": "track.library.set_query",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.TrackLibraryState",
+        "doc": "Filters the track library by name. Parameters: query, and optionally sequence.",
+        "undoable": false,
+        "allowlistedForControl": false,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.track.library.SearchTracksCommand"
+      },
+      {
+        "id": "track.library.set_sort",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.TrackLibraryState",
+        "doc": "Sorts the track library. Parameter: sort, one of newest, name, distance or duration.",
+        "undoable": false,
+        "allowlistedForControl": false,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.track.library.SortTracksCommand"
+      },
+      {
+        "id": "track.library.select_folder",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.TrackLibraryState",
+        "doc": "Filters the track library to one folder. Parameter: folderId, empty for every folder.",
+        "undoable": false,
+        "allowlistedForControl": false,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.track.library.SelectTrackFolderCommand"
+      }
+    ],
+    "streams": [
+      {
+        "id": "track.library.state",
+        "valueType": "nl.r1a.grassmap.plugin.api.model.TrackLibraryState",
+        "serializer": "nl.r1a.grassmap.plugin.api.model.TrackLibraryState.serializer"
+      }
+    ]
+  },
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": []
+  },
+  "activation": [
+    "command",
+    "stream",
+    "ui"
+  ]
+}

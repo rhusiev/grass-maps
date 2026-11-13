@@ -3,12 +3,7 @@ package nl.r1a.grassmap.app
 import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.AttributeValue
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteAttributes
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugin.api.provider.RouteSegment
 import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
 import nl.r1a.grassmap.plugins.route.warnings.RouteWarning
 import nl.r1a.grassmap.plugins.route.warnings.RouteWarningScanner
@@ -151,49 +146,6 @@ class RouteWarningsWiringTest {
         (this as? Outcome.Success)?.value ?: error("the warning query failed: $this")
 
     private companion object {
-        val ROUTE =
-            Route(
-                geometry =
-                    listOf(
-                        GeoPoint(49.9505, 23.9430),
-                        GeoPoint(49.9510, 23.9440),
-                        GeoPoint(49.9510, 23.9460),
-                        GeoPoint(49.9515, 23.9460),
-                        GeoPoint(49.9515, 23.9470),
-                        GeoPoint(49.9515, 23.9490),
-                        GeoPoint(49.9515, 23.9520),
-                    ),
-                distanceMeters = 0.0,
-                durationSeconds = 0.0,
-                segments =
-                    listOf(
-                        segment(0, 1, highway = "track"),
-                        segment(1, 2, highway = "track"),
-                        segment(2, 3, highway = "path"),
-                        segment(3, 4, highway = "path"),
-                        segment(4, 5, highway = "steps"),
-                        segment(5, 6, highway = "path", access = "private"),
-                    ),
-            )
-
-        fun segment(
-            start: Int,
-            end: Int,
-            highway: String,
-            access: String = "yes",
-        ): RouteSegment =
-            RouteSegment(
-                startIndex = start,
-                endIndex = end,
-                distanceMeters = 0.0,
-                durationSeconds = 0.0,
-                attributes =
-                    mapOf(
-                        RouteAttributes.SURFACE to AttributeValue.TextValue("ground"),
-                        RouteAttributes.HIGHWAY to AttributeValue.TextValue(highway),
-                        RouteAttributes.SAC_SCALE to AttributeValue.TextValue("hiking"),
-                        RouteAttributes.ACCESS to AttributeValue.TextValue(access),
-                    ),
-            )
+        val ROUTE = RouteWarningFixtures.ANNOTATED_ROUTE
     }
 }

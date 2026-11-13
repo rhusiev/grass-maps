@@ -129,14 +129,14 @@ class PlannedRouteSaver(
         if (route.name.orEmpty().length > MAX_TRACK_NAME_LENGTH) {
             return Outcome.Failure(AppError.InvalidInput)
         }
-        val document = route.document()
+        val name = route.name.cleanedName()
+        val document = route.document(name)
         val bytes =
             when (val written = writer.write(document)) {
                 is Outcome.Success -> written.value
                 is Outcome.Failure -> return written
             }
         val id = TrackIdentity.of(bytes, index = 0, count = 1)
-        val name = route.name.cleanedName()
         val line = document.routes.single()
         val track = Track(name = name, segments = listOf(TrackSegment(line.points)))
         val record =
@@ -152,12 +152,12 @@ class PlannedRouteSaver(
         return store.save(record, bytes)
     }
 
-    private fun PlannedRoute.document(): ImportedEntities =
+    private fun PlannedRoute.document(name: String?): ImportedEntities =
         ImportedEntities(
             routes =
                 listOf(
                     TrackRoute(
-                        name = name.cleanedName(),
+                        name = name,
                         points = geometry.map(::routePoint),
                     ),
                 ),

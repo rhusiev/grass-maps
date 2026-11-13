@@ -95,8 +95,8 @@ class TrackImporter(
         }
         val waypoints = result.entities.waypoints
         val stored = mutableListOf<StoredTrack>()
-        for (record in records) {
-            val saved = storedRecord(fileName, bytes, record, records.size, waypoints)
+        for ((index, record) in records.withIndex()) {
+            val saved = storedRecord(fileName, bytes, record, index, records.size, waypoints)
             when (val outcome = store.save(saved, bytes)) {
                 is Outcome.Success -> stored += outcome.value
                 is Outcome.Failure -> return outcome
@@ -109,10 +109,11 @@ class TrackImporter(
         fileName: String?,
         bytes: ByteArray,
         record: DocumentRecord,
+        index: Int,
         count: Int,
         waypoints: List<TrackWaypoint>,
     ): StoredTrack {
-        val id = TrackIdentity.of(bytes, record.trackIndex, count)
+        val id = TrackIdentity.of(bytes, index, count)
         // A route is a plan, not a travelled line: the DEM is not sampled for
         // it, so its stored profile never carries invented heights.
         val corrected =
@@ -126,7 +127,7 @@ class TrackImporter(
             track = corrected.track,
             analysis = analyzer.analyze(corrected.track),
             style = TrackPalette.styleFor(id),
-            trackIndex = record.trackIndex,
+            trackIndex = index,
             elevation = corrected.report,
             kind = record.kind,
             waypoints = waypoints,

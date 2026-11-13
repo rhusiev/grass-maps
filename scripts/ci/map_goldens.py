@@ -187,13 +187,16 @@ ROUTE_POSITION_NAMES = frozenset(case[0] for cases in ROUTE_CASES.values() for c
 ROUTE_FIXTURE_PATH = ROOT / "test-data" / "map-goldens" / "route-turns.json"
 ROUTE_FIXTURE = ROUTE_FIXTURE_PATH.read_text(encoding="utf-8")
 
-# T-0418: two hiking routes sharing one fixture track, at an overview and a
-# waymark zoom. The component is the committed fixture-mini extraction, not an
-# authored drawing, so the capture exercises the real parser and assembler.
+# T-0418/T-0419: hiking and cycling routes sharing fixture tracks, at an
+# overview, a waymark zoom and the node-number zoom. The component is the
+# committed fixture-mini extraction, not an authored drawing, so the capture
+# exercises the real parser and assembler.
 ROUTE_RELATION_CASES = {
     "standard": (
         ("hiking-routes-z13", 49.9470, 23.9540, 13.0, 0.0, 0.0),
         ("hiking-routes-z14", 49.9470, 23.9540, 14.0, 0.0, 0.0),
+        ("cycling-routes-z12", 49.9470, 23.9540, 12.0, 0.0, 0.0),
+        ("cycling-node-numbers-z15", 49.9443, 23.9544, 15.0, 0.0, 0.0),
     ),
 }
 ROUTE_RELATION_POSITION_NAMES = frozenset(

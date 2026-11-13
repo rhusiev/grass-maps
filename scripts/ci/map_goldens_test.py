@@ -150,8 +150,8 @@ class StandardPositionsTest(unittest.TestCase):
     def test_route_positions_extend_the_standard_capture(self) -> None:
         positions = map_goldens.cases("standard")
 
-        self.assertEqual(34, len(positions))
-        self.assertEqual(34, len({position[0] for position in positions}))
+        self.assertEqual(36, len(positions))
+        self.assertEqual(36, len({position[0] for position in positions}))
         self.assertEqual(
             {"route-turns-z14", "route-turns-z15"},
             set(map_goldens.ROUTE_POSITION_NAMES),
@@ -162,16 +162,22 @@ class StandardPositionsTest(unittest.TestCase):
     def test_route_relation_positions_carry_the_fixture_component(self) -> None:
         positions = map_goldens.cases("standard")
 
-        self.assertEqual(
-            {"hiking-routes-z13", "hiking-routes-z14"},
-            set(map_goldens.ROUTE_RELATION_POSITION_NAMES),
-        )
-        self.assertTrue({"hiking-routes-z13", "hiking-routes-z14"}.issubset({position[0] for position in positions}))
+        names = {
+            "hiking-routes-z13",
+            "hiking-routes-z14",
+            "cycling-routes-z12",
+            "cycling-node-numbers-z15",
+        }
+        self.assertEqual(names, set(map_goldens.ROUTE_RELATION_POSITION_NAMES))
+        self.assertTrue(names.issubset({position[0] for position in positions}))
         self.assertIsNotNone(map_goldens.route_relations_fixture_for("hiking-routes-z14"))
+        self.assertIsNotNone(map_goldens.route_relations_fixture_for("cycling-routes-z12"))
         self.assertIsNone(map_goldens.route_relations_fixture_for("place-a-z12"))
         component = json.loads(map_goldens.ROUTE_RELATIONS_FIXTURE)
         self.assertEqual("grass-maps-route-relations", component["format"])
-        self.assertEqual(3, len(component["relations"]))
+        self.assertEqual(5, len(component["relations"]))
+        self.assertEqual(5, len(component["nodes"]))
+        self.assertEqual({"lcn", "rcn"}, {node["network"] for node in component["nodes"]})
 
     def test_named_positions_narrow_a_capture_or_compare(self) -> None:
         selected = map_goldens.selected_positions(

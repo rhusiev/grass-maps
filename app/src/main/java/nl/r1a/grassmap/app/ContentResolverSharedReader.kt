@@ -7,17 +7,20 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
-import java.io.ByteArrayOutputStream
 import java.io.IOException
-import java.io.InputStream
+
+/** The provider's own description of a shared document. */
+private data class SharedDocumentMetadata(
+    val displayName: String?,
+    val sizeBytes: Long?,
+)
 
 /**
  * Reads a document another app shared (T-0416) through the one grant its
  * intent carries, so the app declares no storage permission and never resolves
- * a filesystem path. The name and type come from the provider; a provider that
- * refuses the query still allows the stream read, so the name falls back to the
- * URI. The read is bounded: an import larger than [MAX_SHARED_BYTES] is
- * refused instead of being held in memory.
+ * a filesystem path. The name, type and size come from the provider; a provider
+ * that refuses the query still allows the stream read, so the name falls back
+ * to the URI. The read is bounded by [readSharedDocument].
  */
 internal class ContentResolverSharedReader(
     context: Context,
@@ -27,16 +30,21 @@ internal class ContentResolverSharedReader(
     override suspend fun read(uri: String): Outcome<SharedDocument> =
         withContext(Dispatchers.IO) {
             val parsed = Uri.parse(uri)
+            val metadata = metadata(parsed)
             try {
-                val bytes =
-                    appContext.contentResolver.openInputStream(parsed)?.use { input -> input.readBounded() }
+                val stream =
+                    appContext.contentResolver.openInputStream(parsed)
                         ?: return@withContext Outcome.Failure(AppError.NotFound)
-                if (bytes.isEmpty()) {
-                    return@withContext Outcome.Failure(AppError.InvalidInput)
-                }
+                val bytes =
+                    stream.use { input ->
+                        when (val read = readSharedDocument(input, metadata.sizeBytes)) {
+                            is Outcome.Success -> read.value
+                            is Outcome.Failure -> return@withContext read
+                        }
+                    }
                 Outcome.Success(
                     SharedDocument(
-                        displayName = displayName(parsed),
+                        displayName = metadata.displayName,
                         mimeType = appContext.contentResolver.getType(parsed),
                         bytes = bytes,
                     ),
@@ -45,40 +53,41 @@ internal class ContentResolverSharedReader(
                 Outcome.Failure(AppError.PermissionDenied)
             } catch (exception: IOException) {
                 Outcome.Failure(AppError.NotFound)
+            } catch (exception: OutOfMemoryError) {
+                // The bound above keeps a well-behaved provider inside the heap;
+                // a provider that lies about its size could still exhaust it, and
+                // refusing the document is better than killing the app.
+                Outcome.Failure(AppError.InvalidInput)
             } catch (exception: RuntimeException) {
                 Outcome.Failure(AppError.Internal(READ_FAILED))
             }
         }
 
-    private fun displayName(uri: Uri): String? =
+    /**
+     * The display name and size in one provider query. A provider that refuses
+     * the query leaves them unset; the stream read then decides.
+     */
+    private fun metadata(uri: Uri): SharedDocumentMetadata =
         try {
-            appContext.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-                if (cursor.moveToFirst()) cursor.getString(0) else null
-            }
+            appContext.contentResolver
+                .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)
+                ?.use { cursor ->
+                    if (!cursor.moveToFirst()) {
+                        return SharedDocumentMetadata(null, null)
+                    }
+                    val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                    SharedDocumentMetadata(
+                        displayName = nameIndex.takeIf { it >= 0 && !cursor.isNull(it) }?.let(cursor::getString),
+                        sizeBytes = sizeIndex.takeIf { it >= 0 && !cursor.isNull(it) }?.let(cursor::getLong),
+                    )
+                } ?: SharedDocumentMetadata(null, null)
         } catch (exception: RuntimeException) {
-            // A provider that refuses the name query may still serve the stream.
-            null
+            // A provider that refuses the query may still serve the stream.
+            SharedDocumentMetadata(null, null)
         }
-
-    /** The stream's bytes, or null when it exceeds the import bound. */
-    private fun InputStream.readBounded(): ByteArray? {
-        val output = ByteArrayOutputStream()
-        val buffer = ByteArray(READ_BUFFER_BYTES)
-        while (true) {
-            val read = read(buffer)
-            if (read < 0) {
-                return output.toByteArray()
-            }
-            output.write(buffer, 0, read)
-            if (output.size() > MAX_SHARED_BYTES) {
-                return null
-            }
-        }
-    }
 
     private companion object {
-        const val MAX_SHARED_BYTES = 64 * 1024 * 1024
-        const val READ_BUFFER_BYTES = 8 * 1024
         const val READ_FAILED = "platform.read_shared"
     }
 }

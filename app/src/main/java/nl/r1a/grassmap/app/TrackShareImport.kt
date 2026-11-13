@@ -178,24 +178,29 @@ internal class TrackShareImport(
         }
         imported = null
         log("share import source=\"$source\" failed=$error")
-        return publish(TrackImportOutcome(failure = failureOf(error)))
+        return publish(TrackImportOutcome(failure = trackImportFailure(error)))
     }
 
     private fun publish(outcome: TrackImportOutcome): TrackShareState =
         TrackShareState(outcome = outcome, sequence = sequence.incrementAndGet()).also { state.value = it }
 
-    private fun failureOf(error: AppError): TrackImportFailure =
-        when (error) {
-            AppError.Unsupported, AppError.InvalidInput, AppError.CorruptData, is AppError.PluginFailed -> {
-                TrackImportFailure.NotATrack
-            }
-
-            else -> {
-                TrackImportFailure.Unreadable
-            }
-        }
-
     private companion object {
         const val ID_PREFIX = 12
     }
 }
+
+/**
+ * The notice's reason for a typed import failure (T-0416). A document the app
+ * refused or could not parse is not a track; a URI it could not open at all is
+ * an unreadable file. Both keep the failure visible instead of silent.
+ */
+internal fun trackImportFailure(error: AppError): TrackImportFailure =
+    when (error) {
+        AppError.Unsupported, AppError.InvalidInput, AppError.CorruptData, is AppError.PluginFailed -> {
+            TrackImportFailure.NotATrack
+        }
+
+        else -> {
+            TrackImportFailure.Unreadable
+        }
+    }

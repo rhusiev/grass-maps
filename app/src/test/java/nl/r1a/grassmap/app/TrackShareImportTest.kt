@@ -92,6 +92,18 @@ class TrackShareImportTest {
         }
 
     @Test
+    fun aRefusedDocumentIsReportedAsNotATrack() =
+        runTest {
+            val tracks = trackAccess()
+            val shared = TrackShareImport(tracks = { tracks }, log = {})
+
+            val state = requireNotNull(shared.import(SHARE_URI) { Outcome.Failure(AppError.InvalidInput) })
+
+            assertEquals(TrackImportOutcome(failure = TrackImportFailure.NotATrack), state.outcome)
+            assertTrue(tracks.storedTracks().isEmpty())
+        }
+
+    @Test
     fun openingTheNoticeShowsTheImportedTrackAndClosesIt() =
         runTest {
             val tracks = trackAccess()

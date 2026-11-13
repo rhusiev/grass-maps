@@ -1,21 +1,23 @@
 #!/usr/bin/env bash
 #
-# Extracts the region's hiking route relations from an OSM PBF extract.
+# Extracts the region's hiking and cycling route relations from an OSM PBF.
 #
 # The output is `relations.json`, the component `regions.RegionReader` reads:
-# a compact document with one entry per member way and one entry per hiking
-# route relation, whose members name those ways in relation order. The plugin
-# assembles the geometry and draws it; the file is not GeoJSON.
+# a compact document with one entry per member way, one entry per route
+# relation, whose members name those ways in relation order, and the numbered
+# junctions of the cycling node networks. The plugin assembles the geometry and
+# draws it; the file is not GeoJSON.
 #
-# The selection is the T-0418 rule, implemented in tools/pipeline/osm-extract:
-#   keep    type=route and route=hiking
+# The selection is the T-0418/T-0419 rule, implemented in
+# tools/pipeline/osm-extract:
+#   keep    type=route and route=hiking or route=bicycle
 #   skip    state=proposed|abandoned|disused|construction|planned, or
 #           proposed=*
 #   skip    a relation with no way members (node members are guideposts)
 #   skip    a relation whose member ways have no usable geometry
 #   skip    a relation with no point inside the bbox
-#   skip    every other route value, including route=bus, route=bicycle and
-#           route=foot; cycling is T-0419
+#   keep    a node inside the bbox with lcn_ref, rcn_ref, ncn_ref or icn_ref
+#   skip    every other route value, including route=bus and route=foot
 #
 # Usage: tools/pipeline/build-route-relations.sh --pbf PATH --out FILE [options]
 #   --pbf PATH        OSM extract to read (required)
@@ -93,6 +95,6 @@ relations = document.get("relations")
 ways = document.get("ways")
 if not isinstance(relations, list) or not isinstance(ways, list):
     raise SystemExit(f"{path}: missing relations or ways")
-print(f"route-relation component: {len(relations)} relations, {len(ways)} ways, {len(bytes_)} bytes")
+print(f"route-relation component: {len(relations)} relations, {len(ways)} ways, {len(document.get('nodes', []))} nodes, {len(bytes_)} bytes")
 PY
 sha256sum "$OUT"

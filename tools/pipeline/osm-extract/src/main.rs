@@ -204,6 +204,17 @@ const SKIPPED_ROUTE_STATES: [&str; 5] = [
 const ROUTE_RELATIONS_FORMAT: &str = "grass-maps-route-relations";
 const ROUTE_RELATIONS_VERSION: u32 = 1;
 
+/// The two route types this component carries. Hiking and cycling routes share
+/// the schema and the plugin; `route=foot` and every other value stay out.
+const ROUTE_HIKING: &str = "hiking";
+const ROUTE_BICYCLE: &str = "bicycle";
+const KEPT_ROUTE_VALUES: [&str; 2] = [ROUTE_HIKING, ROUTE_BICYCLE];
+
+/// The `*cn_ref` keys that mark a numbered node of a cycling node network. A
+/// node network node is a junction a route connects to, not route geometry, so
+/// the extractor keeps it in its own list (T-0419).
+const CYCLING_NODE_NETWORKS: [&str; 4] = ["icn", "ncn", "rcn", "lcn"];
+
 const NON_CROSSING_RAILWAY_NODE_VALUES: [&str; 13] = [
     "signal",
     "switch",
@@ -363,6 +374,7 @@ struct RouteMember {
 
 struct RouteRelation {
     id: i64,
+    route: String,
     network: Option<String>,
     reference: Option<String>,
     name: Option<String>,
@@ -370,6 +382,15 @@ struct RouteRelation {
     colour: Option<String>,
     distance: Option<String>,
     members: Vec<RouteMember>,
+}
+
+/// One numbered junction of a cycling node network (T-0419).
+struct RouteNode {
+    id: i64,
+    network: &'static str,
+    reference: String,
+    lon: f64,
+    lat: f64,
 }
 
 struct RouteWay {
@@ -381,6 +402,7 @@ struct RouteWay {
 struct RouteRelationStats {
     relations: u64,
     ways: u64,
+    nodes: u64,
     skipped_route: u64,
     skipped_state: u64,
     skipped_no_members: u64,
@@ -427,12 +449,13 @@ fn main() -> ExitCode {
         return match run_route_relations(&options) {
             Ok(stats) => {
                 eprintln!(
-                    "osm-extract: route-relations: {} hiking relations, {} member ways \
-                     ({} skipped: {} not route=hiking, {} proposed or retired, \
-                     {} without way members, {} without any complete member way, \
-                     {} outside the bbox; {} member ways without coordinates)",
+                    "osm-extract: route-relations: {} route relations, {} member ways, \
+                     {} node-network numbers ({} skipped: {} not hiking or cycling, \
+                     {} proposed or retired, {} without way members, {} without any \
+                     complete member way, {} outside the bbox; {} member ways without coordinates)",
                     stats.relations,
                     stats.ways,
+                    stats.nodes,
                     stats.skipped_route
                         + stats.skipped_state
                         + stats.skipped_no_members
@@ -904,8 +927,9 @@ fn run_route_relations(options: &Options) -> Result<RouteRelationStats, String> 
     let mut relations: Vec<RouteRelation> = Vec::new();
     let mut needed_ways: HashSet<i64> = HashSet::new();
 
-    // First pass: the hiking relations and their way members. Node members
-    // (guideposts, route markers) are not geometry and are skipped.
+    // First pass: the hiking and cycling relations and their way members. Node
+    // members (guideposts, route markers) are not geometry and are skipped;
+    // numbered node-network junctions are read as their own list below.
     read_elements(&options.pbf, |element| {
         let Element::Relation(relation) = element else {
             return;
@@ -914,7 +938,8 @@ fn run_route_relations(options: &Options) -> Result<RouteRelationStats, String> 
         if tag(&tags, "type") != Some("route") {
             return;
         }
-        if tag(&tags, "route") != Some("hiking") {
+        let route = tag(&tags, "route").unwrap_or_default();
+        if !KEPT_ROUTE_VALUES.contains(&route) {
             stats.skipped_route += 1;
             return;
         }
@@ -941,6 +966,7 @@ fn run_route_relations(options: &Options) -> Result<RouteRelationStats, String> 
         }
         relations.push(RouteRelation {
             id: relation.id(),
+            route: route.to_owned(),
             network: tag(&tags, "network").map(str::to_owned),
             reference: tag(&tags, "ref").map(str::to_owned),
             name: tag(&tags, "name").map(str::to_owned),
@@ -966,17 +992,38 @@ fn run_route_relations(options: &Options) -> Result<RouteRelationStats, String> 
         ways.push(RouteWay { id: way.id(), refs });
     })?;
 
-    // Third pass: node coordinates for every member way.
+    // Third pass: node coordinates for every member way, and every numbered
+    // junction of a cycling node network inside the bbox. The junction nodes
+    // need no relation member: OSM numbers them with `*cn_ref`, and a network
+    // line is the relation that connects them.
     let mut coordinates: HashMap<i64, (f64, f64)> = HashMap::with_capacity(needed_nodes.len());
-    read_elements(&options.pbf, |element| {
-        let (id, lon, lat) = match element {
-            Element::Node(node) => (node.id(), node.lon(), node.lat()),
-            Element::DenseNode(node) => (node.id(), node.lon(), node.lat()),
-            _ => return,
-        };
-        if needed_nodes.contains(&id) {
-            coordinates.insert(id, (lon, lat));
+    let mut network_nodes: HashMap<i64, RouteNode> = HashMap::new();
+    read_elements(&options.pbf, |element| match element {
+        Element::Node(node) => {
+            collect_route_node(
+                node.id(),
+                node.lon(),
+                node.lat(),
+                node.tags(),
+                &needed_nodes,
+                &mut coordinates,
+                &mut network_nodes,
+                &options.bbox,
+            );
         }
+        Element::DenseNode(node) => {
+            collect_route_node(
+                node.id(),
+                node.lon(),
+                node.lat(),
+                node.tags(),
+                &needed_nodes,
+                &mut coordinates,
+                &mut network_nodes,
+                &options.bbox,
+            );
+        }
+        _ => {}
     })?;
 
     let mut way_geometry: HashMap<i64, Vec<(f64, f64)>> = HashMap::with_capacity(ways.len());
@@ -1033,14 +1080,17 @@ fn run_route_relations(options: &Options) -> Result<RouteRelationStats, String> 
     }
     let mut way_ids: Vec<i64> = used_ways.into_iter().collect();
     way_ids.sort_unstable();
+    let mut nodes: Vec<RouteNode> = network_nodes.into_values().collect();
+    nodes.sort_unstable_by_key(|node| node.id);
     stats.relations = kept.len() as u64;
     stats.ways = way_ids.len() as u64;
+    stats.nodes = nodes.len() as u64;
 
     let mut writer = BufWriter::new(
         File::create(&options.out)
             .map_err(|error| format!("{}: {error}", options.out.display()))?,
     );
-    write_route_relation_document(&mut writer, &kept, &way_ids, &way_geometry)
+    write_route_relation_document(&mut writer, &kept, &way_ids, &way_geometry, &nodes)
         .map_err(|error| format!("{}: {error}", options.out.display()))?;
     writer
         .flush()
@@ -1055,11 +1105,64 @@ fn route_state_is_skipped(tags: &[(String, String)]) -> bool {
         || has_significant_value(tags, "proposed")
 }
 
+/// The cycling network a `*cn_ref` tag key belongs to, or None for every other
+/// node tag. The key is the authority: a node may omit `network=*` and still be
+/// a numbered junction of that network.
+fn cycling_node_network(key: &str) -> Option<&'static str> {
+    let network = key.strip_suffix("_ref")?;
+    CYCLING_NODE_NETWORKS
+        .iter()
+        .find(|candidate| **candidate == network)
+        .copied()
+}
+
+/// Records a node's coordinate when a member way needs it, and its number when
+/// it is a cycling node-network junction inside the bbox (T-0419).
+#[allow(clippy::too_many_arguments)]
+fn collect_route_node<'a>(
+    id: i64,
+    lon: f64,
+    lat: f64,
+    tags: impl Iterator<Item = (&'a str, &'a str)>,
+    needed_nodes: &HashSet<i64>,
+    coordinates: &mut HashMap<i64, (f64, f64)>,
+    network_nodes: &mut HashMap<i64, RouteNode>,
+    bbox: &Option<BoundingBox>,
+) {
+    if needed_nodes.contains(&id) {
+        coordinates.insert(id, (lon, lat));
+    }
+    if !contains(bbox, lon, lat) {
+        return;
+    }
+    for (key, value) in tags {
+        let Some(network) = cycling_node_network(key) else {
+            continue;
+        };
+        let reference = value.trim();
+        if reference.is_empty() {
+            continue;
+        }
+        network_nodes.insert(
+            id,
+            RouteNode {
+                id,
+                network,
+                reference: reference.to_owned(),
+                lon,
+                lat,
+            },
+        );
+        break;
+    }
+}
+
 fn write_route_relation_document(
     writer: &mut impl Write,
     relations: &[RouteRelation],
     way_ids: &[i64],
     way_geometry: &HashMap<i64, Vec<(f64, f64)>>,
+    nodes: &[RouteNode],
 ) -> std::io::Result<()> {
     writeln!(writer, "{{")?;
     writeln!(writer, "  \"format\": \"{ROUTE_RELATIONS_FORMAT}\",")?;
@@ -1079,6 +1182,22 @@ fn write_route_relation_document(
         writeln!(writer, "]}}{separator}")?;
     }
     writeln!(writer, "  ],")?;
+    writeln!(writer, "  \"nodes\": [")?;
+    for (index, node) in nodes.iter().enumerate() {
+        let separator = if index + 1 == nodes.len() { "" } else { "," };
+        write!(
+            writer,
+            "    {{\"id\":{},\"network\":\"{}\",\"ref\":",
+            node.id, node.network
+        )?;
+        write_json_string(writer, &node.reference)?;
+        writeln!(
+            writer,
+            ",\"coordinates\":[{:.7},{:.7}]}}{separator}",
+            node.lon, node.lat
+        )?;
+    }
+    writeln!(writer, "  ],")?;
     writeln!(writer, "  \"relations\": [")?;
     for (index, relation) in relations.iter().enumerate() {
         let separator = if index + 1 == relations.len() {
@@ -1088,8 +1207,8 @@ fn write_route_relation_document(
         };
         write!(
             writer,
-            "    {{\"id\":{},\"type\":\"route\",\"route\":\"hiking\"",
-            relation.id
+            "    {{\"id\":{},\"type\":\"route\",\"route\":\"{}\"",
+            relation.id, relation.route
         )?;
         write_optional_string(writer, "network", &relation.network)?;
         write_optional_string(writer, "ref", &relation.reference)?;
@@ -2271,7 +2390,7 @@ mod tests {
     }
 
     #[test]
-    fn the_fixture_pbf_produces_the_expected_hiking_relations() {
+    fn the_fixture_pbf_produces_the_expected_hiking_and_cycling_relations() {
         let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
         let root = manifest.join("../../..");
         let out = std::env::temp_dir().join(format!(
@@ -2279,7 +2398,7 @@ mod tests {
             std::process::id()
         ));
         let options = Options {
-            pbf: root.join("test-data/regions/fixture-mini/hiking-relations.osm.pbf"),
+            pbf: root.join("test-data/regions/fixture-mini/route-relations.osm.pbf"),
             out: out.clone(),
             bbox: Some(parse_bbox("23.940,49.940,23.960,49.960").expect("fixture bbox")),
             places: true,
@@ -2291,27 +2410,46 @@ mod tests {
         let text = std::fs::read_to_string(&out).expect("read the component");
         std::fs::remove_file(&out).ok();
 
-        assert_eq!(stats.relations, 3);
+        assert_eq!(stats.relations, 5);
         assert_eq!(stats.ways, 3);
+        assert_eq!(stats.nodes, 5);
         assert_eq!(stats.skipped_route, 2, "one bus and one foot route");
-        assert_eq!(stats.skipped_state, 1);
-        assert_eq!(stats.skipped_no_members, 1);
+        assert_eq!(stats.skipped_state, 2, "one hiking and one cycling proposal");
+        assert_eq!(stats.skipped_no_members, 2, "one hiking and one cycling node-only relation");
         assert_eq!(stats.skipped_missing_ways, 0);
 
-        for present in [9101, 9102, 9107] {
+        for (present, route) in [
+            (9101, "hiking"),
+            (9102, "hiking"),
+            (9107, "hiking"),
+            (9108, "bicycle"),
+            (9109, "bicycle"),
+        ] {
             assert!(
                 text.contains(&format!(
-                    "\"id\":{present},\"type\":\"route\",\"route\":\"hiking\""
+                    "\"id\":{present},\"type\":\"route\",\"route\":\"{route}\""
                 )),
                 "{present}"
             );
         }
-        for absent in [9103, 9104, 9105, 9106] {
+        for absent in [9103, 9104, 9105, 9106, 9110, 9111] {
             assert!(
                 !text.contains(&format!("\"id\":{absent},")),
                 "{absent} must be skipped"
             );
         }
+        for present in [2344261512_i64, 3114545825, 5556643401, 5556643405, 5556643624] {
+            assert!(
+                text.contains(&format!("\"id\":{present},\"network\":")),
+                "node {present}"
+            );
+        }
+        assert!(
+            !text.contains("\"id\":387853648,\"network\":"),
+            "a hiking node-network number is not a cycling junction"
+        );
+        assert!(text.contains("\"network\":\"rcn\",\"ref\":\"7\""));
+        assert!(text.contains("\"network\":\"lcn\",\"ref\":\"48\""));
         assert!(text.contains("\"osmcSymbol\":\"red:white:red_bar\""));
         assert!(text.contains("\"network\":\"rwn\""));
         assert!(
@@ -2320,5 +2458,16 @@ mod tests {
             ),
             "member order must be the relation's order: {text}"
         );
+    }
+
+    #[test]
+    fn a_cycling_node_network_key_is_the_junction_number() {
+        assert_eq!(cycling_node_network("lcn_ref"), Some("lcn"));
+        assert_eq!(cycling_node_network("rcn_ref"), Some("rcn"));
+        assert_eq!(cycling_node_network("ncn_ref"), Some("ncn"));
+        assert_eq!(cycling_node_network("icn_ref"), Some("icn"));
+        assert_eq!(cycling_node_network("lwn_ref"), None);
+        assert_eq!(cycling_node_network("network"), None);
+        assert_eq!(cycling_node_network("lcn_ref:note"), None);
     }
 }

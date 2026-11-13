@@ -18,7 +18,7 @@
 #                           test-data/regions/fixture-mini/way-alerts.osm.pbf)
 #   --route-relations-source PBF
 #                           OSM input for the route-relation component (default
-#                           test-data/regions/fixture-mini/hiking-relations.osm.pbf)
+#                           test-data/regions/fixture-mini/route-relations.osm.pbf)
 #   --out DIR               package directory (default test-data/regions/<region>/<version>)
 #
 # The output is deterministic: re-running against the same archives produces
@@ -36,7 +36,7 @@ readonly CONTOURS_MIN_ZOOM=9
 readonly CONTOURS_MAX_ZOOM=14
 readonly SEARCH_SOURCE="$ROOT/tools/pipeline/fixture-places.tsv"
 readonly WAY_ALERTS_SOURCE="$ROOT/test-data/regions/fixture-mini/way-alerts.osm.pbf"
-readonly ROUTE_RELATIONS_SOURCE="$ROOT/test-data/regions/fixture-mini/hiking-relations.osm.pbf"
+readonly ROUTE_RELATIONS_SOURCE="$ROOT/test-data/regions/fixture-mini/route-relations.osm.pbf"
 
 BENCH="${GRASS_MAPS_BENCH:-/hdd/drive/Projects/Life/grass-maps-bench}"
 PMTILES=""
@@ -139,7 +139,7 @@ echo "Extracting way alerts: $WAY_ALERTS_PBF"
 # The route-relation component follows the same rule: the fixture's own small
 # OSM input carries the parallel routes and the skips the tests name, and the
 # real extractor produces the committed bytes.
-echo "Extracting hiking relations: $ROUTE_RELATIONS_PBF"
+echo "Extracting hiking and cycling relations: $ROUTE_RELATIONS_PBF"
 "$ROOT/tools/pipeline/build-route-relations.sh" \
     --pbf "$ROUTE_RELATIONS_PBF" --bbox "$BBOX" --out "$work/relations.json"
 
@@ -215,6 +215,7 @@ def route_relation_counts():
     return {
         "relations": len(relations),
         "ways": len(document["ways"]),
+        "nodes": len(document["nodes"]),
         "networks": dict(sorted(networks.items())),
         "withOsmcSymbol": sum(1 for relation in relations if "osmcSymbol" in relation),
     }
@@ -287,7 +288,7 @@ manifest = {
             "archive": route_relations_archive,
             "sha256": route_relations_archive_sha,
             "bbox": [float(value) for value in bbox.split(",")],
-            "extraction": "osm-extract 0.1.0 route-relations v1",
+            "extraction": "osm-extract 0.1.0 route-relations v2",
             "features": route_relation_counts(),
         },
     },

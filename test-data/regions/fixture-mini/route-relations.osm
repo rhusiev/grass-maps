@@ -1,13 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <osm version="0.6" generator="grass-maps fixture authoring">
-  <node id="387853648" lat="49.9478873" lon="23.9615389" version="1"/>
+  <node id="387853648" lat="49.9478873" lon="23.9615389" version="1">
+    <tag k="network" v="lwn"/>
+    <tag k="lwn_ref" v="3"/>
+  </node>
   <node id="2344261502" lat="49.9434851" lon="23.9468950" version="1"/>
   <node id="2344261510" lat="49.9448843" lon="23.9483628" version="1"/>
-  <node id="2344261512" lat="49.9455525" lon="23.9500685" version="1"/>
+  <node id="2344261512" lat="49.9455525" lon="23.9500685" version="1">
+    <tag k="network" v="rcn"/>
+    <tag k="rcn_ref" v="7"/>
+  </node>
   <node id="2344261515" lat="49.9466600" lon="23.9540872" version="1"/>
   <node id="3114545817" lat="49.9451400" lon="23.9489040" version="1"/>
   <node id="3114545819" lat="49.9457601" lon="23.9581214" version="1"/>
-  <node id="3114545825" lat="49.9460647" lon="23.9583525" version="1"/>
+  <node id="3114545825" lat="49.9460647" lon="23.9583525" version="1">
+    <tag k="network" v="lcn"/>
+    <tag k="lcn_ref" v="48"/>
+  </node>
   <node id="3114545826" lat="49.9463909" lon="23.9590217" version="1"/>
   <node id="3114545827" lat="49.9466447" lon="23.9594841" version="1"/>
   <node id="3114545828" lat="49.9468903" lon="23.9596910" version="1"/>
@@ -24,11 +33,17 @@
   <node id="5556643398" lat="49.9451307" lon="23.9563613" version="1"/>
   <node id="5556643399" lat="49.9450183" lon="23.9559577" version="1"/>
   <node id="5556643400" lat="49.9449446" lon="23.9558492" version="1"/>
-  <node id="5556643401" lat="49.9448206" lon="23.9557046" version="1"/>
+  <node id="5556643401" lat="49.9448206" lon="23.9557046" version="1">
+    <tag k="network" v="lcn"/>
+    <tag k="lcn_ref" v="47"/>
+  </node>
   <node id="5556643402" lat="49.9446694" lon="23.9555420" version="1"/>
   <node id="5556643403" lat="49.9444523" lon="23.9553854" version="1"/>
   <node id="5556643404" lat="49.9443205" lon="23.9552046" version="1"/>
-  <node id="5556643405" lat="49.9441848" lon="23.9549516" version="1"/>
+  <node id="5556643405" lat="49.9441848" lon="23.9549516" version="1">
+    <tag k="network" v="lcn"/>
+    <tag k="lcn_ref" v="13"/>
+  </node>
   <node id="5556643406" lat="49.9440568" lon="23.9547649" version="1"/>
   <node id="5556643407" lat="49.9439444" lon="23.9544516" version="1"/>
   <node id="5556643408" lat="49.9439289" lon="23.9541263" version="1"/>
@@ -51,7 +66,10 @@
   <node id="5556643621" lat="49.9429791" lon="23.9511624" version="1"/>
   <node id="5556643622" lat="49.9428046" lon="23.9511323" version="1"/>
   <node id="5556643623" lat="49.9426108" lon="23.9507709" version="1"/>
-  <node id="5556643624" lat="49.9425100" lon="23.9503673" version="1"/>
+  <node id="5556643624" lat="49.9425100" lon="23.9503673" version="1">
+    <tag k="network" v="lcn"/>
+    <tag k="lcn_ref" v="12"/>
+  </node>
   <node id="5556643625" lat="49.9423588" lon="23.9501685" version="1"/>
   <node id="5556643626" lat="49.9421184" lon="23.9501082" version="1"/>
   <node id="5556643627" lat="49.9418703" lon="23.9500118" version="1"/>
@@ -480,5 +498,40 @@
     <tag k="network" v="nwn"/>
     <tag k="ref" v="З"/>
     <tag k="name" v="Без символу"/>
+  </relation>
+  <relation id="9108" version="1">
+    <member type="way" ref="306496773" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="bicycle"/>
+    <tag k="network" v="lcn"/>
+    <tag k="ref" v="47-48"/>
+    <tag k="name" v="Веломережа 47–48"/>
+    <tag k="osmc:symbol" v="blue:white:blue_rectangle"/>
+    <tag k="colour" v="blue"/>
+  </relation>
+  <relation id="9109" version="1">
+    <member type="way" ref="225670351" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="bicycle"/>
+    <tag k="network" v="ncn"/>
+    <tag k="ref" v="Н-1"/>
+    <tag k="name" v="Національний веломаршрут"/>
+  </relation>
+  <relation id="9110" version="1">
+    <member type="node" ref="8335781347" role="guidepost"/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="bicycle"/>
+    <tag k="network" v="lcn"/>
+    <tag k="ref" v="Б"/>
+    <tag k="name" v="Лише велоточки"/>
+  </relation>
+  <relation id="9111" version="1">
+    <member type="way" ref="225670351" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="bicycle"/>
+    <tag k="network" v="lcn"/>
+    <tag k="state" v="proposed"/>
+    <tag k="ref" v="П"/>
+    <tag k="name" v="Запланована веломережа"/>
   </relation>
 </osm>

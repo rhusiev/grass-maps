@@ -44,7 +44,7 @@ packages a byte-for-byte copy of `contours.pmtiles` as
 | `format.bin`, `terms.fst`, `postings.bin`, `places.bin`, `context.bin`, `entities.bin`, `kinds.bin`, `strings.bin` | the search section, built by `rust/grass-core` from `fixture-places.tsv`; a version-2 build writes `format.bin`, the committed version-1 package has no such file | no |
 | `features.bin` | the feature component, built in the same pass | no |
 | `way-alerts.geojson` | extracted by `osm-extract --way-alerts` from the fixture's own small OSM extract `test-data/regions/fixture-mini/way-alerts.osm.pbf`: two crossings, one tunnel, three hazards, one ford and one gate | no |
-| `relations.json` | extracted by `osm-extract --route-relations` from the fixture's own `test-data/regions/fixture-mini/hiking-relations.osm.pbf`: two parallel hiking routes sharing a track, one route without a symbol, and the bus, proposed, node-only and foot relations that prove the skips | no |
+| `relations.json` | extracted by `osm-extract --route-relations` from the fixture's own `test-data/regions/fixture-mini/route-relations.osm.pbf`: two parallel hiking routes sharing a track, one hiking route without a symbol, two cycling routes, five cycling node-network numbers, and the bus, proposed, node-only and foot relations that prove the skips | no |
 
 The bounding box is `23.940,49.940,23.960,49.960` (about 1.5 km around
 Ivano-Frankove, Lviv oblast). It is rural, so its z12-14 tiles stay small; the
@@ -232,18 +232,21 @@ prove the skips. The manifest marks the component `standIn: false` and records
 the PBF sha256, bbox, extraction version and counts under
 `pipeline.wayAlertSource`.
 
-### Hiking route relations (T-0418)
+### Hiking and cycling route relations (T-0418, T-0419)
 
-`relations.json` is the region's hiking-route component. It is not GeoJSON.
-The document holds each member way's geometry once and each relation's ordered
-way members, because two routes that share a path must draw side by side and a
-later relation chart (T-0420) needs the membership, not only a merged line.
+`relations.json` is the region's route-relation component. It is not GeoJSON.
+The document holds each member way's geometry once, each relation's ordered way
+members, and the numbered junctions of the cycling node networks. Two routes
+that share a path must draw side by side, and a later relation chart (T-0420)
+needs the membership, not only a merged line.
 
 ```json
 {
   "format": "grass-maps-route-relations",
   "version": 1,
   "ways": [{"id": 896757861, "coordinates": [[23.9472208, 49.9448998]]}],
+  "nodes": [{"id": 5556643624, "network": "lcn", "ref": "12",
+             "coordinates": [23.9503673, 49.9425100]}],
   "relations": [{
     "id": 9101, "type": "route", "route": "hiking", "network": "lwn", "ref": "ЛГ",
     "name": "Лісова Гряда", "osmcSymbol": "red:white:red_bar",
@@ -256,13 +259,21 @@ later relation chart (T-0420) needs the membership, not only a merged line.
 `coordinates` are `[longitude, latitude]` WGS84 degrees, seven decimals, in the
 way's own direction. `members` is the relation's own order; `role` is the OSM
 role and may be empty. Every member way exists in `ways`; the reader treats a
-missing one as corrupt data. `network` is mapped to `iwn`, `nwn`, `rwn` or `lwn`
-by the app, and a relation without the tag draws as `lwn`.
+missing one as corrupt data. `route` is `hiking` or `bicycle`. `network` is
+mapped to `iwn`, `nwn`, `rwn` or `lwn` for a hiking route and to `icn`, `ncn`,
+`rcn` or `lcn` for a cycling route; a relation without the tag, or with a tag
+from the other kind, draws as the local tier of its own kind.
+
+`nodes` is the numbered junctions of the cycling node networks. OSM tags the
+junction node itself (`lcn_ref`, `rcn_ref`, `ncn_ref` or `icn_ref`), not the
+relation, and the network's route relations connect these nodes. `ref` is text
+because OSM allows a letter suffix. A document written before T-0419 has no
+`nodes` array; the reader opens it with no node numbers.
 
 Selection rules, exact. `tools/pipeline/build-route-relations.sh` runs
 `osm-extract --route-relations`:
 
-- keep a relation with `type=route` and `route=hiking`
+- keep a relation with `type=route` and `route=hiking` or `route=bicycle`
 - skip `state=proposed`, `abandoned`, `disused`, `construction` or `planned`,
   and any relation with `proposed=*` other than `no`/`none`
 - skip a relation with no way members; node members (guideposts, route markers)
@@ -270,37 +281,54 @@ Selection rules, exact. `tools/pipeline/build-route-relations.sh` runs
 - skip a member way whose nodes are incomplete (a way at the clip edge), and
   skip the relation when no complete member way remains
 - skip a relation with no point inside the bbox
-- skip every other route value, including `route=bus`, `route=bicycle` and
-  `route=foot`. Cycling is T-0419; `route=foot` had 48 relations in the
-  2026-11-04 Ukraine extract and is not in this layer yet
+- keep a node inside the bbox when it carries `lcn_ref`, `rcn_ref`, `ncn_ref`
+  or `icn_ref` with a non-empty value; the key decides the network, so a node
+  without `network=*` still counts. Hiking node refs (`lwn_ref` and the other
+  tiers) are not in this layer
+- skip every other route value, including `route=bus` and `route=foot`.
+  `route=foot` had 48 relations in the 2026-11-04 Ukraine extract and is not
+  in this layer yet
 - skip every relation whose `type` is not `route`
 
-The output is deterministic for one PBF and one bbox: ways and relations are
-sorted by id, members keep relation order, and coordinates are rounded to seven
-decimals. The plugin assembles each relation by walking its members in order
-and reversing a way whose far end is nearer the previous member's end. A member
-that does not meet its neighbour is a real gap and stays a separate line.
+The output is deterministic for one PBF and one bbox: ways, node-network
+numbers and relations are sorted by id, members keep relation order, and
+coordinates are rounded to seven decimals. The plugin assembles each relation
+by walking its members in order and reversing a way whose far end is nearer the
+previous member's end. A member that does not meet its neighbour is a real gap
+and stays a separate line.
 
-Measured on 2026-11-12, 8 cores, `gm-data` slot, the phase-A Ukraine PBF
-(883,214,645 B, sha256 `ff46165a…`) and the `22.5,48.9,25.2,50.6` map bbox:
+Measured on 2026-11-13, 8 cores, `gm-data` slot, the phase-A Ukraine PBF
+(883,214,645 B, sha256 `ff46165a…`). Each run decodes the whole PBF three
+times, so the wall time is a full-file scan even for a small bbox; the table
+records counts and bytes, not a timing comparison with the v1 run:
 
-| Run | Relations | Ways | Bytes | Extract time | Peak RSS |
-|---|---|---|---|---|---|
-| Fixture input, bbox `23.94,49.94,23.96,49.96` | 3 | 3 | 5,714 | 0.07 s | 3.3 MB |
-| Lviv bbox, from the 78,434,355 B bbox extract | 87 | 2,360 | 1,049,166 | 5.09 s | 18.9 MB |
-| Skole probe, bbox `23.505,49.018,23.53,49.035` | 6 | 61 | 30,438 | 10.63 s | 18.8 MB |
+| Run | Relations | Ways | Nodes | Bytes |
+|---|---|---|---|---|
+| Fixture input, bbox `23.94,49.94,23.96,49.96` | 5 | 3 | 5 | 6,561 |
+| Lviv city bbox `23.90,49.75,24.15,49.95` | 16 | 2,199 | 0 | not kept |
+| Cycling probe, bbox `23.930,49.900,23.952,49.918` | 8 | 402 | 0 | 130,097 |
 
-The whole Ukraine extract has 545 `route=hiking` relations and 75 distinct
-`osmc:symbol` values; 355 are `lwn`, 120 `rwn`, 21 `nwn`, 3 `iwn`, 42 have no
-`network`, and 4 carry an `lcn` or `rcn` value on a hiking route (drawn as
-local). 164 have no `osmc:symbol` and draw a band without a waymark.
+The whole Ukraine extract, with no bbox, keeps 658 route relations and 15,151
+member ways: 537 `hiking` and 121 `bicycle`. The bicycle networks are 59 `lcn`,
+35 `rcn`, 9 `ncn` and 2 `icn`; 13 have no `network`, and 3 carry a hiking `lwn`
+value and draw as local. The hiking networks are 354 `lwn`, 120 `rwn`, 17
+`nwn`, 2 `iwn` and 40 without a tag; 3 carry `lcn` and 1 `rcn` and draw as
+local. The whole run reports **0 node-network numbers**: the 2026-11-04
+snapshot has no node with a cycling `*cn_ref` tag anywhere. Every node member
+of a bicycle relation is a guidepost without a number. The Lviv cycling probe
+records that gap; its node list is empty.
 
-The fixture's input is `test-data/regions/fixture-mini/hiking-relations.osm`
-(1,950 B PBF beside it). Its ways are real tracks from the fixture bbox
-(896757861 and 306496773 for the two parallel routes, 225670351 for the route
-without a symbol); the relations are authored to exercise the rules: 9101 and
-9102 share a way, 9103 is a bus, 9104 is proposed, 9105 has only a node member
-and 9106 is `route=foot`. The real extractor produces the committed bytes.
+The fixture's input is `test-data/regions/fixture-mini/route-relations.osm`
+(2,223 B PBF beside it). Its ways are real tracks from the fixture bbox
+(896757861 and 306496773 for the parallel hiking and cycling routes, 225670351
+for the symbol-less hiking route and the national cycling route); the relations
+and node tags are authored to exercise the rules: 9101 and 9102 share a way,
+9103 is a bus, 9104 is proposed, 9105 has only a node member, 9106 is
+`route=foot`, 9108 is a local cycling route, 9109 is a national cycling route,
+9110 has only a node member and 9111 is a proposed cycling route. Nodes
+5556643624, 5556643405, 5556643401 and 3114545825 carry `lcn_ref` 12, 13, 47
+and 48; node 2344261512 carries `rcn_ref` 7; node 387853648 carries `lwn_ref`
+3 and must not appear. The real extractor produces the committed bytes.
 `regions.RegionReader` reads the component; the `route.relations` plugin
 assembles it and draws it.
 
@@ -371,6 +399,13 @@ relations step is 5.09 s over the bbox extract. A 30,438 B Skole probe
 (`23.505,49.018,23.53,49.035`, 6 relations, 61 ways) is committed under
 `test-data/regions/lviv-hiking-relations/` with its provenance and a copy of
 the new pack manifest.
+
+T-0419 adds a cycling probe under `test-data/regions/lviv-cycling-relations/`:
+`relations.json` is 130,097 B, eight `route=bicycle` relations and 402 member
+ways from the bbox `23.930,49.900,23.952,49.918`, extracted from the same
+Ukraine PBF. It carries no node numbers because the source snapshot has no
+`*cn_ref` junction there. `provenance.json` records the source digest, the
+extraction revision and that data gap. The T-0418 pack was not rebuilt.
 
 ### Search section and features
 

@@ -430,7 +430,7 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/track-layer` | the imported-track line layer and the controller that keeps it on the map | `plugin-api` |
 | `plugins/track-library` | the track library state, its folder definitions, the rename, describe, move and delete actions with one-step undo, and the four fixed orders and name search | `plugin-api` |
 | `plugins/contours` | the contour overlay for the Standard and Touring variants and the one-row layers panel that toggles it | `plugin-api`, `plugin-ui-api` |
-| `plugins/route-relations` | the hiking relation geometry assembler, the shared-way lane assignment, the OSMC waymark mapping and the `MapHost` layers over an inline GeoJSON source | `plugin-api` |
+| `plugins/route-relations` | the hiking and cycling relation geometry assembler, the shared-way lane assignment, the OSMC waymark mapping, the cycling node-network numbers and the `MapHost` layers over an inline GeoJSON source | `plugin-api` |
 | `plugins/route-warnings` | the warning list for fords, steps, barriers, railway crossings and private ways, with its profile filter and distance order | `plugin-api` |
 
 ## Place card
@@ -1788,19 +1788,23 @@ kind text, the details and the distances, and the absent row at zero warnings.
 five kinds and the profile filter, and counts scans to prove one scan per route
 and profile, a rescan on a profile or route change, and the failure path.
 
-## Hiking route relations
+## Hiking and cycling route relations
 
-Hiking route relations are T-0418. `RegionReader` reads the mounted region's
-`relations.json` component: each member way's geometry once, and each hiking
-relation's ordered way members with its `network`, `ref`, `name`, `colour` and
-`osmc:symbol`. A package without the component opens and draws nothing.
+Hiking and cycling route relations are T-0418 and T-0419. `RegionReader` reads
+the mounted region's `relations.json` component: each member way's geometry
+once, each relation's ordered way members with its `route`, `network`, `ref`,
+`name`, `colour` and `osmc:symbol`, and the numbered junctions of the cycling
+node networks. A package without the component opens and draws nothing.
 
 `plugins/route-relations` assembles each relation by walking its members in
 relation order and reversing a way that points back against the previous
 member. Shared ways carry a lane rank and count, so two routes that share a
-path draw side by side instead of on top of each other. The band colours are
-the style's network colours (`iwn` `#d9483b`, `nwn` `#4a3fd6`, `rwn` `#e07a2f`,
-`lwn` `#6fbf3a`) at 0.55 opacity; a route without a network draws as local.
+path draw side by side instead of on top of each other, across the two route
+kinds as well. Hiking bands use the style's hiking network colours (`iwn`
+`#d9483b`, `nwn` `#4a3fd6`, `rwn` `#e07a2f`, `lwn` `#6fbf3a`) at 0.55 opacity
+from z9. Cycling bands use `icn` `#d93030`, `ncn` `#e0602a`, `rcn` `#b03ac7`
+and `lcn` `#2f5fe0` at 0.45 opacity from z11. A route without a network, or
+with a tag from the other kind, draws as the local tier of its own kind.
 
 The waymark is the `osmc:symbol` background plate and foreground shape, drawn
 from eighteen `osmc_*` SDF glyphs authored here and tinted per feature. The
@@ -1809,10 +1813,17 @@ the layer does not carry keeps its band and draws no mark. The geometry comes
 from the component and `MapHost.addLayer` with an inline GeoJSON source, never
 from `queryRenderedFeatures`.
 
+A cycling node-network junction draws from its tagged OSM node at z15: a white
+disc, a green ring and the `*cn_ref` number in medium type. The marker is a
+`LayerType.Circle` plus a text symbol layer, so it does not need a sprite glyph
+and does not move when a route line is redrawn.
+
 The extraction rules and the measured Lviv and fixture runs are in
-`tools/pipeline/README.md`. The fixture carries two routes sharing one real
-track, and the golden cases `hiking-routes-z13` and `hiking-routes-z14` drive
-the same parser, assembler, symbol mapping and map layers through the debug
+`tools/pipeline/README.md`. The fixture carries two hiking routes sharing one
+real track, two cycling routes on the same tracks, and five node numbers. The
+golden cases `hiking-routes-z13`, `hiking-routes-z14`, `cycling-routes-z12` and
+`cycling-node-numbers-z15` drive the same parser, assembler, symbol mapping,
+node placement and map layers through the debug
 `core.map.set_route_relations` command.
 
 ## Search seam

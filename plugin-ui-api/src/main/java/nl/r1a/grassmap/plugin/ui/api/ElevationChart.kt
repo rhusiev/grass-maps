@@ -36,15 +36,68 @@ data class ElevationChartPoint(
 )
 
 /**
- * The chart in the app's state: the engine's samples and the axis they are read
- * along.
+ * A distance range the user selected on the chart (T-0405).
+ *
+ * The two ends are distances along the profile, ordered so [endMeters] is the
+ * later one. The range is the view's gesture state; the statistics for it come
+ * from the analysis engine, not from the chart.
+ */
+data class ElevationChartRange(
+    val startMeters: Double,
+    val endMeters: Double,
+) {
+    /** The ground distance the range covers. */
+    val distanceMeters: Double get() = (endMeters - startMeters).coerceAtLeast(0.0)
+}
+
+/**
+ * The analysis engine's statistics for one [range].
+ *
+ * Every value is copied from the engine's own range model; the chart only
+ * formats them. [durationMillis] is null when the profile has no complete
+ * timing.
+ */
+data class ElevationChartRangeStats(
+    val range: ElevationChartRange,
+    val distanceMeters: Double,
+    val ascentMeters: Double,
+    val descentMeters: Double,
+    val averageGradePercent: Double,
+    val durationMillis: Long? = null,
+)
+
+/**
+ * One climb of the profile, as the analysis engine found it.
+ *
+ * [averageGradePercent] is the climb's gain over its own distance. The chart
+ * draws the climb where it lies; the analysis panel lists it and tapping it
+ * selects [range].
+ */
+data class ElevationChartClimb(
+    val startMeters: Double,
+    val endMeters: Double,
+    val ascentMeters: Double,
+    val averageGradePercent: Double,
+    val durationMillis: Long? = null,
+) {
+    /** The climb's range, for selecting it on the chart. */
+    val range: ElevationChartRange get() = ElevationChartRange(startMeters, endMeters)
+}
+
+/**
+ * The chart in the app's state: the engine's samples, the axis they are read
+ * along, the selected range with the engine's statistics, and the climbs the
+ * engine found (T-0405).
  *
  * [points] is empty when the engine has no profile, and then the shell draws no
- * chart at all instead of an empty frame.
+ * chart at all instead of an empty frame. [selection] is null when no range is
+ * selected; [climbs] is empty when the profile has none.
  */
 data class ElevationChartState(
     val points: List<ElevationChartPoint> = emptyList(),
     val axis: ElevationChartAxis = ElevationChartAxis.Distance,
+    val selection: ElevationChartRangeStats? = null,
+    val climbs: List<ElevationChartClimb> = emptyList(),
 ) {
     /** True when there is a line to draw. */
     val isDrawable: Boolean get() = points.size >= MINIMUM_POINTS

@@ -1,6 +1,8 @@
 import buildlogic.CheckPrivacyManifestTask
 import buildlogic.GeneratePluginRegistryTask
 import com.android.build.api.artifact.SingleArtifact
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.testing.Test
 
 plugins {
     alias(libs.plugins.android.application)
@@ -202,8 +204,21 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(testFixtures(project(":plugin-api")))
 }
 
 tasks.named("check") {
     dependsOn(":checkPluginManifests")
+}
+
+// The route-warning wiring test reads the committed test region by path, so a
+// changed fixture must invalidate the test (T-0409).
+val routeWarningFixture =
+    rootProject.file("test-data/regions/fixture-mini/2026-11-03-1")
+
+tasks.withType<Test>().configureEach {
+    inputs
+        .dir(routeWarningFixture)
+        .withPropertyName("routeWarningFixtureRegion")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
 }

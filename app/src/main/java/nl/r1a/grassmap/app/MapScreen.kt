@@ -348,6 +348,27 @@ private fun MapContent(
     var turnIndex by remember(plan.selected) { mutableIntStateOf(0) }
     var turnRequest by remember(plan.selected) { mutableIntStateOf(0) }
     val turns = remember(plan.selected, container.strings) { routePlanTurns(plan, container.strings) }
+    // One scan per produced route and profile (T-0409). The effect restarts on
+    // a new selected route or a profile change, and a cancelled scan never
+    // writes its result, so a late answer cannot replace a newer one.
+    val warningCache =
+        remember(container) {
+            RouteWarningCache(
+                scan = { route, profile -> container.routeWarnings.warnings(route, profile) },
+                log = { message -> Log.i(TAG, message) },
+            )
+        }
+    var warnings by remember { mutableStateOf(RouteWarningsSnapshot.Empty) }
+    val warningRoute = remember(plan.selected) { plan.selectedRoute() }
+    LaunchedEffect(warningRoute, plan.profile) {
+        warnings =
+            RouteWarningsSnapshot(
+                route = warningRoute,
+                profile = plan.profile,
+                rows = warningCache.rows(warningRoute, plan.profile),
+            )
+    }
+    val warningRows = warnings.rowsFor(warningRoute, plan.profile)
     LaunchedEffect(turnRequest) {
         if (turnRequest == 0) {
             return@LaunchedEffect
@@ -953,6 +974,7 @@ private fun MapContent(
                         invokePlannerCommand(container, RoutePlannerContract.resetPreferences, JsonObject(emptyMap()))
                     }
                 },
+                warnings = warningRows,
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)

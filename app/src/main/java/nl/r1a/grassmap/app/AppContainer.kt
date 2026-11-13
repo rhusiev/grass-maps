@@ -80,6 +80,7 @@ import nl.r1a.grassmap.plugins.map.controls.PositionOffsetFraction
 import nl.r1a.grassmap.plugins.map.controls.PositionOffsetProvider
 import nl.r1a.grassmap.plugins.point.info.PointInfo
 import nl.r1a.grassmap.plugins.point.info.SelectedPointStore
+import nl.r1a.grassmap.plugins.route.warnings.RouteWarningScanner
 import nl.r1a.grassmap.plugins.track.layer.TrackLayer
 import nl.r1a.grassmap.plugins.way.alerts.WayAlertHost
 import nl.r1a.grassmap.plugins.way.alerts.WayAlertSink
@@ -399,6 +400,15 @@ class AppContainer(
     /** The mounted region's components for feature wiring outside this container. */
     val regionData: RegionAccess
         get() = regionAccess
+
+    /**
+     * The warning list for the planned route (T-0409). The scanner reads the
+     * mounted region's way-alert component for fords, barriers and railway
+     * crossings and the route's own segments for steps and private ways. An
+     * unmounted region is the inert source, so a plan without a pack still
+     * gets its route-attribute warnings.
+     */
+    val routeWarnings: RouteWarningScanner by lazy { RouteWarningScanner(regionAccess) }
 
     /**
      * The mounted region's DEM heights (T-0308). The grid is opened on the

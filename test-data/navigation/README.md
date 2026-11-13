@@ -34,7 +34,7 @@ or replayed by `core.nav.beep_probe` with the same route and profile.
 `screen-route.json` is the T-0320 navigation screen fixture. It is a 1.2 km walk
 with a 450 m intermediate stop, a turn at 180 m and a second at 620 m, so the
 screen shows the round 5 values (180 m, Pidvalna St, then Ruska St, 450 m,
-4 min). `core.nav.show_screen` draws it and fills the deterministic screen
+6 min). `core.nav.show_screen` draws it and fills the deterministic screen
 state; the navigation goldens capture that state in light and dark.
 
 `screen-live-route.json` is the same committed mock-walk line split at a 172.5 m

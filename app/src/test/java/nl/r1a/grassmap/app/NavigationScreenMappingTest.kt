@@ -8,6 +8,7 @@ import nl.r1a.grassmap.navigation.NavigationCameraSettings
 import nl.r1a.grassmap.navigation.NavigationPhase
 import nl.r1a.grassmap.navigation.NavigationState
 import nl.r1a.grassmap.navigation.RouteRelation
+import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
 import nl.r1a.grassmap.plugin.api.provider.Route
@@ -21,6 +22,7 @@ import nl.r1a.grassmap.plugin.ui.api.NavigationScreenStatus
 import nl.r1a.grassmap.plugin.ui.api.NavigationTurnArrow
 import nl.r1a.grassmap.plugins.guidance.ui.GuidanceInput
 import nl.r1a.grassmap.plugins.guidance.ui.guidancePanel
+import nl.r1a.grassmap.routing.RouteJson
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -59,6 +61,38 @@ class NavigationScreenMappingTest {
         assertEquals("4.8", screen.trip.speedCurrent)
         assertEquals("4.6", screen.trip.speedAverage)
         assertEquals("6.1", screen.trip.speedMax)
+    }
+
+    @Test
+    fun theScreenRouteFixtureShowsSixMinutesToTheStopThroughTheMapping() {
+        val route = decodeFixture("screen-route.json")
+        val panel = requireNotNull(guidancePanel(GuidanceInput(route, 0.0), TestStrings, Locale.US))
+        val state =
+            NavigationState(
+                phase = NavigationPhase.Following,
+                remainingDistanceMeters = route.distanceMeters,
+                remainingDurationSeconds = route.durationSeconds,
+                activeRoute = route,
+                profile = RouteProfile.Walk,
+            )
+
+        val screen =
+            navigationScreenState(
+                NavigationScreenInput(
+                    state = state,
+                    panel = panel,
+                    destination = "Lviv Opera",
+                    nextStopName = "Svit Kavy",
+                ),
+                TestStrings,
+                Locale.US,
+                ZoneId.of("UTC"),
+            )
+
+        assertEquals("180 m", screen.turn.distance)
+        assertEquals("450 m", screen.readout.stopDistance)
+        assertEquals("6 min", screen.readout.stopTime)
+        assertEquals("16 min", screen.trip.remainingTime)
     }
 
     @Test
@@ -250,6 +284,17 @@ class NavigationScreenMappingTest {
         Locale.US,
         ZoneId.of("UTC"),
     )
+
+    private fun decodeFixture(name: String): Route {
+        val json =
+            requireNotNull(javaClass.getResourceAsStream("/navigation/$name")) {
+                "$name is missing from the test resources"
+            }.bufferedReader().use { it.readText() }
+        return when (val outcome = RouteJson.decode(json)) {
+            is Outcome.Success -> outcome.value
+            is Outcome.Failure -> throw AssertionError("$name did not decode: ${outcome.error}")
+        }
+    }
 
     private fun screenAlert(banner: AlertBanner) =
         screen(state = state(), panel = panel(state(), along = 200.0), alerts = listOf(banner)).alerts.single()

@@ -1,12 +1,7 @@
 package nl.r1a.grassmap.tracks
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.Track
 import nl.r1a.grassmap.plugin.api.model.TrackPoint
-import kotlin.math.asin
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.sqrt
 
 /**
  * A pure statistics function over a track's points, with no I/O and no state.
@@ -118,24 +113,7 @@ class TrackAnalyzer(
         return delta.takeIf { it in 1..policy.pauseGapMillis }
     }
 
-    private fun distanceMeters(
-        from: GeoPoint,
-        to: GeoPoint,
-    ): Double {
-        val fromLatitude = Math.toRadians(from.latitude)
-        val toLatitude = Math.toRadians(to.latitude)
-        val latitudeDelta = toLatitude - fromLatitude
-        val longitudeDelta = Math.toRadians(to.longitude - from.longitude)
-        val haversine =
-            sin(latitudeDelta / 2.0) * sin(latitudeDelta / 2.0) +
-                cos(fromLatitude) * cos(toLatitude) *
-                sin(longitudeDelta / 2.0) * sin(longitudeDelta / 2.0)
-        return 2.0 * EARTH_RADIUS_METERS * asin(sqrt(haversine.coerceIn(0.0, 1.0)))
-    }
-
     private companion object {
-        /** IUGG mean Earth radius. The oracle documents the same constant. */
-        const val EARTH_RADIUS_METERS: Double = 6_371_008.8
         const val MILLIS_PER_SECOND: Double = 1_000.0
     }
 }

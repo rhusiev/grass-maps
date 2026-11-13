@@ -9,9 +9,11 @@ import nl.r1a.grassmap.plugin.ui.api.ElevationChartPoint
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartRangeStats
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartState
+import nl.r1a.grassmap.plugin.ui.api.ElevationChartStretch
 import nl.r1a.grassmap.tracks.ElevationProfile
 import nl.r1a.grassmap.tracks.ElevationProfiler
 import nl.r1a.grassmap.tracks.ElevationSegments
+import nl.r1a.grassmap.tracks.RouteStretches
 import nl.r1a.grassmap.tracks.StoredTrack
 import nl.r1a.grassmap.ui.shell.TrackAnalysisSummary
 import kotlin.math.ceil
@@ -35,6 +37,7 @@ internal fun elevationChartState(
     axis: ElevationChartAxis = ElevationChartAxis.Distance,
     selection: ElevationChartRangeStats? = null,
     climbs: List<ElevationChartClimb> = emptyList(),
+    stretches: List<ElevationChartStretch> = emptyList(),
 ): ElevationChartState =
     ElevationChartState(
         points =
@@ -49,7 +52,31 @@ internal fun elevationChartState(
         axis = axis,
         selection = selection,
         climbs = climbs,
+        stretches = stretches,
     )
+
+/**
+ * The annotated stretches of a planned route, in the chart's vocabulary
+ * (T-0406).
+ *
+ * The routing engine's annotate pass already cut the route into one segment per
+ * graph edge with its surface and highway values; [RouteStretches] only reads
+ * those ends onto the profile's own axis. Nothing asks the engine again and
+ * nothing samples the map, so the strips and the percentages beside them are the
+ * engine's own segments.
+ */
+internal fun elevationChartStretches(
+    profile: ElevationProfile,
+    option: RoutePlanOption,
+): List<ElevationChartStretch> =
+    routeStretches.of(profile, option.geometry, option.segments).map { stretch ->
+        ElevationChartStretch(
+            startMeters = stretch.startMeters,
+            endMeters = stretch.endMeters,
+            surface = stretch.surface,
+            wayType = stretch.wayType,
+        )
+    }
 
 /** The climbs the engine finds in [profile], in the chart's vocabulary. */
 internal fun elevationChartClimbs(profile: ElevationProfile): List<ElevationChartClimb> =
@@ -84,6 +111,8 @@ internal fun elevationChartSelection(
 
 private val elevationSegments = ElevationSegments()
 
+private val routeStretches = RouteStretches()
+
 /** The panel's statistics, copied from the engine's analysis of the same track. */
 internal fun trackAnalysisSummary(track: StoredTrack): TrackAnalysisSummary {
     val analysis = track.analysis
@@ -108,6 +137,11 @@ internal fun trackAnalysisSummary(track: StoredTrack): TrackAnalysisSummary {
  * count is capped, with an even stride, so a long route does not ask the DEM
  * for thousands of heights.
  *
+ * The profile is built over the whole geometry with a null height where the
+ * stride skipped a point. [ElevationProfiler.lineProfile] skips a null without
+ * breaking the distance, so the chart's distance axis stays the route's own line
+ * and an annotated segment's shape range lands on it unchanged (T-0406).
+ *
  * A route with no measured heights, or with fewer than two, has no profile and
  * the chart is not drawn.
  */
@@ -121,33 +155,31 @@ internal class RouteElevation(
             return null
         }
         val stride = ceil(geometry.size / MAXIMUM_SAMPLES.toDouble()).toInt().coerceAtLeast(1)
-        val positions =
-            geometry.filterIndexed { index, _ -> index % stride == 0 || index == geometry.lastIndex }
+        val sampled = geometry.indices.filter { index -> index % stride == 0 || index == geometry.lastIndex }
         var reportedFailure = false
-        val heights =
-            positions.map { position ->
-                when (val outcome = elevation.elevationMeters(position)) {
-                    is Outcome.Success -> {
-                        outcome.value
-                    }
+        val heights = mutableMapOf<Int, Double>()
+        sampled.forEach { index ->
+            when (val outcome = elevation.elevationMeters(geometry[index])) {
+                is Outcome.Success -> {
+                    outcome.value?.let { height -> heights[index] = height }
+                }
 
-                    is Outcome.Failure -> {
-                        if (!reportedFailure) {
-                            reportedFailure = true
-                            log("route elevation not read: ${outcome.error}")
-                        }
-                        null
+                is Outcome.Failure -> {
+                    if (!reportedFailure) {
+                        reportedFailure = true
+                        log("route elevation not read: ${outcome.error}")
                     }
                 }
             }
-        if (heights.count { it != null } < MINIMUM_GEOMETRY_POINTS) {
+        }
+        if (heights.size < MINIMUM_GEOMETRY_POINTS) {
             return null
         }
         val durationMillis = (option.durationSeconds * MILLIS_PER_SECOND).toLong().coerceAtLeast(0L)
         val departureEpochMillis = option.arrivalEpochMillis - durationMillis
         return ElevationProfiler().lineProfile(
-            positions = positions,
-            elevations = heights,
+            positions = geometry,
+            elevations = geometry.indices.map { index -> heights[index] },
             durationMillis = durationMillis,
             departureEpochMillis = departureEpochMillis,
         )

@@ -4,13 +4,17 @@ import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.ElevationAccess
+import nl.r1a.grassmap.plugin.api.model.AttributeValue
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanOption
 import nl.r1a.grassmap.plugin.api.model.Track
 import nl.r1a.grassmap.plugin.api.model.TrackPoint
 import nl.r1a.grassmap.plugin.api.model.TrackSegment
+import nl.r1a.grassmap.plugin.api.provider.RouteAttributes
+import nl.r1a.grassmap.plugin.api.provider.RouteSegment
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
+import nl.r1a.grassmap.plugin.ui.api.ElevationChartStretch
 import nl.r1a.grassmap.tracks.ElevationProfiler
 import nl.r1a.grassmap.tracks.ElevationSegments
 import nl.r1a.grassmap.tracks.StoredTrack
@@ -171,6 +175,64 @@ class AnalysisChartsTest {
             assertTrue((profile?.samples?.size ?: 0) >= 2)
         }
 
+    @Test
+    fun aStridedRouteProfileKeepsTheRoutesOwnDistanceAxis() =
+        runTest {
+            val short =
+                RouteElevation(ElevationAccess { position -> Outcome.Success(heightAt(position)) })
+                    .profile(route(geometry(size = 5), durationSeconds = 1_140.0, arrivalEpochMillis = ARRIVAL))
+            val step = (short?.distanceMeters ?: 0.0) / 4.0
+            val long =
+                RouteElevation(ElevationAccess { position -> Outcome.Success(heightAt(position)) })
+                    .profile(route(geometry(size = 1_000), durationSeconds = 3_600.0, arrivalEpochMillis = ARRIVAL))
+
+            assertEquals(999 * step, long?.distanceMeters ?: 0.0, step * 1e-6)
+        }
+
+    @Test
+    fun theRouteStripsComeFromTheAnnotatedSegments() =
+        runTest {
+            val route = route(geometry(size = 5), durationSeconds = 1_140.0, arrivalEpochMillis = ARRIVAL)
+            val annotated = route.copy(segments = listOf(FIRST_SEGMENT, SECOND_SEGMENT))
+            val elevation = ElevationAccess { position -> Outcome.Success(heightAt(position)) }
+            val profile = RouteElevation(elevation).profile(annotated) ?: error("no profile")
+
+            val stretches = elevationChartStretches(profile, annotated)
+
+            assertEquals(2, stretches.size)
+            assertEquals(0.0, stretches[0].startMeters, 1e-9)
+            assertEquals(profile.samples[2].distanceMeters, stretches[0].endMeters, 1e-9)
+            assertEquals("asphalt", stretches[0].surface)
+            assertEquals("residential", stretches[0].wayType)
+            assertEquals(profile.samples[2].distanceMeters, stretches[1].startMeters, 1e-9)
+            assertEquals(profile.distanceMeters, stretches[1].endMeters, 1e-9)
+            assertEquals("gravel", stretches[1].surface)
+            assertEquals("track", stretches[1].wayType)
+        }
+
+    @Test
+    fun theChartStateCarriesTheEngineStretches() {
+        val profile = ElevationProfiler().profile(TIMED_TRACK)
+        val stretches =
+            listOf(
+                ElevationChartStretch(0.0, 100.0, surface = "asphalt", wayType = "path"),
+            )
+
+        val state = elevationChartState(profile, stretches = stretches)
+
+        assertEquals(stretches, state.stretches)
+    }
+
+    @Test
+    fun aRouteWithoutSegmentsHasNoStrips() =
+        runTest {
+            val route = route(geometry(size = 5), durationSeconds = 1_140.0, arrivalEpochMillis = ARRIVAL)
+            val elevation = ElevationAccess { position -> Outcome.Success(heightAt(position)) }
+            val profile = RouteElevation(elevation).profile(route) ?: error("no profile")
+
+            assertTrue(elevationChartStretches(profile, route).isEmpty())
+        }
+
     private fun route(
         geometry: List<GeoPoint>,
         durationSeconds: Double,
@@ -196,6 +258,32 @@ class AnalysisChartsTest {
         const val HEIGHT_PER_DEGREE = 1_000.0
         const val ARRIVAL = 1_700_006_000_000L
         const val START_MILLIS = 1_700_000_000_000L
+
+        val FIRST_SEGMENT =
+            RouteSegment(
+                startIndex = 0,
+                endIndex = 2,
+                distanceMeters = 222.4,
+                durationSeconds = 60.0,
+                attributes =
+                    mapOf(
+                        RouteAttributes.SURFACE to AttributeValue.TextValue("asphalt"),
+                        RouteAttributes.HIGHWAY to AttributeValue.TextValue("residential"),
+                    ),
+            )
+
+        val SECOND_SEGMENT =
+            RouteSegment(
+                startIndex = 2,
+                endIndex = 4,
+                distanceMeters = 222.4,
+                durationSeconds = 60.0,
+                attributes =
+                    mapOf(
+                        RouteAttributes.SURFACE to AttributeValue.TextValue("gravel"),
+                        RouteAttributes.HIGHWAY to AttributeValue.TextValue("track"),
+                    ),
+            )
 
         val TIMED_TRACK =
             Track(

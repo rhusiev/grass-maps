@@ -85,19 +85,44 @@ data class ElevationChartClimb(
 }
 
 /**
+ * One stretch of the chart with the attributes the routing engine's annotate
+ * pass gave that part of the line (T-0406).
+ *
+ * The two ends are distances along the same profile the chart draws, taken from
+ * the engine's own annotated segments and their shape ranges, so a stretch
+ * covers exactly the part of the axis it describes. [surface] and [wayType] are
+ * the engine's own attribute values rather than a second reading of the map,
+ * and either is null when the engine had no value for the stretch. The shell
+ * groups the values into the round-10 classes; a value it does not know is left
+ * out of the strips rather than guessed.
+ */
+data class ElevationChartStretch(
+    val startMeters: Double,
+    val endMeters: Double,
+    val surface: String? = null,
+    val wayType: String? = null,
+) {
+    /** The ground distance the stretch covers. */
+    val distanceMeters: Double get() = (endMeters - startMeters).coerceAtLeast(0.0)
+}
+
+/**
  * The chart in the app's state: the engine's samples, the axis they are read
- * along, the selected range with the engine's statistics, and the climbs the
- * engine found (T-0405).
+ * along, the selected range with the engine's statistics, the climbs the engine
+ * found (T-0405) and the annotated stretches behind the surface and way-type
+ * strips (T-0406).
  *
  * [points] is empty when the engine has no profile, and then the shell draws no
  * chart at all instead of an empty frame. [selection] is null when no range is
- * selected; [climbs] is empty when the profile has none.
+ * selected; [climbs] is empty when the profile has none. [stretches] is empty
+ * when nothing annotated the line, as a GPX track has no attributes of its own.
  */
 data class ElevationChartState(
     val points: List<ElevationChartPoint> = emptyList(),
     val axis: ElevationChartAxis = ElevationChartAxis.Distance,
     val selection: ElevationChartRangeStats? = null,
     val climbs: List<ElevationChartClimb> = emptyList(),
+    val stretches: List<ElevationChartStretch> = emptyList(),
 ) {
     /** True when there is a line to draw. */
     val isDrawable: Boolean get() = points.size >= MINIMUM_POINTS

@@ -106,6 +106,7 @@ import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
+import nl.r1a.grassmap.plugin.ui.api.ElevationChartStretch
 import nl.r1a.grassmap.plugin.ui.api.NavigationScreenStatus
 import nl.r1a.grassmap.plugins.contours.ContoursLayerPanel
 import nl.r1a.grassmap.plugins.favourites.ui.FavouritesUiContract
@@ -370,16 +371,25 @@ private fun MapContent(
     val routeElevation = remember(container) { RouteElevation(container.elevationAccess) }
     var chartAxis by remember(plan.selected) { mutableStateOf(ElevationChartAxis.Distance) }
     var routeProfile by remember(plan.selected) { mutableStateOf(ElevationProfile()) }
+    // The route's surface and way-type strips (T-0406): the annotate pass cut
+    // the route into edge segments with their attributes, and the strips read
+    // those ends on the same profile the chart draws.
+    var routeStretchList by remember(plan.selected) { mutableStateOf(emptyList<ElevationChartStretch>()) }
     LaunchedEffect(plan.selected) {
         val selectedRoute = plan.selected
-        routeProfile =
-            if (selectedRoute == null) {
-                ElevationProfile()
-            } else {
-                withContext(Dispatchers.Default) { routeElevation.profile(selectedRoute) } ?: ElevationProfile()
-            }
+        if (selectedRoute == null) {
+            routeProfile = ElevationProfile()
+            routeStretchList = emptyList()
+        } else {
+            val profile = withContext(Dispatchers.Default) { routeElevation.profile(selectedRoute) } ?: ElevationProfile()
+            routeProfile = profile
+            routeStretchList = withContext(Dispatchers.Default) { elevationChartStretches(profile, selectedRoute) }
+        }
     }
-    val routeChart = remember(routeProfile, chartAxis) { elevationChartState(routeProfile, chartAxis) }
+    val routeChart =
+        remember(routeProfile, chartAxis, routeStretchList) {
+            elevationChartState(routeProfile, chartAxis, stretches = routeStretchList)
+        }
     // The track analysis panel (T-0404), opened by the control command until the
     // map's track selection opens it (T-0415).
     val analysisTrack by TrackAnalysisSession.track.collectAsState()

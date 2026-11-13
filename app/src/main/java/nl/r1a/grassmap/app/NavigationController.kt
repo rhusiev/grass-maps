@@ -80,10 +80,17 @@ class NavigationController(
      * session, false when one already existed. A missing location permission,
      * or a system that refuses the foreground service, is a typed failure and
      * starts nothing.
+     *
+     * [reroute] is false for a followed track (T-0412). Its line is the
+     * guidance the user asked for, so replacing it with a road route computed
+     * from the current position would abandon the track; while the user is
+     * still walking to the join point the session then reports off route
+     * instead of rerouting.
      */
     fun start(
         route: Route,
         profile: RouteProfile,
+        reroute: Boolean = true,
     ): Outcome<Boolean> {
         synchronized(lock) {
             if (job != null) {
@@ -116,7 +123,7 @@ class NavigationController(
                 )
             val started =
                 scope.launch(start = CoroutineStart.LAZY) {
-                    runSession(route, profile)
+                    runSession(route, profile, reroute)
                 }
             job = started
             started.invokeOnCompletion { finish(started) }
@@ -196,6 +203,7 @@ class NavigationController(
     private suspend fun runSession(
         route: Route,
         profile: RouteProfile,
+        reroute: Boolean,
     ) {
         val sessionControl = NavigationControl()
         synchronized(lock) {
@@ -222,12 +230,12 @@ class NavigationController(
                 follower = followerFactory(),
                 routing = engine ?: NoRerouteEngine,
                 profile = profile,
-                config = if (engine == null) config.copy(reroute = false) else config,
+                config = if (engine == null || !reroute) config.copy(reroute = false) else config,
                 clockMillis = clockMillis,
                 log = log,
                 control = sessionControl,
             )
-        log("navigation-session profile=$profile reroute=${engine != null}")
+        log("navigation-session profile=$profile reroute=${engine != null && reroute}")
         try {
             coroutineScope {
                 val mirror =

@@ -71,8 +71,13 @@ internal object GeoMath {
  * Snaps a position to a route line in a local equirectangular plane. Both the
  * polyline and the reported distances are in metres, so the radius of the
  * target latitude only affects the longitude scale.
+ *
+ * The locator is the one measure of a line in this module: the follower snaps
+ * every fix with it, and [trackFollowPlan] and [trackFollowRoute] choose a
+ * followed track's join and cut its line with it, so a followed track's
+ * distances are the same space the follower reports.
  */
-internal class PolylineLocator(
+class PolylineLocator(
     points: List<GeoPoint>,
 ) {
     private val vertices: List<GeoPoint> = points

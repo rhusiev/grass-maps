@@ -26,6 +26,18 @@ class CameraModeController(
 ) {
     val mode: StateFlow<CameraMode> = store.mode
 
+    private val mutablePosition = MutableStateFlow<LocationFix?>(null)
+
+    /**
+     * The latest fix the puck was placed on, or null before the first one.
+     *
+     * The map screen reads it for the follow-a-track start sheet (T-0412): the
+     * sheet needs the position the user is standing at to name the join point
+     * and the walk to it, and the camera's own copy is the one the puck already
+     * shows, so the sheet and the puck can never disagree.
+     */
+    val position: StateFlow<LocationFix?> = mutablePosition
+
     @Volatile
     private var latestFix: LocationFix? = null
 
@@ -84,6 +96,7 @@ class CameraModeController(
      */
     suspend fun onFix(fix: LocationFix?) {
         latestFix = fix
+        mutablePosition.value = fix
         val map = host() ?: return
         map.setLocation(fix).onFailure { error -> log("puck rejected: $error") }
         applyCamera(map, recenter = recenterPending)

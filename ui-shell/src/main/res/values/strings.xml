@@ -149,6 +149,17 @@
     <string name="track_analysis_descent">\u2193%1$s m</string>
     <string name="track_analysis_untitled">Track</string>
     <string name="track_analysis_close">Close the analysis</string>
+    <string name="track_analysis_follow">Follow track</string>
+    <string name="follow_track_title">Follow %1$s</string>
+    <string name="follow_track_untitled">this track</string>
+    <string name="follow_track_ascent">↑%1$s m</string>
+    <string name="follow_track_from_start">From the start</string>
+    <string name="follow_track_from_end_reversed">From the end, reversed</string>
+    <string name="follow_track_from_nearest">From the nearest point</string>
+    <string name="follow_track_to_get_there">%1$s to get there</string>
+    <string name="follow_track_to_get_there_loop">%1$s to get there · the loop the other way</string>
+    <string name="follow_track_start">Start</string>
+    <string name="follow_track_close">Close the start choices</string>
     <string name="track_library_title">Tracks</string>
     <string name="track_library_close">Close the track library</string>
     <string name="track_library_subtitle">Saved · %1$s tracks in %2$s folders</string>

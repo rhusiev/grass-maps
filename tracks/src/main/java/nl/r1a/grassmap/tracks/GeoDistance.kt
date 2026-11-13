@@ -11,8 +11,12 @@ import kotlin.math.sqrt
  * radius. The statistics and the elevation profile measure the same steps, so
  * one function serves both: a chart that used another constant would drift from
  * the totals beside it.
+ *
+ * The app also measures a followed track's walk to its join point with it
+ * (T-0412), so the hint a start sheet shows and the analysis totals beside it
+ * agree.
  */
-internal fun distanceMeters(
+fun distanceMeters(
     from: GeoPoint,
     to: GeoPoint,
 ): Double {

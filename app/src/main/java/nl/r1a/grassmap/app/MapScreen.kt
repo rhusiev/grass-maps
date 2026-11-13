@@ -92,6 +92,7 @@ import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleId
 import nl.r1a.grassmap.plugin.api.model.StyleSpec
+import nl.r1a.grassmap.plugin.api.model.TrackFollowStart
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
 import nl.r1a.grassmap.plugin.api.model.TrackSort
 import nl.r1a.grassmap.plugin.api.model.TrackingMode
@@ -132,6 +133,7 @@ import nl.r1a.grassmap.tracks.TrackId
 import nl.r1a.grassmap.ui.shell.ControlBarLabels
 import nl.r1a.grassmap.ui.shell.ControlButton
 import nl.r1a.grassmap.ui.shell.FavouritesListsHost
+import nl.r1a.grassmap.ui.shell.FollowTrackSheet
 import nl.r1a.grassmap.ui.shell.MapControlBar
 import nl.r1a.grassmap.ui.shell.MapScaleBar
 import nl.r1a.grassmap.ui.shell.NavigationAlertSwitch
@@ -144,6 +146,7 @@ import nl.r1a.grassmap.ui.shell.SearchScreenHost
 import nl.r1a.grassmap.ui.shell.TrackAnalysisPanel
 import nl.r1a.grassmap.ui.shell.TrackImportNoticeBar
 import nl.r1a.grassmap.ui.shell.TrackLibraryHost
+import nl.r1a.grassmap.ui.shell.followTrackSheetDisplay
 import nl.r1a.grassmap.ui.shell.routePlanTurns
 import nl.r1a.grassmap.ui.shell.routeTurnStep
 import nl.r1a.grassmap.ui.shell.trackImportNotice
@@ -408,6 +411,16 @@ private fun MapContent(
     // The track analysis panel (T-0404), opened by the control command until the
     // map's track selection opens it (T-0415).
     val analysisTrack by TrackAnalysisSession.track.collectAsState()
+    // Following a track (T-0412): the card's Follow track action asks where to
+    // start. The sheet keeps the position it opened with so its hints do not
+    // jitter with every fix, and Start rebuilds the route from the fix of that
+    // moment.
+    val followPosition =
+        container.cameraModes.position
+            .collectAsState()
+            .value
+            ?.position
+    var followSheet by remember { mutableStateOf<FollowTrackSheetState?>(null) }
     // The share-sheet import's notice (T-0416).
     val trackShare by container.trackShare.notice.collectAsState()
     var analysisAxis by remember(analysisTrack) { mutableStateOf(ElevationChartAxis.Distance) }
@@ -1107,6 +1120,59 @@ private fun MapContent(
                     Modifier
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding(),
+                onFollow = {
+                    val track = analysisTrack
+                    val plan = track?.followPlan(followPosition)
+                    if (track == null || plan == null) {
+                        Log.w(TAG, "track follow has no line")
+                    } else {
+                        followSheet = FollowTrackSheetState(track = track, plan = plan)
+                    }
+                },
+            )
+        }
+        val openFollowSheet = followSheet
+        if (!navigationActive && openFollowSheet != null) {
+            FollowTrackSheet(
+                display =
+                    followTrackSheetDisplay(
+                        plan = openFollowSheet.plan,
+                        name = openFollowSheet.track.name,
+                        distanceMeters = openFollowSheet.track.analysis.distanceMeters,
+                        ascentMeters = openFollowSheet.track.analysis.ascentMeters,
+                        selected = openFollowSheet.selected,
+                        strings = container.strings,
+                    ),
+                dark = isSystemInDarkTheme(),
+                onSelect = { start -> followSheet = openFollowSheet.copy(selected = start) },
+                onStart = {
+                    val route = openFollowSheet.track.followRoute(openFollowSheet.selected, followPosition)
+                    if (route == null) {
+                        Log.w(TAG, "track follow built no route")
+                    } else {
+                        when (val outcome = container.navigation.start(route, RouteProfile.Walk, reroute = false)) {
+                            is Outcome.Failure -> {
+                                val message =
+                                    if (outcome.error == AppError.PermissionDenied) {
+                                        R.string.location_permission_denied
+                                    } else {
+                                        R.string.route_planner_start_unavailable
+                                    }
+                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                Log.w(TAG, "track follow start failed: ${outcome.error}")
+                            }
+
+                            is Outcome.Success -> {
+                                navigationDestination = openFollowSheet.track.name?.takeIf { it.isNotBlank() }
+                                navigationNextStop = null
+                                navigationSheet = NavigationSheet.Collapsed
+                                followSheet = null
+                                TrackAnalysisSession.hide()
+                            }
+                        }
+                    }
+                },
+                onClose = { followSheet = null },
             )
         }
         if (navigationActive) {

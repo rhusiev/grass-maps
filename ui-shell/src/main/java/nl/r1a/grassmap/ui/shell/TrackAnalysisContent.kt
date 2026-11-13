@@ -267,6 +267,10 @@ private fun kilometres(
  * the elevation chart behind the Details toggle. With [onRange] the chart is a
  * range selector, and the selected range's row and the climb list sit under it
  * (T-0405). Nothing here moves a control to the top of the screen.
+ *
+ * With [onFollow] the panel also carries the design's Follow track action: a
+ * tap asks where to start following this track (T-0412), which is the card's
+ * one guidance entry.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -279,6 +283,7 @@ fun TrackAnalysisPanel(
     onRange: (ElevationChartRange?) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    onFollow: (() -> Unit)? = null,
 ) {
     var expanded by remember(summary.name) { mutableStateOf(false) }
     val display =
@@ -378,6 +383,27 @@ fun TrackAnalysisPanel(
                         }
                     }
                 }
+            }
+        }
+        onFollow?.let { follow ->
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(ROUTE_ACTION_COLOR, RoundedCornerShape(FOLLOW_CORNER_DP.dp))
+                        .clickable(onClick = follow)
+                        .padding(vertical = FOLLOW_PADDING_VERTICAL_DP.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                BasicText(
+                    text = strings.resolve(FOLLOW_KEY),
+                    style =
+                        TextStyle(
+                            color = ROUTE_VALUE_COLOR,
+                            fontSize = FOLLOW_FONT_SP.sp,
+                            fontWeight = FontWeight.Bold,
+                        ),
+                )
             }
         }
     }
@@ -556,6 +582,9 @@ private const val CLIMB_GRADE_WIDTH_DP = 32
 private const val CLIMB_TIME_WIDTH_DP = 46
 private const val RANGE_MATCH_METERS = 1.0
 private const val METRES_PER_KILOMETRE = 1_000.0
+private const val FOLLOW_FONT_SP = 15
+private const val FOLLOW_CORNER_DP = 22
+private const val FOLLOW_PADDING_VERTICAL_DP = 11
 
 private const val DISTANCE_KEY = "track_analysis_distance"
 private const val ASCENT_KEY = "track_analysis_ascent"
@@ -569,6 +598,7 @@ private const val MAX_SPEED_KEY = "track_analysis_max_speed"
 private const val DESCENT_KEY = "track_analysis_descent"
 private const val UNTITLED_KEY = "track_analysis_untitled"
 private const val TRACK_CLOSE_KEY = "track_analysis_close"
+private const val FOLLOW_KEY = "track_analysis_follow"
 private const val DETAILS_SHOW_KEY = "elevation_chart_details_show"
 private const val DETAILS_HIDE_KEY = "elevation_chart_details_hide"
 private const val RANGE_KILOMETRES_KEY = "elevation_chart_range_kilometres"

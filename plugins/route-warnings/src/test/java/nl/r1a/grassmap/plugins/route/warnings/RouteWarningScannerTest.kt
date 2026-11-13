@@ -21,6 +21,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.asin
+import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 /**
  * Route warnings against the committed test region (T-0409). The route starts
@@ -203,6 +208,48 @@ class RouteWarningScannerTest {
         }
 
     @Test
+    fun aNaNCoordinateIsInvalidInputNotAThrow() =
+        runTest {
+            val invalidRoute =
+                Route(
+                    geometry = listOf(GeoPoint(Double.NaN, 23.9430), GeoPoint(49.9510, 23.9440)),
+                    distanceMeters = 0.0,
+                    durationSeconds = 0.0,
+                )
+
+            val outcome = RouteWarningScanner(reader).warnings(invalidRoute, RouteProfile.Hike)
+
+            assertEquals(Outcome.Failure(AppError.InvalidInput), outcome)
+        }
+
+    @Test
+    fun theDeclaredRouteDistanceScalesBothWarningSources() =
+        runTest {
+            val unscaled = warnings()
+            val scaledRoute = route.copy(distanceMeters = 2.0 * geometryLengthMeters(route.geometry))
+            val scaled = warnings(route = scaledRoute)
+
+            assertEquals(
+                listOf(
+                    RouteWarningKind.Ford,
+                    RouteWarningKind.Barrier,
+                    RouteWarningKind.RailwayCrossing,
+                    RouteWarningKind.Steps,
+                    RouteWarningKind.PrivateWay,
+                ),
+                scaled.map { it.kind },
+            )
+            for (index in unscaled.indices) {
+                assertEquals(
+                    "warning $index",
+                    2.0 * unscaled[index].distanceAlongRouteMeters,
+                    scaled[index].distanceAlongRouteMeters,
+                    SCALE_DISTANCE_TOLERANCE_METERS,
+                )
+            }
+        }
+
+    @Test
     fun aRegionFailureIsReported() =
         runTest {
             val outcome =
@@ -281,5 +328,28 @@ class RouteWarningScannerTest {
             route: Route,
             corridorMeters: Double,
         ): Outcome<List<WayAlertHit>> = outcome
+    }
+
+    private fun geometryLengthMeters(points: List<GeoPoint>): Double =
+        points.zipWithNext().sumOf { (first, second) -> distanceMeters(first, second) }
+
+    private fun distanceMeters(
+        first: GeoPoint,
+        second: GeoPoint,
+    ): Double {
+        val firstLatitude = Math.toRadians(first.latitude)
+        val secondLatitude = Math.toRadians(second.latitude)
+        val latitudeDelta = secondLatitude - firstLatitude
+        val longitudeDelta = Math.toRadians(second.longitude - first.longitude)
+        val haversine =
+            sin(latitudeDelta / 2.0) * sin(latitudeDelta / 2.0) +
+                cos(firstLatitude) * cos(secondLatitude) *
+                sin(longitudeDelta / 2.0) * sin(longitudeDelta / 2.0)
+        return 2.0 * EARTH_RADIUS_METERS * asin(min(1.0, sqrt(haversine)))
+    }
+
+    private companion object {
+        const val SCALE_DISTANCE_TOLERANCE_METERS = 5.0
+        const val EARTH_RADIUS_METERS = 6_371_000.0
     }
 }

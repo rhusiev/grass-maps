@@ -34,6 +34,12 @@ import kotlin.math.sqrt
  * A region failure is returned as a failure rather than silently dropping the
  * region half of the list: the caller must not show a complete-looking list
  * that is missing every ford and crossing.
+ *
+ * The segment attributes are the T-0301 `RoutingEngine.annotate` output, which
+ * runs after the route is already returned. A route that is not annotated yet
+ * is valid input: the region half is still listed and the steps and private-way
+ * warnings are absent. A caller that needs the complete list waits for
+ * annotation, or asks again after it.
  */
 class RouteWarningScanner(
     private val region: RegionAccess,
@@ -48,7 +54,7 @@ class RouteWarningScanner(
         if (route.geometry.size < MIN_ROUTE_POINTS) {
             return Outcome.Success(emptyList())
         }
-        val distances = alongRouteDistances(route)
+        val distances = alongRouteDistances(route) ?: return Outcome.Failure(AppError.InvalidInput)
         val hits =
             when (val outcome = region.wayAlertFeatures(route, RouteWarningPolicy.CORRIDOR_METERS)) {
                 is Outcome.Failure -> return outcome
@@ -131,13 +137,19 @@ class RouteWarningScanner(
         key: String,
     ): String? = (attributes[key] as? AttributeValue.TextValue)?.value
 
-    /** The cumulative distance to each shape point, in the route's own metre scale. */
-    private fun alongRouteDistances(route: Route): DoubleArray {
+    /**
+     * The cumulative distance to each shape point, in the route's own metre
+     * scale, or null when a coordinate is not finite.
+     */
+    private fun alongRouteDistances(route: Route): DoubleArray? {
         val cumulative = DoubleArray(route.geometry.size)
         for (index in 1 until route.geometry.size) {
             cumulative[index] = cumulative[index - 1] + distanceMeters(route.geometry[index - 1], route.geometry[index])
         }
         val measured = cumulative.last()
+        if (!measured.isFinite()) {
+            return null
+        }
         val scale =
             if (route.distanceMeters.isFinite() && route.distanceMeters > 0.0 && measured > 0.0) {
                 route.distanceMeters / measured

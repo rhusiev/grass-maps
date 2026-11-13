@@ -1636,7 +1636,10 @@ the same reason: metre-level noise in both lines, and a parallel railway or a
 service road one street away stays out. Steps and a private way are route
 attributes: they come from the route's annotated segments, where the T-0301
 `trace_attributes` pass puts `highway=steps` and `access=private`. The region
-component does not carry either one.
+component does not carry either one. That pass runs after the route is already
+returned, so a route that is not annotated yet yields the region warnings and
+no steps or private-way warning; `RouteWarningScanner` documents that
+precondition.
 
 | Kind | Walk | Hike | Bike | Source |
 |---|---|---|---|---|

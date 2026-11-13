@@ -158,6 +158,4 @@ internal object FavouritesBrowser {
 
             else -> false
         }
-
-    internal const val MAX_DESCRIPTION_LENGTH: Int = HtmlText.MAX_LENGTH
 }

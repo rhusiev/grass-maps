@@ -94,20 +94,20 @@ class FavouritesDescriptionTest {
     @Test
     fun aVeryLongDescriptionIsBounded() {
         val rendered = render("a".repeat(50_000))
-        assertEquals(FavouritesBrowser.MAX_DESCRIPTION_LENGTH, rendered?.length)
+        assertEquals(EXPECTED_MAX_LENGTH, rendered?.length)
     }
 
     @Test
     fun aVeryLongInputIsCappedBeforeTheScan() {
         val rendered = render("&amp;".repeat(50_000))
-        assertEquals(FavouritesBrowser.MAX_DESCRIPTION_LENGTH, rendered?.length)
+        assertEquals(EXPECTED_MAX_LENGTH, rendered?.length)
         assertEquals('&', rendered?.first())
     }
 
     @Test
     fun theBoundNeverSplitsASurrogatePair() {
         val rendered = render("\uD83D\uDE00".repeat(MAX_POINTS))
-        assertTrue("rendered length ${rendered?.length}", (rendered?.length ?: 0) <= FavouritesBrowser.MAX_DESCRIPTION_LENGTH)
+        assertTrue("rendered length ${rendered?.length}", (rendered?.length ?: 0) <= EXPECTED_MAX_LENGTH)
         assertEquals(0, rendered?.last()?.isHighSurrogate()?.let { if (it) 1 else 0 } ?: 0)
     }
 
@@ -115,5 +115,8 @@ class FavouritesDescriptionTest {
 
     private companion object {
         const val MAX_POINTS = 3000
+
+        /** The renderer's cap, pinned as a literal so an alias cannot pass. */
+        const val EXPECTED_MAX_LENGTH = 2000
     }
 }

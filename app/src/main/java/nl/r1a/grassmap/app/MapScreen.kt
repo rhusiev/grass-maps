@@ -1183,13 +1183,14 @@ private fun MapContent(
                 onClose = { TrackLibraryScreen.hide() },
                 onCreateFolder = { name ->
                     scope.launch {
-                        invokeTrackLibraryCommand(container, TrackLibraryContract.createFolder, listParams("name" to name))
+                        invokeTrackLibraryCommand(container, context, TrackLibraryContract.createFolder, listParams("name" to name))
                     }
                 },
                 onRenameFolder = { folderId, name ->
                     scope.launch {
                         invokeTrackLibraryCommand(
                             container,
+                            context,
                             TrackLibraryContract.renameFolder,
                             listParams("folderId" to folderId, "name" to name),
                         )
@@ -1199,6 +1200,7 @@ private fun MapContent(
                     scope.launch {
                         invokeTrackLibraryCommand(
                             container,
+                            context,
                             TrackLibraryContract.editTrack,
                             listParams(
                                 "trackId" to trackId,
@@ -1213,6 +1215,7 @@ private fun MapContent(
                     scope.launch {
                         invokeTrackLibraryCommand(
                             container,
+                            context,
                             TrackLibraryContract.moveTrack,
                             listParams("trackId" to trackId, "folderId" to folderId.orEmpty()),
                         )
@@ -1220,7 +1223,7 @@ private fun MapContent(
                 },
                 onDeleteTrack = { trackId ->
                     scope.launch {
-                        invokeTrackLibraryCommand(container, TrackLibraryContract.deleteTrack, listParams("trackId" to trackId))
+                        invokeTrackLibraryCommand(container, context, TrackLibraryContract.deleteTrack, listParams("trackId" to trackId))
                     }
                 },
                 onShare = { trackId ->
@@ -1240,7 +1243,7 @@ private fun MapContent(
                 },
                 onUndo = {
                     scope.launch {
-                        invokeTrackLibraryCommand(container, TrackLibraryContract.undo, JsonObject(emptyMap()))
+                        invokeTrackLibraryCommand(container, context, TrackLibraryContract.undo, JsonObject(emptyMap()))
                     }
                 },
                 onQueryChange = { query ->
@@ -1249,6 +1252,7 @@ private fun MapContent(
                     scope.launch {
                         invokeTrackLibraryCommand(
                             container,
+                            context,
                             TrackLibraryContract.setQuery,
                             listParams("query" to query, "sequence" to sequence.toString()),
                         )
@@ -1256,13 +1260,14 @@ private fun MapContent(
                 },
                 onSortChange = { sort: TrackSort ->
                     scope.launch {
-                        invokeTrackLibraryCommand(container, TrackLibraryContract.setSort, listParams("sort" to sort.wireName))
+                        invokeTrackLibraryCommand(container, context, TrackLibraryContract.setSort, listParams("sort" to sort.wireName))
                     }
                 },
                 onSelectFolder = { folderId ->
                     scope.launch {
                         invokeTrackLibraryCommand(
                             container,
+                            context,
                             TrackLibraryContract.selectFolder,
                             listParams("folderId" to folderId.orEmpty()),
                         )
@@ -1659,11 +1664,13 @@ private fun listParams(vararg pairs: Pair<String, String>): JsonObject =
 /** Runs one track library command and logs a typed failure; the screen keeps its state. */
 private suspend fun invokeTrackLibraryCommand(
     container: AppContainer,
+    context: Context,
     id: CommandId,
     params: JsonObject,
 ) {
     container.commandBus.invoke(id, params).onFailure { error ->
         Log.w(TAG, "track library command $id failed: $error")
+        Toast.makeText(context, R.string.track_library_action_failed, Toast.LENGTH_SHORT).show()
     }
 }
 

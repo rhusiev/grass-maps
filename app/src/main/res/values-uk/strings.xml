@@ -158,4 +158,5 @@
     <string name="nav_notification_pause">Призупинити</string>
     <string name="nav_notification_resume">Продовжити</string>
     <string name="nav_notification_stop">Зупинити</string>
+    <string name="track_library_action_failed">Не вдалося змінити бібліотеку треків</string>
 </resources>

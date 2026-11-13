@@ -64,6 +64,12 @@ private const val RECENT_LIMIT = 5
  * The preview card is [routePlanPreview] and nothing else. Undo, redo, swap, the
  * close control, the stop rows, the coordinate field and the turn stepper are
  * controls around it, not extra preview rows.
+ *
+ * The design also draws a warning marker on the route line. That marker is not
+ * built: the map host has no marker set, and the composed-layers compiler
+ * rejects [nl.r1a.grassmap.plugin.api.model.LayerType.Circle] as not rendered,
+ * so no drawable layer type carries one point per warning. The row and the
+ * list are the whole warning surface (T-0409).
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -88,11 +94,13 @@ fun RoutePlanPanel(
     onClose: () -> Unit,
     onApplyPreferences: (RouteOptions) -> Unit,
     onResetPreferences: () -> Unit,
+    warnings: List<RouteWarningRow> = emptyList(),
     modifier: Modifier = Modifier,
 ) {
     if (state.status == RoutePlanStatus.Idle) return
     val preview = routePlanPreview(state, strings)
     var preferencesVisible by remember { mutableStateOf(false) }
+    var warningsVisible by remember { mutableStateOf(false) }
     Column(
         modifier =
             modifier
@@ -173,6 +181,32 @@ fun RoutePlanPanel(
 
             RoutePlanStatus.Idle -> {
                 // The panel returns before this branch; kept for an exhaustive enum.
+            }
+        }
+        // The warning row sits between the returned routes and the
+        // preferences entry, as the round-6 design places it, and exists only
+        // while the selected route has warnings (T-0409).
+        val warningsEntry =
+            if (state.status == RoutePlanStatus.Ready) {
+                routeWarningsEntryContent(warnings, strings)
+            } else {
+                null
+            }
+        if (warningsEntry != null) {
+            RouteWarningsEntry(content = warningsEntry, onClick = { warningsVisible = !warningsVisible })
+            val selected = state.selected
+            if (warningsVisible && selected != null) {
+                RouteWarningsContent(
+                    content =
+                        routeWarningsSheetContent(
+                            profile = state.profile,
+                            durationSeconds = selected.durationSeconds,
+                            distanceMeters = selected.distanceMeters,
+                            warnings = warnings,
+                            strings = strings,
+                        ),
+                    onBack = { warningsVisible = false },
+                )
             }
         }
         // Preferences stay reachable in every non-idle state: an applied

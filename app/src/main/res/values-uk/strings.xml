@@ -99,6 +99,18 @@
     <string name="route_planner_arrive">Прибуття до призначення</string>
     <string name="route_planner_recent">Останні маршрути</string>
     <string name="route_planner_reuse">Використати маршрут з %1$s</string>
+    <string name="route_warnings_count_one">1 попередження на маршруті</string>
+    <string name="route_warnings_count_many">Попереджень на маршруті: %1$s</string>
+    <string name="route_warnings_title">На цьому маршруті</string>
+    <string name="route_warnings_scope">%1$s · %2$s, %3$s · за відстанню</string>
+    <string name="route_warnings_back">Назад</string>
+    <string name="route_warnings_kind_ford">Брід</string>
+    <string name="route_warnings_kind_steps">Сходи</string>
+    <string name="route_warnings_kind_barrier">Бар\'єр</string>
+    <string name="route_warnings_kind_railway_crossing">Залізничний переїзд</string>
+    <string name="route_warnings_kind_private_way">Приватна дорога</string>
+    <string name="route_warnings_detail_private">access=private</string>
+    <string name="route_warnings_detail_push_bike">пішки з велосипедом</string>
     <string name="route_preferences_title">Налаштування маршруту</string>
     <string name="route_preferences_set_count">Задано: %1$s</string>
     <string name="route_preferences_changed">змінено</string>

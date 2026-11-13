@@ -98,6 +98,18 @@
     <string name="route_planner_arrive">Arrive at the destination</string>
     <string name="route_planner_recent">Recent routes</string>
     <string name="route_planner_reuse">Use the route from %1$s</string>
+    <string name="route_warnings_count_one">1 warning on this route</string>
+    <string name="route_warnings_count_many">%1$s warnings on this route</string>
+    <string name="route_warnings_title">On this route</string>
+    <string name="route_warnings_scope">%1$s profile · %2$s, %3$s · by distance</string>
+    <string name="route_warnings_back">Back</string>
+    <string name="route_warnings_kind_ford">Ford</string>
+    <string name="route_warnings_kind_steps">Steps</string>
+    <string name="route_warnings_kind_barrier">Barrier</string>
+    <string name="route_warnings_kind_railway_crossing">Railway crossing</string>
+    <string name="route_warnings_kind_private_way">Private way</string>
+    <string name="route_warnings_detail_private">access=private</string>
+    <string name="route_warnings_detail_push_bike">push the bike</string>
     <string name="route_preferences_title">Route preferences</string>
     <string name="route_preferences_set_count">%1$s set</string>
     <string name="route_preferences_changed">changed</string>

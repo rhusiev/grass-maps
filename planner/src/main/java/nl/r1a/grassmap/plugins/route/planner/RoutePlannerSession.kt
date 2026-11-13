@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.plugins.route.planner
 
+import kotlinx.coroutines.CoroutineScope
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -24,16 +25,25 @@ import nl.r1a.grassmap.routing.RoutePlanner
  * the alternatives request to what the engine declares, and republishes every
  * answer as one stream. The reuse history arrives through the host seam too
  * (T-0304), so the plugin names no path and no clock.
+ *
+ * The annotate pass (T-0409) picks up the same resolved engine, so the route's
+ * per-edge attributes come from the engine that planned the line. Its scope is
+ * the plugin's, and a failed pass leaves the route as published.
  */
 class RoutePlannerSession(
     private val engines: RoutingEngineAccess,
     clock: Clock,
     history: RouteHistoryAccess,
     options: RoutingOptionsAccess = NoRoutingOptionsAccess,
+    annotationScope: CoroutineScope? = null,
+    log: (String) -> Unit = {},
 ) {
     private val planner =
         RoutePlanner(
             requestRoute = ::route,
+            annotateRoute = ::annotate,
+            annotationScope = annotationScope,
+            log = log,
             clock = clock,
             profile = RouteProfile.Walk,
             optionsForProfile = { profile -> options.forProfile(profile) },
@@ -107,6 +117,21 @@ class RoutePlannerSession(
                 val engine = resolved.value
                 val alternatives = request.alternatives.coerceIn(0, engine.capabilities().maxAlternatives)
                 engine.route(request.copy(alternatives = alternatives), cancellation)
+            }
+        }
+
+    private suspend fun annotate(
+        route: Route,
+        profile: RouteProfile,
+        cancellation: CancellationHandle,
+    ): Outcome<Route> =
+        when (val resolved = engines.engine()) {
+            is Outcome.Failure -> {
+                resolved
+            }
+
+            is Outcome.Success -> {
+                resolved.value.annotate(route, profile, cancellation)
             }
         }
 

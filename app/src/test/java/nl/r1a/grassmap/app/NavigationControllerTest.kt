@@ -8,13 +8,19 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.navigation.GeometryRouteFollower
 import nl.r1a.grassmap.navigation.NavigationPhase
+import nl.r1a.grassmap.navigation.RouteRelation
+import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmap.plugin.api.provider.ProviderContract
 import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmap.plugin.api.provider.RouteRequest
+import nl.r1a.grassmap.plugin.api.provider.RoutingCapabilities
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
+import nl.r1a.grassmap.plugin.api.provider.RoutingEngineContract
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -178,6 +184,29 @@ class NavigationControllerTest {
             advanceUntilIdle()
         }
 
+    @Test
+    fun aFollowedTrackIsNotReroutedWhenTheUserIsStillWalkingToIt() =
+        runTest {
+            val router = CountingRouter()
+            val harness = harness(backgroundScope, routing = { router })
+            harness.controller.start(ROUTE, RouteProfile.Walk, reroute = false).valueOrFail()
+            runCurrent()
+            // Two fixes well off the line, 100 m apart, so the off-route
+            // confirmation and the gate's travel budget are both spent.
+            harness.fixes.emit(fix(OFF_ROUTE))
+            runCurrent()
+            harness.fixes.emit(fix(OFF_ROUTE_2))
+            runCurrent()
+            advanceUntilIdle()
+
+            assertEquals(0, router.requests)
+            assertEquals(RouteRelation.OffRoute, harness.controller.state.value.relation)
+            assertTrue(harness.controller.isActive)
+            harness.controller.stop()
+            runCurrent()
+            advanceUntilIdle()
+        }
+
     private fun harness(
         scope: CoroutineScope,
         hasPermission: Boolean = true,
@@ -220,6 +249,30 @@ class NavigationControllerTest {
         }
     }
 
+    /** Counts the routes it is asked for; a followed track must ask for none. */
+    private class CountingRouter : RoutingEngine {
+        var requests: Int = 0
+            private set
+
+        override val contract: ProviderContract = RoutingEngineContract.REFERENCE
+
+        override fun capabilities(): RoutingCapabilities =
+            RoutingCapabilities(
+                profiles = setOf(RouteProfile.Walk),
+                modifierKinds = emptySet(),
+                maxAlternatives = 0,
+                maxDistanceMeters = 250_000.0,
+            )
+
+        override suspend fun route(
+            request: RouteRequest,
+            cancellation: CancellationHandle,
+        ): Outcome<List<Route>> {
+            requests += 1
+            return Outcome.Failure(AppError.RoutingPackUnavailable(AppError.RoutingPackUnavailable.Reason.Absent))
+        }
+    }
+
     private fun <T> Outcome<T>.valueOrFail(): T =
         when (this) {
             is Outcome.Success -> value
@@ -231,6 +284,10 @@ class NavigationControllerTest {
 
         val START = GeoPoint(49.8400, 24.0300)
         val END = GeoPoint(49.8420, 24.0300)
+
+        /** 200 m east of the line, then 100 m along it while still off route. */
+        val OFF_ROUTE = GeoPoint(49.8400, 24.0328)
+        val OFF_ROUTE_2 = GeoPoint(49.8409, 24.0328)
         val ROUTE =
             Route(
                 geometry = listOf(START, END),

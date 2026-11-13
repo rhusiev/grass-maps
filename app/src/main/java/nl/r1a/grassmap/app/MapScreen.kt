@@ -102,6 +102,7 @@ import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue
+import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmap.plugin.ui.api.NavigationScreenStatus
 import nl.r1a.grassmap.plugins.contours.ContoursLayerPanel
 import nl.r1a.grassmap.plugins.favourites.ui.FavouritesUiContract
@@ -120,6 +121,8 @@ import nl.r1a.grassmap.plugins.point.info.SelectedPointValue
 import nl.r1a.grassmap.plugins.route.planner.RoutePlannerContract
 import nl.r1a.grassmap.plugins.route.relations.RouteRelationsMapController
 import nl.r1a.grassmap.routing.selectedRoute
+import nl.r1a.grassmap.tracks.ElevationProfile
+import nl.r1a.grassmap.tracks.ElevationProfiler
 import nl.r1a.grassmap.ui.shell.ControlBarLabels
 import nl.r1a.grassmap.ui.shell.ControlButton
 import nl.r1a.grassmap.ui.shell.FavouritesListsHost
@@ -131,6 +134,7 @@ import nl.r1a.grassmap.ui.shell.NavigationSheet
 import nl.r1a.grassmap.ui.shell.PlaceCardHost
 import nl.r1a.grassmap.ui.shell.RoutePlanPanel
 import nl.r1a.grassmap.ui.shell.SearchScreenHost
+import nl.r1a.grassmap.ui.shell.TrackAnalysisPanel
 import nl.r1a.grassmap.ui.shell.routePlanTurns
 import nl.r1a.grassmap.ui.shell.routeTurnStep
 import java.io.File
@@ -348,6 +352,40 @@ private fun MapContent(
     var turnIndex by remember(plan.selected) { mutableIntStateOf(0) }
     var turnRequest by remember(plan.selected) { mutableIntStateOf(0) }
     val turns = remember(plan.selected, container.strings) { routePlanTurns(plan, container.strings) }
+    // The selected route's chart (T-0404): the analysis engine profiles the
+    // engine's own geometry and the chart only chooses the axis. A cancelled
+    // profile never replaces a newer one.
+    val routeElevation = remember(container) { RouteElevation(container.elevationAccess) }
+    var chartAxis by remember(plan.selected) { mutableStateOf(ElevationChartAxis.Distance) }
+    var routeProfile by remember(plan.selected) { mutableStateOf(ElevationProfile()) }
+    LaunchedEffect(plan.selected) {
+        val selectedRoute = plan.selected
+        routeProfile =
+            if (selectedRoute == null) {
+                ElevationProfile()
+            } else {
+                withContext(Dispatchers.Default) { routeElevation.profile(selectedRoute) } ?: ElevationProfile()
+            }
+    }
+    val routeChart = remember(routeProfile, chartAxis) { elevationChartState(routeProfile, chartAxis) }
+    // The track analysis panel (T-0404), opened by the control command until the
+    // map's track selection opens it (T-0415).
+    val analysisTrack by TrackAnalysisSession.track.collectAsState()
+    var analysisAxis by remember(analysisTrack) { mutableStateOf(ElevationChartAxis.Distance) }
+    val analysisProfile by
+        produceState<ElevationProfile?>(null, analysisTrack) {
+            val stored = analysisTrack
+            if (stored == null) {
+                value = null
+                return@produceState
+            }
+            value = withContext(Dispatchers.Default) { ElevationProfiler().profile(stored.track) }
+        }
+    val analysisSummary = remember(analysisTrack) { analysisTrack?.let(::trackAnalysisSummary) }
+    val analysisChart =
+        remember(analysisProfile, analysisAxis) {
+            elevationChartState(analysisProfile ?: ElevationProfile(), analysisAxis)
+        }
     // One scan per produced route and profile (T-0409). The effect restarts on
     // a new selected route or a profile change, and a cancelled scan never
     // writes its result, so a late answer cannot replace a newer one.
@@ -975,6 +1013,24 @@ private fun MapContent(
                     }
                 },
                 warnings = warningRows,
+                chart = routeChart,
+                onChartAxis = { axis -> chartAxis = axis },
+                dark = isSystemInDarkTheme(),
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding(),
+            )
+        }
+        val analysisSummaryNow = analysisSummary
+        if (!navigationActive && analysisTrack != null && analysisSummaryNow != null) {
+            TrackAnalysisPanel(
+                summary = analysisSummaryNow,
+                chart = analysisChart,
+                strings = container.strings,
+                dark = isSystemInDarkTheme(),
+                onAxis = { axis -> analysisAxis = axis },
+                onClose = { TrackAnalysisSession.hide() },
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)

@@ -15,12 +15,20 @@ import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.tracks.StoredTrack
+import nl.r1a.grassmap.tracks.TrackId
 import java.io.File
 import java.io.IOException
 import java.util.Locale
 
 /** The debug trigger that proves the tracks seam. */
 internal val TRACK_IMPORT_COMMAND: CommandId = CommandId("core.track.import_test")
+
+/**
+ * The temporary way to open a track's analysis (T-0404). The map's track
+ * selection opens it from T-0415; until then the control channel is the caller,
+ * like the import trigger.
+ */
+internal val TRACK_ANALYSIS_COMMAND: CommandId = CommandId("core.track.analysis")
 
 private const val TRACK_TAG = "GrassMapsTracks"
 private const val DEFAULT_ASSET = "mock-walk.gpx"
@@ -136,10 +144,69 @@ internal class TrackImportTestCommand(
     }
 }
 
+/**
+ * Opens the analysis panel for one stored track, by id or, with no id, for the
+ * newest one. The panel reads the engine's analysis and profile; this command
+ * only chooses the track.
+ */
+internal class TrackAnalysisCommand(
+    private val tracks: () -> TrackAccess,
+    private val log: (String) -> Unit = { message -> Log.i(TRACK_TAG, message) },
+) : Command<JsonElement, String>(
+        id = TRACK_ANALYSIS_COMMAND,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = String.serializer(),
+        doc = "Opens the analysis of a stored track. Parameter: optionally id.",
+        policy =
+            CommandPolicy(
+                allowlistedForControl = true,
+                dispatcher = CommandDispatcher.IO,
+            ),
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
+        val requested = pathOf(params)
+        val track =
+            when (val outcome = load(requested)) {
+                is Outcome.Success -> {
+                    outcome.value
+                }
+
+                is Outcome.Failure -> {
+                    log("analysis for \"${requested.orEmpty()}\" failed=${outcome.error}")
+                    return outcome
+                }
+            }
+        TrackAnalysisSession.show(track)
+        log("analysis open id=${track.id.value.take(ID_PREFIX)}")
+        return Outcome.Success(CommandResult("analysis open"))
+    }
+
+    private suspend fun load(id: String?): Outcome<StoredTrack> {
+        if (id != null) {
+            return tracks().stored(TrackId(id))
+        }
+        val newest = tracks().summaries().maxByOrNull { summary -> summary.savedAtMillis }
+        return when (val newestId = newest?.id) {
+            null -> Outcome.Failure(AppError.NotFound)
+            else -> tracks().stored(newestId)
+        }
+    }
+
+    private fun pathOf(params: JsonElement): String? {
+        val json = params as? JsonObject ?: return null
+        return (json[PARAM_ID] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
+    }
+
+    private companion object {
+        const val PARAM_ID = "id"
+        const val ID_PREFIX = 12
+    }
+}
+
 internal fun trackCommands(
     tracks: () -> TrackAccess,
     assetReader: (String) -> ByteArray?,
-): List<Command<*, *>> = listOf(TrackImportTestCommand(tracks, assetReader))
+): List<Command<*, *>> = listOf(TrackImportTestCommand(tracks, assetReader), TrackAnalysisCommand(tracks))
 
 /** An imported file is untrusted input; the debug path gets the same bound. */
 private const val MAX_IMPORT_BYTES: Long = 64L * 1024L * 1024L

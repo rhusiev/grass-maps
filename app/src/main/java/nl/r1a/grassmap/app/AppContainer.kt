@@ -426,7 +426,7 @@ class AppContainer(
      * first query; a package without the component or with the old stand-in
      * reports no height, and an unmounted region is the inert source.
      */
-    private val elevationAccess: ElevationAccess by lazy {
+    val elevationAccess: ElevationAccess by lazy {
         mountedElevation ?: NoElevationAccess
     }
 

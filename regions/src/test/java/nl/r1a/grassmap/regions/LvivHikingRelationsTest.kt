@@ -5,7 +5,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.HikingNetwork
+import nl.r1a.grassmap.plugin.api.model.RouteNetwork
 import nl.r1a.grassmap.plugin.api.model.RouteRelationsJson
 import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
 import org.junit.Assert.assertEquals
@@ -44,7 +44,7 @@ class LvivHikingRelationsTest {
             ),
             component.relations.map { it.id },
         )
-        assertTrue(component.relations.all { it.network == HikingNetwork.Local })
+        assertTrue(component.relations.all { it.network == RouteNetwork.HikingLocal })
         val doob = component.relations.first { it.id == 19709971L }
         assertEquals("№501 Сколе – Скелі Довбуша", doob.name)
         assertEquals("orange:white:orange_bar:501:black", doob.osmcSymbol)

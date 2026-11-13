@@ -10,17 +10,17 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 
 /**
- * Decodes the region's `relations.json` component (T-0418).
+ * Decodes the region's `relations.json` component (T-0418, T-0419).
  *
  * The component is written by `tools/pipeline/osm-extract --route-relations`
  * and read by both the region reader and the map plugin, so the schema has one
- * decoder. Any malformed member, missing way, or unknown format version is
- * [AppError.CorruptData]; a caller never receives a partially built value.
+ * decoder. Any malformed member, missing way, unknown route kind or network, or
+ * unknown format version is [AppError.CorruptData]; a caller never receives a
+ * partially built value.
  */
 object RouteRelationsJson {
     const val FORMAT: String = "grass-maps-route-relations"
     const val VERSION: Long = 1
-    const val ROUTE_HIKING: String = "hiking"
 
     fun decode(text: String): Outcome<RouteRelations> {
         val root =
@@ -33,6 +33,9 @@ object RouteRelationsJson {
             return corrupt()
         }
         val wayElements = root["ways"] as? JsonArray ?: return corrupt()
+        val nodeElements =
+            root["nodes"]?.let { it as? JsonArray ?: return corrupt() }
+                ?: emptyList<kotlinx.serialization.json.JsonElement>()
         val relationElements = root["relations"] as? JsonArray ?: return corrupt()
         val ways = LinkedHashMap<Long, List<GeoPoint>>()
         for (element in wayElements) {
@@ -47,6 +50,32 @@ object RouteRelationsJson {
             }
             ways[id] = coordinates.map { parsePoint(it) ?: return corrupt() }
         }
+        val nodes = mutableListOf<RouteNetworkNode>()
+        val nodeIds = HashSet<Long>()
+        for (element in nodeElements) {
+            val node = element as? JsonObject ?: return corrupt()
+            val id = node.integer("id") ?: return corrupt()
+            if (id <= 0L || !nodeIds.add(id)) {
+                return corrupt()
+            }
+            val network =
+                RouteNetwork.entries.firstOrNull {
+                    it.route == Route.Cycling && it.tag == node.string("network")
+                } ?: return corrupt()
+            val reference = node.string("ref") ?: return corrupt()
+            val point = parsePoint(node["coordinates"]) ?: return corrupt()
+            nodes +=
+                try {
+                    RouteNetworkNode(
+                        id = id,
+                        point = point,
+                        network = network,
+                        reference = reference,
+                    )
+                } catch (exception: IllegalArgumentException) {
+                    return corrupt()
+                }
+        }
         val relations = mutableListOf<RouteRelation>()
         val ids = HashSet<Long>()
         for (element in relationElements) {
@@ -55,9 +84,12 @@ object RouteRelationsJson {
             if (id <= 0L || !ids.add(id)) {
                 return corrupt()
             }
-            if (relation.string("type") != "route" || relation.string("route") != ROUTE_HIKING) {
+            if (relation.string("type") != "route") {
                 return corrupt()
             }
+            val route =
+                Route.entries.firstOrNull { it.tag == relation.string("route") }
+                    ?: return corrupt()
             val memberElements = relation["members"] as? JsonArray ?: return corrupt()
             if (memberElements.isEmpty()) {
                 return corrupt()
@@ -79,8 +111,8 @@ object RouteRelationsJson {
                 try {
                     RouteRelation(
                         id = id,
-                        route = ROUTE_HIKING,
-                        network = HikingNetwork.fromTag(relation.string("network")),
+                        route = route,
+                        network = RouteNetwork.fromTag(route, relation.string("network")),
                         ref = relation.string("ref"),
                         name = relation.string("name"),
                         osmcSymbol = relation.string("osmcSymbol"),
@@ -93,13 +125,13 @@ object RouteRelationsJson {
                 }
         }
         return try {
-            Outcome.Success(RouteRelations(ways = ways, relations = relations))
+            Outcome.Success(RouteRelations(ways = ways, relations = relations, nodes = nodes))
         } catch (exception: IllegalArgumentException) {
             corrupt()
         }
     }
 
-    private fun parsePoint(element: kotlinx.serialization.json.JsonElement): GeoPoint? {
+    private fun parsePoint(element: kotlinx.serialization.json.JsonElement?): GeoPoint? {
         val pair = element as? JsonArray ?: return null
         if (pair.size != POINT_COORDINATES) {
             return null

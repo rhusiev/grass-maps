@@ -122,19 +122,20 @@ class TestRegionFixtureTest {
     }
 
     @Test
-    fun theHikingRelationsComponentIsExtracted() {
+    fun theRouteRelationsComponentIsExtracted() {
         val component = requireNotNull(region.manifest.component("relations")) { "relations component missing" }
 
         assertEquals("route-relations-json", component.format)
         assertEquals(1, component.formatVersion)
-        assertFalse("the hiking-relation fixture must come from the extraction", component.standIn)
+        assertFalse("the route-relation fixture must come from the extraction", component.standIn)
         val document =
             Json
                 .parseToJsonElement(String(Files.readAllBytes(region.file(component)), Charsets.UTF_8))
                 .jsonObject
         assertEquals("grass-maps-route-relations", document.getValue("format").jsonPrimitive.content)
-        assertEquals(3, document.getValue("relations").jsonArray.size)
+        assertEquals(5, document.getValue("relations").jsonArray.size)
         assertEquals(3, document.getValue("ways").jsonArray.size)
+        assertEquals(5, document.getValue("nodes").jsonArray.size)
         val ids =
             document
                 .getValue("relations")
@@ -144,7 +145,7 @@ class TestRegionFixtureTest {
                         .getValue("id")
                         .jsonPrimitive.long
                 }
-        assertEquals(listOf(9101L, 9102L, 9107L), ids)
+        assertEquals(listOf(9101L, 9102L, 9107L, 9108L, 9109L), ids)
     }
 
     @Test

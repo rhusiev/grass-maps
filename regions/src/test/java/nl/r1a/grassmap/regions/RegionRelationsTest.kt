@@ -3,7 +3,7 @@ package nl.r1a.grassmap.regions
 import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.HikingNetwork
+import nl.r1a.grassmap.plugin.api.model.RouteNetwork
 import nl.r1a.grassmap.plugin.api.model.RouteRelations
 import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
 import org.junit.Assert.assertEquals
@@ -19,21 +19,31 @@ import java.nio.file.Files
  */
 class RegionRelationsTest {
     @Test
-    fun theFixtureCarriesItsThreeHikingRelations() =
+    fun theFixtureCarriesItsHikingAndCyclingRelations() =
         runTest {
             val relations = relationsOf(TestRegions.load().root.toFile())
 
-            assertEquals(listOf(9101L, 9102L, 9107L), relations.relations.map { it.id })
-            assertEquals(listOf(2, 1, 1), relations.relations.map { it.members.size })
+            assertEquals(listOf(9101L, 9102L, 9107L, 9108L, 9109L), relations.relations.map { it.id })
+            assertEquals(listOf(2, 1, 1, 1, 1), relations.relations.map { it.members.size })
             assertEquals(
                 listOf(
-                    HikingNetwork.Local,
-                    HikingNetwork.Regional,
-                    HikingNetwork.National,
+                    RouteNetwork.HikingLocal,
+                    RouteNetwork.HikingRegional,
+                    RouteNetwork.HikingNational,
+                    RouteNetwork.CyclingLocal,
+                    RouteNetwork.CyclingNational,
                 ),
                 relations.relations.map { it.network },
             )
             assertEquals(3, relations.ways.size)
+            assertEquals(5, relations.nodes.size)
+            assertEquals(
+                listOf("7", "48", "47", "13", "12"),
+                relations.nodes.map { it.reference },
+            )
+            assertEquals(RouteNetwork.CyclingRegional, relations.nodes.first().network)
+            assertEquals(9108L, relations.relations[3].id)
+            assertEquals("blue:white:blue_rectangle", relations.relations[3].osmcSymbol)
         }
 
     @Test
@@ -53,6 +63,27 @@ class RegionRelationsTest {
                     .coerceAtMost(2),
             )
             assertTrue(relations.ways.getValue(306496773L).size > 10)
+        }
+
+    @Test
+    fun aComponentWithoutTheNodesArrayStillDecodes() =
+        runTest {
+            val directory =
+                packageWith(
+                    """
+                    {"format":"grass-maps-route-relations","version":1,
+                     "ways":[{"id":1,"coordinates":[[23.94,49.94],[23.95,49.95]]}],
+                     "relations":[{"id":9,"type":"route","route":"bicycle","network":"rcn",
+                                   "members":[{"way":1,"role":""}]}]}
+                    """.trimIndent(),
+                )
+            try {
+                val component = relationsOf(directory)
+                assertEquals(1, component.relations.size)
+                assertTrue(component.nodes.isEmpty())
+            } finally {
+                directory.deleteRecursively()
+            }
         }
 
     @Test

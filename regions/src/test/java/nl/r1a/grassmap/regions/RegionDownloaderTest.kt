@@ -57,7 +57,7 @@ class RegionDownloaderTest {
                 val installed = success(download(server.baseUrl, token = token))
                 assertEquals(FixturePackages.FIXTURE_VERSION, installed.currentVersion)
                 assertEquals(13, installed.manifest.components.size)
-                assertEquals(139_910L, installed.verifiedBytes)
+                assertEquals(140_757L, installed.verifiedBytes)
                 assertEquals(
                     listOf("Bearer ${"wrong-token-0123456789"}", "Bearer $token"),
                     server.authorizations(),

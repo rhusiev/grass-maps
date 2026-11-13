@@ -8,7 +8,6 @@ import nl.r1a.grassmap.core.ProviderRegistry
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.DocumentSaveResult
-import nl.r1a.grassmap.plugin.api.host.PlatformActions
 import nl.r1a.grassmap.plugin.api.host.PlatformFile
 import nl.r1a.grassmap.tracks.ImportReport
 import nl.r1a.grassmap.tracks.TrackId
@@ -27,7 +26,7 @@ class TrackExportTest {
         runTest {
             val access = access()
             val record = import(access, "garmin-connect-hike.gpx").tracks.single()
-            val actions = RecordingActions()
+            val actions = RecordingPlatformActions()
             val export = TrackExport(access, actions)
 
             val file =
@@ -62,7 +61,7 @@ class TrackExportTest {
         runTest {
             val access = access()
             val record = import(access, "osmand-walk-two-segments.gpx").tracks.single()
-            val actions = RecordingActions()
+            val actions = RecordingPlatformActions()
             val export = TrackExport(access, actions)
             val file = exported(export.fileFor(record.id))
 
@@ -84,7 +83,7 @@ class TrackExportTest {
             val access = access()
             val first = import(access, "garmin-connect-hike.gpx").tracks.single()
             val second = import(access, "strava-run.gpx").tracks.single()
-            val actions = RecordingActions()
+            val actions = RecordingPlatformActions()
 
             val file =
                 exported(
@@ -105,7 +104,7 @@ class TrackExportTest {
             import(access, "strava-run.gpx")
             import(access, "osmand-multi-track.gpx")
 
-            val file = exported(TrackExport(access, RecordingActions()).fileForAll())
+            val file = exported(TrackExport(access, RecordingPlatformActions()).fileForAll())
 
             assertEquals("grass-maps-tracks.gpx", file.fileName)
             val reread = reread(access, file.bytes)
@@ -117,7 +116,7 @@ class TrackExportTest {
         runTest {
             val access = access()
             val record = import(access, "strava-run.gpx").tracks.single()
-            val export = TrackExport(access, RecordingActions())
+            val export = TrackExport(access, RecordingPlatformActions())
 
             assertEquals(Outcome.Failure(AppError.InvalidInput), export.fileForList(emptyList()))
             assertEquals(Outcome.Failure(AppError.InvalidInput), export.fileForList(listOf(record.id, record.id)))
@@ -176,32 +175,4 @@ class TrackExportTest {
         requireNotNull(javaClass.classLoader?.getResourceAsStream(resource)) {
             "missing test resource $resource"
         }.use { it.readBytes() }
-
-    private class RecordingActions : PlatformActions {
-        val calls = mutableListOf<String>()
-        var saveResult: Outcome<DocumentSaveResult> = Outcome.Success(DocumentSaveResult.SAVED)
-        var shareResult: Outcome<Unit> = Outcome.Success(Unit)
-
-        override fun copyToClipboard(text: String): Outcome<Unit> = Outcome.Success(Unit)
-
-        override fun shareText(
-            text: String,
-            subject: String?,
-        ): Outcome<Unit> = Outcome.Success(Unit)
-
-        override suspend fun shareFile(
-            file: PlatformFile,
-            subject: String?,
-        ): Outcome<Unit> {
-            calls += "file:${file.fileName}:${file.mimeType}:${file.bytes.size}"
-            return shareResult
-        }
-
-        override suspend fun saveFile(file: PlatformFile): Outcome<DocumentSaveResult> {
-            calls += "save:${file.fileName}:${file.mimeType}:${file.bytes.size}"
-            return saveResult
-        }
-
-        override fun openUri(uri: String): Outcome<Unit> = Outcome.Success(Unit)
-    }
 }

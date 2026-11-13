@@ -7,6 +7,8 @@ import nl.r1a.grassmap.plugin.api.host.DocumentSaveResult
 import nl.r1a.grassmap.plugin.api.host.PlatformActions
 import nl.r1a.grassmap.plugin.api.host.PlatformFile
 import nl.r1a.grassmap.plugin.api.model.ImportedEntities
+import nl.r1a.grassmap.plugin.api.model.TrackKind
+import nl.r1a.grassmap.plugin.api.model.TrackRoute
 import nl.r1a.grassmap.plugins.share.TrackFileShares
 import nl.r1a.grassmap.tracks.StoredTrack
 import nl.r1a.grassmap.tracks.TrackId
@@ -21,6 +23,12 @@ import nl.r1a.grassmap.tracks.TrackId
  * provider can take over without changing this path. The store's style travels
  * as a namespaced GPX extension; geometry, names, elevation and time stay
  * standard GPX and survive the importer unchanged.
+ *
+ * A record's kind decides its element (T-0411): a travelled track is a `<trk>`
+ * and a saved route is a `<rte>`, so an export never presents a plan as a
+ * recording. The `<wpt>` entries a document was imported with are written
+ * back, and a record whose waypoints appear twice in one export - a document
+ * that holds several records - contributes them once.
  */
 class TrackExport(
     private val tracks: TrackAccess,
@@ -62,7 +70,13 @@ class TrackExport(
             }
         val entities =
             ImportedEntities(
-                tracks = stored.map { record -> record.track.copy(style = record.style) },
+                tracks =
+                    stored
+                        .filter { record ->
+                            record.kind == TrackKind.Track
+                        }.map { record -> record.track.copy(style = record.style) },
+                routes = stored.filter { record -> record.kind == TrackKind.Route }.map(::routeOf),
+                waypoints = stored.flatMap { record -> record.waypoints }.distinct(),
             )
         val bytes =
             when (val exported = format.export(entities, CancellationHandle.None)) {
@@ -82,4 +96,11 @@ class TrackExport(
             ),
         )
     }
+
+    /** A saved route as the `<rte>` its document holds, with one point per vertex. */
+    private fun routeOf(record: StoredTrack): TrackRoute =
+        TrackRoute(
+            name = record.name,
+            points = record.track.segments.flatMap { segment -> segment.points },
+        )
 }

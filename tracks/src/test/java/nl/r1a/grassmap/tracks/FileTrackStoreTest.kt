@@ -9,6 +9,7 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.ElevationAccess
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.ImportedEntities
 import nl.r1a.grassmap.plugin.api.model.Track
 import nl.r1a.grassmap.plugin.api.model.TrackPoint
 import nl.r1a.grassmap.plugin.api.model.TrackSegment
@@ -241,7 +242,7 @@ class FileTrackStoreTest {
                     analysis = TrackAnalyzer().analyze(timedTrack),
                     style = TrackPalette.styleFor(id),
                 )
-            val timedReader = TrackDocumentReader { Outcome.Success(listOf(timedTrack)) }
+            val timedReader = TrackDocumentReader { Outcome.Success(ImportedEntities(tracks = listOf(timedTrack))) }
             success(
                 FileTrackStore(
                     root = root,
@@ -273,7 +274,7 @@ class FileTrackStoreTest {
             val source = "stripped".toByteArray()
             val stripped = strippedTrack()
             val id = TrackIdentity.of(source, index = 0, count = 1)
-            val reader = TrackDocumentReader { Outcome.Success(listOf(stripped)) }
+            val reader = TrackDocumentReader { Outcome.Success(ImportedEntities(tracks = listOf(stripped))) }
             val correction = TrackElevationCorrection(ElevationAccess { Outcome.Success(300.0) })
             val record =
                 StoredTrack(
@@ -319,7 +320,7 @@ class FileTrackStoreTest {
             val source = "no dem".toByteArray()
             val stripped = strippedTrack()
             val id = TrackIdentity.of(source, index = 0, count = 1)
-            val reader = TrackDocumentReader { Outcome.Success(listOf(stripped)) }
+            val reader = TrackDocumentReader { Outcome.Success(ImportedEntities(tracks = listOf(stripped))) }
             val record =
                 StoredTrack(
                     id = id,
@@ -400,7 +401,7 @@ class FileTrackStoreTest {
             if (text.startsWith("bad")) {
                 Outcome.Failure(AppError.CorruptData)
             } else {
-                Outcome.Success(text.split('|').map { part -> trackOf(part) })
+                Outcome.Success(ImportedEntities(tracks = text.split('|').map { part -> trackOf(part) }))
             }
         }
 

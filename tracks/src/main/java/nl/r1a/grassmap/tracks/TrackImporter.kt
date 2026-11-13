@@ -6,6 +6,8 @@ import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.ImportResult
 import nl.r1a.grassmap.plugin.api.model.ImportWarning
 import nl.r1a.grassmap.plugin.api.model.Track
+import nl.r1a.grassmap.plugin.api.model.TrackKind
+import nl.r1a.grassmap.plugin.api.model.TrackWaypoint
 import nl.r1a.grassmap.plugin.api.provider.FileFormat
 
 /**
@@ -25,6 +27,8 @@ fun interface FileFormatResolver {
 data class ImportReport(
     val tracks: List<StoredTrack>,
     val warnings: List<ImportWarning>,
+    /** The `<wpt>` entries of the document, kept beside every record it produced. */
+    val waypoints: List<TrackWaypoint> = emptyList(),
 ) {
     /** The stable diagnostic lines for [warnings], one per skipped part. */
     fun warningLines(): List<String> = warnings.map { it.describe() }
@@ -34,6 +38,12 @@ data class ImportReport(
  * The one import path: resolve a format, read the document, store every track
  * it contains and compute each profile. A document with no track is
  * [AppError.Unsupported]; every skipped point stays a warning on the result.
+ *
+ * A `<rte>` is a record too (T-0411): a document that holds a route beside its
+ * track yields one record per element, and the route's record is
+ * [TrackKind.Route], so the library and an export keep the distinction. The
+ * document's `<wpt>` entries travel with each record it produced, so an export
+ * of a stored track writes its waypoints back.
  *
  * A missing height is filled from [elevationCorrection] before the profile is
  * computed, so the stored analysis includes the DEM heights (T-0403).
@@ -79,38 +89,47 @@ class TrackImporter(
         bytes: ByteArray,
         result: ImportResult,
     ): Outcome<ImportReport> {
-        val imported = result.entities.tracks
-        if (imported.isEmpty()) {
+        val records = result.entities.records()
+        if (records.isEmpty()) {
             return Outcome.Failure(AppError.Unsupported)
         }
-        val records = mutableListOf<StoredTrack>()
-        for ((index, track) in imported.withIndex()) {
-            val record = storedRecord(fileName, bytes, index, track, imported.size)
-            when (val saved = store.save(record, bytes)) {
-                is Outcome.Success -> records += saved.value
-                is Outcome.Failure -> return saved
+        val waypoints = result.entities.waypoints
+        val stored = mutableListOf<StoredTrack>()
+        for (record in records) {
+            val saved = storedRecord(fileName, bytes, record, records.size, waypoints)
+            when (val outcome = store.save(saved, bytes)) {
+                is Outcome.Success -> stored += outcome.value
+                is Outcome.Failure -> return outcome
             }
         }
-        return Outcome.Success(ImportReport(tracks = records, warnings = result.warnings))
+        return Outcome.Success(ImportReport(tracks = stored, warnings = result.warnings, waypoints = waypoints))
     }
 
     private suspend fun storedRecord(
         fileName: String?,
         bytes: ByteArray,
-        index: Int,
-        track: Track,
+        record: DocumentRecord,
         count: Int,
+        waypoints: List<TrackWaypoint>,
     ): StoredTrack {
-        val id = TrackIdentity.of(bytes, index, count)
-        val corrected = elevationCorrection.correct(track)
+        val id = TrackIdentity.of(bytes, record.trackIndex, count)
+        // A route is a plan, not a travelled line: the DEM is not sampled for
+        // it, so its stored profile never carries invented heights.
+        val corrected =
+            when (record.kind) {
+                TrackKind.Route -> CorrectedTrack(record.track, ElevationCorrectionReport(ElevationSource.NoDem))
+                TrackKind.Track -> elevationCorrection.correct(record.track)
+            }
         return StoredTrack(
             id = id,
-            name = track.name ?: fileName,
+            name = record.track.name ?: fileName,
             track = corrected.track,
             analysis = analyzer.analyze(corrected.track),
             style = TrackPalette.styleFor(id),
-            trackIndex = index,
+            trackIndex = record.trackIndex,
             elevation = corrected.report,
+            kind = record.kind,
+            waypoints = waypoints,
         )
     }
 

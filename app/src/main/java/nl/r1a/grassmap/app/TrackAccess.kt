@@ -8,8 +8,9 @@ import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.error.map
 import nl.r1a.grassmap.plugin.api.host.ElevationAccess
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedProvider
+import nl.r1a.grassmap.plugin.api.model.ImportedEntities
 import nl.r1a.grassmap.plugin.api.model.MapTrack
-import nl.r1a.grassmap.plugin.api.model.Track
+import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.model.TrackStyle
 import nl.r1a.grassmap.plugin.api.provider.FileFormat
 import nl.r1a.grassmap.plugin.api.provider.FileFormatContract
@@ -17,6 +18,10 @@ import nl.r1a.grassmap.tracks.FileFormatResolver
 import nl.r1a.grassmap.tracks.FileTrackStore
 import nl.r1a.grassmap.tracks.ImportReport
 import nl.r1a.grassmap.tracks.InMemoryTrackStore
+import nl.r1a.grassmap.tracks.PlannedRouteEngine
+import nl.r1a.grassmap.tracks.PlannedRouteRecomputer
+import nl.r1a.grassmap.tracks.PlannedRouteSaver
+import nl.r1a.grassmap.tracks.RecomputedRoute
 import nl.r1a.grassmap.tracks.StoredTrack
 import nl.r1a.grassmap.tracks.TrackDocumentReader
 import nl.r1a.grassmap.tracks.TrackElevationCorrection
@@ -26,6 +31,7 @@ import nl.r1a.grassmap.tracks.TrackMetadata
 import nl.r1a.grassmap.tracks.TrackRemoval
 import nl.r1a.grassmap.tracks.TrackStore
 import nl.r1a.grassmap.tracks.TrackSummary
+import nl.r1a.grassmap.tracks.toPlannedRoute
 import java.io.File
 
 /**
@@ -58,6 +64,11 @@ class TrackAccess internal constructor(
             store = store,
             elevationCorrection = correction,
         )
+    private val plannedRouteSaver =
+        PlannedRouteSaver(
+            store = store,
+            writer = { entities -> writeDocument(entities) },
+        )
 
     /** The tracks the map draws, current after every import, remove and style change. */
     val drawn: StateFlow<List<MapTrack>> = store.drawn
@@ -73,6 +84,34 @@ class TrackAccess internal constructor(
         bytes: ByteArray,
         cancellation: CancellationHandle = CancellationHandle.None,
     ): Outcome<ImportReport> = importer.importFile(fileName, bytes, cancellation)
+
+    /**
+     * Saves the route the plan is showing into the library (T-0411), or
+     * [AppError.InvalidInput] when the plan has no route yet. The document is
+     * written by the resolved `file.gpx` provider, so this path names no plugin.
+     */
+    suspend fun savePlannedRoute(
+        plan: RoutePlanState,
+        name: String?,
+    ): Outcome<StoredTrack> {
+        val route = plan.toPlannedRoute(name) ?: return Outcome.Failure(AppError.InvalidInput)
+        return plannedRouteSaver.save(route)
+    }
+
+    /**
+     * Asks the engine for a stored route's line again, and falls back to the
+     * line as saved (T-0411). [engine] is null in a build with no routing
+     * engine, which is a normal state and not an error.
+     */
+    suspend fun recomputeRoute(
+        id: TrackId,
+        engine: PlannedRouteEngine?,
+        cancellation: CancellationHandle = CancellationHandle.None,
+    ): Outcome<RecomputedRoute> =
+        when (val record = stored(id)) {
+            is Outcome.Success -> Outcome.Success(PlannedRouteRecomputer(engine).recompute(record.value, cancellation))
+            is Outcome.Failure -> record
+        }
 
     suspend fun stored(id: TrackId): Outcome<StoredTrack> = importer.stored(id)
 
@@ -106,13 +145,23 @@ class TrackAccess internal constructor(
     internal suspend fun formatFor(extension: String): Outcome<FileFormat> = resolve(extension)
 
     /** Reads one stored document with the format that wrote it. */
-    private suspend fun readDocument(bytes: ByteArray): Outcome<List<Track>> {
+    private suspend fun readDocument(bytes: ByteArray): Outcome<ImportedEntities> {
         val format =
-            when (val resolved = resolve("gpx")) {
+            when (val resolved = resolve(DOCUMENT_EXTENSION)) {
                 is Outcome.Success -> resolved.value
                 is Outcome.Failure -> return resolved
             }
-        return format.importFile(bytes, CancellationHandle.None).map { result -> result.entities.tracks }
+        return format.importFile(bytes, CancellationHandle.None).map { result -> result.entities }
+    }
+
+    /** Writes a document the library is about to store, through the same provider. */
+    private suspend fun writeDocument(entities: ImportedEntities): Outcome<ByteArray> {
+        val format =
+            when (val resolved = resolve(DOCUMENT_EXTENSION)) {
+                is Outcome.Success -> resolved.value
+                is Outcome.Failure -> return resolved
+            }
+        return format.export(entities, CancellationHandle.None)
     }
 
     private suspend fun resolve(extension: String): Outcome<FileFormat> {
@@ -135,5 +184,10 @@ class TrackAccess internal constructor(
             }
         }
         return Outcome.Failure(failure ?: AppError.NotFound)
+    }
+
+    private companion object {
+        /** The one extension a stored document has today. */
+        const val DOCUMENT_EXTENSION = "gpx"
     }
 }

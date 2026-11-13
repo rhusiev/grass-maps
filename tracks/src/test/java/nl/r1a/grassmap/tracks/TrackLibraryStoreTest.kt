@@ -4,6 +4,7 @@ import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.ImportedEntities
 import nl.r1a.grassmap.plugin.api.model.Track
 import nl.r1a.grassmap.plugin.api.model.TrackPoint
 import nl.r1a.grassmap.plugin.api.model.TrackSegment
@@ -228,7 +229,7 @@ class TrackLibraryStoreTest {
             if (text.startsWith("bad")) {
                 Outcome.Failure(AppError.CorruptData)
             } else {
-                Outcome.Success(text.split('|').map { part -> trackOf(part) })
+                Outcome.Success(ImportedEntities(tracks = text.split('|').map { part -> trackOf(part) }))
             }
         }
 

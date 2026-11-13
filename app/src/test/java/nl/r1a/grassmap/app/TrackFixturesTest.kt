@@ -317,7 +317,7 @@ class TrackFixturesTest {
         const val ELEVATION_TOLERANCE = 1e-6
         const val SPEED_TOLERANCE = 1e-6
         const val SINGLE_POINT = "osmand-single-point.gpx"
-        const val RECORD_COUNT = 21
+        const val RECORD_COUNT = 24
 
         /** Printed by `test-data/tracks/generate-fixtures.py`, one row per track. */
         val STATISTICS =
@@ -352,16 +352,16 @@ class TrackFixturesTest {
                 FixtureExpectation("osmand-no-elevation.gpx", 1, 1, 5, 0.0, 0.0, null, null),
                 FixtureExpectation("osmand-no-time.gpx", 1, 1, 4, 3.0, 0.0, 340.0, 343.0),
                 FixtureExpectation("osmand-single-point.gpx", 1, 1, 1, 0.0, 0.0, 350.0, 350.0),
-                FixtureExpectation("osmand-planned-route.gpx", 1, 1, 3, 2.0, 0.0, 360.0, 362.0),
+                FixtureExpectation("osmand-planned-route.gpx", 2, 2, 6, 12.0, 0.0, 360.0, 370.0),
                 FixtureExpectation("garmin-connect-hike.gpx", 1, 1, 6, 11.5, 3.5, 370.0, 378.0),
                 FixtureExpectation("garmin-connect-autopause.gpx", 1, 3, 12, 10.0, 2.0, 380.0, 388.0),
                 FixtureExpectation("garmin-fenix-run.gpx", 1, 2, 11, 7.0, 7.0, 390.0, 396.0),
                 FixtureExpectation("garmin-oregon-gpx10.gpx", 1, 1, 4, 4.0, 1.0, 400.0, 403.0),
-                FixtureExpectation("garmin-waypoints-route.gpx", 1, 1, 3, 2.0, 0.0, 410.0, 412.0),
+                FixtureExpectation("garmin-waypoints-route.gpx", 2, 2, 5, 7.0, 0.0, 410.0, 415.0),
                 FixtureExpectation("strava-run.gpx", 1, 1, 8, 8.0, 3.0, 420.0, 426.0),
                 FixtureExpectation("strava-ride-pauses.gpx", 1, 4, 16, 8.0, 7.0, 430.0, 438.0),
                 FixtureExpectation("strava-no-elevation.gpx", 1, 1, 5, 0.0, 0.0, null, null),
-                FixtureExpectation("strava-route-and-track.gpx", 1, 1, 4, 4.0, 0.0, 440.0, 444.0),
+                FixtureExpectation("strava-route-and-track.gpx", 2, 2, 7, 14.0, 0.0, 440.0, 450.0),
                 FixtureExpectation("strava-ukrainian-name.gpx", 1, 1, 4, 2.0, 1.0, 450.0, 452.0),
                 FixtureExpectation("broken-partial.gpx", 1, 1, 4, 1.0, 0.0, 460.0, 463.0, warnings = 8),
                 FixtureExpectation("broken-empty-tracks.gpx", 1, 2, 4, 2.0, 0.0, 470.0, 474.0, warnings = 3),

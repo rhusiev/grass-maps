@@ -10,7 +10,9 @@ import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.MapTrack
 import nl.r1a.grassmap.plugin.api.model.Track
+import nl.r1a.grassmap.plugin.api.model.TrackKind
 import nl.r1a.grassmap.plugin.api.model.TrackStyle
+import nl.r1a.grassmap.plugin.api.model.TrackWaypoint
 
 /** A stored track's identity. T-0027 derives it from the imported file bytes. */
 @JvmInline
@@ -35,6 +37,12 @@ internal fun Track.startPoint(): GeoPoint? =
  * One imported track with the profile computed when it was stored.
  * [elevation] records the DEM correction pass that produced [track], or null
  * when the caller built the record without one.
+ *
+ * [kind] says whether the record is a track or a saved route (T-0411), and
+ * [recompute] is the request a saved route was built from, or null when the
+ * build has none - an imported `<rte>` has no sidecar, and an unreadable one
+ * degrades to the stored line rather than failing the open. [waypoints] are the
+ * document's `<wpt>` entries, kept so an export writes them back.
  */
 data class StoredTrack(
     val id: TrackId,
@@ -46,6 +54,9 @@ data class StoredTrack(
     val elevation: ElevationCorrectionReport? = null,
     val description: String? = null,
     val listId: String? = null,
+    val kind: TrackKind = TrackKind.Track,
+    val recompute: PlannedRouteRecompute? = null,
+    val waypoints: List<TrackWaypoint> = emptyList(),
 ) {
     /** The drawable form the map layer reads; geometry only, no profile. */
     fun toMapTrack(): MapTrack =
@@ -72,6 +83,7 @@ data class TrackSummary(
     val listId: String? = null,
     val startLatitude: Double? = null,
     val startLongitude: Double? = null,
+    val kind: TrackKind = TrackKind.Track,
 )
 
 /**
@@ -226,6 +238,7 @@ class InMemoryTrackStore(
                     listId = track.listId,
                     startLatitude = start?.latitude,
                     startLongitude = start?.longitude,
+                    kind = track.kind,
                 )
             }
         }

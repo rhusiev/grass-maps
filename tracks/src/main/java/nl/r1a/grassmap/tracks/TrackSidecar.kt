@@ -10,6 +10,7 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
+import nl.r1a.grassmap.plugin.api.model.TrackKind
 import nl.r1a.grassmap.plugin.api.model.TrackStyle
 
 /**
@@ -17,6 +18,10 @@ import nl.r1a.grassmap.plugin.api.model.TrackStyle
  * for geometry; the sidecar carries what the file cannot: the chosen styling,
  * the cached elevation profile and the document index of this track. Identity
  * is the document hash, so a sidecar and its GPX cannot drift apart unnoticed.
+ *
+ * [kind] says whether the record came from a `<trk>` or a `<rte>` (T-0411).
+ * Older sidecars have no value and read as a track, which is what every record
+ * written before routes were stored is.
  */
 internal data class TrackSidecar(
     val id: String,
@@ -30,6 +35,7 @@ internal data class TrackSidecar(
     val listId: String? = null,
     val startLatitude: Double? = null,
     val startLongitude: Double? = null,
+    val kind: TrackKind = TrackKind.Track,
 )
 
 /**
@@ -50,6 +56,7 @@ internal object TrackSidecarJson {
     private const val START_LATITUDE = "startLatitude"
     private const val START_LONGITUDE = "startLongitude"
     private const val SAVED_AT = "savedAtMillis"
+    private const val KIND = "kind"
     private const val STYLE = "style"
     private const val COLOUR = "colour"
     private const val WIDTH = "widthDp"
@@ -77,6 +84,7 @@ internal object TrackSidecarJson {
             sidecar.startLatitude?.let { latitude -> put(START_LATITUDE, latitude) }
             sidecar.startLongitude?.let { longitude -> put(START_LONGITUDE, longitude) }
             put(SAVED_AT, sidecar.savedAtMillis)
+            put(KIND, sidecar.kind.wireName)
             put(
                 STYLE,
                 buildJsonObject {
@@ -116,6 +124,12 @@ internal object TrackSidecarJson {
         val documentHash = root.string(DOCUMENT_HASH) ?: return null
         val trackIndex = root.int(TRACK_INDEX) ?: return null
         val savedAtMillis = root.long(SAVED_AT) ?: 0L
+        val kind =
+            if (KIND in root) {
+                TrackKind.ofWireName(root.string(KIND)) ?: return null
+            } else {
+                TrackKind.Track
+            }
         val style = root.objectAt(STYLE)?.let(::decodeStyle) ?: return null
         val analysis = root.objectAt(ANALYSIS)?.let(::decodeAnalysis) ?: return null
         if (trackIndex < 0 || analysis.pointCount < 0) {
@@ -139,6 +153,7 @@ internal object TrackSidecarJson {
             listId = root.string(LIST_ID),
             startLatitude = startLatitude.takeIf { hasStart },
             startLongitude = startLongitude.takeIf { hasStart },
+            kind = kind,
         )
     }
 

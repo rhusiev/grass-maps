@@ -2542,6 +2542,53 @@ distances through a callback and `app` answers with `ElevationSegments`' own
 statistics. That keeps one range model, in the engine, and the callback is the
 host seam the earlier note expected; no `plugins/analysis-ui` module is created.
 
+## Slope-aware time models
+
+`tracks` owns the slope-aware time models the route preview names (T-0407). A
+model reads only `ElevationProfile.samples`. The profiler already measured the
+distance, so a step is the distance between two consecutive samples and no
+geometry is measured twice. A sample without a height never enters the profile,
+so a gap is one longer step between the samples on either side.
+
+Walk and hike use Tobler's hiker curve, re-anchored at the profile's flat speed:
+
+    v(S) = vFlat * exp(-3.5 * (abs(S + 0.05) - 0.05))
+
+S is rise over run. The constants 3.5 and 0.05 are Tobler's. vFlat is 5.0 km/h
+for walk and 4.5 km/h for hike, the walking speeds the Valhalla costing sends.
+The curve peaks at a 5 % descent, so a gentle descent is faster than flat and a
+steep descent is slower again.
+
+Bike uses a power balance:
+
+    P = (Crr * m * g * cos(theta) + m * g * sin(theta) + 0.5 * rho * CdA * v^2) * v
+
+The parameters are chosen, not measured: m = 95 kg, Crr = 0.010,
+CdA = 0.45 m^2, rho = 1.225 kg/m^3 and g = 9.80665 m/s^2. The flat speed is
+18 km/h, the cycling speed the Valhalla costing sends, so the power is 81.03 W.
+A descent is capped at 50 km/h, a stated safety limit rather than a measured
+one. Both models clamp the grade at ±50 % and treat a grade under 0.1 % as flat.
+
+A missing, one-sample or flat profile falls back to the existing flat estimate
+and is named Flat speed. The route preview passes the routing engine's duration
+as that fallback. A track passes its distance divided by the profile's flat
+speed. `SlopeTimeEstimator` chooses the model by `RouteProfile`. Car has no
+model and keeps the engine's duration.
+
+`app` maps the engine profile and the estimator's `TimeModelKind` to the
+preview's `RoutePreviewTime`, and `ui-shell` appends the model's name to the
+Time entry, for example `25 min · Tobler walk`. The arrival moves by the same
+duration, so the preview's time and arrival stay one answer. The names Tobler
+walk, Tobler hike, Bike power and Flat speed live in `app`'s strings in English
+and Ukrainian.
+
+`TimeModelTest` holds fixed expected times for flat, gentle and steep up and
+down, walk, hike and bike, a profile with a gap, an empty and one-sample
+profile, the flat fallback, a zero-distance step and the grade clamp.
+`AnalysisChartsTest` covers the route mapping and the named fallback. The
+constants come from the literature and the stated parameters, not from a fit to
+real tracks. No real track or route has been compared with either model yet.
+
 ## Regions seam
 
 `regions` reads the T-0015 `manifest.json` (region, version, package format,

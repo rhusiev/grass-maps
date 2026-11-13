@@ -10,8 +10,9 @@ import org.junit.Test
  * last row under the action bar.
  *
  * The placement itself - that the bars are anchored to the bottom edge rather
- * than the top - is not covered here. This module's tests run on the JVM and
- * cannot lay out a composable, so that half is device evidence only.
+ * than the top - and the window insets that the header, the bars and the rows
+ * clear are not covered here. This module's tests run on the JVM and cannot lay
+ * out a composable, so those halves are device evidence only.
  */
 class TrackLibraryBarLayoutTest {
     @Test

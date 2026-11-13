@@ -67,7 +67,8 @@ enum class TrackLibraryAction {
  * must sanitise it before the screen draws it. [listId] is the folder the track
  * belongs to, or null when it is unfiled. [startLatitude] and [startLongitude]
  * are the first point of the track, used by the Nearest order, or null when the
- * document carries no geometry.
+ * document carries no geometry. [kind] says whether the record is a travelled
+ * or imported line or a route the user planned and saved (T-0411).
  */
 @Serializable
 data class TrackLibraryEntry(
@@ -82,12 +83,15 @@ data class TrackLibraryEntry(
     val colour: String? = null,
     val startLatitude: Double? = null,
     val startLongitude: Double? = null,
+    val kind: TrackKind = TrackKind.Track,
 )
 
 /**
  * One rendered list row (T-0414). [description] is the sanitised native styled
  * text, never the stored markup. [listName] is the resolved folder name, so a
  * row that is shown outside its folder still says where the track lives.
+ * [kind] travels with the row so the screen names a saved route as a route
+ * (T-0411).
  */
 @Serializable
 data class TrackLibraryRow(
@@ -103,6 +107,7 @@ data class TrackLibraryRow(
     val colour: String? = null,
     val startLatitude: Double? = null,
     val startLongitude: Double? = null,
+    val kind: TrackKind = TrackKind.Track,
 )
 
 /**

@@ -32,12 +32,19 @@ data class TrackRoute(
     val points: List<TrackPoint>,
 )
 
-/** A named standalone point read from a file. */
+/**
+ * A named standalone point read from a file. [description] is the free text a
+ * GPX `<desc>` carries, kept beside the name so a waypoint survives an export
+ * with what its author wrote (T-0411). The symbol and type elements have no
+ * field: this build has no icon vocabulary, so they are dropped on import and
+ * an export writes no `<sym>` or `<type>`.
+ */
 data class TrackWaypoint(
     val name: String? = null,
     val position: GeoPoint,
     val elevationMeters: Double? = null,
     val timeMillis: Long? = null,
+    val description: String? = null,
 )
 
 /** Everything a file format can produce in one import. */
@@ -52,6 +59,27 @@ enum class FileEntityKind {
     Track,
     Route,
     Waypoint,
+}
+
+/**
+ * What a stored record is (T-0411). [Track] is a line that was travelled or
+ * imported from a file; [Route] is a route a user planned and saved, which the
+ * library also keeps, and which is a `<rte>` in the GPX rather than a `<trk>`.
+ *
+ * The value is stored on the record, never derived from its name, so a row can
+ * say which one it is without guessing.
+ */
+enum class TrackKind(
+    val wireName: String,
+) {
+    Track("track"),
+    Route("route"),
+    ;
+
+    companion object {
+        /** The kind whose stored name is [name], or null for a value this build does not know. */
+        fun ofWireName(name: String?): TrackKind? = entries.firstOrNull { kind -> kind.wireName == name }
+    }
 }
 
 /**

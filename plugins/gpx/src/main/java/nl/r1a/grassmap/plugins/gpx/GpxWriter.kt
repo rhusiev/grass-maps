@@ -91,6 +91,7 @@ internal object GpxWriter {
 
     private fun isWritableWaypoint(waypoint: TrackWaypoint): Boolean =
         isText(waypoint.name) &&
+            isText(waypoint.description) &&
             isWritablePosition(waypoint.position) &&
             isWritableElevation(waypoint.elevationMeters)
 
@@ -113,6 +114,7 @@ internal object GpxWriter {
         append("\" lon=\"").append(coordinate(waypoint.position.longitude)).append("\">\n")
         appendPointFields(waypoint.elevationMeters, waypoint.timeMillis, INDENT_ELEMENT)
         appendName(waypoint.name, INDENT_ELEMENT)
+        appendDescription(waypoint.description)
         append("  </wpt>\n")
     }
 
@@ -158,6 +160,16 @@ internal object GpxWriter {
     ) {
         val trimmed = name?.trim()?.takeIf { it.isNotEmpty() } ?: return
         append(indent).append("<name>").appendText(trimmed).append("</name>\n")
+    }
+
+    /**
+     * The waypoint's free text. GPX puts `<desc>` after `<name>`, so this runs
+     * after [appendName]. A description is kept as written, minus a blank one,
+     * and its line breaks travel as escaped characters.
+     */
+    private fun StringBuilder.appendDescription(description: String?) {
+        val kept = description?.takeIf { text -> text.isNotBlank() } ?: return
+        append(INDENT_ELEMENT).append("<desc>").appendText(kept).append("</desc>\n")
     }
 
     private fun StringBuilder.appendPointFields(

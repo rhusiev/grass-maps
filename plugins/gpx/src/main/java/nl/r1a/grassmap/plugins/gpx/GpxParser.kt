@@ -147,6 +147,7 @@ internal object GpxParser {
                     position = point.position,
                     elevationMeters = point.elevationMeters,
                     timeMillis = point.timeMillis,
+                    description = description(element),
                 )
         }
         return waypoints
@@ -208,6 +209,13 @@ internal object GpxParser {
     }
 
     private fun name(element: Element): String? = childText(element, ELEMENT_NAME)?.trim()?.takeIf { it.isNotEmpty() }
+
+    /**
+     * The free text a waypoint carries. A description keeps its internal line
+     * breaks; only a blank one is dropped, so an export cannot invent an empty
+     * `<desc>`.
+     */
+    private fun description(element: Element): String? = childText(element, ELEMENT_DESCRIPTION)?.takeIf { text -> text.isNotBlank() }
 
     private fun childElements(
         parent: Element,
@@ -356,6 +364,7 @@ internal object GpxParser {
     private const val ELEMENT_ROUTE_POINT = "rtept"
     private const val ELEMENT_WAYPOINT = "wpt"
     private const val ELEMENT_NAME = "name"
+    private const val ELEMENT_DESCRIPTION = "desc"
     private const val ELEMENT_ELEVATION = "ele"
     private const val ELEMENT_TIME = "time"
     private const val ATTRIBUTE_LATITUDE = "lat"

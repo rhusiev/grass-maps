@@ -72,6 +72,21 @@ class TrackShareWiringTest {
         }
     }
 
+    @Test
+    fun theAcceptanceProviderIsDebugOnlyAndNotExported() {
+        val provider =
+            elements(parse(File(DEBUG_MANIFEST)).documentElement, "provider")
+                .firstOrNull { it.android("name") == TEST_PROVIDER }
+                ?: error("no test provider in the debug manifest")
+
+        assertEquals(TEST_AUTHORITY, provider.android("authorities"))
+        assertEquals("false", provider.android("exported"))
+        val mainProviders =
+            elements(parse(File(MANIFEST)).documentElement, "provider")
+                .mapNotNull { it.android("name") }
+        assertTrue("a release build carries no test provider", TEST_PROVIDER !in mainProviders)
+    }
+
     private fun activity(): Element =
         elements(manifest(), "activity").firstOrNull { it.android("name") == MAIN_ACTIVITY }
             ?: error("no $MAIN_ACTIVITY")
@@ -105,6 +120,7 @@ class TrackShareWiringTest {
     private companion object {
         const val ANDROID_NAMESPACE = "http://schemas.android.com/apk/res/android"
         const val MANIFEST = "src/main/AndroidManifest.xml"
+        const val DEBUG_MANIFEST = "src/debug/AndroidManifest.xml"
         const val MAIN_ACTIVITY = "nl.r1a.grassmap.app.MainActivity"
         const val MAIN_ACTIVITY_SOURCE = "src/main/java/nl/r1a/grassmap/app/MainActivity.kt"
         const val MAP_SCREEN = "src/main/java/nl/r1a/grassmap/app/MapScreen.kt"
@@ -114,8 +130,16 @@ class TrackShareWiringTest {
 
         const val SEND = "android.intent.action.SEND"
         const val DEFAULT = "android.intent.category.DEFAULT"
+        const val TEST_PROVIDER = "nl.r1a.grassmap.app.SharedTrackTestProvider"
+        const val TEST_AUTHORITY = "nl.r1a.grassmap.share-test"
 
-        val MIME_TYPES = setOf("application/gpx+xml", "application/octet-stream")
+        val MIME_TYPES =
+            setOf(
+                "application/gpx+xml",
+                "application/octet-stream",
+                "application/xml",
+                "text/xml",
+            )
         val NOTICE_KEYS =
             setOf(
                 "track_import_one",

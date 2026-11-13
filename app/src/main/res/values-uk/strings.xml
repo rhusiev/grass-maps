@@ -100,8 +100,12 @@
     <string name="route_planner_recent">Останні маршрути</string>
     <string name="route_planner_reuse">Використати маршрут з %1$s</string>
     <string name="route_preferences_title">Налаштування маршруту</string>
-    <string name="route_preferences_set_count">Задано: %1$d</string>
+    <string name="route_preferences_set_count">Задано: %1$s</string>
     <string name="route_preferences_changed">змінено</string>
+    <string name="route_preferences_open_description">Відкрити налаштування маршруту</string>
+    <string name="route_preferences_close_description">Закрити налаштування маршруту</string>
+    <string name="route_preferences_step_description">%1$s: %2$s</string>
+    <string name="route_preferences_step_default_description">%1$s: %2$s, типове значення профілю</string>
     <string name="route_preferences_scope">Лише цей маршрут. Профіль «%1$s» зберігає свої типові значення; крапка позначає їх.</string>
     <string name="route_preferences_hills">Пагорби</string>
     <string name="route_preferences_hills_detail">Підйоми дорогою</string>

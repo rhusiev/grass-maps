@@ -280,7 +280,9 @@ class RoutePlanner(
     /**
      * Replaces the chain with a stored entry and routes it, as one edit so one
      * undo returns to the plan the user had. The stored totals are not reused:
-     * the engine resolves the chain again against the current map data.
+     * the engine resolves the chain again against the current map data. The
+     * entry's preferences travel with the chain, so a reuse restores the route
+     * the user chose rather than today's profile defaults (T-0421).
      */
     suspend fun reuse(entry: RouteHistoryEntry): Outcome<RoutePlanState> {
         val snapshot =
@@ -297,6 +299,7 @@ class RoutePlanner(
                         options = emptyList(),
                         selectedIndex = 0,
                         failure = null,
+                        overridePreferences = entry.preferences,
                     ),
                 )
                 _state.value
@@ -497,6 +500,7 @@ class RoutePlanner(
                 vias = state.vias,
                 distanceMeters = selected.distanceMeters,
                 durationSeconds = selected.durationSeconds,
+                preferences = state.preferences,
             )
         val stored = history.remember(entry)
         if (stored is Outcome.Success) {

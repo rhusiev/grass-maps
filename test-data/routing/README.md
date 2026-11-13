@@ -67,6 +67,11 @@ steps name the closest pedestrian options instead of keys Valhalla would ignore.
 Car is out of v1 and keeps its profile. The direct engine has no costing, so a
 preference never moves its geodesic; it accepts the request unchanged.
 
+Only the bike hills `Avoid` step has a measured Lviv ascent run
+(`hills/bike-hills.json`). The busy-roads and rough-surfaces keys are checked at
+request level only; they are not measured against Valhalla 3.9.1 until a measured
+run exists.
+
 The settings model is `RoutingOptionsSettings`, one entry per profile,
 defaulting every unset profile to `RouteOptions()`. The planner reads it through
 `RoutingOptionsAccess`; the profile is still the one the planner was built with,

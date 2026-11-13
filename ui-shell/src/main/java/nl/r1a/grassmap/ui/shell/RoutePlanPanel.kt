@@ -163,29 +163,6 @@ fun RoutePlanPanel(
                 if (preview != null) {
                     PreviewCard(preview = preview, onStart = onStart)
                 }
-                RoutePreferencesEntry(
-                    profilePreferences = state.profilePreferences,
-                    overridePreferences = state.overridePreferences,
-                    strings = strings,
-                    expanded = preferencesVisible,
-                    onClick = { preferencesVisible = !preferencesVisible },
-                )
-                if (preferencesVisible) {
-                    RoutePreferencesContent(
-                        profile = state.profile,
-                        profilePreferences = state.profilePreferences,
-                        overridePreferences = state.overridePreferences,
-                        strings = strings,
-                        onApply = { options ->
-                            preferencesVisible = false
-                            onApplyPreferences(options)
-                        },
-                        onReset = {
-                            preferencesVisible = false
-                            onResetPreferences()
-                        },
-                    )
-                }
                 TurnStepper(
                     turns = routePlanTurns(state, strings),
                     turnIndex = turnIndex,
@@ -197,6 +174,32 @@ fun RoutePlanPanel(
             RoutePlanStatus.Idle -> {
                 // The panel returns before this branch; kept for an exhaustive enum.
             }
+        }
+        // Preferences stay reachable in every non-idle state: an applied
+        // override can leave the reroute in Planning or Failed, and the user
+        // must be able to reset it there (T-0421).
+        RoutePreferencesEntry(
+            profilePreferences = state.profilePreferences,
+            overridePreferences = state.overridePreferences,
+            strings = strings,
+            expanded = preferencesVisible,
+            onClick = { preferencesVisible = !preferencesVisible },
+        )
+        if (preferencesVisible) {
+            RoutePreferencesContent(
+                profile = state.profile,
+                profilePreferences = state.profilePreferences,
+                overridePreferences = state.overridePreferences,
+                strings = strings,
+                onApply = { options ->
+                    preferencesVisible = false
+                    onApplyPreferences(options)
+                },
+                onReset = {
+                    preferencesVisible = false
+                    onResetPreferences()
+                },
+            )
         }
         RecentRoutes(
             recent = recent,

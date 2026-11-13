@@ -99,8 +99,12 @@
     <string name="route_planner_recent">Recent routes</string>
     <string name="route_planner_reuse">Use the route from %1$s</string>
     <string name="route_preferences_title">Route preferences</string>
-    <string name="route_preferences_set_count">%1$d set</string>
+    <string name="route_preferences_set_count">%1$s set</string>
     <string name="route_preferences_changed">changed</string>
+    <string name="route_preferences_open_description">Open route preferences</string>
+    <string name="route_preferences_close_description">Close route preferences</string>
+    <string name="route_preferences_step_description">%1$s: %2$s</string>
+    <string name="route_preferences_step_default_description">%1$s: %2$s, profile default</string>
     <string name="route_preferences_scope">This route only. The %1$s profile keeps its defaults; a dot marks them.</string>
     <string name="route_preferences_hills">Hills</string>
     <string name="route_preferences_hills_detail">Climbs on the way</string>

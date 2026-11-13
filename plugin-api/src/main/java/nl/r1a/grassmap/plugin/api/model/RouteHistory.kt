@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.plugin.api.model
 
 import kotlinx.serialization.Serializable
+import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 
 /**
  * One route the planner produced, kept for reuse (T-0304).
@@ -13,6 +14,11 @@ import kotlinx.serialization.Serializable
  * [atMillis] is the injected clock's time when the route was produced; it is
  * the ordering key. [label]s travel inside [start], [vias] and [destination],
  * so a reused plan keeps the text the points were picked from.
+ *
+ * [preferences] are the route preferences the entry was produced with
+ * (T-0421), so a reuse restores what the user chose rather than the current
+ * profile defaults. An entry written before this field decodes as all
+ * [nl.r1a.grassmap.plugin.api.provider.RoutePreference.Normal].
  */
 @Serializable
 data class RouteHistoryEntry(
@@ -22,6 +28,7 @@ data class RouteHistoryEntry(
     val distanceMeters: Double = 0.0,
     val durationSeconds: Double = 0.0,
     val atMillis: Long = 0,
+    val preferences: RouteOptions = RouteOptions(),
 ) {
     /** The whole chain in visit order, which is what a reuse sets. */
     val stops: List<RoutePlanPoint>

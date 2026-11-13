@@ -3,7 +3,9 @@ package nl.r1a.grassmap.routing
 import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.host.RouteHistoryAccess
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.RouteHistoryEntry
 import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanRole
 import nl.r1a.grassmap.plugin.api.provider.Route
@@ -137,6 +139,72 @@ class RoutePlannerOptionsTest {
         }
 
     @Test
+    fun reusingAnEntryRestoresItsThreePreferences() =
+        runTest {
+            val engine = CapturingEngine()
+            val entryPreferences =
+                RouteOptions(
+                    hills = RoutePreference.DontMind,
+                    busyRoads = RoutePreference.Avoid,
+                    roughSurfaces = RoutePreference.DontMind,
+                )
+            val planner =
+                RoutePlanner(
+                    requestRoute = engine::route,
+                    clock = Clock { NOW_MILLIS },
+                    profile = RouteProfile.Walk,
+                    optionsForProfile = { RouteOptions(hills = RoutePreference.Avoid) },
+                )
+
+            planner.reuse(RouteHistoryEntry(START, DESTINATION, preferences = entryPreferences))
+
+            assertEquals(entryPreferences, engine.requests.single().options)
+            assertEquals(entryPreferences, planner.state.value.overridePreferences)
+            assertEquals(entryPreferences, planner.state.value.preferences)
+        }
+
+    @Test
+    fun anEntryWithoutPreferencesReusesAllNormal() =
+        runTest {
+            val engine = CapturingEngine()
+            val planner =
+                RoutePlanner(
+                    requestRoute = engine::route,
+                    clock = Clock { NOW_MILLIS },
+                    profile = RouteProfile.Walk,
+                    optionsForProfile = {
+                        RouteOptions(hills = RoutePreference.Avoid, roughSurfaces = RoutePreference.DontMind)
+                    },
+                )
+
+            planner.reuse(RouteHistoryEntry(START, DESTINATION))
+
+            assertEquals(RouteOptions(), engine.requests.single().options)
+            assertEquals(RouteOptions(), planner.state.value.overridePreferences)
+        }
+
+    @Test
+    fun aProducedRouteKeepsItsPreferencesForReuse() =
+        runTest {
+            val engine = CapturingEngine()
+            val history = CapturingHistory()
+            val override = RouteOptions(busyRoads = RoutePreference.DontMind)
+            val planner =
+                RoutePlanner(
+                    requestRoute = engine::route,
+                    clock = Clock { NOW_MILLIS },
+                    profile = RouteProfile.Walk,
+                    optionsForProfile = { RouteOptions(hills = RoutePreference.Avoid) },
+                    history = history,
+                )
+            planner.setPoint(RoutePlanRole.Start, START)
+            planner.setPoint(RoutePlanRole.Destination, DESTINATION)
+            planner.setPreferences(override)
+
+            assertEquals(override, history.entries.single().preferences)
+        }
+
+    @Test
     fun applyingTheProfileDefaultsClearsTheOverride() =
         runTest {
             val engine = CapturingEngine()
@@ -157,6 +225,23 @@ class RoutePlannerOptionsTest {
             assertNull(planner.state.value.overridePreferences)
             assertEquals(profileDefaults, engine.requests.last().options)
         }
+
+    private class CapturingHistory : RouteHistoryAccess {
+        val entries = mutableListOf<RouteHistoryEntry>()
+
+        override suspend fun remember(entry: RouteHistoryEntry): Outcome<List<RouteHistoryEntry>> {
+            entries.removeAll { existing -> existing.stops == entry.stops }
+            entries.add(0, entry)
+            return Outcome.Success(entries.toList())
+        }
+
+        override suspend fun recent(): Outcome<List<RouteHistoryEntry>> = Outcome.Success(entries.toList())
+
+        override suspend fun clear(): Outcome<Unit> {
+            entries.clear()
+            return Outcome.Success(Unit)
+        }
+    }
 
     private class CapturingEngine {
         val requests = mutableListOf<RouteRequest>()

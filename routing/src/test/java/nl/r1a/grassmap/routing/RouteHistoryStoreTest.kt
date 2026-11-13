@@ -8,6 +8,7 @@ import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.RouteHistoryEntry
 import nl.r1a.grassmap.plugin.api.model.RouteHistoryRules
 import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
+import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 import nl.r1a.grassmap.plugin.api.service.Clock
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
@@ -216,6 +217,26 @@ class RouteHistoryStoreTest {
     }
 
     private suspend fun entries(): List<RouteHistoryEntry> = listed(store.recent())
+
+    @Test
+    fun `an entry written before preferences reads as all normal`() =
+        runTest {
+            writeRaw(
+                """
+                {"format":1,"entries":[{
+                  "start":{"position":{"latitude":49.8290,"longitude":23.9520},"label":"start"},
+                  "destination":{"position":{"latitude":49.8420,"longitude":24.0320},"label":"destination"},
+                  "distanceMeters":7100.0,
+                  "durationSeconds":1500.0,
+                  "atMillis":1000
+                }]}
+                """.trimIndent(),
+            )
+
+            val entry = entries().single()
+
+            assertEquals(RouteOptions(), entry.preferences)
+        }
 
     private fun listed(outcome: Outcome<List<RouteHistoryEntry>>): List<RouteHistoryEntry> =
         when (outcome) {

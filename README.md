@@ -2573,7 +2573,9 @@ A missing, one-sample or flat profile falls back to the existing flat estimate
 and is named Flat speed. The route preview passes the routing engine's duration
 as that fallback. A track passes its distance divided by the profile's flat
 speed. `SlopeTimeEstimator` chooses the model by `RouteProfile`. Car has no
-model and keeps the engine's duration.
+model and keeps the engine's duration. The profile is not smoothed, so DEM
+noise on a nearly flat route can add time. That is the profiler's no-smoothing
+policy, not a separate model choice.
 
 `app` maps the engine profile and the estimator's `TimeModelKind` to the
 preview's `RoutePreviewTime`, and `ui-shell` appends the model's name to the

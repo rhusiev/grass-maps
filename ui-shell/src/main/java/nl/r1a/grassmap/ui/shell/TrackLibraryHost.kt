@@ -2,6 +2,7 @@ package nl.r1a.grassmap.ui.shell
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -33,10 +34,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmap.plugin.api.model.RichText
+import nl.r1a.grassmap.plugin.api.model.RichTextStyle
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
 import nl.r1a.grassmap.plugin.api.model.TrackSort
 import nl.r1a.grassmap.plugin.api.service.Strings
@@ -49,8 +59,10 @@ import nl.r1a.grassmap.plugin.api.service.Strings
  *
  * Every control is reachable from the screen itself: a folder tile filters, the
  * pencil renames, the new-folder tile creates, the sort chips reorder, the
- * search field matches names, and a row's action sheet edits, moves, shares or
- * deletes the track. Undo sits on the snackbar after a change.
+ * search field matches names, and pressing a track selects it. The bottom bar of
+ * the selected track offers Move, Rename, Share and Delete; Delete happens at
+ * once and Undo reverses it. A link in a description shows its full address
+ * before the host opens it in the system browser.
  *
  * [dark] selects the light or dark tokens, so both themes are drawn from the
  * same layout. Device interaction is unexercised in CI; the content resolver
@@ -69,6 +81,7 @@ fun TrackLibraryHost(
     onMoveTrack: (trackId: String, folderId: String?) -> Unit,
     onDeleteTrack: (trackId: String) -> Unit,
     onShare: (trackId: String) -> Unit,
+    onOpenLink: (String) -> Unit,
     onUndo: () -> Unit,
     onQueryChange: (String) -> Unit,
     onSortChange: (TrackSort) -> Unit,
@@ -77,8 +90,10 @@ fun TrackLibraryHost(
 ) {
     val colors = trackLibraryPalette(dark)
     val content = trackLibraryContent(state, strings)
+    val selection = trackSelectionBarContent(strings)
     var sheet by remember { mutableStateOf(LibrarySheet.NONE) }
     var selectedTrackId by remember { mutableStateOf<String?>(null) }
+    var linkToOpen by remember { mutableStateOf<String?>(null) }
     var folderSheetMode by remember { mutableStateOf(FolderSheetMode.CREATE) }
     var renameFolderId by remember { mutableStateOf<String?>(null) }
     var nameField by remember { mutableStateOf("") }
@@ -88,7 +103,7 @@ fun TrackLibraryHost(
     val selectedRow = selectedLibraryRow(content.rows, selectedTrackId)
 
     LaunchedEffect(selectedTrackId, state.tracks.size) {
-        if (sheet == LibrarySheet.ACTIONS || sheet == LibrarySheet.EDIT || sheet == LibrarySheet.MOVE) {
+        if (sheet == LibrarySheet.EDIT || sheet == LibrarySheet.MOVE) {
             if (selectedRow == null) {
                 sheet = LibrarySheet.NONE
                 selectedTrackId = null
@@ -106,11 +121,21 @@ fun TrackLibraryHost(
                         start = SCREEN_PADDING_DP.dp,
                         end = SCREEN_PADDING_DP.dp,
                         top = SCREEN_TOP_DP.dp,
-                        bottom = if (content.undoMessage != null) UNDO_RESERVED_DP.dp else 0.dp,
+                        bottom =
+                            when {
+                                selectedRow != null -> SELECTION_RESERVED_DP.dp
+                                content.undoMessage != null -> UNDO_RESERVED_DP.dp
+                                else -> 0.dp
+                            },
                     ),
             verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
         ) {
-            Header(content = content, colors = colors, onClose = onClose)
+            Header(
+                content = content,
+                colors = colors,
+                selectionTitle = selection.title.takeIf { selectedRow != null },
+                onClose = onClose,
+            )
             FolderTiles(
                 content = content,
                 colors = colors,
@@ -146,9 +171,14 @@ fun TrackLibraryHost(
                 TrackRow(
                     row = row,
                     colors = colors,
-                    onOpen = {
+                    selected = row.id == selectedTrackId,
+                    onSelect = {
                         selectedTrackId = row.id
-                        sheet = LibrarySheet.ACTIONS
+                        sheet = LibrarySheet.NONE
+                    },
+                    onLink = { url ->
+                        linkToOpen = url
+                        sheet = LibrarySheet.LINK
                     },
                 )
             }
@@ -160,51 +190,50 @@ fun TrackLibraryHost(
                 undo = content.undo,
                 colors = colors,
                 onUndo = onUndo,
-                modifier = Modifier.align(Alignment.BottomCenter),
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = if (selectedRow != null) SELECTION_BAR_HEIGHT_DP.dp else 0.dp),
+            )
+        }
+        if (selectedRow != null) {
+            SelectionBar(
+                content = selection,
+                colors = colors,
+                onClose = { selectedTrackId = null },
+                onAction = { kind ->
+                    when (kind) {
+                        TrackSelectionActionKind.MOVE -> {
+                            sheet = LibrarySheet.MOVE
+                        }
+
+                        TrackSelectionActionKind.RENAME -> {
+                            nameField = selectedRow.name
+                            descriptionField =
+                                state.tracks
+                                    .firstOrNull { track -> track.id == selectedRow.id }
+                                    ?.description
+                                    .orEmpty()
+                            folderField = selectedRow.listId
+                            sheet = LibrarySheet.EDIT
+                        }
+
+                        TrackSelectionActionKind.SHARE -> {
+                            selectedTrackId = null
+                            onShare(selectedRow.id)
+                        }
+
+                        TrackSelectionActionKind.DELETE -> {
+                            selectedTrackId = null
+                            onDeleteTrack(selectedRow.id)
+                        }
+                    }
+                },
             )
         }
         if (sheet != LibrarySheet.NONE) {
             Scrim(onClose = { sheet = LibrarySheet.NONE })
             when (sheet) {
-                LibrarySheet.ACTIONS -> {
-                    selectedRow?.let { row ->
-                        ActionSheet(
-                            content = trackActionSheetContent(row, strings),
-                            colors = colors,
-                            onAction = { kind ->
-                                when (kind) {
-                                    TrackActionKind.EDIT -> {
-                                        nameField = row.name
-                                        descriptionField =
-                                            state.tracks
-                                                .firstOrNull { track -> track.id == row.id }
-                                                ?.description
-                                                .orEmpty()
-                                        folderField = row.listId
-                                        sheet = LibrarySheet.EDIT
-                                    }
-
-                                    TrackActionKind.MOVE -> {
-                                        sheet = LibrarySheet.MOVE
-                                    }
-
-                                    TrackActionKind.SHARE -> {
-                                        sheet = LibrarySheet.NONE
-                                        onShare(row.id)
-                                    }
-
-                                    TrackActionKind.DELETE -> {
-                                        sheet = LibrarySheet.NONE
-                                        selectedTrackId = null
-                                        onDeleteTrack(row.id)
-                                    }
-                                }
-                            },
-                            onCancel = { sheet = LibrarySheet.NONE },
-                        )
-                    }
-                }
-
                 LibrarySheet.EDIT -> {
                     selectedRow?.let { row ->
                         EditSheet(
@@ -271,6 +300,25 @@ fun TrackLibraryHost(
                     )
                 }
 
+                LibrarySheet.LINK -> {
+                    val address = linkToOpen
+                    if (address != null) {
+                        LinkSheet(
+                            content = trackLinkPromptContent(address, strings),
+                            colors = colors,
+                            onOpen = {
+                                sheet = LibrarySheet.NONE
+                                linkToOpen = null
+                                onOpenLink(address)
+                            },
+                            onCancel = {
+                                sheet = LibrarySheet.NONE
+                                linkToOpen = null
+                            },
+                        )
+                    }
+                }
+
                 LibrarySheet.NONE -> {
                     Unit
                 }
@@ -284,6 +332,7 @@ fun TrackLibraryHost(
 private fun Header(
     content: TrackLibraryContent,
     colors: TrackLibraryPalette,
+    selectionTitle: String?,
     onClose: () -> Unit,
 ) {
     Row(
@@ -301,7 +350,7 @@ private fun Header(
                     .padding(ACTION_PADDING_DP.dp),
         )
         Column(modifier = Modifier.weight(WEIGHT_ONE)) {
-            Line(text = content.title, colors = colors, bold = true, size = TITLE_FONT_SP)
+            Line(text = selectionTitle ?: content.title, colors = colors, bold = true, size = TITLE_FONT_SP)
             Line(text = content.subtitle, colors = colors, secondary = true)
         }
     }
@@ -438,15 +487,21 @@ private fun SearchField(
 private fun TrackRow(
     row: TrackLibraryRowContent,
     colors: TrackLibraryPalette,
-    onOpen: () -> Unit,
+    selected: Boolean,
+    onSelect: () -> Unit,
+    onLink: (String) -> Unit,
 ) {
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(colors.surface, RoundedCornerShape(TILE_CORNER_DP.dp))
-                .clickable(onClick = onOpen)
-                .padding(TILE_PADDING_DP.dp),
+                .background(
+                    if (selected) colors.selection else colors.surface,
+                    RoundedCornerShape(TILE_CORNER_DP.dp),
+                ).combinedClickable(
+                    onClick = onSelect,
+                    onLongClick = onSelect,
+                ).padding(TILE_PADDING_DP.dp),
         horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -462,15 +517,72 @@ private fun TrackRow(
                 Line(text = row.meta, colors = colors, secondary = true)
             }
             row.listName?.let { list -> Line(text = list, colors = colors, secondary = true) }
-            row.description?.let { description -> Line(text = description, colors = colors, secondary = true) }
+            row.description?.let { description ->
+                FormattedDescription(text = description, colors = colors, onLink = onLink)
+            }
         }
-        BasicText(
-            text = MORE_GLYPH,
-            style = TextStyle(color = colors.textPrimary, fontSize = ROW_FONT_SP.sp),
-            modifier = Modifier.padding(ACTION_PADDING_DP.dp),
-        )
     }
 }
+
+/**
+ * A description with the sanitised bold, italic and link runs. A link tap asks
+ * the host for the full address before it opens the system browser.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun FormattedDescription(
+    text: RichText,
+    colors: TrackLibraryPalette,
+    onLink: (String) -> Unit,
+) {
+    val annotated = remember(text, colors.accent) { text.toAnnotatedString(colors.accent) }
+    var layout by remember(annotated) { mutableStateOf<TextLayoutResult?>(null) }
+    BasicText(
+        text = annotated,
+        style = TextStyle(color = colors.textSecondary, fontSize = ROW_FONT_SP.sp),
+        onTextLayout = { result -> layout = result },
+        modifier =
+            Modifier.pointerInput(annotated, text) {
+                detectTapGestures { position ->
+                    val result = layout ?: return@detectTapGestures
+                    val offset = result.getOffsetForPosition(position)
+                    text.linkAt(offset)?.let(onLink)
+                }
+            },
+    )
+}
+
+/** The safe address whose run holds [offset], or null for ordinary text. */
+private fun RichText.linkAt(offset: Int): String? =
+    spans
+        .firstOrNull { span ->
+            span.style == RichTextStyle.LINK && offset >= span.start && offset < span.end
+        }?.href
+
+/** Builds the Compose text from the safe model; only kept runs can carry a style. */
+private fun RichText.toAnnotatedString(linkColour: Color): AnnotatedString =
+    buildAnnotatedString {
+        append(text)
+        spans.forEach { span ->
+            when (span.style) {
+                RichTextStyle.BOLD -> {
+                    addStyle(SpanStyle(fontWeight = FontWeight.Bold), span.start, span.end)
+                }
+
+                RichTextStyle.ITALIC -> {
+                    addStyle(SpanStyle(fontStyle = FontStyle.Italic), span.start, span.end)
+                }
+
+                RichTextStyle.LINK -> {
+                    addStyle(
+                        SpanStyle(color = linkColour, textDecoration = TextDecoration.Underline),
+                        span.start,
+                        span.end,
+                    )
+                }
+            }
+        }
+    }
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -512,33 +624,72 @@ private fun Scrim(onClose: () -> Unit) {
     )
 }
 
+/**
+ * The bar of the selected track: a close control that leaves the selection and
+ * the four fixed actions Move, Rename, Share and Delete. Delete happens at once
+ * and the library's Undo bar reverses it.
+ */
 @Suppress("ktlint:standard:function-naming")
 @Composable
-private fun ActionSheet(
-    content: TrackActionSheetContent,
+private fun SelectionBar(
+    content: TrackSelectionBarContent,
     colors: TrackLibraryPalette,
-    onAction: (TrackActionKind) -> Unit,
-    onCancel: () -> Unit,
+    onClose: () -> Unit,
+    onAction: (TrackSelectionActionKind) -> Unit,
 ) {
-    SheetFrame(colors = colors) {
-        Line(text = content.title, colors = colors, bold = true, size = TITLE_FONT_SP)
-        Line(text = content.subtitle, colors = colors, secondary = true)
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(colors.surface)
+                .padding(horizontal = SCREEN_PADDING_DP.dp, vertical = SELECTION_BAR_PADDING_DP.dp),
+        horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BasicText(
+            text = CLOSE_GLYPH,
+            style = TextStyle(color = colors.textPrimary, fontSize = TITLE_FONT_SP.sp),
+            modifier =
+                Modifier
+                    .clickable(onClick = onClose)
+                    .semantics { contentDescription = content.close }
+                    .padding(ACTION_PADDING_DP.dp),
+        )
         content.actions.forEach { action ->
             BasicText(
                 text = action.label,
                 style =
                     TextStyle(
-                        color = if (action.kind == TrackActionKind.DELETE) colors.danger else colors.textPrimary,
+                        color = if (action.kind == TrackSelectionActionKind.DELETE) colors.danger else colors.textPrimary,
                         fontSize = ROW_FONT_SP.sp,
+                        textAlign = TextAlign.Center,
                     ),
                 modifier =
                     Modifier
-                        .fillMaxWidth()
+                        .weight(WEIGHT_ONE)
                         .clickable { onAction(action.kind) }
-                        .padding(SHEET_ROW_PADDING_DP.dp),
+                        .padding(ACTION_PADDING_DP.dp),
             )
         }
-        CancelButton(text = content.cancel, colors = colors, onClick = onCancel)
+    }
+}
+
+/** The confirmation that shows a link's full address before the browser opens it. */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun LinkSheet(
+    content: TrackLinkPromptContent,
+    colors: TrackLibraryPalette,
+    onOpen: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    SheetFrame(colors = colors) {
+        Line(text = content.title, colors = colors, bold = true, size = TITLE_FONT_SP)
+        Line(text = content.address, colors = colors, secondary = true)
+        Row(horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp)) {
+            SecondaryButton(text = content.cancel, colors = colors, onClick = onCancel)
+            PrimaryButton(text = content.open, colors = colors, onClick = onOpen)
+        }
     }
 }
 
@@ -795,6 +946,7 @@ internal data class TrackLibraryPalette(
     val surface: Color,
     val field: Color,
     val selectedSurface: Color,
+    val selection: Color,
     val textPrimary: Color,
     val textSecondary: Color,
     val selectedText: Color,
@@ -811,6 +963,7 @@ internal fun trackLibraryPalette(dark: Boolean): TrackLibraryPalette =
             surface = Color(0xFF1E2124),
             field = Color(0xFF2B2F33),
             selectedSurface = Color(0xFF2E7D32),
+            selection = Color(0x335FD39A),
             textPrimary = Color.White,
             textSecondary = Color(0xFFB8B8B8),
             selectedText = Color.White,
@@ -825,6 +978,7 @@ internal fun trackLibraryPalette(dark: Boolean): TrackLibraryPalette =
             surface = Color.White,
             field = Color(0xFFF2F1EE),
             selectedSurface = Color(0xFF202124),
+            selection = Color(0x1F1E7F53),
             textPrimary = Color(0xFF202124),
             textSecondary = Color(0xFF686C72),
             selectedText = Color.White,
@@ -837,10 +991,10 @@ internal fun trackLibraryPalette(dark: Boolean): TrackLibraryPalette =
 
 private enum class LibrarySheet {
     NONE,
-    ACTIONS,
     EDIT,
     MOVE,
     FOLDER,
+    LINK,
 }
 
 private enum class FolderSheetMode {
@@ -853,8 +1007,8 @@ private const val RENAME_FOLDER_TITLE_KEY = "track_library_rename_folder_title"
 private const val CREATE_FOLDER_TITLE_KEY = "track_library_create_folder_title"
 
 private const val BACK_GLYPH = "‹"
+private const val CLOSE_GLYPH = "✕"
 private const val RENAME_GLYPH = "✎"
-private const val MORE_GLYPH = "⋯"
 
 private const val SCREEN_PADDING_DP = 16
 private const val SCREEN_TOP_DP = 20
@@ -877,6 +1031,9 @@ private const val UNDO_CORNER_DP = 12
 private const val DOT_SIZE_DP = 12
 private const val DESCRIPTION_HEIGHT_DP = 120
 private const val UNDO_RESERVED_DP = 72
+private const val SELECTION_RESERVED_DP = 96
+private const val SELECTION_BAR_HEIGHT_DP = 64
+private const val SELECTION_BAR_PADDING_DP = 8
 private const val ACTION_PADDING_DP = 6
 private const val TITLE_FONT_SP = 21
 private const val ROW_FONT_SP = 15

@@ -1,5 +1,7 @@
 package nl.r1a.grassmap.plugins.track.library
 
+import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.RichTextStyle
 import nl.r1a.grassmap.plugin.api.model.TrackFolderSummary
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryEntry
 import nl.r1a.grassmap.plugin.api.model.TrackSort
@@ -25,17 +27,34 @@ class TrackLibraryBrowserTest {
     }
 
     @Test
-    fun distanceOrderIsLargestFirst() {
+    fun distanceOrderIsLongestFirst() {
         val rows = rows(TrackSort.DISTANCE)
 
         assertEquals(listOf("b", "c", "a", "d"), rows)
     }
 
     @Test
-    fun durationOrderIsLargestFirstAndPutsAMissingDurationLast() {
-        val rows = rows(TrackSort.DURATION)
+    fun nearestOrderMeasuresFromTheOriginToTheTrackStartAndPutsAMissingStartLast() {
+        val state =
+            TrackLibraryBrowser.browse(
+                tracks = TRACKS,
+                folders = FOLDERS,
+                query = "",
+                sort = TrackSort.NEAREST,
+                selectedListId = null,
+                origin = GeoPoint(49.84, 24.03),
+            )
 
-        assertEquals(listOf("b", "d", "a", "c"), rows)
+        assertEquals(listOf("a", "b", "d", "c"), state.rows.map { row -> row.id })
+        assertEquals(49.84, state.originLatitude)
+        assertEquals(24.03, state.originLongitude)
+    }
+
+    @Test
+    fun nearestWithoutAnOriginFallsBackToName() {
+        val rows = rows(TrackSort.NEAREST)
+
+        assertEquals(listOf("b", "a", "d", "c"), rows)
     }
 
     @Test
@@ -96,8 +115,15 @@ class TrackLibraryBrowserTest {
             )
 
         val row = state.rows.first { row -> row.id == "a" }
-        assertEquals("Alpha note", row.description)
-        assertEquals("Track note", state.rows.first { row -> row.id == "b" }.description)
+        assertEquals("Alpha note", row.description?.text)
+        assertEquals(listOf(RichTextStyle.BOLD), row.description?.spans?.map { span -> span.style })
+        assertEquals(
+            "Track note",
+            state.rows
+                .first { row -> row.id == "b" }
+                .description
+                ?.text,
+        )
         assertNull(state.rows.first { row -> row.id == "c" }.description)
     }
 
@@ -139,6 +165,8 @@ class TrackLibraryBrowserTest {
                     savedAtMillis = 100L,
                     description = "<b>Alpha</b> note<script>alert(1)</script>",
                     colour = "#1E88E5",
+                    startLatitude = 49.84,
+                    startLongitude = 24.03,
                 ),
                 TrackLibraryEntry(
                     id = "b",
@@ -148,6 +176,8 @@ class TrackLibraryBrowserTest {
                     durationMillis = 300_000L,
                     savedAtMillis = 300L,
                     description = "<i>Track note</i>",
+                    startLatitude = 49.80,
+                    startLongitude = 24.00,
                 ),
                 TrackLibraryEntry(
                     id = "c",
@@ -164,6 +194,8 @@ class TrackLibraryBrowserTest {
                     distanceMeters = 0.0,
                     durationMillis = 120_000L,
                     savedAtMillis = 200L,
+                    startLatitude = 50.0,
+                    startLongitude = 25.0,
                 ),
             )
     }

@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.ui.shell
 
+import nl.r1a.grassmap.plugin.api.model.RichText
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryAction
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryRow
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
@@ -25,7 +26,7 @@ data class TrackLibraryRowContent(
     val meta: String,
     val listId: String?,
     val listName: String?,
-    val description: String?,
+    val description: RichText?,
     val colour: Long?,
 )
 
@@ -58,24 +59,34 @@ data class TrackLibraryContent(
     val rows: List<TrackLibraryRowContent>,
 )
 
-/** One action in the track action sheet. */
-enum class TrackActionKind {
-    EDIT,
+/**
+ * One action in the selected-track bar: Move, Rename, Share or Delete, in that
+ * fixed order. The close control leaves the selection (T-0414).
+ */
+enum class TrackSelectionActionKind {
     MOVE,
+    RENAME,
     SHARE,
     DELETE,
 }
 
-data class TrackActionRow(
-    val kind: TrackActionKind,
+data class TrackSelectionAction(
+    val kind: TrackSelectionActionKind,
     val label: String,
 )
 
-/** The action sheet of one track, with every label resolved. */
-data class TrackActionSheetContent(
+/** The bottom bar of one selected track, with every label resolved. */
+data class TrackSelectionBarContent(
     val title: String,
-    val subtitle: String,
-    val actions: List<TrackActionRow>,
+    val close: String,
+    val actions: List<TrackSelectionAction>,
+)
+
+/** The confirmation that shows a description link's full address before opening it. */
+data class TrackLinkPromptContent(
+    val title: String,
+    val address: String,
+    val open: String,
     val cancel: String,
 )
 
@@ -203,21 +214,33 @@ internal fun selectedLibraryRow(
     selectedId: String?,
 ): TrackLibraryRowContent? = rows.firstOrNull { row -> row.id == selectedId }
 
-/** The action sheet of one row; [kind] decides what the shell does with a tap. */
-fun trackActionSheetContent(
-    row: TrackLibraryRowContent,
-    strings: Strings,
-): TrackActionSheetContent =
-    TrackActionSheetContent(
-        title = row.name,
-        subtitle = row.listName ?: strings.resolve(TRACK_LIBRARY_NO_FOLDER_KEY),
+/**
+ * The bottom bar of the selected track. The four actions keep the design's
+ * fixed order, and the close control is the only way back to the browsing view
+ * (T-0414).
+ */
+fun trackSelectionBarContent(strings: Strings): TrackSelectionBarContent =
+    TrackSelectionBarContent(
+        title = strings.resolve(TRACK_LIBRARY_SELECTION_TITLE_KEY, listOf(SINGLE_SELECTION.toString())),
+        close = strings.resolve(TRACK_LIBRARY_LEAVE_SELECTION_KEY),
         actions =
             listOf(
-                TrackActionRow(TrackActionKind.EDIT, strings.resolve(TRACK_LIBRARY_ACTION_EDIT_KEY)),
-                TrackActionRow(TrackActionKind.MOVE, strings.resolve(TRACK_LIBRARY_ACTION_MOVE_KEY)),
-                TrackActionRow(TrackActionKind.SHARE, strings.resolve(TRACK_LIBRARY_ACTION_SHARE_KEY)),
-                TrackActionRow(TrackActionKind.DELETE, strings.resolve(TRACK_LIBRARY_ACTION_DELETE_KEY)),
+                TrackSelectionAction(TrackSelectionActionKind.MOVE, strings.resolve(TRACK_LIBRARY_ACTION_MOVE_KEY)),
+                TrackSelectionAction(TrackSelectionActionKind.RENAME, strings.resolve(TRACK_LIBRARY_ACTION_RENAME_KEY)),
+                TrackSelectionAction(TrackSelectionActionKind.SHARE, strings.resolve(TRACK_LIBRARY_ACTION_SHARE_KEY)),
+                TrackSelectionAction(TrackSelectionActionKind.DELETE, strings.resolve(TRACK_LIBRARY_ACTION_DELETE_KEY)),
             ),
+    )
+
+/** The link confirmation: the full address is shown before the host opens it. */
+fun trackLinkPromptContent(
+    address: String,
+    strings: Strings,
+): TrackLinkPromptContent =
+    TrackLinkPromptContent(
+        title = strings.resolve(TRACK_LIBRARY_LINK_TITLE_KEY),
+        address = address,
+        open = strings.resolve(TRACK_LIBRARY_LINK_OPEN_KEY),
         cancel = strings.resolve(TRACK_LIBRARY_CANCEL_KEY),
     )
 
@@ -249,7 +272,7 @@ fun trackEditContent(
                 },
         newFolder = strings.resolve(TRACK_LIBRARY_NEW_FOLDER_KEY),
         descriptionLabel = strings.resolve(TRACK_LIBRARY_DESCRIPTION_KEY),
-        description = state.tracks.firstOrNull { track -> track.id == row.id }?.description ?: row.description.orEmpty(),
+        description = state.tracks.firstOrNull { track -> track.id == row.id }?.description ?: row.description?.text.orEmpty(),
         descriptionNote = strings.resolve(TRACK_LIBRARY_DESCRIPTION_NOTE_KEY),
         cancel = strings.resolve(TRACK_LIBRARY_CANCEL_KEY),
         save = strings.resolve(TRACK_LIBRARY_SAVE_KEY),
@@ -272,9 +295,9 @@ fun trackFolderSheetContent(
 internal fun trackSortKey(sort: TrackSort): String =
     when (sort) {
         TrackSort.NEWEST -> TRACK_LIBRARY_SORT_NEWEST_KEY
+        TrackSort.NEAREST -> TRACK_LIBRARY_SORT_NEAREST_KEY
         TrackSort.NAME -> TRACK_LIBRARY_SORT_NAME_KEY
         TrackSort.DISTANCE -> TRACK_LIBRARY_SORT_DISTANCE_KEY
-        TrackSort.DURATION -> TRACK_LIBRARY_SORT_DURATION_KEY
     }
 
 private fun trackRowContent(
@@ -349,9 +372,9 @@ internal const val TRACK_LIBRARY_SEARCH_KEY = "track_library_search"
 internal const val TRACK_LIBRARY_SEARCH_HINT_KEY = "track_library_search_hint"
 internal const val TRACK_LIBRARY_SORT_KEY = "track_library_sort"
 internal const val TRACK_LIBRARY_SORT_NEWEST_KEY = "track_library_sort_newest"
+internal const val TRACK_LIBRARY_SORT_NEAREST_KEY = "track_library_sort_nearest"
 internal const val TRACK_LIBRARY_SORT_NAME_KEY = "track_library_sort_name"
 internal const val TRACK_LIBRARY_SORT_DISTANCE_KEY = "track_library_sort_distance"
-internal const val TRACK_LIBRARY_SORT_DURATION_KEY = "track_library_sort_duration"
 internal const val TRACK_LIBRARY_EMPTY_KEY = "track_library_empty"
 internal const val TRACK_LIBRARY_NO_MATCHES_KEY = "track_library_no_matches"
 internal const val TRACK_LIBRARY_UNTITLED_KEY = "track_analysis_untitled"
@@ -361,10 +384,14 @@ internal const val TRACK_LIBRARY_UNDO_RENAMED_FOLDER_KEY = "track_library_undo_r
 internal const val TRACK_LIBRARY_UNDO_EDITED_TRACK_KEY = "track_library_undo_edited_track"
 internal const val TRACK_LIBRARY_UNDO_MOVED_TRACK_KEY = "track_library_undo_moved_track"
 internal const val TRACK_LIBRARY_UNDO_DELETED_TRACK_KEY = "track_library_undo_deleted_track"
-internal const val TRACK_LIBRARY_ACTION_EDIT_KEY = "track_library_action_edit"
 internal const val TRACK_LIBRARY_ACTION_MOVE_KEY = "track_library_action_move"
+internal const val TRACK_LIBRARY_ACTION_RENAME_KEY = "track_library_action_rename"
 internal const val TRACK_LIBRARY_ACTION_SHARE_KEY = "track_library_action_share"
 internal const val TRACK_LIBRARY_ACTION_DELETE_KEY = "track_library_action_delete"
+internal const val TRACK_LIBRARY_SELECTION_TITLE_KEY = "track_library_selection_title"
+internal const val TRACK_LIBRARY_LEAVE_SELECTION_KEY = "track_library_leave_selection"
+internal const val TRACK_LIBRARY_LINK_TITLE_KEY = "track_library_link_title"
+internal const val TRACK_LIBRARY_LINK_OPEN_KEY = "track_library_link_open"
 internal const val TRACK_LIBRARY_NO_FOLDER_KEY = "track_library_no_folder"
 internal const val TRACK_LIBRARY_EDIT_TITLE_KEY = "track_library_edit_title"
 internal const val TRACK_LIBRARY_NAME_KEY = "track_library_name"
@@ -382,3 +409,4 @@ private const val META_SEPARATOR = " · "
 private const val ASCENT_PREFIX = "↑"
 private const val DATE_PATTERN = "d MMM"
 private const val MILLIS_PER_SECOND = 1_000.0
+private const val SINGLE_SELECTION = 1

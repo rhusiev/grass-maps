@@ -7,6 +7,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.MapTrack
 import nl.r1a.grassmap.plugin.api.model.Track
 import nl.r1a.grassmap.plugin.api.model.TrackStyle
@@ -18,6 +19,17 @@ value class TrackId(
 ) {
     override fun toString(): String = value
 }
+
+/**
+ * The first point of a track, or null when every segment is empty. The library's
+ * Nearest order measures from this point (T-0414).
+ */
+internal fun Track.startPoint(): GeoPoint? =
+    segments
+        .firstOrNull { segment -> segment.points.isNotEmpty() }
+        ?.points
+        ?.first()
+        ?.position
 
 /**
  * One imported track with the profile computed when it was stored.
@@ -58,6 +70,8 @@ data class TrackSummary(
     val trackIndex: Int = 0,
     val description: String? = null,
     val listId: String? = null,
+    val startLatitude: Double? = null,
+    val startLongitude: Double? = null,
 )
 
 /**
@@ -189,6 +203,7 @@ class InMemoryTrackStore(
     override suspend fun summaries(): List<TrackSummary> =
         mutex.withLock {
             ordered().map { track ->
+                val start = track.track.startPoint()
                 TrackSummary(
                     id = track.id,
                     name = track.name,
@@ -198,6 +213,8 @@ class InMemoryTrackStore(
                     trackIndex = track.trackIndex,
                     description = track.description,
                     listId = track.listId,
+                    startLatitude = start?.latitude,
+                    startLongitude = start?.longitude,
                 )
             }
         }

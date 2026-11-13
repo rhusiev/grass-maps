@@ -89,6 +89,18 @@ class TrackLibraryStoreTest {
         }
 
     @Test
+    fun theSummaryCarriesTheFirstPointForTheNearestOrder() =
+        runTest {
+            val store = store()
+            store.save(record(SOURCE_A), SOURCE_A)
+
+            val summary = store.summaries().single()
+
+            assertEquals(49.84, summary.startLatitude ?: Double.NaN, COORDINATE_TOLERANCE)
+            assertEquals(24.03, summary.startLongitude ?: Double.NaN, COORDINATE_TOLERANCE)
+        }
+
+    @Test
     fun metadataThatIsTooLongIsRejectedWithoutChangingTheSidecar() =
         runTest {
             val store = store()
@@ -263,6 +275,7 @@ class TrackLibraryStoreTest {
 
     private companion object {
         const val SAVED_AT_MILLIS = 1_762_000_000_000L
+        const val COORDINATE_TOLERANCE = 1e-9
         val SOURCE_A = "49.84000,24.03000;49.84010,24.03010".toByteArray()
         val SOURCE_B = "49.85000,24.04000;49.85010,24.04010".toByteArray()
         val SOURCE_MULTI = "49.86000,24.05000;49.86010,24.05010|49.87000,24.06000".toByteArray()

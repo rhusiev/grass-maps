@@ -2170,11 +2170,21 @@ A segment with fewer than two points has no line.
 
 The library screen (T-0414) is `TrackLibraryHost` in `ui-shell`, drawn from the
 `track.library` plugin's state. `plugins/track-library` owns the folder filter,
-the name search and the four fixed orders (newest, name, distance, duration),
-and the screen draws its rows and action sheets. `StoreTrackLibrary` in `app`
+the name search and the four fixed orders (newest, nearest, name, longest), and
+the screen draws its rows and the selected track's bottom bar. Nearest measures
+from the map centre to the first point of each track; a track without a start
+goes last and no origin falls back to name order. A description keeps only
+`b`, `i`, `em`, `strong`, `p`, `br`, `ul`, `ol`, `li` and `a` as native styled
+text. A link keeps its `href` only when the address is `http` or `https`, and
+the screen shows the full address before the system browser opens it. A script,
+style, frame, image, SVG or form is dropped with its content, so an import loads
+no remote image. A press on a row selects the track, and the bottom bar then
+offers Move, Rename, Share and Delete; Delete happens at once and Undo restores
+the track. `StoreTrackLibrary` in `app`
 is the only writer: a rename, description or folder change rewrites that
 track's sidecar, and the folder definitions live in `.library.json` beside the
-documents. The GPX document is never rewritten. A delete parks the sidecar and
+documents. The sidecar also caches the track's first point for the nearest
+order; a load derives it from the document when an older sidecar has none. The GPX document is never rewritten. A delete parks the sidecar and
 document in `.trash`; the in-memory token is process-scoped and a reload keeps
 every parked token, so two deletes undo in reverse order and each restores its
 track to the same folder. The same scoped receipt stack reverses folder and

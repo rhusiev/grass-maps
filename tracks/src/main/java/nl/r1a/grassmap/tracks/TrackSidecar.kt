@@ -28,6 +28,8 @@ internal data class TrackSidecar(
     val analysis: TrackAnalysis,
     val description: String? = null,
     val listId: String? = null,
+    val startLatitude: Double? = null,
+    val startLongitude: Double? = null,
 )
 
 /**
@@ -45,6 +47,8 @@ internal object TrackSidecarJson {
     private const val NAME = "name"
     private const val DESCRIPTION = "description"
     private const val LIST_ID = "listId"
+    private const val START_LATITUDE = "startLatitude"
+    private const val START_LONGITUDE = "startLongitude"
     private const val SAVED_AT = "savedAtMillis"
     private const val STYLE = "style"
     private const val COLOUR = "colour"
@@ -70,6 +74,8 @@ internal object TrackSidecarJson {
             put(NAME, sidecar.name)
             put(DESCRIPTION, sidecar.description)
             put(LIST_ID, sidecar.listId)
+            sidecar.startLatitude?.let { latitude -> put(START_LATITUDE, latitude) }
+            sidecar.startLongitude?.let { longitude -> put(START_LONGITUDE, longitude) }
             put(SAVED_AT, sidecar.savedAtMillis)
             put(
                 STYLE,
@@ -115,6 +121,12 @@ internal object TrackSidecarJson {
         if (trackIndex < 0 || analysis.pointCount < 0) {
             return null
         }
+        val startLatitude = root.maybeDouble(START_LATITUDE)?.takeIf { value -> value.isFinite() && value in -MAX_LATITUDE..MAX_LATITUDE }
+        val startLongitude =
+            root.maybeDouble(START_LONGITUDE)?.takeIf { value ->
+                value.isFinite() && value in -MAX_LONGITUDE..MAX_LONGITUDE
+            }
+        val hasStart = startLatitude != null && startLongitude != null
         return TrackSidecar(
             id = id,
             documentHash = documentHash,
@@ -125,6 +137,8 @@ internal object TrackSidecarJson {
             analysis = analysis,
             description = root.string(DESCRIPTION),
             listId = root.string(LIST_ID),
+            startLatitude = startLatitude.takeIf { hasStart },
+            startLongitude = startLongitude.takeIf { hasStart },
         )
     }
 
@@ -171,6 +185,9 @@ internal object TrackSidecarJson {
             (maxSpeedMetersPerSecond == null || maxSpeedMetersPerSecond.isValidSpeed())
 
     private fun Double.isValidSpeed(): Boolean = this >= 0.0 && isFinite()
+
+    private const val MAX_LATITUDE = 90.0
+    private const val MAX_LONGITUDE = 180.0
 
     private fun JsonObject.objectAt(key: String): JsonObject? = this[key] as? JsonObject
 

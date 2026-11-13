@@ -212,6 +212,26 @@ class TrackLibraryPluginTest {
         }
 
     @Test
+    fun nearestUsesTheOriginSentWithTheSort() {
+        runTest {
+            val context = context(FakeLibraryAccess())
+
+            context.command(TrackLibraryContract.setSort).invokeRaw(
+                params("sort" to "nearest", "latitude" to "49.80", "longitude" to "24.00"),
+            )
+
+            assertEquals(
+                listOf("t2", "t1"),
+                context
+                    .state()
+                    .browse.rows
+                    .map { row -> row.id },
+            )
+            assertEquals(49.80, context.state().browse.originLatitude)
+        }
+    }
+
+    @Test
     fun eachFixedSortChangesTheRows() =
         runTest {
             val context = context(FakeLibraryAccess())
@@ -234,7 +254,7 @@ class TrackLibraryPluginTest {
         runTest {
             val context = context(FakeLibraryAccess())
 
-            val outcome = context.command(TrackLibraryContract.setSort).invokeRaw(params("sort" to "nearest"))
+            val outcome = context.command(TrackLibraryContract.setSort).invokeRaw(params("sort" to "oldest"))
 
             assertEquals(Outcome.Failure(AppError.InvalidInput), outcome)
         }
@@ -262,7 +282,6 @@ class TrackLibraryPluginTest {
                 "newest" to listOf("t1", "t2"),
                 "name" to listOf("t2", "t1"),
                 "distance" to listOf("t2", "t1"),
-                "duration" to listOf("t2", "t1"),
             )
     }
 }
@@ -342,6 +361,8 @@ internal class FakeLibraryAccess : TrackLibraryAccess {
                         ascentMeters = 219.0,
                         durationMillis = 9_660_000L,
                         savedAtMillis = 200L,
+                        startLatitude = 49.84,
+                        startLongitude = 24.03,
                     ),
                     TrackLibraryEntry(
                         id = "t2",
@@ -351,6 +372,8 @@ internal class FakeLibraryAccess : TrackLibraryAccess {
                         ascentMeters = 180.0,
                         durationMillis = 11_000_000L,
                         savedAtMillis = 100L,
+                        startLatitude = 49.80,
+                        startLongitude = 24.00,
                     ),
                 ),
         )

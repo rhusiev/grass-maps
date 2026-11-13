@@ -90,6 +90,7 @@ class FileTrackStore(
                         description = existing?.description ?: track.description,
                         listId = existing?.listId ?: track.listId,
                     )
+                val start = effective.track.startPoint()
                 val sidecar =
                     TrackSidecar(
                         id = track.id.value,
@@ -101,6 +102,8 @@ class FileTrackStore(
                         analysis = effective.analysis,
                         description = effective.description,
                         listId = effective.listId,
+                        startLatitude = start?.latitude,
+                        startLongitude = start?.longitude,
                     )
                 if (!writeAtomically(sidecarFile(track.id), TrackSidecarJson.encode(sidecar).toByteArray())) {
                     return@withContext writeFailure("cannot write the sidecar of ${track.id.value}")
@@ -142,6 +145,8 @@ class FileTrackStore(
                         trackIndex = sidecar.trackIndex,
                         description = sidecar.description,
                         listId = sidecar.listId,
+                        startLatitude = sidecar.startLatitude,
+                        startLongitude = sidecar.startLongitude,
                     )
                 }
             }
@@ -374,6 +379,7 @@ class FileTrackStore(
             if (corrected.report.changed) {
                 log("track ${sidecar.id}: ${corrected.report.describe()}")
             }
+            val start = corrected.track.startPoint()
             records[id] =
                 StoredTrack(
                     id = id,
@@ -386,27 +392,31 @@ class FileTrackStore(
                     description = sidecar.description,
                     listId = sidecar.listId,
                 )
-            sidecars[id] = sidecar
-            if (analysis != sidecar.analysis) {
-                rewriteAnalysis(id, sidecar, analysis)
+            val refreshed =
+                sidecar.copy(
+                    analysis = analysis,
+                    startLatitude = start?.latitude,
+                    startLongitude = start?.longitude,
+                )
+            sidecars[id] = refreshed
+            if (refreshed != sidecar) {
+                rewriteSidecar(id, refreshed)
             }
         }
         loaded = true
     }
 
     /**
-     * The document is parsed here anyway, so the analysis is derived from it
-     * rather than trusted from the cache. A sidecar from an older build, or
-     * one written under another policy, is brought up to date once.
+     * The document is parsed here anyway, so the analysis and the first point
+     * are derived from it rather than trusted from the cache. A sidecar from an
+     * older build, or one written under another policy, is brought up to date
+     * once.
      */
-    private fun rewriteAnalysis(
+    private fun rewriteSidecar(
         id: TrackId,
         sidecar: TrackSidecar,
-        analysis: TrackAnalysis,
     ) {
-        val updated = sidecar.copy(analysis = analysis)
-        sidecars[id] = updated
-        if (!writeAtomically(sidecarFile(id), TrackSidecarJson.encode(updated).toByteArray())) {
+        if (!writeAtomically(sidecarFile(id), TrackSidecarJson.encode(sidecar).toByteArray())) {
             log("track ${id.value}: the sidecar could not be updated with its statistics")
         }
     }

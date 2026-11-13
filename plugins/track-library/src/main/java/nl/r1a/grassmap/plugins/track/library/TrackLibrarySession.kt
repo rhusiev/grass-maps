@@ -8,6 +8,7 @@ import kotlinx.coroutines.sync.withLock
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.TrackLibraryAccess
 import nl.r1a.grassmap.plugin.api.host.TrackLibraryChange
+import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryAction
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
 import nl.r1a.grassmap.plugin.api.model.TrackSort
@@ -36,6 +37,7 @@ class TrackLibrarySession(
     private var query: String = ""
     private var lastQuerySequence: Long = 0
     private var sort: TrackSort = TrackSort.NEWEST
+    private var origin: GeoPoint? = null
     private var selectedListId: String? = null
 
     val state: StateFlow<TrackLibraryState> = current.asStateFlow()
@@ -97,10 +99,18 @@ class TrackLibrarySession(
             Outcome.Success(current.value)
         }
 
-    /** Applies one of the four fixed orders; the library is untouched. */
-    suspend fun setSort(sort: TrackSort): Outcome<TrackLibraryState> =
+    /**
+     * Applies one of the four fixed orders; the library is untouched. [origin]
+     * is the position Nearest measures from, normally the map centre. Without
+     * one, Nearest falls back to Name A-Z in the browser.
+     */
+    suspend fun setSort(
+        sort: TrackSort,
+        origin: GeoPoint? = null,
+    ): Outcome<TrackLibraryState> =
         mutex.withLock {
             this.sort = sort
+            this.origin = origin
             republishBrowse()
             Outcome.Success(current.value)
         }
@@ -202,6 +212,7 @@ class TrackLibrarySession(
             query = query,
             sort = sort,
             selectedListId = selectedListId,
+            origin = origin,
         )
 
     private companion object {

@@ -1241,6 +1241,11 @@ private fun MapContent(
                         }
                     }
                 },
+                onOpenLink = { uri ->
+                    container.platformActions.openUri(uri).onFailure { error ->
+                        Log.w(TAG, "track description link rejected: $error")
+                    }
+                },
                 onUndo = {
                     scope.launch {
                         invokeTrackLibraryCommand(container, context, TrackLibraryContract.undo, JsonObject(emptyMap()))
@@ -1260,7 +1265,16 @@ private fun MapContent(
                 },
                 onSortChange = { sort: TrackSort ->
                     scope.launch {
-                        invokeTrackLibraryCommand(container, context, TrackLibraryContract.setSort, listParams("sort" to sort.wireName))
+                        invokeTrackLibraryCommand(
+                            container,
+                            context,
+                            TrackLibraryContract.setSort,
+                            listParams(
+                                "sort" to sort.wireName,
+                                "latitude" to searchCamera.center.latitude.toString(),
+                                "longitude" to searchCamera.center.longitude.toString(),
+                            ),
+                        )
                     }
                 },
                 onSelectFolder = { folderId ->

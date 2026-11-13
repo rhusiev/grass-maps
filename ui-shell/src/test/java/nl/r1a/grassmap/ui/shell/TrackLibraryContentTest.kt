@@ -1,5 +1,8 @@
 package nl.r1a.grassmap.ui.shell
 
+import nl.r1a.grassmap.plugin.api.model.RichText
+import nl.r1a.grassmap.plugin.api.model.RichTextSpan
+import nl.r1a.grassmap.plugin.api.model.RichTextStyle
 import nl.r1a.grassmap.plugin.api.model.TrackBrowseState
 import nl.r1a.grassmap.plugin.api.model.TrackFolderSummary
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryAction
@@ -38,7 +41,7 @@ class TrackLibraryContentTest {
         assertEquals("Znesinnia ridges", row.name)
         assertEquals("7.5 km · ↑219 m · 2 h 41 min · 12 Oct", row.meta)
         assertEquals("Hikes", row.listName)
-        assertEquals("Steep steps", row.description)
+        assertEquals("Steep steps", row.description?.text)
     }
 
     @Test
@@ -50,12 +53,16 @@ class TrackLibraryContentTest {
     }
 
     @Test
-    fun theFourFixedSortsAreNamedAndTheCurrentOneIsSelected() {
+    fun theFourFixedSortsAreNamedInDesignOrderAndTheCurrentOneIsSelected() {
         val content = content()
 
         assertEquals(
-            listOf("Newest first", "Name A-Z", "Longest first", "Longest time"),
+            listOf("Newest first", "Nearest first", "Name A-Z", "Longest first"),
             content.sorts.map { row -> row.label },
+        )
+        assertEquals(
+            listOf(TrackSort.NEWEST, TrackSort.NEAREST, TrackSort.NAME, TrackSort.DISTANCE),
+            content.sorts.map { row -> row.sort },
         )
         assertEquals(listOf(TrackSort.NEWEST), content.sorts.filter { row -> row.selected }.map { row -> row.sort })
     }
@@ -98,13 +105,31 @@ class TrackLibraryContentTest {
     }
 
     @Test
-    fun theActionSheetOffersEditMoveShareAndDelete() {
-        val content = trackActionSheetContent(content().rows.first(), strings(ENGLISH, APP_ENGLISH))
+    fun theSelectionBarOffersMoveRenameShareAndDeleteAndLeavesTheSelection() {
+        val bar = trackSelectionBarContent(strings(ENGLISH, APP_ENGLISH))
 
-        assertEquals("Znesinnia ridges", content.title)
-        assertEquals("Hikes", content.subtitle)
-        assertEquals(listOf("Edit track", "Move", "Share", "Delete"), content.actions.map { action -> action.label })
-        assertEquals("Cancel", content.cancel)
+        assertEquals("1 selected", bar.title)
+        assertEquals("Leave selection", bar.close)
+        assertEquals(
+            listOf(
+                TrackSelectionActionKind.MOVE,
+                TrackSelectionActionKind.RENAME,
+                TrackSelectionActionKind.SHARE,
+                TrackSelectionActionKind.DELETE,
+            ),
+            bar.actions.map { action -> action.kind },
+        )
+        assertEquals(listOf("Move", "Rename", "Share", "Delete"), bar.actions.map { action -> action.label })
+    }
+
+    @Test
+    fun theLinkPromptShowsTheFullAddressBeforeOpeningIt() {
+        val prompt = trackLinkPromptContent("https://example.org/trail?a=1", strings(ENGLISH, APP_ENGLISH))
+
+        assertEquals("Open link?", prompt.title)
+        assertEquals("https://example.org/trail?a=1", prompt.address)
+        assertEquals("Open", prompt.open)
+        assertEquals("Cancel", prompt.cancel)
     }
 
     @Test
@@ -120,7 +145,7 @@ class TrackLibraryContentTest {
         assertEquals(listOf("Hikes"), edit.folders.filter { folder -> folder.selected }.map { folder -> folder.name })
         assertEquals("<b>Steep</b> steps", edit.description)
         assertEquals(
-            "Your description is stored as text; formatting is flattened on screen",
+            "HTML from the GPX shows as text formatting; scripts and images are removed",
             edit.descriptionNote,
         )
     }
@@ -143,8 +168,12 @@ class TrackLibraryContentTest {
         assertEquals("Усі треки", content.listTitle)
         assertEquals("Спочатку нові", content.sorts.first().label)
         assertEquals(
-            listOf("Редагувати трек", "Перемістити", "Поділитися", "Видалити"),
-            trackActionSheetContent(content.rows.first(), strings(UKRAINIAN, APP_UKRAINIAN)).actions.map { action -> action.label },
+            listOf("Перемістити", "Перейменувати", "Поділитися", "Видалити"),
+            trackSelectionBarContent(strings(UKRAINIAN, APP_UKRAINIAN)).actions.map { action -> action.label },
+        )
+        assertEquals(
+            "Вибрано: 1",
+            trackSelectionBarContent(strings(UKRAINIAN, APP_UKRAINIAN)).title,
         )
         assertEquals(
             "Трек",
@@ -199,7 +228,11 @@ class TrackLibraryContentTest {
                 ascentMeters = 219.0,
                 durationMillis = 9_660_000L,
                 savedAtMillis = SAVED_AT,
-                description = "Steep steps",
+                description =
+                    RichText(
+                        text = "Steep steps",
+                        spans = listOf(RichTextSpan(start = 0, end = 5, style = RichTextStyle.BOLD)),
+                    ),
             )
 
         val STATE =

@@ -235,6 +235,8 @@ class StoreTrackLibrary(
                     savedAtMillis = summary.savedAtMillis,
                     description = summary.description,
                     colour = summary.style.colour,
+                    startLatitude = summary.startLatitude,
+                    startLongitude = summary.startLongitude,
                 )
             }
         val counts = entries.groupingBy { entry -> entry.listId }.eachCount()

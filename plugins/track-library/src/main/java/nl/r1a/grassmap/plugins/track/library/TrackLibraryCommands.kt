@@ -12,6 +12,7 @@ import nl.r1a.grassmap.plugin.api.command.CommandResult
 import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
 import nl.r1a.grassmap.plugin.api.model.TrackSort
 
@@ -201,19 +202,21 @@ class SearchTracksCommand(
     }
 }
 
-/** Selects one of the four fixed track orders. */
+/** Selects one of the four fixed track orders, optionally with a Nearest origin. */
 class SortTracksCommand(
     private val session: TrackLibrarySession,
 ) : Command<JsonElement, TrackLibraryState>(
         id = TrackLibraryContract.setSort,
         paramsSerializer = JsonElement.serializer(),
         resultSerializer = TrackLibraryState.serializer(),
-        doc = "Sorts the track library. Parameter: sort, one of newest, name, distance or duration.",
+        doc =
+            "Sorts the track library. Parameter: sort, one of nearest, newest, name or distance; " +
+                "optionally latitude and longitude for nearest.",
         policy = VIEW_POLICY,
     ) {
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<TrackLibraryState>> {
         val sort = params.text(PARAM_SORT)?.let(TrackSort::fromWire) ?: return Outcome.Failure(AppError.InvalidInput)
-        return session.result(session.setSort(sort))
+        return session.result(session.setSort(sort, params.origin()))
     }
 
     private companion object {
@@ -267,5 +270,31 @@ private fun JsonElement.long(key: String): Long? {
     val json = this as? JsonObject ?: return null
     return (json[key] as? JsonPrimitive)?.contentOrNull?.toLongOrNull()
 }
+
+/**
+ * The optional Nearest origin. A missing, non-numeric or out-of-range pair is
+ * no origin, so a malformed control call cannot move a track off the map.
+ */
+private fun JsonElement.origin(): GeoPoint? {
+    val latitude = double(PARAM_LATITUDE) ?: return null
+    val longitude = double(PARAM_LONGITUDE) ?: return null
+    if (!latitude.isFinite() || !longitude.isFinite()) {
+        return null
+    }
+    if (latitude !in -MAX_LATITUDE..MAX_LATITUDE || longitude !in -MAX_LONGITUDE..MAX_LONGITUDE) {
+        return null
+    }
+    return GeoPoint(latitude = latitude, longitude = longitude)
+}
+
+private fun JsonElement.double(key: String): Double? {
+    val json = this as? JsonObject ?: return null
+    return (json[key] as? JsonPrimitive)?.contentOrNull?.toDoubleOrNull()
+}
+
+private const val PARAM_LATITUDE = "latitude"
+private const val PARAM_LONGITUDE = "longitude"
+private const val MAX_LATITUDE = 90.0
+private const val MAX_LONGITUDE = 180.0
 
 private const val QUERY_CANCELLATION_KEY = "track.library.query"

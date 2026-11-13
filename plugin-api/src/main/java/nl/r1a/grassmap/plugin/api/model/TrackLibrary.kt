@@ -18,22 +18,26 @@ data class TrackFolderSummary(
 )
 
 /**
- * The four fixed track orders the screen offers (T-0414).
+ * The four fixed track orders the screen offers (T-0414): Newest first, Nearest
+ * first, Name A-Z and Longest first, in that order.
  *
  * Every order is deterministic and locale-independent, so one library draws the
  * same rows on every device. [NEWEST] orders by the stored save time, newest
- * first. [NAME] compares lowercased names with the JVM's ordinary string order
- * and puts an unnamed track after a named one. [DISTANCE] and [DURATION] order
- * largest first. Ties keep the library's file order, so a sort is stable.
+ * first. [NEAREST] orders by the ground distance from the map centre (or the
+ * current fix when one is supplied) to the first point of the track, closest
+ * first; a track without a start point goes last and, without an origin, the
+ * order falls back to [NAME]. [NAME] compares lowercased names with the JVM's
+ * ordinary string order and puts an unnamed track after a named one. [DISTANCE]
+ * is Longest first. Ties keep the library's file order, so a sort is stable.
  */
 @Serializable
 enum class TrackSort(
     val wireName: String,
 ) {
     NEWEST("newest"),
+    NEAREST("nearest"),
     NAME("name"),
     DISTANCE("distance"),
-    DURATION("duration"),
     ;
 
     companion object {
@@ -61,7 +65,9 @@ enum class TrackLibraryAction {
  *
  * [description] is the stored value and may carry simple HTML, so a renderer
  * must sanitise it before the screen draws it. [listId] is the folder the track
- * belongs to, or null when it is unfiled.
+ * belongs to, or null when it is unfiled. [startLatitude] and [startLongitude]
+ * are the first point of the track, used by the Nearest order, or null when the
+ * document carries no geometry.
  */
 @Serializable
 data class TrackLibraryEntry(
@@ -74,12 +80,14 @@ data class TrackLibraryEntry(
     val savedAtMillis: Long = 0L,
     val description: String? = null,
     val colour: String? = null,
+    val startLatitude: Double? = null,
+    val startLongitude: Double? = null,
 )
 
 /**
- * One rendered list row (T-0414). [description] is sanitised plain text, never
- * the stored markup. [listName] is the resolved folder name, so a row that is
- * shown outside its folder still says where the track lives.
+ * One rendered list row (T-0414). [description] is the sanitised native styled
+ * text, never the stored markup. [listName] is the resolved folder name, so a
+ * row that is shown outside its folder still says where the track lives.
  */
 @Serializable
 data class TrackLibraryRow(
@@ -91,8 +99,10 @@ data class TrackLibraryRow(
     val ascentMeters: Double = 0.0,
     val durationMillis: Long? = null,
     val savedAtMillis: Long = 0L,
-    val description: String? = null,
+    val description: RichText? = null,
     val colour: String? = null,
+    val startLatitude: Double? = null,
+    val startLongitude: Double? = null,
 )
 
 /**
@@ -101,13 +111,17 @@ data class TrackLibraryRow(
  * [query] is matched against the track name, case- and accent-insensitively; a
  * blank query keeps every track. [selectedListId] filters the rows to one
  * folder, or null for every folder. [rows] is the result of applying the
- * folder filter, the query and the chosen order.
+ * folder filter, the query and the chosen order. [originLatitude] and
+ * [originLongitude] are the position the Nearest order measured from, or null
+ * when the host sent none.
  */
 @Serializable
 data class TrackBrowseState(
     val query: String = "",
     val sort: TrackSort = TrackSort.NEWEST,
     val selectedListId: String? = null,
+    val originLatitude: Double? = null,
+    val originLongitude: Double? = null,
     val rows: List<TrackLibraryRow> = emptyList(),
 )
 

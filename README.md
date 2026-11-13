@@ -2473,6 +2473,39 @@ clamping to the profile, a segment boundary that adds no gain, an untimed
 profile, an empty, one-sample and flat profile, the two thresholds, a single
 descending step that ends a climb, and a sustained descent.
 
+The surface and way-type strips (T-0406) sit under the chart inside the same
+card, over the chart's own plot width, so a boundary falls under the distance it
+ends. `RouteStretches` in `tracks` reads the routing engine's annotated route
+segments: the annotate pass already cut the line into one segment per graph edge
+with `surface` and `highway` on it, and the strips only place those ends on the
+profile. A segment's `startIndex` and `endIndex` give its two ends through the
+cumulative haversine distance of the geometry, which is the step and the
+constant the profile measures with, so the strips cannot drift from the axis. A
+route's profile is built over its whole geometry, with a null height where the
+240-sample stride skipped a point, so the axis is the route's own line and a
+segment's shape range lands on it unchanged. `ElevationChartState.stretches`
+carries the result into `plugin-ui-api`, and `ui-shell` groups each value into
+the round-10 classes: asphalt, paving, ground and gravel for the surface, and
+street, footway, path, track and steps for the way type. A value the palette has
+no class for is left out and leaves a gap, never guessed into a class.
+
+Each row's percentage is the summed length of that class's segments over the
+summed length of the row's classified segments, so the percentages add up to
+100 % whenever the line is classified throughout, and the design's 2 px gaps are
+drawn from the pixels without changing the fractions. Whole percentages are
+taken with a largest-remainder step, so 34 % + 33 % + 33 % is what a third each
+reads as. Adjacent segments of one class are merged into one piece, which keeps
+a route cut per graph edge from becoming a ladder of gaps. Steps are the design's
+45° stripes rather than a sixth colour: a 4 dp period with a 1.6 dp stroke in
+#202124 on light and #e8eaed on dark, over the card's own surface. The palette
+is the round-10 one, with Ground and Path sharing one green and Gravel and Track
+one amber in both themes, as the design does. The legend keeps the classes in
+the order they first appear along the line, and the percentages block under the
+strips repeats them in descending order, as the round-10 route details draws it.
+A track carries no attributes of its own, so a GPX analysis shows no strips
+until something annotates it; the chart state and the panel are shared, so a
+track that gains the attributes draws them without another change.
+
 `core.track.analysis` opens the track analysis panel, by id or for the newest
 stored track:
 
@@ -2481,12 +2514,13 @@ tools/control/grassctl.py invoke core.track.analysis '{"id":"<track id>"}'
 ```
 
 That command is the temporary entry point. The map's track selection opens the
-same panel in T-0415, and the track library screen is still T-0414. The surface
-and way-type strips and their stripes belong to T-0406 and are not drawn here.
-No device screenshot of the chart exists yet, the route profile is unverified
-against a real routing pack, the climb thresholds are chosen rather than
-measured against real tracks, and the drag gesture has only content tests until
-the chart is exercised on a device.
+same panel in T-0415, and the track library screen is still T-0414. No device
+screenshot of the chart exists yet, the route profile is unverified against a
+real routing pack, the climb thresholds are chosen rather than measured against
+real tracks, and the drag gesture has only content tests until the chart is
+exercised on a device. The strips have content and engine tests only: no
+screenshot of either theme exists, and no real Valhalla annotate has been drawn
+as a strip.
 
 The plugin boundary rule decides where the pieces live: `ui-shell` and a plugin
 may depend on `plugin-api` and `plugin-ui-api` but not on `tracks`, and a plugin

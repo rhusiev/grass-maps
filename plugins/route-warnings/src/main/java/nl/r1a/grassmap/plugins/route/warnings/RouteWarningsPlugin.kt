@@ -12,8 +12,8 @@ import nl.r1a.grassmap.plugin.api.error.Outcome
  * for a route and the active profile. The plugin declares no command, stream
  * or provider, and activation is a no-op. Its manifest exists because every
  * module under `plugins/` carries one, and it names the region component the
- * feature reads. The screen that shows the list is not built yet; the design
- * backlog owns that surface.
+ * feature reads. The row and the list that show the scanner's answer are
+ * `ui-shell`'s, wired in `app`.
  */
 class RouteWarningsPlugin : Plugin {
     override suspend fun activate(context: PluginContext): Outcome<Unit> = Outcome.Success(Unit)

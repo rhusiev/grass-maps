@@ -1708,8 +1708,12 @@ and typed-banner cases.
 Route warnings are T-0409. `RouteWarningScanner` in
 `plugins/route-warnings` answers one list for a planned route and a profile,
 ordered by distance along the route. The list names five kinds: a ford, steps,
-a barrier, a railway crossing and a private way. There is no screen yet; the
-plugin exposes the list and its tests, and the design backlog owns the surface.
+a barrier, a railway crossing and a private way. `app` builds the scanner over
+the mounted region (`AppContainer.routeWarnings`) and asks it once for the
+selected route and the plan's profile. A new selected route or another profile
+is a new scan; a cancelled scan writes nothing, so a late answer cannot replace
+a newer one. A region or invalid-input failure logs the outcome and shows no
+warnings, and the plan itself is unaffected.
 
 The ford, the barrier and the railway crossing are region features, read
 through the same `RegionAccess.wayAlertFeatures` corridor query as the way
@@ -1755,6 +1759,23 @@ route's own segments, so the fixture needed no new file and no authored feature
 is presented as extracted. `RouteWarningScannerTest` drives the real
 `RegionReader` over that package for the five-kind order, the two profile
 filters, the repeated-node case, the empty route and the region failure.
+
+The round-6 design's two surfaces are the panel's. `ui-shell` draws the amber
+"N warnings on this route" row above the route preferences entry, with the
+distinct kinds in distance order, and only while the selected route has
+warnings; a tap expands the "On this route" list, one row per warning with its
+kind, the private way's `access=private` or the bike's "push the bike", and the
+distance. `app` maps the scanner's kind onto the panel's own glyph, keeping the
+scanner's order. The row's count is also the list's, so the two never disagree.
+The design's marker on the route line is not drawn: `MapHost` has no marker
+set, and the composed-layers compiler rejects circle layers as not rendered
+yet, so no drawable layer type carries one point per warning.
+
+`RouteWarningsContentTest` covers the count, the summary, the row order, the
+kind text, the details and the distances, and the absent row at zero warnings.
+`RouteWarningsWiringTest` drives the real scanner over the same package for the
+five kinds and the profile filter, and counts scans to prove one scan per route
+and profile, a rescan on a profile or route change, and the failure path.
 
 ## Hiking route relations
 

@@ -7,8 +7,11 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.host.NoRouteHistoryAccess
+import nl.r1a.grassmap.plugin.api.host.RouteHistoryAccess
 import nl.r1a.grassmap.plugin.api.model.AttributeValue
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.RouteHistoryEntry
 import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanRole
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
@@ -60,9 +63,15 @@ class RoutePlannerAnnotationTest {
     @Test
     fun annotationChangesNothingButTheSegments() =
         runTest {
-            val planner = planner(annotate = { route -> Outcome.Success(route.copy(segments = ANNOTATED_SEGMENTS)) })
+            val history = CountingHistory()
+            val planner =
+                planner(
+                    annotate = { route -> Outcome.Success(route.copy(segments = ANNOTATED_SEGMENTS)) },
+                    history = history,
+                )
 
             val published = plan(planner)
+            val stored = planner.recent.value
             advanceUntilIdle()
 
             val current = planner.state.value
@@ -80,6 +89,8 @@ class RoutePlannerAnnotationTest {
             assertEquals(published.vias, current.vias)
             assertEquals(published.undoAvailable, current.undoAvailable)
             assertEquals(published.redoAvailable, current.redoAvailable)
+            assertEquals("the annotate pass stores no second history entry", 1, history.remembers)
+            assertEquals(stored, planner.recent.value)
         }
 
     @Test
@@ -224,6 +235,7 @@ class RoutePlannerAnnotationTest {
     private fun TestScope.planner(
         annotate: suspend (Route) -> Outcome<Route>,
         log: (String) -> Unit = {},
+        history: RouteHistoryAccess = NoRouteHistoryAccess,
     ): RoutePlanner =
         RoutePlanner(
             requestRoute = { request, _ ->
@@ -236,6 +248,7 @@ class RoutePlannerAnnotationTest {
             annotateRoute = { route, _, _ -> annotate(route) },
             annotationScope = this,
             log = log,
+            history = history,
             clock = Clock { NOW_MILLIS },
             profile = RouteProfile.Walk,
         )
@@ -244,6 +257,24 @@ class RoutePlannerAnnotationTest {
         planner.setPoint(RoutePlanRole.Start, RoutePlanPoint(START, "start"))
         planner.setPoint(RoutePlanRole.Destination, RoutePlanPoint(END, "destination"))
         return planner.state.value
+    }
+
+    private class CountingHistory : RouteHistoryAccess {
+        var remembers = 0
+        private val entries = mutableListOf<RouteHistoryEntry>()
+
+        override suspend fun remember(entry: RouteHistoryEntry): Outcome<List<RouteHistoryEntry>> {
+            remembers += 1
+            entries.add(0, entry)
+            return Outcome.Success(entries.toList())
+        }
+
+        override suspend fun recent(): Outcome<List<RouteHistoryEntry>> = Outcome.Success(entries.toList())
+
+        override suspend fun clear(): Outcome<Unit> {
+            entries.clear()
+            return Outcome.Success(Unit)
+        }
     }
 
     private companion object {

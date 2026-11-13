@@ -1165,6 +1165,16 @@ another route. Five edits, five undos and five redos end at the same states;
 and stepping through turns are views, not edits, so they are not on the stack,
 and a new edit drops what could have been redone.
 
+The annotate pass is T-0409. A produced route is published first and then
+handed back to the same engine through `RoutingEngine.annotate`, on the
+plugin's own scope, so the preview, the map and the warnings never wait for it.
+When the answer arrives the planner replaces the selected option's segments and
+nothing else: the geometry, the totals, the arrival, the selection, the other
+alternatives and the reuse history stay as published. Each produced option is
+asked for once, re-selecting it asks nothing, and an answer for a route a newer
+edit superseded is dropped. A failed pass keeps the unannotated route and is
+logged through the plugin's `Logger`.
+
 The panel's coordinate field reads typed text with the same `Coordinates.parser`
 the search field uses, through `routePointEntry` in `plugin-api`; blank text is
 not a refusal, and a refused notation changes nothing. The stop list rows move a
@@ -1722,10 +1732,10 @@ the same reason: metre-level noise in both lines, and a parallel railway or a
 service road one street away stays out. Steps and a private way are route
 attributes: they come from the route's annotated segments, where the T-0301
 `trace_attributes` pass puts `highway=steps` and `access=private`. The region
-component does not carry either one. That pass runs after the route is already
-returned, so a route that is not annotated yet yields the region warnings and
-no steps or private-way warning; `RouteWarningScanner` documents that
-precondition.
+component does not carry either one. The planner runs that pass after it
+publishes a route, so the live list gains the two route-attribute kinds when
+the engine answers; `RouteWarningScanner` documents that a route which is not
+annotated yet yields the region half only.
 
 | Kind | Walk | Hike | Bike | Source |
 |---|---|---|---|---|

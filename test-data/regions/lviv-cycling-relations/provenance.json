@@ -1,0 +1,29 @@
+{
+  "region": "ua-46",
+  "extraction": "osm-extract 0.1.0 route-relations v2",
+  "source": {
+    "archive": "ukraine-latest.osm.pbf",
+    "sha256": "ff46165a08b21fc4271aa6d5f199e55d0c9b786bcfd8f50e0f7c31f82248347f"
+  },
+  "probe": {
+    "bbox": [
+      23.93,
+      49.9,
+      23.952,
+      49.918
+    ],
+    "file": "relations.json",
+    "sha256": "5ab9a788e2dfa6f953a363b616295b6d79e46ef6bba7763fb060270d07a18c0e",
+    "features": {
+      "relations": 8,
+      "ways": 402,
+      "nodes": 0,
+      "networks": {
+        "lcn": 3,
+        "rcn": 5
+      },
+      "withOsmcSymbol": 4
+    }
+  },
+  "note": "Real bicycle routes near Lviv. A whole-extract run on the 2026-11-04 Ukraine PBF found 0 *cn_ref node-network junctions, so the probe carries no node numbers."
+}

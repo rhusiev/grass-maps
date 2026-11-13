@@ -39,6 +39,9 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        // The share-sheet import's acceptance (T-0416) sends a real
+        // ACTION_SEND with a content: URI to MainActivity.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -205,6 +208,11 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(testFixtures(project(":plugin-api")))
+
+    // The share-sheet import's intent and URI path needs a device (T-0416).
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
 }
 
 tasks.named("check") {

@@ -8,5 +8,14 @@
     <application
         android:name="nl.r1a.grassmap.app.DebugApplication"
         android:networkSecurityConfig="@xml/network_security_config"
-        tools:replace="android:name" />
+        tools:replace="android:name">
+
+        <!-- T-0416: the document source for the share-sheet import's device check
+             and instrumented test. Debug only, not exported: another app's share
+             is a content:// URI, and a plain file cannot exercise the resolver. -->
+        <provider
+            android:name="nl.r1a.grassmap.app.SharedTrackTestProvider"
+            android:authorities="nl.r1a.grassmap.share-test"
+            android:exported="false" />
+    </application>
 </manifest>

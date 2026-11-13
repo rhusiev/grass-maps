@@ -12,6 +12,9 @@ internal val ROUTE_CHIP_SELECTED_COLOR = Color(0xFF2E7D32)
 internal val ROUTE_ACTION_COLOR = Color(0xFF2E7D32)
 internal val ROUTE_CHANGED_COLOR = Color(0xFFE07A4A)
 
+/** The error tone the shell's dark notices use for a refusal (T-0416). */
+internal val ROUTE_ERROR_COLOR = Color(0xFFFFB4AB)
+
 /** The amber warning row and its list, from the round-6 design (T-0409). */
 internal val ROUTE_WARNING_BACKGROUND = Color(0xFFFFF8E1)
 internal val ROUTE_WARNING_BORDER = Color(0xFFF2B200)

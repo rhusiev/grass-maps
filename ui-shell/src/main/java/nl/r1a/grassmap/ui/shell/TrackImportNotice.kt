@@ -13,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -40,9 +39,6 @@ private const val SKIPPED_MANY_KEY = "track_import_skipped_many"
 private const val OPEN_KEY = "track_import_open"
 private const val NOT_A_TRACK_KEY = "track_import_not_a_track"
 private const val UNREADABLE_KEY = "track_import_unreadable"
-
-/** The amber-red title a failed import uses on the dark notice. */
-private val IMPORT_FAILED_COLOR = Color(0xFFFFB4AB)
 
 /** Why a shared document did not become a track (T-0416). */
 enum class TrackImportFailure {
@@ -80,6 +76,7 @@ data class TrackImportNotice(
     val title: String,
     val detail: String?,
     val action: String?,
+    val failed: Boolean = false,
 )
 
 /**
@@ -97,6 +94,7 @@ fun trackImportNotice(
             title = strings.resolve(failureKey(failure)),
             detail = null,
             action = null,
+            failed = true,
         )
     }
     return TrackImportNotice(
@@ -161,7 +159,7 @@ fun TrackImportNoticeBar(
                 text = notice.title,
                 style =
                     TextStyle(
-                        color = if (notice.action == null) IMPORT_FAILED_COLOR else ROUTE_VALUE_COLOR,
+                        color = if (notice.failed) ROUTE_ERROR_COLOR else ROUTE_VALUE_COLOR,
                         fontSize = TITLE_FONT_SP.sp,
                         fontWeight = FontWeight.Bold,
                     ),

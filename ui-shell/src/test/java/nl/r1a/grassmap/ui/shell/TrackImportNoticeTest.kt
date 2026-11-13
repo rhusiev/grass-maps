@@ -2,7 +2,9 @@ package nl.r1a.grassmap.ui.shell
 
 import nl.r1a.grassmap.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Locale
 
@@ -15,6 +17,7 @@ class TrackImportNoticeTest {
         assertEquals("Imported Znesinnia ridges", notice.title)
         assertNull(notice.detail)
         assertEquals("Open", notice.action)
+        assertFalse(notice.failed)
     }
 
     @Test
@@ -51,6 +54,7 @@ class TrackImportNoticeTest {
 
         assertEquals("This file is not a track Grass Maps can read", notice.title)
         assertNull(notice.action)
+        assertTrue(notice.failed)
     }
 
     @Test
@@ -59,6 +63,7 @@ class TrackImportNoticeTest {
 
         assertEquals("The file could not be opened", notice.title)
         assertNull(notice.action)
+        assertTrue(notice.failed)
     }
 
     @Test

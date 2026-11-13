@@ -161,6 +161,7 @@ private const val LABEL_CLEAR_PADDING_DP = 4
 private const val CLEAR_GLYPH = "×"
 private const val DISTANCE_BADGE_MILLIS = 4_000L
 private const val TRACK_IMPORT_NOTICE_MILLIS = 8_000L
+private const val BANNER_STACK_GAP_DP = 8
 private const val BANNER_TICK_MILLIS = 1_000L
 private const val CONTOURS_PANEL_TOP_DP = 80
 private const val METRE_DECIMALS = 1
@@ -737,53 +738,50 @@ private fun MapContent(
                         .padding(BAR_PADDING_DP.dp),
             )
         }
-        if (!navigationActive) {
-            distance?.let { shown ->
-                DistanceBadge(
-                    text = formatDistance(context, shown),
-                    modifier =
-                        Modifier
-                            .align(Alignment.BottomCenter)
-                            .navigationBarsPadding()
-                            .padding(BAR_PADDING_DP.dp),
-                )
-                LaunchedEffect(shown) {
-                    delay(DISTANCE_BADGE_MILLIS)
-                    distance = null
+        Column(
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(BAR_PADDING_DP.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(BANNER_STACK_GAP_DP.dp),
+        ) {
+            if (!navigationActive) {
+                distance?.let { shown ->
+                    DistanceBadge(text = formatDistance(context, shown), modifier = Modifier)
+                    LaunchedEffect(shown) {
+                        delay(DISTANCE_BADGE_MILLIS)
+                        distance = null
+                    }
                 }
             }
-        }
-        bundle.sources.regionProblem?.let { problem ->
-            RegionProblemBanner(
-                text = stringResource(R.string.map_region_needs_redownload),
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .navigationBarsPadding()
-                        .padding(BAR_PADDING_DP.dp),
-            )
-            LaunchedEffect(problem) {
-                Log.w(
-                    TAG,
-                    "region-needs-redownload region=${bundle.sources.problemRegion ?: "unknown"} problem=$problem",
+            bundle.sources.regionProblem?.let { problem ->
+                RegionProblemBanner(
+                    text = stringResource(R.string.map_region_needs_redownload),
+                    modifier = Modifier,
                 )
+                LaunchedEffect(problem) {
+                    Log.w(
+                        TAG,
+                        "region-needs-redownload region=${bundle.sources.problemRegion ?: "unknown"} problem=$problem",
+                    )
+                }
             }
-        }
-        val share = trackShare
-        if (share != null && !navigationActive) {
-            val notice = remember(share.outcome, container.strings) { trackImportNotice(share.outcome, container.strings) }
-            TrackImportNoticeBar(
-                notice = notice,
-                onOpen = { container.trackShare.openImported() },
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .navigationBarsPadding()
-                        .padding(BAR_PADDING_DP.dp),
-            )
-            LaunchedEffect(share.sequence) {
-                delay(TRACK_IMPORT_NOTICE_MILLIS)
-                container.trackShare.dismiss(share.sequence)
+            val share = trackShare
+            if (share != null && !navigationActive) {
+                val notice =
+                    remember(share.outcome, container.strings) {
+                        trackImportNotice(share.outcome, container.strings)
+                    }
+                TrackImportNoticeBar(
+                    notice = notice,
+                    onOpen = { container.trackShare.openImported() },
+                )
+                LaunchedEffect(share.sequence) {
+                    delay(TRACK_IMPORT_NOTICE_MILLIS)
+                    container.trackShare.dismiss(share.sequence)
+                }
             }
         }
         if (container.devToolsVisible && !navigationActive) {

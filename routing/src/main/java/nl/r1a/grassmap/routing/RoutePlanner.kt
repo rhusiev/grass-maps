@@ -1,9 +1,11 @@
 package nl.r1a.grassmap.routing
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
@@ -55,6 +57,16 @@ import java.util.concurrent.atomic.AtomicLong
  * [resetPreferences] returns to the profile on the next request; neither writes
  * the settings model. [clear] drops the override with the plan, so the next
  * route starts from the profile again.
+ *
+ * A produced route is published before its segments are annotated (T-0409):
+ * the engine's route answer carries no per-edge attributes, so the planner asks
+ * [annotateRoute] for the selected route on [annotationScope] and replaces that
+ * option's segments when the answer arrives. The preview, the map and the
+ * warnings are already usable in the meantime, and every other part of the
+ * option - geometry, totals, arrival, selection, the alternatives and the
+ * history - is left as published. An annotate failure keeps the unannotated
+ * route and reports it through [log]. Each produced option is asked for once,
+ * so re-selecting it does not ask the engine again.
  */
 class RoutePlanner(
     private val requestRoute: suspend (RouteRequest, CancellationHandle) -> Outcome<List<Route>>,
@@ -63,6 +75,10 @@ class RoutePlanner(
     private val optionsForProfile: (RouteProfile) -> RouteOptions = { RouteOptions() },
     private val alternatives: Int = 1,
     private val history: RouteHistoryAccess = NoRouteHistoryAccess,
+    private val annotateRoute: suspend (Route, RouteProfile, CancellationHandle) -> Outcome<Route> =
+        { route, _, _ -> Outcome.Success(route) },
+    private val annotationScope: CoroutineScope? = null,
+    private val log: (String) -> Unit = {},
 ) {
     init {
         require(alternatives >= 0) { "alternatives must not be negative" }
@@ -75,6 +91,13 @@ class RoutePlanner(
     private val redoStack = ArrayDeque<RoutePlanState>()
     private val _recent = MutableStateFlow<List<RouteHistoryEntry>>(emptyList())
     private var generation = 0L
+
+    /**
+     * The option indexes whose annotate pass was requested, per produced
+     * generation. Undo can restore an older generation, so the map keeps a few
+     * of them; the bound is the only memory this holds.
+     */
+    private val annotatedIndexes = LinkedHashMap<Long, MutableSet<Int>>()
 
     val state: StateFlow<RoutePlanState> = _state.asStateFlow()
 
@@ -258,24 +281,32 @@ class RoutePlanner(
      * and five redos end at the same states; the flags in the published state
      * say how many steps are left.
      */
-    suspend fun undo(): Outcome<RoutePlanState> =
-        mutex.withLock {
-            val restored = undoStack.removeLastOrNull() ?: return@withLock Outcome.Failure(AppError.InvalidInput)
-            ticket.incrementAndGet()
-            redoStack.addLast(_state.value)
-            setState(restored)
-            Outcome.Success(_state.value)
-        }
+    suspend fun undo(): Outcome<RoutePlanState> {
+        val outcome =
+            mutex.withLock {
+                val restored = undoStack.removeLastOrNull() ?: return@withLock Outcome.Failure(AppError.InvalidInput)
+                ticket.incrementAndGet()
+                redoStack.addLast(_state.value)
+                setState(restored)
+                Outcome.Success(_state.value)
+            }
+        annotateSelected()
+        return outcome
+    }
 
     /** Steps forward to the state an undo left, the same way [undo] steps back. */
-    suspend fun redo(): Outcome<RoutePlanState> =
-        mutex.withLock {
-            val restored = redoStack.removeLastOrNull() ?: return@withLock Outcome.Failure(AppError.InvalidInput)
-            ticket.incrementAndGet()
-            undoStack.addLast(_state.value)
-            setState(restored)
-            Outcome.Success(_state.value)
-        }
+    suspend fun redo(): Outcome<RoutePlanState> {
+        val outcome =
+            mutex.withLock {
+                val restored = redoStack.removeLastOrNull() ?: return@withLock Outcome.Failure(AppError.InvalidInput)
+                ticket.incrementAndGet()
+                undoStack.addLast(_state.value)
+                setState(restored)
+                Outcome.Success(_state.value)
+            }
+        annotateSelected()
+        return outcome
+    }
 
     /**
      * Replaces the chain with a stored entry and routes it, as one edit so one
@@ -346,15 +377,19 @@ class RoutePlanner(
     }
 
     /** Selects one returned alternative; the drawn line follows [state]. */
-    suspend fun select(index: Int): Outcome<RoutePlanState> =
-        mutex.withLock {
-            val current = _state.value
-            if (current.status != RoutePlanStatus.Ready || index !in current.options.indices) {
-                return@withLock Outcome.Failure(AppError.InvalidInput)
+    suspend fun select(index: Int): Outcome<RoutePlanState> {
+        val outcome =
+            mutex.withLock {
+                val current = _state.value
+                if (current.status != RoutePlanStatus.Ready || index !in current.options.indices) {
+                    return@withLock Outcome.Failure(AppError.InvalidInput)
+                }
+                setState(current.copy(selectedIndex = index))
+                Outcome.Success(_state.value)
             }
-            setState(current.copy(selectedIndex = index))
-            Outcome.Success(_state.value)
-        }
+        annotateSelected()
+        return outcome
+    }
 
     /** Closes the plan, cancels any request still in flight and drops the edit history. */
     suspend fun clear(): Outcome<RoutePlanState> {
@@ -391,29 +426,32 @@ class RoutePlanner(
             } catch (exception: Exception) {
                 Outcome.Failure(AppError.Internal("route.planner", exception.message))
             }
-        return mutex.withLock {
-            if (ticket.get() != mine) {
-                return@withLock Outcome.Failure(AppError.Cancelled)
-            }
-            when (outcome) {
-                is Outcome.Failure -> {
-                    setState(
-                        _state.value.copy(
-                            status = RoutePlanStatus.Failed,
-                            options = emptyList(),
-                            failure = failureOf(outcome.error),
-                            profilePreferences = profilePreferences,
-                            overridePreferences = snapshot.overridePreferences,
-                        ),
-                    )
-                    outcome
+        val published =
+            mutex.withLock {
+                if (ticket.get() != mine) {
+                    return@withLock Outcome.Failure(AppError.Cancelled)
                 }
+                when (outcome) {
+                    is Outcome.Failure -> {
+                        setState(
+                            _state.value.copy(
+                                status = RoutePlanStatus.Failed,
+                                options = emptyList(),
+                                failure = failureOf(outcome.error),
+                                profilePreferences = profilePreferences,
+                                overridePreferences = snapshot.overridePreferences,
+                            ),
+                        )
+                        outcome
+                    }
 
-                is Outcome.Success -> {
-                    publishRoutes(outcome.value, profilePreferences, snapshot.overridePreferences)
+                    is Outcome.Success -> {
+                        publishRoutes(outcome.value, profilePreferences, snapshot.overridePreferences)
+                    }
                 }
             }
-        }
+        annotateSelected()
+        return published
     }
 
     private suspend fun publishRoutes(
@@ -475,6 +513,109 @@ class RoutePlanner(
                 redoAvailable = redoStack.isNotEmpty(),
             )
     }
+
+    /**
+     * Starts the annotate pass for the selected option, if this planner has one
+     * (T-0409). The route is already published, so the caller never waits for
+     * the engine; the pass writes its answer when it arrives and is discarded
+     * when a newer edit or route superseded it.
+     */
+    private suspend fun annotateSelected() {
+        val scope = annotationScope ?: return
+        val request = mutex.withLock { claimAnnotation() } ?: return
+        scope.launch { runAnnotation(request) }
+    }
+
+    /**
+     * Marks the selected option as asked for and returns what to annotate. A
+     * generation is the unit, so an option is asked for once even when the user
+     * re-selects it or the same state is published again.
+     */
+    private fun claimAnnotation(): AnnotationRequest? {
+        val current = _state.value
+        if (current.status != RoutePlanStatus.Ready) {
+            return null
+        }
+        val index = current.selectedIndex
+        val option = current.options.getOrNull(index) ?: return null
+        val indexes = annotatedIndexes.getOrPut(current.generation) { mutableSetOf() }
+        if (!indexes.add(index)) {
+            return null
+        }
+        while (annotatedIndexes.size > MAX_ANNOTATED_GENERATIONS) {
+            annotatedIndexes.remove(annotatedIndexes.keys.first())
+        }
+        return AnnotationRequest(
+            ticket = ticket.get(),
+            generation = current.generation,
+            index = index,
+            route = option.toRoute(),
+        )
+    }
+
+    private suspend fun runAnnotation(request: AnnotationRequest) {
+        val outcome =
+            try {
+                annotateRoute(
+                    request.route,
+                    profile,
+                    CancellationHandle { ticket.get() != request.ticket },
+                )
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                Outcome.Failure(AppError.Internal("route.planner", exception.message))
+            }
+        applyAnnotation(request, outcome)
+    }
+
+    /**
+     * Replaces the annotated option's segments, and nothing else. A result for
+     * a route the plan no longer shows is dropped, and its claim is released so
+     * a restored generation can ask again.
+     */
+    private suspend fun applyAnnotation(
+        request: AnnotationRequest,
+        outcome: Outcome<Route>,
+    ) {
+        mutex.withLock {
+            if (ticket.get() != request.ticket) {
+                releaseClaim(request)
+                return@withLock
+            }
+            val current = _state.value
+            if (current.status != RoutePlanStatus.Ready || current.generation != request.generation) {
+                releaseClaim(request)
+                return@withLock
+            }
+            when (outcome) {
+                is Outcome.Failure -> {
+                    log("route annotation failed: ${outcome.error}")
+                }
+
+                is Outcome.Success -> {
+                    val option = current.options.getOrNull(request.index) ?: return@withLock
+                    if (outcome.value.segments == option.segments) {
+                        return@withLock
+                    }
+                    val options = current.options.toMutableList()
+                    options[request.index] = option.copy(segments = outcome.value.segments)
+                    setState(current.copy(options = options))
+                }
+            }
+        }
+    }
+
+    private fun releaseClaim(request: AnnotationRequest) {
+        annotatedIndexes[request.generation]?.remove(request.index)
+    }
+
+    private data class AnnotationRequest(
+        val ticket: Long,
+        val generation: Long,
+        val index: Int,
+        val route: Route,
+    )
 
     /** Keeps the state an edit replaces; a new edit drops anything redoable. */
     private fun rememberEdit(before: RoutePlanState) {
@@ -543,5 +684,12 @@ class RoutePlanner(
          * acceptance exercises and ten leaves room for ordinary editing.
          */
         const val MAX_UNDO_STEPS = 10
+
+        /**
+         * How many produced generations keep their annotate claims. Undo can
+         * restore an older generation, so a few are kept; each entry is a set
+         * of option indexes and no geometry.
+         */
+        const val MAX_ANNOTATED_GENERATIONS = 8
     }
 }

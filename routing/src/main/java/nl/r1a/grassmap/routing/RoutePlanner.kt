@@ -48,9 +48,11 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * [undo] and [redo] step through whole published states, so the route a request
  * produced is part of its edit. An edit's snapshots are kept in memory only and
- * bounded; the planner asks no engine when it restores one, because the line the
- * user saw is what undo must return and a second request could return another
- * route.
+ * bounded. A restored snapshot that carries a route is published as it was,
+ * because the line the user saw is what undo must return and a second request
+ * could return another route. A snapshot that was still Planning never received
+ * an answer, so the request it was waiting for starts again on the restored
+ * chain.
  *
  * Routing preferences are per profile (T-0308) with three independent steps
  * (T-0421). [setPreferences] keeps an override for this plan only and
@@ -277,35 +279,48 @@ class RoutePlanner(
 
     /**
      * Steps back one edit, restoring the whole state that edit produced
-     * (including its route) without asking the engine. Five edits, five undos
-     * and five redos end at the same states; the flags in the published state
-     * say how many steps are left.
+     * (including its route). A restored route is not asked for again; a restored
+     * Planning state starts its request again. Five edits, five undos and five
+     * redos end at the same states; the flags in the published state say how many
+     * steps are left.
      */
     suspend fun undo(): Outcome<RoutePlanState> {
-        val outcome =
+        val restored =
             mutex.withLock {
-                val restored = undoStack.removeLastOrNull() ?: return@withLock Outcome.Failure(AppError.InvalidInput)
+                val snapshot = undoStack.removeLastOrNull() ?: return@withLock null
                 ticket.incrementAndGet()
                 redoStack.addLast(_state.value)
-                setState(restored)
-                Outcome.Success(_state.value)
-            }
-        annotateSelected()
-        return outcome
+                setState(snapshot)
+                _state.value
+            } ?: return Outcome.Failure(AppError.InvalidInput)
+        return resumeRestore(restored)
     }
 
     /** Steps forward to the state an undo left, the same way [undo] steps back. */
     suspend fun redo(): Outcome<RoutePlanState> {
-        val outcome =
+        val restored =
             mutex.withLock {
-                val restored = redoStack.removeLastOrNull() ?: return@withLock Outcome.Failure(AppError.InvalidInput)
+                val snapshot = redoStack.removeLastOrNull() ?: return@withLock null
                 ticket.incrementAndGet()
                 undoStack.addLast(_state.value)
-                setState(restored)
-                Outcome.Success(_state.value)
-            }
+                setState(snapshot)
+                _state.value
+            } ?: return Outcome.Failure(AppError.InvalidInput)
+        return resumeRestore(restored)
+    }
+
+    /**
+     * Finishes a restore. A snapshot with a route is annotated as published; a
+     * snapshot that was Planning starts the request it was waiting for, and only
+     * that request's ticket can publish, so the answer the restore superseded is
+     * dropped.
+     */
+    private suspend fun resumeRestore(restored: RoutePlanState): Outcome<RoutePlanState> {
+        if (restored.status == RoutePlanStatus.Planning) {
+            return request(restored)
+        }
         annotateSelected()
-        return outcome
+        return Outcome.Success(restored)
     }
 
     /**

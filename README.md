@@ -1279,9 +1279,12 @@ profile and the reorder and removal evidence are in
 `test-data/routing/README.md`.
 
 The planning edit history is T-0304. `undo` and `redo` restore whole published
-states, including the route each edit produced: undo asks no engine, because the
-line the user saw is what it must return and a second request could return
-another route. Five edits, five undos and five redos end at the same states;
+states, including the route each edit produced: a restored route is not asked for
+again, because the line the user saw is what it must return and a second request
+could return another route. Restoring a state that was still computing starts
+that work again: the snapshot has no answer of its own, so the engine is asked
+for the restored chain, and the request the restore superseded can no longer
+publish. Five edits, five undos and five redos end at the same states;
 `undoAvailable` and `redoAvailable` report the reach. Selecting an alternative
 and stepping through turns are views, not edits, so they are not on the stack,
 and a new edit drops what could have been redone.

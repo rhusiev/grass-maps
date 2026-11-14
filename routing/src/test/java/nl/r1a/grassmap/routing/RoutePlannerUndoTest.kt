@@ -1,5 +1,9 @@
 package nl.r1a.grassmap.routing
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
@@ -85,6 +89,136 @@ class RoutePlannerUndoTest {
             assertEquals(routed.withoutReach(), restored.withoutReach())
             assertEquals(line, restored.selected?.geometry)
             assertTrue("undo must not leave a dead redo", restored.redoAvailable)
+        }
+
+    @Test
+    fun addViaUndoRedoWhileTheFirstRouteIsInFlightReachesReady() =
+        runTest {
+            val engine = GatedEngine()
+            val planner = planner(engine)
+            val ready = routed(planner, engine)
+            val line = ready.selected?.geometry ?: error("no route")
+
+            val byVia = launch { planner.addVia(RoutePlanPoint(VIA_ONE, "Cafe")) }
+            runCurrent()
+            assertEquals(RoutePlanStatus.Planning, planner.state.value.status)
+            val requestsBeforeUndo = engine.requests.size
+
+            val undone = edit(planner) { planner.undo() }
+            assertEquals(RoutePlanStatus.Ready, undone.status)
+            assertEquals("undo returns the line the user saw", line, undone.selected?.geometry)
+
+            engine.releaseLast()
+            runCurrent()
+            assertEquals(
+                "the cancelled add-via answer cannot overwrite the undo",
+                line,
+                planner.state.value.selected
+                    ?.geometry,
+            )
+
+            val redone = launch { planner.redo() }
+            runCurrent()
+            assertEquals(RoutePlanStatus.Planning, planner.state.value.status)
+            assertEquals(
+                "the redo of a computing state asks the engine again",
+                requestsBeforeUndo + 1,
+                engine.requests.size,
+            )
+            assertEquals(listOf(START, VIA_ONE, DESTINATION), engine.requests.last().waypoints)
+
+            engine.releaseLast()
+            runCurrent()
+            redone.join()
+            byVia.join()
+
+            val current = planner.state.value
+            assertEquals(RoutePlanStatus.Ready, current.status)
+            assertEquals(listOf(VIA_ONE), current.vias.map { via -> via.position })
+            assertEquals(listOf(START, VIA_ONE, DESTINATION), current.stops.map { point -> point.position })
+        }
+
+    @Test
+    fun undoOfAPlanningSnapshotRoutesTheRestoredChain() =
+        runTest {
+            val engine = GatedEngine()
+            val planner = planner(engine)
+            routed(planner, engine)
+
+            val first = launch { planner.addVia(RoutePlanPoint(VIA_ONE)) }
+            runCurrent()
+            val second = launch { planner.addVia(RoutePlanPoint(VIA_TWO)) }
+            runCurrent()
+            assertEquals(RoutePlanStatus.Planning, planner.state.value.status)
+            assertFalse("nothing has been undone yet", planner.state.value.redoAvailable)
+            val requestsBeforeUndo = engine.requests.size
+
+            val undo = launch { planner.undo() }
+            runCurrent()
+            assertEquals(
+                "the undo of a computing state asks the engine again",
+                requestsBeforeUndo + 1,
+                engine.requests.size,
+            )
+            assertEquals(listOf(START, VIA_ONE, DESTINATION), engine.requests.last().waypoints)
+
+            engine.releaseSuperseded()
+            runCurrent()
+            assertEquals(
+                "the superseded answers cannot publish over the restored planning state",
+                RoutePlanStatus.Planning,
+                planner.state.value.status,
+            )
+
+            engine.releaseLast()
+            runCurrent()
+            undo.join()
+            first.join()
+            second.join()
+
+            val current = planner.state.value
+            assertEquals(RoutePlanStatus.Ready, current.status)
+            assertEquals(listOf(VIA_ONE), current.vias.map { via -> via.position })
+            assertTrue("the undone state can be redone", current.redoAvailable)
+        }
+
+    @Test
+    fun redoOfAPlanningSnapshotThatWaitedOnTheStackRoutesTheRestoredChain() =
+        runTest {
+            val engine = GatedEngine()
+            val planner = planner(engine)
+            routed(planner, engine)
+
+            val byVia = launch { planner.addVia(RoutePlanPoint(VIA_ONE)) }
+            runCurrent()
+            edit(planner) { planner.undo() }
+            engine.releaseLast()
+            runCurrent()
+
+            val picking = edit(planner) { planner.undo() }
+            assertEquals(RoutePlanStatus.PickingDestination, picking.status)
+            val readyAgain = edit(planner) { planner.redo() }
+            assertEquals(RoutePlanStatus.Ready, readyAgain.status)
+            val requestsBeforeRedo = engine.requests.size
+
+            val redone = launch { planner.redo() }
+            runCurrent()
+            assertEquals(RoutePlanStatus.Planning, planner.state.value.status)
+            assertEquals(
+                "the redo of a computing state asks the engine again",
+                requestsBeforeRedo + 1,
+                engine.requests.size,
+            )
+            assertEquals(listOf(START, VIA_ONE, DESTINATION), engine.requests.last().waypoints)
+
+            engine.releaseLast()
+            runCurrent()
+            redone.join()
+            byVia.join()
+
+            val current = planner.state.value
+            assertEquals(RoutePlanStatus.Ready, current.status)
+            assertEquals(listOf(VIA_ONE), current.vias.map { via -> via.position })
         }
 
     @Test
@@ -182,13 +316,32 @@ class RoutePlannerUndoTest {
             assertTrue(undone.stops.isEmpty())
         }
 
-    private fun planner(history: RouteHistoryAccess = NoHistory) =
-        RoutePlanner(
-            requestRoute = engine::route,
-            clock = Clock { NOW_MILLIS },
-            profile = RouteProfile.Walk,
-            history = history,
-        )
+    private fun planner(history: RouteHistoryAccess = NoHistory) = planner(engine, history)
+
+    private fun planner(
+        engine: RoutingEngine,
+        history: RouteHistoryAccess = NoHistory,
+    ) = RoutePlanner(
+        requestRoute = engine::route,
+        clock = Clock { NOW_MILLIS },
+        profile = RouteProfile.Walk,
+        history = history,
+    )
+
+    /** Brings a fresh planner to Ready and completes that one request. */
+    private suspend fun TestScope.routed(
+        planner: RoutePlanner,
+        engine: GatedEngine,
+    ): RoutePlanState {
+        planner.begin()
+        planner.setPoint(RoutePlanRole.Start, RoutePlanPoint(START))
+        val request = launch { planner.setPoint(RoutePlanRole.Destination, RoutePlanPoint(DESTINATION)) }
+        runCurrent()
+        engine.releaseLast()
+        runCurrent()
+        request.join()
+        return planner.state.value
+    }
 
     private suspend fun edit(
         planner: RoutePlanner,
@@ -240,6 +393,51 @@ class RoutePlannerUndoTest {
         override suspend fun clear(): Outcome<Unit> {
             remembered.clear()
             return Outcome.Success(Unit)
+        }
+    }
+
+    /**
+     * Holds every request until the test releases it, so a Planning state can be
+     * observed with its answer still in flight. The gate ignores the cancellation
+     * handle on purpose: the planner's own ticket check must drop a superseded
+     * answer.
+     */
+    private class GatedEngine : RoutingEngine {
+        val requests = mutableListOf<RouteRequest>()
+        private val gates = mutableListOf<CompletableDeferred<Unit>>()
+
+        override val contract: ProviderContract = RoutingEngineContract.REFERENCE
+
+        override fun capabilities(): RoutingCapabilities =
+            RoutingCapabilities(
+                profiles = setOf(RouteProfile.Walk),
+                modifierKinds = emptySet(),
+                maxAlternatives = 0,
+                maxDistanceMeters = 250_000.0,
+            )
+
+        override suspend fun route(
+            request: RouteRequest,
+            cancellation: CancellationHandle,
+        ): Outcome<List<Route>> {
+            requests += request
+            val gate = CompletableDeferred<Unit>()
+            gates += gate
+            gate.await()
+            return Outcome.Success(listOf(routeFor(request.waypoints)))
+        }
+
+        fun release(index: Int) {
+            gates[index].complete(Unit)
+        }
+
+        fun releaseLast() {
+            release(gates.lastIndex)
+        }
+
+        /** Releases every request but the newest, which stays in flight. */
+        fun releaseSuperseded() {
+            gates.dropLast(1).forEach { gate -> gate.complete(Unit) }
         }
     }
 

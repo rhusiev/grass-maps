@@ -350,6 +350,33 @@ class NavigationCameraControllerTest {
             assertEquals(before, host.updates.size)
         }
 
+    @Test
+    fun theTripDefaultsTurnTheSwitchesOnAndFreeTheHostOnce() =
+        runTest {
+            val drive = Drive()
+            val host = RecordingMapHost()
+            val controller =
+                controller(host, settings = NavigationCameraSettings(autoZoom = false, autoCentre = false, tilt = false))
+
+            controller.applyTripDefaults()
+
+            assertEquals(NavigationCameraSettings(), controller.settings.value)
+            assertEquals(listOf(TrackingMode.Free), host.trackingModes)
+
+            controller.setAutoZoom(false)
+            controller.setAutoCentre(false)
+            controller.setTilt(false)
+            controller.onState(following(drive.first()))
+            controller.onState(following(drive.at(speedKmh = 5.0)))
+
+            assertEquals(
+                "a state frame keeps this trip's switches",
+                NavigationCameraSettings(autoZoom = false, autoCentre = false, tilt = false),
+                controller.settings.value,
+            )
+            assertEquals("a state frame applies no second reset", listOf(TrackingMode.Free), host.trackingModes)
+        }
+
     private fun controller(
         host: RecordingMapHost,
         clock: FakeClock = FakeClock(),
@@ -401,6 +428,7 @@ class NavigationCameraControllerTest {
     private class RecordingMapHost : MapHost {
         private val state = MutableStateFlow(Camera(center = START, zoom = 14.0))
         val updates = mutableListOf<CameraUpdate>()
+        val trackingModes = mutableListOf<TrackingMode>()
         var failNextMove: Boolean = false
 
         override val camera: StateFlow<Camera> = state
@@ -428,7 +456,10 @@ class NavigationCameraControllerTest {
 
         override suspend fun fitBounds(bounds: BoundingBox): Outcome<Unit> = Outcome.Success(Unit)
 
-        override suspend fun setTrackingMode(mode: TrackingMode): Outcome<Unit> = Outcome.Success(Unit)
+        override suspend fun setTrackingMode(mode: TrackingMode): Outcome<Unit> {
+            trackingModes += mode
+            return Outcome.Success(Unit)
+        }
 
         override suspend fun setLocation(fix: LocationFix?): Outcome<Unit> = Outcome.Success(Unit)
 

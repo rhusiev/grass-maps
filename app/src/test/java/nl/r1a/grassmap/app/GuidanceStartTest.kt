@@ -5,15 +5,22 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import nl.r1a.grassmap.alerts.AlertSettings
+import nl.r1a.grassmap.alerts.AlertSettingsStore
 import nl.r1a.grassmap.alerts.BeepHost
+import nl.r1a.grassmap.alerts.ProfileAlertSettings
 import nl.r1a.grassmap.navigation.GeometryRouteFollower
+import nl.r1a.grassmap.navigation.NavigationCameraController
+import nl.r1a.grassmap.navigation.NavigationCameraSettings
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.RegionAccess
 import nl.r1a.grassmap.plugin.api.model.BoundingBox
+import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.ProximityPlaceKind
+import nl.r1a.grassmap.plugin.api.model.TrackingMode
 import nl.r1a.grassmap.plugin.api.model.WayAlertElementType
 import nl.r1a.grassmap.plugin.api.model.WayAlertFeature
 import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
@@ -76,7 +83,114 @@ class GuidanceStartTest {
         )
         assertTrue(
             "the container wires the one entry point",
-            "GuidanceStarter(navigation, { beeps }, { wayAlerts }, { proximityAlerts })" in container,
+            "GuidanceStarter(navigation, { beeps }, { wayAlerts }, { proximityAlerts }, { navigationCamera })" in container,
+        )
+    }
+
+    @Test
+    fun aFreshStartAppliesTheProfileCameraDefaults() =
+        runTest {
+            val harness = Harness(backgroundScope)
+            harness.camera.setAutoZoom(false)
+            harness.camera.setAutoCentre(false)
+            harness.camera.setTilt(false)
+
+            harness.starter.start(ROUTE, RouteProfile.Bike).valueOrFail()
+
+            assertEquals(
+                "a new trip starts from the profile defaults",
+                NavigationCameraSettings(),
+                harness.camera.settings.value,
+            )
+            assertEquals(
+                "the host follows the navigation camera, not its own loop",
+                listOf(TrackingMode.Free),
+                harness.mapHost.trackingModes,
+            )
+
+            harness.controller.stop()
+            runCurrent()
+            advanceUntilIdle()
+        }
+
+    @Test
+    fun aRunningTripKeepsItsCameraAndAlertSwitches() =
+        runTest {
+            val harness = Harness(backgroundScope)
+            harness.alertSettings.set(
+                RouteProfile.Bike,
+                ProfileAlertSettings(settings = AlertSettings(signal = true)),
+            )
+            harness.starter.start(ROUTE, RouteProfile.Bike).valueOrFail()
+            assertTrue("the trip activates its profile", harness.alertSettings.active.value.settings.signal)
+
+            harness.camera.setAutoZoom(false)
+            harness.camera.setAutoCentre(false)
+            harness.camera.setTilt(false)
+            val duringTrip = harness.alertSettings.current()
+            harness.alertSettings.setActive(
+                duringTrip.copy(settings = duringTrip.settings.copy(reroute = true)),
+            )
+
+            // A re-created screen reads the same process-owned camera and alert
+            // store; the current state frame is what it delivers. A second
+            // start must not touch either.
+            harness.camera.onState(harness.controller.state.value)
+            harness.starter.start(OTHER_ROUTE, RouteProfile.Walk)
+
+            assertEquals(
+                NavigationCameraSettings(autoZoom = false, autoCentre = false, tilt = false),
+                harness.camera.settings.value,
+            )
+            val active = harness.alertSettings.active.value
+            assertTrue("the signal switch stays on", active.settings.signal)
+            assertTrue("the reroute switch stays on", active.settings.reroute)
+            assertEquals(
+                "a running trip activates no other profile",
+                listOf(RouteProfile.Bike),
+                harness.activations,
+            )
+
+            harness.controller.stop()
+            runCurrent()
+            advanceUntilIdle()
+        }
+
+    @Test
+    fun theScreenDoesNotOwnOrFeedTheTripCamera() {
+        val mapScreen = File(MAP_SCREEN_SOURCE).readText()
+        val container = File(APP_CONTAINER_SOURCE).readText()
+
+        assertFalse(
+            "the screen no longer creates a composition-scoped camera",
+            "NavigationCameraController(" in mapScreen,
+        )
+        assertFalse(
+            "the screen no longer feeds state into the camera",
+            "navigationCamera.onState" in mapScreen,
+        )
+        assertTrue(
+            "the container owns the camera over the process map session",
+            "host = mapSession::hostOrNull" in container,
+        )
+        assertTrue(
+            "the container collects navigation state into the camera",
+            "navigation.state.collect { state -> camera.onState(state) }" in container,
+        )
+        assertEquals(
+            "only the sheet's Reset to profile reapplies auto zoom",
+            1,
+            Regex("""navigationCamera\.setAutoZoom\(true\)""").findAll(mapScreen).count(),
+        )
+        assertEquals(
+            "only the sheet's Reset to profile reapplies auto-centre",
+            1,
+            Regex("""navigationCamera\.setAutoCentre\(true\)""").findAll(mapScreen).count(),
+        )
+        assertEquals(
+            "only the sheet's Reset to profile reapplies tilt",
+            1,
+            Regex("""navigationCamera\.setTilt\(true\)""").findAll(mapScreen).count(),
         )
     }
 
@@ -163,6 +277,8 @@ class GuidanceStartTest {
     ) {
         private val fixes = MutableSharedFlow<LocationFix?>(extraBufferCapacity = FIX_BUFFER)
         val service = RecordingServiceHandle()
+        val alertSettings = AlertSettingsStore()
+        val activations = mutableListOf<RouteProfile>()
         val controller =
             NavigationController(
                 scope = scope,
@@ -172,6 +288,10 @@ class GuidanceStartTest {
                 routing = { null },
                 service = service,
                 followerFactory = { GeometryRouteFollower() },
+                onProfileStarted = { profile ->
+                    activations += profile
+                    alertSettings.activate(profile)
+                },
             )
         val beeps = BeepHost()
         val region = RecordingRegion()
@@ -185,7 +305,9 @@ class GuidanceStartTest {
                 canAlert = { true },
                 sink = { cue -> placeCues += cue },
             )
-        val starter = GuidanceStarter(controller, { beeps }, { wayAlerts }, { proximityAlerts })
+        val mapHost = FakeMapHost(Camera(center = CENTRE, zoom = 14.0))
+        val camera = NavigationCameraController(host = { mapHost })
+        val starter = GuidanceStarter(controller, { beeps }, { wayAlerts }, { proximityAlerts }, { camera })
     }
 
     private class RecordingServiceHandle : NavigationServiceHandle {

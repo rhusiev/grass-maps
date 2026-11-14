@@ -40,6 +40,7 @@ import nl.r1a.grassmap.core.services.SharedLocationSource
 import nl.r1a.grassmap.core.services.UnitSettings
 import nl.r1a.grassmap.core.services.diagnosticsCommands
 import nl.r1a.grassmap.map.DistanceByTapSetting
+import nl.r1a.grassmap.navigation.NavigationCameraController
 import nl.r1a.grassmap.places.MergedPlaceSearch
 import nl.r1a.grassmap.places.PlacesAccess
 import nl.r1a.grassmap.places.SearchHistorySetting
@@ -343,6 +344,22 @@ class AppContainer(
     }
 
     /**
+     * The guidance camera over the current map host. It belongs to the process,
+     * not to a screen composition: a re-created Activity mid-trip keeps the
+     * switches the user set, and a trip started without a UI still drives the
+     * camera once a host binds. [GuidanceStarter] applies the profile defaults
+     * on a fresh start only.
+     */
+    internal val navigationCamera: NavigationCameraController by lazy {
+        NavigationCameraController(
+            host = mapSession::hostOrNull,
+            log = { message -> Log.i(NAVIGATION_TAG, message) },
+        ).also { camera ->
+            processScope.launch { navigation.state.collect { state -> camera.onState(state) } }
+        }
+    }
+
+    /**
      * Turn beeps (T-0318). The host is off until the `core.nav.beeps` debug
      * command turns it on; attaching here means it sees the same published
      * state the notification and a screen read.
@@ -557,12 +574,13 @@ class AppContainer(
 
     /**
      * The one path that starts guidance (T-0413): it points the tone source and
-     * both alert hosts at the profile and resets them before the session, then
-     * starts it. The planner's Start, the follow-track Start and `core.nav.start`
-     * all call it; see [GuidanceStarter].
+     * both alert hosts at the profile, returns the camera to the profile
+     * defaults and resets the alert caches before the session, then starts it.
+     * The planner's Start, the follow-track Start and `core.nav.start` all call
+     * it; see [GuidanceStarter].
      */
     internal val guidance: GuidanceStarter by lazy {
-        GuidanceStarter(navigation, { beeps }, { wayAlerts }, { proximityAlerts })
+        GuidanceStarter(navigation, { beeps }, { wayAlerts }, { proximityAlerts }, { navigationCamera })
     }
 
     /**

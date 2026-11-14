@@ -94,7 +94,6 @@ import nl.r1a.grassmap.plugin.api.model.StyleSpec
 import nl.r1a.grassmap.plugin.api.model.TrackFollowStart
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
 import nl.r1a.grassmap.plugin.api.model.TrackSort
-import nl.r1a.grassmap.plugin.api.model.TrackingMode
 import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.model.WebMercator
 import nl.r1a.grassmap.plugin.api.provider.MapLayerContract
@@ -536,29 +535,16 @@ private fun MapContent(
     val navigationFixture by container.navigationScreenFixture.state.collectAsState()
     val activeNavigation = navigationFixture?.state ?: navigationState
     val navigationActive = navigationFixture != null || activeNavigation.phase.isActiveNavigation()
-    val navigationCamera =
-        remember(surface) {
-            NavigationCameraController(
-                host = { surface.host },
-                log = { message -> Log.i(TAG, message) },
-            )
-        }
+    // The guidance camera belongs to the process, not this composition, so a
+    // re-created Activity keeps the switches the user set for this trip. The
+    // container collects navigation state into it; a fresh trip applies the
+    // profile defaults in GuidanceStarter.
+    val navigationCamera = container.navigationCamera
     val navigationCameraSettings by navigationCamera.settings.collectAsState()
     var navigationWasActive by remember { mutableStateOf(false) }
-    LaunchedEffect(navigationCamera) {
-        container.navigation.state.collect { state -> navigationCamera.onState(state) }
-    }
     LaunchedEffect(navigationActive) {
         if (navigationActive) {
             navigationWasActive = true
-            // A new trip starts from the profile defaults; the sheet's camera
-            // and alert changes are this-trip overrides.
-            navigationCamera.setAutoZoom(true)
-            navigationCamera.setAutoCentre(true)
-            navigationCamera.setTilt(true)
-            surface.host.setTrackingMode(TrackingMode.Free).onFailure { error ->
-                Log.w(TAG, "navigation tracking not set: $error")
-            }
         } else if (navigationWasActive) {
             navigationWasActive = false
             container.locationController.syncToHost()

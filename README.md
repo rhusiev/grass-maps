@@ -1472,12 +1472,16 @@ off writes 0 degrees and restores the flat camera. The pitch gesture stays
 disabled (T-0104), so the navigation screen's camera sheet is the only way the
 navigation camera pitches.
 
-The controller does not set a tracking mode. The screen that binds it leaves the
-host in `TrackingMode.Free`, otherwise the host's own follow loop and this
-controller both write the centre. The navigation screen (T-0320) binds the three
-switches and reports a one-finger map drag through `onManualPan`; the
-`clearPan()` call after the screen's own recentre keeps the next fix on the
-position.
+The controller applies the trip defaults itself when a trip starts: auto zoom,
+auto-centre and tilt on, and the host in `TrackingMode.Free`, otherwise the
+host's own follow loop and this controller both write the centre. Only
+`GuidanceStarter`'s fresh-start branch applies them; a recomposition, a state
+frame or a re-created Activity never does. The controller lives in
+`AppContainer`, not the screen composition, so the switches and camera state the
+user set for a running trip survive a configuration change. The navigation
+screen (T-0320) binds the three switches and reports a one-finger map drag
+through `onManualPan`; the `clearPan()` call after the screen's own recentre
+keeps the next fix on the position.
 
 ## Guidance panel
 
@@ -1618,14 +1622,18 @@ nothing.
 Every path that starts a trip goes through `GuidanceStarter.start`: the
 planner's Start, the follow-track sheet's Start and `core.nav.start`. It points
 the beep host and both alert hosts at the caller's profile. It resets the
-way-alert and proximity caches and latches. Then it starts the session. This
-closes the defect from before T-0413: the planner and the follow-track sheet
-started the controller directly and left every alert inert. A start that the
+way-alert and proximity caches and latches. Then it starts the session. Once the
+controller accepts the start, it also applies the navigation camera's profile
+defaults; a refused start leaves the camera as it was. A start that the
 controller refuses leaves those hosts reset for the next attempt, because no
 session runs and no latch of a running session is cleared. A second start while
-a session runs does not touch the hosts at all, so the running session keeps its
-profile, route cache and latches. The profile is the caller's choice. Both UI
-sheets use Walk today.
+a session runs does not touch the hosts or the camera at all, so the running
+session keeps its profile, route cache, latches and this-trip switches. A
+re-created Activity reads the same active profile and the same process-owned
+camera, so this trip's alert and camera choices survive a configuration change.
+This closes the defect from before T-0413: the planner and the follow-track
+sheet started the controller directly and left every alert inert. The profile
+is the caller's choice. Both UI sheets use Walk today.
 
 Location is shared, not process-scoped (T-0314, user decision Q10 on
 2026-11-08). The map's collector and an active session subscribe to

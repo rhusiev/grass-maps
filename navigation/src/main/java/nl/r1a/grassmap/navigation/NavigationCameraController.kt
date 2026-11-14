@@ -5,9 +5,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.error.onFailure
 import nl.r1a.grassmap.plugin.api.host.MapHost
 import nl.r1a.grassmap.plugin.api.model.CameraUpdate
 import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmap.plugin.api.model.TrackingMode
 
 /**
  * The navigation camera (T-0313): auto zoom, auto-centre and tilt.
@@ -31,10 +33,12 @@ import nl.r1a.grassmap.plugin.api.model.LocationFix
  * Tilt is on by default in round 5. [setTilt] on pitches the camera to
  * [TILT_DEGREES] and off restores [FLAT_DEGREES].
  *
- * The controller does not set a tracking mode. A screen that binds it must
- * leave the host in `TrackingMode.Free`, or the host's own follow loop and this
- * controller will both write the centre. The navigation screen (T-0320) binds
- * the switches and reports a pan through [onManualPan].
+ * A new trip applies the profile defaults once through [applyTripDefaults],
+ * which also leaves the host in `TrackingMode.Free`; the host's own follow loop
+ * and this controller must not both write the centre. The navigation screen
+ * (T-0320) binds the switches and reports a pan through [onManualPan]. The
+ * controller lives in the container, not the screen composition, so a
+ * re-created screen keeps the switches the user set for the running trip.
  */
 class NavigationCameraController(
     private val host: () -> MapHost?,
@@ -125,6 +129,24 @@ class NavigationCameraController(
         appliedZoom = null
         val map = host() ?: return
         applyTilt(map, FLAT_DEGREES)
+    }
+
+    /**
+     * Applies the profile defaults at the start of a new trip: auto zoom,
+     * auto-centre and tilt on, and the host in free tracking.
+     *
+     * The app's `GuidanceStarter` calls this once on a fresh start. A state
+     * frame, a recomposition or a re-created screen never calls it, so the
+     * switches the user changes for this trip stay in place.
+     */
+    suspend fun applyTripDefaults() {
+        setAutoZoom(true)
+        setAutoCentre(true)
+        setTilt(true)
+        val map = host() ?: return
+        map.setTrackingMode(TrackingMode.Free).onFailure { error ->
+            log("navigation tracking not set: $error")
+        }
     }
 
     /** Turns auto zoom on or off; off leaves the current zoom where it is. */

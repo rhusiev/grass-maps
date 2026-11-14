@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.app
 
 import nl.r1a.grassmap.alerts.BeepHost
+import nl.r1a.grassmap.navigation.NavigationCameraController
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
@@ -22,12 +23,18 @@ import nl.r1a.grassmap.plugins.way.alerts.WayAlertHost
  *
  * The profile is the caller's choice: the route planner and the follow-track
  * sheet both use Walk today, and this class does not pick one.
+ *
+ * A fresh start is also where the navigation camera returns to the profile
+ * defaults. It must not run from the map screen whenever navigation becomes
+ * active: a re-created Activity mid-trip would then silently undo this trip's
+ * camera switches. It lives here, on the one path a trip actually begins.
  */
 internal class GuidanceStarter(
     private val navigation: NavigationController,
     private val beeps: () -> BeepHost,
     private val wayAlerts: () -> WayAlertHost,
     private val proximityAlerts: () -> ProximityAlertHost,
+    private val camera: () -> NavigationCameraController,
 ) {
     /**
      * Prepares the hosts for [profile] and starts a session on [route].
@@ -44,7 +51,8 @@ internal class GuidanceStarter(
      *
      * A start while a session runs is not a failure. The controller reports
      * `started=false`, and this class does not touch the hosts at all, so a
-     * running session keeps its profile, route cache and latches.
+     * running session keeps its profile, route cache, latches and camera
+     * switches.
      */
     suspend fun start(
         route: Route,
@@ -58,6 +66,10 @@ internal class GuidanceStarter(
         wayAlerts().setProfile(profile)
         wayAlerts().reset()
         proximityAlerts().reset()
-        return navigation.start(route, profile, reroute)
+        val started = navigation.start(route, profile, reroute)
+        if (started is Outcome.Success && started.value) {
+            camera().applyTripDefaults()
+        }
+        return started
     }
 }

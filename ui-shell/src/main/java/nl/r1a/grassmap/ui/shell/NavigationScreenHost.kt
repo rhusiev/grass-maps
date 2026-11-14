@@ -987,6 +987,7 @@ private fun alertGlyph(glyph: NavigationAlertGlyph): String =
         NavigationAlertGlyph.Reroute -> "\u27F3"
         NavigationAlertGlyph.Signal -> "\u25D4"
         NavigationAlertGlyph.Arrival -> "\u2691"
+        NavigationAlertGlyph.Place -> "\u25CF"
     }
 
 private fun TripDetail(

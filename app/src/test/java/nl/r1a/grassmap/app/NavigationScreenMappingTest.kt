@@ -188,6 +188,39 @@ class NavigationScreenMappingTest {
     }
 
     @Test
+    fun proximityAlertsNameTheCategoryAndThePlace() {
+        val favourite =
+            screenAlert(
+                AlertBanner(
+                    AlertKind.Favourite,
+                    AlertSeverity.Info,
+                    placeDistanceMeters = 180.0,
+                    placeName = "Home",
+                ),
+            )
+        assertEquals("Favourite nearby", favourite.title)
+        assertEquals("Home · in 180 m", favourite.detail)
+        assertEquals(NavigationAlertTone.Info, favourite.tone)
+        assertEquals(NavigationAlertGlyph.Place, favourite.glyph)
+
+        val waypoint =
+            screenAlert(
+                AlertBanner(
+                    AlertKind.TrackWaypoint,
+                    AlertSeverity.Info,
+                    placeDistanceMeters = 90.0,
+                    placeName = "Spring",
+                ),
+            )
+        assertEquals("Waypoint nearby", waypoint.title)
+        assertEquals("Spring · in 90 m", waypoint.detail)
+
+        val unnamed = screenAlert(AlertBanner(AlertKind.Poi, AlertSeverity.Info, placeDistanceMeters = 240.0))
+        assertEquals("Place nearby", unnamed.title)
+        assertEquals("in 240 m", unnamed.detail)
+    }
+
+    @Test
     fun infoAlertsAndTheSignalGapKeepTheirOwnCopy() {
         val recalculated = screenAlert(AlertBanner(AlertKind.Rerouted, AlertSeverity.Info, routeDistanceMeters = 321.5))
         assertEquals("Route recalculated", recalculated.title)
@@ -355,6 +388,10 @@ class NavigationScreenMappingTest {
                 "nav_screen_alert_gps_back" to "GPS signal back",
                 "nav_screen_alert_recalculated" to "Route recalculated",
                 "nav_screen_alert_arrived" to "You have arrived",
+                "nav_screen_alert_favourite" to "Favourite nearby",
+                "nav_screen_alert_waypoint" to "Waypoint nearby",
+                "nav_screen_alert_place" to "Place nearby",
+                "nav_screen_alert_place_detail" to "%1\$s · %2\$s",
                 "nav_screen_seconds" to "%1\$s s",
             )
 

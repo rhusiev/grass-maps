@@ -9,7 +9,9 @@ import kotlinx.serialization.Serializable
  * One switch covers both [AlertKind.SignalLost] and [AlertKind.SignalRegained],
  * because one gap produces both halves of one announcement. The others map to
  * exactly one kind each, including the three way alerts (T-0319), whose
- * features come from the region and are on by their own switches only.
+ * features come from the region and are on by their own switches only. The
+ * three proximity alerts (T-0413) have one switch each for the same reason: a
+ * traveller may want favourites announced and places left silent.
  */
 @Serializable
 data class AlertSettings(
@@ -20,6 +22,9 @@ data class AlertSettings(
     val tunnel: Boolean = false,
     val railwayCrossing: Boolean = false,
     val hazard: Boolean = false,
+    val favourite: Boolean = false,
+    val trackWaypoint: Boolean = false,
+    val poi: Boolean = false,
 ) {
     /** Whether [kind] may be announced with these switches. */
     fun isEnabled(kind: AlertKind): Boolean =
@@ -31,6 +36,9 @@ data class AlertSettings(
             AlertKind.Tunnel -> tunnel
             AlertKind.RailwayCrossing -> railwayCrossing
             AlertKind.Hazard -> hazard
+            AlertKind.Favourite -> favourite
+            AlertKind.TrackWaypoint -> trackWaypoint
+            AlertKind.Poi -> poi
         }
 
     /** A copy with the switch that owns [kind] set to [enabled]. */
@@ -46,6 +54,9 @@ data class AlertSettings(
             AlertKind.Tunnel -> copy(tunnel = enabled)
             AlertKind.RailwayCrossing -> copy(railwayCrossing = enabled)
             AlertKind.Hazard -> copy(hazard = enabled)
+            AlertKind.Favourite -> copy(favourite = enabled)
+            AlertKind.TrackWaypoint -> copy(trackWaypoint = enabled)
+            AlertKind.Poi -> copy(poi = enabled)
         }
 
     companion object {

@@ -105,6 +105,10 @@
     <string name="nav_screen_alert_reroute">Reroute</string>
     <string name="nav_screen_alert_arrival">Arrival</string>
     <string name="nav_screen_alert_arrived">You have arrived</string>
+    <string name="nav_screen_alert_favourite">Favourite nearby</string>
+    <string name="nav_screen_alert_waypoint">Waypoint nearby</string>
+    <string name="nav_screen_alert_place">Place nearby</string>
+    <string name="nav_screen_alert_place_detail">%1$s · %2$s</string>
 
     <string name="elevation_chart_title">Elevation</string>
     <string name="elevation_chart_axis_distance">Distance</string>

@@ -105,6 +105,10 @@
     <string name="nav_screen_alert_reroute">Перерахунок</string>
     <string name="nav_screen_alert_arrival">Прибуття</string>
     <string name="nav_screen_alert_arrived">Ви прибули</string>
+    <string name="nav_screen_alert_favourite">Улюблене місце поруч</string>
+    <string name="nav_screen_alert_waypoint">Точка треку поруч</string>
+    <string name="nav_screen_alert_place">Місце поруч</string>
+    <string name="nav_screen_alert_place_detail">%1$s · %2$s</string>
 
     <string name="elevation_chart_title">Висота</string>
     <string name="elevation_chart_axis_distance">Відстань</string>

@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.alerts
 
 import kotlinx.serialization.Serializable
+import nl.r1a.grassmap.plugin.api.model.ProximityPlaceKind
 import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
 
 /**
@@ -20,6 +21,15 @@ enum class AlertKind {
     Tunnel,
     RailwayCrossing,
     Hazard,
+
+    /** A favourite the traveller is approaching (T-0413). */
+    Favourite,
+
+    /** A waypoint of the followed track the traveller is approaching (T-0413). */
+    TrackWaypoint,
+
+    /** A place of a kind the user picked, when the traveller is approaching it (T-0413). */
+    Poi,
     ;
 
     companion object {
@@ -33,6 +43,14 @@ enum class AlertKind {
                 WayAlertFeatureKind.RailwayCrossing -> RailwayCrossing
                 WayAlertFeatureKind.Tunnel -> Tunnel
                 WayAlertFeatureKind.Hazard, WayAlertFeatureKind.Ford, WayAlertFeatureKind.Barrier -> Hazard
+            }
+
+        /** The alert kind that announces a proximity place (T-0413). */
+        fun forProximity(kind: ProximityPlaceKind): AlertKind =
+            when (kind) {
+                ProximityPlaceKind.Favourite -> Favourite
+                ProximityPlaceKind.TrackWaypoint -> TrackWaypoint
+                ProximityPlaceKind.Poi -> Poi
             }
     }
 }

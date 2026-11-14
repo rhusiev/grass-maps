@@ -262,6 +262,10 @@ private fun screenAlert(
                 )
             }
 
+            banner.kind in PROXIMITY_ALERT_KINDS -> {
+                placeDetail(banner, strings, locale)
+            }
+
             else -> {
                 null
             }
@@ -297,6 +301,10 @@ private fun alertGlyph(banner: AlertBanner): NavigationAlertGlyph =
                 WayAlertFeatureKind.Ford -> NavigationAlertGlyph.Ford
                 else -> NavigationAlertGlyph.Hazard
             }
+        }
+
+        AlertKind.Favourite, AlertKind.TrackWaypoint, AlertKind.Poi -> {
+            NavigationAlertGlyph.Place
         }
 
         AlertKind.OffRoute, AlertKind.Arrived -> {
@@ -344,7 +352,52 @@ private fun alertTitle(
         AlertKind.Arrived -> {
             strings.resolve(NavigationScreenStrings.ALERT_ARRIVED)
         }
+
+        AlertKind.Favourite -> {
+            strings.resolve(NavigationScreenStrings.ALERT_FAVOURITE)
+        }
+
+        AlertKind.TrackWaypoint -> {
+            strings.resolve(NavigationScreenStrings.ALERT_WAYPOINT)
+        }
+
+        AlertKind.Poi -> {
+            strings.resolve(NavigationScreenStrings.ALERT_PLACE)
+        }
     }
+
+/**
+ * The second line of a proximity banner: the place's own name and how far it
+ * was when the alert fired (T-0413). The name is data, so it is drawn as it is.
+ * A place without a name shows the distance alone.
+ */
+private fun placeDetail(
+    banner: AlertBanner,
+    strings: Strings,
+    locale: Locale,
+): String? {
+    val distance =
+        banner.placeDistanceMeters?.let { meters ->
+            strings.resolve(
+                NavigationScreenStrings.ALERT_IN,
+                listOf(guidanceDistanceText(meters, strings, locale)),
+            )
+        }
+    val name = banner.placeName
+    return when {
+        name != null && distance != null -> {
+            strings.resolve(NavigationScreenStrings.ALERT_PLACE_DETAIL, listOf(name, distance))
+        }
+
+        name != null -> {
+            name
+        }
+
+        else -> {
+            distance
+        }
+    }
+}
 
 /** Whole km/h from 10, one decimal below; a missing value draws a dash. */
 internal fun formatSpeedKmh(
@@ -369,6 +422,8 @@ private fun formatArrival(
 
 private val WAY_ALERT_KINDS =
     setOf(AlertKind.Tunnel, AlertKind.RailwayCrossing, AlertKind.Hazard)
+private val PROXIMITY_ALERT_KINDS =
+    setOf(AlertKind.Favourite, AlertKind.TrackWaypoint, AlertKind.Poi)
 private val ARRIVAL_FORMAT = DateTimeFormatter.ofPattern("HH:mm")
 private const val DASH = "–"
 private const val DEFAULT_PROFILE = "walk"

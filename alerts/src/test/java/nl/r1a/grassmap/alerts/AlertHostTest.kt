@@ -9,6 +9,7 @@ import nl.r1a.grassmap.navigation.NavigationState
 import nl.r1a.grassmap.navigation.RouteRelation
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmap.plugin.api.model.ProximityPlaceKind
 import nl.r1a.grassmap.plugin.api.model.WayAlertElementType
 import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
 import nl.r1a.grassmap.plugin.api.model.WayAlertKey
@@ -228,6 +229,68 @@ class AlertHostTest {
                 listOf(
                     AlertEffect.Sound(AlertKind.Hazard),
                     AlertEffect.Vibration(AlertKind.Hazard),
+                ),
+                sink.effects,
+            )
+        }
+
+    @Test
+    fun eachProximityAlertHasItsOwnOffByDefaultSwitch() {
+        val settings = AlertSettings.ALL_OFF
+
+        assertFalse(settings.isEnabled(AlertKind.Favourite))
+        assertFalse(settings.isEnabled(AlertKind.TrackWaypoint))
+        assertFalse(settings.isEnabled(AlertKind.Poi))
+        assertTrue(AlertKind.entries.none { settings.isEnabled(it) })
+
+        val favouriteOnly = settings.with(AlertKind.Favourite, true)
+
+        assertTrue(favouriteOnly.isEnabled(AlertKind.Favourite))
+        assertFalse(favouriteOnly.isEnabled(AlertKind.TrackWaypoint))
+        assertFalse(favouriteOnly.isEnabled(AlertKind.Poi))
+        assertFalse(favouriteOnly.isEnabled(AlertKind.Hazard))
+    }
+
+    @Test
+    fun aDisabledProximityAlertEmitsNoEventAndNoEffect() =
+        runTest {
+            val sink = RecordingEffectSink()
+            val host = AlertHost(AlertSettings.ALL_OFF, sink)
+            val events = collectAlerts(host)
+
+            host.onPlaceAlert(
+                placeKind = ProximityPlaceKind.Favourite,
+                fixTimeMillis = 1_000L,
+                distanceMeters = 180.0,
+                placeName = "Home",
+            )
+
+            assertTrue(events.isEmpty())
+            assertTrue(sink.effects.isEmpty())
+        }
+
+    @Test
+    fun aProximityAlertCarriesItsPlaceNameAndDistance() =
+        runTest {
+            val sink = RecordingEffectSink()
+            val host = AlertHost(AlertSettings(poi = true), sink)
+            val events = collectAlerts(host)
+
+            host.onPlaceAlert(
+                placeKind = ProximityPlaceKind.Poi,
+                fixTimeMillis = 1_000L,
+                distanceMeters = 240.5,
+                placeName = "Svit Kavy",
+            )
+
+            assertEquals(listOf(AlertKind.Poi), events.map { it.kind })
+            assertEquals("Svit Kavy", events.single().banner.placeName)
+            assertEquals(240.5, events.single().banner.placeDistanceMeters ?: -1.0, 0.001)
+            assertEquals(AlertSeverity.Info, events.single().banner.severity)
+            assertEquals(
+                listOf(
+                    AlertEffect.Sound(AlertKind.Poi),
+                    AlertEffect.Vibration(AlertKind.Poi),
                 ),
                 sink.effects,
             )

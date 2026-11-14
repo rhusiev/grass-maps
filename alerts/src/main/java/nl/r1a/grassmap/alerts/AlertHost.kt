@@ -16,6 +16,7 @@ import nl.r1a.grassmap.navigation.NavigationPhase
 import nl.r1a.grassmap.navigation.NavigationState
 import nl.r1a.grassmap.navigation.RouteRelation
 import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmap.plugin.api.model.ProximityPlaceKind
 import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
 import nl.r1a.grassmap.plugin.api.model.WayAlertKey
 
@@ -47,6 +48,10 @@ import nl.r1a.grassmap.plugin.api.model.WayAlertKey
  * - **Arrival** - announced once on the transition into
  *   [NavigationPhase.Arrived]; a second Arrived state is the same arrival. The
  *   latch re-arms only when the phase leaves Arrived, which starts a new trip.
+ * - **Proximity** - the host has no proximity latch of its own: the producer
+ *   (T-0413) decides that one approach is due and the host announces it. Two
+ *   independent latches for the same place would disagree about a second
+ *   approach, so the scope of "once" stays with the producer.
  *
  * Latches advance even while their switch is off, so enabling an alert in the
  * middle of an episode waits for the next episode. Sound and vibration are
@@ -201,6 +206,44 @@ class AlertHost(
         )
     }
 
+    /**
+     * Announces one proximity alert (T-0413): a favourite, a waypoint of the
+     * followed track, or a place of a kind the user picked.
+     *
+     * The producer owns the approach scope. Its schedule latches a place when
+     * it first comes inside the place's radius and releases the latch only
+     * after the traveller is beyond the radius again, so a fix that stays
+     * inside the radius does not repeat and a second approach does. The host
+     * therefore announces every call that its switch allows instead of keeping
+     * a second latch: two "once" rules would disagree, and an approach is
+     * spatial, not a time window.
+     *
+     * A switch that is off drops the alert before any event or effect is
+     * produced. [placeName] is the place's own stored name, not authored
+     * English; a null name is a place that has none.
+     */
+    @Synchronized
+    fun onPlaceAlert(
+        placeKind: ProximityPlaceKind,
+        fixTimeMillis: Long,
+        distanceMeters: Double,
+        placeName: String? = null,
+    ) {
+        require(distanceMeters.isFinite() && distanceMeters >= 0.0) {
+            "the place distance must be finite and not negative"
+        }
+        val kind = AlertKind.forProximity(placeKind)
+        if (!mutableSettings.value.isEnabled(kind)) {
+            return
+        }
+        announce(
+            kind = kind,
+            fixTimeMillis = fixTimeMillis,
+            placeDistanceMeters = distanceMeters,
+            placeName = placeName,
+        )
+    }
+
     private fun announce(
         kind: AlertKind,
         fixTimeMillis: Long,
@@ -208,10 +251,22 @@ class AlertHost(
         gapMillis: Long? = null,
         featureDistanceMeters: Double? = null,
         featureKind: WayAlertFeatureKind? = null,
+        placeDistanceMeters: Double? = null,
+        placeName: String? = null,
     ) {
         sequence += 1
         val effects = listOf(AlertEffect.Sound(kind), AlertEffect.Vibration(kind))
-        val banner = AlertBanner(kind, severityOf(kind), routeDistanceMeters, gapMillis, featureDistanceMeters, featureKind)
+        val banner =
+            AlertBanner(
+                kind = kind,
+                severity = severityOf(kind),
+                routeDistanceMeters = routeDistanceMeters,
+                gapMillis = gapMillis,
+                featureDistanceMeters = featureDistanceMeters,
+                featureKind = featureKind,
+                placeDistanceMeters = placeDistanceMeters,
+                placeName = placeName,
+            )
         mutableEvents.tryEmit(
             AlertEvent(
                 sequence = sequence,
@@ -230,6 +285,7 @@ class AlertHost(
             AlertKind.SignalRegained, AlertKind.Rerouted, AlertKind.Arrived -> AlertSeverity.Info
             AlertKind.Tunnel -> AlertSeverity.Info
             AlertKind.RailwayCrossing, AlertKind.Hazard -> AlertSeverity.Warning
+            AlertKind.Favourite, AlertKind.TrackWaypoint, AlertKind.Poi -> AlertSeverity.Info
         }
 
     companion object {

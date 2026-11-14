@@ -88,6 +88,7 @@ enum class NavigationAlertGlyph {
     Reroute,
     Signal,
     Arrival,
+    Place,
 }
 
 /** One banner, with its copy already resolved for the active language. */

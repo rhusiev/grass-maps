@@ -60,6 +60,7 @@ class AndroidAlertEffects(
             AlertKind.Rerouted -> ToneGenerator.TONE_PROP_BEEP
             AlertKind.Tunnel -> ToneGenerator.TONE_PROP_BEEP
             AlertKind.RailwayCrossing, AlertKind.Hazard -> ToneGenerator.TONE_PROP_NACK
+            AlertKind.Favourite, AlertKind.TrackWaypoint, AlertKind.Poi -> ToneGenerator.TONE_PROP_ACK
         }
 
     private fun vibrationOf(kind: AlertKind): LongArray =
@@ -82,6 +83,10 @@ class AndroidAlertEffects(
 
             AlertKind.RailwayCrossing, AlertKind.Hazard -> {
                 longArrayOf(0L, VIBRATION_LONG_MILLIS)
+            }
+
+            AlertKind.Favourite, AlertKind.TrackWaypoint, AlertKind.Poi -> {
+                longArrayOf(0L, VIBRATION_SHORT_MILLIS)
             }
         }
 

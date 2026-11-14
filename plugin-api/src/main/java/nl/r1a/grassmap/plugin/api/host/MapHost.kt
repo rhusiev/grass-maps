@@ -12,6 +12,7 @@ import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerSpec
 import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.MapTrack
+import nl.r1a.grassmap.plugin.api.model.RouteLineStyle
 import nl.r1a.grassmap.plugin.api.model.ScreenOffset
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleSpec
@@ -78,6 +79,18 @@ interface MapHost {
      * null. The line is not a Compose overlay, so it follows the map.
      */
     suspend fun setRoute(route: Route?): Outcome<Unit>
+
+    /**
+     * Draws [route] with the route layer's colour and pattern decision (T-0408).
+     *
+     * A style with no runs leaves the host's own single-colour line in place. A
+     * host that cannot vary a line per run draws [route] through [setRoute]
+     * instead of refusing it, which is why the default overload delegates.
+     */
+    suspend fun setRoute(
+        route: Route?,
+        style: RouteLineStyle,
+    ): Outcome<Unit> = setRoute(route)
 
     /**
      * Draws [tracks] in the overlays slot, replacing every track the map drew

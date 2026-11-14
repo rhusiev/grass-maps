@@ -54,6 +54,7 @@ include(
     ":plugins:way-alerts",
     ":plugins:route-warnings",
     ":plugins:track-layer",
+    ":plugins:route-layer",
     ":plugins:track-library",
     ":plugins:contours",
     ":plugins:route-relations",

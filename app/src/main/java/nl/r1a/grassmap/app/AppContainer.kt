@@ -82,6 +82,7 @@ import nl.r1a.grassmap.plugins.map.controls.PositionOffsetFraction
 import nl.r1a.grassmap.plugins.map.controls.PositionOffsetProvider
 import nl.r1a.grassmap.plugins.point.info.PointInfo
 import nl.r1a.grassmap.plugins.point.info.SelectedPointStore
+import nl.r1a.grassmap.plugins.route.layer.RouteLayer
 import nl.r1a.grassmap.plugins.route.warnings.RouteWarningScanner
 import nl.r1a.grassmap.plugins.track.layer.TrackLayer
 import nl.r1a.grassmap.plugins.track.library.TrackFolderStore
@@ -575,6 +576,18 @@ class AppContainer(
     }
 
     /**
+     * The map layer over the planned route (T-0408). The plugin module owns the
+     * colour and pattern decision; the app gives it the bound map and the route
+     * the map screen already draws.
+     */
+    val routeLayer: RouteLayer by lazy {
+        RouteLayer(
+            host = { mapSession.hostOrNull() },
+            log = { message -> Log.w(ROUTE_LAYER_TAG, message) },
+        )
+    }
+
+    /**
      * The track library's folder definitions (T-0414), in one small index
      * beside the track documents. Without a tracks root the folders live in
      * memory, exactly like the tracks themselves.
@@ -804,6 +817,7 @@ class AppContainer(
         const val NAVIGATION_TAG = "GrassMapsNavigation"
         const val WAY_ALERTS_TAG = "GrassMapsWayAlerts"
         const val TRACK_LAYER_TAG = "GrassMapsTracks"
+        const val ROUTE_LAYER_TAG = "GrassMapsRoute"
         const val TRACK_LIBRARY_INDEX = ".library.json"
         const val ROUTING_PACK_DIRECTORY = "valhalla"
         val ROUTING_ENGINE_PLUGIN = PluginId("valhalla")

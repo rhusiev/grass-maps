@@ -190,6 +190,7 @@ dependencies {
     implementation(project(":plugins:way-alerts"))
     implementation(project(":plugins:route-warnings"))
     implementation(project(":plugins:track-layer"))
+    implementation(project(":plugins:route-layer"))
     implementation(project(":plugins:track-library"))
     implementation(project(":plugins:contours"))
     implementation(project(":plugins:route-relations"))

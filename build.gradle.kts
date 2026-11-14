@@ -96,6 +96,7 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         ":plugins:way-alerts" to setOf(":plugin-api"),
         ":plugins:route-warnings" to setOf(":plugin-api"),
         ":plugins:track-layer" to setOf(":plugin-api"),
+        ":plugins:route-layer" to setOf(":plugin-api"),
         ":plugins:track-library" to setOf(":plugin-api"),
         ":plugins:contours" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:route-relations" to setOf(":plugin-api"),

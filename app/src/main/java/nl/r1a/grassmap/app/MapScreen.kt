@@ -123,6 +123,7 @@ import nl.r1a.grassmap.plugins.map.controls.ScaleBarUnit
 import nl.r1a.grassmap.plugins.point.info.PointInfoContract
 import nl.r1a.grassmap.plugins.point.info.PointInfoLabel
 import nl.r1a.grassmap.plugins.point.info.SelectedPointValue
+import nl.r1a.grassmap.plugins.route.layer.RouteColourMode
 import nl.r1a.grassmap.plugins.route.planner.RoutePlannerContract
 import nl.r1a.grassmap.plugins.route.relations.RouteRelationsMapController
 import nl.r1a.grassmap.plugins.track.library.TrackLibraryContract
@@ -686,9 +687,11 @@ private fun MapContent(
     val drawnRoute = remember(plan.selected) { plan.selectedRoute() }
     val routeToDraw = if (navigationActive) activeNavigation.activeRoute else drawnRoute
     LaunchedEffect(routeToDraw) {
-        surface.host.setRoute(routeToDraw).onFailure { error ->
-            Log.w(TAG, "route not drawn: $error")
-        }
+        // The map loads the light Standard style, so the route line takes the
+        // light round-10 palette. A night map would pass its own theme here.
+        container.routeLayer
+            .draw(routeToDraw, RouteColourMode.Slope, dark = false)
+            .onFailure { error -> Log.w(TAG, "route not drawn: $error") }
     }
     LaunchedEffect(plan.generation) {
         if (plan.generation == 0L) {

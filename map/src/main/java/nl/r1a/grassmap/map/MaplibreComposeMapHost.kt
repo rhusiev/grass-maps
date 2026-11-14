@@ -47,6 +47,7 @@ import nl.r1a.grassmap.plugin.api.model.LayerSpec
 import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.MapSource
 import nl.r1a.grassmap.plugin.api.model.MapTrack
+import nl.r1a.grassmap.plugin.api.model.RouteLineStyle
 import nl.r1a.grassmap.plugin.api.model.ScreenOffset
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.SourceId
@@ -94,6 +95,13 @@ internal class MapHostState(
     var puckWriteCount: Long = 0
         private set
     val route = mutableStateOf<Route?>(null)
+
+    /**
+     * The route layer's colour and pattern decision (T-0408). An empty style
+     * keeps the host's single-colour line, which is what an unannotated route
+     * has.
+     */
+    val routeStyle = mutableStateOf(RouteLineStyle())
 
     /**
      * The stored tracks the map draws in the overlays slot (T-0401). The list is
@@ -204,6 +212,19 @@ internal class MapHostState(
 
     fun updateRoute(route: Route?) {
         this.route.value = route
+        this.routeStyle.value = RouteLineStyle()
+    }
+
+    /**
+     * Keeps a route and its colour decision together, so a redraw never draws
+     * the new line with the previous style.
+     */
+    fun updateRoute(
+        route: Route?,
+        style: RouteLineStyle,
+    ) {
+        this.route.value = route
+        this.routeStyle.value = style
     }
 
     /** Replaces the drawn tracks; an unchanged list is not a new map write. */
@@ -491,6 +512,15 @@ class MaplibreComposeMapHost internal constructor(
     override suspend fun setRoute(route: Route?): Outcome<Unit> =
         withContext(Dispatchers.Main.immediate) {
             session.updateRoute(route)
+            Outcome.Success(Unit)
+        }
+
+    override suspend fun setRoute(
+        route: Route?,
+        style: RouteLineStyle,
+    ): Outcome<Unit> =
+        withContext(Dispatchers.Main.immediate) {
+            session.updateRoute(route, style)
             Outcome.Success(Unit)
         }
 

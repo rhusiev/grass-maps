@@ -29,6 +29,7 @@ import nl.r1a.grassmap.plugin.api.model.LayerType
 import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
 import nl.r1a.grassmap.plugin.api.model.MapTrack
+import nl.r1a.grassmap.plugin.api.model.RouteLineStyle
 import nl.r1a.grassmap.plugin.api.model.SourceId
 import nl.r1a.grassmap.plugin.api.provider.Route
 import org.maplibre.compose.expressions.ast.Expression
@@ -160,7 +161,7 @@ private fun TrackLineNode(
 @Composable
 @MaplibreComposable
 private fun RouteLayerSlot(session: MapHostState) {
-    RouteLine(session.route.value)
+    RouteLine(session.route.value, session.routeStyle.value)
 }
 
 /**
@@ -201,25 +202,82 @@ private fun MarkerLayerSlot(
 /**
  * The planned route as one GeoJSON line in the routes slot, with one point at
  * each end. The source is re-keyed when the route changes, matching the puck's
- * update pattern. This composable reads only [Route], never the camera, so a
- * pan or a zoom does not re-run it.
+ * update pattern. This composable reads only [Route] and [RouteLineStyle],
+ * never the camera, so a pan or a zoom does not re-run it.
+ *
+ * A style with runs draws the route layer's coloured, dashed and striped line
+ * (T-0408): three layers over one FeatureCollection, built once per route or
+ * style change. A style with no runs keeps the single-colour line as it was.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 @MaplibreComposable
-private fun RouteLine(route: Route?) {
+private fun RouteLine(
+    route: Route?,
+    style: RouteLineStyle,
+) {
     if (route == null || route.geometry.size < MIN_ROUTE_POINTS) return
-    val source = rememberGeoJsonSource(GeoJsonData.JsonString(route.toFeatureCollection()))
-    LineLayer(
-        id = ROUTE_LAYER_ID,
-        source = source,
-        color = const(ROUTE_COLOR),
-        opacity = const(1f),
-        width = const(ROUTE_WIDTH_DP.dp),
-    )
+    if (style.isColoured) {
+        ColouredRouteLine(route, style)
+    } else {
+        val source = rememberGeoJsonSource(GeoJsonData.JsonString(route.toFeatureCollection()))
+        LineLayer(
+            id = ROUTE_LAYER_ID,
+            source = source,
+            color = const(ROUTE_COLOR),
+            opacity = const(1f),
+            width = const(ROUTE_WIDTH_DP.dp),
+        )
+    }
     RouteArrows(route)
     RouteEnd(route.geometry.first(), ROUTE_START_LAYER_ID)
     RouteEnd(route.geometry.last(), ROUTE_END_LAYER_ID)
+}
+
+/**
+ * The route layer's coloured line: one source, three layers. The solid layer
+ * also carries a striped run, whose ink is dashed over it, so the two patterns
+ * do not need a layer each per colour.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+@MaplibreComposable
+private fun ColouredRouteLine(
+    route: Route,
+    style: RouteLineStyle,
+) {
+    val data = remember(route, style) { RouteColourLines.featureCollection(route, style) }
+    val source = rememberGeoJsonSource(GeoJsonData.JsonString(data))
+    val colour = remember { RouteColourLines.colourExpression() }
+    val dash = remember { RouteColourLines.dashArray(ROUTE_WIDTH_DP.toFloat()) }
+    LineLayer(
+        id = ROUTE_LAYER_ID,
+        source = source,
+        color = colour,
+        opacity = const(1f),
+        width = const(ROUTE_WIDTH_DP.dp),
+        filter = StyleExpression.filter(RouteColourLines.solidFilter()),
+    )
+    LineLayer(
+        id = ROUTE_DASHED_LAYER_ID,
+        source = source,
+        color = colour,
+        opacity = const(1f),
+        width = const(ROUTE_WIDTH_DP.dp),
+        dasharray = dash,
+        filter = StyleExpression.filter(RouteColourLines.dashedFilter()),
+    )
+    RouteColourLines.stripeColour(style.stripeColour)?.let { stripe ->
+        LineLayer(
+            id = ROUTE_STRIPED_LAYER_ID,
+            source = source,
+            color = const(stripe),
+            opacity = const(1f),
+            width = const(ROUTE_WIDTH_DP.dp),
+            dasharray = dash,
+            filter = StyleExpression.filter(RouteColourLines.stripedFilter()),
+        )
+    }
 }
 
 /**
@@ -375,6 +433,8 @@ private val ACCURACY_COLOR = Color(0x221E88E5)
 private val ACCURACY_STROKE_COLOR = Color(0x551E88E5)
 
 private const val ROUTE_LAYER_ID = "core.route.line"
+private const val ROUTE_DASHED_LAYER_ID = "core.route.line.dashed"
+private const val ROUTE_STRIPED_LAYER_ID = "core.route.line.striped"
 private const val ROUTE_ARROW_LAYER_ID = "core.route.arrows"
 private const val ROUTE_START_LAYER_ID = "core.route.start"
 private const val ROUTE_END_LAYER_ID = "core.route.end"

@@ -5,6 +5,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
@@ -14,6 +15,8 @@ import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmap.plugins.route.layer.RouteColourMode
+import nl.r1a.grassmap.plugins.route.layer.RouteLayer
 import nl.r1a.grassmap.routing.RouteJson
 
 /** The debug-only command the map goldens use to put a fixed route on the map. */
@@ -26,7 +29,10 @@ internal val SET_ROUTE_COMMAND: CommandId = CommandId("core.map.set_route")
  *
  * The T-0311 goldens need a route on a fixture map that has no routing pack, so
  * the fixed route and its turn maneuvers are committed with the golden data and
- * this command hands them to the same route layer the app uses.
+ * this command hands them to the same route layer the app uses. The T-0408
+ * goldens need the colour decision too: `"colour"` picks `slope` (the default)
+ * or `surface`, and `"dark"` picks the dark round-10 palette when the capture
+ * selected a dark map style.
  */
 internal class SetRouteCommand(
     private val session: MapSessionHolder,
@@ -34,7 +40,9 @@ internal class SetRouteCommand(
         id = SET_ROUTE_COMMAND,
         paramsSerializer = JsonElement.serializer(),
         resultSerializer = String.serializer(),
-        doc = "Draws a route in the stable route JSON form, or clears it with a null route.",
+        doc =
+            "Draws a route in the stable route JSON form, or clears it with a null route. " +
+                "Optional colour=slope|surface and dark=true select the route line's palette.",
         policy =
             CommandPolicy(
                 allowlistedForControl = true,
@@ -42,7 +50,6 @@ internal class SetRouteCommand(
             ),
     ) {
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
-        val host = session.hostOrNull() ?: return Outcome.Failure(AppError.NotReady)
         val element = routeElement(params) ?: return Outcome.Failure(AppError.InvalidInput)
         val route =
             when (element) {
@@ -65,15 +72,26 @@ internal class SetRouteCommand(
                     return Outcome.Failure(AppError.InvalidInput)
                 }
             }
-        when (val outcome = host.setRoute(route)) {
+        val mode = colourMode(params) ?: return Outcome.Failure(AppError.InvalidInput)
+        val dark = booleanMember(params, DARK) ?: false
+        when (
+            val outcome =
+                RouteLayer(host = { session.hostOrNull() }).draw(route, mode, dark)
+        ) {
             is Outcome.Failure -> return outcome
             is Outcome.Success -> Unit
         }
         return Outcome.Success(
             CommandResult(
                 when (route) {
-                    null -> "route=cleared"
-                    else -> "route=set points=${route.geometry.size} distance_m=${route.distanceMeters}"
+                    null -> {
+                        "route=cleared"
+                    }
+
+                    else -> {
+                        "route=set points=${route.geometry.size} " +
+                            "distance_m=${route.distanceMeters} colour=${mode.name.lowercase()}"
+                    }
                 },
             ),
         )
@@ -87,9 +105,32 @@ internal class SetRouteCommand(
             else -> null
         }
 
+    private fun colourMode(params: JsonElement): RouteColourMode? {
+        val value = stringMember(params, COLOUR) ?: return RouteColourMode.Slope
+        return RouteColourMode.entries.firstOrNull { mode -> mode.name.equals(value, ignoreCase = true) }
+    }
+
+    private fun stringMember(
+        params: JsonElement,
+        name: String,
+    ): String? =
+        ((params as? JsonObject)?.get(name) as? JsonPrimitive)
+            ?.contentOrNull
+            ?.takeIf { it.isNotBlank() }
+
+    private fun booleanMember(
+        params: JsonElement,
+        name: String,
+    ): Boolean? = ((params as? JsonObject)?.get(name) as? JsonPrimitive)?.booleanOrNull
+
     private fun decoded(text: String): Route? =
         when (val outcome = RouteJson.decode(text)) {
             is Outcome.Success -> outcome.value
             is Outcome.Failure -> null
         }
+
+    private companion object {
+        const val COLOUR = "colour"
+        const val DARK = "dark"
+    }
 }

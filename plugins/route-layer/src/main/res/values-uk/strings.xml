@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.route_layer.name">Розфарбовування маршруту</string>
+    <string name="plugin.route_layer.description">Розфарбовує лінію запланованого маршруту за нахилом або покриттям і малює пунктиром ділянки без твердого покриття.</string>
+</resources>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.route_layer.name">Route colouring</string>
+    <string name="plugin.route_layer.description">Colours the planned route line by slope or surface, and dashes the parts with an unpaved surface.</string>
+</resources>

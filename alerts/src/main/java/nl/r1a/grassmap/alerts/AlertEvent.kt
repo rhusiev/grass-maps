@@ -8,7 +8,9 @@ import kotlinx.serialization.Serializable
  *
  * [sequence] counts from one within a host instance and never repeats, so a
  * consumer can tell two identical-looking banners apart. [fixTimeMillis] is
- * the fix time that decided the alert, not wall time.
+ * the fix time that decided the alert, not wall time. [bannerVisible] is false
+ * when the banner channel is off but a sound or a vibration still reaches the
+ * traveller; the screen then keeps the event's effects and draws no banner.
  *
  * Serialized with the generated serializer, so the stream has a stable JSON
  * form for the control channel and a future screen.
@@ -20,6 +22,7 @@ data class AlertEvent(
     val banner: AlertBanner,
     val effects: List<AlertEffect>,
     val fixTimeMillis: Long,
+    val bannerVisible: Boolean = true,
 ) {
     init {
         require(sequence > 0L) { "the sequence starts at one" }

@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import nl.r1a.grassmap.navigation.NavigationPhase
 import nl.r1a.grassmap.navigation.NavigationState
@@ -56,17 +55,26 @@ import nl.r1a.grassmap.plugin.api.model.WayAlertKey
  * Latches advance even while their switch is off, so enabling an alert in the
  * middle of an episode waits for the next episode. Sound and vibration are
  * values ([AlertEffect]); the host forwards them to [AlertEffectSink], and the
- * event carries the same list. The stream is live: a consumer subscribes
+ * event carries the same list. [AlertChannels] decide which of the banner,
+ * sound and vibration outputs an announced kind produces; all three off means
+ * the host emits nothing at all. The stream is live: a consumer subscribes
  * before the session starts, or it misses the alerts already emitted.
  */
 class AlertHost(
     initialSettings: AlertSettings = AlertSettings.ALL_OFF,
     private val effectSink: AlertEffectSink = NoopAlertEffectSink,
+    initialChannels: AlertChannels = AlertChannels.ALL_ON,
+    private val onSettingsChanged: (AlertSettings) -> Unit = {},
+    private val onChannelsChanged: (AlertChannels) -> Unit = {},
 ) {
     private val mutableSettings = MutableStateFlow(initialSettings)
+    private val mutableChannels = MutableStateFlow(initialChannels)
 
     /** The active switches; a screen can read them to draw the settings page. */
     val settings: StateFlow<AlertSettings> = mutableSettings.asStateFlow()
+
+    /** The active output channels; the screen draws the three reach controls. */
+    val channels: StateFlow<AlertChannels> = mutableChannels.asStateFlow()
 
     private val mutableEvents = MutableSharedFlow<AlertEvent>(extraBufferCapacity = EVENT_BUFFER)
 
@@ -96,7 +104,42 @@ class AlertHost(
         kind: AlertKind,
         enabled: Boolean,
     ) {
-        mutableSettings.update { it.with(kind, enabled) }
+        val next =
+            synchronized(this) {
+                val value = mutableSettings.value.with(kind, enabled)
+                mutableSettings.value = value
+                value
+            }
+        onSettingsChanged(next)
+    }
+
+    /** Turns one output channel on or off. */
+    fun setChannel(
+        channel: AlertChannel,
+        enabled: Boolean,
+    ) {
+        val next =
+            synchronized(this) {
+                val value = mutableChannels.value.with(channel, enabled)
+                mutableChannels.value = value
+                value
+            }
+        onChannelsChanged(next)
+    }
+
+    /**
+     * Replaces the switches and channels without reporting a change, for a new
+     * active profile. A surrounding settings store owns the write; this call
+     * is the read direction only.
+     */
+    fun replaceSettings(
+        settings: AlertSettings,
+        channels: AlertChannels,
+    ) {
+        synchronized(this) {
+            mutableSettings.value = settings
+            mutableChannels.value = channels
+        }
     }
 
     /**
@@ -254,8 +297,16 @@ class AlertHost(
         placeDistanceMeters: Double? = null,
         placeName: String? = null,
     ) {
+        val channels = mutableChannels.value
+        val effects =
+            buildList {
+                if (channels.sound) add(AlertEffect.Sound(kind))
+                if (channels.vibration) add(AlertEffect.Vibration(kind))
+            }
+        if (!channels.banner && effects.isEmpty()) {
+            return
+        }
         sequence += 1
-        val effects = listOf(AlertEffect.Sound(kind), AlertEffect.Vibration(kind))
         val banner =
             AlertBanner(
                 kind = kind,
@@ -274,6 +325,7 @@ class AlertHost(
                 banner = banner,
                 effects = effects,
                 fixTimeMillis = fixTimeMillis,
+                bannerVisible = channels.banner,
             ),
         )
         effects.forEach(effectSink::emit)

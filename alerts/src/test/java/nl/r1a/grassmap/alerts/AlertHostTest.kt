@@ -354,6 +354,105 @@ class AlertHostTest {
         assertEquals(AlertKind.RailwayCrossing, AlertKind.forWayFeature(WayAlertFeatureKind.RailwayCrossing))
     }
 
+    @Test
+    fun aSwitchTurnedOffProducesNoEventOrEffect() =
+        runTest {
+            val sink = RecordingEffectSink()
+            val host = AlertHost(AlertSettings(offRoute = true), sink, initialChannels = AlertChannels.ALL_ON)
+            val events = collectAlerts(host)
+
+            host.disable(AlertKind.OffRoute)
+            host.onState(state(relation = RouteRelation.OffRoute, fix = fix(0L)))
+
+            assertTrue(events.isEmpty())
+            assertTrue(sink.effects.isEmpty())
+        }
+
+    @Test
+    fun theBannerChannelOffLeavesSoundAndVibrationWithoutABanner() =
+        runTest {
+            val sink = RecordingEffectSink()
+            val host =
+                AlertHost(
+                    AlertSettings(arrival = true),
+                    sink,
+                    initialChannels = AlertChannels(sound = true, vibration = true),
+                )
+            val events = collectAlerts(host)
+
+            host.onState(state(phase = NavigationPhase.Arrived, fix = fix(0L)))
+
+            assertEquals(listOf(AlertKind.Arrived), events.map { it.kind })
+            assertFalse("the banner channel is off", events.single().bannerVisible)
+            assertEquals(
+                listOf(AlertEffect.Sound(AlertKind.Arrived), AlertEffect.Vibration(AlertKind.Arrived)),
+                sink.effects,
+            )
+        }
+
+    @Test
+    fun theSoundChannelOffLeavesOnlyVibration() =
+        runTest {
+            val sink = RecordingEffectSink()
+            val host =
+                AlertHost(
+                    AlertSettings(arrival = true),
+                    sink,
+                    initialChannels = AlertChannels(banner = true, vibration = true),
+                )
+            val events = collectAlerts(host)
+
+            host.onState(state(phase = NavigationPhase.Arrived, fix = fix(0L)))
+
+            assertTrue(events.single().bannerVisible)
+            assertEquals(listOf(AlertEffect.Vibration(AlertKind.Arrived)), sink.effects)
+        }
+
+    @Test
+    fun theVibrationChannelOffLeavesOnlySound() =
+        runTest {
+            val sink = RecordingEffectSink()
+            val host =
+                AlertHost(
+                    AlertSettings(arrival = true),
+                    sink,
+                    initialChannels = AlertChannels(banner = true, sound = true),
+                )
+            val events = collectAlerts(host)
+
+            host.onState(state(phase = NavigationPhase.Arrived, fix = fix(0L)))
+
+            assertTrue(events.single().bannerVisible)
+            assertEquals(listOf(AlertEffect.Sound(AlertKind.Arrived)), sink.effects)
+        }
+
+    @Test
+    fun everyChannelOffProducesNoEventAtAll() =
+        runTest {
+            val sink = RecordingEffectSink()
+            val host = AlertHost(AlertSettings(arrival = true), sink, initialChannels = AlertChannels.ALL_OFF)
+            val events = collectAlerts(host)
+
+            host.onState(state(phase = NavigationPhase.Arrived, fix = fix(0L)))
+
+            assertTrue(events.isEmpty())
+            assertTrue(sink.effects.isEmpty())
+        }
+
+    @Test
+    fun aChannelChangeIsReportedOnceAndIsReadable() {
+        val reported = mutableListOf<AlertChannels>()
+        val host = AlertHost(onChannelsChanged = { value -> reported += value })
+
+        host.setChannel(AlertChannel.Banner, true)
+        host.setChannel(AlertChannel.Sound, false)
+
+        assertTrue(host.channels.value.banner)
+        assertFalse(host.channels.value.sound)
+        assertEquals(2, reported.size)
+        assertTrue(reported.last().banner)
+    }
+
     private fun fix(timeMillis: Long): LocationFix =
         LocationFix(
             position = GeoPoint(latitude = 49.84, longitude = 24.03),

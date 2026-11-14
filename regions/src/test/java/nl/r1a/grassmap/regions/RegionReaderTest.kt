@@ -9,11 +9,15 @@ import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
 import nl.r1a.grassmap.plugin.api.model.WayAlertHit
 import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
+import nl.r1a.grassmap.regions.core.InternalException
+import nl.r1a.grassmap.regions.core.LatLon
+import nl.r1a.grassmap.regions.core.RegionRelations
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.nio.file.Files
+import nl.r1a.grassmap.regions.core.AlertHit as CoreAlertHit
 
 /**
  * The region reader against the committed test region (T-0319). The route is a
@@ -138,6 +142,57 @@ class RegionReaderTest {
 
             assertEquals(Outcome.Success(emptyList<WayAlertHit>()), outcome)
         }
+
+    @Test
+    fun aNativeLibraryThatFailsToLoadIsATypedFailure() =
+        runTest {
+            val directory = packageWith("""{"type":"FeatureCollection","features":[]}""")
+            try {
+                val reader =
+                    RegionReader(directory) {
+                        throw RuntimeException("UniFFI contract version mismatch: try cleaning and rebuilding your project")
+                    }
+
+                assertEquals(
+                    Outcome.Failure(AppError.Internal(NATIVE_LINKAGE_ERROR)),
+                    reader.wayAlertFeatures(route, CORRIDOR_METERS),
+                )
+            } finally {
+                directory.deleteRecursively()
+            }
+        }
+
+    @Test
+    fun aNativeCallThatPanicsIsATypedFailure() =
+        runTest {
+            val directory = packageWith("""{"type":"FeatureCollection","features":[]}""")
+            try {
+                val reader = RegionReader(directory) { PanickingNative() }
+
+                assertEquals(
+                    Outcome.Failure(AppError.Internal(NATIVE_PANIC_ERROR)),
+                    reader.wayAlertFeatures(route, CORRIDOR_METERS),
+                )
+            } finally {
+                directory.deleteRecursively()
+            }
+        }
+
+    /** A native object that fails only once it is called, like a Rust panic. */
+    private class PanickingNative : NativeRegion {
+        override fun wayAlertHits(
+            componentPath: String,
+            expectedBytes: Long,
+            route: List<LatLon>,
+            routeDistanceMeters: Double,
+            corridorMeters: Double,
+        ): List<CoreAlertHit> = throw InternalException("grass-regions panicked")
+
+        override fun routeRelations(
+            componentPath: String,
+            expectedBytes: Long,
+        ): RegionRelations = throw InternalException("grass-regions panicked")
+    }
 
     private suspend fun hitsOf(
         root: File,

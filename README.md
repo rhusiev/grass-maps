@@ -1771,9 +1771,11 @@ keeps the mount contract - it parses the manifest, selects the component and
 checks its format, version, declared size and file - and maps the native values
 onto `WayAlertHit` and `RouteRelations`, so no caller or plugin sees a native
 type. The parsed feature list is cached inside the native reader against the
-component path and declared size, and the read is off Main. The Kotlin
-corridor maths and GeoJSON parser are gone; the fixtures that pinned them were
-not edited.
+component path and declared size, and the read is off Main. The native library
+loads on the first query too, so a missing or mismatched library is an
+`Internal("regions.native")` failure rather than a crash, and a Rust panic is
+`Internal("regions.native.panic")`. The Kotlin corridor maths and GeoJSON
+parser are gone; the fixtures that pinned them were not edited.
 
 The kinds are a railway crossing, a tunnel and a hazard. A ford or a barrier
 node uses the hazard kind and the hazard switch. Each kind has its own switch,

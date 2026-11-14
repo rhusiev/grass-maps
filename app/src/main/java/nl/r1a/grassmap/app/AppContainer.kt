@@ -430,9 +430,10 @@ class AppContainer(
     }
 
     /**
-     * The mounted region's way-alert features (T-0319). The reader opens the
-     * component on the first query, off Main; an older package without it is a
-     * success with no features, and an unmounted region is the inert source.
+     * The mounted region's way-alert features (T-0319). The reader loads the
+     * native library and opens the component on the first query, off Main; an
+     * older package without it is a success with no features, and an unmounted
+     * region is the inert source.
      */
     private val regionAccess: RegionAccess by lazy {
         mountedRegionDirectory?.let(::RegionReader) ?: NoRegionAccess

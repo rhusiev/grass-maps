@@ -19,6 +19,7 @@ import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
 import nl.r1a.grassmap.plugin.api.model.WayAlertHit
 import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.regions.core.AlertKind
+import nl.r1a.grassmap.regions.core.InternalException
 import nl.r1a.grassmap.regions.core.LatLon
 import nl.r1a.grassmap.regions.core.OsmElementType
 import nl.r1a.grassmap.regions.core.RegionReadException
@@ -60,15 +61,24 @@ import nl.r1a.grassmap.regions.core.RegionReader as NativeRegionReader
  * [AppError.CorruptData]; a format or version this reader does not know is
  * [AppError.Unsupported].
  *
- * The constructor does no I/O. The component is read on the first query, off
- * the caller's thread, and kept for the lifetime of the reader; the region
- * mount is immutable until the version directory is swapped.
+ * The constructor only records the mount directory: it loads no library and
+ * reads no component. The native library is loaded and the component is read
+ * on the first query, on the IO dispatcher, and kept for the lifetime of the
+ * reader; the region mount is immutable until the version directory is
+ * swapped. A missing or mismatched library is therefore a typed failure at
+ * that first query, not a throw from whoever built the reader.
  */
-class RegionReader(
+class RegionReader internal constructor(
     private val directory: File,
+    private val createNative: () -> NativeRegion,
 ) : RegionAccess {
-    private val native = NativeRegionReader()
+    constructor(directory: File) : this(directory, ::openNativeRegion)
+
     private val loadMutex = Mutex()
+    private val nativeMutex = Mutex()
+
+    @Volatile
+    private var loadedNative: Outcome<NativeRegion>? = null
 
     @Volatile
     private var loadedFeatures: Outcome<Component?>? = null
@@ -111,21 +121,47 @@ class RegionReader(
         }
 
     /** The corridor query, answered by the native reader. */
-    private fun hits(
+    private suspend fun hits(
         route: Route,
         corridorMeters: Double,
         component: Component,
-    ): Outcome<List<WayAlertHit>> =
-        runCatchingNative {
-            native
-                .wayAlertHits(
+    ): Outcome<List<WayAlertHit>> {
+        val reader =
+            when (val outcome = native()) {
+                is Outcome.Failure -> return outcome
+                is Outcome.Success -> outcome.value
+            }
+        val points = route.geometry.map { LatLon(it.latitude, it.longitude) }
+        val hits =
+            runCatchingNative {
+                reader.wayAlertHits(
                     componentPath = component.path,
                     expectedBytes = component.bytes,
-                    route = route.geometry.map { LatLon(it.latitude, it.longitude) },
+                    route = points,
                     routeDistanceMeters = route.distanceMeters,
                     corridorMeters = corridorMeters,
-                ).map { it.toModel() }
+                )
+            }
+        return when (hits) {
+            is Outcome.Failure -> hits
+            is Outcome.Success -> Outcome.Success(hits.value.map { it.toModel() })
         }
+    }
+
+    /**
+     * The native reader, loaded once on the IO dispatcher. The load sits here
+     * rather than in the constructor so a missing, mismatched or panicking
+     * library reaches the callers as the same typed [Outcome.Failure] they
+     * already handle.
+     */
+    private suspend fun native(): Outcome<NativeRegion> {
+        loadedNative?.let { return it }
+        return nativeMutex.withLock {
+            loadedNative ?: withContext(Dispatchers.IO) {
+                runCatchingNativeLoad { createNative() }
+            }.also { loadedNative = it }
+        }
+    }
 
     private suspend fun featuresComponent(): Outcome<Component?> {
         loadedFeatures?.let { return it }
@@ -135,13 +171,22 @@ class RegionReader(
         }
     }
 
-    private fun readRelations(): Outcome<RouteRelations> {
+    private suspend fun readRelations(): Outcome<RouteRelations> {
         val component =
             when (val outcome = component(RELATIONS_COMPONENT_KIND, RELATIONS_COMPONENT_FORMAT, RELATIONS_COMPONENT_FORMAT_VERSION)) {
                 is Outcome.Failure -> return outcome
                 is Outcome.Success -> outcome.value ?: return Outcome.Success(RouteRelations.EMPTY)
             }
-        return runCatchingNative { native.routeRelations(component.path, component.bytes).toModel() }
+        val reader =
+            when (val outcome = native()) {
+                is Outcome.Failure -> return outcome
+                is Outcome.Success -> outcome.value
+            }
+        val relations = runCatchingNative { reader.routeRelations(component.path, component.bytes) }
+        return when (relations) {
+            is Outcome.Failure -> relations
+            is Outcome.Success -> Outcome.Success(relations.value.toModel())
+        }
     }
 
     /**
@@ -228,13 +273,73 @@ class RegionReader(
     }
 }
 
-/** The native call, with its typed failure and a missing library both mapped. */
+/**
+ * The native operations this reader needs. The default implementation wraps
+ * the uniffi reader; a test can supply its own, so a failing load or call is
+ * exercised without a broken APK.
+ */
+internal interface NativeRegion {
+    fun wayAlertHits(
+        componentPath: String,
+        expectedBytes: Long,
+        route: List<LatLon>,
+        routeDistanceMeters: Double,
+        corridorMeters: Double,
+    ): List<CoreAlertHit>
+
+    fun routeRelations(
+        componentPath: String,
+        expectedBytes: Long,
+    ): RegionRelations
+}
+
+private fun openNativeRegion(): NativeRegion = NativeRegionAdapter(NativeRegionReader())
+
+private class NativeRegionAdapter(
+    private val reader: NativeRegionReader,
+) : NativeRegion {
+    override fun wayAlertHits(
+        componentPath: String,
+        expectedBytes: Long,
+        route: List<LatLon>,
+        routeDistanceMeters: Double,
+        corridorMeters: Double,
+    ): List<CoreAlertHit> =
+        reader.wayAlertHits(
+            componentPath = componentPath,
+            expectedBytes = expectedBytes,
+            route = route,
+            routeDistanceMeters = routeDistanceMeters,
+            corridorMeters = corridorMeters,
+        )
+
+    override fun routeRelations(
+        componentPath: String,
+        expectedBytes: Long,
+    ): RegionRelations = reader.routeRelations(componentPath, expectedBytes)
+}
+
+/** The native call, with every failure the bindings can raise mapped. */
 private inline fun <T> runCatchingNative(call: () -> T): Outcome<T> =
     try {
         Outcome.Success(call())
     } catch (error: RegionReadException) {
         Outcome.Failure(error.toAppError())
+    } catch (error: InternalException) {
+        Outcome.Failure(AppError.Internal(NATIVE_PANIC_ERROR))
     } catch (error: LinkageError) {
+        Outcome.Failure(AppError.Internal(NATIVE_LINKAGE_ERROR))
+    }
+
+/**
+ * The library load. It reports the call failures plus the bindings' own
+ * contract and checksum check, which throws [RuntimeException] while the
+ * library initializes.
+ */
+private inline fun <T> runCatchingNativeLoad(call: () -> T): Outcome<T> =
+    try {
+        runCatchingNative(call)
+    } catch (error: RuntimeException) {
         Outcome.Failure(AppError.Internal(NATIVE_LINKAGE_ERROR))
     }
 
@@ -246,7 +351,9 @@ private fun RegionReadException.toAppError(): AppError =
         is RegionReadException.CorruptData -> AppError.CorruptData
     }
 
-private const val NATIVE_LINKAGE_ERROR: String = "regions.native"
+internal const val NATIVE_LINKAGE_ERROR: String = "regions.native"
+
+internal const val NATIVE_PANIC_ERROR: String = "regions.native.panic"
 
 private fun LatLon.toGeoPoint(): GeoPoint = GeoPoint(latitude = latitude, longitude = longitude)
 

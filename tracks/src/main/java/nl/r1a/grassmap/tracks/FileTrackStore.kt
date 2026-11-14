@@ -97,7 +97,11 @@ class FileTrackStore(
                 }
                 // An existing record keeps the user's name, description and
                 // folder, exactly as it keeps the style: re-importing the same
-                // document must not undo a rename or move (T-0414).
+                // document must not undo a rename or move (T-0414). It keeps
+                // the recompute too, because an imported document carries none
+                // and the same id means the same line: dropping it would lose
+                // the ability to recompute a route the user exported and
+                // opened again.
                 val effective =
                     track.copy(
                         style = existing?.style ?: track.style,
@@ -105,6 +109,7 @@ class FileTrackStore(
                         description = existing?.description ?: track.description,
                         listId = existing?.listId ?: track.listId,
                         hidden = existing?.hidden ?: track.hidden,
+                        recompute = track.recompute ?: records[track.id]?.recompute,
                     )
                 val start = effective.track.startPoint()
                 val sidecar =
@@ -551,9 +556,9 @@ class FileTrackStore(
 
     /**
      * Writes the route's recompute record, or removes the file when the record
-     * has none. A save of the same document without one must not leave the
-     * previous route sidecar behind, because the recompute would then describe
-     * a request the stored line never came from.
+     * has none. A same-id save keeps the loaded record's recompute when the
+     * incoming one is null, so a removal only clears a file the loaded record
+     * could not use or one left without a record.
      */
     private fun writeRecompute(
         id: TrackId,

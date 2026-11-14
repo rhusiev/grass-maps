@@ -2373,7 +2373,10 @@ The GPX is the source of truth for geometry; a reload reads it again and
 refuses a sidecar whose document hash no longer matches the file. A save writes
 a hidden `.<name>.part` sibling, flushes it and moves it over the target
 atomically, so an interrupted write leaves the previous file intact. Importing
-the same bytes again updates the same records and keeps their colour. A missing
+the same bytes again updates the same records and keeps their colour. It also
+keeps the record's name, description, folder and, for a saved route, its
+recompute sidecar: the id is the document hash, so an export that is opened
+again is the same record and still recomputes. A missing
 or corrupt sidecar, a hash mismatch or a document the format rejects skips that
 one track and logs it; the rest of the library still loads. Every call returns
 a typed `Outcome`, and file I/O runs on `Dispatchers.IO`. Every successful write

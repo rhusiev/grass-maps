@@ -2349,9 +2349,9 @@ profile. T-0401 adds the file store behind that path:
 - a document is `<sha256>.gpx` under the app's private `tracks/` directory,
   written exactly as it arrived;
 - a sidecar `<id>.json` sits beside it with the styling (`colour`, `widthDp`),
-  the cached profile, the document index, the record's `kind` and the hash it
-  belongs to, plus the library metadata of T-0414: the name, the description
-  and the folder id;
+  the `hidden` map flag of T-0415, the cached profile, the document index, the
+  record's `kind` and the hash it belongs to, plus the library metadata of
+  T-0414: the name, the description and the folder id;
 - the id is the document hash. A document with several records appends
   `:<index>` to every one, so one file stays one file and each record keeps a
   stable id. The record order is every `<trk>` first, then every `<rte>`;
@@ -2387,11 +2387,40 @@ controller: it collects the store's drawable list and writes it to the bound
 host, which draws one line per track in the overlays slot. The colour and width
 come from the sidecar, and a new track gets a deterministic palette colour
 derived from its hash, so the same file draws the same colour on every device.
-A segment with fewer than two points has no line. The layer cannot colour a
-track by gradient (T-0408): a track has neither surface nor smoothness, and the
-drawable form carries no heights, so `TrackColouring.Gradient` logs the gap and
-keeps the sidecar colour. The library's own colour stays the only track colour
-the map draws.
+That palette is the round-6 track look screen's six swatches, and the tapped
+track's card offers the same six, so a chosen colour is always a colour the
+track could have been given. A segment with fewer than two points has no line.
+The layer cannot colour a track by gradient (T-0408): a track has neither
+surface nor smoothness, and the drawable form carries no heights, so
+`TrackColouring.Gradient` logs the gap and keeps the sidecar colour. The
+library's own colour stays the only track colour the map draws.
+
+Hiding is a draw-time flag on the sidecar and never a library state. The store
+leaves a hidden track out of `drawn`, so the map host receives a shorter list
+and the track has no feature at all: no layer, no transparent style and no
+geometry. A hidden track keeps its library row, its folder, its search match,
+its statistics and its place in every count. The alternative, excluding it
+from the library, would make Hide a second kind of delete and would leave the
+colour choice without a surface to reach. Only the map stops drawing it.
+
+A tap on the map selects a track (T-0415). `TrackTap` in `ui-shell` projects
+each drawn track through the same `SearchMarkerProjection` the search markers
+use and picks the nearest segment within 14 dp, so the engine gains one
+observing tap detector and no hit-testing layer. The selected track's card is
+the round-6 `t-map-selected` layout: the colour dot and name, the folder and
+date line, the distance, ascent and moving time, then Analysis, Color and Hide.
+Analysis opens the existing T-0404 panel, not a second one; Color reveals the
+look screen's six swatches; Hide toggles the sidecar flag and the card's action
+becomes Show while the card stays open. Tapping empty map closes the card. A
+hidden track cannot be tapped, and the library has no visibility control yet,
+so dismissing the card while a track is hidden leaves no way to show it again
+until that control exists. That is the one gap this task leaves.
+
+The `track-looks-z15` golden draws two fixed tracks in green and blue at one
+camera, and `track-looks-hidden-z15` draws the same camera with the green track
+absent, in both styles. The pair is the pixel evidence for the colour mapping
+and for a hidden track producing no feature; `TrackLayerTest` and
+`FileTrackStoreTest` hold the same facts on the JVM.
 
 The library screen (T-0414) is `TrackLibraryHost` in `ui-shell`, drawn from the
 `track.library` plugin's state. `plugins/track-library` owns the folder filter,
@@ -2419,8 +2448,7 @@ each sidecar's folder id in place, so only the folder name is unresolved and a
 later edit cannot unfil the track. The state follows the store's revision,
 which rises after every write, so a track that the share-sheet import stores
 appears on an already open library without a restart. The debug channel opens
-the screen with `core.track.library_show` until the map's track selection grows
-an entry (T-0415); T-0416 owns the share-sheet import.
+the screen with `core.track.library_show`; T-0416 owns the share-sheet import.
 
 The library screen draws edge to edge, so the scrolling content clears the
 window's status-bar inset and both overlay bars are anchored to the bottom edge.
@@ -2792,8 +2820,9 @@ stored track:
 tools/control/grassctl.py invoke core.track.analysis '{"id":"<track id>"}'
 ```
 
-That command is the temporary entry point. The map's track selection opens the
-same panel in T-0415, and the track library screen is still T-0414. No device
+That command remains a debug entry point. T-0415's map card opens the same
+panel with its Analysis action, so the command and the card share one session
+and one panel. No device
 screenshot of the chart exists yet, the route profile is unverified against a
 real routing pack, the climb thresholds are chosen rather than measured against
 real tracks, and the drag gesture has only content tests until the chart is

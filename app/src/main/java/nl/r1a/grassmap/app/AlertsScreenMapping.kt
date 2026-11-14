@@ -26,7 +26,7 @@ internal fun alertsPageState(
     strings: Strings,
 ): AlertsPageState =
     AlertsPageState(
-        profileName = profileLabel(profile, strings),
+        profileName = profileLabel(profile, strings).replaceFirstChar { character -> character.titlecase() },
         switches =
             AlertsPageSwitches(
                 signal = settings.signal,

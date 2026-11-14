@@ -26,7 +26,7 @@ class AlertsScreenMappingTest {
                 strings = MapStrings(mapOf("route_preferences_profile_bike" to "bike")),
             )
 
-        assertEquals("bike", state.profileName)
+        assertEquals("Bike", state.profileName)
         assertTrue(state.switches.offRoute)
         assertTrue(state.switches.favourite)
         assertTrue(state.switches.poi)

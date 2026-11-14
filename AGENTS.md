@@ -22,8 +22,10 @@ document, section 3, plus the build and module rules of this repository.
 
 ## Performance
 
-- The performance budgets are benchmarks in CI. A change that regresses one
-  past its tolerance fails, like a failing test
+- The performance budgets are trend benchmarks in CI. The job is
+  `continue-on-error`, so a regression never blocks a merge: it is recorded with
+  its number and owned by a task, and that task is the only thing that closes
+  it. A regression left without an owner is a defect, not a warning
 - No work on the UI thread beyond layout and drawing; no blocking I/O there,
   checked by a strict-mode run in CI
 

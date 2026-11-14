@@ -124,6 +124,16 @@ class TrackAccess internal constructor(
         style: TrackStyle,
     ): Outcome<Unit> = store.setStyle(id, style)
 
+    /**
+     * Shows or hides one track on the map (T-0415). Hidden is persisted in the
+     * sidecar, so it survives a restart; the track stays in the library and in
+     * every count, and only the map stops drawing it.
+     */
+    suspend fun setHidden(
+        id: TrackId,
+        hidden: Boolean,
+    ): Outcome<Unit> = store.setHidden(id, hidden)
+
     /** Replaces the library metadata on one sidecar; the GPX document is untouched. */
     suspend fun setMetadata(
         id: TrackId,

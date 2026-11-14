@@ -5,6 +5,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
@@ -36,6 +37,7 @@ internal data class TrackSidecar(
     val startLatitude: Double? = null,
     val startLongitude: Double? = null,
     val kind: TrackKind = TrackKind.Track,
+    val hidden: Boolean = false,
 )
 
 /**
@@ -57,6 +59,7 @@ internal object TrackSidecarJson {
     private const val START_LONGITUDE = "startLongitude"
     private const val SAVED_AT = "savedAtMillis"
     private const val KIND = "kind"
+    private const val HIDDEN = "hidden"
     private const val STYLE = "style"
     private const val COLOUR = "colour"
     private const val WIDTH = "widthDp"
@@ -85,6 +88,9 @@ internal object TrackSidecarJson {
             sidecar.startLongitude?.let { longitude -> put(START_LONGITUDE, longitude) }
             put(SAVED_AT, sidecar.savedAtMillis)
             put(KIND, sidecar.kind.wireName)
+            if (sidecar.hidden) {
+                put(HIDDEN, true)
+            }
             put(
                 STYLE,
                 buildJsonObject {
@@ -141,6 +147,7 @@ internal object TrackSidecarJson {
                 value.isFinite() && value in -MAX_LONGITUDE..MAX_LONGITUDE
             }
         val hasStart = startLatitude != null && startLongitude != null
+        val hidden = (root[HIDDEN] as? JsonPrimitive)?.booleanOrNull ?: false
         return TrackSidecar(
             id = id,
             documentHash = documentHash,
@@ -154,6 +161,7 @@ internal object TrackSidecarJson {
             startLatitude = startLatitude.takeIf { hasStart },
             startLongitude = startLongitude.takeIf { hasStart },
             kind = kind,
+            hidden = hidden,
         )
     }
 

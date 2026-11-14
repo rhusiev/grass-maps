@@ -10,6 +10,7 @@ import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.ElevationAccess
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.ImportedEntities
+import nl.r1a.grassmap.plugin.api.model.MapTrack
 import nl.r1a.grassmap.plugin.api.model.Track
 import nl.r1a.grassmap.plugin.api.model.TrackPoint
 import nl.r1a.grassmap.plugin.api.model.TrackSegment
@@ -54,6 +55,52 @@ class FileTrackStoreTest {
             assertTrue(File(root, "${record.id.value}.json").isFile)
             assertEquals(SOURCE_A.decodeToString(), File(root, "${hashOf(SOURCE_A)}.gpx").readText())
             assertEquals(listOf(saved.toMapTrack()), store.drawn.value)
+        }
+
+    @Test
+    fun aHiddenTrackLeavesTheMapAndStaysInTheLibrary() =
+        runTest {
+            val store = store()
+            val record = success(store.save(record(SOURCE_A), SOURCE_A))
+
+            assertEquals(Outcome.Success(Unit), store.setHidden(record.id, true))
+
+            assertEquals(emptyList<MapTrack>(), store.drawn.value)
+            assertEquals(record.id, store.summaries().single().id)
+            assertTrue(store.summaries().single().hidden)
+
+            val reopened = store()
+            assertEquals(Outcome.Success(Unit), reopened.reload())
+            assertTrue(success(reopened.get(record.id)).hidden)
+            assertEquals(emptyList<MapTrack>(), reopened.drawn.value)
+
+            assertEquals(Outcome.Success(Unit), reopened.setHidden(record.id, false))
+            assertEquals(listOf(record.toMapTrack()), reopened.drawn.value)
+            assertFalse(success(reopened.get(record.id)).hidden)
+        }
+
+    @Test
+    fun aReimportKeepsTheHiddenState() =
+        runTest {
+            val store = store()
+            val record = success(store.save(record(SOURCE_A), SOURCE_A))
+            store.setHidden(record.id, true)
+
+            val reimported = success(store.save(record(SOURCE_A), SOURCE_A))
+
+            assertTrue(reimported.hidden)
+            assertTrue(store.summaries().single().hidden)
+        }
+
+    @Test
+    fun hidingAnUnknownTrackIsNotFound() =
+        runTest {
+            val store = store()
+
+            assertEquals(
+                Outcome.Failure(AppError.NotFound),
+                store.setHidden(TrackId("missing"), true),
+            )
         }
 
     @Test

@@ -55,6 +55,7 @@ data class StoredTrack(
     val description: String? = null,
     val listId: String? = null,
     val kind: TrackKind = TrackKind.Track,
+    val hidden: Boolean = false,
     val recompute: PlannedRouteRecompute? = null,
     val waypoints: List<TrackWaypoint> = emptyList(),
 ) {
@@ -84,6 +85,7 @@ data class TrackSummary(
     val startLatitude: Double? = null,
     val startLongitude: Double? = null,
     val kind: TrackKind = TrackKind.Track,
+    val hidden: Boolean = false,
 )
 
 /**
@@ -138,6 +140,16 @@ interface TrackStore {
     suspend fun setStyle(
         id: TrackId,
         style: TrackStyle,
+    ): Outcome<Unit>
+
+    /**
+     * Shows or hides one track on the map and rewrites its sidecar (T-0415).
+     * A hidden track stays in the library, its folder, its search results and
+     * its counts; it is the map that stops drawing it. See [drawn].
+     */
+    suspend fun setHidden(
+        id: TrackId,
+        hidden: Boolean,
     ): Outcome<Unit>
 
     /**
@@ -239,6 +251,7 @@ class InMemoryTrackStore(
                     startLatitude = start?.latitude,
                     startLongitude = start?.longitude,
                     kind = track.kind,
+                    hidden = track.hidden,
                 )
             }
         }
@@ -253,6 +266,20 @@ class InMemoryTrackStore(
             }
             val existing = tracks[id] ?: return@withLock Outcome.Failure(AppError.NotFound)
             tracks[id] = existing.copy(style = style)
+            publish()
+            Outcome.Success(Unit)
+        }
+
+    override suspend fun setHidden(
+        id: TrackId,
+        hidden: Boolean,
+    ): Outcome<Unit> =
+        mutex.withLock {
+            val existing = tracks[id] ?: return@withLock Outcome.Failure(AppError.NotFound)
+            if (existing.hidden == hidden) {
+                return@withLock Outcome.Success(Unit)
+            }
+            tracks[id] = existing.copy(hidden = hidden)
             publish()
             Outcome.Success(Unit)
         }
@@ -320,7 +347,7 @@ class InMemoryTrackStore(
     override suspend fun reload(): Outcome<Unit> = Outcome.Success(Unit)
 
     private fun publish() {
-        drawnState.value = ordered().map { it.toMapTrack() }
+        drawnState.value = ordered().filterNot { track -> track.hidden }.map { it.toMapTrack() }
         revisionState.value = revisionState.value + 1
     }
 

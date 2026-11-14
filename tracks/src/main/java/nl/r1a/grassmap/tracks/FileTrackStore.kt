@@ -104,6 +104,7 @@ class FileTrackStore(
                         name = existing?.name ?: track.name,
                         description = existing?.description ?: track.description,
                         listId = existing?.listId ?: track.listId,
+                        hidden = existing?.hidden ?: track.hidden,
                     )
                 val start = effective.track.startPoint()
                 val sidecar =
@@ -120,6 +121,7 @@ class FileTrackStore(
                         startLatitude = start?.latitude,
                         startLongitude = start?.longitude,
                         kind = effective.kind,
+                        hidden = effective.hidden,
                     )
                 if (!writeAtomically(sidecarFile(track.id), TrackSidecarJson.encode(sidecar).toByteArray())) {
                     return@withContext writeFailure("cannot write the sidecar of ${track.id.value}")
@@ -167,6 +169,7 @@ class FileTrackStore(
                         startLatitude = sidecar.startLatitude,
                         startLongitude = sidecar.startLongitude,
                         kind = sidecar.kind,
+                        hidden = sidecar.hidden,
                     )
                 }
             }
@@ -189,6 +192,29 @@ class FileTrackStore(
                     return@withContext writeFailure("cannot rewrite the sidecar of ${id.value}")
                 }
                 records[id] = record.copy(style = style)
+                sidecars[id] = updated
+                publish()
+                Outcome.Success(Unit)
+            }
+        }
+
+    override suspend fun setHidden(
+        id: TrackId,
+        hidden: Boolean,
+    ): Outcome<Unit> =
+        mutex.withLock {
+            withContext(Dispatchers.IO) {
+                load()
+                val record = records[id] ?: return@withContext Outcome.Failure(AppError.NotFound)
+                val sidecar = sidecars[id] ?: return@withContext Outcome.Failure(AppError.NotFound)
+                if (sidecar.hidden == hidden) {
+                    return@withContext Outcome.Success(Unit)
+                }
+                val updated = sidecar.copy(hidden = hidden)
+                if (!writeAtomically(sidecarFile(id), TrackSidecarJson.encode(updated).toByteArray())) {
+                    return@withContext writeFailure("cannot rewrite the sidecar of ${id.value}")
+                }
+                records[id] = record.copy(hidden = hidden)
                 sidecars[id] = updated
                 publish()
                 Outcome.Success(Unit)
@@ -428,6 +454,7 @@ class FileTrackStore(
                     description = sidecar.description,
                     listId = sidecar.listId,
                     kind = sidecar.kind,
+                    hidden = sidecar.hidden,
                     recompute = readRecompute(id),
                     waypoints = entities.waypoints,
                 )
@@ -478,7 +505,11 @@ class FileTrackStore(
     }
 
     private fun publish() {
-        drawnState.value = records.values.sortedBy { it.id.value }.map { it.toMapTrack() }
+        drawnState.value =
+            records.values
+                .sortedBy { it.id.value }
+                .filterNot { record -> record.hidden }
+                .map { it.toMapTrack() }
         revisionState.value = revisionState.value + 1
     }
 

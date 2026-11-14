@@ -428,6 +428,7 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/guidance-ui` | the guidance panel's four facts and its Compose turn card, drawn from the navigation state the app holds | `plugin-api`, `plugin-ui-api` |
 | `plugins/nav-simulator` | the simulated run at 5 km/h through the production navigation session, its start and stop commands and its status stream | `plugin-api`, `navigation`, `routing` |
 | `plugins/track-layer` | the imported-track line layer and the controller that keeps it on the map | `plugin-api` |
+| `plugins/route-layer` | the route line's colour and pattern decision: slope and surface palettes, the unpaved dash and the steps stripe, drawn through `MapHost` | `plugin-api` |
 | `plugins/track-library` | the track library state, its folder definitions, the rename, describe, move and delete actions with one-step undo, and the four fixed orders and name search | `plugin-api` |
 | `plugins/contours` | the contour overlay for the Standard and Touring variants and the one-row layers panel that toggles it | `plugin-api`, `plugin-ui-api` |
 | `plugins/route-relations` | the hiking and cycling relation geometry assembler, the shared-way lane assignment, the OSMC waymark mapping, the cycling node-network numbers and the `MapHost` layers over an inline GeoJSON source | `plugin-api` |
@@ -608,8 +609,9 @@ resolves each ID to a mounted archive and skips layers whose source is absent.
 `MapHost.setTracks(List<MapTrack>)` draws the stored tracks. `map` turns the
 list into one GeoJSON `MultiLineString` per track in the `Overlays` slot, so a
 segment gap is never crossed and a pan or a zoom never rebuilds the geometry
-from Compose. The track layer (T-0401) is its only caller; the route, puck and
-markers stay on their own host calls.
+from Compose. The track layer (T-0401) is its caller and the route layer
+(T-0408) writes only the route line; the puck and markers stay on their own
+host calls.
 
 The Standard light and dark variants share one `BaseStyle.Json` document, so a
 variant switch updates layers in place instead of reloading the style. A base
@@ -1140,6 +1142,59 @@ multiplier as `linear_cost_factors`; when the synthetic line has no graph edges
 near it, the adapter retries with `exclude_polygons` around the same line. The
 debug-only `core.map.set_route` draws a committed `RouteJson` fixture for the
 T-0311 goldens; those capture points plan no route and mount no routing pack.
+Its optional `colour=slope|surface` and `dark=true` pick the T-0408 palette, so
+a golden captures the same decision the map screen draws.
+
+The route line is coloured by `plugins/route-layer` (T-0408). The colour and
+pattern decision is a pure read of the annotate pass's own segments: each
+segment's `grade` picks one of the round-10 slope colours, or its `surface`
+picks one of the four surface colours, and its `surface` and `highway` pick the
+pattern. The slope scale is the seven stops of the design handoff's round 10
+chart palette, -15, -8, -3, flat, +3, +8 and +15 percent on the hike scale,
+with the light and dark sets in `RouteRound10Palette`; a value exactly on a stop
+belongs to the bin below it, which is the chart's own rule. The surface set is
+asphalt, paving, ground and gravel, and `plugins/route-layer` carries the same
+OSM value table as the T-0406 strips. The runs always partition the geometry:
+a part between annotated segments, or a tail after the last one, keeps the
+route's existing colour, so a continuous line never shows a hole. A route whose
+segments carry none of `grade`, `surface` or `highway` returns an empty style,
+and the map keeps the plain single-colour line, which is why the T-0311
+`route-turns` goldens do not change.
+
+Unpaved surfaces are dashed: ground and gravel. Asphalt and paving are solid,
+and a surface value the palette has no class for is solid too, because the
+design gives no rule for it. Steps are the design's stripe ink, #202124 light
+and #e8eaed dark; MapLibre cannot draw a 45° pattern along a line and
+`map-style.md` forbids `line-pattern`, so the host draws that ink as a dash over
+the run's own colour. A steps way keeps the stripe when its surface is also
+unpaved. The dash keeps the design's 4 dp period and 2 dp gap; those are the
+only pattern constants the line adds, and the existing 2 px gap between strip
+segments in the T-0406 chart stays where the design draws it.
+
+`map` draws the coloured line from one GeoJSON FeatureCollection whose features
+carry `colour` and `pattern` properties: three layers draw it, the solid line,
+the dashes, and the stripe ink. The layer count is fixed and the collection is
+built once per route or style change, never on a camera move, so a route cut
+into hundreds of graph edges costs one data build and no extra layer. The
+drawing has no `line-gradient`; colour is data-driven per feature.
+
+Two parts of the row have no design value and are not drawn. Altitude and speed
+colouring need a scale, and the canon gives slope, surface and way-type sets
+only, so `RouteColourMode` carries slope and surface and no altitude or speed
+mode is guessed. The track half of "gradient colouring" is refused for the
+reason T-0406 recorded and for one more: a track has no surface or smoothness
+attribute, and `MapTrack` carries geometry without heights, so no gradient can
+be computed in the track layer. `TrackColouring.Gradient` logs that gap and
+draws the track's own colour instead.
+
+`RouteColouringTest` in `plugins/route-layer` holds the palette values, the bin
+edges, both colour modes in both themes, the paved solid and unpaved dashed
+rule, the steps stripe and its precedence, a mixed four-segment route, the gap
+and tail fills and the controller's one host write. `RouteColourLinesTest` in
+`map` holds the feature split, the clipping guard, the three layer filters and
+the dash ratio. `TrackLayerTest` holds the gradient refusal. The goldens
+`route-colours-z14` and `route-colours-z15` draw a committed four-segment route
+with a grade, surface and way type on each segment, in both styles.
 
 `routing.RoutePlanner` is the planning state (T-0302), with intermediate stops
 (T-0303): a start, its vias in visit order and a destination go in as one
@@ -2198,7 +2253,11 @@ controller: it collects the store's drawable list and writes it to the bound
 host, which draws one line per track in the overlays slot. The colour and width
 come from the sidecar, and a new track gets a deterministic palette colour
 derived from its hash, so the same file draws the same colour on every device.
-A segment with fewer than two points has no line.
+A segment with fewer than two points has no line. The layer cannot colour a
+track by gradient (T-0408): a track has neither surface nor smoothness, and the
+drawable form carries no heights, so `TrackColouring.Gradient` logs the gap and
+keeps the sidecar colour. The library's own colour stays the only track colour
+the map draws.
 
 The library screen (T-0414) is `TrackLibraryHost` in `ui-shell`, drawn from the
 `track.library` plugin's state. `plugins/track-library` owns the folder filter,

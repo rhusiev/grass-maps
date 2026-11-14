@@ -2403,10 +2403,12 @@ its statistics and its place in every count. The alternative, excluding it
 from the library, would make Hide a second kind of delete and would leave the
 colour choice without a surface to reach. Only the map stops drawing it.
 
-A tap on the map selects a track (T-0415). `TrackTap` in `ui-shell` projects
-each drawn track through the same `SearchMarkerProjection` the search markers
-use and picks the nearest segment within 14 dp, so the engine gains one
-observing tap detector and no hit-testing layer. The selected track's card is
+A tap on the map selects a track (T-0415). The engine turns the tap into a map
+point through its own screen projection, and `TrackTap` in `ui-shell` measures
+that point against each drawn segment in local metres, picking the nearest one
+within 14 dp of finger reach at the camera's scale. The engine gains one
+observing tap detector and no hit-testing layer, and a rotated or tilted camera
+needs no separate maths. The selected track's card is
 the round-6 `t-map-selected` layout: the colour dot and name, the folder and
 date line, the distance, ascent and moving time, then Analysis, Color and Hide.
 Analysis opens the existing T-0404 panel, not a second one; Color reveals the

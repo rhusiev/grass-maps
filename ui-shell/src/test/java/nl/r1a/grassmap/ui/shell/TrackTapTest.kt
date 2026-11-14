@@ -1,9 +1,7 @@
 package nl.r1a.grassmap.ui.shell
 
-import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.MapTrack
-import nl.r1a.grassmap.plugin.api.model.ScreenOffset
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -12,78 +10,39 @@ import org.junit.Test
 class TrackTapTest {
     @Test
     fun aTapOnADrawnLineSelectsThatTrack() {
-        val hit =
-            TrackTap.hit(
-                tracks = listOf(HORIZONTAL, VERTICAL),
-                camera = CAMERA,
-                viewportWidthDp = WIDTH_DP,
-                viewportHeightDp = HEIGHT_DP,
-                tap = ScreenOffset(WIDTH_DP / 2f, HEIGHT_DP / 2f),
-            )
+        val hit = TrackTap.hit(listOf(HORIZONTAL, VERTICAL), CENTRE, METRES_PER_DP)
 
         assertEquals(HORIZONTAL.id, hit)
     }
 
     @Test
     fun aTapBetweenTwoLinesSelectsTheNearerOne() {
-        val hit =
-            TrackTap.hit(
-                tracks = listOf(NEAR, FAR),
-                camera = CAMERA,
-                viewportWidthDp = WIDTH_DP,
-                viewportHeightDp = HEIGHT_DP,
-                tap = ScreenOffset(WIDTH_DP / 2f, HEIGHT_DP / 2f),
-            )
+        val hit = TrackTap.hit(listOf(FAR, NEAR), CENTRE, METRES_PER_DP)
 
         assertEquals(NEAR.id, hit)
     }
 
     @Test
-    fun aLineCrossingTheViewWithBothEndsOutsideIsStillSelectable() {
-        val crossing =
-            MapTrack(
-                id = "crossing",
-                segments = listOf(listOf(GeoPoint(LAT, LON - 0.05), GeoPoint(LAT, LON + 0.05))),
-            )
-
-        val hit =
-            TrackTap.hit(
-                tracks = listOf(crossing),
-                camera = CAMERA,
-                viewportWidthDp = WIDTH_DP,
-                viewportHeightDp = HEIGHT_DP,
-                tap = ScreenOffset(WIDTH_DP / 2f, HEIGHT_DP / 2f),
-            )
-
-        assertEquals("crossing", hit)
+    fun aTapClearOfEveryLineSelectsNothing() {
+        assertNull(TrackTap.hit(listOf(VERTICAL), CENTRE, METRES_PER_DP))
     }
 
     @Test
-    fun aTapClearOfEveryLineSelectsNothing() {
-        assertNull(
-            TrackTap.hit(
-                tracks = listOf(VERTICAL),
-                camera = CAMERA,
-                viewportWidthDp = WIDTH_DP,
-                viewportHeightDp = HEIGHT_DP,
-                tap = ScreenOffset(20f, 20f),
-            ),
-        )
+    fun theToleranceFollowsTheMapsScale() {
+        // NEAR is about 2 m north of the tap; a 1 m tolerance must not reach it.
+        assertNull(TrackTap.hit(listOf(NEAR), CENTRE, METRES_PER_DP / TOLERANCE_DIVISOR))
     }
 
     @Test
     fun aTrackWithoutADrawableSegmentIsNotATarget() {
-        val single = MapTrack(id = "single", segments = listOf(listOf(GeoPoint(LAT, LON))))
+        val single = MapTrack(id = "single", segments = listOf(listOf(CENTRE)))
 
-        assertNull(
-            TrackTap.hit(
-                tracks = listOf(single),
-                camera = CAMERA,
-                viewportWidthDp = WIDTH_DP,
-                viewportHeightDp = HEIGHT_DP,
-                tap = ScreenOffset(WIDTH_DP / 2f, HEIGHT_DP / 2f),
-            ),
-        )
+        assertNull(TrackTap.hit(listOf(single), CENTRE, METRES_PER_DP))
+    }
+
+    @Test
+    fun aMissingScaleSelectsNothing() {
+        assertNull(TrackTap.hit(listOf(HORIZONTAL), CENTRE, 0.0))
     }
 
     @Test
@@ -92,47 +51,38 @@ class TrackTapTest {
     }
 
     private companion object {
-        const val WIDTH_DP = 360f
-        const val HEIGHT_DP = 720f
         const val LAT = 49.95
         const val LON = 23.95
-        val CAMERA = Camera(center = GeoPoint(LAT, LON), zoom = 14.0)
+        const val METRES_PER_DP = 0.5
+        const val TOLERANCE_DIVISOR = 20.0
+        val CENTRE = GeoPoint(LAT, LON)
 
-        /** A horizontal line through the camera centre. */
+        /** A horizontal line through the tap. */
         val HORIZONTAL =
             MapTrack(
                 id = "horizontal",
-                segments =
-                    listOf(
-                        listOf(
-                            GeoPoint(LAT, LON - 0.002),
-                            GeoPoint(LAT, LON + 0.002),
-                        ),
-                    ),
+                segments = listOf(listOf(GeoPoint(LAT, LON - 0.002), GeoPoint(LAT, LON + 0.002))),
             )
 
         /** A line far enough east that its nearest point is outside the tolerance. */
         val VERTICAL =
             MapTrack(
                 id = "vertical",
-                segments =
-                    listOf(
-                        listOf(
-                            GeoPoint(LAT + 0.01, LON + 0.02),
-                            GeoPoint(LAT - 0.01, LON + 0.02),
-                        ),
-                    ),
+                segments = listOf(listOf(GeoPoint(LAT + 0.01, LON + 0.02), GeoPoint(LAT - 0.01, LON + 0.02))),
             )
 
+        /** About 2 m north of the tap. */
         val NEAR =
             MapTrack(
                 id = "near",
-                segments = listOf(listOf(GeoPoint(LAT + 0.0001, LON - 0.001), GeoPoint(LAT + 0.0001, LON + 0.001))),
+                segments = listOf(listOf(GeoPoint(LAT + 0.00002, LON - 0.001), GeoPoint(LAT + 0.00002, LON + 0.001))),
             )
+
+        /** About 22 m south of the tap. */
         val FAR =
             MapTrack(
                 id = "far",
-                segments = listOf(listOf(GeoPoint(LAT - 0.0015, LON - 0.001), GeoPoint(LAT - 0.0015, LON + 0.001))),
+                segments = listOf(listOf(GeoPoint(LAT - 0.0002, LON - 0.001), GeoPoint(LAT - 0.0002, LON + 0.001))),
             )
     }
 }

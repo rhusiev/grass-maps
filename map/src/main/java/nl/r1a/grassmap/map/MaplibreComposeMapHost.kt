@@ -269,7 +269,7 @@ fun MapSurfaceView(
     onDistanceMeasured: (Double) -> Unit = {},
     onPointSelected: (GeoPoint) -> Unit = {},
     onManualPan: () -> Unit = {},
-    onTap: (ScreenOffset) -> Unit = {},
+    onTap: (GeoPoint) -> Unit = {},
 ) {
     val interactions = remember { MapGestures.interactions() }
     val uiOptions = remember { MapGestures.uiOptions() }
@@ -307,7 +307,7 @@ fun MapSurfaceView(
                         projector.geoPointAt(point)?.let { selected -> selectionSink.value(selected) }
                     }
                 }.pointerInput(surface) {
-                    detectSingleTap { point -> tapSink.value(point) }
+                    detectSingleTap { point -> projector.geoPointAt(point)?.let { tapped -> tapSink.value(tapped) } }
                 }.pointerInput(surface) {
                     // Observe a one-finger drag for the navigation camera
                     // without consuming it: the map's own pan still runs.

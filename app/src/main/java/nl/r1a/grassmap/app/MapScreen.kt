@@ -162,6 +162,8 @@ import nl.r1a.grassmap.ui.shell.trackImportNotice
 import java.io.File
 import java.time.ZoneId
 import java.util.Locale
+import kotlin.math.cos
+import kotlin.math.pow
 
 private val STYLE_PLUGIN = PluginId("style.standard")
 private val STANDARD = StyleId("standard")
@@ -189,6 +191,16 @@ private const val KILOMETRE_DECIMALS = 2
 private const val WHOLE_VALUE_MIN = 1.0
 private val NEEDS_REDOWNLOAD_BACKGROUND = Color(0xFFB3261E)
 private val DISTANCE_BADGE_BACKGROUND = Color(0xCC202020)
+
+/**
+ * The ground metres one dp covers at [zoom] and [point]'s latitude. The map's
+ * camera zoom is already in density-independent units, so this needs no screen
+ * density.
+ */
+private fun metresPerDp(
+    point: GeoPoint,
+    zoom: Double,
+): Double = WebMercator.EQUATOR_METERS_PER_PIXEL * cos(Math.toRadians(point.latitude)) / 2.0.pow(zoom)
 
 internal data class MapBundle(
     val style: StyleSpec,
@@ -740,12 +752,10 @@ private fun MapContent(
                 val id =
                     TrackTap.hit(
                         tracks = container.tracks.drawn.value,
-                        camera = searchCamera,
-                        viewportWidthDp = with(density) { viewport.width.toDp().value },
-                        viewportHeightDp = with(density) { viewport.height.toDp().value },
                         tap = point,
-                        anchor = screenOffset,
+                        metresPerDp = metresPerDp(point, searchCamera.zoom),
                     )
+
                 if (id == null) {
                     selectedTrack = null
                     selectedSummary = null

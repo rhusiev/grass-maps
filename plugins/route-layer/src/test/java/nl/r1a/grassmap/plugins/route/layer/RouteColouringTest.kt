@@ -30,6 +30,7 @@ import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.provider.RouteAttributes
 import nl.r1a.grassmap.plugin.api.provider.RouteSegment
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -202,7 +203,9 @@ class RouteColouringTest {
         runTest {
             val host = RecordingMapHost()
 
-            val outcome = RouteLayer({ host }).draw(route(segment(0, 4, grade = 2.0)), RouteColourMode.Slope)
+            val outcome =
+                RouteLayer({ host })
+                    .draw(route(segment(0, 4, grade = 2.0)), RouteLineDrawing.Coloured(mode = RouteColourMode.Slope))
 
             assertEquals(Outcome.Success(Unit), outcome)
             assertEquals(1, host.draws.size)
@@ -215,9 +218,25 @@ class RouteColouringTest {
         }
 
     @Test
+    fun thePlainDrawingLeavesTheHostsSingleColourLineInPlace() =
+        runTest {
+            val host = RecordingMapHost()
+
+            RouteLayer({ host }).draw(route(segment(0, 4, grade = 2.0)), RouteLineDrawing.Plain)
+
+            assertFalse(
+                host.draws
+                    .single()
+                    .second.isColoured,
+            )
+        }
+
+    @Test
     fun aMissingHostIsATypedFailure() =
         runTest {
-            val outcome = RouteLayer({ null }).draw(route(segment(0, 4, grade = 2.0)))
+            val outcome =
+                RouteLayer({ null })
+                    .draw(route(segment(0, 4, grade = 2.0)), RouteLineDrawing.Coloured(mode = RouteColourMode.Slope))
 
             assertEquals(Outcome.Failure(AppError.NotReady), outcome)
         }

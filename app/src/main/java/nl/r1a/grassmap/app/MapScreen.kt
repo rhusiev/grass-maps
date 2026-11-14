@@ -124,6 +124,7 @@ import nl.r1a.grassmap.plugins.point.info.PointInfoContract
 import nl.r1a.grassmap.plugins.point.info.PointInfoLabel
 import nl.r1a.grassmap.plugins.point.info.SelectedPointValue
 import nl.r1a.grassmap.plugins.route.layer.RouteColourMode
+import nl.r1a.grassmap.plugins.route.layer.RouteLineDrawing
 import nl.r1a.grassmap.plugins.route.planner.RoutePlannerContract
 import nl.r1a.grassmap.plugins.route.relations.RouteRelationsMapController
 import nl.r1a.grassmap.plugins.track.library.TrackLibraryContract
@@ -686,11 +687,9 @@ private fun MapContent(
     }
     val drawnRoute = remember(plan.selected) { plan.selectedRoute() }
     val routeToDraw = if (navigationActive) activeNavigation.activeRoute else drawnRoute
-    LaunchedEffect(routeToDraw) {
-        // The map loads the light Standard style, so the route line takes the
-        // light round-10 palette. A night map would pass its own theme here.
+    LaunchedEffect(routeToDraw, navigationActive) {
         container.routeLayer
-            .draw(routeToDraw, RouteColourMode.Slope, dark = false)
+            .draw(routeToDraw, routeLineDrawing(navigationActive))
             .onFailure { error -> Log.w(TAG, "route not drawn: $error") }
     }
     LaunchedEffect(plan.generation) {
@@ -1852,6 +1851,20 @@ private suspend fun loadBundle(
         }
     return (result as? Outcome.Success)?.value
 }
+
+/**
+ * The line the map draws over the route. An active guidance session draws the
+ * canon's one plain line (round 5's navigation screen); the slope and surface
+ * read belongs to inspecting a planned route, so only that state carries it.
+ * The map loads the light Standard style, so the read takes the light round-10
+ * palette; a night map would pass its own theme here.
+ */
+internal fun routeLineDrawing(navigationActive: Boolean): RouteLineDrawing =
+    if (navigationActive) {
+        RouteLineDrawing.Plain
+    } else {
+        RouteLineDrawing.Coloured(mode = RouteColourMode.Slope, dark = false)
+    }
 
 /** The phases that keep the navigation screen on top of the map. */
 private fun NavigationPhase.isActiveNavigation(): Boolean =

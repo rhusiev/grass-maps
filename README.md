@@ -1166,7 +1166,10 @@ a part between annotated segments, or a tail after the last one, keeps the
 route's existing colour, so a continuous line never shows a hole. A route whose
 segments carry none of `grade`, `surface` or `highway` returns an empty style,
 and the map keeps the plain single-colour line, which is why the T-0311
-`route-turns` goldens do not change.
+`route-turns` goldens do not change. An active guidance session asks for that
+plain line too: `RouteLayer` takes `RouteLineDrawing.Plain` while a navigation
+session runs, because the design's navigation screen draws one route line, and
+`RouteLineDrawing.Coloured` only for a planned or inspected route.
 
 Unpaved surfaces are dashed: ground and gravel. Asphalt and paving are solid,
 and a surface value the palette has no class for is solid too, because the
@@ -1197,11 +1200,14 @@ draws the track's own colour instead.
 `RouteColouringTest` in `plugins/route-layer` holds the palette values, the bin
 edges, both colour modes in both themes, the paved solid and unpaved dashed
 rule, the steps stripe and its precedence, a mixed four-segment route, the gap
-and tail fills and the controller's one host write. `RouteColourLinesTest` in
-`map` holds the feature split, the clipping guard, the three layer filters and
-the dash ratio. `TrackLayerTest` holds the gradient refusal. The goldens
-`route-colours-z14` and `route-colours-z15` draw a committed four-segment route
-with a grade, surface and way type on each segment, in both styles.
+and tail fills, the controller's one host write and the plain drawing.
+`RouteColourLinesTest` in `map` holds the feature split, the clipping guard, the
+three layer filters and the dash ratio. `RouteLineDrawingTest` in `app` holds
+the guidance plain line against the planned route's slope read, through the same
+draw call the map screen makes. `TrackLayerTest` holds the gradient refusal. The
+goldens `route-colours-z14` and `route-colours-z15` draw a committed
+four-segment route with a grade, surface and way type on each segment, in both
+styles.
 
 `routing.RoutePlanner` is the planning state (T-0302), with intermediate stops
 (T-0303): a start, its vias in visit order and a destination go in as one

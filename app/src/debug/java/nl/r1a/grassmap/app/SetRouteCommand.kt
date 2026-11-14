@@ -17,6 +17,7 @@ import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugins.route.layer.RouteColourMode
 import nl.r1a.grassmap.plugins.route.layer.RouteLayer
+import nl.r1a.grassmap.plugins.route.layer.RouteLineDrawing
 import nl.r1a.grassmap.routing.RouteJson
 
 /** The debug-only command the map goldens use to put a fixed route on the map. */
@@ -76,7 +77,8 @@ internal class SetRouteCommand(
         val dark = booleanMember(params, DARK) ?: false
         when (
             val outcome =
-                RouteLayer(host = { session.hostOrNull() }).draw(route, mode, dark)
+                RouteLayer(host = { session.hostOrNull() })
+                    .draw(route, RouteLineDrawing.Coloured(mode = mode, dark = dark))
         ) {
             is Outcome.Failure -> return outcome
             is Outcome.Success -> Unit

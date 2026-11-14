@@ -1833,6 +1833,16 @@ All three switches are off by default in `AlertSettings`, like every other
 alert. A kind that is off produces no event and no effect, because
 `AlertHost.onPlaceAlert` checks the switch before it builds a banner.
 
+The three kinds become reachable when round 8's alerts page supplies their
+switches and the place-kind chips. That page is designed, not built, and this
+task does not build it. Until it exists the schedule is inert by construction:
+`AppContainer.proximityAlerts` closes the schedule's gate while all three
+switches are off, or while `poi` is on with no chosen kind, and a closed gate
+does no lookup at all. A session therefore pays no favourites, waypoint or
+index work for alerts that could only be dropped. This is also why
+`ProximityAlertHost` asks its caller `canAlert` before every lookup instead of
+trusting a default.
+
 "Once" is one approach. It is not one fix, and it is not a time window.
 `ProximityAlertSchedule` latches a place when the fix is inside its radius. It
 releases the latch only when the fix is 50 m beyond the radius
@@ -1866,11 +1876,11 @@ The app starts the host in `AppContainer.proximityAlerts` beside the way-alert
 host and feeds it the published navigation state. A session counts as active
 from its first state past Idle until it is stopped, so a pause or an arrival
 keeps the latches and a finished trip clears them. The chosen place kinds live
-in `AppContainer.proximityPoiKinds`; nothing writes that list yet, because the
-alerts page from the design handoff does not exist, so place kinds stay silent
-on a device. The acceptance is `ProximityReplayTest`: a track replay through
-the production session past one place of each category raises one alert of
-each, and the same replay with a switch off raises none of that kind.
+in `AppContainer.proximityPoiKinds`, ready for the alerts page described above.
+The acceptance is `ProximityReplayTest`: a track replay through the production
+session past one place of each category raises one alert of each, the same
+replay with a switch off raises none of that kind, and a replay whose three
+switches are off asks the source nothing at all.
 
 ## Route warnings
 

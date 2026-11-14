@@ -15,6 +15,12 @@ import nl.r1a.grassmap.plugin.api.error.Outcome
  * exists because every module under `plugins/` carries one, and it says the
  * feature reads no network and no location of its own: the navigation session
  * already has the fix.
+ *
+ * The three kinds become reachable when round 8's alerts page supplies their
+ * switches and the place-kind chips; that page is designed but not built, and
+ * this plugin does not build it. Until then the schedule is inert by
+ * construction: the app's gate is closed while all three switches are off, so
+ * a session performs no favourites, waypoint or index lookup at all.
  */
 class ProximityAlertsPlugin : Plugin {
     override suspend fun activate(context: PluginContext): Outcome<Unit> = Outcome.Success(Unit)

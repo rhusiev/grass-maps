@@ -61,13 +61,15 @@ data class TrackLibraryContent(
 )
 
 /**
- * One action in the selected-track bar: Move, Rename, Share or Delete, in that
- * fixed order. The close control leaves the selection (T-0414).
+ * One action in the selected-track bar: Move, Rename, Share, Save or Delete, in
+ * that fixed order. Save hands the selected track to the system document picker
+ * (T-0410); the close control leaves the selection (T-0414).
  */
 enum class TrackSelectionActionKind {
     MOVE,
     RENAME,
     SHARE,
+    SAVE,
     DELETE,
 }
 
@@ -216,9 +218,9 @@ internal fun selectedLibraryRow(
 ): TrackLibraryRowContent? = rows.firstOrNull { row -> row.id == selectedId }
 
 /**
- * The bottom bar of the selected track. The four actions keep the design's
- * fixed order, and the close control is the only way back to the browsing view
- * (T-0414).
+ * The bottom bar of the selected track. The five actions keep the design's
+ * fixed order with the destructive one last, and the close control is the only
+ * way back to the browsing view (T-0414, T-0410).
  */
 fun trackSelectionBarContent(strings: Strings): TrackSelectionBarContent =
     TrackSelectionBarContent(
@@ -229,6 +231,7 @@ fun trackSelectionBarContent(strings: Strings): TrackSelectionBarContent =
                 TrackSelectionAction(TrackSelectionActionKind.MOVE, strings.resolve(TRACK_LIBRARY_ACTION_MOVE_KEY)),
                 TrackSelectionAction(TrackSelectionActionKind.RENAME, strings.resolve(TRACK_LIBRARY_ACTION_RENAME_KEY)),
                 TrackSelectionAction(TrackSelectionActionKind.SHARE, strings.resolve(TRACK_LIBRARY_ACTION_SHARE_KEY)),
+                TrackSelectionAction(TrackSelectionActionKind.SAVE, strings.resolve(TRACK_LIBRARY_ACTION_SAVE_KEY)),
                 TrackSelectionAction(TrackSelectionActionKind.DELETE, strings.resolve(TRACK_LIBRARY_ACTION_DELETE_KEY)),
             ),
     )
@@ -394,6 +397,7 @@ internal const val TRACK_LIBRARY_UNDO_DELETED_TRACK_KEY = "track_library_undo_de
 internal const val TRACK_LIBRARY_ACTION_MOVE_KEY = "track_library_action_move"
 internal const val TRACK_LIBRARY_ACTION_RENAME_KEY = "track_library_action_rename"
 internal const val TRACK_LIBRARY_ACTION_SHARE_KEY = "track_library_action_share"
+internal const val TRACK_LIBRARY_ACTION_SAVE_KEY = "track_library_action_save"
 internal const val TRACK_LIBRARY_ACTION_DELETE_KEY = "track_library_action_delete"
 internal const val TRACK_LIBRARY_SELECTION_TITLE_KEY = "track_library_selection_title"
 internal const val TRACK_LIBRARY_LEAVE_SELECTION_KEY = "track_library_leave_selection"

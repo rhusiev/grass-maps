@@ -186,6 +186,7 @@
     <string name="track_library_action_move">Перемістити</string>
     <string name="track_library_action_rename">Перейменувати</string>
     <string name="track_library_action_share">Поділитися</string>
+    <string name="track_library_action_save">Зберегти</string>
     <string name="track_library_action_delete">Видалити</string>
     <string name="track_library_selection_title">Вибрано: %1$s</string>
     <string name="track_library_leave_selection">Зняти вибір</string>

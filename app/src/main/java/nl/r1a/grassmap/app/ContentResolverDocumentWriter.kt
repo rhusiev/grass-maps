@@ -53,10 +53,26 @@ internal class ContentResolverDocumentWriter(
 
 /** The `ACTION_CREATE_DOCUMENT` intent the system picker receives (T-0410). */
 internal object AndroidDocumentIntents {
-    fun createDocument(file: PlatformFile): Intent =
-        Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+    fun createDocument(file: PlatformFile): Intent {
+        val request = DocumentCreateRequest.of(file)
+        return Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = file.mimeType
-            putExtra(Intent.EXTRA_TITLE, file.fileName)
+            type = request.mimeType
+            putExtra(Intent.EXTRA_TITLE, request.suggestedName)
         }
+    }
+}
+
+/**
+ * The values the picker intent carries (T-0410). The intent itself is an
+ * Android type the JVM tests cannot build, so the suggested name and the filter
+ * are a value those tests can name.
+ */
+internal data class DocumentCreateRequest(
+    val mimeType: String,
+    val suggestedName: String,
+) {
+    companion object {
+        fun of(file: PlatformFile): DocumentCreateRequest = DocumentCreateRequest(mimeType = file.mimeType, suggestedName = file.fileName)
+    }
 }

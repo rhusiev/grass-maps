@@ -163,4 +163,6 @@
     <string name="nav_notification_resume">Продовжити</string>
     <string name="nav_notification_stop">Зупинити</string>
     <string name="track_library_action_failed">Не вдалося змінити бібліотеку треків</string>
+    <string name="track_export_saved">Трек збережено</string>
+    <string name="track_export_failed">Трек не збережено: %1$s</string>
 </resources>

@@ -496,7 +496,9 @@ pending answer across an activity recreation, and the chosen `content:` URI is
 written with `ContentResolver.openOutputStream`. No storage permission is
 declared. The authority, the single `cache-path` and the permission absence are
 checked by `TrackExportManifestTest`; the launcher/writer seam is checked
-without Android by `DocumentSaveCoordinatorTest`.
+without Android by `DocumentSaveCoordinatorTest`. The picker intent's filter and
+suggested file name are a value, `DocumentCreateRequest`, because a JVM test
+cannot build an `Intent`; `TrackSaveTest` names them.
 
 `plugins/share` owns the three coordinate notations and the link builders as
 pure functions:
@@ -2209,8 +2211,9 @@ text. A link keeps its `href` only when the address is `http` or `https`, and
 the screen shows the full address before the system browser opens it. A script,
 style, frame, image, SVG or form is dropped with its content, so an import loads
 no remote image. A press on a row selects the track, and the bottom bar then
-offers Move, Rename, Share and Delete; Delete happens at once and Undo restores
-the track. `StoreTrackLibrary` in `app`
+offers Move, Rename, Share, Save and Delete; Delete happens at once and Undo
+restores the track, and Save opens the system document picker for that one
+track. `StoreTrackLibrary` in `app`
 is the only writer: a rename, description or folder change rewrites that
 track's sidecar, and the folder definitions live in `.library.json` beside the
 documents. The sidecar also caches the track's first point for the nearest
@@ -2357,7 +2360,9 @@ while it is empty. It rejects a partial list of fewer than 10 tracks.
 `PlatformActions.shareFile` or `PlatformActions.saveFile`. `plugins/share`
 names the file (a track name, or `grass-maps-tracks.gpx` for a list) and picks
 the extension-specific MIME type. The track library screen's Share action calls
-this path for one track (T-0414).
+this path for one track (T-0414). Its Save action calls `saveTrack`, which
+builds the same file and asks the picker for it, and reports the save, the
+dismissal or the typed error as a short notice (T-0410).
 
 The debug channel exposes `core.track.import_test`:
 

@@ -1652,7 +1652,12 @@ leaves guidance running without the notification. The service returns
 `START_NOT_STICKY`: after a process death there is no session to resume, and a
 restarted service would hold location for nothing. If the location permission
 is revoked while the service starts, it catches `SecurityException`, ends the
-session and removes itself.
+session and removes itself. A background start that Android 12 and later refuse
+(`ForegroundServiceStartNotAllowedException`, an `IllegalStateException`) is the
+same typed refusal, `ForegroundStartResult.NotAllowedRefused`, so the service
+ends the session and removes itself instead of crashing. A `startForegroundService`
+call the system refuses before the service runs is already `AppError.NotReady`
+from `NavigationController.start`.
 
 ## Alerts
 

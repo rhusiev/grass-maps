@@ -21,6 +21,41 @@ import nl.r1a.grassmap.navigation.NavigationState
 import nl.r1a.grassmap.plugin.api.service.Strings
 
 /**
+ * The result of one foreground-start attempt. A refused start is a value, so
+ * the service ends the session instead of taking the process down.
+ */
+internal enum class ForegroundStartResult {
+    Started,
+    PermissionRefused,
+    NotAllowedRefused,
+}
+
+/**
+ * Runs one foreground start and turns the two refusals Android reports into a
+ * [ForegroundStartResult].
+ *
+ * `ForegroundServiceStartNotAllowedException` (API 31+) is an
+ * [IllegalStateException], so the second catch covers a start the system
+ * refuses because the app is in the background without naming a class that a
+ * device below 31 cannot resolve. The log line keeps the concrete class name
+ * for the record.
+ */
+internal fun foregroundStartResult(
+    start: () -> Unit,
+    log: (String) -> Unit,
+): ForegroundStartResult =
+    try {
+        start()
+        ForegroundStartResult.Started
+    } catch (error: SecurityException) {
+        log("navigation-service-refused reason=permission")
+        ForegroundStartResult.PermissionRefused
+    } catch (error: IllegalStateException) {
+        log("navigation-service-refused reason=not-allowed detail=${error.javaClass.simpleName}")
+        ForegroundStartResult.NotAllowedRefused
+    }
+
+/**
  * The location foreground service that keeps guidance alive while the app is
  * not in the foreground.
  *
@@ -150,18 +185,31 @@ class NavigationService : Service() {
      * Starts the location type the manifest declares. Android 14 and later
      * refuse a location foreground service without the location permission, so
      * a revocation between the controller's check and this call is caught and
-     * ends the session instead of crashing.
+     * ends the session instead of crashing. Android 12 and later can also
+     * refuse the start because the app is in the background; that is the same
+     * [ForegroundStartResult.NotAllowedRefused] path.
      */
     private fun startForegroundSafely(notification: Notification): Boolean =
-        try {
-            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
-            Log.i(TAG, "navigation-service-start type=location")
-            true
-        } catch (error: SecurityException) {
-            Log.w(TAG, "navigation-service-refused reason=permission")
-            controller.stop()
-            stopSelf()
-            false
+        when (
+            foregroundStartResult(
+                start = {
+                    startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+                },
+                log = { message -> Log.w(TAG, message) },
+            )
+        ) {
+            ForegroundStartResult.Started -> {
+                Log.i(TAG, "navigation-service-start type=location")
+                true
+            }
+
+            ForegroundStartResult.PermissionRefused,
+            ForegroundStartResult.NotAllowedRefused,
+            -> {
+                controller.stop()
+                stopSelf()
+                false
+            }
         }
 
     private fun notificationFor(state: NavigationState): Notification {

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -21,8 +22,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,10 +68,15 @@ import kotlin.math.pow
  * and its two handles for the range in [ElevationChartState.selection]. A
  * chart without [onRange] stays read-only, as the route preview's does.
  *
- * Colours are the validated round-10 palette: seven slope colours from the
- * steepest descent to the steepest climb on the hike scale, a hairline grid and
- * a dark line over the filled area. The light and dark palettes are two sets of
- * the same roles; the surface follows the theme so the chart reads on either.
+ * Colours are the validated round-10 palette: seven stops from the steepest
+ * descent to the steepest climb on the hike scale, a hairline grid and a dark
+ * line over the filled area. The area is coloured by slope by default; the
+ * colour chips beside the axis chips switch it to the track's own altitude,
+ * which maps the lowest to highest sample onto the same seven stops. The
+ * design draws no colour selector and no elevation ramp, so both the chip row
+ * and the normalisation are ours (T-0408). The light and dark palettes are two
+ * sets of the same roles; the surface follows the theme so the chart reads on
+ * either.
  */
 internal data class ElevationChartPalette(
     val surface: Color,
@@ -213,6 +221,7 @@ private val DARK_PALETTE =
  * profile with no drawable samples draws nothing at all.
  */
 @Suppress("ktlint:standard:function-naming")
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ElevationChart(
     state: ElevationChartState,
@@ -224,7 +233,8 @@ fun ElevationChart(
     zone: ZoneId = ZoneId.systemDefault(),
     onRange: ((ElevationChartRange?) -> Unit)? = null,
 ) {
-    val content = remember(state, strings, locale, zone) { elevationChartContent(state, strings, locale, zone) }
+    var colour by remember { mutableStateOf(ElevationChartColour.Slope) }
+    val content = remember(state, strings, locale, zone, colour) { elevationChartContent(state, strings, locale, zone, colour) }
     if (content == null) {
         return
     }
@@ -255,12 +265,26 @@ fun ElevationChart(
                     ),
             )
             Box(Modifier.weight(1f))
-            content.axes.forEach { chip ->
-                ElevationAxisChip(
-                    chip = chip,
-                    palette = palette,
-                    onClick = { onAxis(chip.axis) },
-                )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(CHIP_GAP_DP.dp, Alignment.End),
+                verticalArrangement = Arrangement.spacedBy(CHIP_GAP_DP.dp),
+            ) {
+                content.axes.forEach { chip ->
+                    ElevationChip(
+                        label = chip.label,
+                        selected = chip.selected,
+                        palette = palette,
+                        onClick = { onAxis(chip.axis) },
+                    )
+                }
+                content.colours.forEach { chip ->
+                    ElevationChip(
+                        label = chip.label,
+                        selected = chip.selected,
+                        palette = palette,
+                        onClick = { colour = chip.colour },
+                    )
+                }
             }
         }
         Row(modifier = Modifier.fillMaxWidth()) {
@@ -320,17 +344,17 @@ fun ElevationChart(
                         strokeWidth = GRID_STROKE_PX,
                     )
                 }
-                content.slopes.forEach { slope ->
-                    val colour = palette.slope[slope.bin.coerceIn(0, palette.slope.lastIndex)]
-                    val fill =
+                content.fills.forEach { fill ->
+                    val colourAtBin = palette.slope[fill.bin.coerceIn(0, palette.slope.lastIndex)]
+                    val path =
                         Path().apply {
-                            moveTo(slope.startFraction * width, height)
-                            lineTo(slope.startFraction * width, slope.startY * height)
-                            lineTo(slope.endFraction * width, slope.endY * height)
-                            lineTo(slope.endFraction * width, height)
+                            moveTo(fill.startFraction * width, height)
+                            lineTo(fill.startFraction * width, fill.startY * height)
+                            lineTo(fill.endFraction * width, fill.endY * height)
+                            lineTo(fill.endFraction * width, height)
                             close()
                         }
-                    drawPath(fill, colour)
+                    drawPath(path, colourAtBin)
                 }
                 val line =
                     Path().apply {
@@ -357,6 +381,14 @@ fun ElevationChart(
                 BasicText(text = tick.label, style = TextStyle(color = palette.label, fontSize = LABEL_FONT_SP.sp))
             }
         }
+        ElevationChartScaleLegend(
+            legend = content.legend,
+            palette = palette,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = Y_LABEL_WIDTH_DP.dp + LABEL_GAP_DP.dp),
+        )
         val strips = remember(state, strings, locale) { elevationStripRows(state, strings, locale) }
         if (strips.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(STRIP_ROW_GAP_DP.dp)) {
@@ -366,6 +398,46 @@ fun ElevationChart(
                 StripSummary(rows = strips, dark = dark)
             }
         }
+    }
+}
+
+/**
+ * The scale under the plot: the seven stops side by side, then the caption the
+ * chosen mode uses. The bar is the same ramp in both modes, so a user can read
+ * a filled slice's colour against it.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun ElevationChartScaleLegend(
+    legend: ElevationChartLegend,
+    palette: ElevationChartPalette,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(LEGEND_CAPTION_GAP_DP.dp),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(LEGEND_BAR_HEIGHT_DP.dp)
+                    .clip(RoundedCornerShape(LEGEND_BAR_CORNER_DP.dp)),
+        ) {
+            legend.bins.forEach { bin ->
+                Box(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .background(palette.slope[bin.coerceIn(0, palette.slope.lastIndex)]),
+                )
+            }
+        }
+        BasicText(
+            text = legend.caption,
+            style = TextStyle(color = palette.label, fontSize = LEGEND_FONT_SP.sp),
+        )
     }
 }
 
@@ -637,19 +709,20 @@ private fun linear(channel: Float): Double {
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
-private fun ElevationAxisChip(
-    chip: ElevationChartAxisChip,
+private fun ElevationChip(
+    label: String,
+    selected: Boolean,
     palette: ElevationChartPalette,
     onClick: () -> Unit,
 ) {
-    val background = if (chip.selected) palette.chipSelected else palette.chip
-    val text = if (chip.selected) palette.chipSelectedText else palette.chipText
+    val background = if (selected) palette.chipSelected else palette.chip
+    val text = if (selected) palette.chipSelectedText else palette.chipText
     BasicText(
-        text = chip.label,
+        text = label,
         style = TextStyle(color = text, fontSize = CHIP_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
         modifier =
             Modifier
-                .border(CHIP_BORDER_DP.dp, if (chip.selected) palette.chipSelected else palette.chipBorder, CHIP_SHAPE)
+                .border(CHIP_BORDER_DP.dp, if (selected) palette.chipSelected else palette.chipBorder, CHIP_SHAPE)
                 .background(background, CHIP_SHAPE)
                 .clickable(onClick = onClick)
                 .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp, vertical = CHIP_PADDING_VERTICAL_DP.dp),
@@ -721,6 +794,9 @@ private const val LEGEND_SWATCH_DP = 7
 private const val LEGEND_SWATCH_CORNER_DP = 2
 private const val LEGEND_SWATCH_GAP_DP = 4
 private const val LEGEND_FONT_SP = 11
+private const val LEGEND_BAR_HEIGHT_DP = 8
+private const val LEGEND_BAR_CORNER_DP = 4
+private const val LEGEND_CAPTION_GAP_DP = 3
 private const val STRIP_SUMMARY_CORNER_DP = 12
 private const val STRIP_SUMMARY_PADDING_HORIZONTAL_DP = 11
 private const val STRIP_SUMMARY_PADDING_VERTICAL_DP = 8

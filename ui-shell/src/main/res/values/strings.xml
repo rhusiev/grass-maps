@@ -114,6 +114,10 @@
     <string name="elevation_chart_axis_distance">Distance</string>
     <string name="elevation_chart_axis_duration">Duration</string>
     <string name="elevation_chart_axis_time_of_day">Time of day</string>
+    <string name="elevation_chart_colour_slope">Slope</string>
+    <string name="elevation_chart_colour_altitude">Altitude</string>
+    <string name="elevation_chart_legend_slope" formatted="false">down ... up % · hike scale</string>
+    <string name="elevation_chart_legend_altitude">%1$s m low ... %2$s m high</string>
     <string name="elevation_chart_details_show">Show details</string>
     <string name="elevation_chart_details_hide">Hide details</string>
     <string name="elevation_chart_metres">%1$s m</string>

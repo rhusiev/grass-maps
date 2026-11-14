@@ -148,8 +148,8 @@ class ElevationChartContentTest {
     fun aSteadyClimbIsFilledWithTheClimbColour() {
         val content = chart(ElevationChartState(points = TIMED_POINTS))
 
-        assertEquals(2, content.slopes.size)
-        assertTrue(content.slopes.all { slope -> slope.bin > FLAT_BIN })
+        assertEquals(2, content.fills.size)
+        assertTrue(content.fills.all { fill -> fill.bin > FLAT_BIN })
     }
 
     @Test
@@ -161,7 +161,87 @@ class ElevationChartContentTest {
         assertEquals(4, elevationSlopeBin(5.0))
         assertEquals(5, elevationSlopeBin(10.0))
         assertEquals(6, elevationSlopeBin(20.0))
-        assertEquals(7, ELEVATION_SLOPE_BINS)
+        assertEquals(7, ELEVATION_COLOUR_BINS)
+    }
+
+    @Test
+    fun aSlopeExactlyOnAStopStaysInTheLowerBin() {
+        assertEquals(0, elevationSlopeBin(-15.0))
+        assertEquals(1, elevationSlopeBin(-8.0))
+        assertEquals(2, elevationSlopeBin(-3.0))
+        assertEquals(3, elevationSlopeBin(3.0))
+        assertEquals(4, elevationSlopeBin(8.0))
+        assertEquals(5, elevationSlopeBin(15.0))
+        assertEquals(1, elevationSlopeBin(-14.999))
+        assertEquals(6, elevationSlopeBin(15.001))
+    }
+
+    @Test
+    fun theAltitudeScaleIsSevenBinsFromLowToHigh() {
+        val edge = 1.0 / ELEVATION_COLOUR_BINS
+
+        assertEquals(0, elevationAltitudeBin(0.0))
+        assertEquals(1, elevationAltitudeBin(edge * 1.5))
+        assertEquals(3, elevationAltitudeBin(0.5))
+        assertEquals(5, elevationAltitudeBin(edge * 5.5))
+        assertEquals(6, elevationAltitudeBin(1.0))
+    }
+
+    @Test
+    fun anAltitudeExactlyOnAnEdgeStaysInTheLowerBin() {
+        val edge = 1.0 / ELEVATION_COLOUR_BINS
+
+        assertEquals(0, elevationAltitudeBin(edge))
+        assertEquals(1, elevationAltitudeBin(edge * 2.0))
+        assertEquals(5, elevationAltitudeBin(edge * 6.0))
+        assertEquals(6, elevationAltitudeBin(edge * 6.0 + 1e-6))
+    }
+
+    @Test
+    fun theAltitudeModeFillsTheSameStopsFromTheTracksOwnRange() {
+        val content = chart(ElevationChartState(points = TIMED_POINTS), colour = ElevationChartColour.Altitude)
+
+        assertEquals(listOf(1, 5), content.fills.map { fill -> fill.bin })
+        assertEquals(ElevationChartColour.Altitude, content.colour)
+        assertEquals(TIMED_POINTS.map { it.elevationMeters }.min(), content.minElevationMeters, 0.0)
+        assertEquals(TIMED_POINTS.map { it.elevationMeters }.max(), content.maxElevationMeters, 0.0)
+    }
+
+    @Test
+    fun aFlatProfileDrawsInOneColourInBothModes() {
+        val state = ElevationChartState(points = FLAT_POINTS)
+
+        val slope = chart(state)
+        val altitude = chart(state, colour = ElevationChartColour.Altitude)
+
+        assertEquals(listOf(FLAT_BIN, FLAT_BIN), slope.fills.map { fill -> fill.bin })
+        assertEquals(listOf(FLAT_BIN, FLAT_BIN), altitude.fills.map { fill -> fill.bin })
+        assertEquals(0.5f, altitude.line.first().y, 1e-6f)
+        assertEquals("300 m low ... 300 m high", altitude.legend.caption)
+    }
+
+    @Test
+    fun switchingModesKeepsTheSlicesContiguousAndTheTotalsEqual() {
+        val state = ElevationChartState(points = TIMED_POINTS)
+        val slope = chart(state)
+        val altitude = chart(state, colour = ElevationChartColour.Altitude)
+
+        assertEquals(slope.fills.size, altitude.fills.size)
+        assertEquals(slope.fills.first().startFraction, altitude.fills.first().startFraction, 0f)
+        assertEquals(slope.fills.last().endFraction, altitude.fills.last().endFraction, 0f)
+        assertEquals(filledShare(slope), filledShare(altitude), 1e-6)
+        assertContiguous(slope)
+        assertContiguous(altitude)
+    }
+
+    @Test
+    fun aProfileWithOnePointDrawsNothingInEitherMode() {
+        val state = ElevationChartState(points = listOf(TIMED_POINTS.first()))
+
+        assertNull(elevationChartContent(state, MapStrings(ENGLISH), LOCALE, ZONE))
+        assertNull(
+            elevationChartContent(state, MapStrings(ENGLISH), LOCALE, ZONE, ElevationChartColour.Altitude),
+        )
     }
 
     @Test
@@ -175,8 +255,8 @@ class ElevationChartContentTest {
         assertEquals("#FFC4BC", dark.slope.last().toHex())
         assertNotEquals(light.surface, dark.surface)
         assertNotEquals(light.line, dark.line)
-        assertEquals(ELEVATION_SLOPE_BINS, light.slope.size)
-        assertEquals(ELEVATION_SLOPE_BINS, dark.slope.size)
+        assertEquals(ELEVATION_COLOUR_BINS, light.slope.size)
+        assertEquals(ELEVATION_COLOUR_BINS, dark.slope.size)
     }
 
     @Test
@@ -186,6 +266,35 @@ class ElevationChartContentTest {
         assertEquals("Висота", content.title)
         assertEquals(listOf("Відстань", "Тривалість", "Час доби"), content.axes.map { it.label })
         assertFalse(content.xTicks.isEmpty())
+    }
+
+    @Test
+    fun theColourChipsAndTheLegendResolveInBothLanguages() {
+        val english = chart(ElevationChartState(points = TIMED_POINTS))
+        val englishAltitude = chart(ElevationChartState(points = TIMED_POINTS), colour = ElevationChartColour.Altitude)
+        val ukrainian =
+            chart(
+                ElevationChartState(points = TIMED_POINTS),
+                MapStrings(UKRAINIAN),
+                ElevationChartColour.Slope,
+            )
+        val ukrainianAltitude =
+            chart(
+                ElevationChartState(points = TIMED_POINTS),
+                MapStrings(UKRAINIAN),
+                ElevationChartColour.Altitude,
+            )
+
+        assertEquals(listOf("Slope", "Altitude"), english.colours.map { it.label })
+        assertEquals(listOf(true, false), english.colours.map { it.selected })
+        assertEquals(listOf(false, true), englishAltitude.colours.map { it.selected })
+        assertEquals("down ... up % · hike scale", english.legend.caption)
+        assertEquals("300 m low ... 340 m high", englishAltitude.legend.caption)
+        assertEquals(listOf("Нахил", "Висота"), ukrainian.colours.map { it.label })
+        assertEquals("вниз ... вгору % · шкала походів", ukrainian.legend.caption)
+        assertEquals("300 м низько ... 340 м високо", ukrainianAltitude.legend.caption)
+        assertEquals((0 until ELEVATION_COLOUR_BINS).toList(), english.legend.bins)
+        assertEquals((0 until ELEVATION_COLOUR_BINS).toList(), englishAltitude.legend.bins)
     }
 
     @Test
@@ -255,10 +364,21 @@ class ElevationChartContentTest {
     private fun chart(
         state: ElevationChartState,
         strings: Strings = MapStrings(ENGLISH),
+        colour: ElevationChartColour = ElevationChartColour.Slope,
     ): ElevationChartContent {
-        val content = elevationChartContent(state, strings, LOCALE, ZONE)
+        val content = elevationChartContent(state, strings, LOCALE, ZONE, colour)
         assertNotNull(content)
         return content ?: error("no chart content")
+    }
+
+    private fun filledShare(content: ElevationChartContent): Double =
+        content.fills.sumOf { fill -> (fill.endFraction - fill.startFraction).toDouble() }
+
+    private fun assertContiguous(content: ElevationChartContent) {
+        content.fills.zipWithNext().forEach { (before, after) ->
+            assertEquals(before.endFraction, after.startFraction, 1e-6f)
+            assertTrue(after.startFraction < after.endFraction)
+        }
     }
 
     private fun valueAt(fraction: Float?): Double {
@@ -317,6 +437,13 @@ class ElevationChartContentTest {
                 ElevationChartPoint(distanceMeters = 1_000.0, elevationMeters = 320.0),
             )
 
+        val FLAT_POINTS =
+            listOf(
+                ElevationChartPoint(distanceMeters = 0.0, elevationMeters = 300.0),
+                ElevationChartPoint(distanceMeters = 500.0, elevationMeters = 300.0),
+                ElevationChartPoint(distanceMeters = 1_000.0, elevationMeters = 300.0),
+            )
+
         val SELECTION =
             ElevationChartRangeStats(
                 range = ElevationChartRange(startMeters = 250.0, endMeters = 750.0),
@@ -333,6 +460,10 @@ class ElevationChartContentTest {
                 "elevation_chart_axis_distance" to "Distance",
                 "elevation_chart_axis_duration" to "Duration",
                 "elevation_chart_axis_time_of_day" to "Time of day",
+                "elevation_chart_colour_slope" to "Slope",
+                "elevation_chart_colour_altitude" to "Altitude",
+                "elevation_chart_legend_slope" to "down ... up % · hike scale",
+                "elevation_chart_legend_altitude" to "%1\$s m low ... %2\$s m high",
                 "elevation_chart_metres" to "%1\$s m",
                 "elevation_chart_kilometres" to "%1\$s km",
                 "elevation_chart_minutes" to "%1\$s min",
@@ -346,6 +477,10 @@ class ElevationChartContentTest {
                 "elevation_chart_axis_distance" to "Відстань",
                 "elevation_chart_axis_duration" to "Тривалість",
                 "elevation_chart_axis_time_of_day" to "Час доби",
+                "elevation_chart_colour_slope" to "Нахил",
+                "elevation_chart_colour_altitude" to "Висота",
+                "elevation_chart_legend_slope" to "вниз ... вгору % · шкала походів",
+                "elevation_chart_legend_altitude" to "%1\$s м низько ... %2\$s м високо",
                 "elevation_chart_metres" to "%1\$s м",
                 "elevation_chart_kilometres" to "%1\$s км",
                 "elevation_chart_minutes" to "%1\$s хв",

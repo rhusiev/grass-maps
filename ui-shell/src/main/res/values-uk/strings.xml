@@ -114,6 +114,10 @@
     <string name="elevation_chart_axis_distance">Відстань</string>
     <string name="elevation_chart_axis_duration">Тривалість</string>
     <string name="elevation_chart_axis_time_of_day">Час доби</string>
+    <string name="elevation_chart_colour_slope">Нахил</string>
+    <string name="elevation_chart_colour_altitude">Висота</string>
+    <string name="elevation_chart_legend_slope" formatted="false">вниз ... вгору % · шкала походів</string>
+    <string name="elevation_chart_legend_altitude">%1$s м низько ... %2$s м високо</string>
     <string name="elevation_chart_details_show">Показати подробиці</string>
     <string name="elevation_chart_details_hide">Сховати подробиці</string>
     <string name="elevation_chart_metres">%1$s м</string>

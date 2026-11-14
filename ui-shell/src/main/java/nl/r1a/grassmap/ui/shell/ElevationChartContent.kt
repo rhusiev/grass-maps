@@ -2,6 +2,7 @@ package nl.r1a.grassmap.ui.shell
 
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
+import nl.r1a.grassmap.plugin.ui.api.ElevationChartPoint
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartState
 import java.time.Instant
 import java.time.ZoneId
@@ -28,8 +29,24 @@ data class ElevationChartTick(
     val label: String,
 )
 
-/** One filled slice of the area under the line, coloured by the slope it covers. */
-data class ElevationChartSlope(
+/**
+ * What the area under the line is coloured by.
+ *
+ * The colours are the design's seven-stop scale in both modes. Slope is the
+ * design's own scale: the stops are fixed percentages on the hike profile.
+ * Altitude reuses those stops over the track's own lowest to highest sample;
+ * that min-to-max normalisation is ours, not the design's.
+ */
+enum class ElevationChartColour {
+    /** The design's slope scale, from steep descent to steep climb. */
+    Slope,
+
+    /** The same seven stops over the track's own elevation range, low to high. */
+    Altitude,
+}
+
+/** One filled slice of the area under the line, coloured by its bin on the scale. */
+data class ElevationChartFill(
     val startFraction: Float,
     val endFraction: Float,
     val startY: Float,
@@ -42,6 +59,24 @@ data class ElevationChartAxisChip(
     val axis: ElevationChartAxis,
     val label: String,
     val selected: Boolean,
+)
+
+/** One colour chip, drawn in the axis chips' own style. */
+data class ElevationChartColourChip(
+    val colour: ElevationChartColour,
+    val label: String,
+    val selected: Boolean,
+)
+
+/**
+ * The scale drawn under the chart, matching the chosen colour mode.
+ *
+ * [bins] is always the seven stops, lowest first, so the drawing can show the
+ * whole ramp even when the profile itself uses fewer of them.
+ */
+data class ElevationChartLegend(
+    val caption: String,
+    val bins: List<Int>,
 )
 
 /** A drawn point: 0..1 across the plot and 0 at the top..1 at the bottom. */
@@ -60,9 +95,12 @@ data class ElevationChartBand(
 data class ElevationChartContent(
     val title: String,
     val axis: ElevationChartAxis,
+    val colour: ElevationChartColour,
     val axes: List<ElevationChartAxisChip>,
+    val colours: List<ElevationChartColourChip>,
     val line: List<ElevationChartPosition>,
-    val slopes: List<ElevationChartSlope>,
+    val fills: List<ElevationChartFill>,
+    val legend: ElevationChartLegend,
     val yTicks: List<ElevationChartTick>,
     val xTicks: List<ElevationChartTick>,
     val minElevationMeters: Double,
@@ -80,6 +118,7 @@ fun elevationChartContent(
     strings: Strings,
     locale: Locale = Locale.getDefault(),
     zone: ZoneId = ZoneId.systemDefault(),
+    colour: ElevationChartColour = ElevationChartColour.Slope,
 ): ElevationChartContent? {
     if (!state.isDrawable) {
         return null
@@ -104,9 +143,12 @@ fun elevationChartContent(
     return ElevationChartContent(
         title = strings.resolve(CHART_TITLE_KEY),
         axis = axis,
+        colour = colour,
         axes = axisChips(state, strings),
+        colours = colourChips(strings, colour),
         line = line,
-        slopes = slopes(state, line),
+        fills = fills(state, line, colour, minElevation, maxElevation),
+        legend = legend(colour, minElevation, maxElevation, strings),
         yTicks = elevationTicks(minElevation, maxElevation, strings),
         xTicks = axisTicks(state, axis, strings, locale, zone),
         minElevationMeters = minElevation,
@@ -255,31 +297,94 @@ private val SLOPE_BIN_EDGES = listOf(-15.0, -8.0, -3.0, 3.0, 8.0, 15.0)
 /** The slope bin for one step: 0 is the steepest descent, 6 the steepest climb. */
 fun elevationSlopeBin(slopePercent: Double): Int = SLOPE_BIN_EDGES.count { edge -> slopePercent > edge }
 
-private fun slopes(
+/**
+ * The fraction edges that split the track's own elevation range into seven
+ * equal spans. The design gives no elevation ramp; dividing the track's own
+ * lowest to highest sample into seven is ours.
+ */
+private val ALTITUDE_BIN_EDGES = (1 until ELEVATION_COLOUR_BINS).map { index -> index.toDouble() / ELEVATION_COLOUR_BINS }
+
+/**
+ * The altitude bin for [fraction] of the track's elevation range: 0 is the
+ * lowest sample, 6 the highest. A value exactly on an edge stays in the lower
+ * bin, the rule the slope scale uses.
+ */
+fun elevationAltitudeBin(fraction: Double): Int = ALTITUDE_BIN_EDGES.count { edge -> fraction > edge }
+
+/**
+ * Where [elevationMeters] sits inside the track's range, as 0..1.
+ *
+ * A track whose lowest and highest samples are equal has no range, so every
+ * step lands on the flat middle instead of dividing by zero.
+ */
+private fun elevationAltitudeFraction(
+    elevationMeters: Double,
+    minElevationMeters: Double,
+    maxElevationMeters: Double,
+): Double {
+    val span = maxElevationMeters - minElevationMeters
+    if (span <= 0.0) {
+        return MIDDLE_SHARE
+    }
+    return ((elevationMeters - minElevationMeters) / span).coerceIn(0.0, 1.0)
+}
+
+private fun fills(
     state: ElevationChartState,
     line: List<ElevationChartPosition>,
-): List<ElevationChartSlope> =
+    colour: ElevationChartColour,
+    minElevationMeters: Double,
+    maxElevationMeters: Double,
+): List<ElevationChartFill> =
     state.points.zipWithNext().mapIndexedNotNull { index, (from, to) ->
         val start = line[index]
         val end = line[index + 1]
         if (end.x <= start.x) {
             return@mapIndexedNotNull null
         }
-        val stepMeters = to.distanceMeters - from.distanceMeters
-        val slope =
-            if (stepMeters > 0.0) {
-                (to.elevationMeters - from.elevationMeters) / stepMeters * PERCENT
-            } else {
-                0.0
-            }
-        ElevationChartSlope(
+        ElevationChartFill(
             startFraction = start.x,
             endFraction = end.x,
             startY = start.y,
             endY = end.y,
-            bin = elevationSlopeBin(slope),
+            bin = fillBin(colour, from, to, minElevationMeters, maxElevationMeters),
         )
     }
+
+/**
+ * The bin of one drawn step. A slope step is classified by its own grade; an
+ * altitude step takes the colour of the mean of its two ends, so a filled span
+ * carries the height it covers rather than only where it starts.
+ */
+private fun fillBin(
+    colour: ElevationChartColour,
+    from: ElevationChartPoint,
+    to: ElevationChartPoint,
+    minElevationMeters: Double,
+    maxElevationMeters: Double,
+): Int =
+    when (colour) {
+        ElevationChartColour.Slope -> {
+            elevationSlopeBin(slopePercent(from, to))
+        }
+
+        ElevationChartColour.Altitude -> {
+            val mean = (from.elevationMeters + to.elevationMeters) / 2.0
+            elevationAltitudeBin(elevationAltitudeFraction(mean, minElevationMeters, maxElevationMeters))
+        }
+    }
+
+private fun slopePercent(
+    from: ElevationChartPoint,
+    to: ElevationChartPoint,
+): Double {
+    val stepMeters = to.distanceMeters - from.distanceMeters
+    return if (stepMeters > 0.0) {
+        (to.elevationMeters - from.elevationMeters) / stepMeters * PERCENT
+    } else {
+        0.0
+    }
+}
 
 private fun elevationFraction(
     elevationMeters: Double,
@@ -314,6 +419,56 @@ private fun axisKey(axis: ElevationChartAxis): String =
         ElevationChartAxis.Duration -> AXIS_DURATION_KEY
         ElevationChartAxis.TimeOfDay -> AXIS_TIME_OF_DAY_KEY
     }
+
+/**
+ * The two colour chips, in the axis chips' own style. The canon draws no colour
+ * selector; this row extends the axis chip pattern rather than inventing a
+ * control (T-0408).
+ */
+private fun colourChips(
+    strings: Strings,
+    selected: ElevationChartColour,
+): List<ElevationChartColourChip> =
+    ElevationChartColour.entries.map { colour ->
+        ElevationChartColourChip(
+            colour = colour,
+            label = strings.resolve(colourKey(colour)),
+            selected = colour == selected,
+        )
+    }
+
+private fun colourKey(colour: ElevationChartColour): String =
+    when (colour) {
+        ElevationChartColour.Slope -> COLOUR_SLOPE_KEY
+        ElevationChartColour.Altitude -> COLOUR_ALTITUDE_KEY
+    }
+
+/**
+ * The scale legend for the chosen mode: the design's slope caption, or the
+ * track's own lowest and highest samples for altitude.
+ */
+private fun legend(
+    colour: ElevationChartColour,
+    minElevationMeters: Double,
+    maxElevationMeters: Double,
+    strings: Strings,
+): ElevationChartLegend =
+    ElevationChartLegend(
+        caption =
+            when (colour) {
+                ElevationChartColour.Slope -> {
+                    strings.resolve(LEGEND_SLOPE_KEY)
+                }
+
+                ElevationChartColour.Altitude -> {
+                    strings.resolve(
+                        LEGEND_ALTITUDE_KEY,
+                        listOf(minElevationMeters.roundToLong().toString(), maxElevationMeters.roundToLong().toString()),
+                    )
+                }
+            },
+        bins = (0 until ELEVATION_COLOUR_BINS).toList(),
+    )
 
 private fun elevationTicks(
     minElevationMeters: Double,
@@ -498,6 +653,10 @@ private const val CHART_TITLE_KEY = "elevation_chart_title"
 private const val AXIS_DISTANCE_KEY = "elevation_chart_axis_distance"
 private const val AXIS_DURATION_KEY = "elevation_chart_axis_duration"
 private const val AXIS_TIME_OF_DAY_KEY = "elevation_chart_axis_time_of_day"
+private const val COLOUR_SLOPE_KEY = "elevation_chart_colour_slope"
+private const val COLOUR_ALTITUDE_KEY = "elevation_chart_colour_altitude"
+private const val LEGEND_SLOPE_KEY = "elevation_chart_legend_slope"
+private const val LEGEND_ALTITUDE_KEY = "elevation_chart_legend_altitude"
 private const val METRES_KEY = "elevation_chart_metres"
 private const val KILOMETRES_KEY = "elevation_chart_kilometres"
 private const val MINUTES_KEY = "elevation_chart_minutes"
@@ -510,6 +669,7 @@ private const val MAXIMUM_TICK_SPACING = 5.0
 private const val MINIMUM_TICK_SHARE = 0.04
 private const val MINIMUM_POINTS = 2
 private const val MIDDLE_FRACTION = 0.5f
+private const val MIDDLE_SHARE = 0.5
 private const val PERCENT = 100.0
 private const val WHOLE_NUMBER_TOLERANCE = 0.05
 private const val METRES_PER_KILOMETRE = 1_000.0
@@ -518,5 +678,5 @@ private const val MINUTES_PER_HOUR = 60L
 
 private val CLOCK_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
-/** The number of slope colours on the scale. */
-const val ELEVATION_SLOPE_BINS: Int = 7
+/** The number of colours on the scale both modes use. */
+const val ELEVATION_COLOUR_BINS: Int = 7

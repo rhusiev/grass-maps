@@ -4,12 +4,13 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.alerts.AlertEffectSink
 import nl.r1a.grassmap.alerts.AlertHost
 import nl.r1a.grassmap.alerts.AlertKind
+import nl.r1a.grassmap.alerts.AlertSettingsStore
 import nl.r1a.grassmap.alerts.BeepHost
 import nl.r1a.grassmap.alerts.BeepSink
 import nl.r1a.grassmap.alerts.NoopAlertEffectSink
@@ -136,6 +137,7 @@ class AppContainer(
     private val contoursSettingsFileProvider: () -> File? = { null },
     private val routeHistoryFileProvider: () -> File? = { null },
     private val routingOptionsFileProvider: () -> File? = { null },
+    private val alertSettingsFileProvider: () -> File? = { null },
     private val favouritesRootProvider: () -> File? = { null },
     private val favouritesBackupClock: Clock = SystemClock,
     private val favouritesBackupScope: CoroutineScope? = null,
@@ -335,6 +337,7 @@ class AppContainer(
             requiresLocationPermission = { sharedLocation.requiresPermission() },
             routing = routingEngine,
             service = navigationService,
+            onProfileStarted = { profile -> alertSettings.activate(profile) },
             log = { message -> Log.i(NAVIGATION_TAG, message) },
         )
     }
@@ -351,11 +354,41 @@ class AppContainer(
     }
 
     /**
-     * The alert host (T-0317). Way alerts (T-0319) are the first producer; its
-     * switches stay off until `core.nav.way_alerts` turns them on.
+     * The per-profile alert switches, output channels and chosen place kinds
+     * (T-0413). Construction is cheap; [AlertSettingsStore.load] reads the file
+     * from the IO dispatcher when the alert host is first built.
+     */
+    val alertSettings: AlertSettingsStore by lazy {
+        AlertSettingsStore(
+            file = alertSettingsFileProvider(),
+            writeScope = processScope,
+            log = { message -> Log.w(ALERTS_TAG, message) },
+        )
+    }
+
+    /**
+     * The alert host (T-0317). Its switches and channels start from the active
+     * profile's stored values, and every change is written back to that
+     * profile. Way alerts (T-0319) and proximity alerts (T-0413) are the
+     * producers; a trip activates its profile in [NavigationController.start].
      */
     val alerts: AlertHost by lazy {
-        AlertHost(effectSink = alertEffectSink)
+        AlertHost(
+            initialSettings = alertSettings.current().settings,
+            initialChannels = alertSettings.current().channels,
+            effectSink = alertEffectSink,
+            onSettingsChanged = { value ->
+                alertSettings.setActive(alertSettings.current().copy(settings = value))
+            },
+            onChannelsChanged = { value ->
+                alertSettings.setActive(alertSettings.current().copy(channels = value))
+            },
+        ).also { host ->
+            processScope.launch {
+                withContext(Dispatchers.IO) { alertSettings.load() }
+                alertSettings.active.collect { profile -> host.replaceSettings(profile.settings, profile.channels) }
+            }
+        }
     }
 
     /**
@@ -464,13 +497,13 @@ class AppContainer(
     }
 
     /**
-     * The place kinds the user picked for proximity alerts (T-0413). The
-     * design handoff (round 8) gives alerts one page of their own, which does
-     * not exist yet, so nothing writes this value today and every place kind
-     * stays silent. The list holds exact index kinds ("amenity=cafe"), as the
-     * chips on that page will.
+     * The place kinds the active profile picked for proximity alerts (T-0413).
+     * The alerts page writes them through [alertSettings]; this is the read
+     * side the proximity plugin and [proximityAlertsPossible] use. The list
+     * holds exact index kinds ("amenity=cafe").
      */
-    val proximityPoiKinds: MutableStateFlow<Set<String>> = MutableStateFlow(emptySet())
+    val proximityPoiKinds: Set<String>
+        get() = alertSettings.current().poiKinds
 
     /**
      * Proximity alerts (T-0413): a favourite, a track waypoint or a chosen
@@ -481,12 +514,10 @@ class AppContainer(
      *
      * [ProximityAlertHost.canAlert] is this wiring's answer to whether any
      * place alert can be raised: one of the three [AlertHost] switches is on,
-     * and an on `poi` switch has at least one kind to look for. While that is
-     * false the schedule does no lookup at all, because round 8's alerts page
-     * - the page that will own these switches and the chip list - is designed
-     * but not built. The kinds become reachable when that page supplies them;
-     * this container holds the switches in [alerts] and the chip list in
-     * [proximityPoiKinds] for it.
+     * and an on `poi` switch has at least one kind to look for. The alerts page
+     * stores both the switches and the kinds in the active profile, so choosing
+     * a kind there opens this gate. While it is false the schedule does no
+     * lookup at all.
      */
     val proximityAlerts: ProximityAlertHost by lazy {
         ProximityAlertHost(
@@ -505,8 +536,8 @@ class AppContainer(
                     },
                     log = { message -> Log.i(PROXIMITY_ALERTS_TAG, message) },
                 ),
-            poiKinds = { proximityPoiKinds.value },
-            canAlert = { proximityAlertsPossible(alerts.settings.value, proximityPoiKinds.value) },
+            poiKinds = { alertSettings.current().poiKinds },
+            canAlert = { proximityAlertsPossible(alerts.settings.value, alertSettings.current().poiKinds) },
             sink =
                 ProximityAlertSink { cue ->
                     alerts.onPlaceAlert(
@@ -892,6 +923,7 @@ class AppContainer(
         const val NAVIGATION_TAG = "GrassMapsNavigation"
         const val WAY_ALERTS_TAG = "GrassMapsWayAlerts"
         const val PROXIMITY_ALERTS_TAG = "GrassMapsProximityAlerts"
+        const val ALERTS_TAG = "GrassMapsAlerts"
         const val TRACK_LAYER_TAG = "GrassMapsTracks"
         const val ROUTE_LAYER_TAG = "GrassMapsRoute"
         const val TRACK_LIBRARY_INDEX = ".library.json"

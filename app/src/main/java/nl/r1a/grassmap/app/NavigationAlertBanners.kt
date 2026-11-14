@@ -53,6 +53,11 @@ internal class NavigationAlertBanners(
         navigation: NavigationState?,
     ) {
         val kind = event.kind
+        if (!event.bannerVisible) {
+            // The banner channel is off. Sound or vibration still reached the
+            // sink; this screen draws nothing for it.
+            return
+        }
         if (kind == AlertKind.OffRoute || kind == AlertKind.Arrived) {
             return
         }

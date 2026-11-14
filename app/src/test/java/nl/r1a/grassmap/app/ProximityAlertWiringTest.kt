@@ -2,6 +2,8 @@ package nl.r1a.grassmap.app
 
 import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.alerts.AlertSettings
+import nl.r1a.grassmap.alerts.AlertSettingsStore
+import nl.r1a.grassmap.alerts.ProfileAlertSettings
 import nl.r1a.grassmap.navigation.NavigationPhase
 import nl.r1a.grassmap.navigation.NavigationState
 import nl.r1a.grassmap.places.Favourite
@@ -17,7 +19,10 @@ import nl.r1a.grassmap.plugin.api.model.TrackPoint
 import nl.r1a.grassmap.plugin.api.model.TrackSegment
 import nl.r1a.grassmap.plugin.api.model.TrackWaypoint
 import nl.r1a.grassmap.plugin.api.provider.Place
+import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmap.plugins.proximity.alerts.ProximityAlertHost
 import nl.r1a.grassmap.plugins.proximity.alerts.ProximityBox
+import nl.r1a.grassmap.plugins.proximity.alerts.ProximityState
 import nl.r1a.grassmap.tracks.StoredTrack
 import nl.r1a.grassmap.tracks.TrackAnalyzer
 import nl.r1a.grassmap.tracks.TrackId
@@ -150,6 +155,42 @@ class ProximityAlertWiringTest {
         assertTrue("the box reaches past the longest radius", box.contains(fourHundredMetresEast))
         assertTrue("the far place is outside the lookup", !box.contains(GeoPoint(50.0, 25.0)))
     }
+
+    @Test
+    fun theChosenKindsFromTheActiveProfileReachTheProximityLookup() =
+        runTest {
+            val store = AlertSettingsStore().also { it.load() }
+            store.set(
+                RouteProfile.Bike,
+                ProfileAlertSettings(
+                    settings = AlertSettings(poi = true),
+                    poiKinds = setOf(CAFE_KIND),
+                ),
+            )
+            store.activate(RouteProfile.Bike)
+            val asked = mutableSetOf<String>()
+            val source =
+                LibraryProximityPlaces(
+                    favourites = { Outcome.Success(FavouritesSnapshot()) },
+                    tracks = { emptyList() },
+                    pois = { _, kinds ->
+                        asked += kinds
+                        Outcome.Success(pois(kinds))
+                    },
+                )
+            val host =
+                ProximityAlertHost(
+                    source = source,
+                    poiKinds = { store.current().poiKinds },
+                    canAlert = { proximityAlertsPossible(store.current().settings, store.current().poiKinds) },
+                )
+
+            host.onState(
+                ProximityState(active = true, fixTimeMillis = FIX_TIME_MILLIS, position = CENTRE),
+            )
+
+            assertTrue("the picker's kinds reached the index lookup", asked.contains(CAFE_KIND))
+        }
 
     @Test
     fun theGateOpensOnlyWhenAPlaceKindCanAlert() {

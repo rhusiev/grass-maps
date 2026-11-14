@@ -141,6 +141,22 @@ class NavigationAlertBannersTest {
     }
 
     @Test
+    fun anEventWithTheBannerChannelOffDrawsNothing() {
+        val banners = NavigationAlertBanners(clockMillis = { 0L })
+
+        banners.onEvent(
+            event(1, AlertKind.SignalLost, AlertSeverity.Warning).copy(bannerVisible = false),
+            state(remaining = 700.0),
+        )
+
+        assertTrue(
+            banners.state.value.banners
+                .isEmpty(),
+        )
+        assertFalse(banners.state.value.signalLost)
+    }
+
+    @Test
     fun aTerminalPhaseClearsEverything() {
         val banners = NavigationAlertBanners(clockMillis = { 0L })
         banners.onEvent(event(1, AlertKind.SignalLost, AlertSeverity.Warning), state(remaining = 700.0))

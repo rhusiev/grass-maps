@@ -63,6 +63,7 @@ open class GrassMapsApplication : Application() {
             contoursSettingsFileProvider = { File(filesDir, CONTOURS_SETTINGS_PATH) },
             routeHistoryFileProvider = { File(filesDir, ROUTE_HISTORY_PATH) },
             routingOptionsFileProvider = { File(filesDir, ROUTING_OPTIONS_SETTINGS_PATH) },
+            alertSettingsFileProvider = { File(filesDir, ALERT_SETTINGS_PATH) },
             favouritesRootProvider = { filesDir },
             platformActions = AndroidPlatformActions(this, documentSaver),
             documentSaver = documentSaver,
@@ -203,6 +204,7 @@ open class GrassMapsApplication : Application() {
         const val ONLINE_SEARCH_SETTINGS_PATH = "settings/online-search.json"
         const val CONTOURS_SETTINGS_PATH = "settings/contours.json"
         const val ROUTING_OPTIONS_SETTINGS_PATH = "settings/routing-options.json"
+        const val ALERT_SETTINGS_PATH = "settings/alerts.json"
         const val SEARCH_HISTORY_PATH = "history/search-history.json"
         const val ROUTE_HISTORY_PATH = "history/route-history.json"
         const val DEV_TOOLS_GPX_ASSET = "mock-walk.gpx"

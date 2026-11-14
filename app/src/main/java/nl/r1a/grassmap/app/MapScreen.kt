@@ -54,7 +54,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nl.r1a.grassmap.alerts.AlertKind
-import nl.r1a.grassmap.alerts.AlertSettings
 import nl.r1a.grassmap.core.services.ButtonLayoutStore
 import nl.r1a.grassmap.core.services.DEFAULT_PROFILE
 import nl.r1a.grassmap.core.services.MapControlCommands
@@ -135,6 +134,7 @@ import nl.r1a.grassmap.tracks.StoredTrack
 import nl.r1a.grassmap.tracks.TrackId
 import nl.r1a.grassmap.tracks.TrackPalette
 import nl.r1a.grassmap.tracks.TrackSummary
+import nl.r1a.grassmap.ui.shell.AlertsScreenHost
 import nl.r1a.grassmap.ui.shell.ControlBarLabels
 import nl.r1a.grassmap.ui.shell.ControlButton
 import nl.r1a.grassmap.ui.shell.FavouritesListsHost
@@ -553,7 +553,6 @@ private fun MapContent(
             navigationCamera.setAutoZoom(true)
             navigationCamera.setAutoCentre(true)
             navigationCamera.setTilt(true)
-            AlertKind.entries.forEach { kind -> container.alerts.setEnabled(kind, false) }
             surface.host.setTrackingMode(TrackingMode.Free).onFailure { error ->
                 Log.w(TAG, "navigation tracking not set: $error")
             }
@@ -579,13 +578,8 @@ private fun MapContent(
             container.navigationAlertBanners.onTick()
         }
     }
-    val alertSettings by
-        produceState(initialValue = AlertSettings.ALL_OFF, navigationActive) {
-            if (navigationActive) {
-                value = AlertSettings.ALL_OFF
-                container.alerts.settings.collect { value = it }
-            }
-        }
+    val alertProfile by container.alertSettings.active.collectAsState()
+    val alertSettings = alertProfile.settings
     val speedCurrentFlow =
         remember(container) {
             container.streamAccess.subscribe<SpeedWidgetValue>(InfoWidgetsContract.speedCurrentStream)
@@ -620,6 +614,7 @@ private fun MapContent(
             }
         }
     var navigationSheet by remember { mutableStateOf(NavigationSheet.Collapsed) }
+    var alertsPageVisible by rememberSaveable { mutableStateOf(false) }
     var navigationDestination by rememberSaveable { mutableStateOf<String?>(null) }
     var navigationNextStop by rememberSaveable { mutableStateOf<String?>(null) }
     var cameraPanned by remember { mutableStateOf(false) }
@@ -627,6 +622,7 @@ private fun MapContent(
     LaunchedEffect(navigationActive, navigationFixture) {
         if (!navigationActive) {
             navigationSheet = NavigationSheet.Collapsed
+            alertsPageVisible = false
             cameraPanned = false
             navigationDestination = null
             navigationNextStop = null
@@ -1368,7 +1364,37 @@ private fun MapContent(
                     navigationCamera.setAutoZoom(true)
                     navigationCamera.setAutoCentre(true)
                     scope.launch { navigationCamera.setTilt(true) }
-                    AlertKind.entries.forEach { kind -> container.alerts.setEnabled(kind, false) }
+                    container.alertSettings.activate(container.alertSettings.activeProfile())
+                },
+                onOpenAlerts = { alertsPageVisible = true },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        if (alertsPageVisible) {
+            AlertsScreenHost(
+                state =
+                    alertsPageState(
+                        profile = container.alertSettings.activeProfile(),
+                        settings = alertProfile.settings,
+                        channels = alertProfile.channels,
+                        poiKinds = alertProfile.poiKinds,
+                        strings = container.strings,
+                    ),
+                strings = container.strings,
+                dark = dark,
+                onBack = { alertsPageVisible = false },
+                onDone = { alertsPageVisible = false },
+                onSwitch = { switch, enabled -> container.alerts.setEnabled(switch.toAlertKind(), enabled) },
+                onChannel = { channel, enabled -> container.alerts.setChannel(channel.toAlertChannel(), enabled) },
+                onPlaceKind = { kind, enabled ->
+                    val current = container.alertSettings.current()
+                    val kinds = if (enabled) current.poiKinds + kind else current.poiKinds - kind
+                    container.alertSettings.setActive(
+                        current.copy(
+                            settings = current.settings.with(AlertKind.Poi, kinds.isNotEmpty()),
+                            poiKinds = kinds,
+                        ),
+                    )
                 },
                 modifier = Modifier.fillMaxSize(),
             )

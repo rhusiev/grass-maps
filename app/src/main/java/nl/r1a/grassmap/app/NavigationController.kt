@@ -60,6 +60,8 @@ class NavigationController(
     private val followerFactory: () -> RouteFollowerEngine = { FerrostarRouteFollower() },
     private val config: NavigationConfig = NavigationConfig(),
     private val clockMillis: () -> Long = { System.nanoTime() / 1_000_000L },
+    /** Reports the profile a new session uses, so its alert settings become active. */
+    private val onProfileStarted: (RouteProfile) -> Unit = {},
     private val log: (String) -> Unit = {},
 ) {
     private val mutableState = MutableStateFlow(NavigationState())
@@ -127,6 +129,7 @@ class NavigationController(
                 }
             job = started
             started.invokeOnCompletion { finish(started) }
+            onProfileStarted(profile)
             started.start()
             log(
                 "navigation-start points=${route.geometry.size} " +

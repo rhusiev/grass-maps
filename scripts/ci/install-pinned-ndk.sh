@@ -17,6 +17,7 @@ if [[ -z "$VERSION" ]]; then
 fi
 
 export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/.local/share/android-sdk}}"
+PINNED_NDK="$ANDROID_HOME/ndk/$VERSION"
 SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
 if [[ ! -x "$SDKMANAGER" ]]; then
     SDKMANAGER="$(command -v sdkmanager || true)"
@@ -26,14 +27,23 @@ if [[ -z "$SDKMANAGER" || ! -x "$SDKMANAGER" ]]; then
     exit 1
 fi
 
-if [[ "$(sed -n 's/^Pkg.Revision *= *//p' "$ANDROID_HOME/ndk/$VERSION/source.properties" 2>/dev/null)" == "$VERSION" ]]; then
+# A runner may export an older NDK; point the later steps at the pinned one.
+# Gradle treats a blank variable as unset, so the root fallback cannot win.
+if [[ -n "${GITHUB_ENV:-}" ]]; then
+    {
+        echo "ANDROID_NDK_HOME=$PINNED_NDK"
+        echo "ANDROID_NDK_ROOT="
+    } >> "$GITHUB_ENV"
+fi
+
+if [[ "$(sed -n 's/^Pkg.Revision *= *//p' "$PINNED_NDK/source.properties" 2>/dev/null)" == "$VERSION" ]]; then
     echo "Android NDK $VERSION is already installed"
     exit 0
 fi
 
 yes | "$SDKMANAGER" --install "ndk;$VERSION"
-if [[ "$(sed -n 's/^Pkg.Revision *= *//p' "$ANDROID_HOME/ndk/$VERSION/source.properties" 2>/dev/null)" != "$VERSION" ]]; then
-    echo "sdkmanager did not install Android NDK $VERSION under $ANDROID_HOME/ndk" >&2
+if [[ "$(sed -n 's/^Pkg.Revision *= *//p' "$PINNED_NDK/source.properties" 2>/dev/null)" != "$VERSION" ]]; then
+    echo "sdkmanager did not install Android NDK $VERSION under $PINNED_NDK" >&2
     exit 1
 fi
 echo "Installed Android NDK $VERSION"

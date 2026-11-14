@@ -27,7 +27,7 @@ class RouteJsonTest {
 
         val attributes =
             (decoded as Outcome.Success<Route>)
-                .value.segments
+                .value.runs
                 .single()
                 .attributes
         assertEquals(AttributeValue.NumberValue(320.5), attributes["elevation"])
@@ -65,6 +65,15 @@ class RouteJsonTest {
                     RouteSegment(
                         startIndex = 0,
                         endIndex = 3,
+                        distanceMeters = 1_009.0,
+                        durationSeconds = 716.27,
+                    ),
+                ),
+            runs =
+                listOf(
+                    RouteSegment(
+                        startIndex = 0,
+                        endIndex = 2,
                         distanceMeters = 1_009.0,
                         durationSeconds = 716.27,
                         attributes =

@@ -195,10 +195,10 @@ class AnalysisChartsTest {
         }
 
     @Test
-    fun theRouteStripsComeFromTheAnnotatedSegments() =
+    fun theRouteStripsComeFromTheAnnotatedRuns() =
         runTest {
             val route = route(geometry(size = 5), durationSeconds = 1_140.0, arrivalEpochMillis = ARRIVAL)
-            val annotated = route.copy(segments = listOf(FIRST_SEGMENT, SECOND_SEGMENT))
+            val annotated = route.copy(runs = listOf(FIRST_SEGMENT, SECOND_SEGMENT))
             val elevation = ElevationAccess { position -> Outcome.Success(heightAt(position)) }
             val profile = RouteElevation(elevation).profile(annotated) ?: error("no profile")
 

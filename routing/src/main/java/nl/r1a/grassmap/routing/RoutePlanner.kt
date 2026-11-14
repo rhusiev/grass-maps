@@ -58,15 +58,15 @@ import java.util.concurrent.atomic.AtomicLong
  * the settings model. [clear] drops the override with the plan, so the next
  * route starts from the profile again.
  *
- * A produced route is published before its segments are annotated (T-0409):
- * the engine's route answer carries no per-edge attributes, so the planner asks
+ * A produced route is published before its runs are annotated (T-0409): the
+ * engine's route answer carries no per-edge attributes, so the planner asks
  * [annotateRoute] for the selected route on [annotationScope] and replaces that
- * option's segments when the answer arrives. The preview, the map and the
- * warnings are already usable in the meantime, and every other part of the
- * option - geometry, totals, arrival, selection, the alternatives and the
- * history - is left as published. An annotate failure keeps the unannotated
- * route and reports it through [log]. Each produced option is asked for once,
- * so re-selecting it does not ask the engine again.
+ * option's runs when the answer arrives. The legs stay as produced. The preview,
+ * the map and the warnings are already usable in the meantime, and every other
+ * part of the option - geometry, totals, legs, arrival, selection, the
+ * alternatives and the history - is left as published. An annotate failure
+ * keeps the unannotated route and reports it through [log]. Each produced option
+ * is asked for once, so re-selecting it does not ask the engine again.
  */
 class RoutePlanner(
     private val requestRoute: suspend (RouteRequest, CancellationHandle) -> Outcome<List<Route>>,
@@ -481,6 +481,7 @@ class RoutePlanner(
                     durationSeconds = route.durationSeconds,
                     arrivalEpochMillis = now + (route.durationSeconds * MILLIS_PER_SECOND).toLong(),
                     segments = route.segments,
+                    runs = route.runs,
                     instructions = route.instructions,
                 )
             }
@@ -570,9 +571,11 @@ class RoutePlanner(
     }
 
     /**
-     * Replaces the annotated option's segments, and nothing else. A result for
-     * a route the plan no longer shows is dropped, and its claim is released so
-     * a restored generation can ask again.
+     * Replaces the annotated option's runs, and nothing else. The legs in
+     * [RoutePlanOption.segments] stay as published, so guidance keeps one
+     * waypoint per leg after annotation. A result for a route the plan no
+     * longer shows is dropped, and its claim is released so a restored
+     * generation can ask again.
      */
     private suspend fun applyAnnotation(
         request: AnnotationRequest,
@@ -595,11 +598,11 @@ class RoutePlanner(
 
                 is Outcome.Success -> {
                     val option = current.options.getOrNull(request.index) ?: return@withLock
-                    if (outcome.value.segments == option.segments) {
+                    if (outcome.value.runs == option.runs) {
                         return@withLock
                     }
                     val options = current.options.toMutableList()
-                    options[request.index] = option.copy(segments = outcome.value.segments)
+                    options[request.index] = option.copy(runs = outcome.value.runs)
                     setState(current.copy(options = options))
                 }
             }

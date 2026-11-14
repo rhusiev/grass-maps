@@ -27,10 +27,15 @@ interface RoutingEngine : Provider {
     ): Outcome<List<Route>>
 
     /**
-     * Re-reads [route] with the engine's per-segment attributes, keyed by the
+     * Re-reads [route] with the engine's per-edge attributes, keyed by the
      * route line rather than by a second routing run. The returned route keeps
-     * the geometry, distance, duration and instructions of [route], and its
-     * segments gain the keys [RoutingCapabilities.attributeKeys] declares.
+     * the geometry, distance, duration, legs and instructions of [route], and
+     * fills [Route.runs] with the keys [RoutingCapabilities.attributeKeys]
+     * declares.
+     *
+     * [Route.segments] is not replaced: it keeps the legs, which guidance needs
+     * for its stop and reroute waypoints. An engine that has to cut the line at
+     * its graph edges puts those cuts in [Route.runs] only.
      *
      * This runs after guidance is already showing, because an engine may have
      * to match the line to its graph edge by edge. An engine without the
@@ -47,8 +52,12 @@ interface RoutingEngine : Provider {
 object RoutingEngineContract {
     const val NAME: String = "routing.engine"
 
-    /** 1.3.0 replaces the two-state hilliness with three independent preferences (T-0421). */
-    const val VERSION: String = "1.3.0"
+    /**
+     * 1.3.0 replaces the two-state hilliness with three independent preferences
+     * (T-0421). 1.4.0 adds [Route.runs]: annotate fills the per-edge runs there
+     * and leaves [Route.segments] as the legs.
+     */
+    const val VERSION: String = "1.4.0"
 
     val REFERENCE: ProviderContract = ProviderContract(NAME, VERSION)
 }
@@ -197,25 +206,46 @@ object RouteModifierRules {
 }
 
 /**
- * A route in the shared model. [geometry] is the full ordered line. [segments]
- * split it by leg and carry attributes under the engine's declared vocabulary;
- * [RoutingEngine.annotate] re-splits them by graph edge and fills the attributes
- * after the route is already returned. [rawResponse] keeps the engine response
- * for debugging and is never shown to the user.
+ * A route in the shared model. [geometry] is the full ordered line.
+ *
+ * [segments] and [runs] are two different cuts of that line, and each one means
+ * exactly what its own KDoc says:
+ * - [segments] holds the route's legs: one item per hop between requested
+ *   waypoints, so a route with two vias has three legs. Guidance reads this
+ *   list for its stop and for the waypoints of a reroute.
+ * - [runs] holds the per-edge attribute runs that [RoutingEngine.annotate]
+ *   fills after the route is returned: one item per graph edge of the engine.
+ *   The route layer and the route warnings read this list.
+ *
+ * Neither list replaces the other. A route that has not been annotated has no
+ * runs and still has its legs. [rawResponse] keeps the engine response for
+ * debugging and is never shown to the user.
  */
 data class Route(
     val geometry: List<GeoPoint>,
     val distanceMeters: Double,
     val durationSeconds: Double,
     val segments: List<RouteSegment> = emptyList(),
+    val runs: List<RouteSegment> = emptyList(),
     val instructions: List<RouteInstruction> = emptyList(),
     val rawResponse: String? = null,
 )
 
 /**
- * One leg of [Route], with half-open shape indices. Each leg is one hop between
- * requested waypoints, so its distance and duration are the route's own time
- * model below the whole-route totals.
+ * One leg of [Route] or one attribute run of it, placed by its shape range.
+ *
+ * A range addresses [Route.geometry] and nothing else. The convention belongs
+ * to the list that holds the item, and both lists state it:
+ * - A leg in [Route.segments] is half-open: `[startIndex, endIndex)`. Its last
+ *   shape point is `geometry[endIndex - 1]`, which is the point the leg ends
+ *   at, and its first is `geometry[startIndex]`.
+ * - A run in [Route.runs] is inclusive: `[startIndex, endIndex]`. Its first
+ *   shape point is `geometry[startIndex]` and its last is `geometry[endIndex]`.
+ *   Consecutive runs share the point between them, so `endIndex` of one run is
+ *   the `startIndex` of the next and the drawn line has no gap.
+ *
+ * A leg's distance and duration are the route's own time model for that hop. A
+ * run's distance is the graph edge's length.
  */
 @Serializable
 data class RouteSegment(

@@ -167,6 +167,31 @@ class RouteColouringTest {
     }
 
     @Test
+    fun oneRunPerAnnotatedEdgeEvenWhenTheRouteHasTwoLegs() {
+        val runs =
+            listOf(
+                segment(0, 1, grade = 3.5),
+                segment(1, 2, grade = 9.0),
+                segment(2, 3, grade = -12.0),
+                segment(3, 4, grade = 0.5),
+            )
+        val route =
+            route(*runs.toTypedArray()).copy(
+                segments =
+                    listOf(
+                        RouteSegment(startIndex = 0, endIndex = 2, distanceMeters = 30.0, durationSeconds = 21.0),
+                        RouteSegment(startIndex = 2, endIndex = 4, distanceMeters = 30.0, durationSeconds = 22.0),
+                    ),
+            )
+
+        val style = RouteColouring.style(route, RouteColourMode.Slope, dark = false)
+
+        assertEquals(4, style.runs.size)
+        assertEquals(runs.map { it.startIndex }, style.runs.map { it.startIndex })
+        assertEquals(runs.map { it.endIndex }, style.runs.map { it.endIndex })
+    }
+
+    @Test
     fun aGapBetweenAnnotatedSegmentsIsFilledWithTheExistingColour() {
         val route = route(segment(0, 1, grade = 2.0), segment(3, 4, grade = 2.0))
 
@@ -253,7 +278,7 @@ class RouteColouringTest {
                 ),
             distanceMeters = 60.0,
             durationSeconds = 43.0,
-            segments = segments.toList(),
+            runs = segments.toList(),
         )
 
     private fun segment(

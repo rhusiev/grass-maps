@@ -10,7 +10,7 @@ import nl.r1a.grassmap.plugin.api.provider.RouteProfile
  * A ford, a barrier and a railway crossing are region features, the same ones
  * the way alerts read. Steps and a private way are route attributes, because
  * the region feature component does not carry them: the route engine's
- * annotated segments do.
+ * annotated runs do.
  */
 enum class RouteWarningKind {
     Ford,

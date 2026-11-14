@@ -83,6 +83,7 @@ class StartSimulationCommand(
                 distanceMeters = selected.distanceMeters,
                 durationSeconds = selected.durationSeconds,
                 segments = selected.segments,
+                runs = selected.runs,
                 instructions = selected.instructions,
             ),
         )

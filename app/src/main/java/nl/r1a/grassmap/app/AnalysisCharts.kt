@@ -65,17 +65,17 @@ internal fun elevationChartState(
  * The annotated stretches of a planned route, in the chart's vocabulary
  * (T-0406).
  *
- * The routing engine's annotate pass already cut the route into one segment per
+ * The routing engine's annotate pass already cut the route into one run per
  * graph edge with its surface and highway values; [RouteStretches] only reads
  * those ends onto the profile's own axis. Nothing asks the engine again and
  * nothing samples the map, so the strips and the percentages beside them are the
- * engine's own segments.
+ * engine's own runs.
  */
 internal fun elevationChartStretches(
     profile: ElevationProfile,
     option: RoutePlanOption,
 ): List<ElevationChartStretch> =
-    routeStretches.of(profile, option.geometry, option.segments).map { stretch ->
+    routeStretches.of(profile, option.geometry, option.runs).map { stretch ->
         ElevationChartStretch(
             startMeters = stretch.startMeters,
             endMeters = stretch.endMeters,

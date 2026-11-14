@@ -166,20 +166,20 @@ class StandardPositionsTest(unittest.TestCase):
         route = json.loads(map_goldens.route_fixture_for("route-colours-z15"))
 
         self.assertIsNot(map_goldens.ROUTE_COLOUR_FIXTURE_PATH, map_goldens.ROUTE_FIXTURE_PATH)
-        segments = route["segments"]
-        self.assertEqual(4, len(segments))
-        self.assertEqual([0, 1, 2, 3], [segment["startIndex"] for segment in segments])
-        self.assertEqual([1, 2, 3, 4], [segment["endIndex"] for segment in segments])
-        surfaces = [segment["attributes"]["surface"] for segment in segments]
+        runs = route["runs"]
+        self.assertEqual(4, len(runs))
+        self.assertEqual([0, 1, 2, 3], [run["startIndex"] for run in runs])
+        self.assertEqual([1, 2, 3, 4], [run["endIndex"] for run in runs])
+        surfaces = [run["attributes"]["surface"] for run in runs]
         self.assertIn("gravel", surfaces)
         self.assertIn("ground", surfaces)
-        self.assertEqual("steps", segments[2]["attributes"]["highway"])
-        grades = [segment["attributes"]["grade"] for segment in segments]
+        self.assertEqual("steps", runs[2]["attributes"]["highway"])
+        grades = [run["attributes"]["grade"] for run in runs]
         self.assertLess(min(grades), 0.0)
         self.assertGreater(max(grades), 8.0)
         self.assertAlmostEqual(
             route["distanceMeters"],
-            sum(segment["distanceMeters"] for segment in segments),
+            sum(run["distanceMeters"] for run in runs),
             places=3,
         )
 

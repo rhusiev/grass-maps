@@ -32,6 +32,39 @@ class ValhallaResponseTest {
     }
 
     @Test
+    fun aSecondLegStartsAtTheStopItSharesWithTheFirst() {
+        val first =
+            Polyline6.encode(
+                listOf(
+                    GeoPoint(49.8419, 24.0316),
+                    GeoPoint(49.8400, 24.0300),
+                    GeoPoint(49.8380, 24.0280),
+                ),
+            )
+        val second = Polyline6.encode(listOf(GeoPoint(49.8380, 24.0280), GeoPoint(49.8365, 24.0250)))
+        val body =
+            """
+            {
+              "trip": {
+                "summary": {"length": 2.0, "time": 1200.0},
+                "legs": [
+                  {"summary": {"length": 1.2, "time": 700.0}, "shape": "$first", "maneuvers": []},
+                  {"summary": {"length": 0.8, "time": 500.0}, "shape": "$second", "maneuvers": []}
+                ]
+              }
+            }
+            """.trimIndent()
+
+        val route =
+            (ValhallaResponse.parse(body) as? Outcome.Success<List<Route>>)?.value?.single()
+                ?: throw AssertionError("expected one route")
+
+        assertEquals(4, route.geometry.size)
+        assertEquals(listOf(0, 2), route.segments.map { it.startIndex })
+        assertEquals(listOf(3, 4), route.segments.map { it.endIndex })
+    }
+
+    @Test
     fun alternatesBecomeExtraRoutes() {
         val shape = Polyline6.encode(listOf(GeoPoint(49.8419, 24.0316), GeoPoint(49.8400, 24.0300)))
         val body =

@@ -23,21 +23,21 @@ import kotlin.math.sqrt
  * The ford, barrier and railway crossing come from a [RegionAccess] corridor
  * query over the region's way-alert component, not from a routing engine's
  * tiles: the engine's answer does not carry those nodes. Steps and a private
- * way come from the route's annotated segments, where the engine's
+ * way come from the route's annotated runs, where the engine's
  * `trace_attributes` pass puts `highway=steps` and `access=private`.
  *
  * The result is ordered by distance along the route. A region node is listed
  * once even when the route meets it twice, so an out-and-back route does not
- * repeat the same crossing. Consecutive steps segments are one warning, since
- * one OSM way is cut into one segment per graph edge.
+ * repeat the same crossing. Consecutive steps runs are one warning, since one
+ * OSM way is cut into one run per graph edge.
  *
  * A region failure is returned as a failure rather than silently dropping the
  * region half of the list: the caller must not show a complete-looking list
  * that is missing every ford and crossing.
  *
- * The segment attributes are the T-0301 `RoutingEngine.annotate` output, which
- * runs after the route is already returned. A route that is not annotated yet
- * is valid input: the region half is still listed and the steps and private-way
+ * The run attributes are the T-0301 `RoutingEngine.annotate` output, which runs
+ * after the route is already returned. A route that is not annotated yet is
+ * valid input: the region half is still listed and the steps and private-way
  * warnings are absent. A caller that needs the complete list waits for
  * annotation, or asks again after it.
  */
@@ -62,7 +62,7 @@ class RouteWarningScanner(
             }
         val warnings =
             regionWarnings(hits).filter { profile in it.profiles } +
-                segmentWarnings(route.segments, distances, profile)
+                runWarnings(route.runs, distances, profile)
         return Outcome.Success(sorted(warnings))
     }
 
@@ -87,27 +87,28 @@ class RouteWarningScanner(
     }
 
     /**
-     * The steps and private-way warnings. A run of consecutive segments of the
-     * same kind is one warning at the run's first segment, because a graph edge
-     * split does not make a second steps flight.
+     * The steps and private-way warnings. A run of consecutive runs of the same
+     * kind is one warning at the first of them, because a graph edge split does
+     * not make a second steps flight. Consecutive runs share the boundary point,
+     * so the previous run's `endIndex` is this run's `startIndex`.
      */
-    private fun segmentWarnings(
-        segments: List<RouteSegment>,
+    private fun runWarnings(
+        runs: List<RouteSegment>,
         distances: DoubleArray,
         profile: RouteProfile,
     ): List<RouteWarning> {
         val result = mutableListOf<RouteWarning>()
         val lastEndByKind = mutableMapOf<RouteWarningKind, Int>()
-        for (segment in segments.sortedBy { it.startIndex }) {
-            val start = segment.startIndex
+        for (run in runs.sortedBy { it.startIndex }) {
+            val start = run.startIndex
             if (start !in distances.indices) {
                 continue
             }
-            for (kind in segmentWarningKinds(segment.attributes)) {
+            for (kind in segmentWarningKinds(run.attributes)) {
                 if (!RouteWarningPolicy.appliesTo(kind, profile)) {
                     continue
                 }
-                val previousEnd = lastEndByKind.put(kind, segment.endIndex)
+                val previousEnd = lastEndByKind.put(kind, run.endIndex)
                 if (previousEnd == start) {
                     continue
                 }

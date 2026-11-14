@@ -126,9 +126,11 @@ internal object ValhallaTrace {
     }
 
     /**
-     * Cuts [route] into one segment per edge. Each segment keeps its half-open
-     * shape range into the route geometry; a duration is split by distance,
-     * because the trace answer carries no per-edge time.
+     * Cuts [route] into one run per edge. Each run's shape range is inclusive,
+     * as [Route.runs] documents: `startIndex` is the first shape point of the
+     * edge, `endIndex` the last, and consecutive runs share that boundary point.
+     * A duration is split by distance, because the trace answer carries no
+     * per-edge time.
      */
     fun segments(
         route: Route,

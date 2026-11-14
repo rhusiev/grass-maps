@@ -25,6 +25,11 @@ import nl.r1a.grassmap.plugin.api.provider.RouteSegment
  * The stable JSON form of [Route] for logs, fixtures and the control channel.
  * The engine's raw response is not encoded: it is a debugging attachment, not
  * part of the shared model.
+ *
+ * `segments` holds the route's legs and `runs` holds the annotate pass's
+ * per-edge runs, each in the range convention `RouteSegment` documents. A
+ * document written before this split has no `runs` field: its `segments` is
+ * read as the legs.
  */
 object RouteJson {
     fun encode(route: Route): String =
@@ -39,25 +44,8 @@ object RouteJson {
             }
             put("distanceMeters", route.distanceMeters)
             put("durationSeconds", route.durationSeconds)
-            putJsonArray("segments") {
-                for (segment in route.segments) {
-                    addJsonObject {
-                        put("startIndex", segment.startIndex)
-                        put("endIndex", segment.endIndex)
-                        put("distanceMeters", segment.distanceMeters)
-                        put("durationSeconds", segment.durationSeconds)
-                        putJsonObject("attributes") {
-                            for ((key, value) in segment.attributes) {
-                                when (value) {
-                                    is AttributeValue.NumberValue -> put(key, value.value)
-                                    is AttributeValue.TextValue -> put(key, value.value)
-                                    is AttributeValue.BooleanValue -> put(key, value.value)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            put("segments", segmentsJson(route.segments))
+            put("runs", segmentsJson(route.runs))
             putJsonArray("instructions") {
                 for (instruction in route.instructions) {
                     addJsonObject {
@@ -91,22 +79,8 @@ object RouteJson {
         if (geometry.size < 2) {
             return Outcome.Failure(AppError.InvalidInput)
         }
-        val segments =
-            root
-                .array("segments")
-                .orEmpty()
-                .mapNotNull { element ->
-                    val segment = element as? JsonObject ?: return@mapNotNull null
-                    val startIndex = segment.int("startIndex") ?: return@mapNotNull null
-                    val endIndex = segment.int("endIndex") ?: return@mapNotNull null
-                    RouteSegment(
-                        startIndex = startIndex,
-                        endIndex = endIndex,
-                        distanceMeters = segment.number("distanceMeters") ?: 0.0,
-                        durationSeconds = segment.number("durationSeconds") ?: 0.0,
-                        attributes = readAttributes(segment.objectValue("attributes")),
-                    )
-                }
+        val segments = readSegments(root, "segments")
+        val runs = readSegments(root, "runs")
         val instructions =
             root
                 .array("instructions")
@@ -128,10 +102,52 @@ object RouteJson {
                 distanceMeters = distance,
                 durationSeconds = duration,
                 segments = segments,
+                runs = runs,
                 instructions = instructions,
             ),
         )
     }
+
+    private fun segmentsJson(segments: List<RouteSegment>): JsonArray =
+        JsonArray(
+            segments.map { segment ->
+                buildJsonObject {
+                    put("startIndex", segment.startIndex)
+                    put("endIndex", segment.endIndex)
+                    put("distanceMeters", segment.distanceMeters)
+                    put("durationSeconds", segment.durationSeconds)
+                    putJsonObject("attributes") {
+                        for ((key, value) in segment.attributes) {
+                            when (value) {
+                                is AttributeValue.NumberValue -> put(key, value.value)
+                                is AttributeValue.TextValue -> put(key, value.value)
+                                is AttributeValue.BooleanValue -> put(key, value.value)
+                            }
+                        }
+                    }
+                }
+            },
+        )
+
+    private fun readSegments(
+        root: JsonObject,
+        name: String,
+    ): List<RouteSegment> =
+        root
+            .array(name)
+            .orEmpty()
+            .mapNotNull { element ->
+                val segment = element as? JsonObject ?: return@mapNotNull null
+                val startIndex = segment.int("startIndex") ?: return@mapNotNull null
+                val endIndex = segment.int("endIndex") ?: return@mapNotNull null
+                RouteSegment(
+                    startIndex = startIndex,
+                    endIndex = endIndex,
+                    distanceMeters = segment.number("distanceMeters") ?: 0.0,
+                    durationSeconds = segment.number("durationSeconds") ?: 0.0,
+                    attributes = readAttributes(segment.objectValue("attributes")),
+                )
+            }
 
     private fun readAttributes(attributes: JsonObject?): Map<String, AttributeValue> =
         attributes

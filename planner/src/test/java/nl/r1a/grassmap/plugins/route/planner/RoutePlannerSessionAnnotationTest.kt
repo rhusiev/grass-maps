@@ -51,9 +51,14 @@ class RoutePlannerSessionAnnotationTest {
             assertEquals(UNANNOTATED_SEGMENTS, engine.annotated.single().segments)
             assertEquals(RouteProfile.Walk, engine.annotatedProfiles.single())
             assertEquals(
-                ANNOTATED_SEGMENTS,
+                UNANNOTATED_SEGMENTS,
                 session.state.value.selected!!
                     .segments,
+            )
+            assertEquals(
+                ANNOTATED_RUNS,
+                session.state.value.selected!!
+                    .runs,
             )
             assertEquals(RoutePlanStatus.Ready, session.state.value.status)
         }
@@ -123,7 +128,7 @@ class RoutePlannerSessionAnnotationTest {
             return if (failure) {
                 Outcome.Failure(AppError.CorruptData)
             } else {
-                Outcome.Success(route.copy(segments = ANNOTATED_SEGMENTS))
+                Outcome.Success(route.copy(runs = ANNOTATED_RUNS))
             }
         }
     }
@@ -135,7 +140,7 @@ class RoutePlannerSessionAnnotationTest {
         val UNANNOTATED_SEGMENTS =
             listOf(RouteSegment(startIndex = 0, endIndex = 2, distanceMeters = 600.0, durationSeconds = 360.0))
 
-        val ANNOTATED_SEGMENTS =
+        val ANNOTATED_RUNS =
             listOf(
                 RouteSegment(
                     startIndex = 0,

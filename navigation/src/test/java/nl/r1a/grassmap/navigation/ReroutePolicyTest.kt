@@ -15,6 +15,7 @@ import nl.r1a.grassmap.plugin.api.provider.ProviderContract
 import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteRequest
+import nl.r1a.grassmap.plugin.api.provider.RouteSegment
 import nl.r1a.grassmap.plugin.api.provider.RoutingCapabilities
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngineContract
@@ -248,6 +249,51 @@ class ReroutePolicyTest {
         }
 
     @Test
+    fun aRerouteOfAnAnnotatedRouteSendsOneWaypointPerLeg() =
+        runTest {
+            val router = RecordingRouter()
+            val journey =
+                ReplayReroute
+                    .walk(legMeters = listOf(100.0, 100.0, 200.0), startAlongMeters = 50.0)
+                    .onRoute(3)
+                    .offRoute(21)
+                    .build()
+            val annotated = annotatedPerEdge(journey.route)
+            assertTrue("the annotate pass must cut the line into many edges", annotated.runs.size > 10)
+
+            val run = follow(router, journey.copy(route = annotated))
+
+            assertEquals(1, run.rerouteCount)
+            val waypoints = router.requests.single().waypoints
+            assertEquals(
+                "the fix, each leg end and the destination",
+                annotated.segments.size + 1,
+                waypoints.size,
+            )
+            assertTrue("one waypoint per leg, not per graph edge", waypoints.size < annotated.runs.size)
+        }
+
+    @Test
+    fun theRerouteWaypointsAreTheAnnotatedRoutesLegEnds() =
+        runTest {
+            val router = RecordingRouter()
+            val journey =
+                ReplayReroute
+                    .walk(legMeters = listOf(100.0, 100.0, 200.0), startAlongMeters = 120.0)
+                    .onRoute(3)
+                    .offRoute(21)
+                    .build()
+
+            follow(router, journey.copy(route = annotatedPerEdge(journey.route)))
+
+            val waypoints = router.requests.single().waypoints
+            assertEquals(3, waypoints.size)
+            assertEquals(journey.fixes.last().position, waypoints.first())
+            assertEquals(200.0, distanceFromOrigin(waypoints[1]), TOLERANCE_METERS)
+            assertEquals(400.0, distanceFromOrigin(waypoints[2]), TOLERANCE_METERS)
+        }
+
+    @Test
     fun aRerouteKeepsTheIntermediateStopsNotYetReached() =
         runTest {
             val router = RecordingRouter()
@@ -352,6 +398,24 @@ class ReroutePolicyTest {
             is Outcome.Failure -> throw AssertionError("expected success, got ${outcome.error}")
         }
     }
+
+    /**
+     * The same route after an annotate pass: one run per geometry edge, each
+     * with the edge's own length. The legs are left exactly as they were.
+     */
+    private fun annotatedPerEdge(route: Route): Route =
+        route.copy(
+            runs =
+                (0 until route.geometry.lastIndex).map { index ->
+                    RouteSegment(
+                        startIndex = index,
+                        endIndex = index + 1,
+                        distanceMeters =
+                            GeoMath.distanceMeters(route.geometry[index], route.geometry[index + 1]),
+                        durationSeconds = 1.0,
+                    )
+                },
+        )
 
     private fun distanceFromOrigin(point: GeoPoint): Double =
         GeoMath.distanceMeters(GeoPoint(RerouteReplay.ORIGIN_LATITUDE, RerouteReplay.ORIGIN_LONGITUDE), point)

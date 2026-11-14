@@ -58,13 +58,19 @@ internal object ValhallaResponse {
             val legSummary = leg.objectValue("summary")
             val legDistance = (legSummary?.doubleValue("length") ?: 0.0) * METRES_PER_KILOMETRE
             val legDuration = legSummary?.doubleValue("time") ?: 0.0
-            val startIndex = geometry.size
-            val shape = leg.stringValue("shape")
-            if (!shape.isNullOrEmpty()) {
-                for (point in Polyline6.decode(shape)) {
-                    if (geometry.lastOrNull() != point) {
-                        geometry += point
-                    }
+            val shapePoints =
+                leg
+                    .stringValue("shape")
+                    ?.takeIf { shape -> shape.isNotEmpty() }
+                    ?.let(Polyline6::decode)
+                    .orEmpty()
+            // Legs share the stop vertex, so a leg that begins where the last
+            // one ended starts at that existing point, not one past it.
+            val startsAtPrevious = geometry.isNotEmpty() && shapePoints.firstOrNull() == geometry.lastOrNull()
+            val startIndex = if (startsAtPrevious) geometry.size - 1 else geometry.size
+            for (point in shapePoints) {
+                if (geometry.lastOrNull() != point) {
+                    geometry += point
                 }
             }
             segments +=

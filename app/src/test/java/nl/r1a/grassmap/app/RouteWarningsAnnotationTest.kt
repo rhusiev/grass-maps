@@ -112,7 +112,7 @@ class RouteWarningsAnnotationTest {
             requestRoute = { _, _ -> Outcome.Success(listOf(engineRoute)) },
             annotateRoute = { route, _, _ ->
                 Outcome.Success(
-                    route.copy(segments = RouteWarningFixtures.ANNOTATED_ROUTE.segments),
+                    route.copy(runs = RouteWarningFixtures.ANNOTATED_ROUTE.runs),
                 )
             },
             annotationScope = this,

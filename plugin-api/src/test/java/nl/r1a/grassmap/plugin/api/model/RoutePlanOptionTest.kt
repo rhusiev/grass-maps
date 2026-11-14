@@ -9,7 +9,7 @@ import org.junit.Test
 /** The plan option's guidance model survives plugin-state serialization (T-0309). */
 class RoutePlanOptionTest {
     @Test
-    fun segmentsAndInstructionsRoundTripWithTheirAttributes() {
+    fun legsRunsAndInstructionsRoundTripWithTheirAttributes() {
         val option =
             RoutePlanOption(
                 geometry = listOf(GeoPoint(49.84, 24.03), GeoPoint(49.85, 24.04)),
@@ -17,6 +17,15 @@ class RoutePlanOptionTest {
                 durationSeconds = 720.0,
                 arrivalEpochMillis = 1_700_000_720_000L,
                 segments =
+                    listOf(
+                        RouteSegment(
+                            startIndex = 0,
+                            endIndex = 2,
+                            distanceMeters = 1_000.0,
+                            durationSeconds = 720.0,
+                        ),
+                    ),
+                runs =
                     listOf(
                         RouteSegment(
                             startIndex = 0,

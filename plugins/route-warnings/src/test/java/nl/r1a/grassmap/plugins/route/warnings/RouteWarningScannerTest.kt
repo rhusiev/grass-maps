@@ -32,7 +32,7 @@ import kotlin.math.sqrt
  * west of the fixture's ford, turns over the barrier and the shared railway
  * crossing, then gets a steps segment and a private-access segment. The three
  * region features are read through the real [RegionReader]; the two route
- * attributes come from the route's own annotated segments.
+ * attributes come from the route's own annotated runs.
  */
 class RouteWarningScannerTest {
     private val reader = RegionReader(TestRegions.load().root.toFile())
@@ -184,7 +184,7 @@ class RouteWarningScannerTest {
                         ),
                     distanceMeters = 0.0,
                     durationSeconds = 0.0,
-                    segments = listOf(segment(0, 1, highway = "steps"), segment(1, 2, highway = "steps")),
+                    runs = listOf(segment(0, 1, highway = "steps"), segment(1, 2, highway = "steps")),
                 )
 
             val warnings = warnings(route = stepsRoute, region = NoRegionAccess)
@@ -201,7 +201,7 @@ class RouteWarningScannerTest {
                     geometry = listOf(GeoPoint(49.9400, 23.9400), GeoPoint(49.9405, 23.9405)),
                     distanceMeters = 0.0,
                     durationSeconds = 0.0,
-                    segments = listOf(segment(0, 1, highway = "path")),
+                    runs = listOf(segment(0, 1, highway = "path")),
                 )
 
             assertTrue(warnings(route = quietRoute).isEmpty())
@@ -290,7 +290,7 @@ class RouteWarningScannerTest {
                 ),
             distanceMeters = 0.0,
             durationSeconds = 0.0,
-            segments =
+            runs =
                 listOf(
                     segment(0, 1, highway = "track"),
                     segment(1, 2, highway = "track"),

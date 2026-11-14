@@ -66,6 +66,7 @@ internal fun routePlanState(route: Route = acceptanceRoute()): RoutePlanState =
                     durationSeconds = route.durationSeconds,
                     arrivalEpochMillis = NavSimulatorContract.START_EPOCH_MILLIS,
                     segments = route.segments,
+                    runs = route.runs,
                     instructions = route.instructions,
                 ),
             ),

@@ -89,7 +89,7 @@ data class ElevationChartClimb(
  * pass gave that part of the line (T-0406).
  *
  * The two ends are distances along the same profile the chart draws, taken from
- * the engine's own annotated segments and their shape ranges, so a stretch
+ * the engine's own annotated runs and their shape ranges, so a stretch
  * covers exactly the part of the axis it describes. [surface] and [wayType] are
  * the engine's own attribute values rather than a second reading of the map,
  * and either is null when the engine had no value for the stretch. The shell

@@ -121,13 +121,14 @@ class GuidancePanelTest {
     }
 
     @Test
-    fun annotatedEdgeSegmentsAreNotLegsAndShowNoStop() {
+    fun anAnnotatedRouteKeepsTheLegStopBesideItsEdgeRuns() {
         val route =
             straightRoute(
                 distanceMeters = 300.0,
                 durationSeconds = 300.0,
                 instructions = listOf(instruction("Depart", 0.0, 150.0), instruction("Arrive", 300.0, 150.0)),
-                segments =
+                segments = listOf(leg(150.0, 150.0), leg(150.0, 150.0)),
+                runs =
                     listOf(
                         leg(150.0, 150.0).copy(attributes = mapOf(RouteAttributes.SURFACE to AttributeValue.TextValue("paved"))),
                         leg(150.0, 150.0).copy(attributes = mapOf(RouteAttributes.SURFACE to AttributeValue.TextValue("gravel"))),
@@ -136,8 +137,8 @@ class GuidancePanelTest {
 
         val panel = requireNotNull(guidancePanel(GuidanceInput(route, alongMeters = 0.0), TestStrings))
 
-        assertNull(panel.entries.singleOrNull { it.field == GuidancePanelField.NextStopDistance })
-        assertNull(panel.entries.singleOrNull { it.field == GuidancePanelField.NextStopTime })
+        assertNotNull("the leg model still holds", panel.entries.singleOrNull { it.field == GuidancePanelField.NextStopDistance })
+        assertNotNull(panel.entries.singleOrNull { it.field == GuidancePanelField.NextStopTime })
     }
 
     @Test

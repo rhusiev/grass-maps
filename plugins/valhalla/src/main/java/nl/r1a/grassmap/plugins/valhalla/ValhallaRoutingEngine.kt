@@ -149,13 +149,16 @@ class ValhallaRoutingEngine internal constructor(
         }
 
     /**
-     * Re-splits the route by graph edge and adds the five v1 attributes.
+     * Re-splits the route's line by graph edge and adds the five v1 attributes
+     * to the resulting runs. The legs in [Route.segments] are left as they are:
+     * a reroute reads one waypoint per leg, so an annotated route must not
+     * pretend to have one leg per edge.
      *
-     * Four come straight from `trace_attributes`. Grade does not: the phase-A
-     * pack was built without elevation, so Valhalla reports the "no data"
-     * sentinel (-500) for every edge. Grade is instead sampled from the mounted
-     * region DEM through [ElevationAccess]; without one the key is absent
-     * rather than wrong.
+     * Four attributes come straight from `trace_attributes`. Grade does not: the
+     * phase-A pack was built without elevation, so Valhalla reports the "no
+     * data" sentinel (-500) for every edge. Grade is instead sampled from the
+     * mounted region DEM through [ElevationAccess]; without one the key is
+     * absent rather than wrong.
      */
     override suspend fun annotate(
         route: Route,
@@ -205,7 +208,7 @@ class ValhallaRoutingEngine internal constructor(
                 }
             }
             Outcome.Success(
-                route.copy(segments = grade(ValhallaTrace.segments(route, edges), route.geometry)),
+                route.copy(runs = grade(ValhallaTrace.segments(route, edges), route.geometry)),
             )
         }
 

@@ -22,5 +22,6 @@ fun RoutePlanOption.toRoute(): Route =
         distanceMeters = distanceMeters,
         durationSeconds = durationSeconds,
         segments = segments,
+        runs = runs,
         instructions = instructions,
     )

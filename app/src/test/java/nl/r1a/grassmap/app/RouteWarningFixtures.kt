@@ -8,9 +8,10 @@ import nl.r1a.grassmap.plugin.api.provider.RouteSegment
 
 /**
  * The committed test region's warning route (T-0409), in the two shapes the
- * app sees: the engine's route answer, whose segments carry no attributes, and
- * the same line after the annotate pass, whose segments carry `highway` and
- * `access` per graph edge.
+ * app sees: the engine's route answer, whose runs carry no attributes, and the
+ * same line after the annotate pass, whose runs carry `highway` and `access`
+ * per graph edge. The route has one leg in both shapes: annotation adds runs
+ * and never replaces the legs.
  *
  * The line crosses the fixture's ford, gate and shared railway crossing, then
  * runs over a steps edge and a private-access edge, so the five warning kinds
@@ -20,7 +21,7 @@ import nl.r1a.grassmap.plugin.api.provider.RouteSegment
 internal object RouteWarningFixtures {
     val START = GeoPoint(49.9505, 23.9430)
 
-    /** The route after the engine's annotate pass: one segment per graph edge. */
+    /** The route after the engine's annotate pass: one run per graph edge. */
     val ANNOTATED_ROUTE =
         Route(
             geometry =
@@ -35,7 +36,8 @@ internal object RouteWarningFixtures {
                 ),
             distanceMeters = 0.0,
             durationSeconds = 0.0,
-            segments =
+            segments = listOf(leg(0, GEOMETRY_SIZE)),
+            runs =
                 listOf(
                     segment(0, 1, highway = "track"),
                     segment(1, 2, highway = "track"),
@@ -46,9 +48,11 @@ internal object RouteWarningFixtures {
                 ),
         )
 
-    /** The same line as the engine's route answer: one leg, no attributes. */
+    /** The same line as the engine's route answer: one leg, no runs. */
     val UNANNOTATED_ROUTE: Route =
-        ANNOTATED_ROUTE.copy(segments = listOf(leg(0, ANNOTATED_ROUTE.geometry.lastIndex)))
+        ANNOTATED_ROUTE.copy(runs = emptyList())
+
+    private const val GEOMETRY_SIZE = 7
 
     private fun leg(
         start: Int,

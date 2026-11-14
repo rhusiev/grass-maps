@@ -397,8 +397,8 @@ private fun MapContent(
     var chartAxis by remember(plan.selected) { mutableStateOf(ElevationChartAxis.Distance) }
     var routeProfile by remember(plan.selected) { mutableStateOf(ElevationProfile()) }
     // The route's surface and way-type strips (T-0406): the annotate pass cut
-    // the route into edge segments with their attributes, and the strips read
-    // those ends on the same profile the chart draws.
+    // the route into edge runs with their attributes, and the strips read those
+    // ends on the same profile the chart draws.
     var routeStretchList by remember(plan.selected) { mutableStateOf(emptyList<ElevationChartStretch>()) }
     LaunchedEffect(plan.selected) {
         val selectedRoute = plan.selected

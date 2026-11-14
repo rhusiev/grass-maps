@@ -42,7 +42,7 @@ class RouteLineDrawingTest {
             )
         }
 
-    /** One segment over the whole line, so the read would colour it if asked. */
+    /** One run over the whole line, so the read would colour it if asked. */
     private fun gradedRoute(): Route =
         Route(
             geometry =
@@ -55,7 +55,7 @@ class RouteLineDrawingTest {
                 ),
             distanceMeters = 60.0,
             durationSeconds = 43.0,
-            segments =
+            runs =
                 listOf(
                     RouteSegment(
                         startIndex = 0,

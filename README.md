@@ -1088,7 +1088,7 @@ method list, the token handling and the CLI examples.
 
 ## Routing seam
 
-`RoutingEngine` in `plugin-api` is the engine contract (1.3.0). `plugins/valhalla`
+`RoutingEngine` in `plugin-api` is the engine contract (1.4.0). `plugins/valhalla`
 is the v1 provider: it binds the contract to valhalla-mobile 0.6.4 and keeps
 every library type inside that module. The engine reads the pack directory from
 the host's `RoutingPackAccess` service. It inspects that directory on the first
@@ -1108,14 +1108,16 @@ ships them. The tiles may be a `tiles.tar` extract or a `tiles/` directory.
 registers an engine that answers that typed failure. It does not fail at
 startup.
 
-`annotate` fills the segment attributes after the route is already returned:
+`annotate` fills the per-edge attributes after the route is already returned:
 the routed line goes back to Valhalla's `trace_attributes` with `map_snap`, is
-cut into one segment per graph edge, and carries `surface`, `highway`,
-`sac_scale` and `access`; `grade` is sampled from the mounted region DEM. The
-phase-A pack has no elevation, so the T-0301 runs kept `use_hills` inert; the
-T-0308 Lviv pack bakes GLO-30 grades into its edges. The per-profile options,
-the preference mapping, the Lviv pack build and the 10-route ascent measurement
-are in `test-data/routing/` and `tools/pipeline/`.
+cut into one run per graph edge, and carries `surface`, `highway`, `sac_scale`
+and `access`; `grade` is sampled from the mounted region DEM. The runs go into
+`Route.runs`; the legs in `Route.segments` are left as the engine routed them,
+because a reroute reads one waypoint per leg. The phase-A pack has no elevation,
+so the T-0301 runs kept `use_hills` inert; the T-0308 Lviv pack bakes GLO-30
+grades into its edges. The per-profile options, the preference mapping, the Lviv
+pack build and the 10-route ascent measurement are in `test-data/routing/` and
+`tools/pipeline/`.
 
 `RouteRequest.options` carries the chosen profile's three preferences (hills,
 busy roads and rough surfaces, each Avoid, Normal or Don't mind). The planner
@@ -1169,23 +1171,23 @@ Its optional `colour=slope|surface` and `dark=true` pick the T-0408 palette, so
 a golden captures the same decision the map screen draws.
 
 The route line is coloured by `plugins/route-layer` (T-0408). The colour and
-pattern decision is a pure read of the annotate pass's own segments: each
-segment's `grade` picks one of the round-10 slope colours, or its `surface`
-picks one of the four surface colours, and its `surface` and `highway` pick the
-pattern. The slope scale is the seven stops of the design handoff's round 10
-chart palette, -15, -8, -3, flat, +3, +8 and +15 percent on the hike scale,
-with the light and dark sets in `RouteRound10Palette`; a value exactly on a stop
-belongs to the bin below it, which is the chart's own rule. The surface set is
-asphalt, paving, ground and gravel, and `plugins/route-layer` carries the same
-OSM value table as the T-0406 strips. The runs always partition the geometry:
-a part between annotated segments, or a tail after the last one, keeps the
-route's existing colour, so a continuous line never shows a hole. A route whose
-segments carry none of `grade`, `surface` or `highway` returns an empty style,
-and the map keeps the plain single-colour line, which is why the T-0311
-`route-turns` goldens do not change. An active guidance session asks for that
-plain line too: `RouteLayer` takes `RouteLineDrawing.Plain` while a navigation
-session runs, because the design's navigation screen draws one route line, and
-`RouteLineDrawing.Coloured` only for a planned or inspected route.
+pattern decision is a pure read of the annotate pass's own runs: each run's
+`grade` picks one of the round-10 slope colours, or its `surface` picks one of
+the four surface colours, and its `surface` and `highway` pick the pattern. The
+slope scale is the seven stops of the design handoff's round 10 chart palette,
+-15, -8, -3, flat, +3, +8 and +15 percent on the hike scale, with the light and
+dark sets in `RouteRound10Palette`; a value exactly on a stop belongs to the bin
+below it, which is the chart's own rule. The surface set is asphalt, paving,
+ground and gravel, and `plugins/route-layer` carries the same OSM value table as
+the T-0406 strips. The runs always partition the geometry: a part between
+annotated runs, or a tail after the last one, keeps the route's existing colour,
+so a continuous line never shows a hole. A route whose runs carry none of
+`grade`, `surface` or `highway` returns an empty style, and the map keeps the
+plain single-colour line, which is why the T-0311 `route-turns` goldens do not
+change. An active guidance session asks for that plain line too: `RouteLayer`
+takes `RouteLineDrawing.Plain` while a navigation session runs, because the
+design's navigation screen draws one route line, and `RouteLineDrawing.Coloured`
+only for a planned or inspected route.
 
 Unpaved surfaces are dashed: ground and gravel. Asphalt and paving are solid,
 and a surface value the palette has no class for is solid too, because the
@@ -1215,14 +1217,15 @@ draws the track's own colour instead.
 
 `RouteColouringTest` in `plugins/route-layer` holds the palette values, the bin
 edges, both colour modes in both themes, the paved solid and unpaved dashed
-rule, the steps stripe and its precedence, a mixed four-segment route, the gap
-and tail fills, the controller's one host write and the plain drawing.
+rule, the steps stripe and its precedence, a mixed four-run route, one run per
+edge on a two-leg route, the gap and tail fills, the controller's one host write
+and the plain drawing.
 `RouteColourLinesTest` in `map` holds the feature split, the clipping guard, the
 three layer filters and the dash ratio. `RouteLineDrawingTest` in `app` holds
 the guidance plain line against the planned route's slope read, through the same
 draw call the map screen makes. `TrackLayerTest` holds the gradient refusal. The
 goldens `route-colours-z14` and `route-colours-z15` draw a committed
-four-segment route with a grade, surface and way type on each segment, in both
+four-run route with a grade, surface and way type on each run, in both
 styles.
 
 `routing.RoutePlanner` is the planning state (T-0302), with intermediate stops
@@ -1252,11 +1255,11 @@ another route. Five edits, five undos and five redos end at the same states;
 and stepping through turns are views, not edits, so they are not on the stack,
 and a new edit drops what could have been redone.
 
-The annotate pass is T-0409. A produced route is published first and then
-handed back to the same engine through `RoutingEngine.annotate`, on the
-plugin's own scope, so the preview, the map and the warnings never wait for it.
-When the answer arrives the planner replaces the selected option's segments and
-nothing else: the geometry, the totals, the arrival, the selection, the other
+The annotate pass is T-0409. A produced route is published first and then handed
+back to the same engine through `RoutingEngine.annotate`, on the plugin's own
+scope, so the preview, the map and the warnings never wait for it. When the
+answer arrives the planner replaces the selected option's runs and nothing else:
+the geometry, the totals, the legs, the arrival, the selection, the other
 alternatives and the reuse history stay as published. Each produced option is
 asked for once, re-selecting it asks nothing, and an answer for a route a newer
 edit superseded is dropped. A failed pass keeps the unannotated route and is
@@ -1313,11 +1316,11 @@ never published: the mapper prorates Ferrostar's step durations by distance, so
 using them would average a slow stretch into a fast one. `snappedPosition`
 still comes from the follower.
 
-A route planned through `planner` carries the same model.
-`RoutePlanOption` keeps the engine's `segments` and `instructions`, and
+A route planned through `planner` carries the same model. `RoutePlanOption`
+keeps the engine's `segments` (the legs), its `runs` and its `instructions`, and
 `selectedRoute()` restores them for guidance, so the panel counts down from the
-numbers the preview showed. Both types are serializable, attributes included,
-so the plugin state round-trips unchanged.
+numbers the preview showed. Both types are serializable, attributes included, so
+the plugin state round-trips unchanged.
 
 `GeometryRouteFollower` is the fallback when the native core cannot start, and
 the follower the desktop gate can run. It projects onto the line with
@@ -1347,9 +1350,11 @@ so a burst of off-route fixes cannot queue a storm. A fix worse than
 `minimumHorizontalAccuracyMeters` is dropped before the follower and the gate,
 so it neither starts nor cancels a reroute; the last good fix and its guidance
 stay on screen. A reroute continues the plan: the request carries the current
-position, every intermediate stop not yet passed, and the destination. Arrival
-uses one number too: the core's end-of-step advance takes
-`arrivalDistanceMeters` instead of the old hardcoded 10 m.
+position, one waypoint for each leg not yet passed, and the destination. Those
+waypoints come from `Route.segments`, so an annotated route with hundreds of
+edge runs still sends one break per leg. Arrival uses one number too: the core's
+end-of-step advance takes `arrivalDistanceMeters` instead of the old hardcoded
+10 m.
 
 The 15 m noise acceptance replays the committed `test-data/location/mock-walk.gpx`
 with every fix moved exactly 15 m in a seeded random direction (seed
@@ -1463,11 +1468,10 @@ planner's turn stepper walks, so one route has one turn order. A turn passed by
 more than one metre is behind the driver. Time is
 `RouteProgress.durationBetween`. A stop is a leg end in `Route.segments`; a
 chain whose leg distances do not add up to the route total has no stop fact
-rather than a guessed one. Segments that carry per-edge attributes came from an
-annotate pass, and they are graph edges rather than legs, so they show no stop
-either; the task that schedules annotation must keep the leg model if the panel
-is to show a stop. Arrival shows the arrival fact alone and off route adds a
-notice beside the same facts.
+rather than a guessed one. The annotate pass writes its per-edge runs to
+`Route.runs` and leaves the legs, so an annotated route still shows its stops.
+Arrival shows the arrival fact alone and off route adds a notice beside the
+same facts.
 
 The acceptance replays the committed `test-data/location/mock-walk.gpx` through
 the geometry follower at 20 points - every third track point from the first to
@@ -1979,7 +1983,7 @@ through the same `RegionAccess.wayAlertFeatures` corridor query as the way
 alerts, not from Valhalla tiles. The 30 m corridor is the way-alert one, for
 the same reason: metre-level noise in both lines, and a parallel railway or a
 service road one street away stays out. Steps and a private way are route
-attributes: they come from the route's annotated segments, where the T-0301
+attributes: they come from the route's annotated runs, where the T-0301
 `trace_attributes` pass puts `highway=steps` and `access=private`. The region
 component does not carry either one. The planner runs that pass after it
 publishes a route, so the live list gains the two route-attribute kinds when
@@ -2006,10 +2010,10 @@ to the scanner.
 
 Each warning carries its kind, its distance along the route, the OSM element
 type and id when a region feature supplied it, and the profiles it applies to.
-Steps and private ways have no OSM id, because a route segment does not carry
-the way id. A region node is listed once even when the route meets it twice, and
-a run of consecutive segments of the same kind is one warning, because the
-engine cuts one OSM way into one segment per graph edge.
+Steps and private ways have no OSM id, because a route run does not carry the
+way id. A region node is listed once even when the route meets it twice, and a
+run of consecutive runs of the same kind is one warning, because the engine cuts
+one OSM way into one run per graph edge.
 
 The committed test region already has the three region features: the ford at
 `49.9510, 23.9440`, the gate at `49.9510, 23.9460` and the shared railway
@@ -2900,9 +2904,9 @@ descending step that ends a climb, and a sustained descent.
 The surface and way-type strips (T-0406) sit under the chart inside the same
 card, over the chart's own plot width, so a boundary falls under the distance it
 ends. `RouteStretches` in `tracks` reads the routing engine's annotated route
-segments: the annotate pass already cut the line into one segment per graph edge
-with `surface` and `highway` on it, and the strips only place those ends on the
-profile. A segment's `startIndex` and `endIndex` give its two ends through the
+runs: the annotate pass already cut the line into one run per graph edge with
+`surface` and `highway` on it, and the strips only place those ends on the
+profile. A run's `startIndex` and `endIndex` give its two ends through the
 cumulative haversine distance of the geometry, which is the step and the
 constant the profile measures with, so the strips cannot drift from the axis. A
 route's profile is built over its whole geometry, with a null height where the

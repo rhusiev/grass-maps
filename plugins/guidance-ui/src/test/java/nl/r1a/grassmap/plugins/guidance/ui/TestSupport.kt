@@ -167,12 +167,14 @@ internal fun straightRoute(
     durationSeconds: Double = 300.0,
     instructions: List<RouteInstruction> = emptyList(),
     segments: List<RouteSegment> = emptyList(),
+    runs: List<RouteSegment> = emptyList(),
 ): Route =
     Route(
         geometry = listOf(GeoPoint(49.8400, 24.0300), GeoPoint(49.8427, 24.0300)),
         distanceMeters = distanceMeters,
         durationSeconds = durationSeconds,
         segments = segments,
+        runs = runs,
         instructions = instructions,
     )
 

@@ -445,7 +445,7 @@ class AppContainer(
     /**
      * The warning list for the planned route (T-0409). The scanner reads the
      * mounted region's way-alert component for fords, barriers and railway
-     * crossings and the route's own segments for steps and private ways. An
+     * crossings and the route's own annotated runs for steps and private ways. An
      * unmounted region is the inert source, so a plan without a pack still
      * gets its route-attribute warnings.
      */

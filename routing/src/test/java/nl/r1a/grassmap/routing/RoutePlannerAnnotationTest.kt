@@ -27,8 +27,8 @@ import org.junit.Test
 
 /**
  * The annotate pass after a route is produced (T-0409). The route is published
- * first and its segments are replaced when the engine answers, so the preview
- * never waits and the totals, selection and history stay as produced.
+ * first and its runs are filled when the engine answers, so the preview never
+ * waits and the legs, totals, selection and history stay as produced.
  */
 class RoutePlannerAnnotationTest {
     @Test
@@ -38,7 +38,7 @@ class RoutePlannerAnnotationTest {
             val planner =
                 planner(annotate = { route ->
                     annotated += route
-                    Outcome.Success(route.copy(segments = ANNOTATED_SEGMENTS))
+                    Outcome.Success(route.copy(runs = ANNOTATED_RUNS))
                 })
 
             val published = plan(planner)
@@ -46,27 +46,36 @@ class RoutePlannerAnnotationTest {
             assertEquals(RoutePlanStatus.Ready, published.status)
             assertTrue(
                 "the engine's route is published unannotated",
-                published.selected!!.segments.none { segment -> segment.attributes.isNotEmpty() },
+                published.selected!!.runs.isEmpty(),
             )
             assertTrue("the annotate pass has not run yet", annotated.isEmpty())
 
             advanceUntilIdle()
 
             assertEquals(
-                ANNOTATED_SEGMENTS,
+                ANNOTATED_RUNS,
+                planner.state.value.selected!!
+                    .runs,
+            )
+            assertEquals(
+                "the legs reach the engine unchanged",
+                listOf(UNANNOTATED_SEGMENTS),
+                annotated.map { route -> route.segments },
+            )
+            assertEquals(
+                UNANNOTATED_SEGMENTS,
                 planner.state.value.selected!!
                     .segments,
             )
-            assertEquals(listOf(UNANNOTATED_SEGMENTS), annotated.map { route -> route.segments })
         }
 
     @Test
-    fun annotationChangesNothingButTheSegments() =
+    fun annotationChangesNothingButTheRuns() =
         runTest {
             val history = CountingHistory()
             val planner =
                 planner(
-                    annotate = { route -> Outcome.Success(route.copy(segments = ANNOTATED_SEGMENTS)) },
+                    annotate = { route -> Outcome.Success(route.copy(runs = ANNOTATED_RUNS)) },
                     history = history,
                 )
 
@@ -100,7 +109,7 @@ class RoutePlannerAnnotationTest {
             val planner =
                 planner(annotate = { route ->
                     calls += 1
-                    Outcome.Success(route.copy(segments = ANNOTATED_SEGMENTS))
+                    Outcome.Success(route.copy(runs = ANNOTATED_RUNS))
                 })
 
             plan(planner)
@@ -123,28 +132,28 @@ class RoutePlannerAnnotationTest {
             val planner =
                 planner(annotate = { route ->
                     annotated += route.geometry.first()
-                    Outcome.Success(route.copy(segments = ANNOTATED_SEGMENTS))
+                    Outcome.Success(route.copy(runs = ANNOTATED_RUNS))
                 })
             plan(planner)
             advanceUntilIdle()
             val primary =
                 planner.state.value.selected!!
-                    .segments
+                    .runs
 
             planner.select(1)
             advanceUntilIdle()
 
             assertEquals(listOf(START, ALTERNATIVE_START), annotated)
             assertEquals(
-                ANNOTATED_SEGMENTS,
+                ANNOTATED_RUNS,
                 planner.state.value.selected!!
-                    .segments,
+                    .runs,
             )
             assertEquals(
                 "the first option keeps its own annotation",
                 primary,
                 planner.state.value.options[0]
-                    .segments,
+                    .runs,
             )
             assertEquals(1, planner.state.value.selectedIndex)
         }
@@ -177,9 +186,9 @@ class RoutePlannerAnnotationTest {
                 planner(annotate = { route ->
                     if (route.distanceMeters == PRIMARY.distanceMeters) {
                         gate.await()
-                        Outcome.Success(route.copy(segments = ANNOTATED_SEGMENTS))
+                        Outcome.Success(route.copy(runs = ANNOTATED_RUNS))
                     } else {
-                        Outcome.Success(route.copy(segments = VIA_ANNOTATED_SEGMENTS))
+                        Outcome.Success(route.copy(runs = VIA_ANNOTATED_RUNS))
                     }
                 })
 
@@ -192,7 +201,7 @@ class RoutePlannerAnnotationTest {
 
             val current = planner.state.value
             assertEquals(1, current.vias.size)
-            assertEquals(VIA_ANNOTATED_SEGMENTS, current.selected!!.segments)
+            assertEquals(VIA_ANNOTATED_RUNS, current.selected!!.runs)
         }
 
     @Test
@@ -206,7 +215,7 @@ class RoutePlannerAnnotationTest {
                         first = false
                         gate.await()
                     }
-                    Outcome.Success(route.copy(segments = ANNOTATED_SEGMENTS))
+                    Outcome.Success(route.copy(runs = ANNOTATED_RUNS))
                 })
 
             plan(planner)
@@ -226,9 +235,9 @@ class RoutePlannerAnnotationTest {
             )
             assertEquals(
                 "the restored route is annotated on its own ticket",
-                ANNOTATED_SEGMENTS,
+                ANNOTATED_RUNS,
                 planner.state.value.selected!!
-                    .segments,
+                    .runs,
             )
         }
 
@@ -305,9 +314,14 @@ class RoutePlannerAnnotationTest {
         val UNANNOTATED_SEGMENTS =
             listOf(RouteSegment(startIndex = 0, endIndex = 6, distanceMeters = 600.0, durationSeconds = 360.0))
 
-        val ANNOTATED_SEGMENTS = UNANNOTATED_SEGMENTS + STEPS_SEGMENT + PRIVATE_SEGMENT
+        val ANNOTATED_RUNS =
+            listOf(
+                RouteSegment(startIndex = 0, endIndex = 4, distanceMeters = 400.0, durationSeconds = 240.0),
+                STEPS_SEGMENT,
+                PRIVATE_SEGMENT,
+            )
 
-        val VIA_ANNOTATED_SEGMENTS =
+        val VIA_ANNOTATED_RUNS =
             listOf(
                 RouteSegment(
                     startIndex = 0,

@@ -260,16 +260,17 @@ class ValhallaRoutingEngineTest {
             val annotated =
                 (engine.annotate(routed, RouteProfile.Walk, CancellationHandle.None) as Outcome.Success).value
 
-            assertEquals(3, annotated.segments.size)
-            val surface = annotated.segments.map { (it.attributes[RouteAttributes.SURFACE] as AttributeValue.TextValue).value }
+            assertEquals("the legs stay as routed", routed.segments, annotated.segments)
+            assertEquals(3, annotated.runs.size)
+            val surface = annotated.runs.map { (it.attributes[RouteAttributes.SURFACE] as AttributeValue.TextValue).value }
             assertEquals(listOf("paved", "gravel", "paved"), surface)
-            val highway = annotated.segments.map { (it.attributes[RouteAttributes.HIGHWAY] as AttributeValue.TextValue).value }
+            val highway = annotated.runs.map { (it.attributes[RouteAttributes.HIGHWAY] as AttributeValue.TextValue).value }
             assertEquals(listOf("footway", "path", "steps"), highway)
-            val sac = annotated.segments.map { (it.attributes[RouteAttributes.SAC_SCALE] as AttributeValue.TextValue).value }
+            val sac = annotated.runs.map { (it.attributes[RouteAttributes.SAC_SCALE] as AttributeValue.TextValue).value }
             assertEquals(listOf("none", "mountain_hiking", "none"), sac)
-            val access = annotated.segments.map { (it.attributes[RouteAttributes.ACCESS] as AttributeValue.TextValue).value }
+            val access = annotated.runs.map { (it.attributes[RouteAttributes.ACCESS] as AttributeValue.TextValue).value }
             assertEquals(listOf("yes", "yes", "private"), access)
-            val grade = annotated.segments.first().attributes[RouteAttributes.GRADE] as AttributeValue.NumberValue
+            val grade = annotated.runs.first().attributes[RouteAttributes.GRADE] as AttributeValue.NumberValue
             assertTrue(grade.value > 0.0)
             assertEquals(1, transport.traces.size)
             assertTrue(transport.traces.single().contains("map_snap"))
@@ -286,6 +287,7 @@ class ValhallaRoutingEngineTest {
             val result = engine.annotate(routed, RouteProfile.Walk, CancellationHandle.None)
 
             assertTrue(result is Outcome.Failure)
+            assertTrue(routed.runs.isEmpty())
             assertEquals(
                 0,
                 routed.segments

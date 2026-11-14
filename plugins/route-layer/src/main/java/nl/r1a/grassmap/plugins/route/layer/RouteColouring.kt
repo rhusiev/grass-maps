@@ -11,14 +11,17 @@ import nl.r1a.grassmap.plugin.api.provider.RouteSegment
 /**
  * The route line's colour and pattern decision (T-0408).
  *
- * The routing engine's annotate pass already cut the line into segments and put
+ * The routing engine's annotate pass already cut the line into runs and put
  * `grade`, `surface` and `highway` on them, so nothing here re-reads the map or
- * runs a second analysis. Each segment becomes one run: its colour from the
- * chosen mode's round-10 scale, its pattern from its own way and surface.
+ * runs a second analysis. Each run becomes one drawn run: its colour from the
+ * chosen mode's round-10 scale, its pattern from its own way and surface. The
+ * runs are [Route.runs], not [Route.segments]: the legs are the same on an
+ * annotated and an unannotated route, so reading them would lose the
+ * attributes.
  *
- * The runs always partition the geometry: an uncovered part keeps the route's
- * existing colour with no pattern rather than guessing a class, because a gap
- * in a continuous route line reads as a broken route. A route whose segments
+ * The drawn runs always partition the geometry: an uncovered part keeps the
+ * route's existing colour with no pattern rather than guessing a class, because
+ * a gap in a continuous route line reads as a broken route. A route whose runs
  * carry none of the three attributes returns an empty style, and the map keeps
  * its plain single-colour line.
  *
@@ -33,16 +36,16 @@ object RouteColouring {
         mode: RouteColourMode,
         dark: Boolean,
     ): RouteLineStyle {
-        if (route == null || route.geometry.size < MINIMUM_GEOMETRY_POINTS || route.segments.isEmpty()) {
+        if (route == null || route.geometry.size < MINIMUM_GEOMETRY_POINTS || route.runs.isEmpty()) {
             return RouteLineStyle()
         }
-        if (route.segments.none(::carriesClass)) {
+        if (route.runs.none(::carriesClass)) {
             return RouteLineStyle()
         }
         val last = route.geometry.lastIndex
         val runs = mutableListOf<RouteLineRun>()
         var covered = NO_COVER
-        for (segment in route.segments.sortedBy { it.startIndex }) {
+        for (segment in route.runs.sortedBy { it.startIndex }) {
             val start = segment.startIndex.coerceIn(0, last)
             val end = segment.endIndex.coerceIn(0, last)
             if (end - start < MINIMUM_RUN_POINTS - 1) {

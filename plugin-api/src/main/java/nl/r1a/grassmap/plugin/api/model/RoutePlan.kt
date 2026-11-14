@@ -60,6 +60,11 @@ enum class RoutePlanFailure {
  * one segment per leg between waypoints, and one instruction per maneuver. They
  * travel with the option so guidance counts down from the same numbers the
  * route was built with instead of recomputing them from the totals.
+ *
+ * [runs] are the annotate pass's per-edge attribute runs, one per graph edge,
+ * and stay empty until that pass answers. They are a separate field from
+ * [segments] so a reroute still reads one waypoint per leg after annotation.
+ * The two lists use the range conventions `RouteSegment` documents.
  */
 @Serializable
 data class RoutePlanOption(
@@ -68,6 +73,7 @@ data class RoutePlanOption(
     val durationSeconds: Double,
     val arrivalEpochMillis: Long,
     val segments: List<RouteSegment> = emptyList(),
+    val runs: List<RouteSegment> = emptyList(),
     val instructions: List<RouteInstruction> = emptyList(),
 )
 

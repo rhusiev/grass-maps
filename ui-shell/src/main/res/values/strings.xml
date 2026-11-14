@@ -56,6 +56,7 @@
     <string name="nav_screen_camera_and_alerts">Camera and alerts</string>
     <string name="nav_screen_settings_subtitle">For this trip. The defaults are in the %1$s profile.</string>
     <string name="nav_screen_camera">Camera</string>
+    <string name="nav_screen_alerts">Alerts</string>
     <string name="nav_screen_alerts_all_off">Alerts · all off</string>
     <string name="nav_screen_alerts_on">Alerts · %1$s on</string>
     <string name="nav_screen_auto_zoom">Auto zoom</string>

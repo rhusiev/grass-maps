@@ -56,6 +56,7 @@
     <string name="nav_screen_camera_and_alerts">Камера й сповіщення</string>
     <string name="nav_screen_settings_subtitle">Для цієї поїздки. Типові значення - у профілі %1$s.</string>
     <string name="nav_screen_camera">Камера</string>
+    <string name="nav_screen_alerts">Сповіщення</string>
     <string name="nav_screen_alerts_all_off">Сповіщення · усі вимкнено</string>
     <string name="nav_screen_alerts_on">Сповіщення · увімкнено: %1$s</string>
     <string name="nav_screen_auto_zoom">Автомасштаб</string>

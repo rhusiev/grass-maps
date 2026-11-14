@@ -44,7 +44,7 @@ class NavigationScreenControlsTest {
     }
 
     @Test
-    fun theExpandedCardKeepsEndPauseCollapseAndCameraAndAlerts() {
+    fun theExpandedCardKeepsEndPauseCollapseAndTheCameraAndAlertRows() {
         val controls = navigationControls(state(), NavigationSheet.Trip)
 
         assertTrue(
@@ -53,7 +53,8 @@ class NavigationScreenControlsTest {
                     NavigationControl.End,
                     NavigationControl.Pause,
                     NavigationControl.Collapse,
-                    NavigationControl.CameraAndAlerts,
+                    NavigationControl.Camera,
+                    NavigationControl.Alerts,
                 ),
             ),
         )
@@ -61,6 +62,25 @@ class NavigationScreenControlsTest {
         val paused = navigationControls(state(paused = true), NavigationSheet.Trip)
         assertTrue(paused.contains(NavigationControl.Resume))
         assertFalse(paused.contains(NavigationControl.Pause))
+    }
+
+    @Test
+    fun theNavigationSheetReachesBothTheCameraControlsAndTheAlertsRow() {
+        val trip = navigationControls(state(), NavigationSheet.Trip)
+        val camera = navigationControls(state(), NavigationSheet.Settings)
+
+        assertTrue("the camera row is unreachable", trip.contains(NavigationControl.Camera))
+        assertTrue("the alerts row is unreachable", trip.contains(NavigationControl.Alerts))
+        assertTrue(
+            "the camera switches lost their entry",
+            camera.containsAll(
+                setOf(
+                    NavigationControl.AutoZoom,
+                    NavigationControl.AutoCentre,
+                    NavigationControl.Tilt,
+                ),
+            ),
+        )
     }
 
     @Test

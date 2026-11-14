@@ -17,7 +17,8 @@ enum class NavigationControl {
     Expand,
     Collapse,
     Recentre,
-    CameraAndAlerts,
+    Camera,
+    Alerts,
     Back,
     ResetToProfile,
     AutoZoom,
@@ -87,7 +88,8 @@ fun navigationControls(
 
         NavigationSheet.Trip -> {
             controls += NavigationControl.Collapse
-            controls += NavigationControl.CameraAndAlerts
+            controls += NavigationControl.Camera
+            controls += NavigationControl.Alerts
             controls += NavigationControl.End
             if (state.status == NavigationScreenStatus.Paused) {
                 controls += NavigationControl.Resume
@@ -138,6 +140,7 @@ object NavigationScreenStrings {
     const val CAMERA_AND_ALERTS = "nav_screen_camera_and_alerts"
     const val SETTINGS_SUBTITLE = "nav_screen_settings_subtitle"
     const val CAMERA = "nav_screen_camera"
+    const val ALERTS = "nav_screen_alerts"
     const val ALERTS_ALL_OFF = "nav_screen_alerts_all_off"
     const val ALERTS_ON = "nav_screen_alerts_on"
     const val AUTO_ZOOM = "nav_screen_auto_zoom"

@@ -203,7 +203,8 @@ fun NavigationScreenHost(
                 onPause = onPause,
                 onResume = onResume,
                 onCollapse = { onSheetChange(NavigationSheet.Collapsed) },
-                onCameraAndAlerts = onOpenAlerts,
+                onCamera = { onSheetChange(NavigationSheet.Settings) },
+                onAlerts = onOpenAlerts,
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
@@ -457,7 +458,8 @@ private fun TripSheet(
     onPause: () -> Unit,
     onResume: () -> Unit,
     onCollapse: () -> Unit,
-    onCameraAndAlerts: () -> Unit,
+    onCamera: () -> Unit,
+    onAlerts: () -> Unit,
     modifier: Modifier,
 ) {
     Column(
@@ -493,25 +495,27 @@ private fun TripSheet(
         Spacer(Modifier.height(8.dp))
         SpeedTiles(state.trip, strings, colors)
         Spacer(Modifier.height(10.dp))
-        if (NavigationControl.CameraAndAlerts in controls) {
-            Row(
-                modifier = Modifier.fillMaxWidth().clickable(onClick = onCameraAndAlerts).padding(vertical = 7.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Glyph("\u2261", 20, colors.muted)
-                Column(modifier = Modifier.weight(1f)) {
-                    BasicText(
-                        text = strings.resolve(NavigationScreenStrings.CAMERA_AND_ALERTS),
-                        style = TextStyle(color = colors.ink, fontSize = 14.5.sp),
-                    )
-                    BasicText(
-                        text = CameraAndAlertsDetail(state, strings),
-                        style = TextStyle(color = colors.muted, fontSize = 12.sp),
-                    )
-                }
-                Glyph("\u203A", 18, colors.muted)
-            }
+        // Round 8 moves the camera switches to the profile editor's "While
+        // navigating" row. That editor does not exist yet, so this sheet is
+        // their interim home. They are two rows now: the alerts row opens the
+        // profile alerts page and the camera row keeps the old sheet.
+        if (NavigationControl.Camera in controls) {
+            SheetEntryRow(
+                glyph = "\u2261",
+                title = strings.resolve(NavigationScreenStrings.CAMERA),
+                detail = CameraTripDetail(state, strings),
+                colors = colors,
+                onClick = onCamera,
+            )
+        }
+        if (NavigationControl.Alerts in controls) {
+            SheetEntryRow(
+                glyph = "\u25CF",
+                title = strings.resolve(NavigationScreenStrings.ALERTS),
+                detail = AlertsTripDetail(state, strings),
+                colors = colors,
+                onClick = onAlerts,
+            )
         }
         Spacer(Modifier.height(18.dp))
         Row(
@@ -554,6 +558,34 @@ private fun TripSheet(
 }
 
 @Composable
+private fun SheetEntryRow(
+    glyph: String,
+    title: String,
+    detail: String,
+    colors: NavigationPalette,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Glyph(glyph, 20, colors.muted)
+        Column(modifier = Modifier.weight(1f)) {
+            BasicText(
+                text = title,
+                style = TextStyle(color = colors.ink, fontSize = 14.5.sp),
+            )
+            BasicText(
+                text = detail,
+                style = TextStyle(color = colors.muted, fontSize = 12.sp),
+            )
+        }
+        Glyph("\u203A", 18, colors.muted)
+    }
+}
+
+@Composable
 private fun SettingsSheet(
     state: NavigationScreenState,
     strings: Strings,
@@ -582,6 +614,9 @@ private fun SettingsSheet(
                 .verticalScroll(rememberScrollState()),
     ) {
         SheetHandle(colors)
+        // Round 8 puts these camera switches in the profile editor's "While
+        // navigating" row; that editor does not exist yet, so this sheet stays
+        // their interim home and keeps the camera and alert controls it had.
         BasicText(
             text = strings.resolve(NavigationScreenStrings.CAMERA_AND_ALERTS),
             style = TextStyle(color = colors.ink, fontSize = 17.sp, fontWeight = FontWeight.Bold),
@@ -999,7 +1034,7 @@ private fun TripDetail(
         strings.resolve(NavigationScreenStrings.TRIP_LEFT, listOf(trip.remainingDistance, arrival))
     } ?: strings.resolve(NavigationScreenStrings.TRIP_LEFT_NO_ARRIVAL, listOf(trip.remainingDistance))
 
-private fun CameraAndAlertsDetail(
+private fun CameraTripDetail(
     state: NavigationScreenState,
     strings: Strings,
 ): String {
@@ -1013,16 +1048,20 @@ private fun CameraAndAlertsDetail(
                 NavigationScreenStrings.CAMERA_SUMMARY_CUSTOM
             },
         )
-    val alerts =
-        strings.resolve(
-            if (state.alertSwitches.enabledCount == 0) {
-                NavigationScreenStrings.ALERTS_SUMMARY_OFF
-            } else {
-                NavigationScreenStrings.ALERTS_SUMMARY_ON
-            },
-        )
-    return "${strings.resolve(NavigationScreenStrings.THIS_TRIP)} · $camera · $alerts"
+    return "${strings.resolve(NavigationScreenStrings.THIS_TRIP)} · $camera"
 }
+
+private fun AlertsTripDetail(
+    state: NavigationScreenState,
+    strings: Strings,
+): String =
+    strings.resolve(
+        if (state.alertSwitches.enabledCount == 0) {
+            NavigationScreenStrings.ALERTS_SUMMARY_OFF
+        } else {
+            NavigationScreenStrings.ALERTS_SUMMARY_ON
+        },
+    )
 
 private fun alertSectionLabel(
     switches: NavigationAlertSwitches,

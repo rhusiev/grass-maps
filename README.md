@@ -1489,11 +1489,14 @@ The round 5 layout is `ui-shell`'s `NavigationScreenHost`: the read-only turn
 card at the top (`plugins/guidance-ui`), the next-stop and current-speed glass
 chips under it, up to two alert banners, and the floating bar with End, the ETA
 and the expand chevron. The chevron opens the trip sheet: destination, next
-stop, current/average/max speed, the Camera and alerts row, and End and Pause at
-the bottom. Camera and alerts open one tap further and change this trip only;
-Reset to profile restores auto zoom, auto-centre and 3D, and turns every alert
-switch off. A manual map pan shows the recentre button above the bar and leaves
-the camera free for five seconds when auto-centre is on.
+stop, current/average/max speed, two rows (Camera and Alerts), and End and Pause
+at the bottom. Camera opens the camera sheet: auto zoom, auto-center and 3D for
+this trip, plus Reset to profile. That sheet is the camera's interim home;
+round 8 moves these switches to the profile editor's "While navigating" row,
+which does not exist yet. Alerts opens the profile alerts page. Reset to profile
+restores auto zoom, auto-centre and 3D. A manual map pan shows the recentre
+button above the bar and leaves the camera free for five seconds when
+auto-centre is on.
 
 The screen state is derived once per published `NavigationState` by
 `navigationScreenState` in `app`: it reads the guidance panel, the three speed
@@ -1950,8 +1953,11 @@ The three reach controls map to `AlertChannels`. Banner off stops
 `bannerVisible`); sound and vibration off remove those values from the event
 and from `AndroidAlertEffects`. All three off means `AlertHost` emits nothing,
 so a trip with the design's default page is silent. The navigation screen's
-Camera and alerts row opens the page; the profile editor does not exist at this
-base, so `ProfileAlertsEntry` is the row it can place beside its other rows.
+trip sheet has two rows: Camera opens the interim camera sheet for this trip,
+and Alerts opens the page. Round 8 moves the camera controls to the profile
+editor's "While navigating" row; the sheet is their interim home while that
+editor does not exist. `ProfileAlertsEntry` is the alerts row the editor can
+place beside its other rows.
 
 ## Route warnings
 

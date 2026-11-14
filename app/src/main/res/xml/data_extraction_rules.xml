@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ backup rules (API 31+). `backup_rules.xml` holds the same set for
+  API 23-30.
+
+  Only the user-data stores are included: favourites, tracks (with their sidecar
+  and planned-route records) and the search and route histories. Naming an
+  include excludes everything else under the app's storage, so region packages,
+  diagnostics and map fixtures never enter a cloud backup or a device-to-device
+  transfer. The cache directory is never part of either mechanism.
+  `tracks/.trash` sits inside the included track directory, so it takes an
+  explicit exclude.
+
+  `disableIfNoEncryptionCapabilities` is true on purpose: tracks are precise
+  location history, and a cloud copy happens only on a device that has a lock
+  screen. The user decision is 2026-11-14.
+-->
+<data-extraction-rules>
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
+        <include domain="file" path="favourites/favourites.gpx" />
+        <include domain="file" path="tracks" />
+        <include domain="file" path="history/search-history.json" />
+        <include domain="file" path="history/route-history.json" />
+        <exclude domain="file" path="tracks/.trash" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="file" path="favourites/favourites.gpx" />
+        <include domain="file" path="tracks" />
+        <include domain="file" path="history/search-history.json" />
+        <include domain="file" path="history/route-history.json" />
+        <exclude domain="file" path="tracks/.trash" />
+    </device-transfer>
+</data-extraction-rules>

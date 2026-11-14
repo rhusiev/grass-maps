@@ -3167,6 +3167,17 @@ the window puts the document, sidecar and folder back and removes the token.
 An undo after the window answers `TrackLibraryUndo.NOT_APPLICABLE` and restores
 nothing. The seven-day window is a user decision of 2026-11-14.
 
+Android backup carries the favourites, tracks (with their sidecar and planned
+route records) and the search and route histories. It carries nothing else.
+An include list backs up only the paths it names, so region packages, map
+fixtures and diagnostics never enter a backup. The cache directory is never
+part of either backup mechanism, and `tracks/.trash` is an explicit exclude.
+`dataExtractionRules` covers API 31+ and `fullBackupContent` covers API 23-30,
+and both name the same paths. The cloud rule sets
+`disableIfNoEncryptionCapabilities="true"`, so a device without a lock screen
+makes no cloud copy. `BackupRulesTest` holds the rules to the constants the
+stores use.
+
 ## Follow-ups
 
 `plugin-api` and `plugin-ui-api` are ordinary Android libraries in this

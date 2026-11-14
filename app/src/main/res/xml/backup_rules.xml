@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Backup rules for API 23-30; Android 12+ reads `data_extraction_rules.xml`.
+
+  Only the user-data stores are included, so everything else under the app's
+  storage - region packages, diagnostics and map fixtures - stays out of a
+  backup. The cache directory is never part of a full backup. `tracks/.trash`
+  sits inside the included track directory, so it takes an explicit exclude.
+  See `data_extraction_rules.xml` for the user decision behind the set.
+-->
+<full-backup-content>
+    <include domain="file" path="favourites/favourites.gpx" />
+    <include domain="file" path="tracks" />
+    <include domain="file" path="history/search-history.json" />
+    <include domain="file" path="history/route-history.json" />
+    <exclude domain="file" path="tracks/.trash" />
+</full-backup-content>

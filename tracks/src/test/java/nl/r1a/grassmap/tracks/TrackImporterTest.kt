@@ -52,6 +52,33 @@ class TrackImporterTest {
         }
 
     @Test
+    fun aPreviewCountsTheTracksWithoutStoringThem() =
+        runTest {
+            val store = InMemoryTrackStore()
+            val importer = TrackImporter(resolver(mutableListOf()) { format(importResult()) }, store)
+
+            val preview = success(importer.previewFile("walk.gpx", BYTES, CancellationHandle.None))
+
+            assertEquals(1, preview.trackCount)
+            assertEquals(emptyList<StoredTrack>(), store.all())
+        }
+
+    @Test
+    fun aPreviewOfADocumentWithoutATrackIsUnsupported() =
+        runTest {
+            val importer =
+                TrackImporter(
+                    resolver(mutableListOf()) { format(ImportResult(ImportedEntities())) },
+                    InMemoryTrackStore(),
+                )
+
+            assertEquals(
+                Outcome.Failure(AppError.Unsupported),
+                importer.previewFile("walk.gpx", BYTES, CancellationHandle.None),
+            )
+        }
+
+    @Test
     fun theTrackIdIsStableForTheSameBytes() =
         runTest {
             val store = InMemoryTrackStore()
@@ -268,7 +295,7 @@ class TrackImporterTest {
             Outcome.Success(format())
         }
 
-    private fun success(outcome: Outcome<ImportReport>): ImportReport =
+    private fun <T> success(outcome: Outcome<T>): T =
         when (outcome) {
             is Outcome.Success -> outcome.value
             is Outcome.Failure -> throw AssertionError("unexpected failure: ${outcome.error}")

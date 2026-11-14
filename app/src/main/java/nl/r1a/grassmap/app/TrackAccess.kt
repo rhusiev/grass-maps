@@ -16,6 +16,7 @@ import nl.r1a.grassmap.plugin.api.provider.FileFormat
 import nl.r1a.grassmap.plugin.api.provider.FileFormatContract
 import nl.r1a.grassmap.tracks.FileFormatResolver
 import nl.r1a.grassmap.tracks.FileTrackStore
+import nl.r1a.grassmap.tracks.ImportPreview
 import nl.r1a.grassmap.tracks.ImportReport
 import nl.r1a.grassmap.tracks.InMemoryTrackStore
 import nl.r1a.grassmap.tracks.PlannedRouteEngine
@@ -84,6 +85,16 @@ class TrackAccess internal constructor(
         bytes: ByteArray,
         cancellation: CancellationHandle = CancellationHandle.None,
     ): Outcome<ImportReport> = importer.importFile(fileName, bytes, cancellation)
+
+    /**
+     * Reads a document without storing it, for the share confirm step (T-0416):
+     * the same format resolution and parse as [import], and no write.
+     */
+    suspend fun preview(
+        fileName: String?,
+        bytes: ByteArray,
+        cancellation: CancellationHandle = CancellationHandle.None,
+    ): Outcome<ImportPreview> = importer.previewFile(fileName, bytes, cancellation)
 
     /**
      * Saves the route the plan is showing into the library (T-0411), or

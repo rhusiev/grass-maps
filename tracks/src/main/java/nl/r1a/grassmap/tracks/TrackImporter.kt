@@ -35,6 +35,18 @@ data class ImportReport(
 }
 
 /**
+ * What a document would add, read before anything is stored (T-0416 confirm
+ * step): the track count the confirm names.
+ */
+data class ImportPreview(
+    val trackCount: Int,
+) {
+    init {
+        require(trackCount > 0) { "a preview needs at least one track" }
+    }
+}
+
+/**
  * The one import path: resolve a format, read the document, store every track
  * it contains and compute each profile. A document with no track is
  * [AppError.Unsupported]; every skipped point stays a warning on the result.
@@ -51,6 +63,9 @@ data class ImportReport(
  * The id of each record is the document hash ([TrackIdentity]), so a repeated
  * import updates the same records and keeps their styling. A failed save stops
  * the import; records already written stay, and a retry is idempotent.
+ *
+ * [previewFile] runs the same format resolution and parse without the write, so
+ * the share confirm step counts the tracks it is about to store.
  */
 class TrackImporter(
     private val formats: FileFormatResolver,
@@ -63,6 +78,41 @@ class TrackImporter(
         bytes: ByteArray,
         cancellation: CancellationHandle,
     ): Outcome<ImportReport> {
+        val result =
+            when (val parsed = parseDocument(fileName, bytes, cancellation)) {
+                is Outcome.Success -> parsed.value
+                is Outcome.Failure -> return parsed
+            }
+        return storeAll(fileName, bytes, result)
+    }
+
+    /**
+     * Reads [bytes] as [fileName] names them and answers what an import would
+     * add, without touching the store. A document with no track is
+     * [AppError.Unsupported], as it is for [importFile].
+     */
+    suspend fun previewFile(
+        fileName: String?,
+        bytes: ByteArray,
+        cancellation: CancellationHandle,
+    ): Outcome<ImportPreview> {
+        val result =
+            when (val parsed = parseDocument(fileName, bytes, cancellation)) {
+                is Outcome.Success -> parsed.value
+                is Outcome.Failure -> return parsed
+            }
+        val records = result.entities.records()
+        if (records.isEmpty()) {
+            return Outcome.Failure(AppError.Unsupported)
+        }
+        return Outcome.Success(ImportPreview(trackCount = records.size))
+    }
+
+    private suspend fun parseDocument(
+        fileName: String?,
+        bytes: ByteArray,
+        cancellation: CancellationHandle,
+    ): Outcome<ImportResult> {
         if (cancellation.isCancelled()) {
             return Outcome.Failure(AppError.Cancelled)
         }
@@ -72,12 +122,7 @@ class TrackImporter(
                 is Outcome.Success -> resolved.value
                 is Outcome.Failure -> return resolved
             }
-        val result =
-            when (val imported = format.importFile(bytes, cancellation)) {
-                is Outcome.Success -> imported.value
-                is Outcome.Failure -> return imported
-            }
-        return storeAll(fileName, bytes, result)
+        return format.importFile(bytes, cancellation)
     }
 
     suspend fun stored(id: TrackId): Outcome<StoredTrack> = store.get(id)

@@ -162,4 +162,6 @@
     <string name="nav_notification_resume">Resume</string>
     <string name="nav_notification_stop">Stop</string>
     <string name="track_library_action_failed">The track library change failed</string>
+    <string name="track_export_saved">Track saved</string>
+    <string name="track_export_failed">Track not saved: %1$s</string>
 </resources>

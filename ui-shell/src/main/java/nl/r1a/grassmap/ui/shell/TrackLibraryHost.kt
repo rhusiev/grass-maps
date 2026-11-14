@@ -65,8 +65,9 @@ import nl.r1a.grassmap.plugin.api.service.Strings
  * Every control is reachable from the screen itself: a folder tile filters, the
  * pencil renames, the new-folder tile creates, the sort chips reorder, the
  * search field matches names, and pressing a track selects it. The bottom bar of
- * the selected track offers Move, Rename, Share and Delete; Delete happens at
- * once and Undo reverses it. A link in a description shows its full address
+ * the selected track offers Move, Rename, Share, Save and Delete; Delete happens
+ * at once and Undo reverses it, while Save hands the track to the system
+ * document picker (T-0410). A link in a description shows its full address
  * before the host opens it in the system browser.
  *
  * [dark] selects the light or dark tokens, so both themes are drawn from the
@@ -86,6 +87,7 @@ fun TrackLibraryHost(
     onMoveTrack: (trackId: String, folderId: String?) -> Unit,
     onDeleteTrack: (trackId: String) -> Unit,
     onShare: (trackId: String) -> Unit,
+    onSave: (trackId: String) -> Unit,
     onOpenLink: (String) -> Unit,
     onUndo: () -> Unit,
     onQueryChange: (String) -> Unit,
@@ -232,6 +234,10 @@ fun TrackLibraryHost(
                                 TrackSelectionActionKind.SHARE -> {
                                     selectedTrackId = null
                                     onShare(selectedRow.id)
+                                }
+
+                                TrackSelectionActionKind.SAVE -> {
+                                    onSave(selectedRow.id)
                                 }
 
                                 TrackSelectionActionKind.DELETE -> {
@@ -639,9 +645,10 @@ private fun Scrim(onClose: () -> Unit) {
 
 /**
  * The bar of the selected track: a close control that leaves the selection and
- * the four fixed actions Move, Rename, Share and Delete. Delete happens at once
- * and the library's Undo bar reverses it. It is a bottom action bar, so its
- * surface reaches the screen edge and its content clears the navigation inset.
+ * the five fixed actions Move, Rename, Share, Save and Delete. Delete happens at
+ * once and the library's Undo bar reverses it; Save opens the system picker. It
+ * is a bottom action bar, so its surface reaches the screen edge and its content
+ * clears the navigation inset.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable

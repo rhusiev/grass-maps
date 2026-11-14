@@ -1352,6 +1352,32 @@ private fun MapContent(
                         }
                     }
                 },
+                onSave = { trackId ->
+                    scope.launch {
+                        when (val result = saveTrack(container.trackExport, TrackId(trackId))) {
+                            TrackSaveResult.Saved -> {
+                                Toast
+                                    .makeText(context, container.strings.resolve(TRACK_EXPORT_SAVED_KEY), Toast.LENGTH_SHORT)
+                                    .show()
+                            }
+
+                            // A dismissed picker is an answer, so it shows nothing.
+                            TrackSaveResult.Cancelled -> {
+                                Unit
+                            }
+
+                            is TrackSaveResult.Failed -> {
+                                Log.w(TAG, "track save failed: ${result.error}")
+                                Toast
+                                    .makeText(
+                                        context,
+                                        container.strings.resolve(TRACK_EXPORT_FAILED_KEY, listOf(result.error.toString())),
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                            }
+                        }
+                    }
+                },
                 onOpenLink = { uri ->
                     container.platformActions.openUri(uri).onFailure { error ->
                         Log.w(TAG, "track description link rejected: $error")

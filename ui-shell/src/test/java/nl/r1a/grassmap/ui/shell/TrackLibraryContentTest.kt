@@ -105,7 +105,7 @@ class TrackLibraryContentTest {
     }
 
     @Test
-    fun theSelectionBarOffersMoveRenameShareAndDeleteAndLeavesTheSelection() {
+    fun theSelectionBarOffersMoveRenameShareSaveAndDeleteAndLeavesTheSelection() {
         val bar = trackSelectionBarContent(strings(ENGLISH, APP_ENGLISH))
 
         assertEquals("1 selected", bar.title)
@@ -115,11 +115,12 @@ class TrackLibraryContentTest {
                 TrackSelectionActionKind.MOVE,
                 TrackSelectionActionKind.RENAME,
                 TrackSelectionActionKind.SHARE,
+                TrackSelectionActionKind.SAVE,
                 TrackSelectionActionKind.DELETE,
             ),
             bar.actions.map { action -> action.kind },
         )
-        assertEquals(listOf("Move", "Rename", "Share", "Delete"), bar.actions.map { action -> action.label })
+        assertEquals(listOf("Move", "Rename", "Share", "Save", "Delete"), bar.actions.map { action -> action.label })
     }
 
     @Test
@@ -168,7 +169,7 @@ class TrackLibraryContentTest {
         assertEquals("Усі треки", content.listTitle)
         assertEquals("Спочатку нові", content.sorts.first().label)
         assertEquals(
-            listOf("Перемістити", "Перейменувати", "Поділитися", "Видалити"),
+            listOf("Перемістити", "Перейменувати", "Поділитися", "Зберегти", "Видалити"),
             trackSelectionBarContent(strings(UKRAINIAN, APP_UKRAINIAN)).actions.map { action -> action.label },
         )
         assertEquals(

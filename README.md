@@ -2468,10 +2468,7 @@ and untappable.
 Two follow-ups are open for the library. The one-tap delete has no confirmation
 because the design's undo snackbar is the canon; a confirm is a product
 decision if the undo is judged too easy to miss. The screen's only entry is the
-debug command until T-0415 adds the map entry. A route has no in-UI Save yet:
-`TrackAccess.savePlannedRoute` is the whole path and the route preview's action
-row belongs to the planner and `ui-shell`, so the preview gains that control in
-its own change.
+debug command until T-0415 adds the map entry.
 
 A planned route is saved as its own document (T-0411). `PlannedRouteSaver` takes
 the route the planner is showing - `RoutePlanState.toPlannedRoute` reads the
@@ -2498,6 +2495,29 @@ saved route therefore never fails on a routing problem, and a missing or broken
 sidecar is the diminished state the requirement asks for rather than a failed
 open. The record kind also decides an export's element, so a saved route leaves
 as a `<rte>` and comes back as a route.
+
+A planned route is saved from its preview card (T-0411). The card gains a Save
+action beside Start, and the tap copies the displayed plan into the library. The
+design allows four elements in this card. Save is a fifth, and the user took that
+decision explicitly on 2026-11-14, so the card is not canon here.
+
+The five do not fit on one row at 360 dp. At 16 sp the three values alone come to
+about 290 dp of the 312 dp the card has inside its padding in English, and the
+Ukrainian time with a long model name is wider than that on its own. So the three
+values keep the first row and the two actions take the card's trailing row, Save
+before Start. Start holds the outer position and its white-on-action-colour look,
+because it stays the primary. Save uses the panel's ordinary chip.
+
+`RouteSave` in `app` builds the name and calls `TrackAccess.savePlannedRoute`
+with the plan itself, so the sidecar records what the displayed route was
+computed with rather than the profile defaults. The name is the destination's
+label, which is the only name a plan carries, and a blank label stores the route
+unnamed under the library's own Untitled string, never under a made-up name.
+
+The save reports through the map screen's existing channels. A successful save
+shows a short notice and a refusal shows the typed error, including a plan with
+no route yet. This path has no picker, so a dismissal cannot happen and nothing
+reports one.
 
 The library row names a saved route: its `meta` line starts with `Route` and the
 `Route` string is a normal localized string. A travelled or imported track needs

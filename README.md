@@ -1824,22 +1824,28 @@ revision change and caches the hits. A feature is announced on the first state
 that puts it ahead of the rider at or inside the distance for the active
 profile; a feature first seen inside the distance is announced at once, because
 it is a hazard on the road, not a maneuver the rider can anticipate. A paused
-phase keeps the cache and the announcements and emits nothing. A terminal phase
-clears both, so a new trip starts clean even when its route revision starts at
-zero again.
+phase keeps the cache and the latch and emits nothing. A terminal phase and a
+new session clear both, so a new trip starts clean even when its route revision
+starts at zero again.
 
-The once-per-feature key is
-`WayAlertKey(routeRevision, elementType, osmId)`. The element type keeps a node
-and a way with the same numeric id apart. A feature is announced once per
-revision; a reroute changes the revision and re-arms every feature on the
-replacement route. The device feature off the corridor is never returned by
-the reader, so it cannot alert at all.
+"Once" is one approach, keyed by the feature's OSM element type and id. The
+element type keeps a node and a way with the same numeric id apart. A reroute
+does not re-arm a feature that the replacement route still passes: a crossing
+announced 150 m ahead is not announced again at 120 m. A latch releases only
+when the feature is 50 m beyond its alert distance, either behind the rider or
+that far beyond the distance ahead (`WayAlertDistance.RELEASE_METERS`). A route
+that takes the rider past the feature, or away from it and back, announces it
+once more on the next approach, and a feature the replacement route does not
+pass at all loses its latch with that route. That is hysteresis, not a reroute
+case. The device feature off the corridor is never returned by the reader, so
+it cannot alert at all.
 
-`AlertHost.onWayAlert` is the typed path: it checks the switch for the kind,
-drops a key it has already announced in this revision, and emits the same
-`AlertEvent` as the other alerts. The banner carries `featureDistanceMeters`
-next to the kind and severity, and the effects follow the profile's three
-output channels (banner, sound, vibration). `core.nav.way_alerts` turns the switches on or off on a
+`AlertHost.onWayAlert` is the typed path: it checks the switch for the kind and
+emits the same `AlertEvent` as the other alerts. It keeps no latch of its own,
+so the schedule is the only owner of "once", as it is for proximity. The banner
+carries `featureDistanceMeters` next to the kind and severity, and the effects
+follow the profile's three output channels (banner, sound, vibration).
+`core.nav.way_alerts` turns the switches on or off on a
 device; its parameters are `enabled` and an optional `kind` (`all`, `tunnel`,
 `railway_crossing`, `hazard`).
 
@@ -1889,6 +1895,11 @@ favourite's id, the track id and the waypoint index, or the search index's
 place id. A place that drops out of the lookup box and returns is a new
 approach. The host keeps no latch of its own, so the producer is the only owner
 of "once".
+
+A trip that starts inside a place's radius latches it silently. The first fix
+of a trip is where the traveller already stands, not an approach, so leaving
+home does not announce home. Leaving the radius by 50 m and returning does
+announce it, and a new trip latches whatever it starts inside again.
 
 The schedule asks `ProximityPlaceSource` for the places near the fix when the
 session starts and every 200 m of travel, inside a box 500 m across. The app's

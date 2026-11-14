@@ -64,7 +64,7 @@ class DataSourceAccessTest {
             val host = FakeMapHost(CAMERA)
             val dataSources = DataSourceAccess(registry(GeneratedPlugins.plugins), PluginId("data.synthetic"))
 
-            assertEquals(Outcome.Success(Unit), installDataSourceLayer(dataSources, host))
+            assertEquals(Outcome.Success(Unit), installDataSourceLayer(dataSources, host, enabled = true))
 
             val layer = host.layers.single()
             assertEquals(PluginId("data.synthetic"), layer.owner)
@@ -78,6 +78,33 @@ class DataSourceAccessTest {
         }
 
     @Test
+    fun theSyntheticContourSeamIsRemovedWhenContoursAreOff() =
+        runTest {
+            val host = FakeMapHost(CAMERA)
+            val dataSources = DataSourceAccess(registry(GeneratedPlugins.plugins), PluginId("data.synthetic"))
+            installDataSourceLayer(dataSources, host, enabled = true)
+            assertEquals(1, host.layers.size)
+
+            assertEquals(Outcome.Success(Unit), installDataSourceLayer(dataSources, host, enabled = false))
+
+            assertTrue(host.layers.isEmpty())
+            assertEquals(PluginId("data.synthetic"), host.removedOwners.last())
+        }
+
+    @Test
+    fun anUnpackagedProviderMakesTheOffStateANoOp() =
+        runTest {
+            val host = FakeMapHost(CAMERA)
+            val dataSources = DataSourceAccess(registry(GeneratedPlugins.plugins), pluginId = null)
+
+            assertEquals(Outcome.Success(Unit), installDataSourceLayer(dataSources, host, enabled = false))
+            assertTrue(host.layers.isEmpty())
+            assertTrue(host.removedOwners.isEmpty())
+
+            assertEquals(Outcome.Failure(AppError.NotFound), installDataSourceLayer(dataSources, host, enabled = true))
+        }
+
+    @Test
     fun anAbsentProviderLeavesTheMapUntouched() =
         runTest {
             val host = FakeMapHost(CAMERA)
@@ -85,7 +112,7 @@ class DataSourceAccessTest {
 
             assertEquals(
                 Outcome.Failure(AppError.NotFound),
-                installDataSourceLayer(dataSources, host),
+                installDataSourceLayer(dataSources, host, enabled = true),
             )
             assertTrue(host.layers.isEmpty())
             assertEquals(

@@ -1001,7 +1001,9 @@ real: a line layer on the `contours` source, source-layer `contours`, in the
 overlays slot, filtering the archive's index lines with `idx == true` (the
 archive stores a Boolean; an integer comparison matches nothing). It draws over
 the shipped contour overlay when both are on, which is acceptable for this
-debug seam. The drawn contours are real and the attributes remain synthetic.
+debug seam; the layer follows the Contours switch and is installed only while
+the overlay is on, so turning contours off leaves no contour line from the
+seam. The drawn contours are real and the attributes remain synthetic.
 
 `app` resolves the provider through `ProviderRegistry` off Main and adds the
 layer under `PluginId("data.synthetic")`; a missing provider or a rejected layer

@@ -1654,16 +1654,24 @@ private fun MapContent(
         surface.host.applyStyleDiff(StyleDiff(bundle.style.id, bundle.layers)).onFailure { error ->
             Log.w(TAG, "style layers rejected: $error")
         }
-        when (val installed = installDataSourceLayer(container.dataSources, surface.host)) {
-            is Outcome.Success -> Log.i(TAG, "data source layer ready owner=${container.dataSources.pluginId}")
-            is Outcome.Failure -> Log.w(TAG, "data source layer not applied: ${installed.error}")
-        }
         Log.i(
             TAG,
             "map-ready region=${bundle.sources.regionName} contours=${bundle.sources.hasContours}",
         )
     }
     LaunchedEffect(surface.host, bundle.style.id, contoursEnabled) {
+        // The synthetic DataSource publishes a contour-index line from the same
+        // archive as the overlay, so the "Contours" switch owns it too. Install
+        // it first so the overlay's index line stays above the seam.
+        when (val installed = installDataSourceLayer(container.dataSources, surface.host, contoursEnabled)) {
+            is Outcome.Success -> {
+                Log.i(TAG, "data source layer ready owner=${container.dataSources.pluginId} enabled=$contoursEnabled")
+            }
+
+            is Outcome.Failure -> {
+                Log.w(TAG, "data source layer not applied: ${installed.error}")
+            }
+        }
         when (val contours = container.contours.apply(surface.host, bundle.style.id, contoursEnabled)) {
             is Outcome.Success -> Log.i(TAG, "contour layers ready enabled=$contoursEnabled")
             is Outcome.Failure -> Log.w(TAG, "contour layers not applied: ${contours.error}")

@@ -66,13 +66,22 @@ class DataSourceAccess internal constructor(
 
 /**
  * Resolves the DataSource map layer off Main and adds it under the provider's
- * own plugin id. A missing provider or a layer the host rejects is returned as a
- * failure for the caller to log; the map keeps running either way.
+ * own plugin id when [enabled], or removes it when disabled. The synthetic
+ * seam draws from the same contour archive as the overlay, so the "Contours"
+ * switch owns it too. A release build has no plugin id, so the off state is
+ * already true and disabling is a no-op. A missing provider or a layer the
+ * host rejects is returned as a failure for the caller to log; the map keeps
+ * running either way.
  */
 internal suspend fun installDataSourceLayer(
     dataSources: DataSourceAccess,
     host: MapHost,
+    enabled: Boolean,
 ): Outcome<Unit> {
+    if (!enabled) {
+        val pluginId = dataSources.pluginId ?: return Outcome.Success(Unit)
+        return host.removeLayers(pluginId)
+    }
     val layer = withContext(Dispatchers.IO) { dataSources.mapLayer() }
     return when (layer) {
         is Outcome.Failure -> {

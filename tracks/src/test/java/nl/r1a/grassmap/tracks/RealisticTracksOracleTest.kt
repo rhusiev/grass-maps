@@ -15,7 +15,6 @@ import nl.r1a.grassmap.plugin.api.model.TrackSegment
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
-import org.junit.Ignore
 import org.junit.Test
 import org.w3c.dom.Element
 import java.time.Instant
@@ -26,7 +25,7 @@ import kotlin.math.max
 
 /**
  * Keeps the six realistic stress tracks and their recorded analysis intact, and
- * holds the truth-bound comparison that T-0422 must turn green.
+ * holds the truth-bound comparison.
  *
  * The clean synthetic oracle in `../oracle/` proves agreement with OsmAnd on
  * generated geometry. These tracks are its noisy counterpart. The dropout
@@ -40,12 +39,13 @@ import kotlin.math.max
  *
  * [fixtureIsIntact] is the normal test: it checks the six GPX files, the six
  * sidecars, the recorded OsmAnd metadata, the emulation cases and the recorded
- * analyser snapshot against a live run. The truth-bound comparison is
- * [truthBoundsAreRecordedButNotYetMet], ignored because 28 of 30 bounds fail
- * today. T-0422 (noise-robust track analysis) owns making it pass. Ignoring it
- * keeps the branch green without hiding the numbers or widening a bound. Run
- * that test by name to print every track's truth, OsmAnd and analyser figures,
- * the signed deltas and which side is closer; its failure message repeats them.
+ * analyser snapshot against a live run. [truthBoundsAreMet] is the acceptance
+ * test of T-0422 (noise-robust track analysis): the analyser's own figures
+ * against the authored truth, within the bounds `oracle-realism.json` records.
+ * It was ignored while 28 of 30 bounds failed; it passes now, and it fails on a
+ * number rather than on a shape. Run it by name to print every track's truth,
+ * OsmAnd and analyser figures, the signed deltas and which side is closer; its
+ * failure message repeats them.
  */
 class RealisticTracksOracleTest {
     @Test
@@ -68,13 +68,8 @@ class RealisticTracksOracleTest {
         }
     }
 
-    @Ignore(
-        "T-0422 owns the fix. 28 of 30 truth bounds fail on these six stress tracks. " +
-            "Run this test by name to print the full comparison and read the failure message. " +
-            "Do not widen a bound.",
-    )
     @Test
-    fun truthBoundsAreRecordedButNotYetMet() {
+    fun truthBoundsAreMet() {
         val oracle = readOracle()
         val failures = mutableListOf<String>()
         val report = mutableListOf<String>()
@@ -115,8 +110,9 @@ class RealisticTracksOracleTest {
                 buildString {
                     appendLine("${failures.size} ground-truth bound(s) missed by TrackAnalyzer.")
                     appendLine(
-                        "T-0422 owns the fix. Do not widen a tolerance for these numbers. " +
-                            "Report the track, both values and the delta, and leave the bound as recorded.",
+                        "The bounds are the authored truth, not a fit to the analyser. " +
+                            "Report the track, both values and the delta; a failure here is a defect in the " +
+                            "filter or a bound that the emitted data cannot meet, and widening it hides the second.",
                     )
                     appendLine()
                     report.forEach { appendLine(it) }

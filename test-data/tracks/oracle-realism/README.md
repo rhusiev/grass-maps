@@ -77,38 +77,69 @@ coarser than the bound.
 
 ## Current result
 
-The truth-bound comparison is red: 28 of 30 bounds are missed. Only
-`hike-steps-6km` ascent (323.1 m against 300 m) and `ride-realistic-15km`
-moving time (2,991 s against 3,000 s) pass. It is committed as the ignored test
-`truthBoundsAreRecordedButNotYetMet`, so the normal gate stays green without
-hiding the numbers or widening a bound. T-0422 (noise-robust track analysis)
-owns making it pass. The failure message carries every track's truth, OsmAnd and
-analyser figures, the signed deltas and which side is closer. The normal
-`fixtureIsIntact` test checks the six GPX files, the six sidecars, the recorded
+All 30 bounds pass since T-0422, and the analyser is closer to the authored truth
+than OsmAnd on all 30 comparisons. `truthBoundsAreMet` holds the comparison;
+`fixtureIsIntact` still checks the six GPX files, the six sidecars, the recorded
 OsmAnd metadata, the emulation cases and the recorded analyser snapshot.
 
-- **Distance.** `TrackAnalyzer` sums haversine steps over the raw fixes. Jitter
-  makes that sum 12-181 % longer than the authored path. OsmAnd's distance shows
-  the same inflation, so its display is also a raw-fix sum; ours is marginally
-  closer only because OsmAnd rounds the display. On `walk-jitter-4km` the
-  authored 4,042.8 m becomes 11,340.8 m for us and 11,400 m for OsmAnd.
-- **Moving time.** A step counts only when its raw speed is at least 0.5 m/s.
-  Jitter cancels the forward step on 26-136 samples per track, so our moving time
-  loses 0.3-6.9 %. On the 75 s dropout track ours is 7,452 s against 8,000 s.
-- **Average speed.** It inherits the inflated distance and the shortened moving
-  time, so it misses on every track.
-- **Ascent and descent.** Noise turns the 5 m authored climb of `walk-drift-3km`
-  into 22.2 m of ascent and 8.7 m of descent. The monotone 400 m climb of
-  `hike-dropout-8km` gains 40.8 m of apparent descent.
-- **Dropout.** OsmAnd reports 8,043 s in motion against 8,071 s of duration, so
-  it excludes 28 s somewhere. It does not treat the whole 75 s gap as a pause;
-  the gap is under our 120 s pause threshold too. Which 28 s it excludes is
-  unverified.
-- **Outliers.** The 260.8 m step over 2 s at point 899 is visible in OsmAnd's max
-  pace of 0:08 min/km. Neither side filters it before the maximum. Its ascent
-  and descent (51/28 m against truth 25/0 m) are contaminated as well.
-- **Drift.** The 6 m drift plus 1 m elevation noise produces 21/8 m in OsmAnd and
-  22.2/8.7 m for us on a track whose authored climb is 5 m.
+| Track | Distance | Moving time | Average speed | Ascent | Descent |
+|---|---|---|---|---|---|
+| `hike-dropout-8km` | 8,840.1 m (+0.62 %) | 7,992 s (-0.10 %) | 1.106 m/s (+0.72 %) | 397.3 m (-2.7) | 0.1 m (+0.1) |
+| `hike-steps-6km` | 5,159.0 m (-0.13 %) | 4,494 s (-0.13 %) | 1.148 m/s (+0.01 %) | 296.4 m (-3.6) | 0.0 m (0.0) |
+| `ride-realistic-15km` | 14,959.5 m (-0.06 %) | 2,994 s (-0.20 %) | 4.997 m/s (+0.14 %) | 116.2 m (-3.8) | 0.1 m (+0.1) |
+| `walk-drift-3km` | 3,129.3 m (+0.49 %) | 2,398 s (-0.08 %) | 1.305 m/s (+0.58 %) | 9.2 m (+4.2) | 0.0 m (0.0) |
+| `walk-jitter-4km` | 4,067.9 m (+0.62 %) | 2,996 s (-0.13 %) | 1.358 m/s (+0.76 %) | 29.7 m (-0.3) | 0.9 m (+0.9) |
+| `walk-outlier-5km` | 4,922.4 m (+0.64 %) | 3,497 s (-0.09 %) | 1.408 m/s (+0.73 %) | 23.8 m (-1.2) | 0.4 m (+0.4) |
 
-Do not widen a tolerance to make this green. A green bound needs a different
-distance and moving-time estimator, not a larger percentage.
+Bounds: distance and average speed 1.5 %, moving time 0.5 %, ascent and descent
+max(10 %, 5 m). The tightest margins are moving time at 0.30 percentage points,
+distance at 0.86, average speed at 0.74, ascent on `walk-drift-3km` at 0.8 m of
+its 5 m allowance, and descent on `walk-outlier-5km` at 3.3 m of 5.
+
+### What each figure needed
+
+- **Distance.** `TrackGeometry` drops a fix whose step in and step out both
+  exceed the track's own median speed (six times it, floored at 5 m/s), which is
+  what removes the two 250 m fixes of `walk-outlier-5km` without a ceiling that
+  would mangle a fast track. It then simplifies the remaining line with
+  Ramer-Douglas-Peucker at eight times the measured fix noise, where the noise is
+  the median absolute residual of a centred five-point quadratic fit: 2.5-5.2 m
+  on these six, 0.39-0.55 m on the clean oracle, whose bend is not mistaken for
+  noise because a quadratic fits a bend exactly. The total is the haversine sum
+  between the surviving points. On `walk-jitter-4km` the raw sum is 11,340.8 m
+  and the cleaned line 4,067.9 m against an authored 4,042.8 m.
+- **Moving time.** A step counts when the straight run of the cleaned line it
+  belongs to averaged at least 0.5 m/s over the time actually observed in it,
+  which is what survives the jitter: a single 2 s step of a 1.35 m/s walk can
+  measure 0.1 m/s when the fixes wander 4 m, while thirty steps of the same walk
+  average to the walk.
+- **Dropouts.** Bridging them is wrong for moving time and right for distance.
+  The 79 s loss of `hike-dropout-8km` is 16-20 sampling intervals; counting it
+  would report 8,071 s against 8,000 s (+0.89 %), past the 0.5 % bound, so its
+  time is unobserved while its chord stays in the distance (87 m of the 8,785.7 m
+  on the long walk, 240 m of 14,968.2 m on the ride). The authored truth agrees:
+  it is the span minus each dropout.
+- **Average speed.** It follows: the cleaned distance over the observed time.
+- **Ascent and descent.** `ElevationSmoothing` averages the heights over two
+  minutes before `ElevationFilter` sees them, and only when the measured height
+  noise exceeds 0.4 m (0.71-1.73 m here, 0.03-0.11 m on the clean oracle). The
+  average is a centred boxcar whose window shrinks at the ends; that is what
+  keeps the endpoint noise out of the first and last step, and it costs about
+  half a window of climb at each end of a profile - 2.7-3.8 m of these 120-400 m
+  climbs, which is why they read slightly low. The same shrink is most of why
+  `walk-drift-3km` reads 9.2 m instead of the 13.5 m that the 6 m barometric
+  drift plus the 5 m authored climb put into the file.
+- **Drift.** It remains the one figure the emitted data cannot support exactly:
+  the authored climb is 5 m, the file rises 13.5 m, and an estimator that
+  reported the observed rise would miss the 5 m bound. 9.2 m is inside the 10 m
+  allowance because the average's shrinking ends absorb part of the drift, not
+  because the analyser can tell a drift from a climb. A filter that reported the
+  whole rise would fail this bound on data that is doing what the fixture asks.
+- **Outliers.** The two 250 m fixes leave the line, so they no longer set the
+  maximum speed either (OsmAnd shows 0:08 min/km, 125 m/s). Their contaminated
+  ascent and descent fall from 43.5/20.1 m to 23.8/0.4 m against a truth of
+  25/0 m.
+
+Do not widen a tolerance to make a figure fit. A missing bound needs a different
+estimator, and a bound the emitted data cannot reach needs to be reported as
+such, not relaxed.

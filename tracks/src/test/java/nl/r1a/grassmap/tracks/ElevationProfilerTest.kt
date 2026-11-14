@@ -171,6 +171,57 @@ class ElevationProfilerTest {
         assertTrue(profile.samples.isEmpty())
     }
 
+    /**
+     * A noisy track's chart must end where the analysis ends. The raw sum over the
+     * same fixes is 40 % longer than the walk, so a profile that accumulated raw
+     * steps would stretch the axis beside the recorded distance.
+     */
+    @Test
+    fun aNoisyTracksAxisEndsAtTheAnalysedDistance() {
+        val segment = noisyWalk(points = 200)
+        val track = track(segment)
+
+        val profile = ElevationProfiler().profile(track)
+        val analysis = TrackAnalyzer().analyze(track)
+        val raw =
+            (1 until segment.points.size).sumOf { index ->
+                distanceMeters(segment.points[index - 1].position, segment.points[index].position)
+            }
+
+        assertEquals(analysis.distanceMeters, profile.samples.last().distanceMeters, 1e-9)
+        assertTrue("the wander must not reach the axis, was ${profile.distanceMeters}", profile.distanceMeters < raw * 0.8)
+        for (index in 1 until profile.samples.size) {
+            assertTrue(
+                "the axis went backwards at $index",
+                profile.samples[index].distanceMeters >= profile.samples[index - 1].distanceMeters,
+            )
+        }
+    }
+
+    private fun noisyWalk(points: Int): TrackSegment {
+        var state = 20_260_111
+
+        fun wander(amplitude: Double): Double {
+            state = state * 1_103_515_245 + 12_345
+            return (((state ushr 16) and 0x7FFF) / 16_384.0 - 1.0) * amplitude
+        }
+        val trackPoints =
+            (0 until points).map { index ->
+                val north = index * 2.7 + if (index == 0) 0.0 else wander(4.0)
+                val east = if (index == 0) 0.0 else wander(4.0)
+                TrackPoint(
+                    position =
+                        GeoPoint(
+                            latitude = 49.84 + north / 111_195.08,
+                            longitude = 24.03 + east / 71_700.0,
+                        ),
+                    elevationMeters = 300.0 + index * 0.1,
+                    timeMillis = index * 2_000L,
+                )
+            }
+        return TrackSegment(trackPoints)
+    }
+
     private fun track(vararg points: TrackPoint): Track = track(TrackSegment(points.toList()))
 
     private fun track(segment: TrackSegment): Track = Track(segments = listOf(segment))

@@ -73,22 +73,32 @@ about how well the GLO-30 grid matches the ground.
 `TrackAnalyzer` returns `TrackAnalysis`: point count, distance, ascent,
 descent, elevation range, duration, moving time, average speed and maximum
 speed. Distance is the haversine ground distance on the IUGG mean radius
-6 371 008.8 m. Ascent and descent pass through `ElevationFilter`, the
-OsmAnd-compatible noise filter; the profile itself is not smoothed.
+6 371 008.8 m, measured between the points of `TrackGeometry`'s cleaned line: a
+fix whose step in and step out are both faster than the track's own median speed
+allows is dropped, and the line is simplified with Ramer-Douglas-Peucker at
+eight times the measured fix noise. On a clean track the cleaned line is the raw
+line, so a recording that was already smooth keeps its sum. Ascent and descent
+pass through `ElevationSmoothing` and then `ElevationFilter`, the
+OsmAnd-compatible noise filter; the profile itself is not smoothed for display.
+The smoothing is a two-minute average that runs only when the measured height
+noise exceeds 0.4 m and the run is at least 32 samples long, so a clean or a
+hand-authored profile is passed through untouched.
 
 Timing uses only consecutive timestamped points of one segment. A segment
-boundary is a pause. A gap longer than 120 s is a pause too, and a step slower
-than 0.5 m/s is standing still; neither adds to moving time. Duration is the
-wall-clock span from the first timestamped point to the last, pauses included.
-Average speed is distance divided by moving time. Maximum speed is the fastest
-step between two timestamped points of one segment, so it never crosses a
-segment boundary or a pause gap.
+boundary is a pause. A gap longer than 120 s is a pause too; a gap longer than
+four sampling intervals is a loss of fixes, whose chord still adds distance but
+whose time was unobserved; and a step inside a run of the cleaned line that did
+not move is standing still. None of the three adds to moving time. Duration is
+the wall-clock span from the first timestamped point to the last, pauses
+included. Average speed is distance divided by moving time. Maximum speed is the
+fastest step between two timestamped points of one segment over the fixes the
+gate kept, so it never crosses a segment boundary or a pause gap.
 
 A file with fewer than two timestamps has no duration, moving time or speed. A
 file without elevation has no elevation range, and ascent and descent are 0. A
-one-point track has zero distance and no timing. The policy thresholds are
-`TrackStatisticsPolicy`, and the defaults are chosen rather than derived from
-OsmAnd.
+one-point track has zero distance and no timing. The timing thresholds are
+`TrackStatisticsPolicy` and the filter strengths are `TrackFilterPolicy`; both
+sets of defaults are chosen rather than derived from OsmAnd.
 
 ## The OsmAnd oracle
 

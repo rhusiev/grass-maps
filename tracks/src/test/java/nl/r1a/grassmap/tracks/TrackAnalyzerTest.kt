@@ -6,7 +6,9 @@ import nl.r1a.grassmap.plugin.api.model.TrackPoint
 import nl.r1a.grassmap.plugin.api.model.TrackSegment
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.abs
 
 class TrackAnalyzerTest {
     @Test
@@ -211,6 +213,89 @@ class TrackAnalyzerTest {
         assertNull(strict.analyze(points).maxSpeedMetersPerSecond)
     }
 
+    /**
+     * A gap of ten sampling intervals is a loss of fixes: the chord across it is
+     * the best estimate of the path, but the walker was not observed, so the time
+     * does not count as moving.
+     */
+    @Test
+    fun aFixLossGapKeepsItsDistanceButGivesNoMovingTime() {
+        val walk = fixLossWalk()
+
+        val analysis = TrackAnalyzer().analyze(walk)
+
+        assertEquals(19 * STEP_METERS, analysis.distanceMeters, 1.0)
+        assertEquals(56_000L, analysis.durationMillis ?: -1L)
+        assertEquals(36_000L, analysis.movingTimeMillis ?: -1L)
+    }
+
+    @Test
+    fun theFixLossFactorIsThePolicyNotAFixedNumber() {
+        val walk = fixLossWalk()
+        val tolerant = TrackAnalyzer(TrackStatisticsPolicy(fixLossGapFactor = 20.0))
+
+        assertEquals(
+            56_000L,
+            tolerant.analyze(walk).movingTimeMillis ?: -1L,
+        )
+    }
+
+    /**
+     * The moving test is the run's speed, not the step's: one step that a jittered
+     * fix pair makes 0.2 m long still belongs to a walk that moved 1.35 m/s.
+     */
+    @Test
+    fun aStepTheWanderShortenedStillCountsAsMoving() {
+        val walk = straightWalk(points = 20, stepMeters = STEP_METERS, pauseAt = 10)
+
+        val analysis = TrackAnalyzer().analyze(walk)
+
+        assertEquals(38_000L, analysis.movingTimeMillis ?: -1L)
+        assertEquals(38_000L, analysis.durationMillis ?: -1L)
+    }
+
+    @Test
+    fun noisyHeightsLoseTheInventedDescent() {
+        // 1 200 two-second samples are 3.2 km of climb, so the average window's
+        // shrinking ends cost a few per cent of the rise and the wander's invented
+        // 40 % is what this measures.
+        val walk = climbWithHeightNoise(points = 1_200, riseMeters = 100.0, noiseMeters = 2.0)
+
+        val analysis = TrackAnalyzer().analyze(walk)
+
+        assertTrue(
+            "a 100 m climb stays a climb, was ${analysis.ascentMeters}",
+            abs(analysis.ascentMeters - 100.0) <= 8.0,
+        )
+        assertTrue(
+            "a monotone climb has no descent, was ${analysis.descentMeters}",
+            analysis.descentMeters < 5.0,
+        )
+    }
+
+    @Test
+    fun aCleanProfileKeepsItsHeightSumExactly() {
+        val walk = climbWithHeightNoise(points = 1_200, riseMeters = 100.0, noiseMeters = 0.0)
+
+        val analysis = TrackAnalyzer().analyze(walk)
+
+        assertEquals(100.0, analysis.ascentMeters, 1e-9)
+        assertEquals(0.0, analysis.descentMeters, 1e-9)
+    }
+
+    @Test
+    fun theHeightAverageWindowIsMeasuredInTimeNotInSamples() {
+        val shortSteps = climbWithHeightNoise(points = 120, riseMeters = 60.0, noiseMeters = 2.0, stepMillis = 10_000)
+
+        val analysis = TrackAnalyzer().analyze(shortSteps)
+
+        assertEquals(120, analysis.pointCount)
+        assertTrue(
+            "a ten-second track still gains its climb, was ${analysis.ascentMeters}",
+            abs(analysis.ascentMeters - 60.0) <= 12.0,
+        )
+    }
+
     @Test
     fun oneTimestampedPointHasNoTimeSpan() {
         val analysis =
@@ -300,6 +385,65 @@ class TrackAnalyzerTest {
 
     private fun points(vararg points: TrackPoint): List<TrackPoint> = points.toList()
 
+    /** Twenty points two seconds apart, with a twenty-second loss of fixes after the tenth. */
+    private fun fixLossWalk(): Track {
+        val steps = 20
+        val trackPoints =
+            (0 until steps).map { index ->
+                val timeMillis =
+                    if (index <= 9) {
+                        index * STEP_MILLIS
+                    } else {
+                        9 * STEP_MILLIS + FIX_LOSS_MILLIS + (index - 10) * STEP_MILLIS
+                    }
+                timedPoint(latitudeAt(index * STEP_METERS), BASE_LONGITUDE, 300.0, timeMillis)
+            }
+        return track(trackPoints)
+    }
+
+    /**
+     * Twenty points on a meridian, one of them [SHORT_STEP_METERS] behind the fix
+     * before it - a wander that makes one step far too slow to be moving on its
+     * own.
+     */
+    private fun straightWalk(
+        points: Int,
+        stepMeters: Double,
+        pauseAt: Int,
+    ): Track {
+        val trackPoints =
+            (0 until points).map { index ->
+                val north =
+                    if (index == pauseAt) {
+                        (index - 1) * stepMeters - SHORT_STEP_METERS
+                    } else {
+                        index * stepMeters
+                    }
+                timedPoint(latitudeAt(north), BASE_LONGITUDE, 300.0, index * STEP_MILLIS)
+            }
+        return track(trackPoints)
+    }
+
+    /** A monotone climb with a uniform height wander from a fixed seed. */
+    private fun climbWithHeightNoise(
+        points: Int,
+        riseMeters: Double,
+        noiseMeters: Double,
+        stepMillis: Long = STEP_MILLIS,
+    ): Track {
+        val wander = Wander(ELEVATION_SEED)
+        val trackPoints =
+            (0 until points).map { index ->
+                val edge = index == 0 || index == points - 1
+                val noise = if (edge) 0.0 else wander.meters(noiseMeters)
+                val elevation = 300.0 + riseMeters * index / (points - 1) + noise
+                timedPoint(latitudeAt(index * STEP_METERS), BASE_LONGITUDE, elevation, index * stepMillis)
+            }
+        return track(trackPoints)
+    }
+
+    private fun latitudeAt(northMeters: Double): Double = BASE_LATITUDE + northMeters / ONE_DEGREE_LATITUDE_METERS
+
     private fun point(
         latitude: Double,
         longitude: Double,
@@ -313,9 +457,33 @@ class TrackAnalyzerTest {
         timeMillis: Long,
     ): TrackPoint = TrackPoint(GeoPoint(latitude, longitude), elevation, timeMillis)
 
+    /** Uniform in `[-amplitude, amplitude]` from a fixed seed, so a run is reproducible. */
+    private class Wander(
+        seed: Int,
+    ) {
+        private var state: Int = seed
+
+        fun meters(amplitude: Double): Double {
+            state = state * LCG_MULTIPLIER + LCG_INCREMENT
+            val unit = ((state ushr 16) and LCG_MASK) / LCG_HALF_RANGE - 1.0
+            return unit * amplitude
+        }
+    }
+
     private companion object {
         /** A degree of latitude on the mean-radius sphere. */
         const val ONE_DEGREE_LATITUDE_METERS: Double = 111_194.93
+        const val BASE_LATITUDE: Double = 49.84
+        const val BASE_LONGITUDE: Double = 24.03
+        const val STEP_METERS: Double = 2.7
+        const val STEP_MILLIS: Long = 2_000
+        const val FIX_LOSS_MILLIS: Long = 20_000
+        const val SHORT_STEP_METERS: Double = 0.2
+        const val ELEVATION_SEED: Int = 4_242
+        const val LCG_MULTIPLIER: Int = 1_103_515_245
+        const val LCG_INCREMENT: Int = 12_345
+        const val LCG_MASK: Int = 0x7FFF
+        const val LCG_HALF_RANGE: Double = 16_384.0
         const val TWO_STEPS_METERS: Double = 2.2239
         const val TWO_GENERATOR_STEPS_METERS: Double = 23.3665
     }

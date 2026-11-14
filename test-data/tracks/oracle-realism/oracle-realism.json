@@ -49,12 +49,12 @@
       },
       "ours": {
         "pointCount": 2000,
-        "distanceMeters": 13186.797,
-        "movingTimeSeconds": 7452,
+        "distanceMeters": 8840.089086,
+        "movingTimeSeconds": 7992,
         "durationSeconds": 8071,
-        "averageSpeedMetersPerSecond": 1.769565,
-        "ascentMeters": 444.4,
-        "descentMeters": 40.8,
+        "averageSpeedMetersPerSecond": 1.106117,
+        "ascentMeters": 397.339315,
+        "descentMeters": 0.058065,
         "minElevationMeters": 298.5,
         "maxElevationMeters": 703.6
       }
@@ -94,12 +94,12 @@
       },
       "ours": {
         "pointCount": 1500,
-        "distanceMeters": 9461.659,
-        "movingTimeSeconds": 4314,
+        "distanceMeters": 5158.953918,
+        "movingTimeSeconds": 4494,
         "durationSeconds": 4557,
-        "averageSpeedMetersPerSecond": 2.193245,
-        "ascentMeters": 323.1,
-        "descentMeters": 19.4,
+        "averageSpeedMetersPerSecond": 1.147965,
+        "ascentMeters": 296.361905,
+        "descentMeters": 0.000000,
         "minElevationMeters": 298.1,
         "maxElevationMeters": 604.3
       }
@@ -139,12 +139,12 @@
       },
       "ours": {
         "pointCount": 1000,
-        "distanceMeters": 16752.074,
-        "movingTimeSeconds": 2991,
+        "distanceMeters": 14959.530436,
+        "movingTimeSeconds": 2994,
         "durationSeconds": 3042,
-        "averageSpeedMetersPerSecond": 5.600827,
-        "ascentMeters": 157.1,
-        "descentMeters": 36.5,
+        "averageSpeedMetersPerSecond": 4.996503,
+        "ascentMeters": 116.247986,
+        "descentMeters": 0.086082,
         "minElevationMeters": 298.4,
         "maxElevationMeters": 423.4
       }
@@ -184,12 +184,12 @@
       },
       "ours": {
         "pointCount": 1200,
-        "distanceMeters": 5919.096,
-        "movingTimeSeconds": 2346,
+        "distanceMeters": 3129.297756,
+        "movingTimeSeconds": 2398,
         "durationSeconds": 2398,
-        "averageSpeedMetersPerSecond": 2.523059,
-        "ascentMeters": 22.2,
-        "descentMeters": 8.7,
+        "averageSpeedMetersPerSecond": 1.304962,
+        "ascentMeters": 9.180645,
+        "descentMeters": 0.000000,
         "minElevationMeters": 296.9,
         "maxElevationMeters": 313.9
       }
@@ -229,12 +229,12 @@
       },
       "ours": {
         "pointCount": 1500,
-        "distanceMeters": 11340.808,
-        "movingTimeSeconds": 2976,
+        "distanceMeters": 4067.917645,
+        "movingTimeSeconds": 2996,
         "durationSeconds": 3028,
-        "averageSpeedMetersPerSecond": 3.810755,
-        "ascentMeters": 57.7,
-        "descentMeters": 26.9,
+        "averageSpeedMetersPerSecond": 1.357783,
+        "ascentMeters": 29.738815,
+        "descentMeters": 0.925912,
         "minElevationMeters": 295.5,
         "maxElevationMeters": 334.6
       }
@@ -277,12 +277,12 @@
       },
       "ours": {
         "pointCount": 1400,
-        "distanceMeters": 10737.816,
-        "movingTimeSeconds": 3400,
+        "distanceMeters": 4922.368118,
+        "movingTimeSeconds": 3497,
         "durationSeconds": 3497,
-        "averageSpeedMetersPerSecond": 3.158181,
-        "ascentMeters": 43.5,
-        "descentMeters": 20.1,
+        "averageSpeedMetersPerSecond": 1.407597,
+        "ascentMeters": 23.808730,
+        "descentMeters": 0.418407,
         "minElevationMeters": 295.6,
         "maxElevationMeters": 328.9
       }

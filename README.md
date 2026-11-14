@@ -2716,12 +2716,18 @@ wrapper module and a design decision; T-0402 (statistics) and T-0403
 (elevation correction) own that move.
 
 `TrackAnalyzer` measures ground distance with the haversine formula on the IUGG
-mean radius 6 371 008.8 m, and filters the elevation line with `ElevationFilter`
-before summing ascent and descent. The filter is OsmAnd's published uphill
-algorithm: keep the points where the height keeps moving in one direction, drop
-a step steeper than 70 % from the last kept point, simplify with
-Ramer-Douglas-Peucker at 7 m, then sum between the surviving turning points. A
-segment boundary is not a sample. The T-0027 oracle over
+mean radius 6 371 008.8 m, over `TrackGeometry`'s cleaned line: an
+implausible-speed gate drops a fix the track cannot have reached, the line is
+simplified with Ramer-Douglas-Peucker at eight times the measured fix noise, and
+the total is the sum between the surviving points. It filters the elevation line
+with `ElevationSmoothing` and then `ElevationFilter` before summing ascent and
+descent. `ElevationFilter` is OsmAnd's published uphill algorithm: keep the
+points where the height keeps moving in one direction, drop a step steeper than
+70 % from the last kept point, simplify with Ramer-Douglas-Peucker at 7 m, then
+sum between the surviving turning points. `ElevationSmoothing` is a two-minute
+average of the heights that runs only when the measured height noise exceeds
+0.4 m, so a source cleaner than the filter's assumption is passed through
+untouched. A segment boundary is not a sample. The T-0027 oracle over
 `test-data/location/mock-walk.gpx`, recorded in `TrackImportOracleTest`, now
 reports ascent 1.6 m and descent 0.0 m (the raw sums were 19.2 m and 17.6 m),
 minimum 296.0 m, maximum 297.6 m and distance 82.5866 m, within 0.01 m on
@@ -2731,11 +2737,12 @@ the filter against OsmAnd's own figures on nine tracks.
 tracks with 2.5-5 m positional jitter, 1-2.5 m elevation noise, 30-75 s
 dropouts, two outlier fixes and 6 m of barometric drift, each with the authored
 truth and OsmAnd's readings. `RealisticTracksOracleTest` compares `TrackAnalyzer`
-with that truth and records which side is closer. The truth-bound comparison
-misses 28 of 30 bounds: a raw step sum inflates distance by 12-181 %, and a raw
-0.5 m/s threshold drops jitter-slow steps from moving time. T-0422
-(noise-robust track analysis) owns making the bounds pass. That directory's
-README carries the measured numbers. Do not widen a bound to hide them.
+with that truth and records which side is closer. All 30 truth bounds pass since
+T-0422, and the analyser is closer to the truth than OsmAnd on all 30: distance
+within 0.7 %, moving time within 0.2 %, average speed within 0.8 %, and under a
+metre of invented descent on a monotone climb. That directory's README carries
+the measured numbers, the filters behind them and the one figure the emitted data
+cannot support exactly. Do not widen a bound to hide a number.
 
 T-0402 extends the analysis with the figures a track detail shows.
 `TrackAnalysis` also carries duration, moving time, average speed and maximum
@@ -2743,17 +2750,20 @@ speed, cached in the same sidecar. A load parses the GPX anyway, so the store
 recomputes the analysis from it and rewrites the sidecar when the cached copy
 differs. A sidecar written by T-0401 therefore gains the timing on its first
 load, and a later policy change cannot leave a stale profile behind. Distance
-keeps its T-0401 definition; ascent and descent use the OsmAnd-compatible
-filter above.
+keeps its T-0401 definition on a clean track, where the cleaned line is the raw
+line; ascent and descent use the OsmAnd-compatible filter above.
 
 Timing uses consecutive timestamped points of one segment only. A segment
-boundary is a pause. A gap longer than 120 s is a pause, and a step slower than
-0.5 m/s is standing still; neither counts as moving time. Duration is the
+boundary is a pause. A gap longer than 120 s is a pause; a gap longer than four
+sampling intervals is a loss of fixes, whose chord still adds distance but whose
+time was not observed; and a step inside a run of the cleaned line that did not
+move is standing still. None of the three counts as moving time. Duration is the
 wall-clock span from the first timestamped point to the last, pauses included.
 Average speed is distance divided by moving time. Maximum speed is the fastest
-step inside a segment and outside a pause gap. A track without timestamps has
-no timing, one point has no time span, and a track without elevation has no
-elevation range. `TrackStatisticsPolicy` holds the thresholds. They are chosen,
+step inside a segment and outside a pause gap, over the fixes the gate kept. A
+track without timestamps has no timing, one point has no time span, and a track
+without elevation has no elevation range. `TrackStatisticsPolicy` holds the
+timing thresholds and `TrackFilterPolicy` the filter strengths. They are chosen,
 not derived from OsmAnd.
 
 `TrackElevationCorrection` fills a missing height from the mounted region's DEM

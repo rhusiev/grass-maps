@@ -74,10 +74,16 @@ data class ElevationProfile(
  * Builds an [ElevationProfile] from a track or from a planned route.
  *
  * The track profile samples exactly the points the file carries: no
- * interpolation and no thinning, so the chart's x positions are the engine's
- * distance steps. A point without elevation is skipped; a point without a
- * timestamp keeps no time, and the two time axes are unavailable unless every
- * sample carries one.
+ * interpolation and no thinning, so the chart's x positions are the analyser's
+ * own distance steps. Those steps are [TrackGeometry.alongMeters] - the distance
+ * along the cleaned line - so the chart's endpoint is the analysed distance, not
+ * a second, longer sum over the same noise. A point without elevation is skipped;
+ * a point without a timestamp keeps no time, and the two time axes are
+ * unavailable unless every sample carries one.
+ *
+ * [filters] must be the policy the analyser that produced the record ran with,
+ * or the chart's total would disagree with the record beside it. The default is
+ * the analyser's default, which is what the app constructs.
  *
  * A route has no timestamps of its own. Its profile takes the heights of the
  * sampled geometry and spreads the engine's duration evenly over the distance,
@@ -85,17 +91,18 @@ data class ElevationProfile(
  * Duration and Time of day axes plot the route's own numbers rather than a
  * second guess at them.
  */
-class ElevationProfiler {
+class ElevationProfiler(
+    private val filters: TrackFilterPolicy = TrackFilterPolicy(),
+) {
     fun profile(track: Track): ElevationProfile {
         val samples = mutableListOf<ElevationSample>()
         var totalDistanceMeters = 0.0
         var firstTimestampMillis: Long? = null
         var lastTimestampMillis: Long? = null
         for (segment in track.segments) {
-            var previous: GeoPoint? = null
-            for (point in segment.points) {
-                previous?.let { before -> totalDistanceMeters += distanceMeters(before, point.position) }
-                previous = point.position
+            val geometry = TrackGeometry.of(segment, filters)
+            for (index in segment.points.indices) {
+                val point = segment.points[index]
                 point.timeMillis?.let { time ->
                     if (firstTimestampMillis == null) {
                         firstTimestampMillis = time
@@ -106,12 +113,13 @@ class ElevationProfiler {
                 val time = point.timeMillis
                 samples +=
                     ElevationSample(
-                        distanceMeters = totalDistanceMeters,
+                        distanceMeters = totalDistanceMeters + geometry.alongMeters[index],
                         elevationMeters = elevation,
                         elapsedMillis = time?.let { stamp -> firstTimestampMillis?.let { stamp - it } },
                         timeOfDayMillis = time,
                     )
             }
+            totalDistanceMeters += geometry.distanceMeters
         }
         val durationMillis =
             firstTimestampMillis?.let { first ->

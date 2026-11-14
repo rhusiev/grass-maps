@@ -1523,18 +1523,19 @@ private fun MapContent(
                         )
                     }
                 },
-                onEditTrack = { trackId, name, description, folderId ->
+                onEditTrack = { trackId, name, description, folderId, hidden ->
                     scope.launch {
                         invokeTrackLibraryCommand(
                             container,
                             context,
                             TrackLibraryContract.editTrack,
-                            listParams(
-                                "trackId" to trackId,
-                                "name" to name,
-                                "description" to description,
-                                "folderId" to folderId.orEmpty(),
-                            ),
+                            buildJsonObject {
+                                put("trackId", trackId)
+                                put("name", name)
+                                put("description", description)
+                                put("folderId", folderId.orEmpty())
+                                put("hidden", hidden)
+                            },
                         )
                     }
                 },

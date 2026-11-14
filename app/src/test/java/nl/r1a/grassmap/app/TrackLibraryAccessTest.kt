@@ -24,8 +24,8 @@ import java.nio.file.Files
 
 /**
  * The host side of `plugins/track-library` (T-0414) over the real import path:
- * folders, rename, describe, move and delete each return the persisted state
- * and one receipt that reverses exactly that action.
+ * folders, rename, describe, move, hide and delete each return the persisted
+ * state and one receipt that reverses exactly that action.
  */
 class TrackLibraryAccessTest {
     private val temporaryRoots = mutableListOf<File>()
@@ -87,6 +87,68 @@ class TrackLibraryAccessTest {
             assertEquals(first.name, restored.name)
             assertNull(restored.description)
             assertNull(restored.listId)
+        }
+
+    @Test
+    fun hidingFromTheLibraryEditStoresTheFlagAndClearsTheDrawnLine() =
+        runTest {
+            val access = access()
+            val first = import(access, "garmin-connect-hike.gpx").tracks.single()
+            val library = StoreTrackLibrary({ access }, TrackFolderStore(file = null))
+            assertEquals(1, access.drawn.value.size)
+
+            val hidden = changed(library.editTrack(first.id.value, first.name, null, null, hidden = true))
+
+            assertTrue(access.summaries().single().hidden)
+            assertTrue(
+                hidden.state.tracks
+                    .single()
+                    .hidden,
+            )
+            assertTrue(access.drawn.value.isEmpty())
+
+            val shown = changed(library.editTrack(first.id.value, first.name, null, null, hidden = false))
+
+            assertFalse(access.summaries().single().hidden)
+            assertFalse(
+                shown.state.tracks
+                    .single()
+                    .hidden,
+            )
+            assertEquals(listOf(first.id.value), access.drawn.value.map { track -> track.id })
+        }
+
+    @Test
+    fun anEditThatLeavesVisibilityUnnamedKeepsTheStoredHiddenFlag() =
+        runTest {
+            val access = access()
+            val first = import(access, "garmin-connect-hike.gpx").tracks.single()
+            val library = StoreTrackLibrary({ access }, TrackFolderStore(file = null))
+            changed(library.editTrack(first.id.value, first.name, null, null, hidden = true))
+
+            val renamed = changed(library.editTrack(first.id.value, "Renamed", null, null))
+
+            assertTrue(access.summaries().single().hidden)
+            assertTrue(
+                renamed.state.tracks
+                    .single()
+                    .hidden,
+            )
+            assertTrue(access.drawn.value.isEmpty())
+        }
+
+    @Test
+    fun undoingAVisibilityEditRestoresTheDrawnLine() =
+        runTest {
+            val access = access()
+            val first = import(access, "garmin-connect-hike.gpx").tracks.single()
+            val library = StoreTrackLibrary({ access }, TrackFolderStore(file = null))
+            val hidden = changed(library.editTrack(first.id.value, first.name, null, null, hidden = true))
+
+            assertEquals(Outcome.Success(TrackLibraryUndo.APPLIED), library.undo(hidden.receipt))
+
+            assertFalse(access.summaries().single().hidden)
+            assertEquals(listOf(first.id.value), access.drawn.value.map { track -> track.id })
         }
 
     @Test

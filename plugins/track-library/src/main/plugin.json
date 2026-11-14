@@ -31,7 +31,7 @@
         "id": "track.library.edit_track",
         "params": "kotlinx.serialization.json.JsonElement",
         "result": "nl.r1a.grassmap.plugin.api.model.TrackLibraryState",
-        "doc": "Renames, describes and files a track. Parameters: trackId, name, description, and optionally folderId.",
+        "doc": "Renames, describes and files a track. Parameters: trackId, name, description, and optionally folderId and hidden.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",

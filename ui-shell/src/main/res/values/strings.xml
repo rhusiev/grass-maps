@@ -215,6 +215,8 @@
     <string name="track_library_folder">Folder</string>
     <string name="track_library_description">Description</string>
     <string name="track_library_description_note">HTML from the GPX shows as text formatting; scripts and images are removed</string>
+    <string name="track_library_show_on_map">Show on map</string>
+    <string name="track_library_show_on_map_note">When off, the track is not drawn on the map</string>
     <string name="track_library_cancel">Cancel</string>
     <string name="track_library_save">Save</string>
     <string name="track_library_folder_name">Folder name</string>

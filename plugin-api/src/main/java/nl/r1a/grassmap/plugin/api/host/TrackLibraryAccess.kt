@@ -28,9 +28,9 @@ enum class TrackLibraryUndo {
  *
  * `plugins/track-library` owns the screen state, the four fixed orders, the
  * name search and the scoped undo receipts. The host implements this access
- * over the existing track store: the per-track name, description and folder id
- * live on the track sidecar, and the folder definitions live in the library
- * index beside the documents. No GPX document is rewritten.
+ * over the existing track store: the per-track name, description, folder id
+ * and map visibility flag live on the track sidecar, and the folder definitions
+ * live in the library index beside the documents. No GPX document is rewritten.
  *
  * Undo is scoped to one action, like the favourites delete receipt; it is not
  * the global T-0304 history.
@@ -55,13 +55,16 @@ interface TrackLibraryAccess {
 
     /**
      * Renames, describes and files one track in one action; a null
-     * [description] clears it and a null [folderId] unfiles it.
+     * [description] clears it and a null [folderId] unfiles it. A non-null
+     * [hidden] also sets the map visibility flag (T-0415); null leaves the
+     * stored flag unchanged, so an older caller keeps its behaviour.
      */
     suspend fun editTrack(
         trackId: String,
         name: String?,
         description: String?,
         folderId: String?,
+        hidden: Boolean? = null,
     ): Outcome<TrackLibraryChange>
 
     /** Moves a track to a folder, or out of every folder when [folderId] is null. */
@@ -96,6 +99,7 @@ object NoTrackLibraryAccess : TrackLibraryAccess {
         name: String?,
         description: String?,
         folderId: String?,
+        hidden: Boolean?,
     ): Outcome<TrackLibraryChange> = notReady()
 
     override suspend fun moveTrack(

@@ -3,6 +3,7 @@ package nl.r1a.grassmap.plugins.track.library
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import nl.r1a.grassmap.plugin.api.command.CancellationKey
 import nl.r1a.grassmap.plugin.api.command.Command
@@ -99,7 +100,7 @@ class RenameTrackFolderCommand(
 /**
  * Renames, describes and files one track. An empty name or description clears
  * it and an empty folderId unfiles it. Parameters: trackId, name, description,
- * and optionally folderId.
+ * optionally folderId and optionally hidden, the map visibility flag (T-0415).
  */
 class EditTrackCommand(
     private val session: TrackLibrarySession,
@@ -107,7 +108,9 @@ class EditTrackCommand(
         id = TrackLibraryContract.editTrack,
         paramsSerializer = JsonElement.serializer(),
         resultSerializer = TrackLibraryState.serializer(),
-        doc = "Renames, describes and files a track. Parameters: trackId, name, description, and optionally folderId.",
+        doc =
+            "Renames, describes and files a track. Parameters: trackId, name, description, " +
+                "and optionally folderId and hidden.",
         policy = LIBRARY_POLICY,
     ) {
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<TrackLibraryState>> {
@@ -115,7 +118,15 @@ class EditTrackCommand(
         val name = params.rawText(PARAM_NAME) ?: return Outcome.Failure(AppError.InvalidInput)
         val description = params.rawText(PARAM_DESCRIPTION) ?: return Outcome.Failure(AppError.InvalidInput)
         val folderId = params.text(PARAM_FOLDER_ID)
-        return session.result(session.editTrack(trackId, name.trim().ifEmpty { null }, description.ifEmpty { null }, folderId))
+        return session.result(
+            session.editTrack(
+                trackId,
+                name.trim().ifEmpty { null },
+                description.ifEmpty { null },
+                folderId,
+                params.boolean(PARAM_HIDDEN),
+            ),
+        )
     }
 
     private companion object {
@@ -123,6 +134,7 @@ class EditTrackCommand(
         const val PARAM_NAME = "name"
         const val PARAM_DESCRIPTION = "description"
         const val PARAM_FOLDER_ID = "folderId"
+        const val PARAM_HIDDEN = "hidden"
     }
 }
 
@@ -269,6 +281,12 @@ private fun JsonElement.rawText(key: String): String? {
 private fun JsonElement.long(key: String): Long? {
     val json = this as? JsonObject ?: return null
     return (json[key] as? JsonPrimitive)?.contentOrNull?.toLongOrNull()
+}
+
+/** A boolean parameter; a missing or non-boolean value is null, not false. */
+private fun JsonElement.boolean(key: String): Boolean? {
+    val json = this as? JsonObject ?: return null
+    return (json[key] as? JsonPrimitive)?.booleanOrNull
 }
 
 /**

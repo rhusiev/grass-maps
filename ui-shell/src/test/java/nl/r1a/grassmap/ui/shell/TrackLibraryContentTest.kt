@@ -13,6 +13,7 @@ import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
 import nl.r1a.grassmap.plugin.api.model.TrackSort
 import nl.r1a.grassmap.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -21,7 +22,8 @@ import java.util.Locale
 
 /**
  * The track library screen's rows and sheets (T-0414): the formatted row, the
- * four sort labels, the action sheet and the edit sheet, in both languages.
+ * four sort labels, the action sheet and the edit sheet, in both languages. The
+ * edit sheet's map visibility row and the row's hidden notice are T-0415.
  */
 class TrackLibraryContentTest {
     @Test
@@ -150,6 +152,36 @@ class TrackLibraryContentTest {
             "HTML from the GPX shows as text formatting; scripts and images are removed",
             edit.descriptionNote,
         )
+        assertEquals("Show on map", edit.visibilityLabel)
+        assertEquals("When off, the track is not drawn on the map", edit.visibilityNote)
+        assertTrue(edit.showOnMap)
+    }
+
+    @Test
+    fun aHiddenTrackSaysSoInItsRowAndOpensTheEditSheetSwitchedOff() {
+        val state = hiddenFirstTrack()
+
+        val row = trackLibraryContent(state, strings(ENGLISH, APP_ENGLISH), Locale.ENGLISH).rows.first()
+        val edit = trackEditContent(row, state, strings(ENGLISH, APP_ENGLISH))
+
+        assertTrue(row.hidden)
+        assertEquals("Hidden on the map", row.hiddenNotice)
+        assertFalse(edit.showOnMap)
+        assertEquals("Show on map", edit.visibilityLabel)
+        assertEquals("When off, the track is not drawn on the map", edit.visibilityNote)
+    }
+
+    @Test
+    fun theVisibilityLinesResolveInUkrainian() {
+        val state = STATE
+        val row = trackLibraryContent(state, strings(UKRAINIAN, APP_UKRAINIAN), Locale.forLanguageTag("uk")).rows.first()
+        val edit = trackEditContent(row, state, strings(UKRAINIAN, APP_UKRAINIAN))
+
+        assertEquals("Показати на карті", edit.visibilityLabel)
+        assertEquals("Коли вимкнено, трек не малюється на карті", edit.visibilityNote)
+
+        val hiddenContent = trackLibraryContent(hiddenFirstTrack(), strings(UKRAINIAN, APP_UKRAINIAN), Locale.forLanguageTag("uk"))
+        assertEquals("Прихований на карті", hiddenContent.rows.first().hiddenNotice)
     }
 
     @Test
@@ -203,6 +235,15 @@ class TrackLibraryContentTest {
     }
 
     private fun content(): TrackLibraryContent = trackLibraryContent(STATE, strings(ENGLISH, APP_ENGLISH), Locale.ENGLISH)
+
+    /** The fixture library with its first track hidden, in both the entry and the row. */
+    private fun hiddenFirstTrack(): TrackLibraryState {
+        val rows = STATE.browse.rows
+        return STATE.copy(
+            tracks = STATE.tracks.map { track -> if (track.id == "t1") track.copy(hidden = true) else track },
+            browse = STATE.browse.copy(rows = listOf(rows.first().copy(hidden = true)) + rows.drop(1)),
+        )
+    }
 
     private fun strings(
         path: String,

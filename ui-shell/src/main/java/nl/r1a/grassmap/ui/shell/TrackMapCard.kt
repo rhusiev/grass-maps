@@ -309,7 +309,7 @@ private const val TRACK_CARD_ANALYSIS_KEY = "track_card_analysis"
 private const val TRACK_CARD_COLOUR_KEY = "track_card_colour"
 private const val TRACK_CARD_HIDE_KEY = "track_card_hide"
 private const val TRACK_CARD_SHOW_KEY = "track_card_show"
-private const val TRACK_CARD_HIDDEN_KEY = "track_card_hidden"
+internal const val TRACK_CARD_HIDDEN_KEY = "track_card_hidden"
 private const val TRACK_CARD_ASCENT_KEY = "track_card_ascent"
 private const val TRACK_CARD_COLOUR_CHOICE_KEY = "track_card_colour_choice"
 

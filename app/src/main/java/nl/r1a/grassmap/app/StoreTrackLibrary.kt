@@ -87,6 +87,7 @@ class StoreTrackLibrary(
         name: String?,
         description: String?,
         folderId: String?,
+        hidden: Boolean?,
     ): Outcome<TrackLibraryChange> =
         mutex.withLock {
             val summary =
@@ -115,12 +116,28 @@ class StoreTrackLibrary(
                 }
 
                 is Outcome.Success -> {
+                    // The visibility flag is a second sidecar write through the
+                    // store path T-0415 already owns, so `drawn` republishes with
+                    // it. Null means the caller did not touch visibility.
+                    val restoreHidden = summary.hidden.takeIf { current -> hidden != null && hidden != current }
+                    if (restoreHidden != null) {
+                        when (val toggled = tracks().setHidden(TrackId(trackId), hidden == true)) {
+                            is Outcome.Failure -> {
+                                return@withLock toggled
+                            }
+
+                            is Outcome.Success -> {
+                                Unit
+                            }
+                        }
+                    }
                     val receipt = receipt("track-edit")
                     remember(
                         receipt,
                         Pending.RestoreMetadata(
                             trackId = trackId,
                             metadata = TrackMetadata(summary.name, summary.description, summary.listId),
+                            hidden = restoreHidden,
                         ),
                     )
                     change(receipt, TrackLibraryAction.TRACK_EDITED)
@@ -203,10 +220,30 @@ class StoreTrackLibrary(
 
     private suspend fun applyUndo(action: Pending): Outcome<Unit> =
         when (action) {
-            is Pending.RemoveFolder -> folders.remove(action.folder.id)
-            is Pending.RestoreFolderName -> folders.rename(action.folderId, action.name).mapUnit()
-            is Pending.RestoreTrack -> tracks().restoreFromTrash(action.removal)
-            is Pending.RestoreMetadata -> tracks().setMetadata(TrackId(action.trackId), action.metadata)
+            is Pending.RemoveFolder -> {
+                folders.remove(action.folder.id)
+            }
+
+            is Pending.RestoreFolderName -> {
+                folders.rename(action.folderId, action.name).mapUnit()
+            }
+
+            is Pending.RestoreTrack -> {
+                tracks().restoreFromTrash(action.removal)
+            }
+
+            is Pending.RestoreMetadata -> {
+                when (val restored = tracks().setMetadata(TrackId(action.trackId), action.metadata)) {
+                    is Outcome.Failure -> {
+                        restored
+                    }
+
+                    is Outcome.Success -> {
+                        action.hidden?.let { hidden -> tracks().setHidden(TrackId(action.trackId), hidden) }
+                            ?: restored
+                    }
+                }
+            }
         }
 
     private suspend fun change(
@@ -243,6 +280,7 @@ class StoreTrackLibrary(
                     startLatitude = summary.startLatitude,
                     startLongitude = summary.startLongitude,
                     kind = summary.kind,
+                    hidden = summary.hidden,
                 )
             }
         val counts = entries.groupingBy { entry -> entry.listId }.eachCount()
@@ -297,6 +335,7 @@ class StoreTrackLibrary(
         data class RestoreMetadata(
             val trackId: String,
             val metadata: TrackMetadata,
+            val hidden: Boolean? = null,
         ) : Pending
     }
 

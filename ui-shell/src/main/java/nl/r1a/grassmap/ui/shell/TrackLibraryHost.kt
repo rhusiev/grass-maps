@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -68,7 +69,9 @@ import nl.r1a.grassmap.plugin.api.service.Strings
  * the selected track offers Move, Rename, Share, Save and Delete; Delete happens
  * at once and Undo reverses it, while Save hands the track to the system
  * document picker (T-0410). A link in a description shows its full address
- * before the host opens it in the system browser.
+ * before the host opens it in the system browser. The edit sheet also carries
+ * the round-6 "Show on map" switch (T-0415): off stores the sidecar flag, the
+ * map stops drawing the track, and the row says it is hidden.
  *
  * [dark] selects the light or dark tokens, so both themes are drawn from the
  * same layout. Device interaction is unexercised in CI; the content resolver
@@ -83,7 +86,7 @@ fun TrackLibraryHost(
     onClose: () -> Unit,
     onCreateFolder: (name: String) -> Unit,
     onRenameFolder: (folderId: String, name: String) -> Unit,
-    onEditTrack: (trackId: String, name: String, description: String, folderId: String?) -> Unit,
+    onEditTrack: (trackId: String, name: String, description: String, folderId: String?, hidden: Boolean) -> Unit,
     onMoveTrack: (trackId: String, folderId: String?) -> Unit,
     onDeleteTrack: (trackId: String) -> Unit,
     onShare: (trackId: String) -> Unit,
@@ -106,6 +109,7 @@ fun TrackLibraryHost(
     var nameField by remember { mutableStateOf("") }
     var descriptionField by remember { mutableStateOf("") }
     var folderField by remember { mutableStateOf<String?>(null) }
+    var showOnMapField by remember { mutableStateOf(true) }
     var query by remember { mutableStateOf(state.browse.query) }
     val selectedRow = selectedLibraryRow(content.rows, selectedTrackId)
     val navigationInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -228,6 +232,7 @@ fun TrackLibraryHost(
                                             ?.description
                                             .orEmpty()
                                     folderField = selectedRow.listId
+                                    showOnMapField = !selectedRow.hidden
                                     sheet = LibrarySheet.EDIT
                                 }
 
@@ -261,13 +266,15 @@ fun TrackLibraryHost(
                             name = nameField,
                             description = descriptionField,
                             selectedFolderId = folderField,
+                            showOnMap = showOnMapField,
                             onNameChange = { nameField = it },
                             onDescriptionChange = { descriptionField = it },
                             onFolderChange = { folderField = it },
+                            onShowOnMapChange = { showOnMapField = it },
                             onSave = {
                                 sheet = LibrarySheet.NONE
                                 selectedTrackId = null
-                                onEditTrack(row.id, nameField, descriptionField, folderField)
+                                onEditTrack(row.id, nameField, descriptionField, folderField, !showOnMapField)
                             },
                             onCancel = { sheet = LibrarySheet.NONE },
                         )
@@ -536,6 +543,7 @@ private fun TrackRow(
                 Line(text = row.meta, colors = colors, secondary = true)
             }
             row.listName?.let { list -> Line(text = list, colors = colors, secondary = true) }
+            row.hiddenNotice?.let { notice -> Line(text = notice, colors = colors, colour = ROUTE_CHANGED_COLOR) }
             row.description?.let { description ->
                 FormattedDescription(text = description, colors = colors, onLink = onLink)
             }
@@ -723,9 +731,11 @@ private fun EditSheet(
     name: String,
     description: String,
     selectedFolderId: String?,
+    showOnMap: Boolean,
     onNameChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
     onFolderChange: (String?) -> Unit,
+    onShowOnMapChange: (Boolean) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -760,10 +770,75 @@ private fun EditSheet(
                     .padding(FIELD_PADDING_DP.dp),
         )
         Line(text = content.descriptionNote, colors = colors, secondary = true)
+        VisibilityRow(
+            label = content.visibilityLabel,
+            note = content.visibilityNote,
+            checked = showOnMap,
+            colors = colors,
+            onChange = onShowOnMapChange,
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp)) {
             SecondaryButton(text = content.cancel, colors = colors, onClick = onCancel)
             PrimaryButton(text = content.save, colors = colors, onClick = onSave)
         }
+    }
+}
+
+/**
+ * The edit sheet's map visibility row (T-0415): the round-6 t-looks wording, a
+ * detail line and a switch. The switch is "Show on map", so on means drawn; the
+ * value is a draft like the name and description, and only the sheet's Save
+ * writes the inverse into the sidecar's hidden flag.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun VisibilityRow(
+    label: String,
+    note: String,
+    checked: Boolean,
+    colors: TrackLibraryPalette,
+    onChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { onChange(!checked) }
+                .padding(vertical = ACTION_PADDING_DP.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
+    ) {
+        Column(modifier = Modifier.weight(WEIGHT_ONE)) {
+            Line(text = label, colors = colors)
+            Line(text = note, colors = colors, secondary = true, size = NOTE_FONT_SP)
+        }
+        VisibilitySwitch(checked = checked, colors = colors)
+    }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun VisibilitySwitch(
+    checked: Boolean,
+    colors: TrackLibraryPalette,
+) {
+    Box(
+        modifier =
+            Modifier
+                .width(SWITCH_WIDTH_DP.dp)
+                .height(SWITCH_HEIGHT_DP.dp)
+                .background(
+                    if (checked) colors.accent else colors.textSecondary.copy(alpha = SWITCH_OFF_ALPHA),
+                    RoundedCornerShape(SWITCH_HEIGHT_DP.dp),
+                ).padding(horizontal = SWITCH_INSET_DP.dp),
+        contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(SWITCH_KNOB_DP.dp)
+                    .background(Color.White, RoundedCornerShape(SWITCH_KNOB_DP.dp)),
+        )
     }
 }
 
@@ -1076,6 +1151,12 @@ private const val SELECTION_BAR_PADDING_DP = 8
 private const val ACTION_PADDING_DP = 6
 private const val TITLE_FONT_SP = 21
 private const val ROW_FONT_SP = 15
+private const val NOTE_FONT_SP = 13
 private const val WEIGHT_ONE = 1f
+private const val SWITCH_WIDTH_DP = 44
+private const val SWITCH_HEIGHT_DP = 26
+private const val SWITCH_KNOB_DP = 20
+private const val SWITCH_INSET_DP = 3
+private const val SWITCH_OFF_ALPHA = 0.35f
 
 private val SCRIM = Color(0x66000000)

@@ -2536,9 +2536,10 @@ date line, the distance, ascent and moving time, then Analysis, Color and Hide.
 Analysis opens the existing T-0404 panel, not a second one; Color reveals the
 look screen's six swatches; Hide toggles the sidecar flag and the card's action
 becomes Show while the card stays open. Tapping empty map closes the card. A
-hidden track cannot be tapped, and the library has no visibility control yet,
-so dismissing the card while a track is hidden leaves no way to show it again
-until that control exists. That is the one gap this task leaves.
+hidden track cannot be tapped, so the library's edit sheet carries the same
+choice as "Show on map" with the note "When off, the track is not drawn on the
+map"; this is how a track hidden after its card was dismissed comes back. The
+library row says "Hidden on the map" while the sidecar flag is set.
 
 The `track-looks-z15` golden draws two fixed tracks in green and blue at one
 camera, and `track-looks-hidden-z15` draws the same camera with the green track
@@ -2560,10 +2561,11 @@ no remote image. A press on a row selects the track, and the bottom bar then
 offers Move, Rename, Share, Save and Delete; Delete happens at once and Undo
 restores the track, and Save opens the system document picker for that one
 track. `StoreTrackLibrary` in `app`
-is the only writer: a rename, description or folder change rewrites that
-track's sidecar, and the folder definitions live in `.library.json` beside the
-documents. The sidecar also caches the track's first point for the nearest
-order; a load derives it from the document when an older sidecar has none. The GPX document is never rewritten. A delete parks the sidecar and
+is the only writer: a rename, description, folder or map visibility change
+rewrites that track's sidecar, and the folder definitions live in
+`.library.json` beside the documents. The sidecar also caches the track's first
+point for the nearest order; a load derives it from the document when an older
+sidecar has none. The GPX document is never rewritten. A delete parks the sidecar and
 document in `.trash`; the in-memory token is process-scoped and a reload keeps
 every parked token, so two deletes undo in reverse order and each restores its
 track to the same folder. The same scoped receipt stack reverses folder and

@@ -29,6 +29,8 @@ data class TrackLibraryRowContent(
     val listName: String?,
     val description: RichText?,
     val colour: Long?,
+    val hidden: Boolean = false,
+    val hiddenNotice: String? = null,
 )
 
 /** One sort choice the screen offers, with its resolved label. */
@@ -111,6 +113,9 @@ data class TrackEditContent(
     val descriptionLabel: String,
     val description: String,
     val descriptionNote: String,
+    val visibilityLabel: String,
+    val visibilityNote: String,
+    val showOnMap: Boolean,
     val cancel: String,
     val save: String,
 )
@@ -278,6 +283,9 @@ fun trackEditContent(
         descriptionLabel = strings.resolve(TRACK_LIBRARY_DESCRIPTION_KEY),
         description = state.tracks.firstOrNull { track -> track.id == row.id }?.description ?: row.description?.text.orEmpty(),
         descriptionNote = strings.resolve(TRACK_LIBRARY_DESCRIPTION_NOTE_KEY),
+        visibilityLabel = strings.resolve(TRACK_LIBRARY_SHOW_ON_MAP_KEY),
+        visibilityNote = strings.resolve(TRACK_LIBRARY_SHOW_ON_MAP_NOTE_KEY),
+        showOnMap = !row.hidden,
         cancel = strings.resolve(TRACK_LIBRARY_CANCEL_KEY),
         save = strings.resolve(TRACK_LIBRARY_SAVE_KEY),
     )
@@ -334,6 +342,8 @@ private fun trackRowContent(
         listName = row.listName,
         description = row.description,
         colour = row.colour?.let(::favouriteColour),
+        hidden = row.hidden,
+        hiddenNotice = if (row.hidden) strings.resolve(TRACK_CARD_HIDDEN_KEY) else null,
     )
 }
 
@@ -410,6 +420,8 @@ internal const val TRACK_LIBRARY_NAME_KEY = "track_library_name"
 internal const val TRACK_LIBRARY_FOLDER_KEY = "track_library_folder"
 internal const val TRACK_LIBRARY_DESCRIPTION_KEY = "track_library_description"
 internal const val TRACK_LIBRARY_DESCRIPTION_NOTE_KEY = "track_library_description_note"
+internal const val TRACK_LIBRARY_SHOW_ON_MAP_KEY = "track_library_show_on_map"
+internal const val TRACK_LIBRARY_SHOW_ON_MAP_NOTE_KEY = "track_library_show_on_map_note"
 internal const val TRACK_LIBRARY_CANCEL_KEY = "track_library_cancel"
 internal const val TRACK_LIBRARY_SAVE_KEY = "track_library_save"
 internal const val TRACK_LIBRARY_FOLDER_NAME_KEY = "track_library_folder_name"

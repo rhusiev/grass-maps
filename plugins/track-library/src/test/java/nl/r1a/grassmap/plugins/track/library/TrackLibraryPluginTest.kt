@@ -106,7 +106,7 @@ class TrackLibraryPluginTest {
                 ),
             )
 
-            assertEquals(listOf("edit:t1:Ridges:<b>Note</b>:f1"), access.calls)
+            assertEquals(listOf("edit:t1:Ridges:<b>Note</b>:f1:null"), access.calls)
             val row =
                 context
                     .state()
@@ -114,6 +114,31 @@ class TrackLibraryPluginTest {
                     .first { row -> row.id == "t1" }
             assertEquals("Ridges", row.name)
             assertEquals("f1", row.listId)
+        }
+
+    @Test
+    fun editingCanAlsoHideTheTrackFromTheMap() =
+        runTest {
+            val access = FakeLibraryAccess()
+            val context = context(access)
+
+            context.command(TrackLibraryContract.editTrack).invokeRaw(
+                buildJsonObject {
+                    put("trackId", JsonPrimitive("t1"))
+                    put("name", JsonPrimitive("Ridges"))
+                    put("description", JsonPrimitive(""))
+                    put("folderId", JsonPrimitive("f1"))
+                    put("hidden", JsonPrimitive(true))
+                },
+            )
+
+            assertEquals(listOf("edit:t1:Ridges:null:f1:true"), access.calls)
+            val row =
+                context
+                    .state()
+                    .browse.rows
+                    .first { row -> row.id == "t1" }
+            assertTrue(row.hidden)
         }
 
     @Test
@@ -409,15 +434,21 @@ internal class FakeLibraryAccess : TrackLibraryAccess {
         name: String?,
         description: String?,
         folderId: String?,
+        hidden: Boolean?,
     ): Outcome<TrackLibraryChange> {
-        calls += "edit:$trackId:$name:$description:$folderId"
+        calls += "edit:$trackId:$name:$description:$folderId:$hidden"
         return change(TrackLibraryAction.TRACK_EDITED) {
             state =
                 state.copy(
                     tracks =
                         state.tracks.map { track ->
                             if (track.id == trackId) {
-                                track.copy(name = name, description = description, listId = folderId)
+                                track.copy(
+                                    name = name,
+                                    description = description,
+                                    listId = folderId,
+                                    hidden = hidden ?: track.hidden,
+                                )
                             } else {
                                 track
                             }

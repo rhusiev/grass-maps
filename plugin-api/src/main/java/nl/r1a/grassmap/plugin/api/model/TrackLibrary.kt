@@ -68,7 +68,9 @@ enum class TrackLibraryAction {
  * belongs to, or null when it is unfiled. [startLatitude] and [startLongitude]
  * are the first point of the track, used by the Nearest order, or null when the
  * document carries no geometry. [kind] says whether the record is a travelled
- * or imported line or a route the user planned and saved (T-0411).
+ * or imported line or a route the user planned and saved (T-0411). [hidden] is
+ * the sidecar's map visibility flag (T-0415); a hidden track stays in the
+ * library and only leaves the map's drawable list.
  */
 @Serializable
 data class TrackLibraryEntry(
@@ -84,6 +86,7 @@ data class TrackLibraryEntry(
     val startLatitude: Double? = null,
     val startLongitude: Double? = null,
     val kind: TrackKind = TrackKind.Track,
+    val hidden: Boolean = false,
 )
 
 /**
@@ -91,7 +94,7 @@ data class TrackLibraryEntry(
  * text, never the stored markup. [listName] is the resolved folder name, so a
  * row that is shown outside its folder still says where the track lives.
  * [kind] travels with the row so the screen names a saved route as a route
- * (T-0411).
+ * (T-0411). [hidden] lets the row say the track is not on the map (T-0415).
  */
 @Serializable
 data class TrackLibraryRow(
@@ -108,6 +111,7 @@ data class TrackLibraryRow(
     val startLatitude: Double? = null,
     val startLongitude: Double? = null,
     val kind: TrackKind = TrackKind.Track,
+    val hidden: Boolean = false,
 )
 
 /**

@@ -93,7 +93,8 @@ class TrackLibrarySession(
         name: String?,
         description: String?,
         folderId: String?,
-    ): Outcome<TrackLibraryState> = mutate { access.editTrack(trackId, name, description, folderId) }
+        hidden: Boolean? = null,
+    ): Outcome<TrackLibraryState> = mutate { access.editTrack(trackId, name, description, folderId, hidden) }
 
     suspend fun moveTrack(
         trackId: String,

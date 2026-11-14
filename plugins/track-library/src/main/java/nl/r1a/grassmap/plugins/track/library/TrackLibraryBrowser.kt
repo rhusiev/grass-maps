@@ -115,6 +115,7 @@ internal object TrackLibraryBrowser {
             startLatitude = track.startLatitude,
             startLongitude = track.startLongitude,
             kind = track.kind,
+            hidden = track.hidden,
         )
 
     private fun order(

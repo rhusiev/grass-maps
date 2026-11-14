@@ -215,6 +215,8 @@
     <string name="track_library_folder">Тека</string>
     <string name="track_library_description">Опис</string>
     <string name="track_library_description_note">HTML з GPX показується як форматування тексту; скрипти й зображення видалено</string>
+    <string name="track_library_show_on_map">Показати на карті</string>
+    <string name="track_library_show_on_map_note">Коли вимкнено, трек не малюється на карті</string>
     <string name="track_library_cancel">Скасувати</string>
     <string name="track_library_save">Зберегти</string>
     <string name="track_library_folder_name">Назва теки</string>

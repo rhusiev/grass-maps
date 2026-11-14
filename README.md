@@ -274,10 +274,11 @@ detour.
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull
 request. Format, lint, build, unit tests, boundaries and manifest lint are one
-fast job; reproducibility, the API 29 emulator smoke, the native follower
-replay and the trend benchmarks run as separate jobs. The
-iOS compile job is named as pending until an iOS or Kotlin Multiplatform target
-exists, and its summary says that it verified nothing.
+fast job. Reproducibility, the API 29 emulator smoke, the native follower
+replay and the trend benchmarks run as separate jobs. The map goldens moved to
+their own workflow and are not a per-merge gate (see "Map goldens cadence"
+below). The iOS compile job is named as pending until an iOS or Kotlin
+Multiplatform target exists, and its summary says that it verified nothing.
 
 The native follower replay is a real gate, not a trend job. Ferrostar's core is
 an Android-only AAR, so every JVM test uses the `GeometryRouteFollower`
@@ -300,20 +301,42 @@ green):
 | Style and fixture map goldens (API 29, swangle) | 86 min 02 s |
 | iOS target compile (pending, no iOS target yet) | 5 s |
 
-The goldens job dominates: it took 86 minutes while every other job finished
-within the first 24, so it is the critical path and the run's wall time. Every
-other job runs in parallel, so it adds runner minutes but not wall time until
-the goldens job finishes. The native follower replay first ran in run
-`42979708400` at 7 min 04 s (6 min 43 s in the emulator step). The goldens
-job's 210-minute bound is there because successful runs took 1 h 56 m to
-2 h 01 m at the previous 150-minute bound; it is the first job to split when
-its duration is next addressed.
+The goldens job is still the longest: it took 86 minutes while every other job
+finished within the first 24. On the push path it was the run's wall time, and
+the next merge cancelled it. It now runs in the scheduled workflow, so it adds
+runner minutes but not wall time to a push run. The native follower replay
+first ran in run `42979708400` at 7 min 04 s (6 min 43 s in the emulator step).
+The goldens job's 210-minute bound is there because successful runs took
+1 h 56 m to 2 h 01 m at the previous 150-minute bound. It is the first job to
+split when its duration is next addressed.
 
 A job that regularly uses most of its timeout is the same risk as one that
 fails. Both produce a red run that says nothing about the code. Set a timeout
 from measured durations with a margin, and when successful runs approach the
 bound, split the job or raise the bound with a measured reason. Do not delete a
 slow job without recording where its work went.
+
+### Map goldens cadence
+
+The style and fixture goldens run in `.github/workflows/map-goldens.yml`, not in
+the push workflow. The workflow runs every three hours (`15 */3 * * *`) against
+`dev`, and on `workflow_dispatch` against a chosen ref. It is a cadence check,
+not a per-merge gate.
+
+A rendering change is expected to bring its own capture and comparison.
+Recapture the affected references on the same API 29 `swangle` AVD, commit them
+with the change, and dispatch the workflow on that branch. The `ref` input
+takes a branch, tag or commit. An empty value uses the branch the dispatch runs
+from. The artifact name carries the commit that was captured, so a dispatch
+from one branch against another ref still names its evidence.
+
+A cancelled run is not evidence. The push workflow still cancels a superseded
+run on the same branch, which is right for the fast jobs. For a two-hour
+capture it was wrong: merges to `dev` arrived every 20-30 minutes, the next
+merge cancelled the goldens job, and the run's conclusion read `cancelled`
+without a map comparison. The scheduled workflow sets `cancel-in-progress:
+false` and groups runs by tested ref, so a started run finishes and a branch
+dispatch does not wait behind a scheduled run.
 
 ### Runner limits
 

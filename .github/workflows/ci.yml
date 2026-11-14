@@ -109,14 +109,14 @@ jobs:
   # The Ferrostar core is an Android-only AAR, so every JVM test uses the
   # GeometryRouteFollower stand-in. This job is the only one that runs the
   # production follower, which decides where the user is on the route; it is a
-  # real gate. API 29 matches the smoke and goldens jobs and the module's
-  # minSdk 29 (the AAR itself needs only 25). The replay asserts positions, not
-  # rendered colours, so it needs swiftshader rather than the goldens' swangle.
+  # real gate. API 29 matches the smoke job and the module's minSdk 29 (the AAR
+  # itself needs only 25). The replay asserts positions, not rendered colours,
+  # so it needs swiftshader rather than the goldens' swangle.
   emulator-navigation:
     name: Native follower replay (API 29)
     runs-on: ubuntu-latest
-    # The checks job is ~11 minutes and the goldens job is ~86, so this job
-    # runs in parallel and does not move the critical path.
+    # The checks job is ~11 minutes, so this job runs in parallel and does not
+    # move the critical path.
     # The runner has no KVM; API 29 cold boots measured 117 s and 153 s, so the
     # action's 600 s boot bound holds.
     timeout-minutes: 40
@@ -158,58 +158,11 @@ jobs:
             navigation/build/outputs/androidTest-results/**
           if-no-files-found: warn
 
-  # Fixture map goldens only: the committed T-0015 fixture asset, no region
-  # package and no 59 MB archive. The whole-oblast goldens are local acceptance
-  # on gm-emulator; CI must not depend on the bench archive. The Standard style
-  # is captured light and dark over ten places at three zooms, then the T-0102
-  # fixture set is compared on the same booted emulator.
-  emulator-map-goldens:
-    name: Style and fixture map goldens (API 29, swangle)
-    runs-on: ubuntu-latest
-    # Measured, not assumed. Run 42456896336 needed ~123 minutes: the old
-    # 120-minute bound cancelled it during the last fixture. At 150 minutes the
-    # margin did not hold either - the job was cancelled at the bound on 4 of
-    # the 6 runs before 2026-11-10, and successful runs took 1 h 56 m to
-    # 2 h 01 m. A job that regularly uses 96 % of its limit is the same risk as
-    # one that fails, so the bound is 210 minutes until the capture is split.
-    timeout-minutes: 210
-    steps:
-      - name: Check out
-        uses: actions/checkout@v7
-      - name: Set up JDK 21
-        uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: '21'
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
-      - name: Set up Rust 1.93.1 with the Android targets
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: 1.93.1
-          targets: aarch64-linux-android,x86_64-linux-android
-      - name: Build the debug APK
-        run: ./gradlew --console=plain :app:assembleDebug
-      - name: Boot API 29 and compare the style goldens
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 29
-          target: default
-          arch: x86_64
-          profile: pixel_2
-          disable-animations: true
-          # swangle renders text colours correctly; swiftshader_indirect drops
-          # the green channel of every text colour, which turns light labels on
-          # the dark style magenta (T-0108). The comparator is unchanged.
-          emulator-options: -no-snapshot -no-window -gpu swangle -noaudio -no-boot-anim -camera-back none
-          script: ./scripts/ci/android-goldens-ci.sh app/build/outputs/apk/debug/app-debug.apk
-      - name: Keep the goldens and diff images
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: map-goldens-${{ github.sha }}
-          path: build/map-goldens/**
-          if-no-files-found: warn
+  # The map goldens are not on the push path. They run in
+  # .github/workflows/map-goldens.yml every three hours and on dispatch, with
+  # cancel-in-progress false. A two-hour job inside this per-branch
+  # cancel-in-progress group was cancelled by the next merge and attested to
+  # nothing.
 
   # Trend numbers only, not the Moto g32 acceptance gate. The JSON lands in
   # build/benchmarks/ and is uploaded keyed by commit. A commit that regresses

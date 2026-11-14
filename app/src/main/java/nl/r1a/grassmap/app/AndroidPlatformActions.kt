@@ -80,7 +80,7 @@ class AndroidPlatformActions(
             }
         val uri =
             try {
-                FileProvider.getUriForFile(appContext, "${appContext.packageName}$FILE_PROVIDER_SUFFIX", target)
+                FileProvider.getUriForFile(appContext, trackFileProviderAuthority(appContext.packageName), target)
             } catch (exception: IllegalArgumentException) {
                 return Outcome.Failure(AppError.Internal(SHARE_FAILED))
             }
@@ -161,11 +161,19 @@ class AndroidPlatformActions(
         const val COPY_FAILED = "platform.copy"
         const val SHARE_FAILED = "platform.share_file"
         const val SHARE_DIRECTORY = "shared-tracks"
-        const val FILE_PROVIDER_SUFFIX = ".track.files"
         const val DEFAULT_SHARE_NAME = "track.gpx"
         const val FIRST_PRINTABLE = 0x20
     }
 }
+
+/**
+ * The authority of the app's track FileProvider, `${applicationId}.track.files`
+ * (T-0410). The manifest declares it and the share import refuses a `content:`
+ * URI under it, so both sides name it the same way.
+ */
+internal fun trackFileProviderAuthority(packageName: String): String = packageName + TRACK_FILE_PROVIDER_SUFFIX
+
+private const val TRACK_FILE_PROVIDER_SUFFIX = ".track.files"
 
 /**
  * The schemes an `ACTION_VIEW` intent may carry (T-0210).

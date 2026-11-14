@@ -2639,10 +2639,13 @@ instead of guessing.
 
 `TrackShareIntent` in `app` is the rule and names no Android type. The stream
 extra names the document, the data URI is the fallback a sender uses instead,
-and only a `content:` or `file:` URI is a document. `geo:` and `https:` links
-stay on the link path, so `ACTION_VIEW` can share the rule without changing
-T-0211. The activity is `singleTop`, so a share that arrives while it runs
-reaches `onNewIntent` and the same import.
+and only a `content:` URI from another provider is a document. A `file:` URI
+names a filesystem path and is refused, and so is a `content:` URI under the
+app's own track FileProvider (`${applicationId}.track.files`): a share from
+outside must not become a way to read the app's private storage. `geo:` and
+`https:` links stay on the link path, so `ACTION_VIEW` can share the rule
+without changing T-0211. The activity is `singleTop`, so a share that arrives
+while it runs reaches `onNewIntent` and the same import.
 
 `ContentResolverSharedReader` opens the URI through the grant the intent
 carries. The app declares no storage permission and never resolves a filesystem

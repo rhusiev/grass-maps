@@ -3,7 +3,6 @@ package nl.r1a.grassmap.ui.shell
 import nl.r1a.grassmap.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Locale
 
@@ -65,8 +64,9 @@ class TrackMapCardContentTest {
         assertEquals("Колір", content.colourAction)
         assertEquals("Приховати", content.visibilityAction)
         assertEquals("7,5 км · 219 м вгору · 2 год 41 хв", content.stats)
-        assertTrue(
-            trackMapCardContent(CARD.copy(hidden = true), MapStrings(UKRAINIAN), UKRAINIAN_LOCALE).hiddenNotice == "Прихований на карті",
+        assertEquals(
+            "Прихований на карті",
+            trackMapCardContent(CARD.copy(hidden = true), MapStrings(UKRAINIAN), UKRAINIAN_LOCALE).hiddenNotice,
         )
     }
 

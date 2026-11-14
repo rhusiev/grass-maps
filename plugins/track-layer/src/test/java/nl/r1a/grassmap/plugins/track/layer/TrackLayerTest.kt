@@ -65,6 +65,27 @@ class TrackLayerTest {
         }
 
     @Test
+    fun aLibraryWithNoVisibleTrackDrawsNoFeature() =
+        runTest {
+            val tracks = MutableStateFlow(listOf(track("a", "#1B8A3A")))
+            val host = RecordingMapHost()
+            val layer = TrackLayer(tracks, { host })
+
+            val job = launch { layer.run() }
+            advanceUntilIdle()
+            assertEquals(1, host.draws.last().size)
+
+            // A hidden track never reaches this layer: the store's drawable list
+            // leaves it out, so the layer is given an empty list, not a
+            // transparent style.
+            tracks.value = emptyList()
+            advanceUntilIdle()
+            assertEquals(emptyList<MapTrack>(), host.draws.last())
+
+            job.cancel()
+        }
+
+    @Test
     fun aMissingHostIsATypedFailure() =
         runTest {
             val outcome = TrackLayer(MutableStateFlow(emptyList()), { null }).refresh()

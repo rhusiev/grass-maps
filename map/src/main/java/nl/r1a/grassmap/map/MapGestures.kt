@@ -37,6 +37,12 @@ internal object MapGestures {
     /** The furthest the finger may travel, in dp, and still count as a long press. */
     const val LONG_PRESS_MAX_TRAVEL_DP: Float = 12f
 
+    /** The longest a one-finger tap may stay down (T-0415). */
+    const val TAP_MAX_MILLIS: Long = 300L
+
+    /** The furthest a one-finger tap may travel, in dp (T-0415). */
+    const val TAP_MAX_TRAVEL_DP: Float = 12f
+
     /** A two-pointer span ratio maps to the same zoom ratio. */
     const val PINCH_ZOOM_SCALE: Double = 1.0
 

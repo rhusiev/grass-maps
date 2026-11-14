@@ -154,6 +154,13 @@
     <string name="track_analysis_untitled">Track</string>
     <string name="track_analysis_close">Close the analysis</string>
     <string name="track_analysis_follow">Follow track</string>
+    <string name="track_card_analysis">Analysis</string>
+    <string name="track_card_colour">Color</string>
+    <string name="track_card_hide">Hide</string>
+    <string name="track_card_show">Show</string>
+    <string name="track_card_hidden">Hidden on the map</string>
+    <string name="track_card_ascent">%1$s up</string>
+    <string name="track_card_colour_choice">Colour %1$s</string>
     <string name="follow_track_title">Follow %1$s</string>
     <string name="follow_track_untitled">this track</string>
     <string name="follow_track_ascent">↑%1$s m</string>

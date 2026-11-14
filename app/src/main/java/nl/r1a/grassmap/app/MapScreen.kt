@@ -131,7 +131,10 @@ import nl.r1a.grassmap.plugins.track.library.TrackLibraryContract
 import nl.r1a.grassmap.routing.selectedRoute
 import nl.r1a.grassmap.tracks.ElevationProfile
 import nl.r1a.grassmap.tracks.ElevationProfiler
+import nl.r1a.grassmap.tracks.StoredTrack
 import nl.r1a.grassmap.tracks.TrackId
+import nl.r1a.grassmap.tracks.TrackPalette
+import nl.r1a.grassmap.tracks.TrackSummary
 import nl.r1a.grassmap.ui.shell.ControlBarLabels
 import nl.r1a.grassmap.ui.shell.ControlButton
 import nl.r1a.grassmap.ui.shell.FavouritesListsHost
@@ -148,6 +151,10 @@ import nl.r1a.grassmap.ui.shell.SearchScreenHost
 import nl.r1a.grassmap.ui.shell.TrackAnalysisPanel
 import nl.r1a.grassmap.ui.shell.TrackImportNoticeBar
 import nl.r1a.grassmap.ui.shell.TrackLibraryHost
+import nl.r1a.grassmap.ui.shell.TrackMapCard
+import nl.r1a.grassmap.ui.shell.TrackMapCardAction
+import nl.r1a.grassmap.ui.shell.TrackMapCardHost
+import nl.r1a.grassmap.ui.shell.TrackTap
 import nl.r1a.grassmap.ui.shell.followTrackSheetDisplay
 import nl.r1a.grassmap.ui.shell.routePlanTurns
 import nl.r1a.grassmap.ui.shell.routeTurnStep
@@ -410,9 +417,14 @@ private fun MapContent(
                 }
             }
         }
-    // The track analysis panel (T-0404), opened by the control command until the
-    // map's track selection opens it (T-0415).
+    // The track analysis panel (T-0404), opened by the control command or by
+    // the selected track's card (T-0415).
     val analysisTrack by TrackAnalysisSession.track.collectAsState()
+    // The track a tap selected (T-0415). The card reads the sidecar summary the
+    // tap loaded, so a re-import or a colour change updates the same object.
+    var selectedTrack by remember { mutableStateOf<StoredTrack?>(null) }
+    var selectedSummary by remember { mutableStateOf<TrackSummary?>(null) }
+    var selectedFolderName by remember { mutableStateOf<String?>(null) }
     // Following a track (T-0412): the card's Follow track action asks where to
     // start. The sheet keeps the position it opened with so its hints do not
     // jitter with every fix, and Start rebuilds the route from the fix of that
@@ -722,6 +734,44 @@ private fun MapContent(
                     cameraPanned = true
                     panSequence += 1
                     navigationCamera.onManualPan()
+                }
+            },
+            onTap = { point ->
+                val id =
+                    TrackTap.hit(
+                        tracks = container.tracks.drawn.value,
+                        camera = searchCamera,
+                        viewportWidthDp = with(density) { viewport.width.toDp().value },
+                        viewportHeightDp = with(density) { viewport.height.toDp().value },
+                        tap = point,
+                        anchor = screenOffset,
+                    )
+                if (id == null) {
+                    selectedTrack = null
+                    selectedSummary = null
+                    selectedFolderName = null
+                } else {
+                    scope.launch {
+                        val summary = container.tracks.summaries().firstOrNull { row -> row.id.value == id }
+                        when (val outcome = container.tracks.stored(TrackId(id))) {
+                            is Outcome.Success -> {
+                                val stored = outcome.value
+                                selectedTrack = stored
+                                selectedSummary = summary
+                                selectedFolderName =
+                                    (summary?.listId ?: stored.listId)?.let { listId ->
+                                        container.trackFolders.find(listId)?.name
+                                    }
+                            }
+
+                            is Outcome.Failure -> {
+                                selectedTrack = null
+                                selectedSummary = null
+                                selectedFolderName = null
+                                Log.w(TAG, "selected track not loaded: ${outcome.error}")
+                            }
+                        }
+                    }
                 }
             },
         )
@@ -1102,6 +1152,71 @@ private fun MapContent(
                 onChartAxis = { axis -> chartAxis = axis },
                 time = routePreviewTime,
                 dark = isSystemInDarkTheme(),
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding(),
+            )
+        }
+        val trackCardTrack = selectedTrack
+        val trackCardSummary = selectedSummary
+        if (!navigationActive && trackCardTrack != null) {
+            TrackMapCardHost(
+                card =
+                    TrackMapCard(
+                        id = trackCardTrack.id.value,
+                        name = trackCardSummary?.name ?: trackCardTrack.name,
+                        colour = trackCardSummary?.style?.colour ?: trackCardTrack.style.colour,
+                        listName = selectedFolderName,
+                        savedAtMillis = trackCardSummary?.savedAtMillis ?: 0L,
+                        distanceMeters = trackCardTrack.analysis.distanceMeters,
+                        ascentMeters = trackCardTrack.analysis.ascentMeters,
+                        movingMillis = trackCardTrack.analysis.movingTimeMillis,
+                        hidden = trackCardSummary?.hidden ?: trackCardTrack.hidden,
+                        colours = TrackPalette.COLOURS,
+                    ),
+                strings = container.strings,
+                onAction = { action ->
+                    when (action) {
+                        TrackMapCardAction.ANALYSIS -> {
+                            TrackAnalysisSession.show(trackCardTrack)
+                            selectedTrack = null
+                            selectedSummary = null
+                            selectedFolderName = null
+                        }
+
+                        TrackMapCardAction.VISIBILITY -> {
+                            val hidden = !(trackCardSummary?.hidden ?: trackCardTrack.hidden)
+                            scope.launch {
+                                when (val outcome = container.tracks.setHidden(trackCardTrack.id, hidden)) {
+                                    is Outcome.Success -> {
+                                        selectedTrack = trackCardTrack.copy(hidden = hidden)
+                                        selectedSummary = trackCardSummary?.copy(hidden = hidden)
+                                    }
+
+                                    is Outcome.Failure -> {
+                                        Log.w(TAG, "track visibility not saved: ${outcome.error}")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                onColour = { colour ->
+                    val style = (trackCardSummary?.style ?: trackCardTrack.style).copy(colour = colour)
+                    scope.launch {
+                        when (val outcome = container.tracks.setStyle(trackCardTrack.id, style)) {
+                            is Outcome.Success -> {
+                                selectedTrack = trackCardTrack.copy(style = style)
+                                selectedSummary = trackCardSummary?.copy(style = style)
+                            }
+
+                            is Outcome.Failure -> {
+                                Log.w(TAG, "track colour not saved: ${outcome.error}")
+                            }
+                        }
+                    }
+                },
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)

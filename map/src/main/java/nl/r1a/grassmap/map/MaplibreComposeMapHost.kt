@@ -269,6 +269,7 @@ fun MapSurfaceView(
     onDistanceMeasured: (Double) -> Unit = {},
     onPointSelected: (GeoPoint) -> Unit = {},
     onManualPan: () -> Unit = {},
+    onTap: (ScreenOffset) -> Unit = {},
 ) {
     val interactions = remember { MapGestures.interactions() }
     val uiOptions = remember { MapGestures.uiOptions() }
@@ -277,6 +278,7 @@ fun MapSurfaceView(
     val distanceSink = rememberUpdatedState(onDistanceMeasured)
     val selectionSink = rememberUpdatedState(onPointSelected)
     val panSink = rememberUpdatedState(onManualPan)
+    val tapSink = rememberUpdatedState(onTap)
     val projector = remember(surface) { surface.screenProjector() }
     MaplibreMap(
         modifier =
@@ -304,6 +306,8 @@ fun MapSurfaceView(
                     detectLongPress { point ->
                         projector.geoPointAt(point)?.let { selected -> selectionSink.value(selected) }
                     }
+                }.pointerInput(surface) {
+                    detectSingleTap { point -> tapSink.value(point) }
                 }.pointerInput(surface) {
                     // Observe a one-finger drag for the navigation camera
                     // without consuming it: the map's own pan still runs.

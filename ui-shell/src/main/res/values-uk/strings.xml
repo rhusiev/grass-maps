@@ -154,6 +154,13 @@
     <string name="track_analysis_untitled">Трек</string>
     <string name="track_analysis_close">Закрити аналіз</string>
     <string name="track_analysis_follow">Рухатися треком</string>
+    <string name="track_card_analysis">Аналіз</string>
+    <string name="track_card_colour">Колір</string>
+    <string name="track_card_hide">Приховати</string>
+    <string name="track_card_show">Показати</string>
+    <string name="track_card_hidden">Прихований на карті</string>
+    <string name="track_card_ascent">%1$s вгору</string>
+    <string name="track_card_colour_choice">Колір %1$s</string>
     <string name="follow_track_title">Рухатися треком %1$s</string>
     <string name="follow_track_untitled">без назви</string>
     <string name="follow_track_ascent">↑%1$s м</string>

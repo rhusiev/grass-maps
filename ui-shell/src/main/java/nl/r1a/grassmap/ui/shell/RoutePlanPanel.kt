@@ -624,11 +624,12 @@ private fun AlternativeChips(
  * The preview card: the three values on the first row, the two actions on the
  * card's trailing row with Start outermost, because it is the primary (T-0411).
  *
- * One row for all five does not fit a 360 dp screen. At 16 sp the three values
- * alone are about 290 dp of the 312 dp the card has inside its padding in
+ * One row for all five does not fit a 360 dp screen. Font metrics put the three
+ * values at about 290 dp of the 312 dp the card has inside its padding in
  * English, and the Ukrainian time with a long model name is wider than that on
- * its own. So Save and Start take the trailing row, and the values keep the
- * running width they have today.
+ * its own. Both are estimates from glyph widths, not a device measurement. So
+ * Save and Start take the trailing row, and the values keep the running width
+ * they have today.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable

@@ -2501,11 +2501,12 @@ action beside Start, and the tap copies the displayed plan into the library. The
 design allows four elements in this card. Save is a fifth, and the user took that
 decision explicitly on 2026-11-14, so the card is not canon here.
 
-The five do not fit on one row at 360 dp. At 16 sp the three values alone come to
+The five do not fit on one row at 360 dp. Font metrics put the three values at
 about 290 dp of the 312 dp the card has inside its padding in English, and the
-Ukrainian time with a long model name is wider than that on its own. So the three
-values keep the first row and the two actions take the card's trailing row, Save
-before Start. Start holds the outer position and its white-on-action-colour look,
+Ukrainian time with a long model name is wider than that on its own. Both figures
+are estimates from glyph widths, not a device measurement. So the three values
+keep the first row and the two actions take the card's trailing row, Save before
+Start. Start holds the outer position and its white-on-action-colour look,
 because it stays the primary. Save uses the panel's ordinary chip.
 
 `RouteSave` in `app` builds the name and calls `TrackAccess.savePlannedRoute`

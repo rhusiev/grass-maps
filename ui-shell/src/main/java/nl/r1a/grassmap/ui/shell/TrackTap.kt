@@ -48,7 +48,7 @@ object TrackTap {
                             anchor = anchor,
                         )
                     val last = previous
-                    if (last != null && (last.visible || projected.visible)) {
+                    if (last != null) {
                         val distance =
                             distanceToSegment(
                                 tap = tap,

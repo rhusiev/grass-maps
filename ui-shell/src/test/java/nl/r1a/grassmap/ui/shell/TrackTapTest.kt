@@ -39,6 +39,26 @@ class TrackTapTest {
     }
 
     @Test
+    fun aLineCrossingTheViewWithBothEndsOutsideIsStillSelectable() {
+        val crossing =
+            MapTrack(
+                id = "crossing",
+                segments = listOf(listOf(GeoPoint(LAT, LON - 0.05), GeoPoint(LAT, LON + 0.05))),
+            )
+
+        val hit =
+            TrackTap.hit(
+                tracks = listOf(crossing),
+                camera = CAMERA,
+                viewportWidthDp = WIDTH_DP,
+                viewportHeightDp = HEIGHT_DP,
+                tap = ScreenOffset(WIDTH_DP / 2f, HEIGHT_DP / 2f),
+            )
+
+        assertEquals("crossing", hit)
+    }
+
+    @Test
     fun aTapClearOfEveryLineSelectsNothing() {
         assertNull(
             TrackTap.hit(

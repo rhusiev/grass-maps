@@ -319,9 +319,17 @@ slow job without recording where its work went.
 ### Map goldens cadence
 
 The style and fixture goldens run in `.github/workflows/map-goldens.yml`, not in
-the push workflow. The workflow runs every three hours (`15 */3 * * *`) against
-`dev`, and on `workflow_dispatch` against a chosen ref. It is a cadence check,
-not a per-merge gate.
+the push workflow. It fires in three ways: a **push to `dev` that touches
+something which can change a rendered frame** (the style, the sprite and font
+assets, a golden reference or the golden scripts), the **three-hourly schedule**
+(`15 */3 * * *`), and **`workflow_dispatch`** against a chosen ref. An app or
+docs push runs no goldens at all, and a rendering push gets a run that is
+allowed to finish because the workflow never cancels one that started. The
+schedule and the dispatch UI only exist once this file reaches the default
+branch, so on `dev` alone the cadence stays dormant and the push path is what
+fires.
+
+It is a cadence check, not a per-merge gate.
 
 A rendering change is expected to bring its own capture and comparison.
 Recapture the affected references on the same API 29 `swangle` AVD, commit them

@@ -10,6 +10,21 @@ name: Map goldens
 # the three-hour cadence begins after this workflow reaches main. A dispatch can
 # then run it for a chosen branch.
 on:
+  # A push that can change what the map draws runs the comparison, and is
+  # allowed to finish. Without this, a rendering change would reach dev with no
+  # goldens evidence at all until the next three-hourly run - the schedule is
+  # dormant on dev because GitHub reads schedules only from the default branch.
+  # Every path here can alter a rendered frame; anything else (app wiring,
+  # tracks, navigation, docs) does not need a two-hour emulator.
+  push:
+    branches:
+      - dev
+    paths:
+      - 'plugins/style-standard/**'   # the style itself
+      - 'app/src/main/assets/sprites/**'
+      - 'app/src/main/assets/fonts/**'
+      - 'test-data/map-goldens/**'    # the references and their fixtures
+      - 'scripts/ci/*golden*'         # the capture and comparison code
   schedule:
     # Every three hours at :15 UTC. The minute avoids the top-of-hour queue.
     - cron: '15 */3 * * *'

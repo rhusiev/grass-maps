@@ -94,6 +94,7 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         // changes no navigation policy and reaches no core internals.
         ":plugins:nav-simulator" to setOf(":plugin-api", ":navigation", ":routing"),
         ":plugins:way-alerts" to setOf(":plugin-api"),
+        ":plugins:proximity-alerts" to setOf(":plugin-api"),
         ":plugins:route-warnings" to setOf(":plugin-api"),
         ":plugins:track-layer" to setOf(":plugin-api"),
         ":plugins:route-layer" to setOf(":plugin-api"),
@@ -121,6 +122,10 @@ val moduleTestDependencyAllowlist: Map<String, Set<String>> =
         // the real reader and bridges its cues into the real alert host. Test
         // only; the plugin module itself depends on :plugin-api alone.
         ":plugins:way-alerts" to setOf(":plugin-api", ":regions", ":alerts"),
+        // T-0413: the proximity acceptance replays a track through the
+        // production session and bridges its cues into the real alert host.
+        // Test only; the plugin module itself depends on :plugin-api alone.
+        ":plugins:proximity-alerts" to setOf(":plugin-api", ":navigation", ":alerts"),
         // T-0409: the route-warning acceptance reads the committed region
         // through the real reader. Test only; the plugin depends on
         // :plugin-api alone.

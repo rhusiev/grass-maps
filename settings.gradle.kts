@@ -52,6 +52,7 @@ include(
     ":plugins:direct-engine",
     ":plugins:nav-simulator",
     ":plugins:way-alerts",
+    ":plugins:proximity-alerts",
     ":plugins:route-warnings",
     ":plugins:track-layer",
     ":plugins:route-layer",

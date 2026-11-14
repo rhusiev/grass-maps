@@ -1,0 +1,15 @@
+{
+  "id": "proximity.alerts",
+  "name": "plugin.proximity_alerts.name",
+  "description": "plugin.proximity_alerts.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.proximity.alerts.ProximityAlertsPlugin",
+  "contributes": {},
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": []
+  },
+  "activation": []
+}

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.proximity_alerts.name">Сповіщення про наближення</string>
+    <string name="plugin.proximity_alerts.description">Повідомляє про улюблені місця, точки треку та вибрані типи місць, коли ви до них наближаєтесь.</string>
+</resources>

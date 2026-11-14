@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.proximity_alerts.name">Proximity alerts</string>
+    <string name="plugin.proximity_alerts.description">Announces favourites, track waypoints and the place kinds you pick, as you come near them.</string>
+</resources>

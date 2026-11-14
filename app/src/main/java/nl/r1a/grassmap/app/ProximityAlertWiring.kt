@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.app
 
+import nl.r1a.grassmap.alerts.AlertSettings
 import nl.r1a.grassmap.navigation.NavigationPhase
 import nl.r1a.grassmap.navigation.NavigationState
 import nl.r1a.grassmap.places.FavouritesSnapshot
@@ -31,6 +32,23 @@ internal fun NavigationState.toProximityState(): ProximityState =
         fixTimeMillis = fix?.timeMillis,
         position = fix?.position,
     )
+
+/**
+ * Whether any proximity alert can be raised right now (T-0413). The schedule
+ * asks this before every lookup, so a session whose three place switches are
+ * off does no favourites, waypoint or index work at all.
+ *
+ * An on `poi` switch with no chosen kind cannot alert either, because the
+ * schedule has nothing to match. Round 8's alerts page will write both the
+ * switches and the chips; until it exists this is false for every session.
+ */
+internal fun proximityAlertsPossible(
+    settings: AlertSettings,
+    poiKinds: Set<String>,
+): Boolean =
+    settings.favourite ||
+        settings.trackWaypoint ||
+        (settings.poi && poiKinds.isNotEmpty())
 
 /**
  * The places a proximity alert can announce (T-0413): the favourites library,

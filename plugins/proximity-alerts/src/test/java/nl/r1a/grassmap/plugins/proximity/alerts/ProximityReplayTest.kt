@@ -96,6 +96,18 @@ class ProximityReplayTest {
         }
 
     @Test
+    fun withEveryProximitySwitchOffNoPlaceLookupRunsOverALongReplay() =
+        runTest {
+            val route = lineRoute(ROUTE_METERS)
+            val alongs = steps(0.0, TRAVEL_METERS, FIX_STEP_METERS)
+
+            val replay = replayProximity(route, alongs, AlertSettings.ALL_OFF, allThreePlaces(route), setOf(CAFE_KIND))
+
+            assertEquals("the replay really lasted", 81, replay.states.size)
+            assertEquals("a session with every place kind off looks nothing up", 0, replay.sourceCalls)
+        }
+
+    @Test
     fun eachKindThatIsOffProducesNoAlertOfThatKind() =
         runTest {
             val route = lineRoute(ROUTE_METERS)

@@ -22,6 +22,7 @@ import nl.r1a.grassmap.navigation.PolylineLocator
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.model.BoundingBox
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.ProximityPlaceKind
@@ -70,10 +71,41 @@ internal data class ProximityReplay(
     val alerts: List<AlertEvent>,
     val effects: List<AlertEffect>,
     val states: List<NavigationState>,
+    val sourceCalls: Int,
 ) {
     val kinds: List<AlertKind>
         get() = alerts.map { it.kind }
 }
+
+/** A source that counts how often the schedule asked it, for the inertness test. */
+internal class CountingProximitySource(
+    private val places: List<ProximityPlace> = emptyList(),
+) : ProximityPlaceSource {
+    var calls: Int = 0
+        private set
+
+    override suspend fun places(
+        box: BoundingBox,
+        poiKinds: Set<String>,
+    ): ProximityPlaces {
+        calls += 1
+        return ProximityPlaces(places)
+    }
+}
+
+/**
+ * The switch gate the app uses, in the same three clauses: any place switch on,
+ * and an on `poi` switch with at least one chosen kind.
+ *
+ * The plugin module cannot see `:app`, so this is a copy of
+ * `proximityAlertsPossible` there, kept to four lines on purpose.
+ * `ProximityAlertWiringTest` pins the app's own copy, so a change to the rule
+ * fails on the side that ships.
+ */
+internal fun placeAlertsPossible(
+    settings: AlertSettings,
+    poiKinds: Set<String>,
+): Boolean = settings.favourite || settings.trackWaypoint || (settings.poi && poiKinds.isNotEmpty())
 
 /**
  * The T-0412 replay harness, in the shape the proximity acceptance needs: one
@@ -99,10 +131,12 @@ internal suspend fun TestScope.replayProximity(
     backgroundScope.launch(UnconfinedTestDispatcher(testScheduler), start = CoroutineStart.UNDISPATCHED) {
         alerts.events.collect { events += it }
     }
+    val source = CountingProximitySource(places)
     val proximity =
         ProximityAlertHost(
-            source = { _, _ -> ProximityPlaces(places) },
+            source = source,
             poiKinds = { poiKinds },
+            canAlert = { placeAlertsPossible(alerts.settings.value, poiKinds) },
             sink = { cue ->
                 alerts.onPlaceAlert(
                     placeKind = cue.place.kind,
@@ -133,7 +167,7 @@ internal suspend fun TestScope.replayProximity(
         is Outcome.Success -> Unit
         is Outcome.Failure -> throw AssertionError("the replay failed: ${run.error}")
     }
-    return ProximityReplay(events, effectSink.effects, states)
+    return ProximityReplay(events, effectSink.effects, states, source.calls)
 }
 
 /**

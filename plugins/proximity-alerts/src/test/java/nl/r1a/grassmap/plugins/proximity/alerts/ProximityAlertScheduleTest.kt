@@ -22,7 +22,7 @@ class ProximityAlertScheduleTest {
         runTest {
             val street = street()
             val favourite = street.place(ProximityPlaceKind.Favourite, 300.0, "Home")
-            val schedule = ProximityAlertSchedule(source = street.source(listOf(favourite)))
+            val schedule = ProximityAlertSchedule(source = street.source(listOf(favourite)), canAlert = { true })
 
             val cues = mutableListOf<ProximityAlertCue>()
             for (along in steps(0.0, 600.0, 10.0)) {
@@ -40,7 +40,7 @@ class ProximityAlertScheduleTest {
         runTest {
             val street = street()
             val favourite = street.place(ProximityPlaceKind.Favourite, 300.0, "Home")
-            val schedule = ProximityAlertSchedule(source = street.source(listOf(favourite)))
+            val schedule = ProximityAlertSchedule(source = street.source(listOf(favourite)), canAlert = { true })
 
             val outbound = steps(0.0, 450.0, 10.0)
             val back = steps(440.0, 40.0, -10.0)
@@ -56,7 +56,7 @@ class ProximityAlertScheduleTest {
         runTest {
             val street = street()
             val favourite = street.place(ProximityPlaceKind.Favourite, 300.0, "Home")
-            val schedule = ProximityAlertSchedule(source = street.source(listOf(favourite)))
+            val schedule = ProximityAlertSchedule(source = street.source(listOf(favourite)), canAlert = { true })
 
             val outbound = steps(0.0, 450.0, 10.0)
             val shortBack = steps(440.0, 60.0, -10.0)
@@ -77,6 +77,7 @@ class ProximityAlertScheduleTest {
                 ProximityAlertSchedule(
                     source = street.source(listOf(cafe, pharmacy)),
                     poiKinds = { setOf(CAFE_KIND) },
+                    canAlert = { true },
                 )
 
             val cues = mutableListOf<ProximityAlertCue>()
@@ -93,7 +94,7 @@ class ProximityAlertScheduleTest {
         runTest {
             val street = street()
             val favourite = street.place(ProximityPlaceKind.Favourite, 300.0, "Home")
-            val schedule = ProximityAlertSchedule(source = street.source(listOf(favourite)))
+            val schedule = ProximityAlertSchedule(source = street.source(listOf(favourite)), canAlert = { true })
 
             val firstTrip = steps(0.0, 400.0, 10.0).flatMap { along -> schedule.onState(street.state(along)) }
             schedule.onState(ProximityState(active = false))
@@ -108,7 +109,7 @@ class ProximityAlertScheduleTest {
         runTest {
             val street = street()
             val favourite = street.place(ProximityPlaceKind.Favourite, 300.0, "Home")
-            val schedule = ProximityAlertSchedule(source = street.source(listOf(favourite)))
+            val schedule = ProximityAlertSchedule(source = street.source(listOf(favourite)), canAlert = { true })
 
             schedule.onState(street.state(0.0))
             val inside = steps(100.0, 300.0, 10.0).flatMap { along -> schedule.onState(street.state(along)) }
@@ -125,7 +126,7 @@ class ProximityAlertScheduleTest {
         runTest {
             val street = street(countingSource = true)
             val favourite = street.place(ProximityPlaceKind.Favourite, 300.0, "Home")
-            val schedule = ProximityAlertSchedule(source = street.source(listOf(favourite)))
+            val schedule = ProximityAlertSchedule(source = street.source(listOf(favourite)), canAlert = { true })
 
             steps(0.0, 190.0, 10.0).forEach { along -> schedule.onState(street.state(along)) }
             val askedOnce = street.sourceCalls
@@ -141,11 +142,51 @@ class ProximityAlertScheduleTest {
     fun anEmptyLookupIsNotRepeatedOnEveryFix() =
         runTest {
             val street = street(countingSource = true)
-            val schedule = ProximityAlertSchedule(source = street.source(emptyList()))
+            val schedule = ProximityAlertSchedule(source = street.source(emptyList()), canAlert = { true })
 
             steps(0.0, 100.0, 10.0).forEach { along -> schedule.onState(street.state(along)) }
 
             assertEquals("no place found still means one lookup, not one per fix", 1, street.sourceCalls)
+        }
+
+    @Test
+    fun noLookupRunsWhileNoPlaceAlertIsPossible() =
+        runTest {
+            val street = street(countingSource = true)
+            val favourite = street.place(ProximityPlaceKind.Favourite, 300.0, "Home")
+            val schedule =
+                ProximityAlertSchedule(
+                    source = street.source(listOf(favourite)),
+                    canAlert = { false },
+                )
+
+            val cues = steps(0.0, 800.0, 10.0).flatMap { along -> schedule.onState(street.state(along)) }
+
+            assertTrue(cues.isEmpty())
+            assertEquals("a closed gate asks the source nothing", 0, street.sourceCalls)
+        }
+
+    @Test
+    fun openingTheGateAfterAClosedStretchStartsTheLookups() =
+        runTest {
+            var possible = false
+            val street = street(countingSource = true)
+            val favourite = street.place(ProximityPlaceKind.Favourite, 450.0, "Home")
+            val schedule =
+                ProximityAlertSchedule(
+                    source = street.source(listOf(favourite)),
+                    canAlert = { possible },
+                )
+
+            val closed = steps(0.0, 400.0, 10.0).flatMap { along -> schedule.onState(street.state(along)) }
+            val closedCalls = street.sourceCalls
+            possible = true
+            val opened = schedule.onState(street.state(410.0))
+
+            assertTrue(closed.isEmpty())
+            assertEquals(0, closedCalls)
+            assertEquals("opening the gate asks once", 1, street.sourceCalls)
+            assertEquals("the place is already inside its radius", 1, opened.size)
         }
 
     private fun street(countingSource: Boolean = false): Street = Street(countingSource)

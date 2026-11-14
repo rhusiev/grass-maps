@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.app
 
 import kotlinx.coroutines.test.runTest
+import nl.r1a.grassmap.alerts.AlertSettings
 import nl.r1a.grassmap.navigation.NavigationPhase
 import nl.r1a.grassmap.navigation.NavigationState
 import nl.r1a.grassmap.places.Favourite
@@ -148,6 +149,24 @@ class ProximityAlertWiringTest {
         assertTrue(box.contains(CENTRE))
         assertTrue("the box reaches past the longest radius", box.contains(fourHundredMetresEast))
         assertTrue("the far place is outside the lookup", !box.contains(GeoPoint(50.0, 25.0)))
+    }
+
+    @Test
+    fun theGateOpensOnlyWhenAPlaceKindCanAlert() {
+        assertEquals(false, proximityAlertsPossible(AlertSettings.ALL_OFF, emptySet()))
+        assertEquals(
+            "an on poi switch with no chosen kind has nothing to match",
+            false,
+            proximityAlertsPossible(AlertSettings(poi = true), emptySet()),
+        )
+        assertEquals(true, proximityAlertsPossible(AlertSettings(poi = true), setOf(CAFE_KIND)))
+        assertEquals(true, proximityAlertsPossible(AlertSettings(favourite = true), emptySet()))
+        assertEquals(true, proximityAlertsPossible(AlertSettings(trackWaypoint = true), emptySet()))
+        assertEquals(
+            "the way-alert switches do not open the place gate",
+            false,
+            proximityAlertsPossible(AlertSettings(tunnel = true, railwayCrossing = true, hazard = true), emptySet()),
+        )
     }
 
     private fun box() = ProximityBox.around(CENTRE, 500.0)

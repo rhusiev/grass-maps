@@ -478,6 +478,15 @@ class AppContainer(
      * off-by-default switches. The source reads the favourites library, the
      * stored tracks and the offline index; the collector starts on the first
      * access and follows the same published state the notification reads.
+     *
+     * [ProximityAlertHost.canAlert] is this wiring's answer to whether any
+     * place alert can be raised: one of the three [AlertHost] switches is on,
+     * and an on `poi` switch has at least one kind to look for. While that is
+     * false the schedule does no lookup at all, because round 8's alerts page
+     * - the page that will own these switches and the chip list - is designed
+     * but not built. The kinds become reachable when that page supplies them;
+     * this container holds the switches in [alerts] and the chip list in
+     * [proximityPoiKinds] for it.
      */
     val proximityAlerts: ProximityAlertHost by lazy {
         ProximityAlertHost(
@@ -497,6 +506,7 @@ class AppContainer(
                     log = { message -> Log.i(PROXIMITY_ALERTS_TAG, message) },
                 ),
             poiKinds = { proximityPoiKinds.value },
+            canAlert = { proximityAlertsPossible(alerts.settings.value, proximityPoiKinds.value) },
             sink =
                 ProximityAlertSink { cue ->
                     alerts.onPlaceAlert(

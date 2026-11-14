@@ -113,10 +113,20 @@ private fun ProximityPlace.key(): PlaceKey = PlaceKey(kind, id)
  * and every [ProximityRadius.REFRESH_METERS] of travel. A failed lookup is the
  * source's to report; it returns the places it does have, and an empty result
  * means no place is due rather than an error.
+ *
+ * [canAlert] is the caller's answer to "can any place alert be raised right
+ * now". The app answers it from the alert host's switches and the chosen place
+ * kinds, so a session whose three place switches are off does no lookup at all:
+ * a place alert needs its switch on, and looking for places nothing can
+ * announce would spend every session's work on an alert that is dropped. While
+ * the gate is closed the schedule keeps no places and no latches. Opening it
+ * mid-session is therefore a fresh start: the next lookup announces a place the
+ * traveller is already inside, because no lookup ran while it was closed.
  */
 class ProximityAlertSchedule(
     private val source: ProximityPlaceSource = NoProximityPlaces,
     private val poiKinds: () -> Set<String> = { emptySet() },
+    private val canAlert: () -> Boolean,
     private val log: (String) -> Unit = {},
 ) {
     private var places: List<ProximityPlace> = emptyList()
@@ -141,7 +151,7 @@ class ProximityAlertSchedule(
     }
 
     private suspend fun evaluate(state: ProximityState): List<ProximityAlertCue> {
-        if (!state.active) {
+        if (!state.active || !canAlert()) {
             clear()
             return emptyList()
         }
@@ -220,9 +230,10 @@ class ProximityAlertHost(
     constructor(
         source: ProximityPlaceSource,
         poiKinds: () -> Set<String> = { emptySet() },
+        canAlert: () -> Boolean,
         sink: ProximityAlertSink = NoopProximityAlertSink,
         log: (String) -> Unit = {},
-    ) : this(ProximityAlertSchedule(source, poiKinds, log), sink)
+    ) : this(ProximityAlertSchedule(source, poiKinds, canAlert, log), sink)
 
     /** Forgets the places and every announcement, for a new session. */
     suspend fun reset() {

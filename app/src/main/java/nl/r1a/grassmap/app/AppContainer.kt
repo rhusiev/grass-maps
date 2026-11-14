@@ -4,6 +4,7 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import nl.r1a.grassmap.alerts.AlertEffectSink
@@ -46,6 +47,7 @@ import nl.r1a.grassmap.places.SearchScreenSession
 import nl.r1a.grassmap.places.searchHistoryCommands
 import nl.r1a.grassmap.places.searchScreenCommands
 import nl.r1a.grassmap.plugin.api.command.Command
+import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.error.AppError
@@ -82,6 +84,8 @@ import nl.r1a.grassmap.plugins.map.controls.PositionOffsetFraction
 import nl.r1a.grassmap.plugins.map.controls.PositionOffsetProvider
 import nl.r1a.grassmap.plugins.point.info.PointInfo
 import nl.r1a.grassmap.plugins.point.info.SelectedPointStore
+import nl.r1a.grassmap.plugins.proximity.alerts.ProximityAlertHost
+import nl.r1a.grassmap.plugins.proximity.alerts.ProximityAlertSink
 import nl.r1a.grassmap.plugins.route.layer.RouteLayer
 import nl.r1a.grassmap.plugins.route.warnings.RouteWarningScanner
 import nl.r1a.grassmap.plugins.track.layer.TrackLayer
@@ -460,6 +464,57 @@ class AppContainer(
     }
 
     /**
+     * The place kinds the user picked for proximity alerts (T-0413). The
+     * design handoff (round 8) gives alerts one page of their own, which does
+     * not exist yet, so nothing writes this value today and every place kind
+     * stays silent. The list holds exact index kinds ("amenity=cafe"), as the
+     * chips on that page will.
+     */
+    val proximityPoiKinds: MutableStateFlow<Set<String>> = MutableStateFlow(emptySet())
+
+    /**
+     * Proximity alerts (T-0413): a favourite, a track waypoint or a chosen
+     * place kind announced once per approach, through the alert host's own
+     * off-by-default switches. The source reads the favourites library, the
+     * stored tracks and the offline index; the collector starts on the first
+     * access and follows the same published state the notification reads.
+     */
+    val proximityAlerts: ProximityAlertHost by lazy {
+        ProximityAlertHost(
+            source =
+                LibraryProximityPlaces(
+                    favourites = { favourites.load() },
+                    tracks = { tracks.storedTracks() },
+                    pois = { box, kinds ->
+                        places.pois(
+                            indexName = SearchScreenSession.DEFAULT_INDEX,
+                            bbox = box,
+                            categories = kinds,
+                            limit = PROXIMITY_POI_LIMIT,
+                            cancellation = CancellationHandle.None,
+                        )
+                    },
+                    log = { message -> Log.i(PROXIMITY_ALERTS_TAG, message) },
+                ),
+            poiKinds = { proximityPoiKinds.value },
+            sink =
+                ProximityAlertSink { cue ->
+                    alerts.onPlaceAlert(
+                        placeKind = cue.place.kind,
+                        fixTimeMillis = cue.fixTimeMillis,
+                        distanceMeters = cue.distanceMeters,
+                        placeName = cue.place.name,
+                    )
+                },
+            log = { message -> Log.i(PROXIMITY_ALERTS_TAG, message) },
+        ).also { host ->
+            processScope.launch {
+                navigation.state.collect { state -> host.onState(state.toProximityState()) }
+            }
+        }
+    }
+
+    /**
      * The offline search indexes over the app's external files directory, with
      * the coordinate parser in front of them (T-0206): a typed coordinate is a
      * result row even when no index is installed.
@@ -701,7 +756,7 @@ class AppContainer(
     private val hostCommands: List<Command<*, *>> by lazy {
         mapCommands(mapSession, locationController, locationPermission, cameraModes) +
             routeCommands(mapSession, routingEngine, { dataSources }) +
-            navCommands(mapSession, routingEngine, navigation, { beeps }, { wayAlerts }, { alerts }) +
+            navCommands(mapSession, routingEngine, navigation, { beeps }, { wayAlerts }, { proximityAlerts }, { alerts }) +
             searchCommands { places } +
             searchScreenCommands(searchScreen, searchHistory) { message -> Log.i(SEARCH_TAG, message) } +
             searchHistoryCommands(searchHistory) +
@@ -816,10 +871,15 @@ class AppContainer(
         const val FAVOURITES_TAG = "GrassMapsFavourites"
         const val NAVIGATION_TAG = "GrassMapsNavigation"
         const val WAY_ALERTS_TAG = "GrassMapsWayAlerts"
+        const val PROXIMITY_ALERTS_TAG = "GrassMapsProximityAlerts"
         const val TRACK_LAYER_TAG = "GrassMapsTracks"
         const val ROUTE_LAYER_TAG = "GrassMapsRoute"
         const val TRACK_LIBRARY_INDEX = ".library.json"
         const val ROUTING_PACK_DIRECTORY = "valhalla"
+
+        /** The most places one proximity lookup asks the index for (T-0413). */
+        const val PROXIMITY_POI_LIMIT = 50
+
         val ROUTING_ENGINE_PLUGIN = PluginId("valhalla")
         val ONLINE_SEARCH_PLUGIN = PluginId("online.search")
     }

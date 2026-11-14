@@ -37,6 +37,7 @@ import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteRequest
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
+import nl.r1a.grassmap.plugins.proximity.alerts.ProximityAlertHost
 import nl.r1a.grassmap.plugins.way.alerts.WayAlertHost
 import nl.r1a.grassmap.routing.RouteJson
 
@@ -260,11 +261,12 @@ internal fun navCommands(
     navigation: NavigationController,
     beeps: () -> BeepHost,
     wayAlerts: () -> WayAlertHost,
+    proximityAlerts: () -> ProximityAlertHost,
     alerts: () -> AlertHost,
 ): List<Command<*, *>> =
     listOf(
         TestFollowCommand(session, engine),
-        StartNavigationCommand(navigation, beeps, wayAlerts),
+        StartNavigationCommand(navigation, beeps, wayAlerts, proximityAlerts),
         PauseNavigationCommand(navigation),
         ResumeNavigationCommand(navigation),
         StopNavigationCommand(navigation),
@@ -286,6 +288,7 @@ internal class StartNavigationCommand(
     private val navigation: NavigationController,
     private val beeps: () -> BeepHost,
     private val wayAlerts: () -> WayAlertHost,
+    private val proximityAlerts: () -> ProximityAlertHost,
 ) : Command<JsonElement, String>(
         id = NAV_START_COMMAND,
         paramsSerializer = JsonElement.serializer(),
@@ -302,6 +305,7 @@ internal class StartNavigationCommand(
         beeps().setProfile(selection.profile)
         wayAlerts().setProfile(selection.profile)
         wayAlerts().reset()
+        proximityAlerts().reset()
         return when (val outcome = navigation.start(selection.route, selection.profile)) {
             is Outcome.Failure -> {
                 outcome

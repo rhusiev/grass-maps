@@ -189,6 +189,7 @@ dependencies {
     implementation(project(":plugins:direct-engine"))
     implementation(project(":plugins:nav-simulator"))
     implementation(project(":plugins:way-alerts"))
+    implementation(project(":plugins:proximity-alerts"))
     implementation(project(":plugins:route-warnings"))
     implementation(project(":plugins:track-layer"))
     implementation(project(":plugins:route-layer"))

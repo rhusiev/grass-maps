@@ -208,7 +208,29 @@ class PlannedRouteSaveTest {
             val route = reread.tracks.single()
             assertEquals(TrackKind.Route, route.kind)
             assertEquals(GEOMETRY, route.storedGeometry())
-            assertNull("an export carries no recompute sidecar", route.recompute)
+            assertEquals("the export carries no sidecar, so the re-import keeps the saved one", saved.recompute, route.recompute)
+        }
+
+    @Test
+    fun aReimportOfASavedRouteKeepsItsRecomputeSidecar() =
+        runTest {
+            val access = access()
+            val saved = saved(access.savePlannedRoute(readyPlan(), NAME))
+            val sidecar = root.listFiles().orEmpty().single { file -> file.name.endsWith(".route.json") }
+            val exportedFile = exported(TrackExport(access, RecordingPlatformActions()).fileFor(saved.id))
+
+            val reread = import(access, "saved-route.gpx", exportedFile.bytes)
+
+            assertEquals("the re-import is the same record", saved.id, reread.tracks.single().id)
+            assertTrue("the route sidecar survives a re-import", sidecar.isFile)
+            assertEquals(saved.recompute, stored(access, saved.id).recompute)
+
+            val engine =
+                RecordingEngine(Outcome.Success(listOf(Route(geometry = ENGINE_GEOMETRY, distanceMeters = 1.0, durationSeconds = 2.0))))
+            val recomputed = recomputed(access.recomputeRoute(saved.id, engine))
+
+            assertEquals(RouteGeometrySource.Engine, recomputed.source)
+            assertEquals(ENGINE_GEOMETRY, recomputed.geometry)
         }
 
     private fun access(): TrackAccess =

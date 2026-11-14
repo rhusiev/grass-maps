@@ -1467,10 +1467,11 @@ facts over all 20 points. Results are in `test-data/location/README.md`.
 
 The navigation screen is T-0320. It appears for `Following`, `Rerouting`,
 `Paused` and `Arrived`, and `Done` on the arrival card calls
-`NavigationController.dismiss()`, which clears the finished state. Starting a
-route from the planner starts the live session directly; the planner's own Start
-command still answers `Unsupported`, so the screen is reached through the
-planner, `core.nav.start` or the debug replay.
+`NavigationController.dismiss()`, which clears the finished state. The planner's
+Start and the follow-track sheet's Start both start the live session through
+`GuidanceStarter`; the planner's own Start command still answers `Unsupported`,
+so the screen is reached through those two sheets, `core.nav.start` or the debug
+replay.
 
 The round 5 layout is `ui-shell`'s `NavigationScreenHost`: the read-only turn
 card at the top (`plugins/guidance-ui`), the next-stop and current-speed glass
@@ -1557,6 +1558,18 @@ The control commands `core.nav.start`, `core.nav.pause`, `core.nav.resume` and
 `test-data/navigation/nav-route.json`. A second start while a session runs
 reports `started=false` and changes nothing. A stop without a session changes
 nothing.
+
+Every path that starts a trip goes through `GuidanceStarter.start`: the
+planner's Start, the follow-track sheet's Start and `core.nav.start`. It points
+the beep host and both alert hosts at the caller's profile. It resets the
+way-alert and proximity caches and latches. Then it starts the session. This
+closes the defect from before T-0413: the planner and the follow-track sheet
+started the controller directly and left every alert inert. A start that the
+controller refuses leaves those hosts reset for the next attempt, because no
+session runs and no latch of a running session is cleared. A second start while
+a session runs does not touch the hosts at all, so the running session keeps its
+profile, route cache and latches. The profile is the caller's choice. Both UI
+sheets use Walk today.
 
 Location is shared, not process-scoped (T-0314, user decision Q10 on
 2026-11-08). The map's collector and an active session subscribe to
@@ -1658,7 +1671,7 @@ profile's nominal speed:
 
 One value cannot serve every profile: 100 m is 72 s of walking and seven
 seconds of driving. `BeepDistance` holds the three values, and
-`core.nav.start` sets the profile on the host before a session starts.
+`GuidanceStarter.start` sets the profile on the host before a session starts.
 
 A turn is armed when the next instruction is seen farther than the distance and
 beeps on the first later state that reports the same turn at or inside it. A
@@ -1711,10 +1724,11 @@ The g32 run used `test-data/navigation/beep-route.json`, logged two beeps at
 transcript is in `test-data/navigation/evidence/t-0318-g32-beeps.txt`.
 
 The live path is also wired: `AppContainer` attaches the host to
-`NavigationController.state`, and `core.nav.start` sets the profile before a
-session starts. On the g32 probe the live replay did not deliver fixes to that
-controller, so the device evidence comes from the probe command; the live
-attachment itself was not exercised on the phone. What remains: a screen that
+`NavigationController.state`, and `GuidanceStarter.start` sets the profile before
+a session starts, whichever sheet or command starts it. On the g32 probe the
+live replay did not deliver fixes to that controller, so the device evidence
+comes from the probe command; the live attachment itself was not exercised on
+the phone. What remains: a screen that
 exposes the beep mode and its distance, the way alerts described next, and the
 real music-app pause behaviour. The pause mode only requests focus; whether a
 particular player pauses on the loss is the player's decision, so it was not

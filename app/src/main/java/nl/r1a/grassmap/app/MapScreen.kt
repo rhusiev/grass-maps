@@ -1054,7 +1054,7 @@ private fun MapContent(
                                 segments = selected.segments,
                                 instructions = selected.instructions,
                             )
-                        when (val outcome = container.navigation.start(route, RouteProfile.Walk)) {
+                        when (val outcome = container.guidance.start(route, RouteProfile.Walk)) {
                             is Outcome.Failure -> {
                                 Toast.makeText(context, R.string.route_planner_start_unavailable, Toast.LENGTH_LONG).show()
                                 Log.w(TAG, "route start failed: ${outcome.error}")
@@ -1148,28 +1148,30 @@ private fun MapContent(
                 dark = isSystemInDarkTheme(),
                 onSelect = { start -> followSheet = openFollowSheet.copy(selected = start) },
                 onStart = {
-                    val route = openFollowSheet.track.followRoute(openFollowSheet.selected, followPosition)
-                    if (route == null) {
-                        Log.w(TAG, "track follow built no route")
-                    } else {
-                        when (val outcome = container.navigation.start(route, RouteProfile.Walk, reroute = false)) {
-                            is Outcome.Failure -> {
-                                val message =
-                                    if (outcome.error == AppError.PermissionDenied) {
-                                        R.string.location_permission_denied
-                                    } else {
-                                        R.string.route_planner_start_unavailable
-                                    }
-                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                                Log.w(TAG, "track follow start failed: ${outcome.error}")
-                            }
+                    scope.launch {
+                        val route = openFollowSheet.track.followRoute(openFollowSheet.selected, followPosition)
+                        if (route == null) {
+                            Log.w(TAG, "track follow built no route")
+                        } else {
+                            when (val outcome = container.guidance.start(route, RouteProfile.Walk, reroute = false)) {
+                                is Outcome.Failure -> {
+                                    val message =
+                                        if (outcome.error == AppError.PermissionDenied) {
+                                            R.string.location_permission_denied
+                                        } else {
+                                            R.string.route_planner_start_unavailable
+                                        }
+                                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                    Log.w(TAG, "track follow start failed: ${outcome.error}")
+                                }
 
-                            is Outcome.Success -> {
-                                navigationDestination = openFollowSheet.track.name?.takeIf { it.isNotBlank() }
-                                navigationNextStop = null
-                                navigationSheet = NavigationSheet.Collapsed
-                                followSheet = null
-                                TrackAnalysisSession.hide()
+                                is Outcome.Success -> {
+                                    navigationDestination = openFollowSheet.track.name?.takeIf { it.isNotBlank() }
+                                    navigationNextStop = null
+                                    navigationSheet = NavigationSheet.Collapsed
+                                    followSheet = null
+                                    TrackAnalysisSession.hide()
+                                }
                             }
                         }
                     }

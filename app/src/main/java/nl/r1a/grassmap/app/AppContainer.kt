@@ -440,7 +440,7 @@ class AppContainer(
      * Way alerts over the live navigation state (T-0319). The schedule asks
      * the region for the features on each route revision and the sink bridges
      * a due cue into the alert host's typed banner and effect path. The first
-     * access starts the collector; `core.nav.start` sets the profile.
+     * access starts the collector; [guidance] sets the profile.
      */
     val wayAlerts: WayAlertHost by lazy {
         WayAlertHost(
@@ -522,6 +522,16 @@ class AppContainer(
                 navigation.state.collect { state -> host.onState(state.toProximityState()) }
             }
         }
+    }
+
+    /**
+     * The one path that starts guidance (T-0413): it points the tone source and
+     * both alert hosts at the profile and resets them before the session, then
+     * starts it. The planner's Start, the follow-track Start and `core.nav.start`
+     * all call it; see [GuidanceStarter].
+     */
+    internal val guidance: GuidanceStarter by lazy {
+        GuidanceStarter(navigation, { beeps }, { wayAlerts }, { proximityAlerts })
     }
 
     /**
@@ -766,7 +776,7 @@ class AppContainer(
     private val hostCommands: List<Command<*, *>> by lazy {
         mapCommands(mapSession, locationController, locationPermission, cameraModes) +
             routeCommands(mapSession, routingEngine, { dataSources }) +
-            navCommands(mapSession, routingEngine, navigation, { beeps }, { wayAlerts }, { proximityAlerts }, { alerts }) +
+            navCommands(mapSession, routingEngine, navigation, guidance, { beeps }, { alerts }) +
             searchCommands { places } +
             searchScreenCommands(searchScreen, searchHistory) { message -> Log.i(SEARCH_TAG, message) } +
             searchHistoryCommands(searchHistory) +

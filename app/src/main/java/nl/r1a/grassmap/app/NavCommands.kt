@@ -37,8 +37,6 @@ import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteRequest
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
-import nl.r1a.grassmap.plugins.proximity.alerts.ProximityAlertHost
-import nl.r1a.grassmap.plugins.way.alerts.WayAlertHost
 import nl.r1a.grassmap.routing.RouteJson
 
 /** The debug trigger that proves the navigation seam on a replay. */
@@ -259,14 +257,13 @@ internal fun navCommands(
     session: MapSessionHolder,
     engine: suspend () -> RoutingEngine?,
     navigation: NavigationController,
+    guidance: GuidanceStarter,
     beeps: () -> BeepHost,
-    wayAlerts: () -> WayAlertHost,
-    proximityAlerts: () -> ProximityAlertHost,
     alerts: () -> AlertHost,
 ): List<Command<*, *>> =
     listOf(
         TestFollowCommand(session, engine),
-        StartNavigationCommand(navigation, beeps, wayAlerts, proximityAlerts),
+        StartNavigationCommand(navigation, guidance),
         PauseNavigationCommand(navigation),
         ResumeNavigationCommand(navigation),
         StopNavigationCommand(navigation),
@@ -281,14 +278,18 @@ internal fun navCommands(
  * requested here, so the command works without a routing pack; that is also
  * how the emulator acceptance drives the foreground service.
  *
+ * The session is started through [GuidanceStarter], the same entry point the
+ * planner's Start and the follow-track Start use, so the tone source and both
+ * alert hosts are prepared here exactly as they are for a trip the user starts
+ * from the UI.
+ *
  * A second start while a session runs is not an error: it reports
- * `started=false` and leaves the running session and its route untouched.
+ * `started=false` and leaves the running session, its route and its alert
+ * latches untouched.
  */
 internal class StartNavigationCommand(
     private val navigation: NavigationController,
-    private val beeps: () -> BeepHost,
-    private val wayAlerts: () -> WayAlertHost,
-    private val proximityAlerts: () -> ProximityAlertHost,
+    private val guidance: GuidanceStarter,
 ) : Command<JsonElement, String>(
         id = NAV_START_COMMAND,
         paramsSerializer = JsonElement.serializer(),
@@ -302,11 +303,7 @@ internal class StartNavigationCommand(
     ) {
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
         val selection = parse(params) ?: return Outcome.Failure(AppError.InvalidInput)
-        beeps().setProfile(selection.profile)
-        wayAlerts().setProfile(selection.profile)
-        wayAlerts().reset()
-        proximityAlerts().reset()
-        return when (val outcome = navigation.start(selection.route, selection.profile)) {
+        return when (val outcome = guidance.start(selection.route, selection.profile)) {
             is Outcome.Failure -> {
                 outcome
             }

@@ -153,8 +153,8 @@ class StandardPositionsTest(unittest.TestCase):
     def test_route_positions_extend_the_standard_capture(self) -> None:
         positions = map_goldens.cases("standard")
 
-        self.assertEqual(38, len(positions))
-        self.assertEqual(38, len({position[0] for position in positions}))
+        self.assertEqual(40, len(positions))
+        self.assertEqual(40, len({position[0] for position in positions}))
         self.assertEqual(
             {"route-turns-z14", "route-turns-z15", "route-colours-z14", "route-colours-z15"},
             set(map_goldens.ROUTE_POSITION_NAMES),
@@ -202,6 +202,21 @@ class StandardPositionsTest(unittest.TestCase):
         self.assertEqual(5, len(component["relations"]))
         self.assertEqual(5, len(component["nodes"]))
         self.assertEqual({"lcn", "rcn"}, {node["network"] for node in component["nodes"]})
+
+    def test_track_positions_carry_their_track_sets(self) -> None:
+        positions = map_goldens.cases("standard")
+
+        names = {"track-looks-z15", "track-looks-hidden-z15"}
+        self.assertEqual(names, set(map_goldens.TRACK_POSITION_NAMES))
+        self.assertTrue(names.issubset({position[0] for position in positions}))
+        both = json.loads(map_goldens.track_fixture_for("track-looks-z15"))
+        hidden = json.loads(map_goldens.track_fixture_for("track-looks-hidden-z15"))
+        self.assertEqual(2, len(both["tracks"]))
+        self.assertEqual(1, len(hidden["tracks"]))
+        colours = {track["colour"] for track in both["tracks"]}
+        self.assertEqual({"#1B8A3A", "#2A78D6"}, colours)
+        self.assertEqual("track-looks-blue", hidden["tracks"][0]["id"])
+        self.assertIsNone(map_goldens.track_fixture_for("place-a-z12"))
 
     def test_named_positions_narrow_a_capture_or_compare(self) -> None:
         selected = map_goldens.selected_positions(

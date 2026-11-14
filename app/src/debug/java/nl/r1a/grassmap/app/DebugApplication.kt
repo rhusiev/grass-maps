@@ -86,6 +86,7 @@ class DebugApplication : GrassMapsApplication() {
                 SetCameraCommand(session),
                 SetRouteCommand(session),
                 SetRouteRelationsCommand(session),
+                SetTracksCommand(session),
                 SetStyleCommand(
                     session,
                     providers = { container.providerRegistry },

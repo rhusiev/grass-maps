@@ -229,13 +229,29 @@ ROUTE_RELATIONS_FIXTURE_PATH = (
 )
 ROUTE_RELATIONS_FIXTURE = ROUTE_RELATIONS_FIXTURE_PATH.read_text(encoding="utf-8")
 
+# T-0415: two fixed tracks in two colours at one zoom, then the same camera
+# with the green track absent. The pair is the golden evidence that a track
+# draws in its sidecar colour and that a hidden track draws no feature at all.
+TRACK_CASES = {
+    "standard": (
+        ("track-looks-z15", 49.9520, 23.9502, 15.0, 0.0, 0.0),
+        ("track-looks-hidden-z15", 49.9520, 23.9502, 15.0, 0.0, 0.0),
+    ),
+}
+TRACK_POSITION_NAMES = frozenset(case[0] for cases in TRACK_CASES.values() for case in cases)
+TRACK_LOOKS_FIXTURE_PATH = ROOT / "test-data" / "map-goldens" / "track-looks.json"
+TRACK_LOOKS_FIXTURE = TRACK_LOOKS_FIXTURE_PATH.read_text(encoding="utf-8")
+TRACK_LOOKS_HIDDEN_FIXTURE_PATH = ROOT / "test-data" / "map-goldens" / "track-looks-hidden.json"
+TRACK_LOOKS_HIDDEN_FIXTURE = TRACK_LOOKS_HIDDEN_FIXTURE_PATH.read_text(encoding="utf-8")
+
 
 def cases(profile: str) -> tuple[tuple[str, float, float, float, float, float], ...]:
-    """The profile's fixed positions followed by its route positions."""
+    """The profile's fixed positions followed by its route and track positions."""
     return (
         tuple(POSITIONS[profile])
         + ROUTE_CASES.get(profile, ())
         + ROUTE_RELATION_CASES.get(profile, ())
+        + TRACK_CASES.get(profile, ())
     )
 
 
@@ -249,6 +265,15 @@ def route_fixture_for(name: str) -> str | None:
 def route_relations_fixture_for(name: str) -> str | None:
     """The committed route-relation component for its goldens, else None."""
     return ROUTE_RELATIONS_FIXTURE if name in ROUTE_RELATION_POSITION_NAMES else None
+
+
+def track_fixture_for(name: str) -> str | None:
+    """The committed track set for a track golden, else None."""
+    if name == "track-looks-z15":
+        return TRACK_LOOKS_FIXTURE
+    if name == "track-looks-hidden-z15":
+        return TRACK_LOOKS_HIDDEN_FIXTURE
+    return None
 
 
 class GoldenError(RuntimeError):
@@ -596,6 +621,34 @@ def invoke_route_relations(
             if time.monotonic() >= deadline:
                 raise GoldenError(
                     f"route-relation command did not answer within {CAMERA_READY_TIMEOUT_S:.0f}s"
+                ) from error
+        time.sleep(RETRY_PAUSE_S)
+
+
+def invoke_tracks(
+    client: control_client.ControlClient,
+    tracks_json: str | None,
+) -> str:
+    """Apply the fixed track set, or clear it, before a golden position.
+
+    The command draws through the production track layer and `MapHost.setTracks`,
+    so the capture sees the same colour mapping and the same absence of a hidden
+    track. It retries `not_ready` and a socket timeout, as the route command does.
+    """
+    params: dict[str, object] = {
+        "tracks": json.loads(tracks_json)["tracks"] if tracks_json else None,
+    }
+    deadline = time.monotonic() + CAMERA_READY_TIMEOUT_S
+    while True:
+        try:
+            return str(client.invoke("core.map.set_tracks", params))
+        except control_client.ControlError as error:
+            if error.kind != "not_ready" or time.monotonic() >= deadline:
+                raise
+        except TimeoutError as error:
+            if time.monotonic() >= deadline:
+                raise GoldenError(
+                    f"track command did not answer within {CAMERA_READY_TIMEOUT_S:.0f}s"
                 ) from error
         time.sleep(RETRY_PAUSE_S)
 
@@ -1034,6 +1087,7 @@ def capture(
         shots = []
         current_route: str | None = None
         current_relations: str | None = None
+        current_tracks: str | None = None
         route_dark = style is not None and style.endswith("dark")
         selected = positions if positions is not None else cases(profile)
         for name, lat, lon, zoom, bearing, tilt in selected:
@@ -1046,6 +1100,10 @@ def capture(
             if relations != current_relations:
                 invoke_route_relations(client, relations)
                 current_relations = relations
+            tracks = track_fixture_for(name)
+            if tracks != current_tracks:
+                invoke_tracks(client, tracks)
+                current_tracks = tracks
             params = {
                 "lat": lat,
                 "lon": lon,
@@ -1078,6 +1136,7 @@ def capture(
                 "camera_command": "core.map.set_camera",
                 "route_command": "core.map.set_route",
                 "route_relations_command": "core.map.set_route_relations",
+                "track_command": "core.map.set_tracks",
                 "screenshot": "adb exec-out screencap -p",
                 "positions": shots,
             },

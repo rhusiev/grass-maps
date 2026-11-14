@@ -1,0 +1,48 @@
+{
+  "tracks": [
+    {
+      "id": "track-looks-green",
+      "name": "Ridges lower",
+      "colour": "#1B8A3A",
+      "widthDp": 6,
+      "segments": [
+        [
+          {
+            "lat": 49.9516,
+            "lon": 23.949
+          },
+          {
+            "lat": 49.9517,
+            "lon": 23.95
+          },
+          {
+            "lat": 49.9519,
+            "lon": 23.9512
+          }
+        ]
+      ]
+    },
+    {
+      "id": "track-looks-blue",
+      "name": "Ridges upper",
+      "colour": "#2A78D6",
+      "widthDp": 6,
+      "segments": [
+        [
+          {
+            "lat": 49.9525,
+            "lon": 23.9492
+          },
+          {
+            "lat": 49.9524,
+            "lon": 23.9504
+          },
+          {
+            "lat": 49.9526,
+            "lon": 23.9514
+          }
+        ]
+      ]
+    }
+  ]
+}

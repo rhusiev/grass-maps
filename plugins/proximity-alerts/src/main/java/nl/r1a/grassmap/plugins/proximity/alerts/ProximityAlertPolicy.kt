@@ -105,6 +105,13 @@ private fun ProximityPlace.key(): PlaceKey = PlaceKey(kind, id)
  * does not repeat them, and a place that leaves the lookup box and comes back
  * is a new approach.
  *
+ * A trip that starts inside a place's radius latches that place silently: the
+ * first fix of the trip is not an approach, it is where the traveller already
+ * stands. Without that rule leaving home announces home. The latches belong to
+ * one trip, so a new trip latches any place it starts inside again, and a
+ * reset by a finished session clears them; leaving the radius and coming back
+ * re-arms the place by the rule above, inside the same trip.
+ *
  * A place of an unchosen place kind still takes its latch, exactly like a
  * category whose switch is off in the alert host: choosing a kind does not
  * replay a place the traveller is already next to.
@@ -121,7 +128,8 @@ private fun ProximityPlace.key(): PlaceKey = PlaceKey(kind, id)
  * announce would spend every session's work on an alert that is dropped. While
  * the gate is closed the schedule keeps no places and no latches. Opening it
  * mid-session is therefore a fresh start: the next lookup announces a place the
- * traveller is already inside, because no lookup ran while it was closed.
+ * traveller is already inside, because no lookup ran while it was closed and
+ * the trip's start went unobserved.
  */
 class ProximityAlertSchedule(
     private val source: ProximityPlaceSource = NoProximityPlaces,
@@ -132,12 +140,16 @@ class ProximityAlertSchedule(
     private var places: List<ProximityPlace> = emptyList()
     private var anchor: GeoPoint? = null
     private var loaded: Boolean = false
+    private var awaitsTripStart: Boolean = true
     private val announced = mutableSetOf<PlaceKey>()
     private val mutex = Mutex()
 
     /** Forgets the places and every announcement, for a new session. */
     suspend fun reset() {
-        mutex.withLock { clear() }
+        mutex.withLock {
+            clear()
+            awaitsTripStart = true
+        }
     }
 
     /** Reads one state and returns every cue that is due. */
@@ -151,8 +163,14 @@ class ProximityAlertSchedule(
     }
 
     private suspend fun evaluate(state: ProximityState): List<ProximityAlertCue> {
-        if (!state.active || !canAlert()) {
+        if (!state.active) {
             clear()
+            awaitsTripStart = true
+            return emptyList()
+        }
+        if (!canAlert()) {
+            clear()
+            awaitsTripStart = false
             return emptyList()
         }
         val fixTimeMillis = state.fixTimeMillis ?: return emptyList()
@@ -160,11 +178,16 @@ class ProximityAlertSchedule(
         if (!position.latitude.isFinite() || !position.longitude.isFinite()) {
             return emptyList()
         }
-        refresh(position)
+        val startingTrip = awaitsTripStart
+        awaitsTripStart = false
+        refresh(position, startingTrip)
         return due(position, fixTimeMillis)
     }
 
-    private suspend fun refresh(position: GeoPoint) {
+    private suspend fun refresh(
+        position: GeoPoint,
+        startingTrip: Boolean,
+    ) {
         val previous = anchor
         if (previous != null && loaded &&
             ProximityDistance.meters(previous, position) < ProximityRadius.REFRESH_METERS
@@ -176,7 +199,25 @@ class ProximityAlertSchedule(
         val retrieved = source.places(ProximityBox.around(position, ProximityRadius.QUERY_METERS), poiKinds()).places
         places = retrieved
         announced.retainAll(retrieved.map { it.key() }.toSet())
+        if (startingTrip) {
+            latchPlacesAlreadyInside(position)
+        }
         log("proximity places=${retrieved.size} box_m=${ProximityRadius.QUERY_METERS.toInt()}")
+    }
+
+    /**
+     * Takes the latch of every place the trip starts inside, so the first fix
+     * does not announce where the traveller already stands. The latch is the
+     * same one [due] takes, so leaving the radius and returning announces the
+     * place by the ordinary release rule.
+     */
+    private fun latchPlacesAlreadyInside(position: GeoPoint) {
+        for (place in places) {
+            val distance = ProximityDistance.meters(position, place.position)
+            if (distance.isFinite() && distance <= ProximityRadius.metersFor(place.kind)) {
+                announced.add(place.key())
+            }
+        }
     }
 
     private fun due(

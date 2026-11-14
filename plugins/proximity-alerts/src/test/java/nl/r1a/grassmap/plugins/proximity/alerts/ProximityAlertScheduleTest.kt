@@ -52,6 +52,39 @@ class ProximityAlertScheduleTest {
         }
 
     @Test
+    fun aTripThatStartsInsideTheRadiusDoesNotAnnounceThePlace() =
+        runTest {
+            val street = street()
+            val home = street.place(ProximityPlaceKind.Favourite, 100.0, "Home")
+            val schedule = ProximityAlertSchedule(source = street.source(listOf(home)), canAlert = { true })
+
+            val start = schedule.onState(street.state(0.0))
+            val away = steps(0.0, 700.0, 10.0).flatMap { along -> schedule.onState(street.state(along)) }
+            val back = steps(690.0, 0.0, -10.0).flatMap { along -> schedule.onState(street.state(along)) }
+
+            assertTrue("leaving home does not announce home", start.isEmpty())
+            assertTrue("the outbound leg is silent", away.isEmpty())
+            assertEquals("leaving the radius and coming back announces once", 1, back.size)
+        }
+
+    @Test
+    fun aNewTripThatStartsInsideTheRadiusStartsSilentAgain() =
+        runTest {
+            val street = street()
+            val home = street.place(ProximityPlaceKind.Favourite, 100.0, "Home")
+            val schedule = ProximityAlertSchedule(source = street.source(listOf(home)), canAlert = { true })
+
+            val firstTrip =
+                (steps(0.0, 700.0, 10.0) + steps(690.0, 0.0, -10.0))
+                    .flatMap { along -> schedule.onState(street.state(along)) }
+            schedule.onState(ProximityState(active = false))
+            val secondTrip = steps(0.0, 400.0, 10.0).flatMap { along -> schedule.onState(street.state(along)) }
+
+            assertEquals("the first trip announced the return once", 1, firstTrip.size)
+            assertTrue("a new trip clears the latch and latches the start again", secondTrip.isEmpty())
+        }
+
+    @Test
     fun aPlaceJustBeyondTheRadiusDoesNotReleaseTheLatch() =
         runTest {
             val street = street()

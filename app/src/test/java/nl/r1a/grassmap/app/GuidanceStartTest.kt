@@ -86,6 +86,7 @@ class GuidanceStartTest {
             val harness = Harness(backgroundScope)
             harness.wayAlerts.setProfile(RouteProfile.Hike)
             harness.wayAlerts.onState(FOLLOWING_STATE)
+            harness.proximityAlerts.onState(PROXIMITY_APPROACH_STATE)
             harness.proximityAlerts.onState(PROXIMITY_STATE)
             assertEquals(1, harness.region.queries)
             assertEquals(1, harness.source.lookups)
@@ -98,11 +99,12 @@ class GuidanceStartTest {
             assertEquals(RouteProfile.Bike, harness.beeps.profile)
 
             harness.wayAlerts.onState(FOLLOWING_STATE)
+            harness.proximityAlerts.onState(PROXIMITY_APPROACH_STATE)
             harness.proximityAlerts.onState(PROXIMITY_STATE)
             assertEquals("the way-alert cache is cleared", 2, harness.region.queries)
             assertEquals("the place cache is cleared", 2, harness.source.lookups)
             assertEquals("the way alert is armed again", 2, harness.wayCues.size)
-            assertEquals("the place is latched again", 2, harness.placeCues.size)
+            assertEquals("the place is latched again, so the approach announces", 2, harness.placeCues.size)
 
             harness.controller.stop()
             runCurrent()
@@ -278,11 +280,24 @@ class GuidanceStartTest {
                 alongRouteMeters = 0.0,
                 fixTimeMillis = FIX_TIME_MILLIS,
             )
+
+        /**
+         * The first fix of a trip, 300 m east of the saved place: outside its
+         * 200 m radius, so the trip starts with nothing inside to latch.
+         */
+        val PROXIMITY_APPROACH_STATE =
+            ProximityState(
+                active = true,
+                fixTimeMillis = FIX_TIME_MILLIS,
+                position = GeoPoint(49.949, 23.9532),
+            )
+
+        /** The next fix, 180 m east of the place: inside its radius. */
         val PROXIMITY_STATE =
             ProximityState(
                 active = true,
                 fixTimeMillis = FIX_TIME_MILLIS,
-                position = CENTRE,
+                position = GeoPoint(49.949, 23.9515),
             )
         const val FIX_TIME_MILLIS = 1_700_000_000_000L
     }

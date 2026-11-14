@@ -11,12 +11,13 @@
   `tracks/.trash` sits inside the included track directory, so it takes an
   explicit exclude.
 
-  `disableIfNoEncryptionCapabilities` is true on purpose: tracks are precise
-  location history, and a cloud copy happens only on a device that has a lock
-  screen. The user decision is 2026-11-14.
+  `disableIfNoEncryptionCapabilities` is false: the user decided on 2026-11-14
+  that a backup happens whatever the device's lock-screen state, so a phone
+  without one still keeps its favourites, tracks and histories. The rules still
+  limit what may enter a backup; the lock screen is not the gate.
 -->
 <data-extraction-rules>
-    <cloud-backup disableIfNoEncryptionCapabilities="true">
+    <cloud-backup disableIfNoEncryptionCapabilities="false">
         <include domain="file" path="favourites/favourites.gpx" />
         <include domain="file" path="tracks" />
         <include domain="file" path="history/search-history.json" />

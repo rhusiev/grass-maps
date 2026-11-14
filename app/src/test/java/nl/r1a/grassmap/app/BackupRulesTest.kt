@@ -50,7 +50,7 @@ class BackupRulesTest {
     fun cloudBackupNeedsAnEncryptionCapableDevice() {
         val cloud = ruleSections().single { it.element.tagName == "cloud-backup" }
 
-        assertEquals("true", cloud.element.getAttribute("disableIfNoEncryptionCapabilities"))
+        assertEquals("false", cloud.element.getAttribute("disableIfNoEncryptionCapabilities"))
     }
 
     @Test

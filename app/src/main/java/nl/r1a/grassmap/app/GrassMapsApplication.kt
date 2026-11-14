@@ -10,6 +10,7 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.alerts.AndroidAlertEffects
 import nl.r1a.grassmap.alerts.AndroidBeepSink
@@ -25,6 +26,7 @@ import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.service.LocationService
+import nl.r1a.grassmap.tracks.TrackTrash
 import java.io.File
 import java.io.IOException
 
@@ -33,6 +35,9 @@ import java.io.IOException
  * only the first activation event pays for the plugin host.
  */
 open class GrassMapsApplication : Application() {
+    /** Application-lifetime work that must not hold the Main thread. */
+    private val maintenanceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     val container: AppContainer by lazy {
         val location = locationSource()
         val documentSaver = DocumentSaveCoordinator(ContentResolverDocumentWriter(this))
@@ -46,8 +51,8 @@ open class GrassMapsApplication : Application() {
             routingFilesProvider = { getExternalFilesDir(null) ?: filesDir },
             searchFilesProvider = { getExternalFilesDir(null) ?: filesDir },
             assetReader = { path -> readAsset(path) },
-            regionsRootProvider = { File(filesDir, REGIONS_DIRECTORY) },
-            tracksRootProvider = { File(filesDir, TRACKS_DIRECTORY) },
+            regionsRootProvider = { File(filesDir, UserDataLayout.REGIONS_DIRECTORY) },
+            tracksRootProvider = { File(filesDir, UserDataLayout.TRACKS_DIRECTORY) },
             diagnosticsRootProvider = { File(filesDir, DIAGNOSTICS_DIRECTORY) },
             deviceInfoProvider = { deviceInfo() },
             debuggable = { isDebuggable() },
@@ -57,11 +62,11 @@ open class GrassMapsApplication : Application() {
             distanceByTap = distanceByTap(),
             headingSource = AndroidHeadingSource(this, compassScope),
             unitSettingsFileProvider = { File(filesDir, UNIT_SETTINGS_PATH) },
-            searchHistoryFileProvider = { File(filesDir, SEARCH_HISTORY_PATH) },
+            searchHistoryFileProvider = { File(filesDir, UserDataLayout.SEARCH_HISTORY_PATH) },
             searchHistorySettingsFileProvider = { File(filesDir, SEARCH_HISTORY_SETTINGS_PATH) },
             onlineSearchSettingsFileProvider = { File(filesDir, ONLINE_SEARCH_SETTINGS_PATH) },
             contoursSettingsFileProvider = { File(filesDir, CONTOURS_SETTINGS_PATH) },
-            routeHistoryFileProvider = { File(filesDir, ROUTE_HISTORY_PATH) },
+            routeHistoryFileProvider = { File(filesDir, UserDataLayout.ROUTE_HISTORY_PATH) },
             routingOptionsFileProvider = { File(filesDir, ROUTING_OPTIONS_SETTINGS_PATH) },
             alertSettingsFileProvider = { File(filesDir, ALERT_SETTINGS_PATH) },
             favouritesRootProvider = { filesDir },
@@ -76,6 +81,16 @@ open class GrassMapsApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         installCrashGuard { container.diagnostics?.crashGuard }
+        // A deleted track is undoable for seven days. The purge runs once per
+        // process start, here: the park directory needs no store, so no plugin
+        // host is built for it, and the IO dispatcher keeps the first screen
+        // from waiting on it.
+        maintenanceScope.launch {
+            TrackTrash.purge(
+                File(filesDir, UserDataLayout.TRACKS_DIRECTORY),
+                System.currentTimeMillis(),
+            )
+        }
     }
 
     /** The device facts a bundle carries; no identifier is included. */
@@ -194,8 +209,6 @@ open class GrassMapsApplication : Application() {
 
     private companion object {
         const val TAG = "GrassMapsDevTools"
-        const val REGIONS_DIRECTORY = "regions"
-        const val TRACKS_DIRECTORY = "tracks"
         const val DIAGNOSTICS_DIRECTORY = "diagnostics"
         const val PERMISSION_DIRECTORY = "location"
         const val PERMISSION_FILE = "permission-asked"
@@ -205,8 +218,6 @@ open class GrassMapsApplication : Application() {
         const val CONTOURS_SETTINGS_PATH = "settings/contours.json"
         const val ROUTING_OPTIONS_SETTINGS_PATH = "settings/routing-options.json"
         const val ALERT_SETTINGS_PATH = "settings/alerts.json"
-        const val SEARCH_HISTORY_PATH = "history/search-history.json"
-        const val ROUTE_HISTORY_PATH = "history/route-history.json"
         const val DEV_TOOLS_GPX_ASSET = "mock-walk.gpx"
         const val BYTES_PER_KILOBYTE = 1024L
         const val UNKNOWN_VERSION = "unknown"

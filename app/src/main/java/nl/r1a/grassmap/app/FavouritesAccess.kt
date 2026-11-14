@@ -23,7 +23,7 @@ import java.io.File
 class FavouritesAccess internal constructor(
     root: File?,
 ) {
-    private val store: FavouritesStore? = root?.let { FavouritesStore(File(it, FAVOURITES_PATH)) }
+    private val store: FavouritesStore? = root?.let { FavouritesStore(File(it, UserDataLayout.FAVOURITES_PATH)) }
 
     suspend fun load(): Outcome<FavouritesSnapshot> = access { store -> store.load() }
 
@@ -63,9 +63,5 @@ class FavouritesAccess internal constructor(
     private suspend fun <T> access(block: suspend (FavouritesStore) -> Outcome<T>): Outcome<T> {
         val store = store ?: return Outcome.Failure(AppError.NotReady)
         return block(store)
-    }
-
-    private companion object {
-        const val FAVOURITES_PATH = "favourites/favourites.gpx"
     }
 }

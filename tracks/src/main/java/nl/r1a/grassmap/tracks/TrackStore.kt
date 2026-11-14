@@ -166,9 +166,11 @@ interface TrackStore {
 
     /**
      * Removes a track but keeps its sidecar and document for
-     * [restoreFromTrash]. The parked files survive a reload; the token is
-     * process-scoped, and this is the library screen's one-step undo rather
-     * than a quarantine that an older build reads back.
+     * [restoreFromTrash]. The parked files survive a reload for
+     * [TrackTrash.RETENTION_MILLIS]; after that a purge deletes them and the
+     * receipt no longer restores. The token is process-scoped, and this is the
+     * library screen's one-step undo rather than a quarantine that an older
+     * build reads back.
      */
     suspend fun removeToTrash(id: TrackId): Outcome<TrackRemoval>
 

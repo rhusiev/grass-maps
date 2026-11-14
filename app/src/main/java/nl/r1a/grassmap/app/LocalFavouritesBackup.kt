@@ -47,7 +47,7 @@ class LocalFavouritesBackup(
             )
         }
 
-    private val favouritesFile: File? = root?.let { directory -> File(directory, FAVOURITES_PATH) }
+    private val favouritesFile: File? = root?.let { directory -> File(directory, UserDataLayout.FAVOURITES_PATH) }
 
     /** Schedules one debounced copy after a successful mutation. */
     fun onMutation() {
@@ -87,9 +87,5 @@ class LocalFavouritesBackup(
 
     private companion object {
         const val BACKUP_DIRECTORY = "backups/favourites"
-
-        // FavouritesAccess keeps this path private; the restore writes the file
-        // the access caches, so the path is repeated here and nowhere else.
-        const val FAVOURITES_PATH = "favourites/favourites.gpx"
     }
 }

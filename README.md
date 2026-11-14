@@ -2529,6 +2529,9 @@ later edit cannot unfil the track. The state follows the store's revision,
 which rises after every write, so a track that the share-sheet import stores
 appears on an already open library without a restart. The debug channel opens
 the screen with `core.track.library_show`; T-0416 owns the share-sheet import.
+A parked track stays for seven days from the delete time, recorded in
+`deleted-at` inside its token, and is then purged at the next process start; an
+undo after that answers as no longer applicable and restores nothing.
 
 The library screen draws edge to edge, so the scrolling content clears the
 window's status-bar inset and both overlay bars are anchored to the bottom edge.
@@ -3149,6 +3152,20 @@ Cleartext is permitted only in a debuggable build, so the trigger can reach
 `localhost` through `app/src/debug/res/xml/network_security_config.xml`, and
 release keeps the platform default of no cleartext. No downloads UI exists yet;
 T-0504 owns it.
+
+## Privacy
+
+`AGENTS.md` holds the privacy rules. This section records what the build does
+with the data it keeps.
+
+A deleted track stays restorable for seven days. The delete writes the deletion
+time to `deleted-at` inside the parked token, because a move keeps the moved
+file's mtime and that time is the track's last save, not the deletion. At every
+process start the application starts a purge of the tokens older than seven
+days on an IO thread, so the first screen does not wait for it. An undo inside
+the window puts the document, sidecar and folder back and removes the token.
+An undo after the window answers `TrackLibraryUndo.NOT_APPLICABLE` and restores
+nothing. The seven-day window is a user decision of 2026-11-14.
 
 ## Follow-ups
 

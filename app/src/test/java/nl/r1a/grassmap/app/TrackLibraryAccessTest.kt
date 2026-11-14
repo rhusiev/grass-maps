@@ -12,8 +12,10 @@ import nl.r1a.grassmap.plugin.api.host.TrackLibraryUndo
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
 import nl.r1a.grassmap.plugins.track.library.TrackFolderStore
 import nl.r1a.grassmap.tracks.TrackMetadata
+import nl.r1a.grassmap.tracks.TrackTrash
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -260,6 +262,25 @@ class TrackLibraryAccessTest {
         }
 
     @Test
+    fun anUndoAfterTheSevenDayWindowIsNotApplicableAndRestoresNothing() =
+        runTest {
+            val root = temporaryRoot()
+            val access = access(tracksRoot = root)
+            val first = import(access, "garmin-connect-hike.gpx").tracks.single()
+            val library = StoreTrackLibrary({ access }, TrackFolderStore(File(root, ".library.json")))
+            val deleted = changed(library.deleteTrack(first.id.value))
+            val token = File(root, TrackTrash.DIRECTORY).listFiles().orEmpty().single { it.isDirectory }
+            TrackTrash.markDeleted(token, System.currentTimeMillis() - PAST_THE_WINDOW_MILLIS)
+
+            assertEquals(1, TrackTrash.purge(root, System.currentTimeMillis()))
+            assertEquals(Outcome.Success(TrackLibraryUndo.NOT_APPLICABLE), library.undo(deleted.receipt))
+
+            assertTrue(access.summaries().isEmpty())
+            assertEquals(0, root.listFiles().orEmpty().count { it.name.endsWith(".gpx") })
+            assertFalse(token.exists())
+        }
+
+    @Test
     fun anUnknownReceiptChangesNothing() =
         runTest {
             val access = access()
@@ -314,4 +335,8 @@ class TrackLibraryAccessTest {
             is Outcome.Success -> outcome.value
             is Outcome.Failure -> throw AssertionError("unexpected failure: ${outcome.error}")
         }
+
+    private companion object {
+        const val PAST_THE_WINDOW_MILLIS = 8L * 24L * 60L * 60L * 1000L
+    }
 }

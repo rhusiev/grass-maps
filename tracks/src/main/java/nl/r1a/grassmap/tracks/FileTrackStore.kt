@@ -296,6 +296,9 @@ class FileTrackStore(
                 if (!directory.isDirectory && !directory.mkdirs()) {
                     return@withContext writeFailure("cannot create the trash directory for ${id.value}")
                 }
+                if (!TrackTrash.markDeleted(directory, clock())) {
+                    log("track ${id.value}: the delete time could not be recorded; the directory time is used")
+                }
                 val sidecarFile = sidecarFile(id)
                 if (!moveFile(sidecarFile, File(directory, sidecarFile.name))) {
                     return@withContext writeFailure("cannot park the sidecar of ${id.value}")
@@ -321,6 +324,12 @@ class FileTrackStore(
                 load()
                 val directory = trashDirectory(removal.token)
                 if (!directory.isDirectory) {
+                    return@withContext Outcome.Failure(AppError.NotFound)
+                }
+                // The undo is a week, measured from the delete time. A receipt
+                // older than that answers NotFound even before the purge runs,
+                // so a late undo can never restore a file the purge removed.
+                if (TrackTrash.isExpired(directory, clock())) {
                     return@withContext Outcome.Failure(AppError.NotFound)
                 }
                 val parked =
@@ -360,6 +369,7 @@ class FileTrackStore(
                     return@withContext writeFailure("cannot restore the sidecar of ${sidecar.id}")
                 }
                 restoreRecompute(TrackId(sidecar.id), directory)
+                TrackTrash.clearMarker(directory)
                 // Only this token's own directory may go: a second delete has
                 // its own parked token, and its undo must survive this one.
                 if (directory.listFiles().orEmpty().isEmpty()) {
@@ -633,7 +643,7 @@ class FileTrackStore(
         }
     }
 
-    private fun trashDirectory(token: String): File = File(root, TRASH_DIRECTORY + "/" + token)
+    private fun trashDirectory(token: String): File = File(root, TrackTrash.DIRECTORY + "/" + token)
 
     private fun moveFile(
         from: File,
@@ -662,7 +672,6 @@ class FileTrackStore(
         const val TEMPORARY_PREFIX = "."
         const val TEMPORARY_SUFFIX = ".part"
         const val ERROR_ID = "tracks.store"
-        const val TRASH_DIRECTORY = ".trash"
         const val TRASH_PREFIX = "track-"
 
         fun sidecarFileName(id: TrackId): String = id.value + SIDECAR_SUFFIX

@@ -2763,13 +2763,30 @@ The range row under the chart shows the engine's distance, ascent, descent and
 time, and no maximum grade: the design's `max 25 %` needs a slope window that is
 not defined, so it is not drawn.
 
-The drawing uses the round-10 chart palette: seven slope colours from -15 % to
-+15 % on the hike scale, the area under the line filled per segment with the
-colour of that segment's slope, a hairline grid and a line over the fill. The
-light and dark palettes are the same roles in the two themes; `ui-shell` picks
-one per theme and the chip colours follow it. A route's chart sits under the
-preview behind a Details toggle, and a track's sits in the analysis panel behind
-the same toggle. The axis chips stay beside the chart.
+The drawing uses the round-10 chart palette: seven stops from the steepest
+descent to the steepest climb on the hike scale, the area under the line filled
+per segment with the colour of that segment's slope, a hairline grid and a line
+over the fill. The light and dark palettes are the same roles in the two themes;
+`ui-shell` picks one per theme and the chip colours follow it. A route's chart
+sits under the preview behind a Details toggle, and a track's sits in the
+analysis panel behind the same toggle.
+
+The colour chips beside the axis chips switch the fill between the design's
+slope scale and an altitude scale. The chips reuse the axis chip style; the
+canon draws tabs for the X axis only and no colour selector, so this control is
+an extension of the canon's chip pattern rather than a designed element.
+Altitude reuses the same seven stops over the track's own lowest to highest
+sample: the range is divided into seven equal spans, the lowest elevation takes
+the first stop and the highest the last, and a value exactly on a span edge
+stays in the lower span, which is the slope scale's own rule. A step takes the
+mean elevation of its two ends. That min-to-max normalisation is ours, not the
+design's: the canon gives no elevation ramp, so these stops say nothing about an
+absolute height. A track whose lowest and highest samples are equal has no
+range and fills in the flat middle stop instead of dividing by zero. The legend
+under the plot follows the mode: `down ... up % · hike scale` for slope, and the
+track's lowest and highest sample for altitude, in English and Ukrainian.
+Switching modes changes only the bins, so the slices stay contiguous and cover
+the same span. The axis chips stay beside the chart.
 
 `ElevationSegments` in `tracks` owns the range and segment model, over the same
 profile the chart draws. A range sums the profile's own steps between its two

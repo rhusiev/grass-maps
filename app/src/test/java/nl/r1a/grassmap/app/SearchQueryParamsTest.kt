@@ -72,4 +72,57 @@ class SearchQueryParamsTest {
 
         assertNull(params["position"])
     }
+
+    @Test
+    fun aSubmitKeepsTheKeystrokeRequestAndAddsTheStoreFlag() {
+        val keystroke =
+            searchKeystrokeParams(
+                query = "Львів",
+                sequence = 3,
+                index = "lviv",
+                limit = 5,
+                position = point,
+                positionAllowed = true,
+            )
+        val submit =
+            searchSubmitParams(
+                query = "Львів",
+                sequence = 3,
+                index = "lviv",
+                limit = 5,
+                position = point,
+                positionAllowed = true,
+            )
+
+        assertEquals(keystroke.getValue("query"), submit.getValue("query"))
+        assertEquals(keystroke.getValue("sequence"), submit.getValue("sequence"))
+        assertEquals(keystroke.getValue("position"), submit.getValue("position"))
+        assertEquals("true", submit.getValue("submit").jsonPrimitive.content)
+        assertFalse(submit.containsKey("pick"))
+    }
+
+    @Test
+    fun aPickCarriesItsTextAndStartsNoSearch() {
+        val params =
+            searchPickParams(
+                query = "Кава на площі Ринок",
+                index = "lviv",
+                limit = 5,
+                position = point,
+                positionAllowed = true,
+            )
+
+        assertEquals("Кава на площі Ринок", params.getValue("query").jsonPrimitive.content)
+        assertEquals("true", params.getValue("pick").jsonPrimitive.content)
+        assertFalse("a pick must not order a search", params.containsKey("sequence"))
+        val position = params.getValue("position").jsonObject
+        assertEquals(
+            point.latitude,
+            position
+                .getValue("lat")
+                .jsonPrimitive.content
+                .toDouble(),
+            1e-9,
+        )
+    }
 }

@@ -971,6 +971,43 @@ private fun MapContent(
                         }
                     }
                 },
+                onSubmit = { text ->
+                    searchSequence[0] += 1
+                    val sequence = searchSequence[0]
+                    scope.launch {
+                        container.commandBus
+                            .invoke(
+                                SEARCH_SCREEN_COMMAND,
+                                searchSubmitParams(
+                                    query = text,
+                                    sequence = sequence,
+                                    index = SearchScreenSession.DEFAULT_INDEX,
+                                    limit = SearchScreenSession.DEFAULT_LIMIT,
+                                    position = searchCamera.center,
+                                    positionAllowed = positionAllowed,
+                                ),
+                            ).onFailure { error ->
+                                if (error != AppError.Cancelled) {
+                                    Log.w(TAG, "search submit failed: $error")
+                                }
+                            }
+                    }
+                },
+                onPick = { text ->
+                    scope.launch {
+                        container.commandBus
+                            .invoke(
+                                SEARCH_SCREEN_COMMAND,
+                                searchPickParams(
+                                    query = text,
+                                    index = SearchScreenSession.DEFAULT_INDEX,
+                                    limit = SearchScreenSession.DEFAULT_LIMIT,
+                                    position = searchCamera.center,
+                                    positionAllowed = positionAllowed,
+                                ),
+                            ).onFailure { error -> Log.w(TAG, "search pick not recorded: $error") }
+                    }
+                },
                 onClear = {
                     scope.launch {
                         container.commandBus

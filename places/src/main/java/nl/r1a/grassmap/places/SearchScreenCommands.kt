@@ -55,15 +55,25 @@ private val REPLAY_POLICY: CommandPolicy =
         dispatcher = CommandDispatcher.IO,
     )
 
+/** The states that mean a submitted query completed, so the history keeps it. */
+private val REMEMBERED_STATUSES: Set<SearchScreenStatus> = setOf(SearchScreenStatus.RESULTS, SearchScreenStatus.EMPTY)
+
 /**
- * One search keystroke from the screen (T-0203).
+ * One search screen event (T-0203, T-0207).
  *
  * Parameters: `query`, `sequence`, and optionally `index`, `limit`, `position`,
- * `viewport` and `clear`. `viewport` is `{"south": .., "west": .., "north": ..,
- * "east": ..}` and restricts every result to the visible map area, which is
- * "search this area" (T-0206). A blank query or `clear: true` empties the
- * screen without reaching the provider. The result is a one-line summary; the
- * screen itself reads [SearchScreenSession.state].
+ * `viewport`, `clear`, `submit` and `pick`. `viewport` is `{"south": .., "west":
+ * .., "north": .., "east": ..}` and restricts every result to the visible map
+ * area, which is "search this area" (T-0206). `clear: true` empties the screen
+ * without reaching the provider, and a blank query in any other event is
+ * [AppError.InvalidInput]. The result is a one-line summary; the screen itself
+ * reads [SearchScreenSession.state].
+ *
+ * History is written on two events only. `submit: true` runs the query and
+ * remembers it, because the user confirmed the field. `pick: true` remembers
+ * `query` as the text of the result the user tapped, without searching again.
+ * A plain keystroke writes nothing, so typing "lviv" and backspacing to "l"
+ * leaves no fragment behind.
  */
 class SearchScreenCommand(
     private val session: SearchScreenSession,
@@ -73,7 +83,9 @@ class SearchScreenCommand(
         id = SEARCH_SCREEN_COMMAND,
         paramsSerializer = JsonElement.serializer(),
         resultSerializer = String.serializer(),
-        doc = "Sends one search screen keystroke. Parameters: query, sequence, and optionally index, limit, position, viewport or clear.",
+        doc =
+            "Sends one search screen event. Parameters: query, sequence, and optionally index, " +
+                "limit, position, viewport, clear, submit or pick.",
         policy = SCREEN_POLICY,
     ) {
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
@@ -82,6 +94,10 @@ class SearchScreenCommand(
             val cleared = session.clear()
             return Outcome.Success(CommandResult("cleared=true query=\"${cleared.query}\""))
         }
+        if (request.pick) {
+            record(request)
+            return Outcome.Success(CommandResult("picked=true query=\"${request.query}\""))
+        }
         return when (val outcome = session.submit(request.query, request.sequence, request.index, request.limit, request.context)) {
             is Outcome.Failure -> {
                 outcome
@@ -89,7 +105,9 @@ class SearchScreenCommand(
 
             is Outcome.Success -> {
                 val state = outcome.value
-                record(state, request)
+                if (request.submit && state.status in REMEMBERED_STATUSES) {
+                    record(request)
+                }
                 Outcome.Success(
                     CommandResult(
                         "sequence=${state.sequence} status=${state.status} hits=${state.hits.size} " +
@@ -101,17 +119,11 @@ class SearchScreenCommand(
     }
 
     /**
-     * Adds a terminal completed search to the history. A failure to remember is
+     * Adds a submitted or picked search to the history. A failure to remember is
      * logged and never fails the search: the result the user asked for stands.
      */
-    private suspend fun record(
-        state: SearchScreenState,
-        request: Request,
-    ) {
+    private suspend fun record(request: Request) {
         val store = history ?: return
-        if (state.status != SearchScreenStatus.RESULTS && state.status != SearchScreenStatus.EMPTY) {
-            return
-        }
         when (val recorded = store.remember(request.query, request.index, request.limit, request.context)) {
             is Outcome.Failure -> log("search history not recorded: ${recorded.error}")
             is Outcome.Success -> Unit
@@ -120,9 +132,20 @@ class SearchScreenCommand(
 
     private fun parse(params: JsonElement): Request? {
         val json = params as? JsonObject ?: if (params is JsonNull) JsonObject(emptyMap()) else return null
-        val clear = (json[PARAM_CLEAR] as? JsonPrimitive)?.booleanOrNull ?: false
-        val query = (json[PARAM_QUERY] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
-        if (!clear && query == null) {
+        if ((json[PARAM_CLEAR] as? JsonPrimitive)?.booleanOrNull == true) {
+            return Request(
+                query = "",
+                sequence = 0L,
+                index = SearchScreenSession.DEFAULT_INDEX,
+                limit = SearchScreenSession.DEFAULT_LIMIT,
+                context = SearchContext(),
+                clear = true,
+            )
+        }
+        val query = (json[PARAM_QUERY] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() } ?: return null
+        val submit = (json[PARAM_SUBMIT] as? JsonPrimitive)?.booleanOrNull ?: false
+        val pick = (json[PARAM_PICK] as? JsonPrimitive)?.booleanOrNull ?: false
+        if (submit && pick) {
             return null
         }
         val sequence = (json[PARAM_SEQUENCE] as? JsonPrimitive)?.longOrNull ?: 0L
@@ -148,7 +171,15 @@ class SearchScreenCommand(
                     northEast = GeoPoint(north, east),
                 ).takeIf { it.isValid() } ?: return null
             }
-        return Request(query ?: "", sequence, index, limit, SearchContext(viewport = viewport, position = position), clear)
+        return Request(
+            query = query,
+            sequence = sequence,
+            index = index,
+            limit = limit,
+            context = SearchContext(viewport = viewport, position = position),
+            submit = submit,
+            pick = pick,
+        )
     }
 
     private data class Request(
@@ -157,7 +188,9 @@ class SearchScreenCommand(
         val index: String,
         val limit: Int,
         val context: SearchContext,
-        val clear: Boolean,
+        val clear: Boolean = false,
+        val submit: Boolean = false,
+        val pick: Boolean = false,
     )
 
     private companion object {
@@ -168,6 +201,8 @@ class SearchScreenCommand(
         const val PARAM_POSITION = "position"
         const val PARAM_VIEWPORT = "viewport"
         const val PARAM_CLEAR = "clear"
+        const val PARAM_SUBMIT = "submit"
+        const val PARAM_PICK = "pick"
     }
 }
 

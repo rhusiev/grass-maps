@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,6 +34,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -48,6 +51,11 @@ import nl.r1a.grassmap.plugin.api.provider.PlaceHit
  * [onQueryChange] and comes back as [hits]; the list and the markers are built
  * once by [searchScreenContent] from that one list, so they cannot disagree.
  * Tapping a row asks for the place card through [onSelect] with the provider id.
+ *
+ * A keystroke writes nothing to the search history. The field's Search action
+ * calls [onSubmit] with the field's text, and a row tap calls [onPick] with the
+ * row's name; those are the two events the shell may store. [onSelect] and
+ * [onPick] both fire on a row tap, one for the place and one for the history.
  *
  * Markers draw under the field and use [SearchMarkerProjection], which is the
  * map's own Web-Mercator model. [camera] and [viewport] are the live map
@@ -68,6 +76,8 @@ fun SearchScreenHost(
     anchorOffset: ScreenOffset,
     onQueryChange: (String) -> Unit,
     onSelect: (String) -> Unit,
+    onSubmit: (String) -> Unit,
+    onPick: (String) -> Unit,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
     cardModifier: Modifier = Modifier,
@@ -143,6 +153,8 @@ fun SearchScreenHost(
                             onQueryChange(it)
                         },
                         singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { onSubmit(typed) }),
                         textStyle = TextStyle(color = TEXT_PRIMARY, fontSize = FIELD_FONT_SP.sp),
                         modifier =
                             Modifier
@@ -192,7 +204,10 @@ fun SearchScreenHost(
                     SearchResultRowContent(
                         row = row,
                         onlineBadge = content.labels.onlineBadge,
-                        onSelect = { onSelect(row.id) },
+                        onSelect = {
+                            onSelect(row.id)
+                            onPick(row.name)
+                        },
                     )
                 }
                 content.message?.let { message -> BasicText(text = message, style = secondaryStyle()) }

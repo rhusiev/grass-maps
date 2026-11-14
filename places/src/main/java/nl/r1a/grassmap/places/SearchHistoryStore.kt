@@ -43,8 +43,9 @@ fun interface SearchHistorySetting {
  * One remembered search and the exact context it ran with, so it can be replayed
  * by passing [context] back to `PlaceProvider.search` unchanged.
  *
- * [atMillis] is the injected clock's time when the search completed; it is the
- * only ordering key, and the store keeps the file order for equal values.
+ * [atMillis] is the injected clock's time when the search was submitted or
+ * picked; it is the only ordering key, and the store keeps the file order for
+ * equal values.
  */
 data class SearchHistoryEntry(
     val query: String,
@@ -68,15 +69,19 @@ data class SearchHistoryEntry(
  * The last [maxEntries] searches, newest first, in one app-private JSON file
  * (T-0207).
  *
- * A "search" is a terminal keystroke the search screen completed, not every
- * letter on the way there: the newest entry is replaced while the next query
- * extends or shortens it, so typing "lviv" leaves one row, not four. Repeating
- * a query moves it to the front with a new time, and its replay context is the
- * one the repeat carried.
+ * A "search" is a query the user submitted or a result they picked, not every
+ * letter on the way there. A keystroke alone stores nothing, so typing "lviv"
+ * and deleting back to "l" leaves no fragment behind. A query repeated after a
+ * trim moves its existing entry to the front with a new time and the replay
+ * context the repeat carried, so one query is one row. Two queries that only
+ * share a prefix are two rows: they were two searches.
  *
  * The file is written through a temporary sibling, fsynced and moved
  * atomically, so a failed write leaves the previous list in place. The
  * constructor does no I/O; [remember], [list] and [clear] are the lifecycle.
+ * The fsync stays because a submit is rare: one durable write per search costs
+ * nothing measurable, and the entry then survives the process being killed
+ * right after the user confirms it.
  *
  * History is disposable data, not a document the user authored. A missing or
  * unreadable file is an empty history, and the next search replaces a corrupt
@@ -102,7 +107,7 @@ class SearchHistoryStore(
     }
 
     /**
-     * Records one completed search. A blank or malformed search is
+     * Records one submitted or picked search. A blank or malformed search is
      * [AppError.InvalidInput]; with history off the result is success and the
      * file is not read or written.
      */
@@ -135,7 +140,7 @@ class SearchHistoryStore(
                     position = context.position,
                     language = context.language,
                 )
-            writeLocked((listOf(entry) + collapsed(stored, text)).take(maxEntries))
+            writeLocked((listOf(entry) + withoutQuery(stored, text)).take(maxEntries))
         }
 
     /** The stored searches, newest first. Empty when history is off. */
@@ -170,19 +175,14 @@ class SearchHistoryStore(
         }
 
     /**
-     * The file's entries without the new query's exact matches. The newest
-     * remaining entry is dropped too when the new query extends or shortens it,
-     * so one typing session keeps one row.
+     * The file's entries without the new query's exact matches. Comparing the
+     * trimmed text is the whole policy: the same search twice is one row, and
+     * two different searches that share a prefix are two rows.
      */
-    private fun collapsed(
+    private fun withoutQuery(
         entries: List<SearchHistoryEntry>,
         query: String,
-    ): List<SearchHistoryEntry> {
-        val different = entries.filterNot { entry -> entry.query == query }
-        val newest = different.firstOrNull() ?: return different
-        val sameSession = query.startsWith(newest.query) || newest.query.startsWith(query)
-        return if (sameSession) different.drop(1) else different
-    }
+    ): List<SearchHistoryEntry> = entries.filterNot { entry -> entry.query == query }
 
     private fun isValidSearch(
         query: String,

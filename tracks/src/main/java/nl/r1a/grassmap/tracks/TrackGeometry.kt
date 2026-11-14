@@ -33,10 +33,9 @@ import kotlin.math.max
  * either walked or it is not.
  */
 internal class TrackGeometry private constructor(
-    val points: List<TrackPoint>,
-    /** Indices into [points] of the fixes that survived the gate. */
+    /** Indices into the segment's points of the fixes that survived the gate. */
     val keptIndices: IntArray,
-    /** Distance along the cleaned line, indexed like [points] and non-decreasing. */
+    /** Distance along the cleaned line, indexed like the segment's points and non-decreasing. */
     val alongMeters: DoubleArray,
     val legs: List<Leg>,
     /** The median spacing of the timestamps that produced a step, or null without timing. */
@@ -70,7 +69,7 @@ internal class TrackGeometry private constructor(
         ): TrackGeometry {
             val points = segment.points
             if (points.isEmpty()) {
-                return TrackGeometry(points, IntArray(0), DoubleArray(0), emptyList(), null, 0.0, 0.0)
+                return TrackGeometry(IntArray(0), DoubleArray(0), emptyList(), null, 0.0, 0.0)
             }
             val speeds = stepSpeeds(points)
             val kept = plausibleFixes(points.size, speeds, filters)
@@ -86,7 +85,6 @@ internal class TrackGeometry private constructor(
             val along = project(x, y, vertexPoints, points)
             val legs = legs(vertices, vertexPoints, along)
             return TrackGeometry(
-                points = points,
                 keptIndices = kept,
                 alongMeters = along,
                 legs = legs,
@@ -173,9 +171,13 @@ internal class TrackGeometry private constructor(
                 pending.addLast(range.first..farthest)
                 pending.addLast(farthest..range.last)
             }
-            return kept.filterIndexed { position, _ -> survive[position] }.let { surviving ->
-                IntArray(surviving.size) { position -> kept.indexOf(surviving[position]) }
+            val surviving = ArrayList<Int>(kept.size)
+            for (position in kept.indices) {
+                if (survive[position]) {
+                    surviving += position
+                }
             }
+            return surviving.toIntArray()
         }
 
         private fun farthestPoint(

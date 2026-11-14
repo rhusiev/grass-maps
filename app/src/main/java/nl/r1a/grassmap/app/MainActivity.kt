@@ -43,8 +43,9 @@ import nl.r1a.grassmap.plugins.links.LinkTarget
  * instead of leaving the map unchanged and silent.
  *
  * A share from another app's sheet takes the same two entry points and is
- * imported before the link path (T-0416): its `content:` or `file:` URI is a
- * document, which the link router never opens.
+ * imported before the link path (T-0416): a `content:` URI from another
+ * provider is a document, which the link router never opens. A `file:` URI and
+ * a `content:` URI under this app's own provider are refused instead.
  */
 class MainActivity : ComponentActivity() {
     private val container: AppContainer by lazy { (application as GrassMapsApplication).container }

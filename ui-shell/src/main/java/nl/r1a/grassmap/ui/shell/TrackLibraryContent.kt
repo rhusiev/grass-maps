@@ -145,22 +145,27 @@ fun trackLibraryContent(
     val browse = state.browse
     val selected = state.folders.firstOrNull { folder -> folder.id == browse.selectedListId }
     val allDistance = state.tracks.sumOf { track -> track.distanceMeters }
+    val listTrackCount = state.tracks.count { track -> selected == null || track.listId == selected.id }
     val listTitle = selected?.name ?: strings.resolve(TRACK_LIBRARY_ALL_TRACKS_KEY)
     val listSummary =
-        strings.resolve(
+        strings.resolveQuantity(
             TRACK_LIBRARY_LIST_SUMMARY_KEY,
+            listTrackCount,
             listOf(
-                state.tracks.count { track -> selected == null || track.listId == selected.id }.toString(),
+                listTrackCount.toString(),
                 distanceText(allDistanceFor(state, selected?.id), strings, locale),
-                ascentText(allAscentFor(state, selected?.id), strings),
+                ascentValue(allAscentFor(state, selected?.id), strings),
             ),
         )
+    val folderCount = state.folders.size
+    val foldersPhrase = strings.resolveQuantity(TRACK_LIBRARY_FOLDERS_KEY, folderCount, listOf(folderCount.toString()))
     return TrackLibraryContent(
         title = strings.resolve(TRACK_LIBRARY_TITLE_KEY),
         subtitle =
-            strings.resolve(
+            strings.resolveQuantity(
                 TRACK_LIBRARY_SUBTITLE_KEY,
-                listOf(state.tracks.size.toString(), state.folders.size.toString()),
+                state.tracks.size,
+                listOf(state.tracks.size.toString(), foldersPhrase),
             ),
         close = strings.resolve(TRACK_LIBRARY_CLOSE_KEY),
         undo = strings.resolve(TRACK_LIBRARY_UNDO_KEY),
@@ -178,7 +183,7 @@ fun trackLibraryContent(
                 )
             },
         search = strings.resolve(TRACK_LIBRARY_SEARCH_KEY),
-        searchHint = strings.resolve(TRACK_LIBRARY_SEARCH_HINT_KEY, listOf(state.tracks.size.toString())),
+        searchHint = strings.resolveQuantity(TRACK_LIBRARY_SEARCH_HINT_KEY, state.tracks.size, listOf(state.tracks.size.toString())),
         listTitle = listTitle,
         listSummary = listSummary,
         empty = if (state.tracks.isEmpty()) strings.resolve(TRACK_LIBRARY_EMPTY_KEY) else null,
@@ -189,8 +194,9 @@ fun trackLibraryContent(
                     id = null,
                     name = strings.resolve(TRACK_LIBRARY_ALL_TRACKS_KEY),
                     summary =
-                        strings.resolve(
+                        strings.resolveQuantity(
                             TRACK_LIBRARY_FOLDER_SUMMARY_KEY,
+                            state.tracks.size,
                             listOf(state.tracks.size.toString(), distanceText(allDistance, strings, locale)),
                         ),
                     selected = browse.selectedListId == null,
@@ -201,8 +207,9 @@ fun trackLibraryContent(
                         id = folder.id,
                         name = folder.name,
                         summary =
-                            strings.resolve(
+                            strings.resolveQuantity(
                                 TRACK_LIBRARY_FOLDER_SUMMARY_KEY,
+                                folder.trackCount,
                                 listOf(folder.trackCount.toString(), distanceText(folder.distanceMeters, strings, locale)),
                             ),
                         selected = folder.id == browse.selectedListId,
@@ -373,7 +380,12 @@ private fun allAscentFor(
 internal fun ascentText(
     meters: Double,
     strings: Strings,
-): String = ASCENT_PREFIX + strings.resolve(METRES_KEY, listOf(meters.toLong().toString()))
+): String = ASCENT_PREFIX + ascentValue(meters, strings)
+
+private fun ascentValue(
+    meters: Double,
+    strings: Strings,
+): String = strings.resolve(METRES_KEY, listOf(meters.toLong().toString()))
 
 private fun dateText(
     millis: Long,
@@ -383,6 +395,7 @@ private fun dateText(
 internal const val TRACK_LIBRARY_TITLE_KEY = "track_library_title"
 internal const val TRACK_LIBRARY_CLOSE_KEY = "track_library_close"
 internal const val TRACK_LIBRARY_SUBTITLE_KEY = "track_library_subtitle"
+internal const val TRACK_LIBRARY_FOLDERS_KEY = "track_library_folders"
 internal const val TRACK_LIBRARY_ALL_TRACKS_KEY = "track_library_all_tracks"
 internal const val TRACK_LIBRARY_NEW_FOLDER_KEY = "track_library_new_folder"
 internal const val TRACK_LIBRARY_RENAME_FOLDER_KEY = "track_library_rename_folder"

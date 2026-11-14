@@ -732,6 +732,10 @@ private fun ElevationChip(
 /**
  * The row that opens and closes the analysis. The chart is behind it, so the
  * panel keeps its compact shape until the user asks for the details.
+ *
+ * The default ink is the route panel's on-surface token: the panel stays dark
+ * in both themes, so its ink stays white. A host that draws the toggle on a
+ * light surface passes that surface's ink instead.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -740,7 +744,7 @@ fun AnalysisDetailsToggle(
     strings: Strings,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    colour: Color = Color.White,
+    colour: Color = ROUTE_VALUE_COLOR,
 ) {
     val key = if (expanded) DETAILS_HIDE_KEY else DETAILS_SHOW_KEY
     val glyph = if (expanded) COLLAPSE_GLYPH else EXPAND_GLYPH

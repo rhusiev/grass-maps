@@ -9,8 +9,9 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
 /**
- * Fails when an Android string key is missing from either English or Ukrainian,
- * or exists only in the translation.
+ * Fails when an Android string key or plurals name is missing from either
+ * English or Ukrainian, exists only in the translation, or when an English (UK)
+ * override does not differ from the default.
  */
 abstract class CheckTranslationsTask : DefaultTask() {
     @get:InputFiles
@@ -30,7 +31,7 @@ abstract class CheckTranslationsTask : DefaultTask() {
         }
         println(
             "Translations OK: ${report.modulesChecked} module(s), " +
-                "${report.keysChecked} key(s) in English and Ukrainian",
+                "${report.keysChecked} string/plural key(s) in English and Ukrainian",
         )
     }
 }

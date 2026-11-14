@@ -53,8 +53,8 @@ document, section 3, plus the build and module rules of this repository.
 
 - No wanted feature is ever lost: anything moved out of a milestone, or asked
   for without a milestone, gets a backlog entry in the same change
-- Every user-visible string goes through i18n; English and Ukrainian land in
-  the same change
+- Every user-visible string goes through i18n; US English is the default, and
+  Ukrainian and English (UK) land in the same change where the text differs
 - Simple by default: a new option starts hidden in advanced settings unless the
   task says otherwise
 - Light and dark themes both checked for every UI change
@@ -113,7 +113,11 @@ document, section 3, plus the build and module rules of this repository.
   implementations
 - The only feature-to-feature edges are `navigation -> routing`,
   `alerts -> navigation` and `planner -> routing`. Every other call goes through
-  `plugin-api` contracts
+  `plugin-api` contracts. The debug-only `nav-simulator` is the one plugin
+  exception: it depends on `navigation` and `routing` because its simulated run
+  drives the production session with synthetic fixes and reads a passed route
+  through the shared JSON form. It reaches no core internals and changes no
+  navigation policy; `README.md` records the edge
 - Package layout: `nl.r1a.grassmap.<module>`, with dots in place of hyphens:
   `core-services` is `nl.r1a.grassmap.core.services`. The `planner` module keeps
   its historical `nl.r1a.grassmap.plugins.route.planner` package so the plugin

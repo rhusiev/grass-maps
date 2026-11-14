@@ -260,7 +260,8 @@ tasks.register<LintPluginManifestsTask>("checkPluginManifests") {
 // editing the task.
 tasks.register<CheckTranslationsTask>("checkTranslations") {
     group = "verification"
-    description = "Fails when a string key is missing from English or Ukrainian, or exists only in the translation."
+    description =
+        "Fails when a string key or plurals name is missing from English or Ukrainian, exists only in the translation, or an en-GB override does not differ."
     stringResources.from(
         fileTree(rootDir) {
             include("**/src/main/res/values*/strings.xml")

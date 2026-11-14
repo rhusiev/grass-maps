@@ -198,7 +198,7 @@ class NavigationScreenMappingTest {
                     placeName = "Home",
                 ),
             )
-        assertEquals("Favourite nearby", favourite.title)
+        assertEquals("Saved place nearby", favourite.title)
         assertEquals("Home · in 180 m", favourite.detail)
         assertEquals(NavigationAlertTone.Info, favourite.tone)
         assertEquals(NavigationAlertGlyph.Place, favourite.glyph)
@@ -388,7 +388,7 @@ class NavigationScreenMappingTest {
                 "nav_screen_alert_gps_back" to "GPS signal back",
                 "nav_screen_alert_recalculated" to "Route recalculated",
                 "nav_screen_alert_arrived" to "You have arrived",
-                "nav_screen_alert_favourite" to "Favourite nearby",
+                "nav_screen_alert_favourite" to "Saved place nearby",
                 "nav_screen_alert_waypoint" to "Waypoint nearby",
                 "nav_screen_alert_place" to "Place nearby",
                 "nav_screen_alert_place_detail" to "%1\$s · %2\$s",

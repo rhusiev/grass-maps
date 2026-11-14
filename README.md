@@ -124,9 +124,12 @@ cannot pass CI. Every step prints its duration, and the total is printed at the
 end.
 
 `checkTranslations` checks every module with `src/main/res/values*/strings.xml`:
-each key must exist in English (`values`) and Ukrainian (`values-uk`), with a
-non-blank value in both, and no key may exist only in the translation. The
-checker parses XML on the JVM, so it needs no emulator or Robolectric.
+each string key and `plurals` name must exist in English (`values`) and Ukrainian
+(`values-uk`), with a non-blank value in both, and no key may exist only in the
+translation. A `values-en-rGB/strings.xml` file is an override: each key must
+exist in the default file and differ from it, so British spellings live there and
+US spellings stay in `values`. The checker parses XML on the JVM, so it needs no
+emulator or Robolectric.
 
 User-facing text goes through the `Strings` service in `plugin-api`. Core and
 feature modules receive it as a `plugin-api` interface and never take an
@@ -1982,7 +1985,7 @@ kind chosen later therefore does not replay a place the traveller is already
 next to, which is the same rule as a switch that was off.
 
 The banner names the category and carries the place's own name and the distance
-that decided the alert: "Favourite nearby" and "Home · in 180 m", in English and
+that decided the alert: "Saved place nearby" and "Home · in 180 m", in English and
 Ukrainian. The navigation screen maps the three kinds to the blue info banner
 with its place glyph. A proximity banner clears with the other informational
 banners, after 4 s.

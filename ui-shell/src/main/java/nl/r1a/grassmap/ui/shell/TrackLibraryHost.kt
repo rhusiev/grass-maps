@@ -56,6 +56,7 @@ import nl.r1a.grassmap.plugin.api.model.RichTextStyle
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
 import nl.r1a.grassmap.plugin.api.model.TrackSort
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.ui.api.NavigationScreenColors
 
 /**
  * The track library screen (T-0414). The plugin owns the state, the four fixed
@@ -1080,7 +1081,7 @@ internal fun trackLibraryPalette(dark: Boolean): TrackLibraryPalette =
             textSecondary = Color(0xFF686C72),
             selectedText = Color.White,
             accent = Color(0xFF1E7F53),
-            danger = Color(0xFFC62828),
+            danger = Color(NavigationScreenColors.DANGER),
             undoBackground = Color(0xFF323437),
             undoText = Color.White,
         )
@@ -1128,7 +1129,7 @@ private const val RENAME_GLYPH = "✎"
 private const val SCREEN_PADDING_DP = 16
 private const val SCREEN_TOP_DP = 20
 private const val SHEET_MAX_WIDTH_DP = 560
-private const val SHEET_CORNER_DP = 16
+private const val SHEET_CORNER_DP = 22
 private const val SHEET_PADDING_DP = 16
 private const val SHEET_ROW_PADDING_DP = 10
 private const val ROW_GAP_DP = 8

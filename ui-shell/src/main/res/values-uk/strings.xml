@@ -22,7 +22,7 @@
     <string name="favourites_lists_create">Створити список</string>
     <string name="favourites_lists_points">Точки</string>
     <string name="favourites_lists_move_here">Перемістити вибрану точку сюди</string>
-    <string name="favourites_lists_search">Пошук в обраному</string>
+    <string name="favourites_lists_search">Пошук у збереженому</string>
     <string name="favourites_lists_search_hint">Назва або опис</string>
     <string name="favourites_lists_sort">Сортування</string>
     <string name="favourites_lists_sort_insertion">Порядок файлу</string>
@@ -106,7 +106,7 @@
     <string name="nav_screen_alert_reroute">Перерахунок</string>
     <string name="nav_screen_alert_arrival">Прибуття</string>
     <string name="nav_screen_alert_arrived">Ви прибули</string>
-    <string name="nav_screen_alert_favourite">Улюблене місце поруч</string>
+    <string name="nav_screen_alert_favourite">Збережене місце поруч</string>
     <string name="nav_screen_alert_waypoint">Точка треку поруч</string>
     <string name="nav_screen_alert_place">Місце поруч</string>
     <string name="nav_screen_alert_place_detail">%1$s · %2$s</string>
@@ -178,14 +178,40 @@
     <string name="follow_track_close">Закрити вибір старту</string>
     <string name="track_library_title">Треки</string>
     <string name="track_library_close">Закрити бібліотеку треків</string>
-    <string name="track_library_subtitle">Збережено · %1$s треків у %2$s теках</string>
+    <plurals name="track_library_subtitle">
+        <item quantity="one">Збережено · %1$s трек у %2$s</item>
+        <item quantity="few">Збережено · %1$s треки у %2$s</item>
+        <item quantity="many">Збережено · %1$s треків у %2$s</item>
+        <item quantity="other">Збережено · %1$s треків у %2$s</item>
+    </plurals>
+    <plurals name="track_library_folders">
+        <item quantity="one">%1$s теці</item>
+        <item quantity="few">%1$s теках</item>
+        <item quantity="many">%1$s теках</item>
+        <item quantity="other">%1$s теках</item>
+    </plurals>
     <string name="track_library_all_tracks">Усі треки</string>
     <string name="track_library_new_folder">Нова тека</string>
     <string name="track_library_rename_folder">Перейменувати теку</string>
-    <string name="track_library_folder_summary">%1$s треків · %2$s</string>
-    <string name="track_library_list_summary">%1$s треків · %2$s · ↑%3$s</string>
+    <plurals name="track_library_folder_summary">
+        <item quantity="one">%1$s трек · %2$s</item>
+        <item quantity="few">%1$s треки · %2$s</item>
+        <item quantity="many">%1$s треків · %2$s</item>
+        <item quantity="other">%1$s треків · %2$s</item>
+    </plurals>
+    <plurals name="track_library_list_summary">
+        <item quantity="one">%1$s трек · %2$s · ↑%3$s</item>
+        <item quantity="few">%1$s треки · %2$s · ↑%3$s</item>
+        <item quantity="many">%1$s треків · %2$s · ↑%3$s</item>
+        <item quantity="other">%1$s треків · %2$s · ↑%3$s</item>
+    </plurals>
     <string name="track_library_search">Пошук</string>
-    <string name="track_library_search_hint">Знайти серед %1$s треків</string>
+    <plurals name="track_library_search_hint">
+        <item quantity="one">Знайти серед %1$s треку</item>
+        <item quantity="few">Знайти серед %1$s треків</item>
+        <item quantity="many">Знайти серед %1$s треків</item>
+        <item quantity="other">Знайти серед %1$s треків</item>
+    </plurals>
     <string name="track_library_sort">Сортувати треки</string>
     <string name="track_library_sort_newest">Спочатку нові</string>
     <string name="track_library_sort_nearest">Спочатку найближчі</string>

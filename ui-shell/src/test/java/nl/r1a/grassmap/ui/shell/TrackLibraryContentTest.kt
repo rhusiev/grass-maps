@@ -17,7 +17,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 import java.util.Locale
 
 /**
@@ -248,26 +247,7 @@ class TrackLibraryContentTest {
     private fun strings(
         path: String,
         appPath: String,
-    ): Strings = MapStrings(resources(appPath) + resources(path))
-
-    private fun resources(path: String): Map<String, String> =
-        Regex("""<string name="([^"]+)">([^<]*)</string>""")
-            .findAll(File(path).readText())
-            .associate { it.groupValues[1] to it.groupValues[2].replace("\\u2191", "↑") }
-
-    private class MapStrings(
-        private val values: Map<String, String>,
-    ) : Strings {
-        override fun resolve(
-            key: String,
-            arguments: List<String>,
-        ): String {
-            val template = values[key] ?: key
-            return if (arguments.isEmpty()) template else String.format(Locale.ROOT, template, *arguments.toTypedArray())
-        }
-
-        override fun contains(key: String): Boolean = key in values
-    }
+    ): Strings = TestStringCatalog.read(path).merge(TestStringCatalog.read(appPath)).resolver()
 
     private companion object {
         const val ENGLISH = "src/main/res/values/strings.xml"

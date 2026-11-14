@@ -22,7 +22,7 @@
     <string name="favourites_lists_create">Create list</string>
     <string name="favourites_lists_points">Points</string>
     <string name="favourites_lists_move_here">Move the selected point here</string>
-    <string name="favourites_lists_search">Search favourites</string>
+    <string name="favourites_lists_search">Search saved</string>
     <string name="favourites_lists_search_hint">Name or description</string>
     <string name="favourites_lists_sort">Sort</string>
     <string name="favourites_lists_sort_insertion">File order</string>
@@ -106,7 +106,7 @@
     <string name="nav_screen_alert_reroute">Reroute</string>
     <string name="nav_screen_alert_arrival">Arrival</string>
     <string name="nav_screen_alert_arrived">You have arrived</string>
-    <string name="nav_screen_alert_favourite">Favourite nearby</string>
+    <string name="nav_screen_alert_favourite">Saved place nearby</string>
     <string name="nav_screen_alert_waypoint">Waypoint nearby</string>
     <string name="nav_screen_alert_place">Place nearby</string>
     <string name="nav_screen_alert_place_detail">%1$s · %2$s</string>
@@ -165,7 +165,7 @@
     <string name="track_card_show">Show</string>
     <string name="track_card_hidden">Hidden on the map</string>
     <string name="track_card_ascent">%1$s up</string>
-    <string name="track_card_colour_choice">Colour %1$s</string>
+    <string name="track_card_colour_choice">Color %1$s</string>
     <string name="follow_track_title">Follow %1$s</string>
     <string name="follow_track_untitled">this track</string>
     <string name="follow_track_ascent">↑%1$s m</string>
@@ -178,14 +178,30 @@
     <string name="follow_track_close">Close the start choices</string>
     <string name="track_library_title">Tracks</string>
     <string name="track_library_close">Close the track library</string>
-    <string name="track_library_subtitle">Saved · %1$s tracks in %2$s folders</string>
+    <plurals name="track_library_subtitle">
+        <item quantity="one">Saved · %1$s track in %2$s</item>
+        <item quantity="other">Saved · %1$s tracks in %2$s</item>
+    </plurals>
+    <plurals name="track_library_folders">
+        <item quantity="one">%1$s folder</item>
+        <item quantity="other">%1$s folders</item>
+    </plurals>
     <string name="track_library_all_tracks">All tracks</string>
     <string name="track_library_new_folder">New folder</string>
     <string name="track_library_rename_folder">Rename folder</string>
-    <string name="track_library_folder_summary">%1$s tracks · %2$s</string>
-    <string name="track_library_list_summary">%1$s tracks · %2$s · ↑%3$s</string>
+    <plurals name="track_library_folder_summary">
+        <item quantity="one">%1$s track · %2$s</item>
+        <item quantity="other">%1$s tracks · %2$s</item>
+    </plurals>
+    <plurals name="track_library_list_summary">
+        <item quantity="one">%1$s track · %2$s · ↑%3$s</item>
+        <item quantity="other">%1$s tracks · %2$s · ↑%3$s</item>
+    </plurals>
     <string name="track_library_search">Search</string>
-    <string name="track_library_search_hint">Search %1$s tracks</string>
+    <plurals name="track_library_search_hint">
+        <item quantity="one">Search %1$s track</item>
+        <item quantity="other">Search %1$s tracks</item>
+    </plurals>
     <string name="track_library_sort">Sort tracks</string>
     <string name="track_library_sort_newest">Newest first</string>
     <string name="track_library_sort_nearest">Nearest first</string>

@@ -18,6 +18,20 @@ interface Strings {
         arguments: List<String> = emptyList(),
     ): String
 
+    /**
+     * Returns the text for a plural [key] in the form the active language uses
+     * for [quantity], with [arguments] applied in the order the resource
+     * declares its placeholders.
+     *
+     * The default implementation has no plural tables, so it falls back to
+     * [resolve]. An implementation with access to the resources overrides it.
+     */
+    fun resolveQuantity(
+        key: String,
+        quantity: Int,
+        arguments: List<String> = emptyList(),
+    ): String = resolve(key, arguments)
+
     /** Returns true when [key] exists in the active language. */
     fun contains(key: String): Boolean
 }

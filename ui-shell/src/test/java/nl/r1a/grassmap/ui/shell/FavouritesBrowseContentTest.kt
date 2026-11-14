@@ -40,7 +40,7 @@ class FavouritesBrowseContentTest {
 
         val content = favouritesBrowseContent(state, MapStrings(UKRAINIAN))
 
-        assertEquals("Пошук в обраному", content.search)
+        assertEquals("Пошук у збереженому", content.search)
         assertEquals("Назва або опис", content.searchHint)
         assertEquals("Сортування", content.sort)
         assertEquals(4, content.sorts.size)
@@ -120,7 +120,7 @@ class FavouritesBrowseContentTest {
     private companion object {
         val ENGLISH =
             mapOf(
-                SEARCH_KEY to "Search favourites",
+                SEARCH_KEY to "Search saved",
                 SEARCH_HINT_KEY to "Name or description",
                 SORT_KEY to "Sort",
                 SORT_INSERTION_KEY to "File order",
@@ -135,7 +135,7 @@ class FavouritesBrowseContentTest {
 
         val UKRAINIAN =
             mapOf(
-                SEARCH_KEY to "Пошук в обраному",
+                SEARCH_KEY to "Пошук у збереженому",
                 SEARCH_HINT_KEY to "Назва або опис",
                 SORT_KEY to "Сортування",
                 SORT_INSERTION_KEY to "Порядок файлу",

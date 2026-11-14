@@ -440,6 +440,7 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/contours` | the contour overlay for the Standard and Touring variants and the one-row layers panel that toggles it | `plugin-api`, `plugin-ui-api` |
 | `plugins/route-relations` | the hiking and cycling relation geometry assembler, the shared-way lane assignment, the OSMC waymark mapping, the cycling node-network numbers and the `MapHost` layers over an inline GeoJSON source | `plugin-api` |
 | `plugins/route-warnings` | the warning list for fords, steps, barriers, railway crossings and private ways, with its profile filter and distance order | `plugin-api` |
+| `plugins/proximity-alerts` | the proximity schedule for favourites, track waypoints and chosen place kinds: the three chosen radii, the one-per-approach latch and its lookup refresh | `plugin-api` |
 
 ## Place card
 
@@ -1614,7 +1615,8 @@ an episode waits for the next episode instead of replaying a past one.
 and the fix time that decided it. The banner holds the kind, the severity, the
 replacement route's own distance for a reroute, the gap length for a lost
 signal, the way feature's distance and its own `WayAlertFeatureKind`, so a ford
-and a barrier get their own copy while sharing the hazard switch. It holds no
+and a barrier get their own copy while sharing the hazard switch, and a
+proximity place's own name and the distance that decided its alert. It holds no
 text: the screen resolves the kind through i18n and formats the distance with
 the unit system. The event is `@Serializable`, so `AlertEvent.serializer()` is
 the stream's serializer for the control channel and the navigation screen.
@@ -1812,6 +1814,63 @@ The file is an authored stand-in until the OSM extraction writes it; the
 manifest says so. The tests read it through the real `RegionReader`, drive the
 real schedule, and bridge the cues into the real `AlertHost` for the all-off
 and typed-banner cases.
+
+## Proximity alerts
+
+Proximity alerts are T-0413. They announce a favourite, a waypoint of a stored
+track, or a place of a kind the user picked, once per approach, while a session
+is active. The design handoff (round 6) says they use the blue info banner and
+that place kinds are chips the user picks. It states no radius, so the three
+radii are chosen here, one constant per category in `ProximityRadius`:
+
+| Category | Switch | Radius | Walking, 5 km/h | Cycling, 18 km/h |
+|---|---|---|---|---|
+| Favourite | `favourite` | 200 m | 2 min 24 s | 40 s |
+| Track waypoint | `trackWaypoint` | 100 m | 1 min 12 s | 20 s |
+| Chosen place kind | `poi` | 250 m | 3 min | 50 s |
+
+All three switches are off by default in `AlertSettings`, like every other
+alert. A kind that is off produces no event and no effect, because
+`AlertHost.onPlaceAlert` checks the switch before it builds a banner.
+
+"Once" is one approach. It is not one fix, and it is not a time window.
+`ProximityAlertSchedule` latches a place when the fix is inside its radius. It
+releases the latch only when the fix is 50 m beyond the radius
+(`ProximityRadius.RELEASE_METERS`). A fix that stays inside the radius
+announces once, and a traveller who leaves the radius and comes back gets a
+second alert. The latch key is the category plus the place's own id: a
+favourite's id, the track id and the waypoint index, or the search index's
+place id. A place that drops out of the lookup box and returns is a new
+approach. The host keeps no latch of its own, so the producer is the only owner
+of "once".
+
+The schedule asks `ProximityPlaceSource` for the places near the fix when the
+session starts and every 200 m of travel, inside a box 500 m across. The app's
+source (`LibraryProximityPlaces`) reads the favourites library, the waypoints of
+every stored track, and the offline index for the chosen place kinds. Each part
+is read on its own, so an unreadable favourites file or an unmounted index still
+leaves the other two working. The lookup box is wider than the largest radius
+plus one refresh step, so a place cannot enter a radius unseen.
+
+A place of a kind the user did not pick takes its latch without an alert. A
+kind chosen later therefore does not replay a place the traveller is already
+next to, which is the same rule as a switch that was off.
+
+The banner names the category and carries the place's own name and the distance
+that decided the alert: "Favourite nearby" and "Home · in 180 m", in English and
+Ukrainian. The navigation screen maps the three kinds to the blue info banner
+with its place glyph. A proximity banner clears with the other informational
+banners, after 4 s.
+
+The app starts the host in `AppContainer.proximityAlerts` beside the way-alert
+host and feeds it the published navigation state. A session counts as active
+from its first state past Idle until it is stopped, so a pause or an arrival
+keeps the latches and a finished trip clears them. The chosen place kinds live
+in `AppContainer.proximityPoiKinds`; nothing writes that list yet, because the
+alerts page from the design handoff does not exist, so place kinds stay silent
+on a device. The acceptance is `ProximityReplayTest`: a track replay through
+the production session past one place of each category raises one alert of
+each, and the same replay with a switch off raises none of that kind.
 
 ## Route warnings
 

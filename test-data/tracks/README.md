@@ -96,6 +96,15 @@ OsmAnd shows for them. `oracle.json` is empty today, so
 what is missing and how to record it. No OsmAnd number in this repository is
 invented.
 
+`oracle/` is the synthetic companion. Nine generated GPX files were imported
+into OsmAnd 5.4.10 on the Moto g32, and `oracle.json` records what OsmAnd
+showed for each. `SyntheticOsmAndTracksOracleTest` in `tracks` parses the same
+GPX files and compares `TrackAnalyzer` with those figures. The inputs are
+synthetic, so the test proves agreement with OsmAnd, not correctness on real
+GPS noise; `oracle/README.md` records that limitation and the first run's
+elevation gap. The ten-real-track acceptance above remains the milestone gate
+and is still open.
+
 ## Where the profiles are asserted
 
 - `app/src/test/.../TrackFixturesTest` imports each file through the real

@@ -213,6 +213,10 @@ class TrackFollowTest {
                 }
 
             val run = session.run(route, replay).valueOrFail()
+            // The session ends on the fix that arrives, so the last emit does
+            // not return into this builder; take that fix's state from the
+            // session to keep one recorded state per fix.
+            states += session.state.value
 
             assertTrue("the trip arrives", run.arrived)
             assertEquals(NavigationPhase.Arrived, session.state.value.phase)

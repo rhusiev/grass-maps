@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,10 +38,11 @@ import java.util.Locale
  * A session is started with a route and a profile. It runs on [scope] while the
  * process lives; the navigation foreground service keeps the process and
  * location alive when the activity leaves the foreground. A session ends on
- * arrival, on a fix-flow failure or on [stop]. Arrival ends the location
- * session but keeps the notification's Stop action until [dismiss] or the
- * notification's own Stop; every other ending stops and removes the service,
- * which is what releases location when the activity is gone.
+ * arrival, on a fix-flow failure or on [stop]. Arrival is terminal on the fix
+ * that reaches the destination: it ends the location session at once and keeps
+ * the notification's Stop action until [dismiss] or the notification's own
+ * Stop. Every other ending stops and removes the service, which is what
+ * releases location when the activity is gone.
  *
  * Start is idempotent: a second start while a session exists changes nothing
  * and reports that no new session began. Stop is idempotent too, and stopping
@@ -73,7 +75,7 @@ class NavigationController(
     private var job: Job? = null
     private var control: NavigationControl? = null
 
-    /** Whether a session is running or still stopping. */
+    /** Whether a session is running. [stop] clears this in its own call. */
     val isActive: Boolean
         get() = synchronized(lock) { job != null }
 
@@ -167,11 +169,26 @@ class NavigationController(
         return changed
     }
 
-    /** Ends the session. Returns false when there was no session to stop. */
+    /**
+     * Ends the session and releases its screen, notification and location in
+     * this call. A reroute inside the native engine cannot be interrupted - the
+     * engine checks cancellation only before and after that call - so the
+     * cancelled body may outlive the stop; its late answer is dropped and
+     * cannot reopen the screen. Returns false when there was no session.
+     */
     fun stop(): Boolean {
-        val active = synchronized(lock) { job } ?: return false
-        active.cancel()
-        return true
+        synchronized(lock) {
+            val active = job ?: return false
+            mutableState.value = mutableState.value.copy(phase = NavigationPhase.Stopped)
+            service.stop()
+            // Clear the job before the cancel, so the completion handler sees
+            // that this stop already did the teardown and does none of it twice.
+            job = null
+            control = null
+            log("navigation-stopped")
+            active.cancel()
+            return true
+        }
     }
 
     /**
@@ -208,6 +225,7 @@ class NavigationController(
         profile: RouteProfile,
         reroute: Boolean,
     ) {
+        val sessionJob = checkNotNull(currentCoroutineContext()[Job]) { "a session runs in a job" }
         val sessionControl = NavigationControl()
         synchronized(lock) {
             if (job == null) {
@@ -247,7 +265,7 @@ class NavigationController(
                             // The session starts at Idle until its first fix; the
                             // controller already published the starting state.
                             if (state.phase != NavigationPhase.Idle) {
-                                mutableState.value = state
+                                publishFrom(sessionJob, state)
                             }
                         }
                     }
@@ -269,8 +287,9 @@ class NavigationController(
                 } finally {
                     // The final publication happens just before the session
                     // returns; copy it before the mirror stops so an arrival is
-                    // not lost to the cancellation race.
-                    mutableState.value = session.state.value
+                    // not lost to the cancellation race. A stop that already
+                    // released the screen is not overwritten here.
+                    publishFrom(sessionJob, session.state.value)
                     mirror.cancel()
                 }
             }
@@ -279,6 +298,22 @@ class NavigationController(
             throw cancellation
         } catch (error: Exception) {
             log("navigation-session-failed error=${error.javaClass.simpleName}: ${error.message}")
+        }
+    }
+
+    /**
+     * Publishes a session state only while [sessionJob] still owns the
+     * controller, so a stop that already released the screen is not overwritten
+     * by a body that outlived it.
+     */
+    private fun publishFrom(
+        sessionJob: Job,
+        state: NavigationState,
+    ) {
+        synchronized(lock) {
+            if (job === sessionJob) {
+                mutableState.value = state
+            }
         }
     }
 

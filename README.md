@@ -1408,7 +1408,9 @@ position, one waypoint for each leg not yet passed, and the destination. Those
 waypoints come from `Route.segments`, so an annotated route with hundreds of
 edge runs still sends one break per leg. Arrival uses one number too: the core's
 end-of-step advance takes `arrivalDistanceMeters` instead of the old hardcoded
-10 m.
+10 m. The run ends on the fix that reaches the destination. The session does not
+wait for a later fix to end the trip. An arrived trip never keeps the location
+session alive while the driver stands still.
 
 The 15 m noise acceptance replays the committed `test-data/location/mock-walk.gpx`
 with every fix moved exactly 15 m in a seeded random direction (seed
@@ -1628,11 +1630,13 @@ the lock screen. Pausing publishes `NavigationPhase.Paused`; the session drops
 every fix before the follower and before the reroute gate, so guidance stops and
 no reroute can start. An arrival or a stop is terminal: a pause that lands after
 that phase is published leaves it unchanged. Arrival ends the location session
-but keeps the notification's Stop action until the screen's Done or the
-notification's Stop; every other ending removes the service. Resuming continues
-from the next fix; a fix that arrived during the pause is never replayed. A
-paused session that is stopped ends in `Stopped`, never in `Arrived`, because no
-arrival can be detected while fixes are dropped.
+at the fix that reaches the destination. It keeps the notification's Stop action
+until the screen's Done or the notification's Stop. Every other ending removes
+the service. End removes it in the same call, even while a reroute is still
+inside the native engine. The cancelled session drops the answer it gets.
+Resuming continues from the next fix; a fix that arrived during the pause is
+never replayed. A paused session that is stopped ends in `Stopped`, never in
+`Arrived`, because no arrival can be detected while fixes are dropped.
 
 The control commands `core.nav.start`, `core.nav.pause`, `core.nav.resume` and
 `core.nav.stop` drive the controller. `core.nav.start` takes a route in the

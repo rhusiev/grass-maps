@@ -2,10 +2,12 @@ package nl.r1a.grassmap.app
 
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.navigation.GeometryRouteFollower
 import nl.r1a.grassmap.navigation.NavigationPhase
 import nl.r1a.grassmap.navigation.RouteRelation
@@ -153,9 +155,8 @@ class NavigationControllerTest {
             runCurrent()
             harness.fixes.emit(fix(START))
             runCurrent()
-            harness.fixes.emit(fix(END))
-            runCurrent()
-            // The takeWhile checks the arrival flag on the next upstream item.
+            // The fix at the destination is the last one the session needs: no
+            // later fix tells it that the trip ended.
             harness.fixes.emit(fix(END))
             runCurrent()
             advanceUntilIdle()
@@ -167,6 +168,38 @@ class NavigationControllerTest {
             harness.controller.dismiss()
             assertEquals(NavigationPhase.Idle, harness.controller.state.value.phase)
             assertEquals(1, harness.service.stops)
+        }
+
+    @Test
+    fun stoppingDuringARerouteReleasesTheScreenAndNotificationAtOnce() =
+        runTest {
+            val router = UninterruptibleRouter()
+            val harness = harness(backgroundScope, routing = { router })
+            harness.controller.start(ROUTE, RouteProfile.Walk).valueOrFail()
+            runCurrent()
+            harness.fixes.emit(fix(OFF_ROUTE, FIRST_FIX_MILLIS))
+            runCurrent()
+            harness.fixes.emit(fix(OFF_ROUTE_2, SECOND_FIX_MILLIS))
+            runCurrent()
+            assertTrue("the reroute asks the engine", router.entered.isCompleted)
+
+            assertTrue(harness.controller.stop())
+
+            // The native call has not answered, so the session body is still
+            // inside it; End must not wait for that answer.
+            assertFalse("the engine is still routing", router.answered.isCompleted)
+            assertEquals(NavigationPhase.Stopped, harness.controller.state.value.phase)
+            assertEquals(1, harness.service.stops)
+            assertFalse(harness.controller.isActive)
+
+            router.release.complete(Unit)
+            advanceUntilIdle()
+
+            // The late answer must neither reopen the screen nor stop the
+            // service a second time.
+            assertEquals(NavigationPhase.Stopped, harness.controller.state.value.phase)
+            assertEquals(1, harness.service.stops)
+            assertEquals(1, router.requests)
         }
 
     @Test
@@ -273,6 +306,43 @@ class NavigationControllerTest {
         }
     }
 
+    /**
+     * Stands in for the native Valhalla call: it reports that routing started,
+     * then waits in [NonCancellable] until the test answers. Cancelling the
+     * session therefore cannot complete its body, which is the shape of a
+     * blocking native call the engine can only check cancellation around.
+     */
+    private class UninterruptibleRouter : RoutingEngine {
+        val entered = CompletableDeferred<Unit>()
+        val answered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        var requests: Int = 0
+            private set
+
+        override val contract: ProviderContract = RoutingEngineContract.REFERENCE
+
+        override fun capabilities(): RoutingCapabilities =
+            RoutingCapabilities(
+                profiles = setOf(RouteProfile.Walk),
+                modifierKinds = emptySet(),
+                maxAlternatives = 0,
+                maxDistanceMeters = 250_000.0,
+            )
+
+        override suspend fun route(
+            request: RouteRequest,
+            cancellation: CancellationHandle,
+        ): Outcome<List<Route>> {
+            requests += 1
+            entered.complete(Unit)
+            withContext(NonCancellable) {
+                release.await()
+                answered.complete(Unit)
+            }
+            return Outcome.Failure(AppError.NotReady)
+        }
+    }
+
     private fun <T> Outcome<T>.valueOrFail(): T =
         when (this) {
             is Outcome.Success -> value
@@ -288,6 +358,13 @@ class NavigationControllerTest {
         /** 200 m east of the line, then 100 m along it while still off route. */
         val OFF_ROUTE = GeoPoint(49.8400, 24.0328)
         val OFF_ROUTE_2 = GeoPoint(49.8409, 24.0328)
+
+        /**
+         * 45 s apart: 100 m in that time is 2.2 m/s, under the gate's four-times
+         * walking-speed cap, so the second fix spends the reroute budget.
+         */
+        const val FIRST_FIX_MILLIS = 1_000L
+        const val SECOND_FIX_MILLIS = 46_000L
         val ROUTE =
             Route(
                 geometry = listOf(START, END),
@@ -295,6 +372,9 @@ class NavigationControllerTest {
                 durationSeconds = 200.0,
             )
 
-        fun fix(point: GeoPoint): LocationFix = LocationFix(position = point, accuracyMeters = 5.0, timeMillis = 1_000L)
+        fun fix(
+            point: GeoPoint,
+            timeMillis: Long = 1_000L,
+        ): LocationFix = LocationFix(position = point, accuracyMeters = 5.0, timeMillis = timeMillis)
     }
 }

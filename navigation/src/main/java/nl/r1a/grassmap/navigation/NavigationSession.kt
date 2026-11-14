@@ -2,12 +2,14 @@ package nl.r1a.grassmap.navigation
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.launch
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
@@ -139,9 +141,8 @@ class NavigationSession(
                     }
                 try {
                     fixes
-                        .takeWhile { !arrived }
                         .filter { !control.paused.value }
-                        .collect { fix ->
+                        .transformWhile<LocationFix, Unit> { fix ->
                             fixCount += 1
                             if (!isAccurate(fix)) {
                                 inaccurateFixCount += 1
@@ -153,7 +154,7 @@ class NavigationSession(
                                             "limit_m=${config.minimumHorizontalAccuracyMeters}",
                                     )
                                 }
-                                return@collect
+                                return@transformWhile true
                             }
                             if (inaccurate) {
                                 inaccurate = false
@@ -200,7 +201,13 @@ class NavigationSession(
                                             profile = profile,
                                         )
                                     val started = clockMillis()
-                                    when (val outcome = routing.route(request, CancellationHandle.None)) {
+                                    val outcome = routing.route(request, CancellationHandle.None)
+                                    // A stop cannot interrupt the native call, so
+                                    // the session checks here that it still owns
+                                    // the trip before it applies or reports the
+                                    // answer the call produced.
+                                    currentCoroutineContext().ensureActive()
+                                    when (outcome) {
                                         is Outcome.Failure -> {
                                             log("navigation-reroute-failed fixes=$fixCount error=${outcome.error}")
                                             rerouteGate.reset()
@@ -279,7 +286,7 @@ class NavigationSession(
                                                         lastRerouteMillis = lastRerouteMillis,
                                                     ),
                                                 )
-                                                return@collect
+                                                return@transformWhile true
                                             }
                                         }
                                     }
@@ -319,7 +326,13 @@ class NavigationSession(
                                         "remaining_m=${format(mutableState.value.remainingDistanceMeters)}",
                                 )
                             }
-                        }
+                            // Arrival ends the trip on the fix that reached the
+                            // destination. Waiting for one more fix would leave a
+                            // trip that already arrived owning the session, so
+                            // Done and the notification keep waiting on a reading
+                            // that may never come.
+                            !arrived
+                        }.collect {}
                 } finally {
                     pauseWatcher.cancel()
                 }

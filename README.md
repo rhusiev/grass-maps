@@ -42,6 +42,13 @@ targets), and the NDK is found through `ANDROID_NDK_HOME` or the newest
 `$ANDROID_HOME/ndk/*`. A build without either fails at configuration with a
 message naming the missing part.
 
+`rust/grass-regions` is the region reader behind `RegionAccess` (T-0321). It is
+wired the same way and from its own package, `nl.r1a.grassmap.regions.core`:
+`:regions` builds a host library for the JVM tests and one per ABI, generates
+the bindings from the host library, and packages `libgrass_regions.so`, so the
+two crates do not collide at APK merge. `./gradlew :regions:test` needs no
+device and no emulator.
+
 The index itself is not bundled in the app. The debug build reads it from
 `<externalFilesDir>/search/<region>/`; the committed Lviv section under
 `places/src/test/resources/search` is the quality oracle for the P4a probes.
@@ -1714,6 +1721,16 @@ tiles do not carry them. `RegionReader` in `regions` reads the
 `way-alerts.geojson` component and answers a corridor query along the active
 route. A package without the component is valid and reports no features.
 
+Since T-0321 the component read, its parse and both queries run in
+`rust/grass-regions` behind a uniffi `RegionReader`. The Kotlin `RegionReader`
+keeps the mount contract - it parses the manifest, selects the component and
+checks its format, version, declared size and file - and maps the native values
+onto `WayAlertHit` and `RouteRelations`, so no caller or plugin sees a native
+type. The parsed feature list is cached inside the native reader against the
+component path and declared size, and the read is off Main. The Kotlin
+corridor maths and GeoJSON parser are gone; the fixtures that pinned them were
+not edited.
+
 The kinds are a railway crossing, a tunnel and a hazard. A ford or a barrier
 node uses the hazard kind and the hazard switch. Each kind has its own switch,
 and all three are off by default, like the T-0317 alerts. The product scope
@@ -1723,6 +1740,25 @@ feature is skipped. The component is extracted from OSM (T-0319A):
 `osm-extract --way-alerts` writes it from the region's PBF, the fixture uses its
 own small OSM input, and the Lviv pack carries 18,009 extracted features. A
 package without the component still opens and reports no features.
+
+The first corridor query pays the read and the parse; every later query on the
+same mount only runs the geometry. Measured on this machine (Fedora, Intel Core
+i5-9300H, 8 threads, JVM 21.0.12.1, the component in page cache, a fresh reader
+per sample, 15 samples after three warmups, median): the committed test region
+(8 features, 1,341 B) takes 2.2 ms against 1.1 ms for the Kotlin reader at dev
+`bcf212b`, and the Lviv pack (18,009 features, 2,921,155 B) 19.8 ms against
+36.5 ms. Of the Lviv figure, 12.6 ms is the native read and parse measured
+inside the crate; the rest is the manifest read, the uniffi call and the model
+mapping. At the test region's size the fixed cost of a fresh native reader is
+larger than the parse it saves. The relation component (130,097 B) takes 2.6 ms
+against 1.7 ms, parsed from JSON values rather than typed ones; at that size
+the difference is under a millisecond. The APK grows by 1,360,027 B: 573,776 B
+for `arm64-v8a`, 638,680 B for `x86_64`, and the remaining 147,571 B is the
+generated Kotlin bindings and their dex metadata (the two `.so` files are the
+only new native entries in the APK, inferred, not measured separately). A build
+with an empty `regions/build/rust` and no generated bindings takes 224 s, with
+the Gradle caches otherwise warm; the crate's own `cargo test` takes 1.7 s warm
+and 11.6 s with an empty target directory.
 
 The corridor is 30 m wide and the warning is 20 to 40 seconds of travel before
 the feature:
@@ -1851,7 +1887,9 @@ Hiking and cycling route relations are T-0418 and T-0419. `RegionReader` reads
 the mounted region's `relations.json` component: each member way's geometry
 once, each relation's ordered way members with its `route`, `network`, `ref`,
 `name`, `colour` and `osmc:symbol`, and the numbered junctions of the cycling
-node networks. A package without the component opens and draws nothing.
+node networks. Since T-0321 the decode runs in `rust/grass-regions` and the
+Kotlin side rebuilds the model from the native values. A package without the
+component opens and draws nothing.
 
 `plugins/route-relations` assembles each relation by walking its members in
 relation order and reversing a way that points back against the previous
@@ -2840,8 +2878,8 @@ whole file, so it is safe to call while the map is starting.
 
 The way-alert component is optional, so an older package still mounts and
 opens. `RegionReader` (T-0319) reads `way-alerts.geojson` from the mounted
-version on its first query, off Main, and answers the route corridor query the
-way-alert plugin uses. A manifest without the component is a success with no
+version on its first query, off Main, through the native reader (T-0321), and
+answers the route corridor query the way-alert plugin uses. A manifest without the component is a success with no
 features; a present but unreadable component is `CorruptData` and an unknown
 format version is `Unsupported`. The mount does not hash the component; the
 installer already verified every declared file, and the reader checks the

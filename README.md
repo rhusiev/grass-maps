@@ -408,7 +408,7 @@ application ID is `nl.r1a.grassmap`.
 | `regions` | catalogue, download, verify, mount, update, source resolver, routing pack handling | `plugin-api` |
 | `routing` | route model, the `routing.engine` contract seam, its stable JSON form, the start/end planner state machine, and the reuse history store | `plugin-api` |
 | `navigation` | route follower, off-route detection, reroute policy, guidance, following a track | `routing`, `plugin-api` |
-| `alerts` | alert sources, scheduling, sound, vibration and banner output | `navigation`, `plugin-api` |
+| `alerts` | alert sources, scheduling, sound, vibration and banner output, the per-profile alert settings store | `navigation`, `plugin-api` |
 | `planner` | the start/end plan, its intermediate stops, its undo and redo history, its reuse commands and its state and history streams; the shell draws the preview and the turn stepper from it | `plugin-api`, `routing` |
 | `places` | place and search provider hosts, favourites store | `plugin-api` |
 | `tracks` | GPX import and export, the track file store and sidecars, analysis engine | `plugin-api` |
@@ -1828,8 +1828,8 @@ the reader, so it cannot alert at all.
 `AlertHost.onWayAlert` is the typed path: it checks the switch for the kind,
 drops a key it has already announced in this revision, and emits the same
 `AlertEvent` as the other alerts. The banner carries `featureDistanceMeters`
-next to the kind and severity, and the effects are the usual sound and
-vibration for the kind. `core.nav.way_alerts` turns the switches on or off on a
+next to the kind and severity, and the effects follow the profile's three
+output channels (banner, sound, vibration). `core.nav.way_alerts` turns the switches on or off on a
 device; its parameters are `enabled` and an optional `kind` (`all`, `tunnel`,
 `railway_crossing`, `hazard`).
 
@@ -1859,15 +1859,15 @@ All three switches are off by default in `AlertSettings`, like every other
 alert. A kind that is off produces no event and no effect, because
 `AlertHost.onPlaceAlert` checks the switch before it builds a banner.
 
-The three kinds become reachable when round 8's alerts page supplies their
-switches and the place-kind chips. That page is designed, not built, and this
-task does not build it. Until it exists the schedule is inert by construction:
-`AppContainer.proximityAlerts` closes the schedule's gate while all three
-switches are off, or while `poi` is on with no chosen kind, and a closed gate
-does no lookup at all. A session therefore pays no favourites, waypoint or
-index work for alerts that could only be dropped. This is also why
-`ProximityAlertHost` asks its caller `canAlert` before every lookup instead of
-trusting a default.
+The three place switches are on the profile's alerts page. The page has one
+row for the chosen place kinds instead of a switch: a non-empty list turns the
+`poi` alert on, and clearing every kind turns it off. The chosen kinds are the
+exact search-index category strings ("amenity=drinking_water") and live in the
+active profile, so `AppContainer.proximityAlerts` reads them beside the alert
+host's switches. With at least one chosen kind the schedule's gate opens and it
+queries the offline index; with none it does no lookup at all. A session
+therefore pays no favourites, waypoint or index work for alerts that could
+only be dropped.
 
 "Once" is one approach. It is not one fix, and it is not a time window.
 `ProximityAlertSchedule` latches a place when the fix is inside its radius. It
@@ -1902,11 +1902,56 @@ The app starts the host in `AppContainer.proximityAlerts` beside the way-alert
 host and feeds it the published navigation state. A session counts as active
 from its first state past Idle until it is stopped, so a pause or an arrival
 keeps the latches and a finished trip clears them. The chosen place kinds live
-in `AppContainer.proximityPoiKinds`, ready for the alerts page described above.
-The acceptance is `ProximityReplayTest`: a track replay through the production
+in the active profile's `ProfileAlertSettings`, which
+`AppContainer.proximityPoiKinds` exposes to the plugin. The acceptance is
+`ProximityReplayTest`: a track replay through the production
 session past one place of each category raises one alert of each, the same
 replay with a switch off raises none of that kind, and a replay whose three
 switches are off asks the source nothing at all.
+
+## Profile alert settings
+
+`AlertSettingsStore` in `alerts` keeps one `ProfileAlertSettings` per
+`RouteProfile`: the ten `AlertSettings` switches, the three `AlertChannels`,
+and the chosen place kinds. It writes `settings/alerts.json` and stores only a
+profile that differs from the defaults. The file uses stable snake-case keys
+(`off_route`, `railway_crossing`, `track_waypoint`, `poi_kinds`); a missing,
+unreadable or corrupt file reads as every profile at the defaults, and an
+older file is read as the subset of the same fields it carries. Construction
+does not touch the disk: `AppContainer.alerts` loads it on the IO dispatcher,
+and a change is written atomically on that dispatcher, coalescing a burst into
+a write of the latest value.
+
+A trip reads the active profile. `NavigationController.start` reports the
+profile it started, `AlertSettingsStore.activate` makes that profile active,
+and the alert host replaces its switches and channels from the store. Nothing
+resets the host per trip any more. If the active profile's values are edited
+during a trip, the next alert decision uses the new values; an episode already
+latched in `AlertHost` is not replayed. There is no profile-switching UI yet,
+so a different profile can only become active between trips; when that UI
+exists, activating another profile mid-trip swaps the switches and leaves the
+trip and its latches running.
+
+The page is `AlertsScreenHost` in `ui-shell`, built from
+`plugin-ui-api`'s `AlertsPageState`. It draws the design's three sections:
+Navigation (off route, GPS signal lost or back, route recalculated, arrival),
+On the way (railway crossings, tunnels, hazards) and Approaching (saved
+places, track waypoints, places to watch). The nine kind switches are the
+`AlertSettings` rows; the places row opens a picker and the chosen kinds turn
+the `poi` switch on, because the design gives that row no switch of its own.
+The picker offers a fixed vocabulary of exact index kinds (drinking water,
+shelter, spring, toilets, picnic site, viewpoint, campsite, cafe, pharmacy).
+The index has no call that lists its categories, so the page does not probe
+the installed extract: a kind the extract does not carry simply finds no
+places.
+
+The three reach controls map to `AlertChannels`. Banner off stops
+`NavigationAlertBanners` from drawing the event (the event carries
+`bannerVisible`); sound and vibration off remove those values from the event
+and from `AndroidAlertEffects`. All three off means `AlertHost` emits nothing,
+so a trip with the design's default page is silent. The navigation screen's
+Camera and alerts row opens the page; the profile editor does not exist at this
+base, so `ProfileAlertsEntry` is the row it can place beside its other rows.
 
 ## Route warnings
 

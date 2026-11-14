@@ -17,7 +17,6 @@ import nl.r1a.grassmap.navigation.RouteRelation
 import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.ProximityPlaceKind
 import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
-import nl.r1a.grassmap.plugin.api.model.WayAlertKey
 
 /**
  * The alert seam (T-0317): it reads the navigation state and the fix flow and
@@ -47,10 +46,10 @@ import nl.r1a.grassmap.plugin.api.model.WayAlertKey
  * - **Arrival** - announced once on the transition into
  *   [NavigationPhase.Arrived]; a second Arrived state is the same arrival. The
  *   latch re-arms only when the phase leaves Arrived, which starts a new trip.
- * - **Proximity** - the host has no proximity latch of its own: the producer
- *   (T-0413) decides that one approach is due and the host announces it. Two
- *   independent latches for the same place would disagree about a second
- *   approach, so the scope of "once" stays with the producer.
+ * - **Way alert and proximity** - the host has no latch of its own for either:
+ *   the producers (T-0319, T-0413) decide that one approach is due and the host
+ *   announces it. Two independent latches for the same feature would disagree
+ *   about a second approach, so the scope of "once" stays with the producer.
  *
  * Latches advance even while their switch is off, so enabling an alert in the
  * middle of an episode waits for the next episode. Sound and vibration are
@@ -86,8 +85,6 @@ class AlertHost(
     private var lastRouteRevision: Long? = null
     private var arrived = false
     private var sequence = 0L
-    private val announcedWayAlerts = mutableSetOf<WayAlertKey>()
-    private var wayAlertRevision: Long? = null
 
     /** Turns [kind] on, sharing its switch with the kind's other half. */
     fun enable(kind: AlertKind) {
@@ -169,7 +166,6 @@ class AlertHost(
         val previousRevision = lastRouteRevision
         lastRouteRevision = revision
         if (previousRevision != null && revision != previousRevision) {
-            announcedWayAlerts.clear()
             if (fixTimeMillis != null && mutableSettings.value.reroute) {
                 announce(
                     AlertKind.Rerouted,
@@ -212,33 +208,30 @@ class AlertHost(
 
     /**
      * Announces one way alert (T-0319): a tunnel, a railway crossing or a
-     * hazard/ford/barrier found on the route. [key] is the feature's identity
-     * inside [key]'s route revision, so the same feature is announced once and
-     * a reroute, which changes the revision, re-arms it.
+     * hazard/ford/barrier found on the route.
      *
-     * A switch that is off drops the alert; the key is not recorded, so
-     * enabling the switch does not replay a feature that is already behind.
-     * The plugin's schedule has already latched the feature by then.
+     * The producer owns the approach scope, as it does for proximity: the
+     * schedule latches a feature when it first comes inside its alert distance
+     * and releases the latch only beyond that distance, so it sends one cue per
+     * approach and a reroute does not re-send a feature the replacement route
+     * still passes. The host therefore announces every call that its switch
+     * allows instead of keeping a second latch, which would drop the cue a
+     * returning approach is owed.
+     *
+     * A switch that is off drops the alert, and the switch is read on each cue,
+     * so enabling it does not replay a feature that is already behind.
      */
     @Synchronized
     fun onWayAlert(
         kind: AlertKind,
         fixTimeMillis: Long,
         distanceToFeatureMeters: Double,
-        key: WayAlertKey,
         featureKind: WayAlertFeatureKind? = null,
     ) {
         require(kind == AlertKind.Tunnel || kind == AlertKind.RailwayCrossing || kind == AlertKind.Hazard) {
             "a way alert carries a way-alert kind"
         }
         if (!mutableSettings.value.isEnabled(kind)) {
-            return
-        }
-        if (wayAlertRevision != key.routeRevision) {
-            announcedWayAlerts.clear()
-            wayAlertRevision = key.routeRevision
-        }
-        if (!announcedWayAlerts.add(key)) {
             return
         }
         announce(

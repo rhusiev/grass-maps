@@ -484,7 +484,6 @@ class AppContainer(
                         kind = AlertKind.forWayFeature(cue.feature.kind),
                         fixTimeMillis = cue.fixTimeMillis,
                         distanceToFeatureMeters = cue.distanceAheadMeters,
-                        key = cue.key,
                         featureKind = cue.feature.kind,
                     )
                 },

@@ -4,10 +4,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.RegionAccess
+import nl.r1a.grassmap.plugin.api.model.WayAlertElementType
 import nl.r1a.grassmap.plugin.api.model.WayAlertFeature
 import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
 import nl.r1a.grassmap.plugin.api.model.WayAlertHit
-import nl.r1a.grassmap.plugin.api.model.WayAlertKey
 import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 
@@ -36,6 +36,18 @@ import nl.r1a.grassmap.plugin.api.provider.RouteProfile
  */
 object WayAlertDistance {
     const val CORRIDOR_METERS: Double = 30.0
+
+    /**
+     * How far beyond a feature's alert distance its latch is released.
+     *
+     * Chosen, not canon: the same 50 m as the proximity schedule's
+     * `ProximityRadius.RELEASE_METERS`, so both alert kinds call the traveller
+     * away at the same distance. The measure here is the along-route offset: a
+     * feature releases when it is this far behind the rider, or this far beyond
+     * its alert distance ahead of them. Without the margin a fix that wobbles
+     * at the boundary would announce twice for one approach.
+     */
+    const val RELEASE_METERS: Double = 50.0
 
     fun metersFor(
         profile: RouteProfile,
@@ -88,10 +100,17 @@ data class WayAlertState(
 /** One feature the schedule decided to announce, with the distance that decided it. */
 data class WayAlertCue(
     val feature: WayAlertFeature,
-    val key: WayAlertKey,
     val distanceAheadMeters: Double,
     val fixTimeMillis: Long,
 )
+
+/** The identity of one feature for the approach latch: its OSM element. */
+private data class FeatureKey(
+    val elementType: WayAlertElementType,
+    val osmId: Long,
+)
+
+private fun WayAlertFeature.key(): FeatureKey = FeatureKey(elementType, osmId)
 
 /** Where a host sends each due cue; the app bridges it to the alert host. */
 fun interface WayAlertSink {
@@ -113,15 +132,28 @@ object NoopWayAlertSink : WayAlertSink {
  * a feature first seen inside the distance is announced at once: it is a
  * hazard on the road, not a maneuver the rider can anticipate.
  *
- * The once-per-feature key is [WayAlertKey]: the route revision plus the OSM
- * element type and id. A feature is announced once per revision; a reroute
- * changes the revision and re-arms every feature on the replacement route.
- * The announced set is cleared on that revision change, and on a terminal
- * phase, so a new trip starts clean even when its revision starts at zero.
+ * "Once" is one approach, not one revision. The latch is keyed by the
+ * feature's own identity, the OSM element type and id, so a reroute keeps every
+ * latch: a crossing announced 150 m ahead is not announced again when the
+ * replacement route still passes it. A latch releases only when the feature is
+ * more than [WayAlertDistance.RELEASE_METERS] beyond its alert distance, which
+ * is either behind the rider or that far beyond the distance ahead. A route
+ * that leaves the feature and comes back therefore announces it again, once,
+ * through the hysteresis rather than through a reroute case. A feature that the
+ * replacement route does not pass at all loses its latch with that route,
+ * because the schedule can no longer measure a distance to it.
  *
- * A paused phase keeps the cache and the announced set but emits nothing. A
- * feature that is behind the rider at pause does not announce on resume; one
- * still ahead and not yet announced does.
+ * A terminal phase and [reset] clear every latch, so a new trip starts clean
+ * even when its route revision starts at zero. A paused phase keeps the cache
+ * and the latches but emits nothing: a feature that is behind the rider at
+ * pause does not announce on resume, while one still ahead and not yet
+ * announced does.
+ *
+ * A feature already inside its alert distance at trip start does announce. A
+ * proximity place inside its radius at trip start is latched silently, because
+ * the traveller is standing at it. A way alert has no such case: its distance
+ * is ahead on the route the trip has just begun, so the feature is being
+ * approached, and a hazard the rider starts next to is the one that matters.
  */
 class WayAlertSchedule(
     private val region: RegionAccess,
@@ -134,7 +166,7 @@ class WayAlertSchedule(
 
     private var loadedRevision: Long? = null
     private var hits: List<WayAlertHit> = emptyList()
-    private val announced = mutableSetOf<WayAlertKey>()
+    private val latched = mutableSetOf<FeatureKey>()
     private val mutex = Mutex()
 
     /** Changes the profile; the next state reads the new distances. */
@@ -150,7 +182,7 @@ class WayAlertSchedule(
     private fun clear() {
         loadedRevision = null
         hits = emptyList()
-        announced.clear()
+        latched.clear()
     }
 
     /** Reads one state and returns every cue that is due. */
@@ -181,15 +213,23 @@ class WayAlertSchedule(
         for (hit in hits) {
             val threshold = WayAlertDistance.metersFor(profile, hit.feature.kind) ?: continue
             val ahead = hit.alongRouteMeters - state.alongRouteMeters
-            if (!ahead.isFinite() || ahead < 0.0 || ahead > threshold) {
+            if (!ahead.isFinite()) {
                 continue
             }
-            val key = WayAlertKey(state.routeRevision, hit.feature.elementType, hit.feature.osmId)
-            if (announced.add(key)) {
+            val key = hit.feature.key()
+            if (ahead < -WayAlertDistance.RELEASE_METERS ||
+                ahead > threshold + WayAlertDistance.RELEASE_METERS
+            ) {
+                latched.remove(key)
+                continue
+            }
+            if (ahead < 0.0 || ahead > threshold) {
+                continue
+            }
+            if (latched.add(key)) {
                 cues +=
                     WayAlertCue(
                         feature = hit.feature,
-                        key = key,
                         distanceAheadMeters = ahead,
                         fixTimeMillis = fixTimeMillis,
                     )
@@ -206,7 +246,6 @@ class WayAlertSchedule(
             return
         }
         loadedRevision = revision
-        announced.clear()
         when (val outcome = region.wayAlertFeatures(route, WayAlertDistance.CORRIDOR_METERS)) {
             is Outcome.Failure -> {
                 hits = emptyList()
@@ -215,6 +254,7 @@ class WayAlertSchedule(
 
             is Outcome.Success -> {
                 hits = outcome.value
+                latched.retainAll(hits.map { it.feature.key() }.toSet())
                 log("way-alert features=${hits.size} revision=$revision corridor_m=${WayAlertDistance.CORRIDOR_METERS}")
             }
         }

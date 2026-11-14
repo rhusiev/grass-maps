@@ -66,14 +66,3 @@ data class WayAlertHit(
         }
     }
 }
-
-/**
- * The identity of one announced feature inside one route revision. A feature
- * is announced once per revision, so a reroute re-arms it and a route that is
- * followed without a replacement does not repeat it.
- */
-data class WayAlertKey(
-    val routeRevision: Long,
-    val elementType: WayAlertElementType,
-    val osmId: Long,
-)

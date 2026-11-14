@@ -51,6 +51,12 @@ class WayAlertScheduleTest {
         assertNull(WayAlertDistance.metersFor(RouteProfile.Hike, WayAlertFeatureKind.Tunnel))
         assertNull(WayAlertDistance.metersFor(RouteProfile.Walk, WayAlertFeatureKind.Hazard))
         assertNull(WayAlertDistance.metersFor(RouteProfile.Car, WayAlertFeatureKind.RailwayCrossing))
+        assertEquals(
+            "the re-arm distance is chosen and named, not a literal inside the rule",
+            50.0,
+            WayAlertDistance.RELEASE_METERS,
+            0.0,
+        )
     }
 
     @Test
@@ -129,7 +135,7 @@ class WayAlertScheduleTest {
         }
 
     @Test
-    fun aFeatureIsAnnouncedOncePerRouteRevision() =
+    fun aFeatureIsAnnouncedOncePerApproach() =
         runTest {
             val hit = hit(route, CROSSING_ID)
             val schedule = scheduleOf(RouteProfile.Bike)
@@ -142,14 +148,84 @@ class WayAlertScheduleTest {
         }
 
     @Test
-    fun aRerouteRearmsTheFeature() =
+    fun aRerouteDoesNotRepeatAFeatureStillOnTheApproach() =
         runTest {
             val hit = hit(route, CROSSING_ID)
             val schedule = scheduleOf(RouteProfile.Bike)
-            val first = state(hit.alongRouteMeters - 150.0, revision = 0L)
 
-            assertEquals(1, schedule.onState(first).size)
-            assertEquals(1, schedule.onState(first.copy(routeRevision = 1L)).size)
+            assertEquals(1, schedule.onState(state(hit.alongRouteMeters - 150.0, revision = 0L)).size)
+
+            assertTrue(
+                "the replacement route still passes the crossing 120 m ahead",
+                schedule.onState(state(hit.alongRouteMeters - 120.0, revision = 1L)).isEmpty(),
+            )
+            assertTrue(schedule.onState(state(hit.alongRouteMeters - 90.0, revision = 2L)).isEmpty())
+        }
+
+    @Test
+    fun aRerouteAwayAndBackAnnouncesTheCrossingAgainOnce() =
+        runTest {
+            val detour = detourRoute()
+            val crossingOnDetour = hit(detour, CROSSING_ID).alongRouteMeters
+            val schedule = scheduleOf(RouteProfile.Bike)
+
+            assertEquals(
+                "the first approach announces",
+                1,
+                schedule.onState(state(hit(route, CROSSING_ID).alongRouteMeters - 150.0, revision = 0L)).size,
+            )
+
+            assertTrue(
+                "the detour puts the crossing a kilometre ahead, beyond the release distance",
+                schedule
+                    .onState(state(crossingOnDetour - 1_000.0, revision = 1L, route = detour))
+                    .crossings()
+                    .isEmpty(),
+            )
+
+            val returned =
+                schedule
+                    .onState(state(crossingOnDetour - 120.0, revision = 1L, route = detour))
+                    .crossings()
+
+            assertEquals("the route comes back to the crossing, which announces once", 1, returned.size)
+            assertEquals(CROSSING_ID, returned.single().feature.osmId)
+            assertTrue(
+                "the next reroute on the same approach does not repeat it",
+                schedule
+                    .onState(state(crossingOnDetour - 100.0, revision = 2L, route = detour))
+                    .crossings()
+                    .isEmpty(),
+            )
+        }
+
+    @Test
+    fun aPassedCrossingReArmsOnlyBeyondTheReleaseDistance() =
+        runTest {
+            val hit = hit(route, CROSSING_ID)
+            val schedule = scheduleOf(RouteProfile.Bike)
+
+            assertEquals(1, schedule.onState(state(hit.alongRouteMeters - 150.0)).crossings().size)
+
+            assertTrue(
+                "49 m past the crossing is inside the release distance",
+                schedule
+                    .onState(state(hit.alongRouteMeters + WayAlertDistance.RELEASE_METERS - 1.0))
+                    .crossings()
+                    .isEmpty(),
+            )
+            assertTrue(
+                "the release itself emits nothing, because the crossing is behind",
+                schedule
+                    .onState(state(hit.alongRouteMeters + WayAlertDistance.RELEASE_METERS + 1.0))
+                    .crossings()
+                    .isEmpty(),
+            )
+            assertEquals(
+                "the same crossing on the way back is a new approach",
+                1,
+                schedule.onState(state(hit.alongRouteMeters - 150.0)).crossings().size,
+            )
         }
 
     @Test
@@ -241,12 +317,15 @@ class WayAlertScheduleTest {
                         kind = AlertKind.forWayFeature(cue.feature.kind),
                         fixTimeMillis = cue.fixTimeMillis,
                         distanceToFeatureMeters = cue.distanceAheadMeters,
-                        key = cue.key,
+                        featureKind = cue.feature.kind,
                     )
                 },
         )
 
     private fun scheduleOf(profile: RouteProfile): WayAlertSchedule = WayAlertSchedule(reader).also { it.setProfile(profile) }
+
+    /** The crossing cues alone, so another feature's cue cannot decide these tests. */
+    private fun List<WayAlertCue>.crossings(): List<WayAlertCue> = filter { it.feature.osmId == CROSSING_ID }
 
     private suspend fun hit(
         route: Route,
@@ -260,6 +339,26 @@ class WayAlertScheduleTest {
     private fun routeFrom(longitude: Double): Route =
         Route(
             geometry = listOf(GeoPoint(49.9490, longitude), END),
+            distanceMeters = 0.0,
+            durationSeconds = 0.0,
+        )
+
+    /**
+     * A replacement route that leaves the crossing and comes back to it: 500 m
+     * north, east along the ridge, then south to the line 72 m west of the
+     * crossing and east over it. The crossing is therefore about 1.3 km ahead
+     * at the route's start, well beyond the bike distance plus the release.
+     */
+    private fun detourRoute(): Route =
+        Route(
+            geometry =
+                listOf(
+                    START,
+                    GeoPoint(49.9535, 23.9430),
+                    GeoPoint(49.9535, 23.9460),
+                    GeoPoint(49.9490, 23.9460),
+                    END,
+                ),
             distanceMeters = 0.0,
             durationSeconds = 0.0,
         )

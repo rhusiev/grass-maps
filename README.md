@@ -2208,6 +2208,13 @@ that bypasses the bus; the replay harness is such a caller. A superseded
 keystroke returns `Cancelled` and publishes nothing, so a slow older result can
 never replace a newer one.
 
+A keystroke writes nothing to the search history (T-0207). The field's keyboard
+Search action sends the command with `submit: true`, which runs the query and
+remembers it. A row tap sends `pick: true` with the row's name as `query`, which
+remembers that text and starts no new search. Those two events are the only
+history writes, so typing "lviv" and backspacing to "l" leaves no fragment
+behind.
+
 The list and the markers are two views of one result set. `searchResultView`
 maps the hits once, and the screen draws its `rows` and its `markers` from that
 one value. Tapping a row moves the camera to the place and opens the place card
@@ -2254,10 +2261,12 @@ directory. The number is `DEFAULT_MAX_ENTRIES`. Twenty rows cover a few days of
 real use and read without paging. Twenty also bound the file at about 7 kB when
 every query and context is at its widest.
 
-A search is one terminal keystroke the screen completed, not every letter on
-the way there. The store replaces its newest entry when the next query extends
-or shortens it, so typing "lviv" leaves one row and not four. A repeated query
-moves to the front with a new time.
+A search is a query the user submitted or a result they picked, not every letter
+on the way there. A keystroke alone stores nothing, so typing "lviv" and
+deleting back to "l" leaves no fragment behind. A repeated query moves its
+existing entry to the front with a new time. The match is the trimmed text
+exactly: two searches that share a prefix are two rows, because they were two
+searches.
 
 An entry holds the query and the exact request context, so a replay calls
 `PlaceProvider.search` again with the same values: the region `index`, the
@@ -2268,7 +2277,10 @@ and file order breaks a tie.
 
 The file is JSON with a `format` version and an `entries` array. A write goes
 through a temporary sibling, an fsync and an atomic move, like the favourites
-store, so a failed write leaves the previous list. One entry looks like this:
+store, so a failed write leaves the previous list. The fsync stays now that a
+submit or a pick is rare: one durable write per search costs nothing
+measurable, and the entry then survives the process being killed right after the
+user confirms it. One entry looks like this:
 
 ```json
 {"query":"lviv","index":"lviv","limit":5,"atMillis":1794000000000,"position":{"lat":49.83,"lon":24.03},"language":"uk"}

@@ -132,6 +132,7 @@ class MainActivity : ComponentActivity() {
                 action = intent.action,
                 streamUri = streamUriOf(intent),
                 dataUri = intent.dataString,
+                ownProviderAuthority = trackFileProviderAuthority(packageName),
             ) ?: return false
         lifecycleScope.launch {
             container.trackShare.import(uri, ContentResolverSharedReader(this@MainActivity))

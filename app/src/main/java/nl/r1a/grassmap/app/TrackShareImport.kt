@@ -23,33 +23,52 @@ internal const val TRACK_SHARE_TAG = "GrassMapsTracks"
  *
  * The system already chose this app for the intent by its `ACTION_SEND` filter,
  * so the rule only decides whether the payload is a document this app may read:
- * a `content:` or `file:` URI from the stream extra, or from the data URI a
- * sender uses instead of the extra. A `geo:` or `https:` link is never a
- * document, which is why [ACTION_VIEW] can share this rule with `ACTION_SEND`
- * without touching the link path.
+ * a `content:` URI from another provider, from the stream extra or from the data
+ * URI a sender uses instead of the extra. A `file:` URI names a filesystem path
+ * and is refused, and so is a `content:` URI under this app's own track
+ * FileProvider: a share from outside must not become a way to read the app's
+ * private storage. A `geo:` or `https:` link is never a document, which is why
+ * [ACTION_VIEW] can share this rule with `ACTION_SEND` without touching the
+ * link path.
  */
 internal object TrackShareIntent {
     const val ACTION_SEND = "android.intent.action.SEND"
     const val ACTION_VIEW = "android.intent.action.VIEW"
 
-    private val DOCUMENT_SCHEMES = setOf("content", "file")
+    private const val CONTENT_SCHEME = "content"
+    private const val AUTHORITY_MARKER = "://"
     private const val GPX_MIME = "application/gpx+xml"
     private const val GPX_EXTENSION = "gpx"
     private const val UNNAMED_DOCUMENT = "shared"
 
-    /** The document URI a share carries, or null when the intent is not a document share. */
+    /**
+     * The document URI a share carries, or null when the intent is not a
+     * document share or names a document this app must not read.
+     */
     fun documentUri(
         action: String?,
         streamUri: String?,
         dataUri: String?,
+        ownProviderAuthority: String,
     ): String? {
         if (action != ACTION_SEND && action != ACTION_VIEW) {
             return null
         }
         val uri = streamUri?.takeIf { it.isNotBlank() } ?: dataUri?.takeIf { it.isNotBlank() } ?: return null
         val scheme = uri.substringBefore(':', missingDelimiterValue = "").lowercase()
-        return uri.takeIf { scheme in DOCUMENT_SCHEMES }
+        if (scheme != CONTENT_SCHEME) {
+            return null
+        }
+        return uri.takeUnless { candidate -> authorityOf(candidate).equals(ownProviderAuthority, ignoreCase = true) }
     }
+
+    /** The authority between `://` and the next `/`, `?` or `#`, or empty when absent. */
+    private fun authorityOf(uri: String): String =
+        uri
+            .substringAfter(AUTHORITY_MARKER, missingDelimiterValue = "")
+            .substringBefore('/')
+            .substringBefore('?')
+            .substringBefore('#')
 
     /**
      * The name the importer needs to choose a format. A sender's display name

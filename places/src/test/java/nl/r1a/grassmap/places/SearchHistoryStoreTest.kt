@@ -77,18 +77,14 @@ class SearchHistoryStoreTest {
         }
 
     @Test
-    fun `one typing session keeps one row`() =
+    fun `two submitted queries that share a prefix are separate entries`() =
         runTest {
-            listOf("l", "lv", "lvi", "lviv").forEachIndexed { index, typed ->
-                rememberAt(1_000L + index, typed)
-            }
-
-            rememberAt(2_000L, "l")
+            rememberAt(1_000L, "lviv")
+            rememberAt(2_000L, "lviv airport")
 
             val entries = entries()
 
-            assertEquals(1, entries.size)
-            assertEquals("l", entries.first().query)
+            assertEquals(listOf("lviv airport", "lviv"), entries.map { entry -> entry.query })
         }
 
     @Test

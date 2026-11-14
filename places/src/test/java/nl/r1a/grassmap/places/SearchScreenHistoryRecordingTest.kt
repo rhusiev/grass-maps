@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.places
 
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nl.r1a.grassmap.plugin.api.error.AppError
@@ -12,15 +13,19 @@ import nl.r1a.grassmap.plugin.api.service.Clock
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.util.UUID
 
 /**
- * The search command records what it completed (T-0207): a terminal search is
- * stored with its replay context, a failed one is not, and the field clear
- * stays a field clear.
+ * The search screen writes history on exactly two events (T-0207): a submitted
+ * field and a picked result. A keystroke writes nothing, a failed search writes
+ * nothing, and the field clear stays a field clear.
+ *
+ * The keystroke and submit tests share one command with the store attached, so
+ * a keystroke that starts writing again fails them.
  */
 class SearchScreenHistoryRecordingTest {
     private val root = File(System.getProperty("java.io.tmpdir"), "search-history-recording-${UUID.randomUUID()}")
@@ -44,12 +49,76 @@ class SearchScreenHistoryRecordingTest {
     }
 
     @Test
-    fun `a completed search is remembered with its replay context`() =
+    fun `typing without submitting stores nothing`() =
+        runTest {
+            listOf("l", "lv", "lvi", "lviv").forEachIndexed { index, typed ->
+                assertTrue(
+                    "keystroke \"$typed\" must search",
+                    command.execute(keystroke(typed, sequence = index + 1L)) is Outcome.Success,
+                )
+            }
+
+            assertFalse("a keystroke must not create a history file", file.exists())
+            assertEquals(emptyList<SearchHistoryEntry>(), entries())
+        }
+
+    @Test
+    fun `submitting stores the typed text once`() =
+        runTest {
+            command.execute(keystroke("lviv", sequence = 1))
+            command.execute(submit("lviv", sequence = 2))
+
+            assertEquals(listOf("lviv"), entries().map { entry -> entry.query })
+        }
+
+    @Test
+    fun `picking a result stores the result text`() =
+        runTest {
+            command.execute(keystroke("кава", sequence = 1))
+
+            assertTrue(command.execute(pick("Кава на площі Ринок")) is Outcome.Success)
+
+            val entry = entries().single()
+            assertEquals("Кава на площі Ринок", entry.query)
+            assertEquals("lviv", entry.index)
+            assertEquals(5, entry.limit)
+            assertEquals(GeoPoint(49.83, 24.03), entry.position)
+        }
+
+    @Test
+    fun `backspacing after a submit does not store the fragment`() =
+        runTest {
+            command.execute(submit("lviv", sequence = 1))
+            val sentinel = file.readBytes()
+            clock.nowMillis = 2_000L
+
+            command.execute(keystroke("l", sequence = 2))
+
+            assertArrayEquals("a keystroke must not rewrite the store", sentinel, file.readBytes())
+            assertEquals(listOf("lviv"), entries().map { entry -> entry.query })
+        }
+
+    @Test
+    fun `submitting the same query twice keeps one entry`() =
+        runTest {
+            command.execute(submit("lviv", sequence = 1))
+            clock.nowMillis = 2_000L
+            command.execute(submit("lviv", sequence = 2))
+
+            val entries = entries()
+            assertEquals(1, entries.size)
+            assertEquals("lviv", entries.single().query)
+            assertEquals(2_000L, entries.single().atMillis)
+        }
+
+    @Test
+    fun `a submitted search is remembered with its replay context`() =
         runTest {
             val params =
                 buildJsonObject {
                     put("query", "кава")
                     put("sequence", 1)
+                    put("submit", true)
                     put("index", "lviv")
                     put("limit", 5)
                     put(
@@ -84,7 +153,7 @@ class SearchScreenHistoryRecordingTest {
     @Test
     fun `a failed search is not remembered`() =
         runTest {
-            val outcome = command.execute(buildJsonObject { put("query", "fail") })
+            val outcome = command.execute(submit("fail", sequence = 1))
 
             assertEquals(Outcome.Failure(AppError.Network), outcome)
             assertEquals(emptyList<SearchHistoryEntry>(), entries())
@@ -93,7 +162,7 @@ class SearchScreenHistoryRecordingTest {
     @Test
     fun `a field clear is not remembered`() =
         runTest {
-            command.execute(buildJsonObject { put("query", "кава") })
+            command.execute(submit("кава", sequence = 1))
             command.execute(buildJsonObject { put("clear", true) })
 
             assertEquals(listOf("кава"), entries().map { entry -> entry.query })
@@ -102,12 +171,12 @@ class SearchScreenHistoryRecordingTest {
     @Test
     fun `a search with history off leaves the file byte identical`() =
         runTest {
-            command.execute(buildJsonObject { put("query", "кава") })
+            command.execute(submit("кава", sequence = 1))
             val sentinel = file.readBytes()
             setting.enabled = false
 
-            command.execute(buildJsonObject { put("query", "аптека") })
-            command.execute(buildJsonObject { put("query", "парк") })
+            command.execute(submit("аптека", sequence = 2))
+            command.execute(pick("Парк"))
 
             assertArrayEquals(sentinel, file.readBytes())
         }
@@ -117,7 +186,72 @@ class SearchScreenHistoryRecordingTest {
         runTest {
             val plain = SearchScreenCommand(session)
 
-            assertTrue(plain.execute(buildJsonObject { put("query", "кава") }) is Outcome.Success)
+            assertTrue(plain.execute(keystroke("кава", sequence = 1)) is Outcome.Success)
+            assertTrue(plain.execute(submit("кава", sequence = 2)) is Outcome.Success)
+            assertTrue(plain.execute(pick("Кава")) is Outcome.Success)
+        }
+
+    @Test
+    fun `a submit and a pick in one request are invalid input`() =
+        runTest {
+            val params =
+                buildJsonObject {
+                    put("query", "кава")
+                    put("submit", true)
+                    put("pick", true)
+                }
+
+            assertEquals(Outcome.Failure(AppError.InvalidInput), command.execute(params))
+            assertFalse(file.exists())
+        }
+
+    @Test
+    fun `a pick with a blank query is invalid input`() =
+        runTest {
+            assertEquals(
+                Outcome.Failure(AppError.InvalidInput),
+                command.execute(
+                    buildJsonObject {
+                        put("query", "  ")
+                        put("pick", true)
+                    },
+                ),
+            )
+            assertFalse(file.exists())
+        }
+
+    private fun keystroke(
+        query: String,
+        sequence: Long,
+    ): JsonObject =
+        buildJsonObject {
+            put("query", query)
+            put("sequence", sequence)
+        }
+
+    private fun submit(
+        query: String,
+        sequence: Long,
+    ): JsonObject =
+        buildJsonObject {
+            put("query", query)
+            put("sequence", sequence)
+            put("submit", true)
+        }
+
+    private fun pick(text: String): JsonObject =
+        buildJsonObject {
+            put("query", text)
+            put("pick", true)
+            put("index", "lviv")
+            put("limit", 5)
+            put(
+                "position",
+                buildJsonObject {
+                    put("lat", 49.83)
+                    put("lon", 24.03)
+                },
+            )
         }
 
     private suspend fun entries(): List<SearchHistoryEntry> {
@@ -138,9 +272,9 @@ class SearchScreenHistoryRecordingTest {
         )
 
     private class MutableClock(
-        var now: Long,
+        var nowMillis: Long,
     ) : Clock {
-        override fun nowMillis(): Long = now
+        override fun nowMillis(): Long = nowMillis
     }
 
     private class MutableHistorySetting(

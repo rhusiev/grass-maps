@@ -690,8 +690,13 @@ position has no reference to compare against. The update writes it and prints
 its size.
 
 ```sh
-./scripts/ci/android-map-goldens.sh --profile standard --style both --update
+GOLDEN_AVD_NAME=grassmaps-goldens-api29 \
+  ./scripts/ci/android-map-goldens.sh --profile standard --style both --update
 ```
+
+The script's default AVD is `grassmaps-bench`, which is 1080x2400: a different
+geometry that shifts the whole frame against the committed 1080x1920 set, so
+`GOLDEN_AVD_NAME` must be set explicitly for a capture that enters the set.
 
 The Standard and fixture profiles default to contours off, which is how their
 references stay valid; the script always passes that state to the app. The

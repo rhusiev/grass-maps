@@ -2724,10 +2724,11 @@ the filter against OsmAnd's own figures on nine tracks.
 tracks with 2.5-5 m positional jitter, 1-2.5 m elevation noise, 30-75 s
 dropouts, two outlier fixes and 6 m of barometric drift, each with the authored
 truth and OsmAnd's readings. `RealisticTracksOracleTest` compares `TrackAnalyzer`
-with that truth and records which side is closer. The first run misses 28 of 30
-bounds: a raw step sum inflates distance by 12-181 %, and a raw 0.5 m/s
-threshold drops jitter-slow steps from moving time. That directory's README
-carries the measured numbers. Do not widen a bound to hide them.
+with that truth and records which side is closer. The truth-bound comparison
+misses 28 of 30 bounds: a raw step sum inflates distance by 12-181 %, and a raw
+0.5 m/s threshold drops jitter-slow steps from moving time. T-0422
+(noise-robust track analysis) owns making the bounds pass. That directory's
+README carries the measured numbers. Do not widen a bound to hide them.
 
 T-0402 extends the analysis with the figures a track detail shows.
 `TrackAnalysis` also carries duration, moving time, average speed and maximum

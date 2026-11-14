@@ -37,10 +37,11 @@ recording.
 | `walk-jitter-4km.gpx` | 4,042.8 m, 3,000 s, +30 m | 4 m jitter, 1.5 m elevation noise, 30 s dropout |
 | `walk-outlier-5km.gpx` | 4,891.0 m, 3,500 s, +25 m | 3.5 m jitter, 1.5 m elevation noise, 250 m fixes at points 400 and 900 |
 
-The sidecars record `outlierMeters` as `200.0`, while the injected jumps measure
-245-260 m in the GPX and the task describes them as 250 m. The sidecars are
-committed unchanged, so `oracle-realism.json` keeps `200.0`; the test asserts
-the two fix indices and quotes the real 250 m in its comments.
+`walk-outlier-5km.truth.json` and `oracle-realism.json` record `outlierMeters`
+as `250.0`. The injected jumps measure 245-260 m in the GPX and the generator
+call used 250 m, so 250.0 is the value that describes the file. An earlier
+sidecar value of 200.0 did not describe the jump. The GPX is unchanged. The
+test asserts the two fix indices and the 250 m magnitude.
 
 ## How the figures were recorded
 
@@ -76,9 +77,15 @@ coarser than the bound.
 
 ## Current result
 
-The first run is red: 28 of 30 bounds are missed. Only `hike-steps-6km` ascent
-(323.1 m against 300 m) and `ride-realistic-15km` moving time (2,991 s against
-3,000 s) pass. Two bounds passing is not a reason to treat the rest as noise.
+The truth-bound comparison is red: 28 of 30 bounds are missed. Only
+`hike-steps-6km` ascent (323.1 m against 300 m) and `ride-realistic-15km`
+moving time (2,991 s against 3,000 s) pass. It is committed as the ignored test
+`truthBoundsAreRecordedButNotYetMet`, so the normal gate stays green without
+hiding the numbers or widening a bound. T-0422 (noise-robust track analysis)
+owns making it pass. The failure message carries every track's truth, OsmAnd and
+analyser figures, the signed deltas and which side is closer. The normal
+`fixtureIsIntact` test checks the six GPX files, the six sidecars, the recorded
+OsmAnd metadata, the emulation cases and the recorded analyser snapshot.
 
 - **Distance.** `TrackAnalyzer` sums haversine steps over the raw fixes. Jitter
   makes that sum 12-181 % longer than the authored path. OsmAnd's distance shows

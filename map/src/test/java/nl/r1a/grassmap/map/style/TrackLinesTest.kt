@@ -86,8 +86,17 @@ class TrackLinesTest {
     }
 
     @Test
+    fun aColourChangeChangesTheDrawnLine() {
+        val green = trackLine(MapTrack(id = "t", style = TrackStyle(colour = "#1B8A3A"), segments = emptyList()))
+        val blue = trackLine(MapTrack(id = "t", style = TrackStyle(colour = "#2A78D6"), segments = emptyList()))
+
+        assertEquals(Color(0xFF1B8A3A), green.colour)
+        assertEquals(Color(0xFF2A78D6), blue.colour)
+    }
+
+    @Test
     fun anInvalidSidecarColourFallsBackToTheDefault() {
-        assertEquals(Color(0xFF1E88E5), trackColour(TrackStyle(colour = "blue")))
-        assertEquals(Color(0xFF1E88E5), trackColour(TrackStyle(colour = "#12345")))
+        assertEquals(Color(0xFF2A78D6), trackColour(TrackStyle(colour = "blue")))
+        assertEquals(Color(0xFF2A78D6), trackColour(TrackStyle(colour = "#12345")))
     }
 }

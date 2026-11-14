@@ -7,19 +7,21 @@ import nl.r1a.grassmap.plugin.api.model.TrackStyle
  * last byte of the content hash plus the track index, so the same file always
  * draws in the same colour on every device and after a reinstall. A user colour
  * is written to the sidecar and replaces this value.
+ *
+ * [COLOURS] is also the card's colour choice (T-0415), so a track always draws
+ * in one of the six values the card offers. The values are the round-6 track
+ * look screen's six swatches, not a second palette.
  */
 object TrackPalette {
     /** Every track colour, chosen to read on both the light and the dark style. */
     val COLOURS: List<String> =
         listOf(
-            "#1E88E5",
-            "#E53935",
-            "#8E24AA",
-            "#00897B",
-            "#F4511E",
-            "#3949AB",
-            "#6D4C41",
-            "#C2185B",
+            "#1B8A3A",
+            "#2A78D6",
+            "#D93025",
+            "#8A5CC7",
+            "#EB6834",
+            "#D08A00",
         )
 
     /** The default styling for a track with [id]. */

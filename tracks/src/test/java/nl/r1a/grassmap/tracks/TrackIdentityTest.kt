@@ -54,6 +54,14 @@ class TrackIdentityTest {
 
 class TrackPaletteTest {
     @Test
+    fun thePaletteIsTheCardsSixDesignChoices() {
+        assertEquals(
+            listOf("#1B8A3A", "#2A78D6", "#D93025", "#8A5CC7", "#EB6834", "#D08A00"),
+            TrackPalette.COLOURS,
+        )
+    }
+
+    @Test
     fun theSameIdAlwaysGetsTheSameStyle() {
         val id = TrackIdentity.of("bytes".toByteArray(), index = 0, count = 1)
 

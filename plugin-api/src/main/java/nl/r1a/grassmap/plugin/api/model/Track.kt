@@ -121,7 +121,7 @@ data class TrackStyle(
     fun isValid(): Boolean = COLOUR_PATTERN.matches(colour) && widthDp > 0f && widthDp.isFinite()
 
     companion object {
-        const val DEFAULT_COLOUR: String = "#1E88E5"
+        const val DEFAULT_COLOUR: String = "#2A78D6"
         const val DEFAULT_WIDTH_DP: Float = 4f
 
         private val COLOUR_PATTERN = Regex("^#[0-9A-Fa-f]{6}$")

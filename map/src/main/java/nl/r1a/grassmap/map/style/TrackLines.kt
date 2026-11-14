@@ -87,4 +87,4 @@ private const val TRACK_LAYER_PREFIX = "track.line."
 private const val HEX_DIGITS = 6
 private const val RADIX = 16
 private const val OPAQUE = 0xFF000000L
-private const val DEFAULT_RGB = 0x1E88E5L
+private const val DEFAULT_RGB = 0x2A78D6L

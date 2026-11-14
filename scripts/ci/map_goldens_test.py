@@ -1,5 +1,6 @@
 """Unit tests for the timeout-tolerant parts of the map golden capture."""
 
+import io
 import json
 import os
 import sys
@@ -750,6 +751,119 @@ class CompareRecaptureTest(unittest.TestCase):
 
             self.assertEqual("pass", document["result"])
             self.assertNotIn("recaptured", document["positions"][0])
+
+
+class UpdateReferenceGuardTest(unittest.TestCase):
+    """A reference set must stay within one screen shape."""
+
+    SMALL = (216, 384)
+    TALL = (216, 400)
+    FIRST = ("p1", 49.95, 23.95, 13.0, 0.0, 0.0)
+    SECOND = ("p2", 49.96, 23.96, 13.0, 0.0, 0.0)
+
+    def _png(self, path: Path, size: tuple[int, int], value: int) -> None:
+        width, height = size
+        map_goldens.write_png(
+            path, width, height, bytes((value, value, value)) * width * height
+        )
+
+    def _dirs(self, directory: str) -> tuple[Path, Path, Path]:
+        root = Path(directory)
+        captured = root / "captured"
+        reference = root / "reference"
+        output = root / "output"
+        captured.mkdir()
+        reference.mkdir()
+        return captured, reference, output
+
+    def test_an_update_onto_a_matching_size_succeeds(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            captured, reference, _ = self._dirs(directory)
+            self._png(captured / "p1.png", self.SMALL, 10)
+            self._png(captured / "p2.png", self.SMALL, 20)
+            self._png(reference / "p1.png", self.SMALL, 255)
+            self._png(reference / "p2.png", self.SMALL, 255)
+
+            map_goldens.update_reference(
+                "standard",
+                captured,
+                reference,
+                positions=(self.FIRST, self.SECOND),
+            )
+
+            self.assertEqual(
+                (captured / "p1.png").read_bytes(), (reference / "p1.png").read_bytes()
+            )
+            self.assertEqual(
+                (captured / "p2.png").read_bytes(), (reference / "p2.png").read_bytes()
+            )
+
+    def test_an_update_onto_a_mismatched_size_writes_nothing(self) -> None:
+        # p1 matches and comes first, so a write-as-you-go update would already
+        # have replaced it before it reached the mismatched p2.
+        with tempfile.TemporaryDirectory() as directory:
+            captured, reference, _ = self._dirs(directory)
+            self._png(captured / "p1.png", self.SMALL, 10)
+            self._png(captured / "p2.png", self.TALL, 20)
+            self._png(reference / "p1.png", self.SMALL, 255)
+            self._png(reference / "p2.png", self.SMALL, 255)
+            before = {path.name: path.read_bytes() for path in reference.glob("*.png")}
+
+            with self.assertRaises(map_goldens.GoldenError) as raised:
+                map_goldens.update_reference(
+                    "standard",
+                    captured,
+                    reference,
+                    positions=(self.FIRST, self.SECOND),
+                )
+
+            message = str(raised.exception)
+            self.assertIn("p2", message)
+            self.assertIn("216x400", message)
+            self.assertIn("216x384", message)
+            self.assertIn("GOLDEN_AVD_NAME=grassmaps-goldens-api29", message)
+            after = {path.name: path.read_bytes() for path in reference.glob("*.png")}
+            self.assertEqual(before, after)
+
+    def test_a_new_position_is_written_and_its_size_printed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            captured, reference, _ = self._dirs(directory)
+            self._png(captured / "p2.png", self.TALL, 20)
+
+            with mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
+                map_goldens.update_reference(
+                    "standard",
+                    captured,
+                    reference,
+                    positions=(self.SECOND,),
+                )
+
+            self.assertEqual(
+                (captured / "p2.png").read_bytes(), (reference / "p2.png").read_bytes()
+            )
+            self.assertIn("216x400", stderr.getvalue())
+
+    def test_a_size_mismatch_is_not_scored_as_a_percentage(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            captured, reference, output = self._dirs(directory)
+            self._png(reference / "p1.png", self.SMALL, 255)
+            self._png(captured / "p1.png", self.TALL, 255)
+
+            with self.assertRaises(map_goldens.GoldenError) as raised:
+                map_goldens.compare(
+                    "standard",
+                    captured,
+                    reference,
+                    output,
+                    "light",
+                    positions=(self.FIRST,),
+                )
+
+            message = str(raised.exception)
+            self.assertIn("216x384", message)
+            self.assertIn("216x400", message)
+            self.assertIn("not a tolerance question", message)
+            self.assertFalse((output / "comparison.json").exists())
 
 
 class RecaptureSerialTest(unittest.TestCase):

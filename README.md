@@ -682,7 +682,12 @@ correctly, and the comparator and its 5 % tolerance are unchanged. The
 committed set is that renderer's own output: 1080x1920 API 29 `swangle`
 captures, promoted from the CI artifact rather than by raising the tolerance.
 Recapture with `--update` on the same emulator, never from a different device
-size:
+size. The update enforces that rule instead of relying on the reader. It reads
+every existing reference first. When a capture's width or height differs, it
+fails before it writes any file and names the position, both sizes and
+`GOLDEN_AVD_NAME=grassmaps-goldens-api29` as the committed geometry. A new
+position has no reference to compare against. The update writes it and prints
+its size.
 
 ```sh
 ./scripts/ci/android-map-goldens.sh --profile standard --style both --update
@@ -713,8 +718,10 @@ The first `--update` run writes the reference set; every later run compares
 against it. Each image is reduced to its centre 16:9 area, then to the central
 half of that area, which drops the status bar, scale bar, control bar and
 attribution, and then to a 108x192 grid of mean RGB blocks. At a fixed camera
-the central 540x960 window covers the same ground on any 1080-wide device, so a
-16:9 and a 20:9 phone compare directly. The test fails when more than 5 % of
+the central 540x960 window covers the same ground on every 1080-wide device of
+one shape. The comparison refuses a capture and a reference of different sizes
+and names both sizes, because the crop follows each image and a whole-frame
+offset can stay under the tolerance. The test fails when more than 5 % of
 blocks differ by more than 32 on any channel. Block means absorb GPU
 anti-aliasing and label rasterisation; a blank, wrong or shifted map still
 changes most blocks. The run writes `comparison.json` and one diff image per

@@ -14,11 +14,17 @@ viewport with no status or navigation bar), then to the central half of that
 area, which excludes every anchored overlay (scale bar, control bar,
 attribution), and finally to a 108 x 192 grid of mean RGB blocks. At a fixed
 camera the central 540 x 960 window covers the same ground on every 1080-wide
-device, so a 16:9 and a 20:9 phone compare directly. A block mismatches when
-any RGB channel differs by more than BLOCK_DELTA from the golden; the test fails
-when more than MAX_MISMATCH_PERCENT of blocks mismatch. Block means absorb GPU
-anti-aliasing and label rasterisation differences; a blank, wrong or shifted
-map still changes most blocks.
+device of that shape, so the same crop is compared on each of them. A block
+mismatches when any RGB channel differs by more than BLOCK_DELTA from the
+golden; the test fails when more than MAX_MISMATCH_PERCENT of blocks mismatch.
+Block means absorb GPU anti-aliasing and label rasterisation differences; a
+blank, wrong or shifted map still changes most blocks.
+
+Because the crop follows each image, a capture and a reference of different
+sizes are not a tolerance question. The comparison refuses such a pair and
+names both sizes. `update_reference` applies the same rule before it writes:
+every capture is checked against its existing reference first, so a run from a
+different screen shape fails without replacing any file.
 
 The same command runs for the small fixture (CI) and for the whole-oblast region
 package (local acceptance).
@@ -117,6 +123,12 @@ BLOCK_DELTA = 32
 MAX_MISMATCH_PERCENT = 5.0
 GRID_WIDTH = 108
 GRID_HEIGHT = 192
+# The AVD the committed goldens were captured on. A reference set is only
+# meaningful within one screen shape: the block grid crops each image to its
+# own centre, so a capture from the default `grassmaps-bench` AVD (1080x2400)
+# over a 1080x1920 reference scores a whole-frame vertical offset at about 4 %,
+# passes the 5 % tolerance and leaves a flake for the next reader.
+COMMITTED_AVD_NAME = "grassmaps-goldens-api29"
 DEVICE_REGION_STAGE = "/data/local/tmp/grass-map-golden-region"
 # The app's Standard style ids. `light` is the default id the app loads.
 STYLE_IDS = {
@@ -1081,6 +1093,18 @@ def capture(
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
+def read_png_size(path: Path) -> tuple[int, int]:
+    """The IHDR width and height, without decoding the image data."""
+    with path.open("rb") as handle:
+        header = handle.read(24)
+    if header[:8] != PNG_SIGNATURE:
+        raise GoldenError(f"{path}: not a PNG")
+    if header[12:16] != b"IHDR":
+        raise GoldenError(f"{path}: no IHDR")
+    width, height = struct.unpack(">II", header[16:24])
+    return width, height
+
+
 def _paeth(left: int, above: int, upper_left: int) -> int:
     estimate = left + above - upper_left
     distance_left = abs(estimate - left)
@@ -1248,6 +1272,14 @@ def compare_images(
 ) -> dict[str, object]:
     golden_width, golden_height, golden_rgb = read_png(golden)
     candidate_width, candidate_height, candidate_rgb = read_png(candidate)
+    if (golden_width, golden_height) != (candidate_width, candidate_height):
+        raise GoldenError(
+            f"{golden.stem}: the reference is {golden_width}x{golden_height} and the "
+            f"capture {candidate} is {candidate_width}x{candidate_height}; the sizes "
+            f"differ, so this is a screen-shape mismatch and not a tolerance question. "
+            f"Re-capture on the AVD that produced the reference set; the committed map "
+            f"goldens come from GOLDEN_AVD_NAME={COMMITTED_AVD_NAME}"
+        )
     golden_blocks = block_grid(golden_width, golden_height, golden_rgb, window)
     candidate_blocks = block_grid(candidate_width, candidate_height, candidate_rgb, window)
     mismatched = 0
@@ -1370,15 +1402,48 @@ def update_reference(
     reference: Path,
     positions: tuple[tuple[str, float, float, float, float, float], ...] | None = None,
 ) -> None:
-    reference.mkdir(parents=True, exist_ok=True)
+    """Replace the reference set from a capture of the same screen shape.
+
+    Every capture is checked against its existing reference before any file is
+    written: a 1080x2400 capture over a 1080x1920 reference is a whole-frame
+    offset that still scores under the tolerance, so it must fail loudly rather
+    than pass. The check runs as its own pass, so a mismatch near the end of the
+    set cannot leave the earlier positions already replaced. A position with no
+    existing reference has nothing to compare against, so it is written and its
+    size printed.
+    """
     selected = positions if positions is not None else cases(profile)
+    sources = []
     for name, *_ in selected:
         source = captured / f"{name}.png"
         if not source.is_file():
             raise GoldenError(f"missing capture {source}")
+        sources.append((name, source))
+    new_names = set()
+    for name, source in sources:
+        target = reference / f"{name}.png"
+        width, height = read_png_size(source)
+        if not target.is_file():
+            new_names.add(name)
+            continue
+        reference_width, reference_height = read_png_size(target)
+        if (width, height) != (reference_width, reference_height):
+            raise GoldenError(
+                f"{name}: the capture is {width}x{height} but the reference {target} "
+                f"is {reference_width}x{reference_height}; the sizes differ, so this "
+                f"is a screen-shape mismatch and not a tolerance question. Re-capture "
+                f"on the AVD that produced the reference set; the committed map "
+                f"goldens come from GOLDEN_AVD_NAME={COMMITTED_AVD_NAME}. "
+                f"Nothing was written"
+            )
+    reference.mkdir(parents=True, exist_ok=True)
+    for name, source in sources:
         width, height, rgb = read_png(source)
         write_png(reference / f"{name}.png", width, height, rgb)
-        print(f"reference {name} <- {source}", file=sys.stderr)
+        if name in new_names:
+            print(f"new reference {name} {width}x{height} <- {source}", file=sys.stderr)
+        else:
+            print(f"reference {name} <- {source}", file=sys.stderr)
 
 
 def default_reference(profile: str, style: str | None) -> Path:

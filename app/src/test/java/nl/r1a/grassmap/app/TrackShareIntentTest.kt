@@ -42,11 +42,14 @@ class TrackShareIntentTest {
     }
 
     @Test
-    fun aFileUriFromTheAppOwnStorageIsADocument() {
-        assertEquals(
-            FILE_URI,
-            TrackShareIntent.documentUri(SEND, FILE_URI, null),
-        )
+    fun aFileUriIsNeverADocument() {
+        assertNull(TrackShareIntent.documentUri(SEND, FILE_URI, null))
+    }
+
+    @Test
+    fun aContentUriFromTheAppsOwnProviderIsRefused() {
+        assertNull(TrackShareIntent.documentUri(SEND, OWN_PROVIDER_URI, null))
+        assertNull(TrackShareIntent.documentUri(SEND, null, OWN_PROVIDER_TRASH_URI))
     }
 
     @Test
@@ -112,5 +115,7 @@ class TrackShareIntentTest {
         const val VIEW = "android.intent.action.VIEW"
         const val CONTENT_URI = "content://com.example.share/1"
         const val FILE_URI = "file:///sdcard/Android/data/nl.r1a.grassmap/files/share/track.gpx"
+        const val OWN_PROVIDER_URI = "content://nl.r1a.grassmap.track.files/shared-tracks/track.gpx"
+        const val OWN_PROVIDER_TRASH_URI = "content://nl.r1a.grassmap.track.files/.trash/track-1/track.gpx"
     }
 }

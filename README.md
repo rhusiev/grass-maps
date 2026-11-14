@@ -1,13 +1,16 @@
 # Grass Maps
 
 Grass Maps is an Android app for offline maps, routing and navigation. Kotlin
-and Compose build the UI. A Rust core will hold search, analysis and region
-data. MapLibre Native sits behind our own map interface, so the map binding
+and Compose build the UI. A Rust core holds the search index and the region
+reader. MapLibre Native sits behind our own map interface, so the map binding
 stays a one-module swap.
 
-This repository holds the milestone-0 skeleton: the Gradle build, the module
-layout, the plugin boundary rule, the command bus, and the plugin host. No
-product feature is implemented yet.
+This repository holds the app as far as it is built: the Gradle build, the
+module layout, the plugin boundary rule, the command bus and the plugin host,
+plus the map, search, places, routing, navigation, tracks and analysis features
+of milestones 1-4, with milestone 4 still in progress. Milestone 5 (downloads)
+and milestone 6 (profiles, the configured screen and the release) are not
+started.
 
 ## Build
 

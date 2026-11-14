@@ -768,16 +768,16 @@ Built here rather than reused:
 - the elevation grid, from the GLO-30 source tiles through
   `build-elevation.py grid`
 
-No routing data is included: routing is a country-level pack in the design, and
-the fixture has no engine graph.
+No routing data is included: the fixture has no engine graph. Routing tiles are
+a part of each region package in the design (data-formats.md section 2).
 
 ### Manifest
 
 `manifest.json` follows `data-formats.md` section 2: region, version, package
 format, OSM timestamp, and per component the format and its version, size,
-sha256 and stand-in flag. `pipeline` records the source archive sha256, the
-bounding box and the GLO-30 tile hashes, so the package can be traced back to
-the bench build.
+sha256, stand-in flag and zoom levels. `pipeline` records the source archive
+sha256, the bounding box and the GLO-30 tile hashes, so the package can be
+traced back to the bench build.
 
 ### Licensing
 

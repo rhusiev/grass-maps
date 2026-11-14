@@ -1,6 +1,8 @@
 package nl.r1a.grassmap.app
 
 import android.util.Log
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -79,7 +81,6 @@ import nl.r1a.grassmap.plugin.api.service.PrivacySwitches
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.api.service.SystemClock
 import nl.r1a.grassmap.plugins.coordinates.Coordinates
-import nl.r1a.grassmap.plugins.dev.tools.DevToolsContract
 import nl.r1a.grassmap.plugins.map.controls.CameraModeController
 import nl.r1a.grassmap.plugins.map.controls.MapControls
 import nl.r1a.grassmap.plugins.map.controls.PositionOffsetFraction
@@ -127,6 +128,10 @@ class AppContainer(
     private val debuggable: () -> Boolean = { false },
     private val extraCommands: (MapSessionHolder) -> List<Command<*, *>> = { emptyList() },
     val devTools: DevToolsRuntime = NoDevToolsRuntime,
+    /** The development-tools overlay; only a debug build supplies one. */
+    val devToolsPanel: (@Composable (Modifier) -> Unit)? = null,
+    /** The synthetic DataSource plugin; null when this build does not package it. */
+    private val dataSourcePluginId: PluginId? = null,
     private val aiControlEnabled: () -> Boolean = { false },
     val distanceByTap: DistanceByTapSetting = DistanceByTapSetting { false },
     private val headingSource: HeadingSource = NoHeadingSource,
@@ -904,13 +909,7 @@ class AppContainer(
             host = pluginHost,
             commands = GeneratedPlugins.commands + generatedMapCommands(hostCommands),
             dispatchers = dispatchers,
-            switchEnabled = { switch ->
-                if (switch == DevToolsContract.aiControlSwitch) {
-                    aiControlEnabled()
-                } else {
-                    switchEnabled(switch)
-                }
-            },
+            switchEnabled = switchEnabled,
         )
     }
 
@@ -924,7 +923,7 @@ class AppContainer(
 
     /** The synthetic DataSource; the route command reads its cost modifiers. */
     val dataSources: DataSourceAccess by lazy {
-        DataSourceAccess(providerRegistry)
+        DataSourceAccess(providerRegistry, dataSourcePluginId)
     }
 
     /** The contour overlay provider; the map adds and removes its layers. */

@@ -40,7 +40,7 @@ class DataSourceAccessTest {
     @Test
     fun theSyntheticSourceResolvesThroughTheRegistry() =
         runTest {
-            val dataSources = DataSourceAccess(registry(GeneratedPlugins.plugins))
+            val dataSources = DataSourceAccess(registry(GeneratedPlugins.plugins), PluginId("data.synthetic"))
 
             val page =
                 dataSources.attributes(
@@ -62,7 +62,7 @@ class DataSourceAccessTest {
     fun theMapLayerIsAddedUnderTheProvidersOwnPluginId() =
         runTest {
             val host = FakeMapHost(CAMERA)
-            val dataSources = DataSourceAccess(registry(GeneratedPlugins.plugins))
+            val dataSources = DataSourceAccess(registry(GeneratedPlugins.plugins), PluginId("data.synthetic"))
 
             assertEquals(Outcome.Success(Unit), installDataSourceLayer(dataSources, host))
 
@@ -81,7 +81,7 @@ class DataSourceAccessTest {
     fun anAbsentProviderLeavesTheMapUntouched() =
         runTest {
             val host = FakeMapHost(CAMERA)
-            val dataSources = DataSourceAccess(registry(emptyList()))
+            val dataSources = DataSourceAccess(registry(emptyList()), PluginId("data.synthetic"))
 
             assertEquals(
                 Outcome.Failure(AppError.NotFound),

@@ -8,9 +8,10 @@ import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.service.LocationService
 
 /**
- * The release location source: the platform source until the development-tools
- * panel starts the committed GPX replay, then the existing mock replay seam,
- * and back to the platform source on stop.
+ * The app location source: the platform source until a host starts the
+ * committed GPX replay, then the existing mock replay seam, and back to the
+ * platform source on stop. Only a debug build's development-tools plugin can
+ * start the replay.
  *
  * The replay is a cold flow that reloads the fixture on each collection, so a
  * stop and a later start begin at the first point again.

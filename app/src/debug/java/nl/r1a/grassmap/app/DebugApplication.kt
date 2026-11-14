@@ -5,6 +5,8 @@ import android.app.Application
 import android.os.Bundle
 import android.os.StrictMode
 import android.util.Log
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
@@ -12,9 +14,12 @@ import nl.r1a.grassmap.core.services.AndroidLocationSource
 import nl.r1a.grassmap.core.services.MockGpxLocationSource
 import nl.r1a.grassmap.map.DistanceByTapSetting
 import nl.r1a.grassmap.plugin.api.command.Command
+import nl.r1a.grassmap.plugin.api.contract.PluginId
+import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.service.LocationService
+import nl.r1a.grassmap.plugins.dev.tools.DevToolsContract
 import java.io.IOException
 
 /**
@@ -99,6 +104,17 @@ class DebugApplication : GrassMapsApplication() {
 
     /** Debug builds treat the developer as the AI-control switch holder. */
     override fun aiControlEnabled(): Boolean = true
+
+    override fun switchEnabled(): (SwitchId) -> Boolean =
+        { switch ->
+            switch == DevToolsContract.aiControlSwitch
+        }
+
+    /** The panel binds the development-tools plugin, which only this build packages. */
+    override fun devToolsPanel(): (@Composable (Modifier) -> Unit)? = { modifier -> DevToolsPanel(container, modifier) }
+
+    /** This build packages the synthetic DataSource plugin. */
+    override fun dataSourcePluginId(): PluginId = PluginId("data.synthetic")
 
     override fun distanceByTap(): DistanceByTapSetting = DistanceByTapSetting { distanceByTapEnabled.value }
 

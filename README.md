@@ -116,7 +116,9 @@ run is iteration evidence only. The gate runs Spotless with ktlint from
 the root, Android lint, `:app:assembleDebug`, the JVM unit tests,
 `checkTranslations`, `checkPluginBoundaries`, `checkPluginManifests`,
 `lintStyleRules`, `:plugins:example:check`, `checkPrivacyGuards`, and two
-unsigned release builds at different paths compared byte for byte. The test
+unsigned release builds at different paths compared byte for byte. The
+reproducibility script also runs `checkReleaseApkPlugins` over the rebuilt
+release APK, so a development plugin in a release build fails the gate. The test
 count is reported; an empty suite fails the gate, so deleting the last test
 cannot pass CI. Every step prints its duration, and the total is printed at the
 end.
@@ -455,12 +457,12 @@ application ID is `nl.r1a.grassmap`.
 | `control` | JSON-RPC control channel and MCP server, peer auth, allowlist, privacy switch | `core`, `plugin-api` |
 | `devtools` | debug harness: benchmark hooks, GPX replay, screenshot and state probes | `core`, `control`, `plugin-api` |
 | `app` | composition root, Android entry points, foreground service, manifest, resources | every module |
-| `plugins/example` | example of a first-party plugin module | `plugin-api` |
+| `plugins/example` | debug-only example of a first-party plugin module | `plugin-api` |
 | `plugins/style-standard` | the Standard and Touring light and dark palettes and their one-zoom-earlier Touring threshold, as a `MapLayerProvider` | `plugin-api` |
-| `plugins/synthetic-data` | the synthetic elevation `DataSource` and its real contour overlay | `plugin-api` |
+| `plugins/synthetic-data` | the debug-only synthetic elevation `DataSource` and its real contour overlay | `plugin-api` |
 | `plugins/gpx` | GPX 1.0/1.1 import and export as a `FileFormat` provider | `plugin-api` |
 | `plugins/info-widgets` | the altitude, coordinates, GPS info and current / average / max speed widget data providers | `plugin-api` |
-| `plugins/dev-tools` | the release development-tools panel and its GPX replay start/stop commands | `plugin-api` |
+| `plugins/dev-tools` | the debug-only development-tools panel and its GPX replay start/stop commands | `plugin-api` |
 | `plugins/map-controls` | the free, follow and heading camera mode, the compass reset, the position-marker offset seam and the scale-bar layout | `plugin-api` |
 | `plugins/point-info` | the distance and azimuth from the fix or map centre to a long-pressed point | `plugin-api` |
 | `plugins/osm-places` | the `places.card` provider that maps OSM tags to place-card rows and evaluates `opening_hours` | `plugin-api` |
@@ -472,7 +474,7 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/valhalla` | the v1 `routing.engine` provider: profile mapping, the native Valhalla adapter, the async segment attributes | `plugin-api` |
 | `plugins/direct-engine` | the second `routing.engine` provider: one geodesic per leg with the haversine length, its leg segments and its honest empty capabilities | `plugin-api` |
 | `plugins/guidance-ui` | the guidance panel's four facts and its Compose turn card, drawn from the navigation state the app holds | `plugin-api`, `plugin-ui-api` |
-| `plugins/nav-simulator` | the simulated run at 5 km/h through the production navigation session, its start and stop commands and its status stream | `plugin-api`, `navigation`, `routing` |
+| `plugins/nav-simulator` | the debug-only simulated run at 5 km/h through the production navigation session, its start and stop commands and its status stream | `plugin-api`, `navigation`, `routing` |
 | `plugins/track-layer` | the imported-track line layer and the controller that keeps it on the map | `plugin-api` |
 | `plugins/route-layer` | the route line's colour and pattern decision: slope and surface palettes, the unpaved dash and the steps stripe, drawn through `MapHost` | `plugin-api` |
 | `plugins/track-library` | the track library state, its folder definitions, the rename, describe, move and delete actions with one-step undo, and the four fixed orders and name search | `plugin-api` |
@@ -977,12 +979,11 @@ one fix per second, looping at the end. Launching the activity with
 `--ez t0103_platform_location true` uses the real platform source instead, which
 is how the permission flow is exercised on the emulator.
 
-A release build starts on the platform source and can switch to the same
-committed replay through the development-tools panel. That panel is behind the
-AI-control switch and stays invisible and unusable until T-0610 supplies the
-switch; `LoggingLocationSource` remains debug-only. The fixture is the same
-`test-data/location/mock-walk.gpx` and now ships in the main assets, so the
-release panel can parse it.
+A release build starts on the platform source. The development-tools panel that
+can switch to the committed replay is a debug build only, together with its
+plugin; a release build ships no panel and no `dev.tools` command. The fixture
+is the same `test-data/location/mock-walk.gpx` and ships in the main assets, so
+the debug panel can parse it.
 
 ## DataSource seam
 
@@ -993,7 +994,8 @@ optional map layer. Values stay keyed by OSM way id and region build, so a
 provider from an older build is stale and never applied.
 
 The first-party `data.synthetic` plugin in `plugins/synthetic-data` exercises
-that seam. Its elevation attributes and its two cost modifiers are authored
+that seam. It is a `debugImplementation` dependency, so only a debug build
+packages it. Its elevation attributes and its two cost modifiers are authored
 T-0023 fixtures over the fixture-mini bbox, not region data. Its map layer is
 real: a line layer on the `contours` source, source-layer `contours`, in the
 overlays slot, filtering the archive's index lines with `idx == true` (the
@@ -1044,9 +1046,17 @@ Both reach no runtime classpath.
 ## Plugin manifests
 
 Every `plugins/*` module carries `src/main/plugin.json`, and so does the
-compiled-in `planner`. At build time the `generatePluginRegistry` task reads
-those manifests and writes `GeneratedPlugins.kt` and `GeneratedStreams.kt` into
-`app`, so the host never scans the classpath or uses reflection.
+compiled-in `planner`. At build time a variant's `generatePluginRegistry` task
+reads those manifests and writes `GeneratedPlugins.kt` and `GeneratedStreams.kt`
+into `app`, so the host never scans the classpath or uses reflection.
+
+The development plugins (`example`, `synthetic-data`, `dev-tools` and
+`nav-simulator`) are `debugImplementation` dependencies. The debug registry
+includes their manifests; the release, benchmark and measure registries omit
+them, so a release build neither compiles their classes nor names them in a
+command catalog. `checkReleaseApkPlugins` reads the development plugins' own
+manifests and fails when a plugin id or implementation class reaches the release
+APK; CI runs it against the reproducibility APK.
 
 A manifest declares the plugin id, version, the `plugin-api` version, the
 implementation class, and its contributions: commands with parameter and result
@@ -1419,8 +1429,10 @@ even when the wall tick is fast. The summary carries `inaccurate_fixes`,
 `off_route_fixes`, `reroutes` and `reroute_ms`; the phone benchmark is
 `scripts/bench/reroute-latency.sh`.
 
-`plugins/nav-simulator` is the simulated run (T-0315). `NavigationSimulator`
-places one synthetic fix per simulated second 1.389 m further along the route,
+`plugins/nav-simulator` is the simulated run (T-0315) and a
+`debugImplementation` dependency, so no release command reaches it.
+`NavigationSimulator` places one synthetic fix per simulated second 1.389 m
+further along the route,
 so the run holds 5 km/h whatever the vertex spacing is. The fixes go through the
 production `NavigationSession` and `GeometryRouteFollower`; arrival is the
 session's own 15 m check, and the simulator never sets a phase. Its clock

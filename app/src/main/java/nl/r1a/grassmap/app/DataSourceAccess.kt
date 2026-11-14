@@ -17,17 +17,16 @@ import nl.r1a.grassmap.plugin.api.provider.DataSource
 import nl.r1a.grassmap.plugin.api.provider.DataSourceContract
 import nl.r1a.grassmap.plugin.api.provider.DataSourceDescription
 
-internal val SYNTHETIC_DATA_PLUGIN: PluginId = PluginId("data.synthetic")
-
 /**
  * The app's handle on the synthetic DataSource. Routing will read cost
  * modifiers through it; today it proves that the provider resolves and that its
  * map layer reaches the host. Every call returns a typed [Outcome], so a missing
- * provider is a value, not a crash.
+ * provider is a value, not a crash. A release build passes no plugin id: the
+ * development plugin that provides the synthetic source is not packaged there.
  */
 class DataSourceAccess internal constructor(
     private val registry: ProviderRegistry,
-    val pluginId: PluginId = SYNTHETIC_DATA_PLUGIN,
+    val pluginId: PluginId?,
 ) {
     suspend fun describe(): Outcome<DataSourceDescription> = withSource { Outcome.Success(it.describe()) }
 
@@ -50,8 +49,9 @@ class DataSourceAccess internal constructor(
      * disable limit instead of escaping into the caller's coroutine.
      */
     private suspend fun <T> withSource(block: suspend (DataSource) -> Outcome<T>): Outcome<T> {
+        val id = pluginId ?: return Outcome.Failure(AppError.NotFound)
         val guarded =
-            registry.invoke(pluginId, DataSourceContract.REFERENCE) { provider ->
+            registry.invoke(id, DataSourceContract.REFERENCE) { provider ->
                 when (val source = provider as? DataSource) {
                     null -> Outcome.Failure(AppError.Unsupported)
                     else -> block(source)
@@ -84,7 +84,8 @@ internal suspend fun installDataSourceLayer(
             if (slotted == null) {
                 Outcome.Success(Unit)
             } else {
-                host.addLayer(slotted.slot, slotted.spec, dataSources.pluginId)
+                val pluginId = dataSources.pluginId ?: return Outcome.Failure(AppError.NotFound)
+                host.addLayer(slotted.slot, slotted.spec, pluginId)
             }
         }
     }

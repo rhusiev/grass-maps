@@ -894,14 +894,13 @@ private fun MapContent(
                 }
             }
         }
-        if (container.devToolsVisible && !navigationActive) {
-            DevToolsPanel(
-                container = container,
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomStart)
-                        .navigationBarsPadding()
-                        .padding(BAR_PADDING_DP.dp),
+        val devToolsPanel = container.devToolsPanel
+        if (container.devToolsVisible && !navigationActive && devToolsPanel != null) {
+            devToolsPanel(
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .navigationBarsPadding()
+                    .padding(BAR_PADDING_DP.dp),
             )
         }
         if (!navigationActive) {

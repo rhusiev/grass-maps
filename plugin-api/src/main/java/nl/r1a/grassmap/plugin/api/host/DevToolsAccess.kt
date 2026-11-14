@@ -10,7 +10,8 @@ data class DevToolsMetrics(
 )
 
 /**
- * The host seams the release development-tools plugin reads (T-0114).
+ * The host seams the development-tools plugin reads (T-0114). The plugin is a
+ * debug build only, so a release build has no command that calls these seams.
  *
  * The replay it starts is the app's existing location source, not a second
  * position path. Frame rate and memory are values the host already samples, so

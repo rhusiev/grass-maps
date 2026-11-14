@@ -7,6 +7,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Debug
 import android.util.Log
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,6 +25,8 @@ import nl.r1a.grassmap.core.services.MockGpxLocationSource
 import nl.r1a.grassmap.core.services.installCrashGuard
 import nl.r1a.grassmap.map.DistanceByTapSetting
 import nl.r1a.grassmap.plugin.api.command.Command
+import nl.r1a.grassmap.plugin.api.contract.PluginId
+import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.service.LocationService
@@ -58,7 +62,10 @@ open class GrassMapsApplication : Application() {
             debuggable = { isDebuggable() },
             extraCommands = extraCommands(),
             devTools = devToolsAccess(location),
+            devToolsPanel = devToolsPanel(),
+            dataSourcePluginId = dataSourcePluginId(),
             aiControlEnabled = { aiControlEnabled() },
+            switchEnabled = switchEnabled(),
             distanceByTap = distanceByTap(),
             headingSource = AndroidHeadingSource(this, compassScope),
             unitSettingsFileProvider = { File(filesDir, UNIT_SETTINGS_PATH) },
@@ -152,8 +159,26 @@ open class GrassMapsApplication : Application() {
      */
     internal open fun locationSource(): LocationService = replayLocation
 
+    /**
+     * The development-tools overlay. A release build contributes none, so the
+     * plugin module and its panel code exist only in a debug build.
+     */
+    internal open fun devToolsPanel(): (@Composable (Modifier) -> Unit)? = null
+
+    /**
+     * The synthetic DataSource plugin. A debug build declares it; release
+     * returns null because the plugin is not packaged there.
+     */
+    internal open fun dataSourcePluginId(): PluginId? = null
+
     /** The AI-control switch. Release stays off until T-0610 wires the switch. */
     internal open fun aiControlEnabled(): Boolean = false
+
+    /**
+     * The switches this build can turn on. A debug build enables the
+     * development-tools switch; release leaves every switch off.
+     */
+    internal open fun switchEnabled(): (SwitchId) -> Boolean = { false }
 
     /** Development seams over whichever replay source this build installed. */
     internal fun devToolsAccess(location: LocationService): DevToolsRuntime =
@@ -188,9 +213,9 @@ open class GrassMapsApplication : Application() {
     }
 
     /**
-     * Reads the committed replay fixture for the release panel. It runs off
-     * Main, in the loader the replay's collector calls, and a missing asset is
-     * a null fix rather than a crash.
+     * Reads the committed replay fixture for the development-tools panel. It
+     * runs off Main, in the loader the replay's collector calls, and a missing
+     * asset is a null fix rather than a crash.
      */
     private suspend fun readReplayGpx(): Outcome<String> =
         withContext(Dispatchers.IO) {

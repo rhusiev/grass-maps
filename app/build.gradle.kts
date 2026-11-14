@@ -1,3 +1,4 @@
+import buildlogic.CheckApkPluginsTask
 import buildlogic.CheckPrivacyManifestTask
 import buildlogic.GeneratePluginRegistryTask
 import buildlogic.RustNative
@@ -18,18 +19,36 @@ val pluginManifestFiles =
         .filter { it.path.startsWith(":plugins:") || it.path == ":planner" }
         .map { it.file("src/main/plugin.json") }
 
+/**
+ * Plugins that exist only in a debug-flavoured build. A release build must not
+ * package their code; `checkReleaseApkPlugins` reads these manifests and fails
+ * when a plugin id or implementation class reaches the release APK.
+ */
+val developmentPluginProjects =
+    listOf(
+        ":plugins:example",
+        ":plugins:synthetic-data",
+        ":plugins:dev-tools",
+        ":plugins:nav-simulator",
+    )
+
+val developmentPluginManifestFiles =
+    rootProject.subprojects
+        .filter { it.path in developmentPluginProjects }
+        .map { it.file("src/main/plugin.json") }
+
+val releasePluginManifestFiles =
+    pluginManifestFiles.filterNot { it in developmentPluginManifestFiles }
+
+/** Only the `debug` build type uses the debug dependency configuration. */
+val developmentPluginBuildTypes = setOf("debug")
+
 val measurePackAssets: String? = providers.gradleProperty("measurePackDir").orNull
 
 /** The one ABI a measure APK packages; the phone is arm64-v8a. */
 val measureAbi: String = providers.gradleProperty("measureAbi").orElse("arm64-v8a").get()
 
-val generatePluginRegistry =
-    tasks.register<GeneratePluginRegistryTask>("generatePluginRegistry") {
-        group = "build"
-        description = "Generates GeneratedPlugins.kt and GeneratedStreams.kt from plugin manifests."
-        manifests.from(pluginManifestFiles)
-        outputDirectory.set(layout.buildDirectory.dir("generated/plugin-registry"))
-    }
+val releaseApkProperty: String? = providers.gradleProperty("releaseApk").orNull
 
 android {
     namespace = "nl.r1a.grassmap.app"
@@ -96,7 +115,7 @@ android {
     }
 
     // The committed GPX fixture ships in every build: the debug build replays
-    // it by default and the release development-tools plugin starts it on
+    // it by default and the debug development-tools plugin starts it on
     // request (T-0114). It is the same file the JVM tests read.
     sourceSets.getByName("main").assets.srcDir(rootProject.file("test-data/location"))
 
@@ -151,12 +170,47 @@ androidComponents {
                 mergedManifest.set(variant.artifacts.get(SingleArtifact.MERGED_MANIFEST))
             }
         checkPrivacyManifest.configure { dependsOn(manifestCheck) }
+
+        // A release-flavoured variant must not name a plugin whose classes are
+        // not on its classpath, so its registry excludes the development
+        // manifests. Only the debug variant keeps the full registry.
+        val includesDevelopmentPlugins = variant.buildType in developmentPluginBuildTypes
+        val generatePluginRegistry =
+            tasks.register<GeneratePluginRegistryTask>(
+                "generatePluginRegistry${variant.name.replaceFirstChar { it.uppercase() }}",
+            ) {
+                group = "build"
+                description =
+                    "Generates GeneratedPlugins.kt and GeneratedStreams.kt for the ${variant.name} variant."
+                manifests.from(
+                    if (includesDevelopmentPlugins) pluginManifestFiles else releasePluginManifestFiles,
+                )
+                outputDirectory.set(
+                    layout.buildDirectory.dir("generated/plugin-registry/${variant.name}"),
+                )
+            }
         variant.sources.kotlin?.addGeneratedSourceDirectory(
             generatePluginRegistry,
             GeneratePluginRegistryTask::outputDirectory,
         )
     }
 }
+
+// The release APK must not package a development plugin. The ids and
+// implementation classes come from each plugin's own plugin.json, so adding a
+// plugin to developmentPluginProjects is enough to extend the check.
+val checkReleaseApkPlugins =
+    tasks.register<CheckApkPluginsTask>("checkReleaseApkPlugins") {
+        group = "verification"
+        description = "Fails when the release APK packages a development plugin."
+        manifests.from(developmentPluginManifestFiles)
+        if (releaseApkProperty == null) {
+            apk.set(layout.buildDirectory.file("outputs/apk/release/app-release-unsigned.apk"))
+            dependsOn("assembleRelease")
+        } else {
+            apk.set(rootProject.file(requireNotNull(releaseApkProperty)))
+        }
+    }
 
 dependencies {
     implementation(project(":plugin-api"))
@@ -172,12 +226,9 @@ dependencies {
     implementation(project(":places"))
     implementation(project(":tracks"))
     implementation(project(":ui-shell"))
-    implementation(project(":plugins:example"))
     implementation(project(":plugins:style-standard"))
-    implementation(project(":plugins:synthetic-data"))
     implementation(project(":plugins:gpx"))
     implementation(project(":plugins:info-widgets"))
-    implementation(project(":plugins:dev-tools"))
     implementation(project(":plugins:map-controls"))
     implementation(project(":plugins:point-info"))
     implementation(project(":plugins:osm-places"))
@@ -189,7 +240,6 @@ dependencies {
     implementation(project(":plugins:coordinates"))
     implementation(project(":plugins:valhalla"))
     implementation(project(":plugins:direct-engine"))
-    implementation(project(":plugins:nav-simulator"))
     implementation(project(":plugins:way-alerts"))
     implementation(project(":plugins:proximity-alerts"))
     implementation(project(":plugins:route-warnings"))
@@ -204,10 +254,15 @@ dependencies {
     implementation("org.jetbrains.compose.foundation:foundation:1.12.1")
     implementation("org.jetbrains.compose.runtime:runtime:1.12.1")
 
-    // Debug-only: the control channel and the devtools harness must not be
-    // packaged into a release build at all (architecture section 22).
+    // Debug-only: the control channel, the devtools harness and the plugins
+    // that exist to drive them must not be packaged into a release build at all
+    // (architecture section 22). The release APK check below enforces the
+    // plugin half of that rule.
     debugImplementation(project(":control"))
     debugImplementation(project(":devtools"))
+    developmentPluginProjects.forEach { plugin ->
+        debugImplementation(project(plugin))
+    }
 
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 

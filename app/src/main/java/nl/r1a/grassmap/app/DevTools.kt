@@ -6,9 +6,9 @@ import nl.r1a.grassmap.plugin.api.host.DevToolsAccess
 import nl.r1a.grassmap.plugin.api.host.DevToolsMetrics
 
 /**
- * Starts and stops the GPX replay the app's location source already runs. The
- * debug source and the release source both implement it, so the dev-tools
- * plugin drives one seam in either build.
+ * Starts and stops the GPX replay the app's location source already runs. Both
+ * the debug and release location sources implement it, so the seam has one
+ * shape; only a debug build packages the dev-tools plugin that drives it.
  */
 internal interface ReplayControl {
     fun isReplaying(): Boolean

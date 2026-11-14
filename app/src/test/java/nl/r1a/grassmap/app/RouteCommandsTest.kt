@@ -10,6 +10,7 @@ import nl.r1a.grassmap.core.PluginHost
 import nl.r1a.grassmap.core.ProviderRegistry
 import nl.r1a.grassmap.plugin.api.command.CommandResult
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.Camera
@@ -127,7 +128,7 @@ class RouteCommandsTest {
                 commands = emptyList(),
                 dispatcher = Dispatchers.Unconfined,
             )
-        return DataSourceAccess(ProviderRegistry(pluginHost))
+        return DataSourceAccess(ProviderRegistry(pluginHost), PluginId("data.synthetic"))
     }
 
     private class FakeEngine : RoutingEngine {

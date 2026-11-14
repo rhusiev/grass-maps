@@ -92,6 +92,9 @@ class DevToolsWiringTest {
                 ),
             devTools = devTools,
             aiControlEnabled = { aiControlEnabled },
+            switchEnabled = { switch ->
+                aiControlEnabled && switch == DevToolsContract.aiControlSwitch
+            },
         )
     }
 

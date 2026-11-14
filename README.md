@@ -41,9 +41,14 @@ builds it with `cargo` for the host (JVM tests) and for `arm64-v8a` and
 `x86_64`, generates the Kotlin uniffi bindings from the host library, and
 packages the stripped `.so` files from `places/build/rust-jni`. The toolchain is
 pinned by `rust/grass-core/rust-toolchain.toml` (1.93.1 with the two Android
-targets), and the NDK is found through `ANDROID_NDK_HOME` or the newest
-`$ANDROID_HOME/ndk/*`. A build without either fails at configuration with a
-message naming the missing part.
+targets), and the NDK is pinned to 28.2.13676358
+(`RustNative.NDK_VERSION` in `buildSrc`). `ANDROID_NDK_HOME` or
+`ANDROID_NDK_ROOT` may name the NDK, but must point at exactly that revision;
+otherwise `$ANDROID_HOME/ndk/28.2.13676358` is used. The NDK is resolved only
+by a task that builds native code, so a machine without one can still run JVM
+tests, formatting and other unrelated Gradle tasks. A native build without the
+pinned NDK fails with a message naming the required revision and the one it
+found.
 
 `rust/grass-regions` is the region reader behind `RegionAccess` (T-0321). It is
 wired the same way and from its own package, `nl.r1a.grassmap.regions.core`:

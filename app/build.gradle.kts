@@ -1,5 +1,6 @@
 import buildlogic.CheckPrivacyManifestTask
 import buildlogic.GeneratePluginRegistryTask
+import buildlogic.RustNative
 import buildlogic.useGrassRegionsInTests
 import com.android.build.api.artifact.SingleArtifact
 import org.gradle.api.tasks.PathSensitivity
@@ -33,6 +34,7 @@ val generatePluginRegistry =
 android {
     namespace = "nl.r1a.grassmap.app"
     compileSdk = 37
+    ndkVersion = RustNative.NDK_VERSION
 
     defaultConfig {
         applicationId = "nl.r1a.grassmap"

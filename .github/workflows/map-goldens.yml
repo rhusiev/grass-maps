@@ -74,6 +74,8 @@ jobs:
           java-version: '21'
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+      - name: Install the pinned Android NDK
+        run: ./scripts/ci/install-pinned-ndk.sh
       - name: Set up Rust 1.93.1 with the Android targets
         uses: dtolnay/rust-toolchain@stable
         with:

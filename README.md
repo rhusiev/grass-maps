@@ -2743,7 +2743,23 @@ oversize document, like one that is empty or not a track, is `InvalidInput` and
 becomes the notice's "not a track" message. The parse and the store write run
 on `Dispatchers.IO`, never on Main.
 
-`TrackShareImport` imports through the same `TrackAccess` the library uses, so
+`TrackShareImport` parses before it stores. `prepare` reads and parses the
+document without writing, and `MapScreen` draws a confirm sheet: the file name
+the sender's provider gave, the track count, and Cancel beside Import. The
+sheet follows the track library's `LinkSheet` shape - a scrim and a
+bottom-centre panel with the title, the detail lines and the two answers -
+because that is the repository's existing way to show what a thing is before it
+acts. The design canon has no share-confirm screen; this is the user's decision
+to extend the link-confirm pattern. Import is the only control that writes;
+Cancel and the scrim drop the pending document, so the library is untouched and
+no notice appears. A document that does not parse never reaches the sheet and
+keeps the existing failure notice, because there is nothing to confirm. The
+count uses the app's label form (`Tracks: 2` / `Треків: 2`) because the app has
+no plural resources yet. `ACTION_SEND` and `ACTION_VIEW` enter the same
+`prepare` path, and the debug `core.track.import_test` command calls
+`TrackAccess.import` directly, so it keeps importing without a confirm.
+
+`confirm` imports through the same `TrackAccess` the library uses, so
 the document hash stays the track id: sharing the same file twice updates one
 record and keeps its colour. That write raises the store's revision, and the
 `track.library` plugin reloads its state from it, so the imported track shows
@@ -2764,7 +2780,9 @@ from release). It serves the committed `mock-walk.gpx` at three addresses:
 type names the format), `notes` (a document that is not a track) and
 `unreadable` (a read that throws `SecurityException`).
 
-The acceptance ran on the API 29 emulator with the debug APK:
+The acceptance ran on the API 29 emulator with the debug APK, before the
+confirm step existed. With the confirm, the `am start` command below stops at
+the sheet, and the import log line and the stored document appear after Import:
 
 ```sh
 adb install -r app/build/outputs/apk/debug/app-debug.apk
@@ -2796,9 +2814,9 @@ its left end.
 
 `ShareImportInstrumentedTest` in `app/src/androidTest` drives the same path
 through the activity without `adb`: it launches `MainActivity` with
-`ACTION_SEND` and the `content:` URI and asserts the notice, the stored track,
-the duplicate update, the non-track document and the provider that refuses the
-read. Run it with
+`ACTION_SEND` and the `content:` URI, waits for the confirm sheet, confirms, and
+asserts the notice, the stored track, the duplicate update, the non-track
+document and the provider that refuses the read. Run it with
 
 ```sh
 adb shell am instrument -w -e class nl.r1a.grassmap.app.ShareImportInstrumentedTest \

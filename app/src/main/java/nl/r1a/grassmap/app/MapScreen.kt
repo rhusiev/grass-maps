@@ -149,6 +149,7 @@ import nl.r1a.grassmap.ui.shell.RoutePlanPanel
 import nl.r1a.grassmap.ui.shell.RoutePreviewTime
 import nl.r1a.grassmap.ui.shell.SearchScreenHost
 import nl.r1a.grassmap.ui.shell.TrackAnalysisPanel
+import nl.r1a.grassmap.ui.shell.TrackImportConfirmSheet
 import nl.r1a.grassmap.ui.shell.TrackImportNoticeBar
 import nl.r1a.grassmap.ui.shell.TrackLibraryHost
 import nl.r1a.grassmap.ui.shell.TrackMapCard
@@ -158,6 +159,7 @@ import nl.r1a.grassmap.ui.shell.TrackTap
 import nl.r1a.grassmap.ui.shell.followTrackSheetDisplay
 import nl.r1a.grassmap.ui.shell.routePlanTurns
 import nl.r1a.grassmap.ui.shell.routeTurnStep
+import nl.r1a.grassmap.ui.shell.trackImportConfirmContent
 import nl.r1a.grassmap.ui.shell.trackImportNotice
 import java.io.File
 import java.time.ZoneId
@@ -447,8 +449,9 @@ private fun MapContent(
             .value
             ?.position
     var followSheet by remember { mutableStateOf<FollowTrackSheetState?>(null) }
-    // The share-sheet import's notice (T-0416).
+    // The share-sheet import's notice (T-0416) and the confirm that precedes it.
     val trackShare by container.trackShare.notice.collectAsState()
+    val trackShareConfirmation by container.trackShare.confirmation.collectAsState()
     var analysisAxis by remember(analysisTrack) { mutableStateOf(ElevationChartAxis.Distance) }
     // The range the user dragged on the analysis chart (T-0405). The shell
     // reports distances; the engine answers with the statistics, so the chart
@@ -1638,6 +1641,22 @@ private fun MapContent(
                     }
                 },
                 modifier = Modifier.fillMaxSize(),
+            )
+        }
+        val shareConfirmation = trackShareConfirmation
+        if (shareConfirmation != null) {
+            val confirmContent =
+                remember(shareConfirmation, container.strings) {
+                    trackImportConfirmContent(
+                        fileName = shareConfirmation.fileName,
+                        trackCount = shareConfirmation.trackCount,
+                        strings = container.strings,
+                    )
+                }
+            TrackImportConfirmSheet(
+                content = confirmContent,
+                onImport = { scope.launch { container.trackShare.confirm() } },
+                onCancel = { container.trackShare.cancel() },
             )
         }
     }

@@ -2,17 +2,23 @@ package nl.r1a.grassmap.ui.shell
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -39,6 +45,18 @@ private const val SKIPPED_MANY_KEY = "track_import_skipped_many"
 private const val OPEN_KEY = "track_import_open"
 private const val NOT_A_TRACK_KEY = "track_import_not_a_track"
 private const val UNREADABLE_KEY = "track_import_unreadable"
+private const val CONFIRM_TITLE_KEY = "track_import_confirm_title"
+private const val CONFIRM_COUNT_KEY = "track_import_confirm_count"
+private const val CONFIRM_IMPORT_KEY = "track_import_confirm_import"
+
+private const val SHEET_SCREEN_PADDING_DP = 16
+private const val SHEET_MAX_WIDTH_DP = 560
+private const val SHEET_PADDING_DP = 16
+private const val SHEET_ROW_GAP_DP = 8
+private const val BUTTON_PADDING_HORIZONTAL_DP = 12
+private const val BUTTON_PADDING_VERTICAL_DP = 6
+
+private val SCRIM_COLOR = Color(0x66000000)
 
 /** Why a shared document did not become a track (T-0416). */
 enum class TrackImportFailure {
@@ -78,6 +96,36 @@ data class TrackImportNotice(
     val action: String?,
     val failed: Boolean = false,
 )
+
+/** The confirm sheet's resolved text, ready to draw (T-0416 confirm step). */
+data class TrackImportConfirmContent(
+    val title: String,
+    val fileName: String,
+    val count: String,
+    val cancel: String,
+    val import: String,
+)
+
+/**
+ * The confirm's text: what arrived, how many tracks it holds, and the two
+ * answers. The count uses the app's label form (`Tracks: 2` / `Треків: 2`)
+ * because the app has no plural resources yet; the numeral carries the number
+ * and the label stays the same for one track and for many.
+ */
+fun trackImportConfirmContent(
+    fileName: String,
+    trackCount: Int,
+    strings: Strings,
+): TrackImportConfirmContent {
+    require(trackCount > 0) { "a confirmation needs at least one track" }
+    return TrackImportConfirmContent(
+        title = strings.resolve(CONFIRM_TITLE_KEY),
+        fileName = fileName,
+        count = strings.resolve(CONFIRM_COUNT_KEY, listOf(trackCount.toString())),
+        cancel = strings.resolve(TRACK_LIBRARY_CANCEL_KEY),
+        import = strings.resolve(CONFIRM_IMPORT_KEY),
+    )
+}
 
 /**
  * The notice another app's share produced (T-0416), from the round-6
@@ -130,6 +178,91 @@ private fun failureKey(failure: TrackImportFailure): String =
         TrackImportFailure.NotATrack -> NOT_A_TRACK_KEY
         TrackImportFailure.Unreadable -> UNREADABLE_KEY
     }
+
+/**
+ * The share confirm sheet (T-0416). It follows the track library's `LinkSheet`
+ * shape - a scrim, a bottom-centre panel with the title, the detail line and
+ * Cancel beside the primary action - because the repository already answers
+ * "show what this is, then act" that way. The design canon has no share
+ * confirm screen; this is the user's decision to extend that pattern.
+ *
+ * [content] names the file and counts its tracks. Import is the only control
+ * that writes, and the scrim and Cancel both discard the pending document.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+fun TrackImportConfirmSheet(
+    content: TrackImportConfirmContent,
+    onImport: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(SCRIM_COLOR)
+                    .pointerInput(Unit) { detectTapGestures(onTap = { onCancel() }) },
+        )
+        Column(
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(SHEET_SCREEN_PADDING_DP.dp)
+                    .widthIn(max = SHEET_MAX_WIDTH_DP.dp)
+                    .background(ROUTE_PANEL_BACKGROUND, RoundedCornerShape(NOTICE_CORNER_DP.dp))
+                    .pointerInput(Unit) { detectTapGestures(onTap = {}) }
+                    .padding(SHEET_PADDING_DP.dp),
+            verticalArrangement = Arrangement.spacedBy(SHEET_ROW_GAP_DP.dp),
+        ) {
+            BasicText(
+                text = content.title,
+                style = TextStyle(color = ROUTE_VALUE_COLOR, fontSize = TITLE_FONT_SP.sp, fontWeight = FontWeight.Bold),
+            )
+            BasicText(
+                text = content.fileName,
+                style = TextStyle(color = ROUTE_VALUE_COLOR, fontSize = DETAIL_FONT_SP.sp),
+            )
+            BasicText(
+                text = content.count,
+                style = TextStyle(color = ROUTE_STATUS_COLOR, fontSize = DETAIL_FONT_SP.sp),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(SHEET_ROW_GAP_DP.dp)) {
+                ConfirmButton(text = content.cancel, primary = false, colors = ROUTE_CHIP_COLOR, onClick = onCancel)
+                ConfirmButton(text = content.import, primary = true, colors = ROUTE_ACTION_COLOR, onClick = onImport)
+            }
+        }
+    }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun ConfirmButton(
+    text: String,
+    primary: Boolean,
+    colors: Color,
+    onClick: () -> Unit,
+) {
+    BasicText(
+        text = text,
+        style =
+            TextStyle(
+                color = if (primary) ROUTE_VALUE_COLOR else ROUTE_STATUS_COLOR,
+                fontSize = ACTION_FONT_SP.sp,
+                fontWeight = if (primary) FontWeight.Bold else FontWeight.Normal,
+            ),
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(NOTICE_CORNER_DP.dp))
+                .background(colors, RoundedCornerShape(NOTICE_CORNER_DP.dp))
+                .clickable(onClick = onClick)
+                .semantics { contentDescription = text }
+                .padding(
+                    horizontal = BUTTON_PADDING_HORIZONTAL_DP.dp,
+                    vertical = BUTTON_PADDING_VERTICAL_DP.dp,
+                ),
+    )
+}
 
 /**
  * The notice row. The whole row is one announcement and [onOpen] is the only

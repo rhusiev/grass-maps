@@ -71,7 +71,9 @@ class TrackShareLibraryRefreshTest {
                 assertTrue("the screen starts on an empty library", state.value.tracks.isEmpty())
 
                 val shared = TrackShareImport(tracks = { tracks }, log = {})
-                requireNotNull(shared.import(SHARE_URI, reader()))
+                requireNotNull(shared.prepare(SHARE_URI, reader()))
+                assertTrue("nothing is stored before confirm", tracks.summaries().isEmpty())
+                requireNotNull(shared.confirm())
 
                 val visible =
                     withTimeout(REFRESH_TIMEOUT_MILLIS) {

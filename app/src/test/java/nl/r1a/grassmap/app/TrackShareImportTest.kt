@@ -15,36 +15,102 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The share-sheet import over the real `file.gpx` provider (T-0416): an
- * `ACTION_SEND` of the committed GPX becomes a stored track, and sharing the
- * same bytes again updates that one record.
+ * The share-sheet import over the real `file.gpx` provider (T-0416).
  *
- * The activity's part - the content resolver and the intent delivery - is the
- * device check over `adb`; this test drives the same rule and the same importer
- * with the reader seam the activity supplies.
+ * A share is parsed first and waits in [TrackShareImport.confirmation]; only
+ * `confirm` writes to the library, and `cancel` writes nothing and says
+ * nothing. The activity's part - the content resolver and the intent delivery -
+ * is the device check over `adb`; this test drives the same rule and the same
+ * importer with the reader seam the activity supplies.
  */
 class TrackShareImportTest {
     @Test
-    fun anActionSendOfAGpxImportsTheTrackAndNoticesIt() =
+    fun aShareAsksBeforeItStoresTheOneTrack() =
         runTest {
             val tracks = trackAccess()
             val shared = TrackShareImport(tracks = { tracks }, log = {})
 
-            val state = requireNotNull(shared.import(SHARE_URI, reader(gpxBytes())))
+            val confirmation = requireNotNull(shared.prepare(SHARE_URI, reader(gpxBytes())))
+
+            assertEquals(1, confirmation.trackCount)
+            assertTrue("nothing is stored before confirm", tracks.storedTracks().isEmpty())
+            assertNull("no notice before confirm", shared.notice.value)
+
+            val state = requireNotNull(shared.confirm())
 
             assertEquals(TrackImportOutcome(names = listOf(TRACK_NAME)), state.outcome)
             assertEquals(1L, state.sequence)
             assertEquals(TRACK_NAME, tracks.storedTracks().single().name)
             assertEquals(state, shared.notice.value)
+            assertNull(shared.confirmation.value)
         }
 
     @Test
-    fun aGpxTypedDocumentWithoutADisplayNameStillImports() =
+    fun aTwoTrackShareAsksAndImportsBothOnlyOnConfirm() =
         runTest {
             val tracks = trackAccess()
             val shared = TrackShareImport(tracks = { tracks }, log = {})
 
-            val state = requireNotNull(shared.import(SHARE_URI, reader(gpxBytes(), mimeType = GPX_MIME)))
+            val confirmation =
+                requireNotNull(
+                    shared.prepare(SHARE_URI, reader(multiTrackBytes(), displayName = MULTI_DISPLAY_NAME)),
+                )
+
+            assertEquals(2, confirmation.trackCount)
+            assertTrue(tracks.storedTracks().isEmpty())
+
+            val state = requireNotNull(shared.confirm())
+
+            assertEquals(2, state.outcome.trackCount)
+            assertEquals(listOf("Morning walk", "Evening walk"), state.outcome.names)
+            assertEquals(2, tracks.storedTracks().size)
+        }
+
+    @Test
+    fun aCancelledShareImportsNothingAndPublishesNoNotice() =
+        runTest {
+            val tracks = trackAccess()
+            val shared = TrackShareImport(tracks = { tracks }, log = {})
+
+            requireNotNull(shared.prepare(SHARE_URI, reader(multiTrackBytes(), displayName = MULTI_DISPLAY_NAME)))
+            shared.cancel()
+
+            assertNull(shared.confirmation.value)
+            assertTrue("cancel writes nothing", tracks.storedTracks().isEmpty())
+            assertNull("cancel says nothing", shared.notice.value)
+            assertNull("there is nothing left to confirm", shared.confirm())
+        }
+
+    @Test
+    fun aOneTrackShareCarriesTheSingularCount() =
+        runTest {
+            val tracks = trackAccess()
+            val shared = TrackShareImport(tracks = { tracks }, log = {})
+
+            val confirmation = requireNotNull(shared.prepare(SHARE_URI, reader(gpxBytes())))
+
+            assertEquals(1, confirmation.trackCount)
+        }
+
+    @Test
+    fun theConfirmationCarriesTheSendersFileName() =
+        runTest {
+            val tracks = trackAccess()
+            val shared = TrackShareImport(tracks = { tracks }, log = {})
+
+            val confirmation = requireNotNull(shared.prepare(SHARE_URI, reader(gpxBytes())))
+
+            assertEquals(DISPLAY_NAME, confirmation.fileName)
+        }
+
+    @Test
+    fun aGpxTypedDocumentWithoutADisplayNameStillAsks() =
+        runTest {
+            val tracks = trackAccess()
+            val shared = TrackShareImport(tracks = { tracks }, log = {})
+
+            requireNotNull(shared.prepare(SHARE_URI, reader(gpxBytes(), mimeType = GPX_MIME)))
+            val state = requireNotNull(shared.confirm())
 
             assertEquals(TRACK_NAME, state.outcome.names.single())
         }
@@ -55,9 +121,11 @@ class TrackShareImportTest {
             val tracks = trackAccess()
             val shared = TrackShareImport(tracks = { tracks }, log = {})
 
-            val first = requireNotNull(shared.import(SHARE_URI, reader(gpxBytes())))
+            requireNotNull(shared.prepare(SHARE_URI, reader(gpxBytes())))
+            val first = requireNotNull(shared.confirm())
             val firstId = tracks.storedTracks().single().id
-            val second = requireNotNull(shared.import(SHARE_URI, reader(gpxBytes())))
+            requireNotNull(shared.prepare(SHARE_URI, reader(gpxBytes())))
+            val second = requireNotNull(shared.confirm())
 
             assertEquals(first.outcome, second.outcome)
             assertEquals(firstId, tracks.storedTracks().single().id)
@@ -66,17 +134,19 @@ class TrackShareImportTest {
         }
 
     @Test
-    fun aDocumentThatIsNotATrackSaysSo() =
+    fun aDocumentThatIsNotATrackSaysSoAndDoesNotAsk() =
         runTest {
             val tracks = trackAccess()
             val shared = TrackShareImport(tracks = { tracks }, log = {})
 
-            val state =
-                requireNotNull(
-                    shared.import(SHARE_URI, reader("not a track".toByteArray(), displayName = "notes.txt")),
-                )
+            val confirmation = shared.prepare(SHARE_URI, reader("not a track".toByteArray(), displayName = "notes.txt"))
 
-            assertEquals(TrackImportOutcome(failure = TrackImportFailure.NotATrack), state.outcome)
+            assertNull("nothing to confirm", confirmation)
+            assertNull(shared.confirmation.value)
+            assertEquals(
+                TrackImportOutcome(failure = TrackImportFailure.NotATrack),
+                requireNotNull(shared.notice.value).outcome,
+            )
             assertTrue(tracks.storedTracks().isEmpty())
         }
 
@@ -86,20 +156,28 @@ class TrackShareImportTest {
             val tracks = trackAccess()
             val shared = TrackShareImport(tracks = { tracks }, log = {})
 
-            val state = requireNotNull(shared.import(SHARE_URI) { Outcome.Failure(AppError.NotFound) })
+            assertNull(shared.prepare(SHARE_URI) { Outcome.Failure(AppError.NotFound) })
 
-            assertEquals(TrackImportOutcome(failure = TrackImportFailure.Unreadable), state.outcome)
+            assertNull(shared.confirmation.value)
+            assertEquals(
+                TrackImportOutcome(failure = TrackImportFailure.Unreadable),
+                requireNotNull(shared.notice.value).outcome,
+            )
         }
 
     @Test
-    fun aRefusedDocumentIsReportedAsNotATrack() =
+    fun aRefusedDocumentIsReportedAsNotATrackWithoutAsking() =
         runTest {
             val tracks = trackAccess()
             val shared = TrackShareImport(tracks = { tracks }, log = {})
 
-            val state = requireNotNull(shared.import(SHARE_URI) { Outcome.Failure(AppError.InvalidInput) })
+            assertNull(shared.prepare(SHARE_URI) { Outcome.Failure(AppError.InvalidInput) })
 
-            assertEquals(TrackImportOutcome(failure = TrackImportFailure.NotATrack), state.outcome)
+            assertNull(shared.confirmation.value)
+            assertEquals(
+                TrackImportOutcome(failure = TrackImportFailure.NotATrack),
+                requireNotNull(shared.notice.value).outcome,
+            )
             assertTrue(tracks.storedTracks().isEmpty())
         }
 
@@ -108,7 +186,8 @@ class TrackShareImportTest {
         runTest {
             val tracks = trackAccess()
             val shared = TrackShareImport(tracks = { tracks }, log = {})
-            requireNotNull(shared.import(SHARE_URI, reader(gpxBytes())))
+            requireNotNull(shared.prepare(SHARE_URI, reader(gpxBytes())))
+            requireNotNull(shared.confirm())
 
             shared.openImported()
 
@@ -122,8 +201,10 @@ class TrackShareImportTest {
         runTest {
             val tracks = trackAccess()
             val shared = TrackShareImport(tracks = { tracks }, log = {})
-            val first = requireNotNull(shared.import(SHARE_URI, reader(gpxBytes())))
-            val second = requireNotNull(shared.import(SHARE_URI, reader(gpxBytes())))
+            requireNotNull(shared.prepare(SHARE_URI, reader(gpxBytes())))
+            val first = requireNotNull(shared.confirm())
+            requireNotNull(shared.prepare(SHARE_URI, reader(gpxBytes())))
+            val second = requireNotNull(shared.confirm())
 
             shared.dismiss(first.sequence)
 
@@ -141,9 +222,13 @@ class TrackShareImportTest {
             Outcome.Success(SharedDocument(displayName = displayName, mimeType = mimeType, bytes = bytes))
         }
 
-    private fun gpxBytes(): ByteArray =
-        requireNotNull(javaClass.classLoader?.getResourceAsStream(FIXTURE_RESOURCE)) {
-            "missing test resource $FIXTURE_RESOURCE"
+    private fun gpxBytes(): ByteArray = resourceBytes(FIXTURE_RESOURCE)
+
+    private fun multiTrackBytes(): ByteArray = resourceBytes(MULTI_TRACK_RESOURCE)
+
+    private fun resourceBytes(resource: String): ByteArray =
+        requireNotNull(javaClass.classLoader?.getResourceAsStream(resource)) {
+            "missing test resource $resource"
         }.use { it.readBytes() }
 
     private fun trackAccess(): TrackAccess =
@@ -163,8 +248,10 @@ class TrackShareImportTest {
     private companion object {
         const val SHARE_URI = "content://com.example.share/1"
         const val DISPLAY_NAME = "znesinnia-ridges.gpx"
+        const val MULTI_DISPLAY_NAME = "two-walks.gpx"
         const val TRACK_NAME = "Mock walk around Lviv"
         const val GPX_MIME = "application/gpx+xml"
         const val FIXTURE_RESOURCE = "location/mock-walk.gpx"
+        const val MULTI_TRACK_RESOURCE = "tracks/osmand-multi-track.gpx"
     }
 }

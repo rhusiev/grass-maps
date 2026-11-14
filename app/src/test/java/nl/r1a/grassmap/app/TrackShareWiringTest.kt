@@ -37,10 +37,20 @@ class TrackShareWiringTest {
         assertEquals("the first intent and a new one take the same path", 2, entries)
         assertTrue("the rule", "TrackShareIntent.documentUri(" in source)
         assertTrue("the reader", "ContentResolverSharedReader(this@MainActivity)" in source)
+        assertTrue("parse before confirm", "container.trackShare.prepare(uri, ContentResolverSharedReader(this@MainActivity))" in source)
+        assertTrue("nothing is imported on receipt", "container.trackShare.import(" !in source)
         assertTrue("stream extra", "Intent.EXTRA_STREAM" in source)
         assertTrue("clip data", "intent.clipData" in source)
         assertTrue("the link path stays", "openLink(intent?.dataString)" in source)
         assertTrue("the link path stays", "openLink(intent.dataString)" in source)
+    }
+
+    @Test
+    fun theDebugImportCommandStillImportsWithoutAConfirmation() {
+        val source = File(TRACK_COMMANDS).readText()
+
+        assertTrue("the command's own import path", "tracks().import(path, bytes, CancellationHandle.None)" in source)
+        assertTrue("no share confirmation", "trackShare" !in source)
     }
 
     @Test
@@ -52,13 +62,17 @@ class TrackShareWiringTest {
     }
 
     @Test
-    fun theMapDrawsTheNoticeAndOffersToOpenTheTrack() {
+    fun theMapDrawsTheConfirmBeforeTheNoticeAndActsOnlyOnConfirm() {
         val source = File(MAP_SCREEN).readText()
 
         assertTrue("collect", "container.trackShare.notice.collectAsState()" in source)
         assertNotNull("notice bar", Regex("TrackImportNoticeBar\\(").find(source))
         assertTrue("open", "container.trackShare.openImported()" in source)
         assertTrue("auto-hide", "container.trackShare.dismiss(share.sequence)" in source)
+        assertTrue("confirm state", "container.trackShare.confirmation.collectAsState()" in source)
+        assertNotNull("confirm sheet", Regex("TrackImportConfirmSheet\\(").find(source))
+        assertTrue("confirm", "container.trackShare.confirm()" in source)
+        assertTrue("cancel", "container.trackShare.cancel()" in source)
     }
 
     @Test
@@ -67,6 +81,17 @@ class TrackShareWiringTest {
         val ukrainian = strings(UKRAINIAN)
 
         for (key in NOTICE_KEYS) {
+            assertTrue("$key in English", key in english)
+            assertTrue("$key in Ukrainian", key in ukrainian)
+        }
+    }
+
+    @Test
+    fun theConfirmStringsExistInEnglishAndUkrainian() {
+        val english = strings(ENGLISH)
+        val ukrainian = strings(UKRAINIAN)
+
+        for (key in CONFIRM_KEYS) {
             assertTrue("$key in English", key in english)
             assertTrue("$key in Ukrainian", key in ukrainian)
         }
@@ -125,6 +150,7 @@ class TrackShareWiringTest {
         const val MAIN_ACTIVITY_SOURCE = "src/main/java/nl/r1a/grassmap/app/MainActivity.kt"
         const val MAP_SCREEN = "src/main/java/nl/r1a/grassmap/app/MapScreen.kt"
         const val APP_CONTAINER = "src/main/java/nl/r1a/grassmap/app/AppContainer.kt"
+        const val TRACK_COMMANDS = "src/main/java/nl/r1a/grassmap/app/TrackCommands.kt"
         const val ENGLISH = "src/main/res/values/strings.xml"
         const val UKRAINIAN = "src/main/res/values-uk/strings.xml"
 
@@ -150,6 +176,12 @@ class TrackShareWiringTest {
                 "track_import_open",
                 "track_import_not_a_track",
                 "track_import_unreadable",
+            )
+        val CONFIRM_KEYS =
+            setOf(
+                "track_import_confirm_title",
+                "track_import_confirm_count",
+                "track_import_confirm_import",
             )
     }
 }

@@ -155,6 +155,9 @@
     <string name="track_import_open">Відкрити</string>
     <string name="track_import_not_a_track">Цей файл не є треком, який Grass Maps може прочитати</string>
     <string name="track_import_unreadable">Не вдалося відкрити файл</string>
+    <string name="track_import_confirm_title">Імпортувати цей файл?</string>
+    <string name="track_import_confirm_count">Треків: %1$s</string>
+    <string name="track_import_confirm_import">Імпортувати</string>
     <string name="nav_notification_channel_name">Навігація</string>
     <string name="nav_notification_channel_description">Показує наступний поворот під час навігації та не дає вимкнути місцеположення</string>
     <string name="nav_notification_starting">Запуск навігації</string>

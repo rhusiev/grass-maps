@@ -104,6 +104,22 @@ internal data class SharedDocument(
     val bytes: ByteArray,
 )
 
+/**
+ * A share that parsed and waits for the user's confirmation (T-0416).
+ *
+ * [fileName] is the name the sender's provider gave, and [trackCount] is what
+ * the parse found. The document stays private to the importer: the sheet draws
+ * the first two fields and only [TrackShareImport.confirm] can read the bytes.
+ */
+internal class PendingTrackShare(
+    val fileName: String,
+    val trackCount: Int,
+    private val shared: SharedDocument,
+) {
+    /** The document a confirmation would import. */
+    fun document(): SharedDocument = shared
+}
+
 /** Reads a shared URI. The activity supplies the content resolver; a test supplies bytes. */
 internal fun interface SharedDocumentReader {
     suspend fun read(uri: String): Outcome<SharedDocument>
@@ -118,19 +134,27 @@ internal data class TrackShareState(
 /**
  * The one path from another app's share sheet to the track library (T-0416).
  *
- * It reads the URI through a [SharedDocumentReader], imports the bytes through
- * the same [TrackAccess] the library uses, and publishes the notice the map
- * draws. The document hash is the track id, so sharing the same file twice
- * updates one record instead of adding a second.
+ * It reads the URI through a [SharedDocumentReader] and parses the bytes
+ * through the same [TrackAccess] the library uses, then publishes
+ * [confirmation] and stops. Nothing reaches the library until [confirm]; a
+ * document that does not parse publishes the existing failure notice instead
+ * and never asks, because there is nothing to confirm. [cancel] drops the
+ * document with no write and no notice.
  *
- * The whole import runs on [Dispatchers.IO]: the XML parse and the store write
- * both belong there, and the notice is a value the UI collects afterwards.
+ * [confirm] imports through the same [TrackAccess] the library uses, and
+ * publishes the notice the map draws. The document hash is the track id, so
+ * sharing the same file twice updates one record instead of adding a second.
+ *
+ * The whole read and parse runs on [Dispatchers.IO], and so does the write:
+ * the XML parse and the store write both belong there, and the notice is a
+ * value the UI collects afterwards.
  */
 internal class TrackShareImport(
     private val tracks: () -> TrackAccess,
     private val log: (String) -> Unit = { message -> Log.i(TRACK_SHARE_TAG, message) },
 ) {
     private val state = MutableStateFlow<TrackShareState?>(null)
+    private val pendingState = MutableStateFlow<PendingTrackShare?>(null)
     private val sequence = AtomicLong(0L)
 
     @Volatile
@@ -138,12 +162,21 @@ internal class TrackShareImport(
 
     val notice: StateFlow<TrackShareState?> = state.asStateFlow()
 
-    /** Imports the document at [uri] and publishes its notice; a cancellation publishes nothing. */
-    suspend fun import(
+    /** The parsed share waiting for its confirm sheet, or null. */
+    val confirmation: StateFlow<PendingTrackShare?> = pendingState.asStateFlow()
+
+    /**
+     * Reads and parses the document at [uri] and publishes it for the confirm
+     * sheet. A failure publishes the notice it always did and returns null.
+     */
+    suspend fun prepare(
         uri: String,
         reader: SharedDocumentReader,
-    ): TrackShareState? =
+    ): PendingTrackShare? =
         withContext(Dispatchers.IO) {
+            // A new share supersedes the notice and any sheet the previous one opened.
+            state.value = null
+            pendingState.value = null
             val document =
                 when (val read = reader.read(uri)) {
                     is Outcome.Success -> {
@@ -151,15 +184,42 @@ internal class TrackShareImport(
                     }
 
                     is Outcome.Failure -> {
-                        return@withContext publishFailure(read.error, uri)
+                        publishFailure(read.error, uri)
+                        return@withContext null
                     }
                 }
             val name = TrackShareIntent.fileName(document.displayName, uri, document.mimeType)
-            when (val importedFile = tracks().import(name, document.bytes, CancellationHandle.None)) {
-                is Outcome.Success -> publishImported(name, importedFile.value.tracks, importedFile.value.warnings.size)
-                is Outcome.Failure -> publishFailure(importedFile.error, name)
+            val preview =
+                when (val parsed = tracks().preview(name, document.bytes, CancellationHandle.None)) {
+                    is Outcome.Success -> {
+                        parsed.value
+                    }
+
+                    is Outcome.Failure -> {
+                        publishFailure(parsed.error, name)
+                        return@withContext null
+                    }
+                }
+            PendingTrackShare(fileName = name, trackCount = preview.trackCount, shared = document)
+                .also { share -> pendingState.value = share }
+        }
+
+    /** Imports the document the sheet confirmed and publishes its notice. */
+    suspend fun confirm(): TrackShareState? {
+        val share = pendingState.value ?: return null
+        pendingState.value = null
+        return withContext(Dispatchers.IO) {
+            when (val importedFile = tracks().import(share.fileName, share.document().bytes, CancellationHandle.None)) {
+                is Outcome.Success -> publishImported(share.fileName, importedFile.value.tracks, importedFile.value.warnings.size)
+                is Outcome.Failure -> publishFailure(importedFile.error, share.fileName)
             }
         }
+    }
+
+    /** Drops the document the sheet was showing; nothing was stored and nothing is said. */
+    fun cancel() {
+        pendingState.value = null
+    }
 
     /** Opens the analysis of the newest imported track, where T-0415 has no library yet. */
     fun openImported() {

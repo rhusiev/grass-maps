@@ -36,6 +36,7 @@ class ShareImportInstrumentedTest {
         val application = ApplicationProvider.getApplicationContext<GrassMapsApplication>()
         container = application.container
         runBlocking { clearTracks() }
+        container.trackShare.cancel()
         container.trackShare.notice.value
             ?.let { state -> container.trackShare.dismiss(state.sequence) }
     }
@@ -43,6 +44,7 @@ class ShareImportInstrumentedTest {
     @After
     fun tearDown() {
         runBlocking { clearTracks() }
+        container.trackShare.cancel()
         container.trackShare.notice.value
             ?.let { state -> container.trackShare.dismiss(state.sequence) }
     }
@@ -79,7 +81,7 @@ class ShareImportInstrumentedTest {
 
     @Test
     fun aDocumentThatIsNotATrackIsReportedAsSuch() {
-        val outcome = shared(NOTES_URI)
+        val outcome = sharedFailure(NOTES_URI)
 
         assertEquals(TrackImportFailure.NotATrack, outcome.failure)
         assertTrue(runBlocking { container.tracks.storedTracks() }.isEmpty())
@@ -87,23 +89,37 @@ class ShareImportInstrumentedTest {
 
     @Test
     fun aProviderThatRefusesTheReadIsReportedAsUnreadable() {
-        val outcome = shared(UNREADABLE_URI)
+        val outcome = sharedFailure(UNREADABLE_URI)
 
         assertEquals(TrackImportFailure.Unreadable, outcome.failure)
         assertTrue(runBlocking { container.tracks.storedTracks() }.isEmpty())
     }
 
-    /** Sends the share to the activity and returns the notice's outcome. */
+    /** Sends the share, waits for the confirm sheet, confirms, and returns the notice's outcome. */
     private fun shared(uri: String) =
         ActivityScenario.launch<MainActivity>(shareIntent(uri)).use {
             runBlocking {
                 withTimeout(IMPORT_TIMEOUT_MILLIS) {
-                    container.trackShare.notice
-                        .first { state -> state != null }
-                        ?.outcome
+                    container.trackShare.confirmation.first { confirmation -> confirmation != null }
                 }
-            } ?: error("the import published no notice")
+                assertTrue("nothing is stored before confirm", container.tracks.storedTracks().isEmpty())
+                container.trackShare.confirm()
+                noticeOutcome()
+            }
         }
+
+    /** Sends a share that cannot parse and returns its failure notice. */
+    private fun sharedFailure(uri: String) =
+        ActivityScenario.launch<MainActivity>(shareIntent(uri)).use {
+            runBlocking { noticeOutcome() }
+        }
+
+    private suspend fun noticeOutcome() =
+        withTimeout(IMPORT_TIMEOUT_MILLIS) {
+            container.trackShare.notice
+                .first { state -> state != null }
+                ?.outcome
+        } ?: error("the import published no notice")
 
     private fun shareIntent(uri: String): Intent =
         Intent(Intent.ACTION_SEND).apply {

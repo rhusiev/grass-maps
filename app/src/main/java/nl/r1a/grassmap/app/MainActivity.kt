@@ -43,9 +43,11 @@ import nl.r1a.grassmap.plugins.links.LinkTarget
  * instead of leaving the map unchanged and silent.
  *
  * A share from another app's sheet takes the same two entry points and is
- * imported before the link path (T-0416): a `content:` URI from another
- * provider is a document, which the link router never opens. A `file:` URI and
- * a `content:` URI under this app's own provider are refused instead.
+ * parsed before the link path (T-0416): a `content:` URI from another provider
+ * is a document, which the link router never opens. A `file:` URI and a
+ * `content:` URI under this app's own provider are refused instead. The parse
+ * only publishes the confirm sheet; the document reaches the library when the
+ * user confirms it.
  */
 class MainActivity : ComponentActivity() {
     private val container: AppContainer by lazy { (application as GrassMapsApplication).container }
@@ -118,9 +120,9 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Imports a GPX another app shared to this one (T-0416), and answers
+     * Parses a GPX another app shared to this one (T-0416), and answers
      * whether this intent was one. The URI is read through the grant the intent
-     * carries, never a storage permission, and the import runs off Main. A
+     * carries, never a storage permission, and the parse runs off Main. A
      * first intent and a share that reaches the running instance take the same
      * path, because the activity is `singleTop`.
      */
@@ -136,7 +138,7 @@ class MainActivity : ComponentActivity() {
                 ownProviderAuthority = trackFileProviderAuthority(packageName),
             ) ?: return false
         lifecycleScope.launch {
-            container.trackShare.import(uri, ContentResolverSharedReader(this@MainActivity))
+            container.trackShare.prepare(uri, ContentResolverSharedReader(this@MainActivity))
         }
         return true
     }

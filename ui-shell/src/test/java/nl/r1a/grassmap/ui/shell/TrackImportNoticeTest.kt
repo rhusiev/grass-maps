@@ -88,6 +88,33 @@ class TrackImportNoticeTest {
         )
     }
 
+    @Test
+    fun theConfirmNamesTheFileAndTheTrackCount() {
+        val content = trackImportConfirmContent("znesinnia-ridges.gpx", 2, MapStrings(ENGLISH))
+
+        assertEquals("Import this file?", content.title)
+        assertEquals("znesinnia-ridges.gpx", content.fileName)
+        assertEquals("Tracks: 2", content.count)
+        assertEquals("Cancel", content.cancel)
+        assertEquals("Import", content.import)
+    }
+
+    @Test
+    fun aOneTrackConfirmReadsTheCountAsOne() {
+        assertEquals("Tracks: 1", trackImportConfirmContent("walk.gpx", 1, MapStrings(ENGLISH)).count)
+    }
+
+    @Test
+    fun theConfirmReadsInUkrainian() {
+        val content = trackImportConfirmContent("znesinnia-ridges.gpx", 2, MapStrings(UKRAINIAN))
+
+        assertEquals("Імпортувати цей файл?", content.title)
+        assertEquals("Треків: 2", content.count)
+        assertEquals("Скасувати", content.cancel)
+        assertEquals("Імпортувати", content.import)
+        assertEquals("Треків: 1", trackImportConfirmContent("walk.gpx", 1, MapStrings(UKRAINIAN)).count)
+    }
+
     private fun notice(outcome: TrackImportOutcome): TrackImportNotice = trackImportNotice(outcome, MapStrings(ENGLISH))
 
     private class MapStrings(
@@ -115,6 +142,10 @@ class TrackImportNoticeTest {
                 "track_import_open" to "Open",
                 "track_import_not_a_track" to "This file is not a track Grass Maps can read",
                 "track_import_unreadable" to "The file could not be opened",
+                "track_import_confirm_title" to "Import this file?",
+                "track_import_confirm_count" to "Tracks: %1\$s",
+                "track_import_confirm_import" to "Import",
+                "track_library_cancel" to "Cancel",
             )
 
         val UKRAINIAN =
@@ -127,6 +158,10 @@ class TrackImportNoticeTest {
                 "track_import_open" to "Відкрити",
                 "track_import_not_a_track" to "Цей файл не є треком, який Grass Maps може прочитати",
                 "track_import_unreadable" to "Не вдалося відкрити файл",
+                "track_import_confirm_title" to "Імпортувати цей файл?",
+                "track_import_confirm_count" to "Треків: %1\$s",
+                "track_import_confirm_import" to "Імпортувати",
+                "track_library_cancel" to "Скасувати",
             )
     }
 }

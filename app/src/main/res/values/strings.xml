@@ -154,6 +154,9 @@
     <string name="track_import_open">Open</string>
     <string name="track_import_not_a_track">This file is not a track Grass Maps can read</string>
     <string name="track_import_unreadable">The file could not be opened</string>
+    <string name="track_import_confirm_title">Import this file?</string>
+    <string name="track_import_confirm_count">Tracks: %1$s</string>
+    <string name="track_import_confirm_import">Import</string>
     <string name="nav_notification_channel_name">Navigation</string>
     <string name="nav_notification_channel_description">Shows the next turn while navigation runs and keeps location active</string>
     <string name="nav_notification_starting">Starting navigation</string>

@@ -390,7 +390,7 @@ private fun preferenceLabel(
         RoutePreference.DontMind -> strings.resolve(PREF_DONT_MIND_KEY)
     }
 
-internal fun profileLabel(
+fun profileLabel(
     profile: RouteProfile,
     strings: Strings,
 ): String =

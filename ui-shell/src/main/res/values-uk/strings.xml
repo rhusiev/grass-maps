@@ -219,4 +219,56 @@
     <string name="track_library_folder_name">Назва теки</string>
     <string name="track_library_create_folder_title">Нова тека</string>
     <string name="track_library_rename_folder_title">Перейменувати теку</string>
+
+    <string name="alerts_page_title">Сповіщення</string>
+    <string name="alerts_page_profile_subtitle">Профіль %1$s</string>
+    <string name="alerts_page_back">Назад</string>
+    <string name="alerts_section_navigation">Навігація</string>
+    <string name="alerts_section_on_the_way">Дорогою</string>
+    <string name="alerts_section_approaching">Наближення</string>
+    <string name="alerts_section_reach">Як надходять сповіщення</string>
+    <string name="alerts_page_done">Готово</string>
+
+    <string name="alerts_switch_off_route">Поза маршрутом</string>
+    <string name="alerts_switch_signal">GPS-сигнал втрачено або відновлено</string>
+    <string name="alerts_switch_reroute">Маршрут перераховано</string>
+    <string name="alerts_switch_arrival">Прибуття</string>
+    <string name="alerts_switch_crossing">Залізничні переїзди</string>
+    <string name="alerts_switch_tunnel">Тунелі</string>
+    <string name="alerts_switch_hazard">Небезпеки</string>
+    <string name="alerts_switch_favourite">Збережені місця</string>
+    <string name="alerts_switch_waypoint">Точки треку</string>
+    <string name="alerts_places_to_watch">Місця для спостереження</string>
+    <string name="alerts_places_none">Типи місць не вибрано</string>
+    <string name="alerts_places_description">%1$s. %2$s. Відкриває вибір типів місць.</string>
+
+    <string name="alerts_channel_banner">Банер</string>
+    <string name="alerts_channel_sound">Звук</string>
+    <string name="alerts_channel_vibration">Вібрація</string>
+    <string name="alerts_switch_on">%1$s, увімкнено</string>
+    <string name="alerts_switch_off">%1$s, вимкнено</string>
+    <string name="alerts_channel_on">%1$s, увімкнено</string>
+    <string name="alerts_channel_off">%1$s, вимкнено</string>
+
+    <string name="alerts_picker_title">Місця для спостереження</string>
+    <string name="alerts_picker_close">Закрити</string>
+    <string name="alerts_picker_selected">%1$s, вибрано</string>
+    <string name="alerts_picker_not_selected">%1$s, не вибрано</string>
+
+    <string name="alerts_profile_row_title">Сповіщення</string>
+    <string name="alerts_profile_row_value_off">усі вимкнено</string>
+    <string name="alerts_profile_row_value_on">увімкнено: %1$s</string>
+    <string name="alerts_profile_row_detail_on">Виводи: %1$s</string>
+    <string name="alerts_profile_row_detail_off">Банер, звук і вібрація вимкнені</string>
+    <string name="alerts_profile_row_description">%1$s. %2$s.</string>
+
+    <string name="alerts_place_drinking_water">Питна вода</string>
+    <string name="alerts_place_shelter">Прихисток</string>
+    <string name="alerts_place_spring">Джерело</string>
+    <string name="alerts_place_toilets">Туалети</string>
+    <string name="alerts_place_picnic_site">Місце для пікніка</string>
+    <string name="alerts_place_viewpoint">Оглядовий майданчик</string>
+    <string name="alerts_place_campsite">Кемпінг</string>
+    <string name="alerts_place_cafe">Кав\'ярня</string>
+    <string name="alerts_place_pharmacy">Аптека</string>
 </resources>

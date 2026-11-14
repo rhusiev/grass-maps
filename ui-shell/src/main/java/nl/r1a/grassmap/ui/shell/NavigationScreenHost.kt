@@ -144,6 +144,7 @@ fun NavigationScreenHost(
     onCameraTilt: (Boolean) -> Unit,
     onAlertSwitch: (NavigationAlertSwitch, Boolean) -> Unit,
     onResetToProfile: () -> Unit,
+    onOpenAlerts: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = palette(dark)
@@ -202,7 +203,7 @@ fun NavigationScreenHost(
                 onPause = onPause,
                 onResume = onResume,
                 onCollapse = { onSheetChange(NavigationSheet.Collapsed) },
-                onCameraAndAlerts = { onSheetChange(NavigationSheet.Settings) },
+                onCameraAndAlerts = onOpenAlerts,
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)

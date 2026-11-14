@@ -219,4 +219,56 @@
     <string name="track_library_folder_name">Folder name</string>
     <string name="track_library_create_folder_title">New folder</string>
     <string name="track_library_rename_folder_title">Rename folder</string>
+
+    <string name="alerts_page_title">Alerts</string>
+    <string name="alerts_page_profile_subtitle">%1$s profile</string>
+    <string name="alerts_page_back">Back</string>
+    <string name="alerts_section_navigation">Navigation</string>
+    <string name="alerts_section_on_the_way">On the way</string>
+    <string name="alerts_section_approaching">Approaching</string>
+    <string name="alerts_section_reach">How alerts reach you</string>
+    <string name="alerts_page_done">Done</string>
+
+    <string name="alerts_switch_off_route">Off route</string>
+    <string name="alerts_switch_signal">GPS signal lost or back</string>
+    <string name="alerts_switch_reroute">Route recalculated</string>
+    <string name="alerts_switch_arrival">Arrival</string>
+    <string name="alerts_switch_crossing">Railway crossings</string>
+    <string name="alerts_switch_tunnel">Tunnels</string>
+    <string name="alerts_switch_hazard">Hazards</string>
+    <string name="alerts_switch_favourite">Saved places</string>
+    <string name="alerts_switch_waypoint">Track waypoints</string>
+    <string name="alerts_places_to_watch">Places to watch</string>
+    <string name="alerts_places_none">No place kinds chosen</string>
+    <string name="alerts_places_description">%1$s. %2$s. Opens the place-kind picker.</string>
+
+    <string name="alerts_channel_banner">Banner</string>
+    <string name="alerts_channel_sound">Sound</string>
+    <string name="alerts_channel_vibration">Vibration</string>
+    <string name="alerts_switch_on">%1$s, on</string>
+    <string name="alerts_switch_off">%1$s, off</string>
+    <string name="alerts_channel_on">%1$s, on</string>
+    <string name="alerts_channel_off">%1$s, off</string>
+
+    <string name="alerts_picker_title">Places to watch</string>
+    <string name="alerts_picker_close">Close</string>
+    <string name="alerts_picker_selected">%1$s, selected</string>
+    <string name="alerts_picker_not_selected">%1$s, not selected</string>
+
+    <string name="alerts_profile_row_title">Alerts</string>
+    <string name="alerts_profile_row_value_off">all off</string>
+    <string name="alerts_profile_row_value_on">%1$s on</string>
+    <string name="alerts_profile_row_detail_on">Outputs: %1$s</string>
+    <string name="alerts_profile_row_detail_off">Banner, sound and vibration are off</string>
+    <string name="alerts_profile_row_description">%1$s. %2$s.</string>
+
+    <string name="alerts_place_drinking_water">Drinking water</string>
+    <string name="alerts_place_shelter">Shelter</string>
+    <string name="alerts_place_spring">Spring</string>
+    <string name="alerts_place_toilets">Toilets</string>
+    <string name="alerts_place_picnic_site">Picnic site</string>
+    <string name="alerts_place_viewpoint">Viewpoint</string>
+    <string name="alerts_place_campsite">Campsite</string>
+    <string name="alerts_place_cafe">Cafe</string>
+    <string name="alerts_place_pharmacy">Pharmacy</string>
 </resources>

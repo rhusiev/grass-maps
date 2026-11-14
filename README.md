@@ -2682,14 +2682,18 @@ would collide at APK merge. Moving analysis behind uniffi needs a shared Rust
 wrapper module and a design decision; T-0402 (statistics) and T-0403
 (elevation correction) own that move.
 
-`TrackAnalyzer` sums every raw elevation delta between consecutive points of a
-segment as ascent or descent, with no smoothing and no noise threshold, and
-measures ground distance with the haversine formula on the IUGG mean radius
-6 371 008.8 m. A segment boundary is not a sample. The oracle is a standalone
-Python one-off over `test-data/location/mock-walk.gpx`, recorded in
-`TrackImportOracleTest`: ascent 19.2 m, descent 17.6 m, minimum 296.0 m,
-maximum 297.6 m and distance 82.5866 m, within 0.01 m on elevation sums and
-0.1 m on distance.
+`TrackAnalyzer` measures ground distance with the haversine formula on the IUGG
+mean radius 6 371 008.8 m, and filters the elevation line with `ElevationFilter`
+before summing ascent and descent. The filter is OsmAnd's published uphill
+algorithm: keep the points where the height keeps moving in one direction, drop
+a step steeper than 70 % from the last kept point, simplify with
+Ramer-Douglas-Peucker at 7 m, then sum between the surviving turning points. A
+segment boundary is not a sample. The T-0027 oracle over
+`test-data/location/mock-walk.gpx`, recorded in `TrackImportOracleTest`, now
+reports ascent 1.6 m and descent 0.0 m (the raw sums were 19.2 m and 17.6 m),
+minimum 296.0 m, maximum 297.6 m and distance 82.5866 m, within 0.01 m on
+elevation sums and 0.1 m on distance. `SyntheticOsmAndTracksOracleTest` checks
+the filter against OsmAnd's own figures on nine tracks.
 
 T-0402 extends the analysis with the figures a track detail shows.
 `TrackAnalysis` also carries duration, moving time, average speed and maximum
@@ -2697,7 +2701,8 @@ speed, cached in the same sidecar. A load parses the GPX anyway, so the store
 recomputes the analysis from it and rewrites the sidecar when the cached copy
 differs. A sidecar written by T-0401 therefore gains the timing on its first
 load, and a later policy change cannot leave a stale profile behind. Distance
-and elevation keep their T-0401 definitions.
+keeps its T-0401 definition; ascent and descent use the OsmAnd-compatible
+filter above.
 
 Timing uses consecutive timestamped points of one segment only. A segment
 boundary is a pause. A gap longer than 120 s is a pause, and a step slower than
@@ -2948,13 +2953,15 @@ Switching modes changes only the bins, so the slices stay contiguous and cover
 the same span. The axis chips stay beside the chart.
 
 `ElevationSegments` in `tracks` owns the range and segment model, over the same
-profile the chart draws. A range sums the profile's own steps between its two
+profile the chart draws. A range follows the profile's own steps between its two
 ends and interpolates the ends along the drawn line; a step at a segment
-boundary (zero distance) adds nothing, which is the statistics' own rule. A
-range over a whole profile therefore equals `TrackAnalyzer`'s distance, ascent,
-descent and duration, and `ElevationSegmentsTest` checks exactly that on a
-synthetic track. A range's duration is the elapsed-time span of its ends and is
-absent when the profile has no complete timing.
+boundary (zero distance) adds nothing, which is the statistics' own rule. Its
+ascent and descent pass through `ElevationFilter`, the same noise filter as the
+statistics, while the drawn line stays unsmoothed. A range over a whole profile
+therefore equals `TrackAnalyzer`'s distance, ascent, descent and duration, and
+`ElevationSegmentsTest` checks exactly that on a synthetic track. A range's
+duration is the elapsed-time span of its ends and is absent when the profile has
+no complete timing.
 
 A climb is a maximal run of consecutive samples in which no step descends: a
 flat step keeps the run alive and a descending step of any size ends it. The run

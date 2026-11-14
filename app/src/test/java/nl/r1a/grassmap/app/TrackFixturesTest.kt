@@ -24,10 +24,12 @@ import java.nio.file.Files
  * geometry.
  *
  * The expected profile does not come from the production analyser. Point counts
- * and ascent/descent follow from the authored elevation sequence, one step per
- * point, and were printed by the generator recorded in
- * `test-data/tracks/README.md`. A segment boundary is not a step, which the
- * multi-segment fixtures exercise.
+ * and elevation ranges follow from the authored geometry, one step per point,
+ * and were printed by the generator recorded in `test-data/tracks/README.md`. A
+ * segment boundary is not a step, which the multi-segment fixtures exercise.
+ * Ascent and descent are the authored sequence run through the same
+ * `ElevationFilter` as the analyser, so a filtered sum is still an independent
+ * figure rather than a recording of the code under test.
  */
 class TrackFixturesTest {
     private val root: File = Files.createTempDirectory("grass-tracks").toFile()
@@ -346,19 +348,19 @@ class TrackFixturesTest {
         val FIXTURES =
             listOf(
                 FixtureExpectation("osmand-walk-two-segments.gpx", 1, 2, 9, 4.0, 4.0, 300.0, 304.0),
-                FixtureExpectation("osmand-morning-run.gpx", 1, 1, 6, 8.5, 2.5, 310.0, 316.0),
+                FixtureExpectation("osmand-morning-run.gpx", 1, 1, 6, 6.0, 0.0, 310.0, 316.0),
                 FixtureExpectation("osmand-multi-track.gpx", 2, 2, 7, 3.0, 3.0, 320.0, 323.0),
                 FixtureExpectation("osmand-waypoints.gpx", 1, 1, 4, 3.0, 0.0, 330.0, 333.0),
                 FixtureExpectation("osmand-no-elevation.gpx", 1, 1, 5, 0.0, 0.0, null, null),
                 FixtureExpectation("osmand-no-time.gpx", 1, 1, 4, 3.0, 0.0, 340.0, 343.0),
                 FixtureExpectation("osmand-single-point.gpx", 1, 1, 1, 0.0, 0.0, 350.0, 350.0),
                 FixtureExpectation("osmand-planned-route.gpx", 2, 2, 6, 12.0, 0.0, 360.0, 370.0),
-                FixtureExpectation("garmin-connect-hike.gpx", 1, 1, 6, 11.5, 3.5, 370.0, 378.0),
+                FixtureExpectation("garmin-connect-hike.gpx", 1, 1, 6, 8.0, 0.0, 370.0, 378.0),
                 FixtureExpectation("garmin-connect-autopause.gpx", 1, 3, 12, 10.0, 2.0, 380.0, 388.0),
-                FixtureExpectation("garmin-fenix-run.gpx", 1, 2, 11, 7.0, 7.0, 390.0, 396.0),
+                FixtureExpectation("garmin-fenix-run.gpx", 1, 2, 11, 6.0, 6.0, 390.0, 396.0),
                 FixtureExpectation("garmin-oregon-gpx10.gpx", 1, 1, 4, 4.0, 1.0, 400.0, 403.0),
                 FixtureExpectation("garmin-waypoints-route.gpx", 2, 2, 5, 7.0, 0.0, 410.0, 415.0),
-                FixtureExpectation("strava-run.gpx", 1, 1, 8, 8.0, 3.0, 420.0, 426.0),
+                FixtureExpectation("strava-run.gpx", 1, 1, 8, 5.0, 0.0, 420.0, 426.0),
                 FixtureExpectation("strava-ride-pauses.gpx", 1, 4, 16, 8.0, 7.0, 430.0, 438.0),
                 FixtureExpectation("strava-no-elevation.gpx", 1, 1, 5, 0.0, 0.0, null, null),
                 FixtureExpectation("strava-route-and-track.gpx", 2, 2, 7, 14.0, 0.0, 440.0, 450.0),

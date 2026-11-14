@@ -88,10 +88,11 @@ points of one segment, with a gap of at most
 boundary is a pause. Duration is the wall-clock span from the first timestamped
 point to the last, pauses included.
 
-Ascent and descent sum every raw elevation difference, with no smoothing and no
-noise threshold. A noisy barometric track can therefore read higher than
-OsmAnd. The first comparison shows whether a noise threshold belongs in the
-policy; do not pre-tune it without that evidence.
+Ascent and descent pass through `ElevationFilter`, the OsmAnd-compatible
+extremum model: the monotonic and 70 % slope filters, a Ramer-Douglas-Peucker
+simplification at 7 m, and the sums between the surviving turning points. A
+noisy barometric track is therefore filtered instead of summed raw. The
+synthetic oracle in `../oracle/` is the evidence for the 7 m value.
 
 OsmAnd has its own thresholds. The comparison exists to find out whether these
 defaults agree closely enough; a systematic difference is a reason to change the

@@ -14,9 +14,10 @@ python3 test-data/tracks/generate-fixtures.py
 ```
 
 The printed table is the oracle, not a recording of the production analyser.
-Points and ascent/descent follow from the authored elevation sequence, one step
-per point, with a segment boundary counting as no step. The test tolerates
-1e-6 m on the elevation sums.
+Points follow from the authored elevation sequence, one step per point, with a
+segment boundary counting as no step. Ascent and descent are the authored
+sequence run through `ElevationFilter`, the same OsmAnd-compatible filter as the
+analyser. The test tolerates 1e-6 m on the elevation sums.
 
 The script prints two tables: the elevation profile per file, and the
 statistics per track. The second table's duration, moving time, average speed
@@ -72,7 +73,8 @@ about how well the GLO-30 grid matches the ground.
 `TrackAnalyzer` returns `TrackAnalysis`: point count, distance, ascent,
 descent, elevation range, duration, moving time, average speed and maximum
 speed. Distance is the haversine ground distance on the IUGG mean radius
-6 371 008.8 m. Elevation deltas are raw, with no smoothing.
+6 371 008.8 m. Ascent and descent pass through `ElevationFilter`, the
+OsmAnd-compatible noise filter; the profile itself is not smoothed.
 
 Timing uses only consecutive timestamped points of one segment. A segment
 boundary is a pause. A gap longer than 120 s is a pause too, and a step slower

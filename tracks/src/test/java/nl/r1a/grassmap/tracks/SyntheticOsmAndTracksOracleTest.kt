@@ -34,8 +34,9 @@ import kotlin.math.abs
  *
  * Every comparison is relative to the OsmAnd figure. A failure names the track,
  * both numbers and the signed percentage; it is not a signal to widen the
- * tolerance. The elevation tolerance is sized from the probe's measured gap
- * between OsmAnd's filtered series and the raw deltas [TrackAnalyzer] sums.
+ * tolerance. Ascent and descent run through [ElevationFilter], the same
+ * OsmAnd-compatible filter as the analyser, so this test measures the analyser
+ * against OsmAnd, not against a second implementation of the same filter.
  */
 class SyntheticOsmAndTracksOracleTest {
     @Test
@@ -52,6 +53,10 @@ class SyntheticOsmAndTracksOracleTest {
             val track = parseGpx(bytes("tracks/oracle/${expected.file}"))
             val actual = TrackAnalyzer().analyze(track)
             assertEquals("${expected.file}: point count", expected.pointCount, actual.pointCount)
+            assertTrue(
+                "${expected.file}: moving time is required for the speed comparison",
+                expected.movingTimeSeconds > 0,
+            )
             val movingSeconds =
                 actual.movingTimeMillis?.let { it / MILLIS_PER_SECOND } ?: Double.NaN
             val durationSeconds =
@@ -74,7 +79,7 @@ class SyntheticOsmAndTracksOracleTest {
                     ),
                     comparison(
                         "average speed",
-                        expected.averageSpeedMetersPerSecond,
+                        expected.distanceMeters / expected.movingTimeSeconds.toDouble(),
                         averageSpeed,
                         AVERAGE_SPEED_PERCENT,
                         decimals = 3,
@@ -246,6 +251,7 @@ class SyntheticOsmAndTracksOracleTest {
         val descentMeters: Double,
         val movingTimeSeconds: Long,
         val totalDurationSeconds: Long,
+        /** The record of 60 / OsmAnd's rounded pace. Not compared; see [AVERAGE_SPEED_PERCENT]. */
         val averageSpeedMetersPerSecond: Double,
     )
 
@@ -273,27 +279,29 @@ class SyntheticOsmAndTracksOracleTest {
         const val MOVING_TIME_PERCENT = 2.0
 
         /**
-         * Average speed: 2 %. The oracle speed is 60 / the pace OsmAnd shows,
-         * and that display rounds pace to whole minutes per km. At 3-15 min/km
-         * the rounding is below 2 %; at 18 min/km it is not, so walk-slow-2km
-         * is reported instead of hidden.
+         * Average speed: 2 %. The oracle's `averageSpeedMetersPerSecond` is 60 /
+         * the pace OsmAnd shows, and that display rounds pace to whole minutes
+         * per km. At 18 min/km the rounding is 5.6 %, larger than this
+         * tolerance. The compared value is therefore
+         * `distanceMeters / movingTimeSeconds`, both exact in the oracle; the
+         * pace-derived field stays a record only.
          */
         const val AVERAGE_SPEED_PERCENT = 2.0
 
         /**
-         * Ascent: 10 %. OsmAnd filters the elevation series before summing,
-         * while [TrackAnalyzer] sums every raw delta. The 5.1 km probe measured
-         * that gap: OsmAnd 42 m against an authored profile of about 40 m plus
-         * a ripple. 10 % is the allowance for that filter, taken from the
-         * probe; a near-flat track whose raw ripple is below OsmAnd's noise
-         * floor is reported, not excused.
+         * Ascent: 10 %. OsmAnd reports ascent rounded to whole metres and
+         * filters the elevation series; [ElevationFilter] follows that filter.
+         * The filter leaves a real track within a few tenths of a metre, so
+         * 10 % is generous enough for the comparison. On a track whose whole
+         * ascent is 1-2 m the display rounding alone is 25-50 %; the test
+         * reports that instead of hiding it.
          */
         const val ASCENT_PERCENT = 10.0
 
         /**
          * Descent: 10 %. Same reason as ascent. Descent is the smaller side on
-         * the climb tracks, so the same absolute filter gap is a larger
-         * percentage there; the test reports that rather than widening.
+         * the climb tracks, so the same absolute gap is a larger percentage
+         * there; the test reports that rather than widening.
          */
         const val DESCENT_PERCENT = 10.0
     }

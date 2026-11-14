@@ -30,8 +30,11 @@ class ElevationSegmentsTest {
         assertEquals(analysis.descentMeters, range?.descentMeters ?: 0.0, 1e-6)
         assertEquals(analysis.durationMillis, range?.durationMillis)
         assertEquals(9 * STEP_METERS, range?.distanceMeters ?: 0.0, 1e-6)
-        assertEquals(110.0, range?.ascentMeters ?: 0.0, 1e-6)
-        assertEquals(15.0, range?.descentMeters ?: 0.0, 1e-6)
+        // ElevationFilter's 7 m simplification keeps the net rise: the 10 m dip
+        // and the 5 m end drop are below the line, so ascent is 95 and descent
+        // 0 instead of the drawn line's 110 and 15; the net and the grade stay.
+        assertEquals(95.0, range?.ascentMeters ?: 0.0, 1e-6)
+        assertEquals(0.0, range?.descentMeters ?: 0.0, 1e-6)
         assertEquals(9.492826061561535, range?.averageGradePercent ?: 0.0, 1e-6)
     }
 

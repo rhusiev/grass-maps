@@ -7,10 +7,11 @@ import nl.r1a.grassmap.plugin.api.model.TrackPoint
  * A pure statistics function over a track's points, with no I/O and no state.
  *
  * Distance is the haversine ground distance with the mean Earth radius
- * [EARTH_RADIUS_METERS]. Elevation deltas use the raw `ele` values, so a noisy
- * file produces a large ascent. Timing follows [TrackStatisticsPolicy]: a
- * segment boundary, a pause gap and a step slower than the moving speed do not
- * count as moving time.
+ * [EARTH_RADIUS_METERS]. Ascent and descent use [ElevationFilter], the filtered
+ * sums that agree with OsmAnd's track analysis: a raw delta sum reports a DEM
+ * ripple as climbing. Timing follows [TrackStatisticsPolicy]: a segment
+ * boundary, a pause gap and a step slower than the moving speed do not count as
+ * moving time.
  */
 class TrackAnalyzer(
     private val policy: TrackStatisticsPolicy = TrackStatisticsPolicy(),
@@ -30,6 +31,7 @@ class TrackAnalyzer(
 
         for (segment in track.segments) {
             var previous: TrackPoint? = null
+            var elevationRun: MutableList<ElevationStep>? = null
             for (point in segment.points) {
                 pointCount += 1
                 point.elevationMeters?.let { elevation ->
@@ -53,11 +55,17 @@ class TrackAnalyzer(
                     val fromElevation = before.elevationMeters
                     val toElevation = point.elevationMeters
                     if (fromElevation != null && toElevation != null) {
-                        val delta = toElevation - fromElevation
-                        if (delta > 0.0) {
-                            ascentMeters += delta
-                        } else {
-                            descentMeters += -delta
+                        val run = elevationRun ?: mutableListOf<ElevationStep>().also { elevationRun = it }
+                        if (run.isEmpty()) {
+                            run += ElevationStep(0.0, fromElevation)
+                        }
+                        run += ElevationStep(stepMeters, toElevation)
+                    } else {
+                        elevationRun?.let { active ->
+                            val gain = ElevationFilter.sum(active)
+                            ascentMeters += gain.ascentMeters
+                            descentMeters += gain.descentMeters
+                            elevationRun = null
                         }
                     }
                     val step = timedStep(before, point)
@@ -72,6 +80,11 @@ class TrackAnalyzer(
                     }
                 }
                 previous = point
+            }
+            elevationRun?.let { run ->
+                val gain = ElevationFilter.sum(run)
+                ascentMeters += gain.ascentMeters
+                descentMeters += gain.descentMeters
             }
         }
 

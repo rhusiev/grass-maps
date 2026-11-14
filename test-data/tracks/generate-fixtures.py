@@ -23,6 +23,13 @@ BASE_TIME = datetime(2026, 8, 14, 7, 41, 3, tzinfo=timezone.utc)
 PAUSE_GAP_S = 120
 MOVING_SPEED_MPS = 0.5
 
+# OsmAnd's published uphill algorithm: a monotonic/jumping-point filter, a 70 %
+# spike filter and a Ramer-Douglas-Peucker simplification at 7 m. TrackAnalyzer
+# follows the same algorithm, so this generator is still the fixtures' oracle.
+ELEVATION_NOISE_THRESHOLD_METERS = 7.0
+ELEVATION_SPIKE_SLOPE_PERCENT = 70.0
+PERCENT = 100.0
+
 
 @dataclass
 class Pt:
@@ -188,6 +195,141 @@ def haversine(a: Pt, b: Pt) -> float:
     return 2 * R * math.asin(math.sqrt(min(1.0, max(0.0, h))))
 
 
+def _perpendicular_distance(
+    point_x: float,
+    point_y: float,
+    from_x: float,
+    from_y: float,
+    to_x: float,
+    to_y: float,
+) -> float:
+    span_x = to_x - from_x
+    span_y = to_y - from_y
+    length_squared = span_x * span_x + span_y * span_y
+    if length_squared == 0:
+        return math.hypot(point_x - from_x, point_y - from_y)
+    projection = (point_x - from_x) * span_x + (point_y - from_y) * span_y
+    if projection < 0:
+        projected_x, projected_y = from_x, from_y
+    elif projection >= length_squared:
+        projected_x, projected_y = to_x, to_y
+    else:
+        share = projection / length_squared
+        projected_x = from_x + span_x * share
+        projected_y = from_y + span_y * share
+    return math.hypot(point_x - projected_x, point_y - projected_y)
+
+
+def filtered_gain(steps: list[tuple[float, float]]) -> tuple[float, float]:
+    """OsmAnd's ascent and descent for one run of (step distance, elevation)."""
+    if len(steps) < 4:
+        return _raw_gain(steps)
+    elevations = [step[1] for step in steps]
+    surviving = [False] * len(steps)
+    last = 0
+    for index in range(1, len(steps) - 1):
+        before = elevations[index] - elevations[last]
+        after = elevations[index + 1] - elevations[index]
+        if before * after > 0:
+            surviving[index] = True
+            last = index
+    last = 0
+    count = 0
+    for index in range(1, len(steps) - 1):
+        if not surviving[index]:
+            continue
+        distance = sum(step[0] for step in steps[last + 1 : index + 1])
+        delta = elevations[index] - elevations[last]
+        slope = (
+            delta * PERCENT / distance
+            if distance > 0
+            else (math.nan if delta == 0 else math.inf)
+        )
+        if abs(slope) > ELEVATION_SPIKE_SLOPE_PERCENT:
+            surviving[index] = False
+            continue
+        last = index
+        count += 1
+    if count < 2:
+        return _raw_gain(steps)
+    surviving[0] = True
+    surviving[-1] = True
+    kept = [index for index, keep in enumerate(surviving) if keep]
+    distances = [0.0] * len(kept)
+    for position in range(1, len(kept)):
+        distances[position] = (
+            0.0
+            if position == 1
+            else sum(step[0] for step in steps[kept[position - 1] + 1 : kept[position] + 1])
+        )
+    kept_elevations = [elevations[index] for index in kept]
+    turning = {0, len(kept_elevations) - 1}
+    pending = [(0, len(kept_elevations) - 1)]
+    while pending:
+        start, end = pending.pop()
+        farthest = start
+        farthest_distance = ELEVATION_NOISE_THRESHOLD_METERS
+        for index in range(start + 1, end):
+            deviation = _perpendicular_distance(
+                distances[index],
+                kept_elevations[index],
+                distances[start],
+                kept_elevations[start],
+                distances[end],
+                kept_elevations[end],
+            )
+            if deviation > farthest_distance:
+                farthest = index
+                farthest_distance = deviation
+        if farthest != start:
+            turning.add(farthest)
+            pending.append((start, farthest))
+            pending.append((farthest, end))
+    ordered = sorted(turning)
+    ascent = sum(
+        max(0.0, kept_elevations[b] - kept_elevations[a])
+        for a, b in zip(ordered, ordered[1:])
+    )
+    descent = sum(
+        max(0.0, kept_elevations[a] - kept_elevations[b])
+        for a, b in zip(ordered, ordered[1:])
+    )
+    return ascent, descent
+
+
+def _raw_gain(steps: list[tuple[float, float]]) -> tuple[float, float]:
+    ascent = sum(max(0.0, b[1] - a[1]) for a, b in zip(steps, steps[1:]))
+    descent = sum(max(0.0, a[1] - b[1]) for a, b in zip(steps, steps[1:]))
+    return ascent, descent
+
+
+def segment_gain(segment: Seg) -> tuple[float, float]:
+    """The filtered gain of one segment; a missing height breaks the run."""
+    ascent = 0.0
+    descent = 0.0
+    steps: list[tuple[float, float]] = []
+    previous: Pt | None = None
+    for point in segment.points:
+        if point.ele is None:
+            if steps:
+                run_ascent, run_descent = filtered_gain(steps)
+                ascent += run_ascent
+                descent += run_descent
+                steps = []
+            previous = None
+            continue
+        if previous is None:
+            steps = [(0.0, point.ele)]
+        else:
+            steps.append((haversine(previous, point), point.ele))
+        previous = point
+    if steps:
+        run_ascent, run_descent = filtered_gain(steps)
+        ascent += run_ascent
+        descent += run_descent
+    return ascent, descent
+
+
 def analysis(track: Trk) -> tuple[int, float, float, float, float | None, float | None]:
     count = 0
     distance = 0.0
@@ -202,13 +344,10 @@ def analysis(track: Trk) -> tuple[int, float, float, float, float | None, float 
                 eles.append(point.ele)
             if previous is not None:
                 distance += haversine(previous, point)
-                if previous.ele is not None and point.ele is not None:
-                    delta = point.ele - previous.ele
-                    if delta > 0:
-                        ascent += delta
-                    else:
-                        descent += -delta
             previous = point
+        segment_ascent, segment_descent = segment_gain(segment)
+        ascent += segment_ascent
+        descent += segment_descent
     return (
         count,
         distance,
@@ -661,13 +800,14 @@ print(f"{len(FIXTURES) + 2} fixtures written to {OUT}\n")
 print("name | tracks | segs | points | ascent | descent | min | max | distance")
 for fixture in FIXTURES:
     rows = [analysis(track) for track in fixture.tracks]
+    rows += [analysis(Trk("route", [Seg(route)])) for _, route in fixture.routes]
     total_points = sum(row[0] for row in rows)
     ascent = sum(row[2] for row in rows)
     descent = sum(row[3] for row in rows)
     distance = sum(row[1] for row in rows)
     mins = [row[4] for row in rows if row[4] is not None]
     maxs = [row[5] for row in rows if row[5] is not None]
-    segs = sum(len(track.segments) for track in fixture.tracks)
+    segs = sum(len(track.segments) for track in fixture.tracks) + len(fixture.routes)
     print(
         f"{fixture.name} | {len(rows)} | {segs} | {total_points} | {ascent:.1f} | "
         f"{descent:.1f} | {min(mins) if mins else None} | {max(maxs) if maxs else None} | {distance:.4f}"

@@ -65,9 +65,11 @@ map instead of Analyze by intervals for that reason. `uiautomator dump` gives
 exact bounds when a row is ambiguous.
 
 `averageSpeedMetersPerSecond` is `60 / pace`, as the task specified. The raw
-pace string is kept beside it because OsmAnd rounds the display to whole
-minutes per km. At 18 min/km that rounding is larger than the 2 % speed
-tolerance, and `walk-slow-2km` says so in the test result instead of hiding it.
+pace string is kept beside it as a record because OsmAnd rounds the display to
+whole minutes per km. At 18 min/km that rounding is 5.6 %, larger than the 2 %
+speed tolerance. The test therefore compares `distanceMeters /
+movingTimeSeconds`, both exact in the JSON, and does not compare the
+pace-derived figure.
 
 The pause track is the one that separates moving time from total time. OsmAnd
 reported `1:19:38` total and `59:24` in motion. The generated file has a
@@ -85,12 +87,22 @@ The test compares relative to the OsmAnd figure:
 |---|---|---|
 | Distance | 1 % | OsmAnd rounds the display to 10 m below 10 km and 100 m above, so up to 0.5 % is display rounding alone |
 | Moving time | 2 % | OsmAnd reports seconds; 2 % covers its pause threshold on the one deliberate stop |
-| Average speed | 2 % | The speed comes from a pace rounded to whole minutes per km; 3-15 min/km stays under 2 %, 18 min/km does not |
-| Ascent | 10 % | OsmAnd filters the elevation series; `TrackAnalyzer` sums every raw delta. The 5.1 km probe measured 42 m from OsmAnd against about 40 m plus a ripple from the generator |
-| Descent | 10 % | Same gap as ascent; it is the smaller side on the climb tracks, so the percentage is larger there |
+| Average speed | 2 % | Compared as distance / moving time, not as 60 / the pace rounded to whole minutes per km |
+| Ascent | 10 % | OsmAnd filters the elevation series and rounds the display to whole metres; the analyser follows the same filter |
+| Descent | 10 % | Same as ascent; it is the smaller side on the climb tracks, so the same absolute gap is a larger percentage there |
 
 The first run found the elevation gap on the near-flat tracks. On
 `walk-city-5km`, for example, OsmAnd reported 1 m of ascent while the raw
-deltas sum to 31.9 m: the 1-2 m ripple is below OsmAnd's noise floor. The test
-reports each such track with both numbers and the percentage. Do not widen a
-tolerance to make the suite green. The comparison exists to expose the gap.
+deltas sum to 31.9 m: the 1-2 m ripple is below OsmAnd's noise floor.
+`TrackAnalyzer` now applies OsmAnd's published uphill algorithm: the monotonic
+and 70 % slope filters, a Ramer-Douglas-Peucker simplification at 7 m, and the
+sums between the surviving turning points. That is also where
+`ELEVATION_NOISE_THRESHOLD_METERS` comes from.
+
+A single hysteresis on the elevation sums was tried first and cannot match the
+nine tracks: `hilly-3km` needs about 4 m, while `long-30km` needs about 2 m.
+The extremum model is OsmAnd's own, so the analyser uses it instead. On the
+nine tracks every ascent and descent is within 0.7 m of OsmAnd except the
+tracks whose whole gain is 1-2 m, where whole-metre display rounding is larger
+than 10 %. The test reports those tracks with both numbers. Do not widen a
+tolerance to make the suite green.

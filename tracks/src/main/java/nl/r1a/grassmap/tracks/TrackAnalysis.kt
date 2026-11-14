@@ -5,11 +5,12 @@ package nl.r1a.grassmap.tracks
  * file carries timestamps, its duration, moving time and speeds.
  *
  * [distanceMeters] is the haversine ground distance over consecutive points of
- * one segment. [ascentMeters] and [descentMeters] are the sum of every positive
- * and negative elevation difference between consecutive points of a segment,
- * with no smoothing and no noise threshold. A segment boundary is not a sample:
- * no distance and no elevation difference is taken across it. A point without
- * elevation breaks the elevation difference without breaking the distance.
+ * one segment. [ascentMeters] and [descentMeters] are the sums between the
+ * turning points of the elevation line, after the noise filter in
+ * [ElevationFilter] that matches OsmAnd's own track analysis. A segment boundary
+ * is not a sample: no distance, no elevation difference and no filter run is
+ * taken across it. A point without elevation breaks the elevation difference
+ * without breaking the distance.
  * [minElevationMeters] and [maxElevationMeters] are null when the track carries
  * no elevation at all.
  *

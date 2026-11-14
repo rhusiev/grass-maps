@@ -9,12 +9,13 @@ import kotlin.math.roundToLong
  * own sums for the part that lies inside it.
  *
  * [startMeters] and [endMeters] are ordered and lie inside the profile's own
- * distance span. [ascentMeters] and [descentMeters] sum the positive and
- * negative elevation steps of the part, [distanceMeters] is the ground distance
- * it covers and [averageGradePercent] is the net rise over that distance. A
- * step at a segment boundary (zero distance) adds neither, which is the same
- * rule the statistics use. [durationMillis] is the elapsed-time span between the
- * two ends, and null when the profile has no complete timing.
+ * distance span. [ascentMeters] and [descentMeters] are the filtered sums of
+ * the part, the same [ElevationFilter] the track statistics use, so a
+ * whole-profile range equals [TrackAnalyzer]. [distanceMeters] is the ground
+ * distance it covers and [averageGradePercent] is the net rise over that
+ * distance. A step at a segment boundary (zero distance) adds neither, which is
+ * the same rule the statistics use. [durationMillis] is the elapsed-time span
+ * between the two ends, and null when the profile has no complete timing.
  */
 data class ElevationRange(
     val startMeters: Double,
@@ -55,9 +56,11 @@ data class DescentSegment(
  * The range and segment model over an [ElevationProfile] (T-0405).
  *
  * The profile is the engine's own chart data, so a range or a climb here is a
- * read of the same samples the chart draws: no track is sampled again and no
- * smoothing is applied. A range follows the drawn line, so its ends may fall
- * between two samples and are interpolated there.
+ * read of the same samples the chart draws: no track is sampled again. A range
+ * follows the drawn line, so its ends may fall between two samples and are
+ * interpolated there. Its ascent and descent run through [ElevationFilter], the
+ * same noise filter as the track statistics, while the drawn line itself stays
+ * unsmoothed.
  *
  * A climb is a maximal run of consecutive samples in which no step descends. A
  * flat step keeps the run alive; a descending step of any size ends it. The run
@@ -100,8 +103,8 @@ class ElevationSegments {
         }
         val startElevation = elevationAt(samples, start) ?: return null
         val endElevation = elevationAt(samples, end) ?: return null
-        var ascent = 0.0
-        var descent = 0.0
+        val runs = mutableListOf<MutableList<ElevationStep>>()
+        var run = mutableListOf(ElevationStep(0.0, startElevation))
         var previous = startElevation
         var previousDistance = start
         for (sample in samples) {
@@ -110,15 +113,25 @@ class ElevationSegments {
                 continue
             }
             if (distance - previousDistance <= 0.0) {
+                runs += run
                 previous = sample.elevationMeters
+                run = mutableListOf(ElevationStep(0.0, previous))
                 continue
             }
-            accumulate(sample.elevationMeters - previous, ascent = { ascent += it }, descent = { descent += it })
+            run += ElevationStep(distance - previousDistance, sample.elevationMeters)
             previous = sample.elevationMeters
             previousDistance = distance
         }
         if (end - previousDistance > 0.0) {
-            accumulate(endElevation - previous, ascent = { ascent += it }, descent = { descent += it })
+            run += ElevationStep(end - previousDistance, endElevation)
+        }
+        runs += run
+        var ascent = 0.0
+        var descent = 0.0
+        for (steps in runs) {
+            val gain = ElevationFilter.sum(steps)
+            ascent += gain.ascentMeters
+            descent += gain.descentMeters
         }
         val distance = end - start
         return ElevationRange(
@@ -304,18 +317,6 @@ class ElevationSegments {
             }
         }
         return samples.lastIndex
-    }
-
-    private inline fun accumulate(
-        delta: Double,
-        ascent: (Double) -> Unit,
-        descent: (Double) -> Unit,
-    ) {
-        if (delta > 0.0) {
-            ascent(delta)
-        } else if (delta < 0.0) {
-            descent(-delta)
-        }
     }
 
     private companion object {

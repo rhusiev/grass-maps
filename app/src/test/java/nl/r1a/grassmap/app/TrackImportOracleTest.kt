@@ -15,8 +15,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The T-0027 oracle. The expected values come from a standalone Python one-off
- * over the same committed fixture, not from the Kotlin code:
+ * The T-0027 oracle. The raw one-off below printed `19.2 17.6 296.0 297.6
+ * 82.58661883567247` over the committed fixture. After T-0402 the analysis
+ * filters the elevation line with [ElevationFilter], OsmAnd's own uphill
+ * algorithm, so the same fixture reports the 1.6 m relief as its only rise and
+ * no descent; the raw sums stay recorded here as the pre-filter figure. The
+ * filter itself is checked against OsmAnd by `SyntheticOsmAndTracksOracleTest`.
  *
  * ```
  * import re, math
@@ -36,10 +40,7 @@ import org.junit.Test
  *       sum(hav(a, b) for a, b in zip(pts, pts[1:])))
  * ```
  *
- * It printed `19.200000000000273 17.60000000000025 296.0 297.6
- * 82.58661883567247`. The analysis uses raw elevation deltas and the haversine
- * distance with R = 6 371 008.8 m. Tolerance: 0.01 m on ascent and descent,
- * 0.1 m on distance.
+ * Tolerance: 0.01 m on ascent and descent, 0.1 m on distance.
  */
 class TrackImportOracleTest {
     @Test
@@ -116,8 +117,8 @@ class TrackImportOracleTest {
     private companion object {
         const val FIXTURE_NAME = "mock-walk.gpx"
         const val FIXTURE_RESOURCE = "location/mock-walk.gpx"
-        const val ASCENT_METERS = 19.2
-        const val DESCENT_METERS = 17.6
+        const val ASCENT_METERS = 1.6
+        const val DESCENT_METERS = 0.0
         const val DISTANCE_METERS = 82.58661883567247
         const val ELEVATION_TOLERANCE_METERS = 0.01
         const val DISTANCE_TOLERANCE_METERS = 0.1

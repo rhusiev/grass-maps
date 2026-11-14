@@ -14,9 +14,9 @@
   "toleranceRationale": {
     "distancePercent": "1 %: OsmAnd shows distance rounded to 10 m below 10 km and 100 m above, so its display alone can differ from the GPX sum by up to 0.5 %. 1 % accepts that rounding and the two haversine constants.",
     "movingTimePercent": "2 %: OsmAnd reports time in motion to the second. 2 % covers its pause threshold on the one deliberate 20-minute stop; every other synthetic track has no pause.",
-    "averageSpeedPercent": "2 %: the oracle speed is 60 / the pace OsmAnd displays, and the display rounds pace to whole minutes per km. At 3-15 min/km that rounding is below 2 %; at 18 min/km it is not, so walk-slow-2km is reported instead of hidden.",
-    "ascentPercent": "10 %: OsmAnd filters the elevation series before summing, while TrackAnalyzer sums every raw delta. The 5.1 km probe measured that gap: OsmAnd 42 m against an authored profile of about 40 m plus a ripple. 10 % is the allowance for that filter; a near-flat track whose raw ripple is below OsmAnd's noise floor is reported, not excused.",
-    "descentPercent": "10 %: same reason as ascent. Descent is the smaller side on the climb tracks, so the same absolute filter gap is a larger percentage there. The test reports that rather than widening."
+    "averageSpeedPercent": "2 %: the oracle's averageSpeedMetersPerSecond is 60 / the pace OsmAnd displays, and the display rounds pace to whole minutes per km. At 18 min/km that rounding is 5.6 %. The compared value is therefore distanceMeters / movingTimeSeconds, both exact in the oracle; averageSpeedMetersPerSecond stays a record only.",
+    "ascentPercent": "10 %: OsmAnd reports ascent rounded to whole metres and filters the elevation series. TrackAnalyzer follows the same filter. A real track lands within a few tenths of a metre; a track whose whole ascent is 1-2 m cannot meet 10 % because the display rounding alone is 25-50 %, and the test reports those tracks instead of hiding them.",
+    "descentPercent": "10 %: same reason as ascent. Descent is the smaller side on the climb tracks, so the same absolute gap is a larger percentage there. The test reports that rather than widening."
   },
   "limitation": "The GPX inputs are synthetic: generated geometry and elevation around Lviv, not recordings from a real device. The reference numbers are OsmAnd 5.4.10's own analysis of those files on a Moto g32. The oracle therefore proves agreement with OsmAnd, not correctness on real GPS or barometric noise.",
   "tracks": [

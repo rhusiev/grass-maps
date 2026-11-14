@@ -1,0 +1,18 @@
+{
+  "file": "hike-dropout-8km.gpx",
+  "points": 2000,
+  "sampleSeconds": 4,
+  "distanceMeters": 8785.7,
+  "movingSeconds": 8000,
+  "ascentMeters": 400.0,
+  "descentMeters": 0.0,
+  "averageSpeedMps": 1.0982,
+  "emulation": {
+    "positionJitterMeters": 3.0,
+    "elevationNoiseMeters": 2.5,
+    "dropoutSeconds": 75,
+    "outlierFixes": [],
+    "outlierMeters": 200.0,
+    "barometricDriftMeters": 0.0
+  }
+}

@@ -1,0 +1,291 @@
+{
+  "schema": 1,
+  "osmandVersion": "5.4.10",
+  "device": "Moto g32 (ZY22FX5TK9), 1080x2400",
+  "recordedOn": "2026-11-14",
+  "limitation": "The six tracks are generated around Lviv with emulated positional jitter, elevation noise, dropouts, outlier fixes and barometric drift; no device recorded them. Truth is the authored path before emulation. OsmAnd 5.4.10 on the Moto g32 imported the exact files and showed the recorded readings.",
+  "tolerance": {
+    "distancePercent": 1.5,
+    "movingTimePercent": 0.5,
+    "averageSpeedPercent": 1.5,
+    "ascentPercent": 10.0,
+    "ascentAbsoluteMeters": 5.0,
+    "descentPercent": 10.0,
+    "descentAbsoluteMeters": 5.0
+  },
+  "tracks": [
+    {
+      "file": "hike-dropout-8km.gpx",
+      "pointCount": 2000,
+      "emulation": {
+        "positionJitterMeters": 3.0,
+        "elevationNoiseMeters": 2.5,
+        "dropoutSeconds": 75,
+        "outlierFixes": [],
+        "outlierMeters": 200.0,
+        "barometricDriftMeters": 0.0
+      },
+      "truth": {
+        "distanceMeters": 8785.7,
+        "movingTimeSeconds": 8000,
+        "ascentMeters": 400.0,
+        "descentMeters": 0.0,
+        "averageSpeedMetersPerSecond": 1.0982
+      },
+      "osmand": {
+        "durationSeconds": 8071,
+        "distanceMeters": 13200.0,
+        "start": "Nov 12, 2026 11:00",
+        "end": "Nov 12, 2026 13:14",
+        "averageElevationMeters": 500.0,
+        "minElevationMeters": 299.0,
+        "maxElevationMeters": 704.0,
+        "ascentMeters": 430.0,
+        "descentMeters": 27.0,
+        "movingTimeSeconds": 8043,
+        "averagePace": "10 min/km",
+        "maxPace": "3:27 min/km",
+        "averageSpeedMetersPerSecond": 1.641179
+      },
+      "ours": {
+        "pointCount": 2000,
+        "distanceMeters": 13186.797,
+        "movingTimeSeconds": 7452,
+        "durationSeconds": 8071,
+        "averageSpeedMetersPerSecond": 1.769565,
+        "ascentMeters": 444.4,
+        "descentMeters": 40.8,
+        "minElevationMeters": 298.5,
+        "maxElevationMeters": 703.6
+      }
+    },
+    {
+      "file": "hike-steps-6km.gpx",
+      "pointCount": 1500,
+      "emulation": {
+        "positionJitterMeters": 3.0,
+        "elevationNoiseMeters": 2.0,
+        "dropoutSeconds": 60,
+        "outlierFixes": [],
+        "outlierMeters": 200.0,
+        "barometricDriftMeters": 0.0
+      },
+      "truth": {
+        "distanceMeters": 5165.7,
+        "movingTimeSeconds": 4500,
+        "ascentMeters": 300.0,
+        "descentMeters": 0.0,
+        "averageSpeedMetersPerSecond": 1.1479
+      },
+      "osmand": {
+        "durationSeconds": 4557,
+        "distanceMeters": 9480.0,
+        "start": "Nov 12, 2026 11:00",
+        "end": "Nov 12, 2026 12:15",
+        "averageElevationMeters": 450.0,
+        "minElevationMeters": 298.0,
+        "maxElevationMeters": 604.0,
+        "ascentMeters": 326.0,
+        "descentMeters": 22.0,
+        "movingTimeSeconds": 4545,
+        "averagePace": "8:00 min/km",
+        "maxPace": "2:36 min/km",
+        "averageSpeedMetersPerSecond": 2.085809
+      },
+      "ours": {
+        "pointCount": 1500,
+        "distanceMeters": 9461.659,
+        "movingTimeSeconds": 4314,
+        "durationSeconds": 4557,
+        "averageSpeedMetersPerSecond": 2.193245,
+        "ascentMeters": 323.1,
+        "descentMeters": 19.4,
+        "minElevationMeters": 298.1,
+        "maxElevationMeters": 604.3
+      }
+    },
+    {
+      "file": "ride-realistic-15km.gpx",
+      "pointCount": 1000,
+      "emulation": {
+        "positionJitterMeters": 5.0,
+        "elevationNoiseMeters": 2.0,
+        "dropoutSeconds": 45,
+        "outlierFixes": [],
+        "outlierMeters": 200.0,
+        "barometricDriftMeters": 0.0
+      },
+      "truth": {
+        "distanceMeters": 14968.2,
+        "movingTimeSeconds": 3000,
+        "ascentMeters": 120.0,
+        "descentMeters": 0.0,
+        "averageSpeedMetersPerSecond": 4.9894
+      },
+      "osmand": {
+        "durationSeconds": 3042,
+        "distanceMeters": 16800.0,
+        "start": "Nov 12, 2026 11:00",
+        "end": "Nov 12, 2026 11:50",
+        "averageElevationMeters": 360.0,
+        "minElevationMeters": 298.0,
+        "maxElevationMeters": 423.0,
+        "ascentMeters": 153.0,
+        "descentMeters": 32.0,
+        "movingTimeSeconds": 3042,
+        "averagePace": "3:01 min/km",
+        "maxPace": "1:21 min/km",
+        "averageSpeedMetersPerSecond": 5.522682
+      },
+      "ours": {
+        "pointCount": 1000,
+        "distanceMeters": 16752.074,
+        "movingTimeSeconds": 2991,
+        "durationSeconds": 3042,
+        "averageSpeedMetersPerSecond": 5.600827,
+        "ascentMeters": 157.1,
+        "descentMeters": 36.5,
+        "minElevationMeters": 298.4,
+        "maxElevationMeters": 423.4
+      }
+    },
+    {
+      "file": "walk-drift-3km.gpx",
+      "pointCount": 1200,
+      "emulation": {
+        "positionJitterMeters": 2.5,
+        "elevationNoiseMeters": 1.0,
+        "dropoutSeconds": 0,
+        "outlierFixes": [],
+        "outlierMeters": 200.0,
+        "barometricDriftMeters": 6.0
+      },
+      "truth": {
+        "distanceMeters": 3113.9,
+        "movingTimeSeconds": 2400,
+        "ascentMeters": 5.0,
+        "descentMeters": 0.0,
+        "averageSpeedMetersPerSecond": 1.2975
+      },
+      "osmand": {
+        "durationSeconds": 2398,
+        "distanceMeters": 5930.0,
+        "start": "Nov 12, 2026 11:00",
+        "end": "Nov 12, 2026 11:39",
+        "averageElevationMeters": 305.0,
+        "minElevationMeters": 297.0,
+        "maxElevationMeters": 314.0,
+        "ascentMeters": 21.0,
+        "descentMeters": 8.0,
+        "movingTimeSeconds": 2394,
+        "averagePace": "6:44 min/km",
+        "maxPace": "2:13 min/km",
+        "averageSpeedMetersPerSecond": 2.477026
+      },
+      "ours": {
+        "pointCount": 1200,
+        "distanceMeters": 5919.096,
+        "movingTimeSeconds": 2346,
+        "durationSeconds": 2398,
+        "averageSpeedMetersPerSecond": 2.523059,
+        "ascentMeters": 22.2,
+        "descentMeters": 8.7,
+        "minElevationMeters": 296.9,
+        "maxElevationMeters": 313.9
+      }
+    },
+    {
+      "file": "walk-jitter-4km.gpx",
+      "pointCount": 1500,
+      "emulation": {
+        "positionJitterMeters": 4.0,
+        "elevationNoiseMeters": 1.5,
+        "dropoutSeconds": 30,
+        "outlierFixes": [],
+        "outlierMeters": 200.0,
+        "barometricDriftMeters": 0.0
+      },
+      "truth": {
+        "distanceMeters": 4042.8,
+        "movingTimeSeconds": 3000,
+        "ascentMeters": 30.0,
+        "descentMeters": 0.0,
+        "averageSpeedMetersPerSecond": 1.3476
+      },
+      "osmand": {
+        "durationSeconds": 3028,
+        "distanceMeters": 11400.0,
+        "start": "Nov 12, 2026 11:00",
+        "end": "Nov 12, 2026 11:50",
+        "averageElevationMeters": 315.0,
+        "minElevationMeters": 296.0,
+        "maxElevationMeters": 335.0,
+        "ascentMeters": 53.0,
+        "descentMeters": 22.0,
+        "movingTimeSeconds": 2996,
+        "averagePace": "4:24 min/km",
+        "maxPace": "1:22 min/km",
+        "averageSpeedMetersPerSecond": 3.805073
+      },
+      "ours": {
+        "pointCount": 1500,
+        "distanceMeters": 11340.808,
+        "movingTimeSeconds": 2976,
+        "durationSeconds": 3028,
+        "averageSpeedMetersPerSecond": 3.810755,
+        "ascentMeters": 57.7,
+        "descentMeters": 26.9,
+        "minElevationMeters": 295.5,
+        "maxElevationMeters": 334.6
+      }
+    },
+    {
+      "file": "walk-outlier-5km.gpx",
+      "pointCount": 1400,
+      "emulation": {
+        "positionJitterMeters": 3.5,
+        "elevationNoiseMeters": 1.5,
+        "dropoutSeconds": 0,
+        "outlierFixes": [
+          400,
+          900
+        ],
+        "outlierMeters": 250.0,
+        "barometricDriftMeters": 0.0
+      },
+      "truth": {
+        "distanceMeters": 4891.0,
+        "movingTimeSeconds": 3500.0,
+        "ascentMeters": 25.0,
+        "descentMeters": 0.0,
+        "averageSpeedMetersPerSecond": 1.3974
+      },
+      "osmand": {
+        "durationSeconds": 3497,
+        "distanceMeters": 10800.0,
+        "start": "Nov 12, 2026 11:00",
+        "end": "Nov 12, 2026 11:58",
+        "averageElevationMeters": 313.0,
+        "minElevationMeters": 296.0,
+        "maxElevationMeters": 329.0,
+        "ascentMeters": 51.0,
+        "descentMeters": 28.0,
+        "movingTimeSeconds": 3494,
+        "averagePace": "5:25 min/km",
+        "maxPace": "0:08 min/km",
+        "averageSpeedMetersPerSecond": 3.091013
+      },
+      "ours": {
+        "pointCount": 1400,
+        "distanceMeters": 10737.816,
+        "movingTimeSeconds": 3400,
+        "durationSeconds": 3497,
+        "averageSpeedMetersPerSecond": 3.158181,
+        "ascentMeters": 43.5,
+        "descentMeters": 20.1,
+        "minElevationMeters": 295.6,
+        "maxElevationMeters": 328.9
+      }
+    }
+  ]
+}

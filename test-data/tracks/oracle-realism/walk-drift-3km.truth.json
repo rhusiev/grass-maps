@@ -1,0 +1,18 @@
+{
+  "file": "walk-drift-3km.gpx",
+  "points": 1200,
+  "sampleSeconds": 2,
+  "distanceMeters": 3113.9,
+  "movingSeconds": 2400,
+  "ascentMeters": 5.0,
+  "descentMeters": 0.0,
+  "averageSpeedMps": 1.2975,
+  "emulation": {
+    "positionJitterMeters": 2.5,
+    "elevationNoiseMeters": 1.0,
+    "dropoutSeconds": 0,
+    "outlierFixes": [],
+    "outlierMeters": 200.0,
+    "barometricDriftMeters": 6.0
+  }
+}

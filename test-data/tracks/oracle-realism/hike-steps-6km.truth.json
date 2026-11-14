@@ -1,0 +1,18 @@
+{
+  "file": "hike-steps-6km.gpx",
+  "points": 1500,
+  "sampleSeconds": 3,
+  "distanceMeters": 5165.7,
+  "movingSeconds": 4500,
+  "ascentMeters": 300.0,
+  "descentMeters": 0.0,
+  "averageSpeedMps": 1.1479,
+  "emulation": {
+    "positionJitterMeters": 3.0,
+    "elevationNoiseMeters": 2.0,
+    "dropoutSeconds": 60,
+    "outlierFixes": [],
+    "outlierMeters": 200.0,
+    "barometricDriftMeters": 0.0
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "file": "walk-outlier-5km.gpx",
+  "points": 1400,
+  "sampleSeconds": 2.5,
+  "distanceMeters": 4891.0,
+  "movingSeconds": 3500.0,
+  "ascentMeters": 25.0,
+  "descentMeters": 0.0,
+  "averageSpeedMps": 1.3974,
+  "emulation": {
+    "positionJitterMeters": 3.5,
+    "elevationNoiseMeters": 1.5,
+    "dropoutSeconds": 0,
+    "outlierFixes": [
+      400,
+      900
+    ],
+    "outlierMeters": 250.0,
+    "barometricDriftMeters": 0.0
+  }
+}

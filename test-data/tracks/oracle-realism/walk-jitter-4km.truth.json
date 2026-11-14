@@ -1,0 +1,18 @@
+{
+  "file": "walk-jitter-4km.gpx",
+  "points": 1500,
+  "sampleSeconds": 2,
+  "distanceMeters": 4042.8,
+  "movingSeconds": 3000,
+  "ascentMeters": 30.0,
+  "descentMeters": 0.0,
+  "averageSpeedMps": 1.3476,
+  "emulation": {
+    "positionJitterMeters": 4.0,
+    "elevationNoiseMeters": 1.5,
+    "dropoutSeconds": 30,
+    "outlierFixes": [],
+    "outlierMeters": 200.0,
+    "barometricDriftMeters": 0.0
+  }
+}

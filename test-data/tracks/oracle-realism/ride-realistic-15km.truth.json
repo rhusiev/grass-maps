@@ -1,0 +1,18 @@
+{
+  "file": "ride-realistic-15km.gpx",
+  "points": 1000,
+  "sampleSeconds": 3,
+  "distanceMeters": 14968.2,
+  "movingSeconds": 3000,
+  "ascentMeters": 120.0,
+  "descentMeters": 0.0,
+  "averageSpeedMps": 4.9894,
+  "emulation": {
+    "positionJitterMeters": 5.0,
+    "elevationNoiseMeters": 2.0,
+    "dropoutSeconds": 45,
+    "outlierFixes": [],
+    "outlierMeters": 200.0,
+    "barometricDriftMeters": 0.0
+  }
+}

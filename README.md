@@ -2720,6 +2720,14 @@ reports ascent 1.6 m and descent 0.0 m (the raw sums were 19.2 m and 17.6 m),
 minimum 296.0 m, maximum 297.6 m and distance 82.5866 m, within 0.01 m on
 elevation sums and 0.1 m on distance. `SyntheticOsmAndTracksOracleTest` checks
 the filter against OsmAnd's own figures on nine tracks.
+`test-data/tracks/oracle-realism/` adds the noisy counterpart: six generated
+tracks with 2.5-5 m positional jitter, 1-2.5 m elevation noise, 30-75 s
+dropouts, two outlier fixes and 6 m of barometric drift, each with the authored
+truth and OsmAnd's readings. `RealisticTracksOracleTest` compares `TrackAnalyzer`
+with that truth and records which side is closer. The first run misses 28 of 30
+bounds: a raw step sum inflates distance by 12-181 %, and a raw 0.5 m/s
+threshold drops jitter-slow steps from moving time. That directory's README
+carries the measured numbers. Do not widen a bound to hide them.
 
 T-0402 extends the analysis with the figures a track detail shows.
 `TrackAnalysis` also carries duration, moving time, average speed and maximum

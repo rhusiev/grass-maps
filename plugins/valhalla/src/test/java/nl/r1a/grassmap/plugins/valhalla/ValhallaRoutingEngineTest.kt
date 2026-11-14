@@ -14,6 +14,7 @@ import nl.r1a.grassmap.plugin.api.provider.RouteAttributes
 import nl.r1a.grassmap.plugin.api.provider.RouteModifier
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteRequest
+import nl.r1a.grassmap.plugin.api.provider.RouteSegment
 import nl.r1a.grassmap.plugin.api.provider.RoutingEngineContract
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -23,6 +24,8 @@ import java.nio.file.Files
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.cos
+import kotlin.math.roundToInt
 
 class ValhallaRoutingEngineTest {
     @Test
@@ -243,17 +246,22 @@ class ValhallaRoutingEngineTest {
         assertEquals(RoutingEngineContract.REFERENCE, engine.contract)
         assertEquals(setOf(RouteProfile.Walk, RouteProfile.Bike, RouteProfile.Hike), capabilities.profiles)
         assertEquals(2, capabilities.maxAlternatives)
-        assertEquals(RouteAttributes.V1, capabilities.attributeKeys)
+        // Access is declared by the vocabulary but has no Valhalla source.
+        assertEquals(RouteAttributes.V1 - RouteAttributes.ACCESS, capabilities.attributeKeys)
         // Evidence: the pack's loki actions list `trace_route` and
         // valhalla-mobile 0.6.4 exposes Valhalla.traceRouteRaw(String).
         assertTrue(capabilities.hasMatchTrack)
     }
 
     @Test
-    fun annotateSplitsTheRouteByEdgeAndFillsTheFiveAttributes() =
+    fun annotateSplitsTheRouteByEdgeAndFillsTheAttributesTheTraceSources() =
         runTest {
             val transport = RecordingTransport(response(denseShape()), trace = traceResponse())
-            val engine = ValhallaRoutingEngine({ transport }, elevation = elevations(100.0, 104.0, 109.0))
+            val engine =
+                ValhallaRoutingEngine(
+                    { transport },
+                    elevation = elevationAlong(DENSE_SHAPE_LONGITUDE) { distance -> 100.0 + distance * 0.01 },
+                )
 
             val routed =
                 (engine.route(request(), CancellationHandle.None) as Outcome.Success).value.single()
@@ -268,12 +276,63 @@ class ValhallaRoutingEngineTest {
             assertEquals(listOf("footway", "path", "steps"), highway)
             val sac = annotated.runs.map { (it.attributes[RouteAttributes.SAC_SCALE] as AttributeValue.TextValue).value }
             assertEquals(listOf("none", "mountain_hiking", "none"), sac)
-            val access = annotated.runs.map { (it.attributes[RouteAttributes.ACCESS] as AttributeValue.TextValue).value }
-            assertEquals(listOf("yes", "yes", "private"), access)
-            val grade = annotated.runs.first().attributes[RouteAttributes.GRADE] as AttributeValue.NumberValue
-            assertTrue(grade.value > 0.0)
+            assertTrue(annotated.runs.none { it.attributes.containsKey(RouteAttributes.ACCESS) })
+            assertEquals(1.0, gradeOf(annotated.runs.first()), 0.1)
             assertEquals(1, transport.traces.size)
             assertTrue(transport.traces.single().contains("map_snap"))
+        }
+
+    @Test
+    fun aTenMetreEdgeOverATwoMetreStepDoesNotReadTwentyPercent() =
+        runTest {
+            val transport = RecordingTransport(response(shape()), trace = traceOf(0.500, 0.010, 0.490))
+            val engine =
+                ValhallaRoutingEngine(
+                    { transport },
+                    elevation = elevationAlong(LONGITUDE_BASE) { distance -> if (distance < 505.0) 0.0 else 2.0 },
+                )
+
+            val annotated =
+                (engine.annotate(lineRoute(line(1_000.0)), RouteProfile.Walk, CancellationHandle.None) as Outcome.Success).value
+            val step = annotated.runs.single { it.distanceMeters < 20.0 }
+
+            assertEquals(4.0, gradeOf(step), 0.2)
+        }
+
+    @Test
+    fun aGenuineTwoHundredMetreClimbAtTwentyPercentStillReadsTwenty() =
+        runTest {
+            val transport = RecordingTransport(response(shape()), trace = traceOf(0.400, 0.200, 0.400))
+            val engine =
+                ValhallaRoutingEngine(
+                    { transport },
+                    elevation =
+                        elevationAlong(LONGITUDE_BASE) { distance ->
+                            when {
+                                distance < 400.0 -> 0.0
+                                distance < 600.0 -> (distance - 400.0) * 0.2
+                                else -> 40.0
+                            }
+                        },
+                )
+
+            val annotated =
+                (engine.annotate(lineRoute(line(1_000.0)), RouteProfile.Walk, CancellationHandle.None) as Outcome.Success).value
+            val climb = annotated.runs.single { it.distanceMeters in 150.0..250.0 }
+
+            assertEquals(20.0, gradeOf(climb), 0.2)
+        }
+
+    @Test
+    fun aFlatKilometreReadsZeroGrade() =
+        runTest {
+            val transport = RecordingTransport(response(shape()), trace = traceOf(1.0))
+            val engine = ValhallaRoutingEngine({ transport }, elevation = elevationAlong(LONGITUDE_BASE) { 0.0 })
+
+            val annotated =
+                (engine.annotate(lineRoute(line(1_000.0)), RouteProfile.Walk, CancellationHandle.None) as Outcome.Success).value
+
+            assertEquals(0.0, gradeOf(annotated.runs.single()), 1e-9)
         }
 
     @Test
@@ -319,13 +378,37 @@ class ValhallaRoutingEngineTest {
             durationSeconds = 716.0,
         )
 
-    private fun elevations(vararg heights: Double): ElevationAccess {
-        val points = mutableListOf<Double>()
-        return ElevationAccess { _ ->
-            val index = points.size.coerceAtMost(heights.size - 1)
-            points += heights[index]
-            Outcome.Success(heights[index])
+    /** A straight eastward line of [lengthMeters] at the test latitude, one vertex every 10 m. */
+    private fun line(lengthMeters: Double): List<GeoPoint> {
+        val steps = (lengthMeters / VERTEX_SPACING_METERS).roundToInt()
+        return (0..steps).map { index ->
+            GeoPoint(TEST_LATITUDE, LONGITUDE_BASE + (lengthMeters * index / steps) / METRES_PER_DEGREE_LONGITUDE)
         }
+    }
+
+    private fun lineRoute(points: List<GeoPoint>): Route {
+        val length = points.zipWithNext().sumOf { (first, second) -> ValhallaRequest.distanceMetres(first, second) }
+        return Route(geometry = points, distanceMeters = length, durationSeconds = length / 1.4)
+    }
+
+    /** Height as a function of distance from [baseLongitude], along the test line. */
+    private fun elevationAlong(
+        baseLongitude: Double,
+        height: (Double) -> Double,
+    ): ElevationAccess =
+        ElevationAccess { point ->
+            val distance = (point.longitude - baseLongitude) * METRES_PER_DEGREE_LONGITUDE
+            Outcome.Success(height(distance))
+        }
+
+    private fun gradeOf(segment: RouteSegment): Double = (segment.attributes[RouteAttributes.GRADE] as AttributeValue.NumberValue).value
+
+    private fun traceOf(vararg lengthsKm: Double): String {
+        val edges =
+            lengthsKm.joinToString(",") { length ->
+                """{"length":$length,"surface":"paved","use":"footway","road_class":"service_other"}"""
+            }
+        return """{"edges":[$edges]}"""
     }
 
     private fun traceResponse(): String =
@@ -404,5 +487,14 @@ class ValhallaRoutingEngineTest {
     private companion object {
         /** A minimal pack config; the engine never reaches the native layer here. */
         const val CONFIG = """{"mjolnir":{"tile_extract":"/data/valhalla/tiles.tar"}}"""
+
+        const val TEST_LATITUDE = 49.84
+        const val LONGITUDE_BASE = 24.03
+        const val DENSE_SHAPE_LONGITUDE = 24.0316
+        const val VERTEX_SPACING_METERS = 10.0
+
+        // The same small-distance scale ValhallaRequest.distanceMetres uses, so a
+        // vertex lands on an exact edge boundary.
+        val METRES_PER_DEGREE_LONGITUDE = 6_371_000.0 * cos(Math.toRadians(TEST_LATITUDE)) * Math.PI / 180.0
     }
 }

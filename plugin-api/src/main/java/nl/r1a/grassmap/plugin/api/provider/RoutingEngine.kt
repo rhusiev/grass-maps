@@ -107,7 +107,7 @@ object RouteAttributes {
     const val SAC_SCALE: String = "sac_scale"
     const val ACCESS: String = "access"
 
-    /** The five attributes the v1 engine fills. */
+    /** The five attributes the v1 attribute vocabulary defines; an engine declares the ones it fills. */
     val V1: Set<String> = setOf(SURFACE, HIGHWAY, GRADE, SAC_SCALE, ACCESS)
 }
 

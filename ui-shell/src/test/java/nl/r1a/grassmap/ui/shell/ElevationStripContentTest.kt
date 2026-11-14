@@ -206,6 +206,17 @@ class ElevationStripContentTest {
         assertEquals(ElevationStripBand.Steps, wayTypeBand(" STEPS "))
     }
 
+    @Test
+    fun valhallasSurfaceValuesLandInTheSameBandsAsTheMapPalette() {
+        assertEquals(ElevationStripBand.Asphalt, surfaceBand("paved_smooth"))
+        assertEquals(ElevationStripBand.Asphalt, surfaceBand("paved"))
+        assertEquals(ElevationStripBand.Paving, surfaceBand("paved_rough"))
+        assertEquals(ElevationStripBand.Gravel, surfaceBand("compacted"))
+        assertEquals(ElevationStripBand.Ground, surfaceBand("dirt"))
+        assertEquals(ElevationStripBand.Gravel, surfaceBand("gravel"))
+        assertEquals(ElevationStripBand.Ground, surfaceBand("path"))
+    }
+
     private fun rows(state: ElevationChartState): List<ElevationStripRow> = elevationStripRows(state, MapStrings(ENGLISH), LOCALE)
 
     private fun fractionAt(

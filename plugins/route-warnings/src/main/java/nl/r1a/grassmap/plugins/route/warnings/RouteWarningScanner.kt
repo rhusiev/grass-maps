@@ -22,9 +22,14 @@ import kotlin.math.sqrt
  *
  * The ford, barrier and railway crossing come from a [RegionAccess] corridor
  * query over the region's way-alert component, not from a routing engine's
- * tiles: the engine's answer does not carry those nodes. Steps and a private
- * way come from the route's annotated runs, where the engine's
- * `trace_attributes` pass puts `highway=steps` and `access=private`.
+ * tiles: the engine's answer does not carry those nodes. Steps come from the
+ * route's annotated runs, where the engine's `trace_attributes` pass puts
+ * `highway=steps`.
+ *
+ * A private way would come from an `access=private` run, but no v1 engine
+ * supplies that key: Valhalla's trace does not carry the way's OSM access tag,
+ * and a way it routed is passable by construction. The kind stays for an
+ * engine that carries OSM access tags.
  *
  * The result is ordered by distance along the route. A region node is listed
  * once even when the route meets it twice, so an out-and-back route does not

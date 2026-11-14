@@ -27,11 +27,11 @@ class ValhallaProfilesTest {
     }
 
     @Test
-    fun everyV1ProfileNamesTheFiveAttributes() {
+    fun everyV1ProfileNamesTheAttributesTheEngineFills() {
         val capabilities =
             ValhallaRoutingEngine({ throw AssertionError("no transport needed") }).capabilities()
 
-        assertEquals(RouteAttributes.V1, capabilities.attributeKeys)
+        assertEquals(RouteAttributes.V1 - RouteAttributes.ACCESS, capabilities.attributeKeys)
         assertEquals(
             setOf(RouteProfile.Walk, RouteProfile.Bike, RouteProfile.Hike),
             capabilities.profiles,

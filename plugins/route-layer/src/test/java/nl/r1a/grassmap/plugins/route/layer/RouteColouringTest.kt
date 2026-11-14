@@ -5,6 +5,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -33,6 +37,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 
 class RouteColouringTest {
     @Test
@@ -77,6 +84,51 @@ class RouteColouringTest {
         assertEquals("#008300", RouteColouring.colour(segment(surface = "ground"), RouteColourMode.Surface, dark = false))
         assertEquals("#EDA100", RouteColouring.colour(segment(surface = "compacted"), RouteColourMode.Surface, dark = false))
         assertEquals("#C98500", RouteColouring.colour(segment(surface = "gravel"), RouteColourMode.Surface, dark = true))
+    }
+
+    @Test
+    fun valhallasSevenSurfaceValuesHaveRound10Classes() {
+        assertEquals(SurfaceClass.Asphalt, RouteRound10Palette.surfaceClass("paved_smooth"))
+        assertEquals(SurfaceClass.Asphalt, RouteRound10Palette.surfaceClass("paved"))
+        assertEquals(SurfaceClass.Paving, RouteRound10Palette.surfaceClass("paved_rough"))
+        assertEquals(SurfaceClass.Gravel, RouteRound10Palette.surfaceClass("compacted"))
+        assertEquals(SurfaceClass.Ground, RouteRound10Palette.surfaceClass("dirt"))
+        assertEquals(SurfaceClass.Gravel, RouteRound10Palette.surfaceClass("gravel"))
+        assertEquals(SurfaceClass.Ground, RouteRound10Palette.surfaceClass("path"))
+    }
+
+    @Test
+    fun everySurfaceValueInTheCommittedValhallaRunHasAClass() {
+        val root = repositoryRoot().resolve("test-data/routing/lviv-summary.json")
+        val summary = Json.parseToJsonElement(Files.readString(root)).jsonObject
+        val profiles = summary.getValue("profiles").jsonObject
+        assertEquals(
+            30_013,
+            profiles
+                .getValue("walk")
+                .jsonObject
+                .getValue("segments")
+                .jsonPrimitive.int,
+        )
+
+        for ((profile, element) in profiles) {
+            val surfaces =
+                element
+                    .jsonObject
+                    .getValue("attribute_values")
+                    .jsonObject
+                    .getValue("surface")
+                    .jsonObject
+            assertTrue("$profile has no surface values", surfaces.isNotEmpty())
+            assertEquals(
+                "$profile unclassified surfaces",
+                emptyList<String>(),
+                surfaces.keys.filter {
+                    RouteRound10Palette.surfaceClass(it) ==
+                        null
+                },
+            )
+        }
     }
 
     @Test
@@ -351,5 +403,19 @@ class RouteColouringTest {
         override suspend fun setTracks(tracks: List<MapTrack>): Outcome<Unit> = Outcome.Success(Unit)
 
         override suspend fun setPositionOffset(offset: ScreenOffset): Outcome<Unit> = Outcome.Success(Unit)
+    }
+
+    /** The repository root, found by walking up from the test working directory. */
+    private fun repositoryRoot(): Path {
+        var directory: Path? = Paths.get(System.getProperty("user.dir")).toAbsolutePath()
+        while (directory != null) {
+            if (Files.isRegularFile(directory.resolve("settings.gradle.kts")) &&
+                Files.isDirectory(directory.resolve("test-data"))
+            ) {
+                return directory
+            }
+            directory = directory.parent
+        }
+        error("Cannot find the repository root from ${System.getProperty("user.dir")}")
     }
 }

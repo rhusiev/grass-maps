@@ -191,26 +191,35 @@ private data class MergedStretch(
     val endMeters: Double,
 )
 
+/**
+ * The OSM `surface` tag and Valhalla's `edge.surface` enum in one table, the
+ * same split as `RouteRound10Palette`. The route's annotated runs carry
+ * Valhalla's spellings, so a strip that knew only OSM values would drop most of
+ * a Valhalla route.
+ */
 private val SURFACE_BANDS =
     mapOf(
         "asphalt" to ElevationStripBand.Asphalt,
-        "paved" to ElevationStripBand.Asphalt,
-        "concrete" to ElevationStripBand.Asphalt,
         "chipseal" to ElevationStripBand.Asphalt,
+        "concrete" to ElevationStripBand.Asphalt,
+        "paved" to ElevationStripBand.Asphalt,
+        "paved_smooth" to ElevationStripBand.Asphalt,
+        "bricks" to ElevationStripBand.Paving,
+        "cobblestone" to ElevationStripBand.Paving,
+        "paved_rough" to ElevationStripBand.Paving,
         "paving_stones" to ElevationStripBand.Paving,
         "sett" to ElevationStripBand.Paving,
-        "cobblestone" to ElevationStripBand.Paving,
         "unhewn_cobblestone" to ElevationStripBand.Paving,
-        "bricks" to ElevationStripBand.Paving,
-        "gravel" to ElevationStripBand.Gravel,
-        "fine_gravel" to ElevationStripBand.Gravel,
         "compacted" to ElevationStripBand.Gravel,
+        "fine_gravel" to ElevationStripBand.Gravel,
+        "gravel" to ElevationStripBand.Gravel,
         "pebblestone" to ElevationStripBand.Gravel,
-        "ground" to ElevationStripBand.Ground,
-        "earth" to ElevationStripBand.Ground,
         "dirt" to ElevationStripBand.Ground,
-        "mud" to ElevationStripBand.Ground,
+        "earth" to ElevationStripBand.Ground,
         "grass" to ElevationStripBand.Ground,
+        "ground" to ElevationStripBand.Ground,
+        "mud" to ElevationStripBand.Ground,
+        "path" to ElevationStripBand.Ground,
         "sand" to ElevationStripBand.Ground,
     )
 

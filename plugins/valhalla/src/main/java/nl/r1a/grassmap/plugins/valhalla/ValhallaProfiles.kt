@@ -182,9 +182,11 @@ internal object ValhallaProfiles {
         buildJsonObject {
             // Ferries are allowed; a pedestrian or hiker can board one.
             put("use_ferry", 1.0)
-            // Paths are the goal on foot, sidewalks are preferred in town, and
-            // service ways are avoided. These are Valhalla's foot defaults,
-            // written down so a change is a decision rather than a version bump.
+            // Paths are the goal on foot and service ways are avoided; these
+            // are Valhalla's foot defaults, written down so a change is a
+            // decision rather than a version bump. The one deviation is
+            // sidewalk_factor 0.9 against the 1.0 default: in town a walker
+            // should stay on the sidewalk beside the road, not in the road.
             put("walkway_factor", 1.0)
             put("sidewalk_factor", 0.9)
             put("alley_factor", 2.0)

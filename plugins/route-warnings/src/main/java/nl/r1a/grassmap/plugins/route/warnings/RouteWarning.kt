@@ -8,9 +8,10 @@ import nl.r1a.grassmap.plugin.api.provider.RouteProfile
  * The five things a route warning names (T-0409).
  *
  * A ford, a barrier and a railway crossing are region features, the same ones
- * the way alerts read. Steps and a private way are route attributes, because
- * the region feature component does not carry them: the route engine's
- * annotated runs do.
+ * the way alerts read. Steps are a route attribute, because the region feature
+ * component does not carry it: the route engine's annotated runs do. A private
+ * way would be one too, but no v1 engine supplies the OSM access tag it needs;
+ * the kind stays for an engine that does.
  */
 enum class RouteWarningKind {
     Ford,
@@ -24,7 +25,7 @@ enum class RouteWarningKind {
  * One warning for a planned route, at the distance where the rider meets it.
  *
  * [osmElementType] and [osmId] are the OSM identity when the warning comes
- * from a region feature. Steps and private ways come from a route segment,
+ * from a region feature. Steps and a private way come from a route segment,
  * which carries no way id, so both are null there.
  *
  * [profiles] is the set of profiles the kind applies to. It is the policy's

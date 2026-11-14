@@ -2059,13 +2059,19 @@ The ford, the barrier and the railway crossing are region features, read
 through the same `RegionAccess.wayAlertFeatures` corridor query as the way
 alerts, not from Valhalla tiles. The 30 m corridor is the way-alert one, for
 the same reason: metre-level noise in both lines, and a parallel railway or a
-service road one street away stays out. Steps and a private way are route
-attributes: they come from the route's annotated runs, where the T-0301
-`trace_attributes` pass puts `highway=steps` and `access=private`. The region
-component does not carry either one. The planner runs that pass after it
-publishes a route, so the live list gains the two route-attribute kinds when
-the engine answers; `RouteWarningScanner` documents that a route which is not
+service road one street away stays out. Steps are a route attribute: they come
+from the route's annotated runs, where the T-0301 `trace_attributes` pass puts
+`highway=steps`. The region component does not carry that. The planner runs the
+pass after it publishes a route, so the live list gains the steps kind when the
+engine answers; `RouteWarningScanner` documents that a route which is not
 annotated yet yields the region half only.
+
+A private way has no v1 source. The scanner accepts `access=private` on an
+annotated run, but Valhalla's trace does not carry the way's OSM access tag,
+and a way Valhalla routed is passable for the profile by construction. The
+engine declares no `access` attribute rather than inventing `yes`. The kind
+stays in the model for an engine that carries OSM access tags; until then the
+list cannot contain it.
 
 | Kind | Walk | Hike | Bike | Source |
 |---|---|---|---|---|
@@ -2073,7 +2079,7 @@ annotated yet yields the region half only.
 | Steps | yes | yes | yes | route segment `highway=steps` |
 | Barrier | yes | yes | no | region node |
 | Railway crossing | yes | yes | yes | region node |
-| Private way | yes | yes | yes | route segment `access=private` |
+| Private way | yes | yes | yes | route segment `access=private`, no v1 source |
 
 A barrier is dropped for a bike because the region component keeps gates,
 stiles and similar passable barriers but drops bollards and kerbs, and it does
@@ -2094,19 +2100,20 @@ one OSM way into one run per graph edge.
 
 The committed test region already has the three region features: the ford at
 `49.9510, 23.9440`, the gate at `49.9510, 23.9460` and the shared railway
-crossing at `49.9515, 23.9460`. Steps and private access are made by the test
-route's own segments, so the fixture needed no new file and no authored feature
-is presented as extracted. `RouteWarningScannerTest` drives the real
-`RegionReader` over that package for the five-kind order, the two profile
-filters, the repeated-node case, the empty route and the region failure.
+crossing at `49.9515, 23.9460`. Steps are made by the test route's own segment,
+and the private-way case by a segment attribute the scanner accepts from any
+engine, so the fixture needed no new file and no authored feature is presented
+as extracted. `RouteWarningScannerTest` drives the real `RegionReader` over
+that package for the five-kind order, the two profile filters, the
+repeated-node case, the empty route and the region failure.
 
 The round-6 design's two surfaces are the panel's. `ui-shell` draws the amber
 "N warnings on this route" row above the route preferences entry, with the
 distinct kinds in distance order, and only while the selected route has
 warnings; a tap expands the "On this route" list, one row per warning with its
-kind, the private way's `access=private` or the bike's "push the bike", and the
-distance. `app` maps the scanner's kind onto the panel's own glyph, keeping the
-scanner's order. The row's count is also the list's, so the two never disagree.
+kind, the private way's `access=private` when an engine supplies it, or the
+bike's "push the bike", and the distance. `app` maps the scanner's kind onto
+the panel's own glyph, keeping the scanner's order. The row's count is also the list's, so the two never disagree.
 The design's marker on the route line is not drawn: `MapHost` has no marker
 set, and the composed-layers compiler rejects circle layers as not rendered
 yet, so no drawable layer type carries one point per warning.

@@ -22,12 +22,17 @@ import nl.r1a.grassmap.plugin.api.provider.RouteAttributes
 import nl.r1a.grassmap.plugin.api.provider.RouteSegment
 
 /**
- * Turns a routed line into per-edge segments with the five v1 attributes.
+ * Turns a routed line into per-edge segments with the v1 attributes Valhalla
+ * can source.
  *
  * Valhalla's `/route` answer carries no per-edge tags, so the line is sent back
  * to `/trace_attributes` with `map_snap`: Valhalla matches the line to graph
  * edges and returns one record per edge. The line is cut at those edges, which
  * is why the attributes arrive after the route is already shown.
+ *
+ * `access` is not among them: the trace does not carry the way's OSM access
+ * tag, and a way Valhalla routed is passable for the profile by construction.
+ * A `yes` or `private` value here would be invented, so v1 emits none.
  */
 internal object ValhallaTrace {
     private const val METRES_PER_KILOMETRE = 1_000.0
@@ -44,7 +49,6 @@ internal object ValhallaTrace {
             "edge.use",
             "edge.road_class",
             "edge.sac_scale",
-            "edge.access_restriction",
         )
 
     /** One trace request body for [points], which must hold at least two points. */
@@ -115,7 +119,6 @@ internal object ValhallaTrace {
                             RouteAttributes.SURFACE to AttributeValue.TextValue(edge.stringValue("surface") ?: UNKNOWN),
                             RouteAttributes.HIGHWAY to AttributeValue.TextValue(highwayOf(edge)),
                             RouteAttributes.SAC_SCALE to AttributeValue.TextValue(sacScaleOf(edge.intValue("sac_scale"))),
-                            RouteAttributes.ACCESS to AttributeValue.TextValue(accessOf(edge)),
                         ),
                 )
             }
@@ -203,12 +206,6 @@ internal object ValhallaTrace {
         return HIGHWAY_BY_USE[use] ?: use
     }
 
-    private fun accessOf(edge: JsonObject): String {
-        val restrictions = edge["access_restriction"] as? JsonArray ?: return YES
-        val first = (restrictions.firstOrNull() as? JsonPrimitive)?.contentOrNull
-        return first ?: YES
-    }
-
     private fun sacScaleOf(value: Int?): String = SAC_SCALE_NAMES.getOrElse(value ?: 0) { UNKNOWN }
 
     private fun JsonObject.stringValue(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
@@ -217,14 +214,13 @@ internal object ValhallaTrace {
 
     private fun JsonObject.intValue(key: String): Int? = (this[key] as? JsonPrimitive)?.intOrNull
 
-    /** One matched edge: its length and the four attributes the trace carries. */
+    /** One matched edge: its length and the three attributes the trace carries. */
     data class TraceEdge(
         val lengthMeters: Double,
         val values: Map<String, AttributeValue>,
     )
 
     private const val UNKNOWN = "unknown"
-    private const val YES = "yes"
     private const val ROAD = "road"
     private const val SERVICE = "service"
     private const val SERVICE_OTHER = "service_other"

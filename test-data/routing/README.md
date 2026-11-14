@@ -222,8 +222,9 @@ histograms are in `lviv-summary.json`):
 `gravel`, `paved`, `path`, `paved_rough`); `highway` is `edge.use` or
 `road_class`. `grade` is missing on the 1.8-2.2 % of segments whose end point
 falls outside the Lviv DEM raster, which is clipped to the oblast. `access` is
-`yes` on every segment of this run - no random route crossed a restricted way -
-and `sac_scale` is `none` on all but a handful, as above.
+`yes` on every segment of this run because the capture script applied the old
+default that filled it in; the engine no longer emits `access` (see below).
+`sac_scale` is `none` on all but a handful, as above.
 
 Warm timings on this desktop, request time only (inside the container, one
 warm-up then median of ten):
@@ -243,22 +244,32 @@ an observation, not a regression.
 
 `/route` returns no per-edge tags, so `ValhallaRoutingEngine.annotate` sends the
 routed line back to `/trace_attributes` with `shape_match: map_snap` and asks for
-`edge.surface`, `edge.use`, `edge.road_class`, `edge.sac_scale`,
-`edge.access_restriction` and `edge.length`. The line is chunked at 50 km (the
-pack's trace limit is 200 km) and the route is re-cut into one segment per
-matched edge.
+`edge.surface`, `edge.use`, `edge.road_class`, `edge.sac_scale` and
+`edge.length`. The line is chunked at 50 km (the pack's trace limit is 200 km)
+and the route is re-cut into one segment per matched edge.
 
-Four attributes come from Valhalla directly. `highway` is `edge.use`, mapped to
-the OSM vocabulary (`walkway` → `footway`, `service_road` → `service`, a plain
-road takes its `road_class`), and `sac_scale` is Valhalla's enum in the OSM
-spelling (0 → `none`, 2 → `mountain_hiking`, ...). `access` is `yes` unless
-`edge.access_restriction` names a restriction.
+Three attributes come from Valhalla directly. `surface` is Valhalla's `Surface`
+enum; the round-10 palette maps all seven values of the T-0301 walk run onto its
+four classes. `highway` is `edge.use`, mapped to the OSM vocabulary (`walkway` →
+`footway`, `service_road` → `service`, a plain road takes its `road_class`), and
+`sac_scale` is Valhalla's enum in the OSM spelling (0 → `none`, 2 →
+`mountain_hiking`, ...).
+
+`access` is not among them. The trace does not carry the way's OSM access tag,
+and a way Valhalla routed is passable for the profile by construction, so a
+value would be invented. The private-way warning therefore has no source until
+an engine carries OSM access tags; v1 does not. The T-0301 CSV and summary still
+show the old fabricated `access=yes` because they are the committed record of
+that run, not a description of the current engine.
 
 `grade` does not come from Valhalla: the phase-A pack was built without
 elevation and every edge reports the `-500` "no data" sentinel. The engine
-samples the mounted region DEM through `ElevationAccess` at each segment's end
-points and stores `(end - start) / length * 100` as a percent. Without a mounted
-DEM the key is absent rather than wrong.
+samples the mounted region DEM through `ElevationAccess` at the ends of a window
+of at least 50 m of route centred on each segment and stores
+`(end - start) / window * 100` as a percent. A short edge therefore reads the
+grade of the stretch around it: a 10 m edge over a 2 m step reads 4 %, not
+20 %, and a genuine 200 m climb at 20 % still reads 20 %. Without a mounted DEM
+the key is absent rather than wrong.
 
 Users see guidance and distance as soon as `/route` returns; attribute-dependent
 drawing (surface shading) appears after `annotate` finishes, and a failed trace

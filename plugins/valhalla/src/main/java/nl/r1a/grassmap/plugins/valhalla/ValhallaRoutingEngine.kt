@@ -88,7 +88,10 @@ class ValhallaRoutingEngine internal constructor(
                 ),
             maxAlternatives = 2,
             maxDistanceMeters = 250_000.0,
-            attributeKeys = RouteAttributes.V1,
+            // Access is in the shared vocabulary but has no Valhalla source:
+            // the trace does not carry an OSM access tag, so declaring it
+            // would promise a key the engine never fills.
+            attributeKeys = RouteAttributes.V1 - RouteAttributes.ACCESS,
             // The pack's loki actions list `trace_route`, and valhalla-mobile
             // 0.6.4 exposes `traceRouteRaw`; both are needed for map matching.
             hasMatchTrack = true,
@@ -149,16 +152,22 @@ class ValhallaRoutingEngine internal constructor(
         }
 
     /**
-     * Re-splits the route's line by graph edge and adds the five v1 attributes
-     * to the resulting runs. The legs in [Route.segments] are left as they are:
-     * a reroute reads one waypoint per leg, so an annotated route must not
+     * Re-splits the route's line by graph edge and adds the v1 attributes to
+     * the resulting runs. The legs in [Route.segments] are left as they are: a
+     * reroute reads one waypoint per leg, so an annotated route must not
      * pretend to have one leg per edge.
      *
-     * Four attributes come straight from `trace_attributes`. Grade does not: the
-     * phase-A pack was built without elevation, so Valhalla reports the "no
+     * Three attributes come straight from `trace_attributes`. Grade does not:
+     * the phase-A pack was built without elevation, so Valhalla reports the "no
      * data" sentinel (-500) for every edge. Grade is instead sampled from the
-     * mounted region DEM through [ElevationAccess]; without one the key is
-     * absent rather than wrong.
+     * mounted region DEM through [ElevationAccess] over [GRADE_WINDOW_METERS] of
+     * route, so one short edge does not turn a step into a cliff; without a DEM
+     * the key is absent rather than wrong.
+     *
+     * `access` is absent on purpose. Valhalla's trace does not carry the way's
+     * OSM access tag, and a route Valhalla chose is passable for the profile by
+     * construction, so any value here would be invented. The private-way
+     * warning therefore has no source in v1; see `test-data/routing/README.md`.
      */
     override suspend fun annotate(
         route: Route,
@@ -208,22 +217,33 @@ class ValhallaRoutingEngine internal constructor(
                 }
             }
             Outcome.Success(
-                route.copy(runs = grade(ValhallaTrace.segments(route, edges), route.geometry)),
+                route.copy(runs = grade(route, ValhallaTrace.segments(route, edges))),
             )
         }
 
+    /**
+     * Grades each run over a window of at least [GRADE_WINDOW_METERS] of route
+     * centred on it. A graph edge shorter than the window borrows the stretch
+     * around it instead of reporting the height change between its own two
+     * ends: a 10 m edge over a 2 m step reads the step over 50 m, not 20 %.
+     */
     private suspend fun grade(
+        route: Route,
         segments: List<RouteSegment>,
-        points: List<GeoPoint>,
     ): List<RouteSegment> {
-        val heights = HashMap<Int, Double?>()
+        val line = RouteLine(route.geometry)
+        if (line.totalMeters <= 0.0) {
+            return segments
+        }
         return segments.map { segment ->
-            val start = heightAt(points, heights, segment.startIndex)
-            val end = heightAt(points, heights, segment.endIndex)
-            if (start == null || end == null || segment.distanceMeters <= 0.0) {
+            val window = line.window(segment.startIndex, segment.endIndex)
+            val start = heightAt(line.pointAt(window.startMeters))
+            val end = heightAt(line.pointAt(window.endMeters))
+            val length = window.endMeters - window.startMeters
+            if (start == null || end == null || length <= 0.0) {
                 segment
             } else {
-                val grade = (end - start) / segment.distanceMeters * 100.0
+                val grade = (end - start) / length * 100.0
                 segment.copy(
                     attributes = segment.attributes + (RouteAttributes.GRADE to AttributeValue.NumberValue(grade)),
                 )
@@ -231,18 +251,64 @@ class ValhallaRoutingEngine internal constructor(
         }
     }
 
-    private suspend fun heightAt(
-        points: List<GeoPoint>,
-        cache: MutableMap<Int, Double?>,
-        index: Int,
-    ): Double? {
-        if (cache.containsKey(index)) {
-            return cache[index]
+    private suspend fun heightAt(point: GeoPoint): Double? = (elevation.elevationMeters(point) as? Outcome.Success)?.value
+
+    /** The route line as a distance scale, for placing a grade window's ends. */
+    private class RouteLine(
+        private val points: List<GeoPoint>,
+    ) {
+        private val cumulative = DoubleArray(points.size)
+
+        init {
+            for (index in 1 until points.size) {
+                cumulative[index] = cumulative[index - 1] + ValhallaRequest.distanceMetres(points[index - 1], points[index])
+            }
         }
-        val point = points.getOrNull(index) ?: return null
-        val height = (elevation.elevationMeters(point) as? Outcome.Success)?.value
-        cache[index] = height
-        return height
+
+        val totalMeters: Double
+            get() = cumulative.lastOrNull() ?: 0.0
+
+        /** The window around the run from [startIndex] to [endIndex], clipped to the line. */
+        fun window(
+            startIndex: Int,
+            endIndex: Int,
+        ): Window {
+            val start = cumulative[indexOf(startIndex)]
+            val end = cumulative[indexOf(endIndex)]
+            val length = maxOf(GRADE_WINDOW_METERS, end - start)
+            var windowStart = (start + end) / 2.0 - length / 2.0
+            windowStart = windowStart.coerceIn(0.0, (totalMeters - length).coerceAtLeast(0.0))
+            return Window(windowStart, (windowStart + length).coerceAtMost(totalMeters))
+        }
+
+        /** The point at [distance] metres from the line's start, between vertices when needed. */
+        fun pointAt(distance: Double): GeoPoint {
+            if (points.size < 2) {
+                return points.first()
+            }
+            val bounded = distance.coerceIn(0.0, totalMeters)
+            var low = 0
+            var high = cumulative.lastIndex
+            while (low < high) {
+                val middle = (low + high) / 2
+                if (cumulative[middle] < bounded) low = middle + 1 else high = middle
+            }
+            val index = low.coerceAtLeast(1)
+            val before = cumulative[index - 1]
+            val span = cumulative[index] - before
+            val fraction = if (span <= 0.0) 0.0 else ((bounded - before) / span).coerceIn(0.0, 1.0)
+            return GeoPoint(
+                latitude = points[index - 1].latitude + fraction * (points[index].latitude - points[index - 1].latitude),
+                longitude = points[index - 1].longitude + fraction * (points[index].longitude - points[index - 1].longitude),
+            )
+        }
+
+        private fun indexOf(index: Int): Int = index.coerceIn(0, cumulative.lastIndex)
+
+        data class Window(
+            val startMeters: Double,
+            val endMeters: Double,
+        )
     }
 
     override fun close() {
@@ -333,5 +399,12 @@ class ValhallaRoutingEngine internal constructor(
     private companion object {
         const val MIN_WAYPOINTS = 2
         const val EARTH_RADIUS_METRES = 6_371_000.0
+
+        /**
+         * The shortest stretch a grade is read over. It is longer than a typical
+         * graph edge on a footway and short enough that a genuine steep stretch
+         * still reads steep.
+         */
+        const val GRADE_WINDOW_METERS = 50.0
     }
 }

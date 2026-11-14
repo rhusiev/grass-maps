@@ -8,6 +8,7 @@ import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.provider.RouteAttributes
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.cos
@@ -15,20 +16,21 @@ import kotlin.math.hypot
 
 class ValhallaTraceTest {
     @Test
-    fun theTraceAsksValhallaToMatchTheLineAndReturnTheFiveTags() {
+    fun theTraceAsksValhallaToMatchTheLineAndReturnTheFourTagsItCanSource() {
         val profile = ValhallaProfiles.of(RouteProfile.Hike)
 
         val body = ValhallaTrace.request(line(1_000.0), profile)
 
         assertTrue(body.contains("\"shape_match\":\"map_snap\""))
         assertTrue(body.contains("\"encoded_polyline\""))
-        for (attribute in listOf("surface", "use", "road_class", "sac_scale", "access_restriction")) {
+        for (attribute in listOf("surface", "use", "road_class", "sac_scale")) {
             assertTrue("missing edge.$attribute in $body", body.contains("edge.$attribute"))
         }
+        assertFalse("the trace carries no OSM access tag", body.contains("edge.access_restriction"))
     }
 
     @Test
-    fun edgesMapToTheSharedVocabulary() {
+    fun edgesMapToTheSharedVocabularyWithoutInventingAccess() {
         val raw =
             """
             {"edges":[
@@ -45,8 +47,7 @@ class ValhallaTraceTest {
         assertEquals("path", text(edges[1], RouteAttributes.HIGHWAY))
         assertEquals("steps", text(edges[2], RouteAttributes.HIGHWAY))
         assertEquals("mountain_hiking", text(edges[1], RouteAttributes.SAC_SCALE))
-        assertEquals("private", text(edges[2], RouteAttributes.ACCESS))
-        assertEquals("yes", text(edges[0], RouteAttributes.ACCESS))
+        assertTrue(edges.none { it.values.containsKey(RouteAttributes.ACCESS) })
     }
 
     @Test

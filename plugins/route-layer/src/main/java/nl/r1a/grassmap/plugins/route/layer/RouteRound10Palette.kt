@@ -101,32 +101,43 @@ object RouteRound10Palette {
     /** The slope bin for [slopePercent]: 0 is the steepest descent, 6 the steepest climb. */
     fun slopeBin(slopePercent: Double): Int = SLOPE_STOP_PERCENT.count { edge -> slopePercent > edge }
 
-    /** The round-10 class for an OSM `surface` value, or null when it has none. */
+    /** The round-10 class for a surface value in the OSM or Valhalla vocabulary, or null for neither. */
     fun surfaceClass(value: String?): SurfaceClass? = SURFACES[value?.trim()?.lowercase(Locale.ROOT)]
 
     /** True when an OSM `highway` value is a way the design draws as steps. */
     fun isSteps(value: String?): Boolean = STEPS.contains(value?.trim()?.lowercase(Locale.ROOT))
 
+    /**
+     * One table for both vocabularies: the OSM `surface` tag the map and other
+     * engines use, and Valhalla's `edge.surface` enum. A key both spell the same
+     * way (`paved`, `compacted`, `dirt`, `gravel`) keeps one entry. `paved_rough`
+     * is Paving rather than Asphalt because the design's asphalt class is the
+     * smooth sealed one; `path` is Ground because Valhalla uses it for an
+     * unpaved trail.
+     */
     private val SURFACES =
         mapOf(
             "asphalt" to SurfaceClass.Asphalt,
-            "paved" to SurfaceClass.Asphalt,
-            "concrete" to SurfaceClass.Asphalt,
             "chipseal" to SurfaceClass.Asphalt,
+            "concrete" to SurfaceClass.Asphalt,
+            "paved" to SurfaceClass.Asphalt,
+            "paved_smooth" to SurfaceClass.Asphalt,
+            "bricks" to SurfaceClass.Paving,
+            "cobblestone" to SurfaceClass.Paving,
+            "paved_rough" to SurfaceClass.Paving,
             "paving_stones" to SurfaceClass.Paving,
             "sett" to SurfaceClass.Paving,
-            "cobblestone" to SurfaceClass.Paving,
             "unhewn_cobblestone" to SurfaceClass.Paving,
-            "bricks" to SurfaceClass.Paving,
-            "gravel" to SurfaceClass.Gravel,
-            "fine_gravel" to SurfaceClass.Gravel,
             "compacted" to SurfaceClass.Gravel,
+            "fine_gravel" to SurfaceClass.Gravel,
+            "gravel" to SurfaceClass.Gravel,
             "pebblestone" to SurfaceClass.Gravel,
-            "ground" to SurfaceClass.Ground,
-            "earth" to SurfaceClass.Ground,
             "dirt" to SurfaceClass.Ground,
-            "mud" to SurfaceClass.Ground,
+            "earth" to SurfaceClass.Ground,
             "grass" to SurfaceClass.Ground,
+            "ground" to SurfaceClass.Ground,
+            "mud" to SurfaceClass.Ground,
+            "path" to SurfaceClass.Ground,
             "sand" to SurfaceClass.Ground,
         )
 

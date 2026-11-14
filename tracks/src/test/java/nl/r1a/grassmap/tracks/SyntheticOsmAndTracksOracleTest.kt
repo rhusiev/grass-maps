@@ -32,11 +32,13 @@ import kotlin.math.abs
  * files, parses them without the GPX plugin, and runs the analyser exactly as
  * the app does.
  *
- * Every comparison is relative to the OsmAnd figure. A failure names the track,
- * both numbers and the signed percentage; it is not a signal to widen the
- * tolerance. Ascent and descent run through [ElevationFilter], the same
- * OsmAnd-compatible filter as the analyser, so this test measures the analyser
- * against OsmAnd, not against a second implementation of the same filter.
+ * Every comparison is relative to the OsmAnd figure, except ascent and descent,
+ * which also pass within half a displayed metre because OsmAnd shows them as
+ * whole metres. A failure names the track, both numbers and the signed
+ * percentage; it is not a signal to widen the tolerance. Ascent and descent run
+ * through [ElevationFilter], the same OsmAnd-compatible filter as the analyser,
+ * so this test measures the analyser against OsmAnd, not against a second
+ * implementation of the same filter.
  */
 class SyntheticOsmAndTracksOracleTest {
     @Test
@@ -84,8 +86,20 @@ class SyntheticOsmAndTracksOracleTest {
                         AVERAGE_SPEED_PERCENT,
                         decimals = 3,
                     ),
-                    comparison("ascent", expected.ascentMeters, actual.ascentMeters, ASCENT_PERCENT),
-                    comparison("descent", expected.descentMeters, actual.descentMeters, DESCENT_PERCENT),
+                    comparison(
+                        "ascent",
+                        expected.ascentMeters,
+                        actual.ascentMeters,
+                        ASCENT_PERCENT,
+                        absoluteTolerance = ELEVATION_DISPLAY_HALF_METERS,
+                    ),
+                    comparison(
+                        "descent",
+                        expected.descentMeters,
+                        actual.descentMeters,
+                        DESCENT_PERCENT,
+                        absoluteTolerance = ELEVATION_DISPLAY_HALF_METERS,
+                    ),
                 )
             report += "${expected.file}: ${comparisons.joinToString(", ") { it.summary() }}"
             for (result in comparisons.filterNot { it.withinTolerance }) {
@@ -113,13 +127,22 @@ class SyntheticOsmAndTracksOracleTest {
         actual: Double,
         tolerancePercent: Double,
         decimals: Int = 1,
+        absoluteTolerance: Double = 0.0,
     ): Comparison {
         val differencePercent =
             when {
                 expected == 0.0 -> if (actual == 0.0) 0.0 else Double.POSITIVE_INFINITY
                 else -> (actual - expected) / abs(expected) * PERCENT
             }
-        return Comparison(label, expected, actual, differencePercent, tolerancePercent, decimals)
+        return Comparison(
+            label,
+            expected,
+            actual,
+            differencePercent,
+            tolerancePercent,
+            decimals,
+            absoluteTolerance,
+        )
     }
 
     private fun readOracle(): Oracle {
@@ -162,6 +185,12 @@ class SyntheticOsmAndTracksOracleTest {
         )
         assertEquals("ascent tolerance", ASCENT_PERCENT, tolerance.requiredDouble("ascentPercent"), 0.0)
         assertEquals("descent tolerance", DESCENT_PERCENT, tolerance.requiredDouble("descentPercent"), 0.0)
+        assertEquals(
+            "elevation display half-metre",
+            ELEVATION_DISPLAY_HALF_METERS,
+            tolerance.requiredDouble("elevationDisplayHalfMeters"),
+            0.0,
+        )
     }
 
     private fun parseGpx(bytes: ByteArray): Track {
@@ -223,17 +252,29 @@ class SyntheticOsmAndTracksOracleTest {
         val differencePercent: Double,
         val tolerancePercent: Double,
         val decimals: Int,
+        val absoluteTolerance: Double,
     ) {
         val withinTolerance: Boolean
-            get() = differencePercent.isFinite() && abs(differencePercent) <= tolerancePercent
+            get() =
+                (differencePercent.isFinite() && abs(differencePercent) <= tolerancePercent) ||
+                    abs(actual - expected) <= absoluteTolerance
+
+        private val toleranceText: String
+            get() =
+                if (absoluteTolerance > 0.0) {
+                    "${formatPercent(tolerancePercent)} or ${formatValue(absoluteTolerance, 2)} m"
+                } else {
+                    formatPercent(tolerancePercent)
+                }
 
         fun summary(): String =
             "$label ${formatValue(expected, decimals)} vs ${formatValue(actual, decimals)} " +
-                "(${formatPercent(differencePercent)})"
+                "(${formatPercent(differencePercent)}, ${formatValue(abs(actual - expected), 2)} m)"
 
         fun failure(): String =
             "$label expected ${formatValue(expected, decimals)}, actual ${formatValue(actual, decimals)}, " +
-                "delta ${formatPercent(differencePercent)} > ${formatPercent(tolerancePercent)}"
+                "delta ${formatPercent(differencePercent)}, ${formatValue(abs(actual - expected), 2)} m " +
+                "outside $toleranceText"
     }
 
     private data class Oracle(
@@ -289,21 +330,31 @@ class SyntheticOsmAndTracksOracleTest {
         const val AVERAGE_SPEED_PERCENT = 2.0
 
         /**
-         * Ascent: 10 %. OsmAnd reports ascent rounded to whole metres and
-         * filters the elevation series; [ElevationFilter] follows that filter.
-         * The filter leaves a real track within a few tenths of a metre, so
-         * 10 % is generous enough for the comparison. On a track whose whole
-         * ascent is 1-2 m the display rounding alone is 25-50 %; the test
-         * reports that instead of hiding it.
+         * Ascent: 10 %, or half a displayed metre, whichever is larger. OsmAnd
+         * filters the elevation series and shows ascent as a whole number of
+         * metres; [ElevationFilter] follows that filter. A 10 % rule alone would
+         * fail a 1-2 m track on the reference's own rounding, where 0.3 m is
+         * 30 %. The integer is a display quantum, not a truth, so
+         * [ELEVATION_DISPLAY_HALF_METERS] is the larger allowance there, while
+         * 10 % still catches a real gap on a track with hundreds of metres of
+         * gain.
          */
         const val ASCENT_PERCENT = 10.0
 
         /**
-         * Descent: 10 %. Same reason as ascent. Descent is the smaller side on
-         * the climb tracks, so the same absolute gap is a larger percentage
-         * there; the test reports that rather than widening.
+         * Descent: 10 %, or half a displayed metre, whichever is larger. Same
+         * reason as ascent; descent is the smaller side on the climb tracks, so
+         * the same absolute gap is a larger percentage there.
          */
         const val DESCENT_PERCENT = 10.0
+
+        /**
+         * Half of one whole metre: the largest difference OsmAnd's integer
+         * display can hide. It is a comparison allowance for the reference's
+         * resolution, not a change to the analyser and not a truth about the
+         * ascent.
+         */
+        const val ELEVATION_DISPLAY_HALF_METERS = 0.5
     }
 }
 

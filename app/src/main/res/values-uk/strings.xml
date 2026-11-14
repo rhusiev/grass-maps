@@ -135,6 +135,9 @@
     <string name="route_preferences_profile_hike">похід</string>
     <string name="route_preferences_profile_car">авто</string>
     <string name="route_preview_start">Старт</string>
+    <string name="route_preview_save">Зберегти</string>
+    <string name="route_saved">Маршрут збережено в треках</string>
+    <string name="route_save_failed">Маршрут не збережено: %1$s</string>
     <string name="route_preview_minutes">%1$s хв</string>
     <string name="route_preview_hours">%1$s год</string>
     <string name="route_preview_hours_minutes">%1$s год %2$s хв</string>

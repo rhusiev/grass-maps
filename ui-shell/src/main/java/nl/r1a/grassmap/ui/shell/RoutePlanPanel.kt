@@ -59,8 +59,8 @@ private const val RECENT_LIMIT = 5
 /**
  * The planning panel (T-0302, stops T-0303, controls and history T-0304): the
  * start/end plan, the editable stop chain, the returned alternatives, the
- * four-field preview, the turn stepper and the Start action. The map and this
- * card read the same [RoutePlanState], so an alternative changes both or
+ * preview with its Save and Start actions, and the turn stepper. The map and
+ * this card read the same [RoutePlanState], so an alternative changes both or
  * neither.
  *
  * The preview card is [routePlanPreview] and nothing else. Undo, redo, swap, the
@@ -99,6 +99,7 @@ fun RoutePlanPanel(
     onRedo: () -> Unit,
     onSwap: () -> Unit,
     onStart: () -> Unit,
+    onSave: () -> Unit,
     onClose: () -> Unit,
     onApplyPreferences: (RouteOptions) -> Unit,
     onResetPreferences: () -> Unit,
@@ -182,7 +183,7 @@ fun RoutePlanPanel(
                     )
                 }
                 if (preview != null) {
-                    PreviewCard(preview = preview, onStart = onStart)
+                    PreviewCard(preview = preview, onSave = onSave, onStart = onStart)
                 }
                 if (chart.isDrawable) {
                     AnalysisDetailsToggle(
@@ -619,39 +620,69 @@ private fun AlternativeChips(
     }
 }
 
+/**
+ * The preview card: the three values on the first row, the two actions on the
+ * card's trailing row with Start outermost, because it is the primary (T-0411).
+ *
+ * One row for all five does not fit a 360 dp screen. At 16 sp the three values
+ * alone are about 290 dp of the 312 dp the card has inside its padding in
+ * English, and the Ukrainian time with a long model name is wider than that on
+ * its own. So Save and Start take the trailing row, and the values keep the
+ * running width they have today.
+ */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 private fun PreviewCard(
     preview: RoutePreview,
+    onSave: () -> Unit,
     onStart: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier,
-        horizontalArrangement = Arrangement.spacedBy(VALUE_GAP_DP.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        ValueText(preview.time)
-        ValueText(preview.distance)
-        ValueText(preview.arrival)
-        Box(Modifier.weight(1f))
-        BasicText(
-            text = preview.start,
-            style =
-                TextStyle(
-                    color = Color.White,
-                    fontSize = ACTION_FONT_SP.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
-            modifier =
-                Modifier
-                    .background(ROUTE_ACTION_COLOR, RoundedCornerShape(CHIP_CORNER_DP.dp))
-                    .clickable(onClick = onStart)
-                    .padding(
-                        horizontal = CHIP_PADDING_HORIZONTAL_DP.dp,
-                        vertical = CHIP_PADDING_VERTICAL_DP.dp,
-                    ),
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(PANEL_ROW_GAP_DP.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(VALUE_GAP_DP.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ValueText(preview.time)
+            ValueText(preview.distance)
+            ValueText(preview.arrival)
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(PANEL_ROW_GAP_DP.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.weight(1f))
+            ActionChip(text = preview.save, onClick = onSave)
+            StartChip(text = preview.start, onClick = onStart)
+        }
     }
+}
+
+/** The Start action keeps its own primary look: white on the action colour. */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun StartChip(
+    text: String,
+    onClick: () -> Unit,
+) {
+    BasicText(
+        text = text,
+        style =
+            TextStyle(
+                color = Color.White,
+                fontSize = ACTION_FONT_SP.sp,
+                fontWeight = FontWeight.Bold,
+            ),
+        modifier =
+            Modifier
+                .background(ROUTE_ACTION_COLOR, RoundedCornerShape(CHIP_CORNER_DP.dp))
+                .clickable(onClick = onClick)
+                .padding(
+                    horizontal = CHIP_PADDING_HORIZONTAL_DP.dp,
+                    vertical = CHIP_PADDING_VERTICAL_DP.dp,
+                ),
+    )
 }
 
 @Suppress("ktlint:standard:function-naming")

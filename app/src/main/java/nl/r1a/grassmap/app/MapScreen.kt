@@ -1133,6 +1133,27 @@ private fun MapContent(
                         }
                     }
                 },
+                onSave = {
+                    scope.launch {
+                        when (val result = saveRoute(container.tracks, plan)) {
+                            is RouteSaveResult.Saved -> {
+                                Toast
+                                    .makeText(context, container.strings.resolve(ROUTE_SAVED_KEY), Toast.LENGTH_SHORT)
+                                    .show()
+                            }
+
+                            is RouteSaveResult.Failed -> {
+                                Log.w(TAG, "route save failed: ${result.error}")
+                                Toast
+                                    .makeText(
+                                        context,
+                                        container.strings.resolve(ROUTE_SAVE_FAILED_KEY, listOf(result.error.toString())),
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                            }
+                        }
+                    }
+                },
                 onClose = {
                     scope.launch {
                         invokePlannerCommand(container, RoutePlannerContract.clear, JsonObject(emptyMap()))

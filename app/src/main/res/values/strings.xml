@@ -134,6 +134,9 @@
     <string name="route_preferences_profile_hike">hike</string>
     <string name="route_preferences_profile_car">car</string>
     <string name="route_preview_start">Start</string>
+    <string name="route_preview_save">Save</string>
+    <string name="route_saved">Route saved to your tracks</string>
+    <string name="route_save_failed">Route not saved: %1$s</string>
     <string name="route_preview_minutes">%1$s min</string>
     <string name="route_preview_hours">%1$s h</string>
     <string name="route_preview_hours_minutes">%1$s h %2$s min</string>

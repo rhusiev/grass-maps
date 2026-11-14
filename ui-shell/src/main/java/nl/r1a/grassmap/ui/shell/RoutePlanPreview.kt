@@ -9,19 +9,25 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
- * The four things the preview shows, and nothing else: time, distance,
- * arrival and the Start action (T-0302). Elevation, slope, surface and way
- * detail belong to later tasks and must not be added here. The slope-aware
- * model's name (T-0407) sits inside the Time text, so it is not a fifth field.
+ * What the preview card shows: time, distance, arrival, Save and Start (T-0302,
+ * Save in T-0411). Elevation, slope, surface and way detail belong to later
+ * tasks and must not be added here. The slope-aware model's name (T-0407) sits
+ * inside the Time text, so it is not a field of its own.
+ *
+ * The design allows four elements in this card. Save is a fifth, taken as a
+ * product decision on 2026-11-14 because the library needs an in-UI way in and
+ * the card is where the route is. Start stays the primary action, so the two
+ * actions sit on the card's own trailing row, Save before Start.
  */
 enum class RoutePreviewField {
     Time,
     Distance,
     Arrival,
+    Save,
     Start,
 }
 
-/** One preview item. The Start item is the action; the other three are values. */
+/** One preview item. Save and Start are actions; the first three are values. */
 data class RoutePreviewEntry(
     val field: RoutePreviewField,
     val text: String,
@@ -37,18 +43,19 @@ data class RoutePreviewTime(
     val model: String,
 )
 
-/** The preview card. Construction fixes the list at four entries. */
+/** The preview card. Construction fixes the list at its five entries. */
 data class RoutePreview(
     val entries: List<RoutePreviewEntry>,
 ) {
     init {
-        require(entries.map { it.field } == FIELDS) { "the preview has exactly four fields" }
+        require(entries.map { it.field } == FIELDS) { "the preview has exactly five fields" }
     }
 
     val time: String get() = entries[0].text
     val distance: String get() = entries[1].text
     val arrival: String get() = entries[2].text
-    val start: String get() = entries[3].text
+    val save: String get() = entries[3].text
+    val start: String get() = entries[4].text
 
     private companion object {
         val FIELDS =
@@ -56,6 +63,7 @@ data class RoutePreview(
                 RoutePreviewField.Time,
                 RoutePreviewField.Distance,
                 RoutePreviewField.Arrival,
+                RoutePreviewField.Save,
                 RoutePreviewField.Start,
             )
     }
@@ -95,6 +103,7 @@ fun routePlanPreview(
                     RoutePreviewField.Arrival,
                     ARRIVAL_FORMAT.format(Instant.ofEpochMilli(arrivalMillis(option, seconds)).atZone(zone)),
                 ),
+                RoutePreviewEntry(RoutePreviewField.Save, strings.resolve(SAVE_KEY)),
                 RoutePreviewEntry(RoutePreviewField.Start, strings.resolve(START_KEY)),
             ),
     )
@@ -171,6 +180,7 @@ private const val METRES_PER_KILOMETRE = 1_000.0
 private const val MILLIS_PER_SECOND = 1_000.0
 private const val MODEL_SEPARATOR = " · "
 private const val START_KEY = "route_preview_start"
+private const val SAVE_KEY = "route_preview_save"
 private const val MINUTES_KEY = "route_preview_minutes"
 private const val HOURS_KEY = "route_preview_hours"
 private const val HOURS_MINUTES_KEY = "route_preview_hours_minutes"

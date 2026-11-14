@@ -33,9 +33,11 @@ class FakeClient:
     def __init__(self, answers: list[object]) -> None:
         self.answers = answers
         self.calls = 0
+        self.params: list[object] = []
 
     def invoke(self, command: str, params: object = None) -> object:
         self.calls += 1
+        self.params.append(params)
         answer = self.answers.pop(0)
         if isinstance(answer, BaseException):
             raise answer
@@ -150,14 +152,35 @@ class StandardPositionsTest(unittest.TestCase):
     def test_route_positions_extend_the_standard_capture(self) -> None:
         positions = map_goldens.cases("standard")
 
-        self.assertEqual(36, len(positions))
-        self.assertEqual(36, len({position[0] for position in positions}))
+        self.assertEqual(38, len(positions))
+        self.assertEqual(38, len({position[0] for position in positions}))
         self.assertEqual(
-            {"route-turns-z14", "route-turns-z15"},
+            {"route-turns-z14", "route-turns-z15", "route-colours-z14", "route-colours-z15"},
             set(map_goldens.ROUTE_POSITION_NAMES),
         )
         self.assertIsNotNone(map_goldens.route_fixture_for("route-turns-z15"))
         self.assertIsNone(map_goldens.route_fixture_for("place-a-z12"))
+
+    def test_the_colour_position_carries_the_annotated_route(self) -> None:
+        route = json.loads(map_goldens.route_fixture_for("route-colours-z15"))
+
+        self.assertIsNot(map_goldens.ROUTE_COLOUR_FIXTURE_PATH, map_goldens.ROUTE_FIXTURE_PATH)
+        segments = route["segments"]
+        self.assertEqual(4, len(segments))
+        self.assertEqual([0, 1, 2, 3], [segment["startIndex"] for segment in segments])
+        self.assertEqual([1, 2, 3, 4], [segment["endIndex"] for segment in segments])
+        surfaces = [segment["attributes"]["surface"] for segment in segments]
+        self.assertIn("gravel", surfaces)
+        self.assertIn("ground", surfaces)
+        self.assertEqual("steps", segments[2]["attributes"]["highway"])
+        grades = [segment["attributes"]["grade"] for segment in segments]
+        self.assertLess(min(grades), 0.0)
+        self.assertGreater(max(grades), 8.0)
+        self.assertAlmostEqual(
+            route["distanceMeters"],
+            sum(segment["distanceMeters"] for segment in segments),
+            places=3,
+        )
 
     def test_route_relation_positions_carry_the_fixture_component(self) -> None:
         positions = map_goldens.cases("standard")
@@ -329,6 +352,16 @@ class InvokeRouteTest(unittest.TestCase):
 
         self.assertIn("route=set", result)
         self.assertEqual(client.calls, 2)
+
+    def test_the_route_asks_for_the_slope_palette_and_the_captured_theme(self) -> None:
+        client = FakeClient(["route=set points=5 distance_m=669.822", "route=set points=5 distance_m=669.822"])
+
+        map_goldens.invoke_route(client, map_goldens.ROUTE_COLOUR_FIXTURE, dark=False)
+        map_goldens.invoke_route(client, map_goldens.ROUTE_COLOUR_FIXTURE, dark=True)
+
+        self.assertEqual("slope", client.params[0]["colour"])
+        self.assertFalse(client.params[0]["dark"])
+        self.assertTrue(client.params[1]["dark"])
 
 
 class CapturePositionTest(unittest.TestCase):

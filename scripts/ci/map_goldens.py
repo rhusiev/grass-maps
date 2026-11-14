@@ -177,15 +177,25 @@ POSITIONS = {
 # T-0311: the same fixed route on the Standard fixture, at a driving overview
 # zoom and at a walking zoom. The route and its turn maneuvers are committed so
 # the capture needs no routing pack.
+# T-0408: the same drawn positions with a route whose segments carry grade,
+# surface and highway, so the golden shows the slope colours, an unpaved dash
+# and the steps' stripe ink.
 ROUTE_CASES = {
     "standard": (
         ("route-turns-z14", 49.9520, 23.9502, 14.0, 0.0, 0.0),
         ("route-turns-z15", 49.9520, 23.9502, 15.0, 0.0, 0.0),
+        ("route-colours-z14", 49.9520, 23.9502, 14.0, 0.0, 0.0),
+        ("route-colours-z15", 49.9520, 23.9502, 15.0, 0.0, 0.0),
     ),
 }
 ROUTE_POSITION_NAMES = frozenset(case[0] for cases in ROUTE_CASES.values() for case in cases)
 ROUTE_FIXTURE_PATH = ROOT / "test-data" / "map-goldens" / "route-turns.json"
 ROUTE_FIXTURE = ROUTE_FIXTURE_PATH.read_text(encoding="utf-8")
+# The T-0408 fixture: the same line as route-turns.json, cut by the annotate
+# pass into four edges with a different grade, surface and way type each.
+ROUTE_COLOUR_POSITION_NAMES = frozenset({"route-colours-z14", "route-colours-z15"})
+ROUTE_COLOUR_FIXTURE_PATH = ROOT / "test-data" / "map-goldens" / "route-colours.json"
+ROUTE_COLOUR_FIXTURE = ROUTE_COLOUR_FIXTURE_PATH.read_text(encoding="utf-8")
 
 # T-0418/T-0419: hiking and cycling routes sharing fixture tracks, at an
 # overview, a waymark zoom and the node-number zoom. The component is the
@@ -219,6 +229,8 @@ def cases(profile: str) -> tuple[tuple[str, float, float, float, float, float], 
 
 def route_fixture_for(name: str) -> str | None:
     """The committed route for a route golden, or None for a plain one."""
+    if name in ROUTE_COLOUR_POSITION_NAMES:
+        return ROUTE_COLOUR_FIXTURE
     return ROUTE_FIXTURE if name in ROUTE_POSITION_NAMES else None
 
 
@@ -520,14 +532,20 @@ def invoke_camera(
 def invoke_route(
     client: control_client.ControlClient,
     route_json: str | None,
+    dark: bool = False,
 ) -> str:
     """Apply the fixed route, or clear it, before a golden position.
 
     The command draws through the same route layer the product uses. It retries
     `not_ready` until the map surface has bound, and a socket timeout is retried
-    because the call is idempotent.
+    because the call is idempotent. `dark` selects the dark round-10 palette for
+    the coloured line (T-0408) when the capture selected a dark map style.
     """
-    params: dict[str, object] = {"route": json.loads(route_json) if route_json else None}
+    params: dict[str, object] = {
+        "route": json.loads(route_json) if route_json else None,
+        "colour": "slope",
+        "dark": dark,
+    }
     deadline = time.monotonic() + CAMERA_READY_TIMEOUT_S
     while True:
         try:
@@ -1004,12 +1022,13 @@ def capture(
         shots = []
         current_route: str | None = None
         current_relations: str | None = None
+        route_dark = style is not None and style.endswith("dark")
         selected = positions if positions is not None else cases(profile)
         for name, lat, lon, zoom, bearing, tilt in selected:
             stage = name
             fixture = route_fixture_for(name)
             if fixture != current_route:
-                invoke_route(client, fixture)
+                invoke_route(client, fixture, dark=route_dark)
                 current_route = fixture
             relations = route_relations_fixture_for(name)
             if relations != current_relations:
@@ -1443,9 +1462,10 @@ def build_recapture(
         client = wait_for_channel(adb)
         if args.style is not None:
             invoke_style(client, args.style)
+        route_dark = args.style is not None and args.style.endswith("dark")
 
         def recapture(name: str, params: dict[str, object]) -> dict[str, object]:
-            invoke_route(client, route_fixture_for(name))
+            invoke_route(client, route_fixture_for(name), dark=route_dark)
             invoke_route_relations(client, route_relations_fixture_for(name))
             return capture_position(adb, client, captured, name, params)
 

@@ -28,6 +28,7 @@ import nl.r1a.grassmap.plugin.api.model.TrackStyle
 import nl.r1a.grassmap.plugin.api.model.TrackingMode
 import nl.r1a.grassmap.plugin.api.provider.Route
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TrackLayerTest {
@@ -90,6 +91,28 @@ class TrackLayerTest {
             assertEquals(listOf(listOf(track("b", "#E53935"))), host.draws)
 
             job.cancel()
+        }
+
+    @Test
+    fun aGradientRequestDrawsTheOwnColourAndNamesTheGap() =
+        runTest {
+            val library = listOf(track("a", "#1E88E5"))
+            val host = RecordingMapHost()
+            val logs = mutableListOf<String>()
+
+            val outcome =
+                TrackLayer(
+                    MutableStateFlow(library),
+                    { host },
+                    log = { message -> logs += message },
+                    colouring = TrackColouring.Gradient,
+                ).refresh()
+
+            assertEquals(Outcome.Success(Unit), outcome)
+            assertEquals(listOf(library), host.draws)
+            assertEquals(1, logs.size)
+            assertTrue(logs.single().contains("no surface data"))
+            assertTrue(logs.single().contains("no heights"))
         }
 
     private fun track(

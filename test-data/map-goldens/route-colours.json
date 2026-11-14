@@ -1,0 +1,48 @@
+{
+  "geometry": [
+    {"lat": 49.95, "lon": 23.9486},
+    {"lat": 49.95, "lon": 23.9503},
+    {"lat": 49.9524, "lon": 23.9503},
+    {"lat": 49.9524, "lon": 23.9519},
+    {"lat": 49.9539, "lon": 23.9519}
+  ],
+  "distanceMeters": 669.766,
+  "durationSeconds": 558.139,
+  "segments": [
+    {
+      "startIndex": 0,
+      "endIndex": 1,
+      "distanceMeters": 121.633,
+      "durationSeconds": 101.361,
+      "attributes": {"grade": 3.5, "surface": "asphalt", "highway": "residential"}
+    },
+    {
+      "startIndex": 1,
+      "endIndex": 2,
+      "distanceMeters": 266.868,
+      "durationSeconds": 222.39,
+      "attributes": {"grade": 9.0, "surface": "gravel", "highway": "track"}
+    },
+    {
+      "startIndex": 2,
+      "endIndex": 3,
+      "distanceMeters": 114.473,
+      "durationSeconds": 95.394,
+      "attributes": {"grade": -12.0, "surface": "asphalt", "highway": "steps"}
+    },
+    {
+      "startIndex": 3,
+      "endIndex": 4,
+      "distanceMeters": 166.792,
+      "durationSeconds": 138.994,
+      "attributes": {"grade": 0.5, "surface": "ground", "highway": "path"}
+    }
+  ],
+  "instructions": [
+    {"text": "Walk east along the lane", "distanceAlongRouteMeters": 0.0, "durationSeconds": 101.361, "maneuver": "1"},
+    {"text": "Turn left onto the north lane", "distanceAlongRouteMeters": 121.633, "durationSeconds": 222.39, "maneuver": "15"},
+    {"text": "Turn right onto the east lane", "distanceAlongRouteMeters": 388.501, "durationSeconds": 95.394, "maneuver": "10"},
+    {"text": "Turn left onto the north lane", "distanceAlongRouteMeters": 502.974, "durationSeconds": 138.994, "maneuver": "15"},
+    {"text": "Arrive at the destination", "distanceAlongRouteMeters": 669.766, "durationSeconds": 0.0, "maneuver": "4"}
+  ]
+}

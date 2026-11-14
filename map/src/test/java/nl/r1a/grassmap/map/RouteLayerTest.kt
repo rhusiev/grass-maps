@@ -10,6 +10,8 @@ import nl.r1a.grassmap.map.style.toFeatureCollection
 import nl.r1a.grassmap.map.style.toPointFeatureCollection
 import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.RouteLineRun
+import nl.r1a.grassmap.plugin.api.model.RouteLineStyle
 import nl.r1a.grassmap.plugin.api.model.StyleId
 import nl.r1a.grassmap.plugin.api.model.StyleSpec
 import nl.r1a.grassmap.plugin.api.provider.Route
@@ -63,6 +65,29 @@ class RouteLayerTest {
 
         state.updateRoute(null)
         assertNull(state.route.value)
+    }
+
+    @Test
+    fun theHostStateKeepsTheColourStyleWithItsRoute() {
+        val state =
+            MapHostState(
+                StyleSpec(StyleId("standard"), """{"version":8}"""),
+                Camera(center = GeoPoint(49.84, 24.03), zoom = 12.0),
+            ) { null }
+        val route = route()
+        val style =
+            RouteLineStyle(
+                runs = listOf(RouteLineRun(0, 1, "#4A3AA7")),
+                stripeColour = "#202124",
+            )
+
+        state.updateRoute(route, style)
+
+        assertEquals(style, state.routeStyle.value)
+
+        state.updateRoute(route)
+
+        assertEquals(RouteLineStyle(), state.routeStyle.value)
     }
 
     private fun route(): Route =

@@ -108,6 +108,7 @@ scripts/ci/test-count.sh || fail "unit tests (empty suite)"
 
 step "Rust tests"
 ( cd "$ROOT/rust/grass-core" && "$CARGO" test --locked ) || fail "rust tests (grass-core)"
+( cd "$ROOT/rust/grass-regions" && "$CARGO" test --locked ) || fail "rust tests (grass-regions)"
 ( cd "$ROOT/tools/pipeline/osm-extract" && "$CARGO" test --locked ) || fail "rust tests (osm-extract)"
 
 step "Script tests (map goldens, benchmark)"

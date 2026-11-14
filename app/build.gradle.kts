@@ -1,5 +1,6 @@
 import buildlogic.CheckPrivacyManifestTask
 import buildlogic.GeneratePluginRegistryTask
+import buildlogic.useGrassRegionsInTests
 import com.android.build.api.artifact.SingleArtifact
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.testing.Test
@@ -232,3 +233,5 @@ tasks.withType<Test>().configureEach {
         .withPropertyName("routeWarningFixtureRegion")
         .withPathSensitivity(PathSensitivity.RELATIVE)
 }
+
+useGrassRegionsInTests()

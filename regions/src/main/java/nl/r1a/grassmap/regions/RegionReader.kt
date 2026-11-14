@@ -4,45 +4,59 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.longOrNull
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.RegionAccess
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.RouteNetwork
+import nl.r1a.grassmap.plugin.api.model.RouteNetworkNode
+import nl.r1a.grassmap.plugin.api.model.RouteRelation
+import nl.r1a.grassmap.plugin.api.model.RouteRelationMember
 import nl.r1a.grassmap.plugin.api.model.RouteRelations
-import nl.r1a.grassmap.plugin.api.model.RouteRelationsJson
 import nl.r1a.grassmap.plugin.api.model.WayAlertElementType
 import nl.r1a.grassmap.plugin.api.model.WayAlertFeature
 import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
 import nl.r1a.grassmap.plugin.api.model.WayAlertHit
 import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmap.regions.core.AlertKind
+import nl.r1a.grassmap.regions.core.LatLon
+import nl.r1a.grassmap.regions.core.OsmElementType
+import nl.r1a.grassmap.regions.core.RegionReadException
+import nl.r1a.grassmap.regions.core.RegionRelations
+import nl.r1a.grassmap.regions.core.RouteKind
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
-import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.hypot
-import kotlin.math.max
-import kotlin.math.min
+import nl.r1a.grassmap.plugin.api.model.Route as RouteModel
+import nl.r1a.grassmap.regions.core.AlertHit as CoreAlertHit
+import nl.r1a.grassmap.regions.core.RegionReader as NativeRegionReader
 
 /**
  * Reads the mounted region's way-alert features and answers corridor queries
- * along a route (T-0319).
+ * along a route (T-0319), and reads the region's route relations (T-0418).
+ *
+ * Since T-0321 the component read, its parse and both queries run in the Rust
+ * crate `rust/grass-regions` behind a uniffi `RegionReader`; this class is the
+ * Kotlin side of that boundary and keeps three things:
+ *
+ * - the mount contract: it parses `manifest.json`, selects the component and
+ *   checks its format, version, declared size and file, exactly as before
+ *   ([RegionManifestParser], [RegionIdentifiers]);
+ * - the plugin-api model: the native values are mapped onto `WayAlertHit` and
+ *   `RouteRelations` here, so no caller or plugin sees a native type;
+ * - the per-mount caches: the selected component and the assembled relations
+ *   are kept for the reader's lifetime, and the parsed feature list is kept
+ *   inside the native reader.
  *
  * The component is `way-alerts.geojson`, a GeoJSON `FeatureCollection` whose
  * features carry `kind` (`railway_crossing`, `tunnel`, `hazard`, `ford` or
  * `barrier`), `osmType` (`node` or `way`) and `osmId`. It is region data, not
  * a Valhalla tile: the engine does not return hazards, fords or barriers, and
- * T-0301 verified its tiles do not carry them.
+ * T-0301 verified its tiles do not carry them. `relations.json` is the
+ * route-relations document.
  *
- * A package without the component is valid and reports no features, so an
- * older region still opens. A component that is present but unreadable is
+ * A package without a component is valid and reports no features, so an older
+ * region still opens. A component that is present but unreadable is
  * [AppError.CorruptData]; a format or version this reader does not know is
  * [AppError.Unsupported].
  *
@@ -53,10 +67,11 @@ import kotlin.math.min
 class RegionReader(
     private val directory: File,
 ) : RegionAccess {
+    private val native = NativeRegionReader()
     private val loadMutex = Mutex()
 
     @Volatile
-    private var loaded: Outcome<List<WayAlertFeature>>? = null
+    private var loadedFeatures: Outcome<Component?>? = null
 
     @Volatile
     private var loadedRelations: Outcome<RouteRelations>? = null
@@ -72,17 +87,18 @@ class RegionReader(
             return Outcome.Success(emptyList())
         }
         return withContext(Dispatchers.IO) {
-            when (val features = load()) {
-                is Outcome.Failure -> features
-                is Outcome.Success -> Outcome.Success(CorridorQuery.hits(route, corridorMeters, features.value))
-            }
-        }
-    }
+            when (val component = featuresComponent()) {
+                is Outcome.Failure -> {
+                    component
+                }
 
-    private suspend fun load(): Outcome<List<WayAlertFeature>> {
-        loaded?.let { return it }
-        return loadMutex.withLock {
-            loaded ?: read().also { loaded = it }
+                is Outcome.Success -> {
+                    when (val value = component.value) {
+                        null -> Outcome.Success(emptyList())
+                        else -> hits(route, corridorMeters, value)
+                    }
+                }
+            }
         }
     }
 
@@ -94,46 +110,73 @@ class RegionReader(
             }
         }
 
-    private fun read(): Outcome<List<WayAlertFeature>> {
-        val manifest =
-            when (val outcome = manifest()) {
-                is Outcome.Failure -> return outcome
-                is Outcome.Success -> outcome.value
-            }
-        val component =
-            manifest.components.firstOrNull { it.kind == COMPONENT_KIND }
-                ?: return Outcome.Success(emptyList())
-        val text =
-            when (val outcome = componentText(manifest, component, COMPONENT_FORMAT, COMPONENT_FORMAT_VERSION)) {
-                is Outcome.Failure -> return outcome
-                is Outcome.Success -> outcome.value
-            }
-        return parse(text)
+    /** The corridor query, answered by the native reader. */
+    private fun hits(
+        route: Route,
+        corridorMeters: Double,
+        component: Component,
+    ): Outcome<List<WayAlertHit>> =
+        runCatchingNative {
+            native
+                .wayAlertHits(
+                    componentPath = component.path,
+                    expectedBytes = component.bytes,
+                    route = route.geometry.map { LatLon(it.latitude, it.longitude) },
+                    routeDistanceMeters = route.distanceMeters,
+                    corridorMeters = corridorMeters,
+                ).map { it.toModel() }
+        }
+
+    private suspend fun featuresComponent(): Outcome<Component?> {
+        loadedFeatures?.let { return it }
+        return loadMutex.withLock {
+            loadedFeatures ?: component(COMPONENT_KIND, COMPONENT_FORMAT, COMPONENT_FORMAT_VERSION)
+                .also { loadedFeatures = it }
+        }
     }
 
     private fun readRelations(): Outcome<RouteRelations> {
+        val component =
+            when (val outcome = component(RELATIONS_COMPONENT_KIND, RELATIONS_COMPONENT_FORMAT, RELATIONS_COMPONENT_FORMAT_VERSION)) {
+                is Outcome.Failure -> return outcome
+                is Outcome.Success -> outcome.value ?: return Outcome.Success(RouteRelations.EMPTY)
+            }
+        return runCatchingNative { native.routeRelations(component.path, component.bytes).toModel() }
+    }
+
+    /**
+     * The manifest's component of [kind], after its format, version and size
+     * are checked, or null when the package does not declare it.
+     */
+    private fun component(
+        kind: String,
+        format: String,
+        formatVersion: Int,
+    ): Outcome<Component?> {
         val manifest =
             when (val outcome = manifest()) {
                 is Outcome.Failure -> return outcome
                 is Outcome.Success -> outcome.value
             }
-        val component =
-            manifest.components.firstOrNull { it.kind == RELATIONS_COMPONENT_KIND }
-                ?: return Outcome.Success(RouteRelations.EMPTY)
-        val text =
-            when (
-                val outcome =
-                    componentText(
-                        manifest,
-                        component,
-                        RELATIONS_COMPONENT_FORMAT,
-                        RELATIONS_COMPONENT_FORMAT_VERSION,
-                    )
-            ) {
-                is Outcome.Failure -> return outcome
-                is Outcome.Success -> outcome.value
+        val component = manifest.components.firstOrNull { it.kind == kind } ?: return Outcome.Success(null)
+        if (component.format != format || component.formatVersion != formatVersion) {
+            return Outcome.Failure(AppError.Unsupported)
+        }
+        if (component.bytes <= 0L || component.bytes > MAX_COMPONENT_BYTES) {
+            return Outcome.Failure(AppError.CorruptData)
+        }
+        val file = File(directory, component.file)
+        return try {
+            if (!file.isFile || Files.isSymbolicLink(file.toPath()) || file.length() != component.bytes) {
+                Outcome.Failure(AppError.CorruptData)
+            } else {
+                Outcome.Success(Component(path = file.absolutePath, bytes = component.bytes))
             }
-        return RouteRelationsJson.decode(text)
+        } catch (exception: IOException) {
+            Outcome.Failure(AppError.CorruptData)
+        } catch (exception: SecurityException) {
+            Outcome.Failure(AppError.CorruptData)
+        }
     }
 
     /**
@@ -161,136 +204,11 @@ class RegionReader(
         return RegionManifestParser.parse(manifestBytes, region, version)
     }
 
-    /** The component's text, after its format, version and size are checked. */
-    private fun componentText(
-        manifest: RegionManifest,
-        component: RegionComponent,
-        format: String,
-        formatVersion: Int,
-    ): Outcome<String> {
-        if (component.format != format || component.formatVersion != formatVersion) {
-            return Outcome.Failure(AppError.Unsupported)
-        }
-        if (component.bytes <= 0L || component.bytes > MAX_COMPONENT_BYTES) {
-            return Outcome.Failure(AppError.CorruptData)
-        }
-        val file = File(directory, component.file)
-        return try {
-            if (!file.isFile || Files.isSymbolicLink(file.toPath()) || file.length() != component.bytes) {
-                Outcome.Failure(AppError.CorruptData)
-            } else {
-                Outcome.Success(file.readText())
-            }
-        } catch (exception: IOException) {
-            Outcome.Failure(AppError.CorruptData)
-        } catch (exception: SecurityException) {
-            Outcome.Failure(AppError.CorruptData)
-        }
-    }
-
-    private fun parse(text: String): Outcome<List<WayAlertFeature>> {
-        val root =
-            try {
-                Json.parseToJsonElement(text) as? JsonObject
-            } catch (exception: IllegalArgumentException) {
-                null
-            } ?: return corrupt()
-        if (root.string("type") != FEATURE_COLLECTION) {
-            return corrupt()
-        }
-        val features = root["features"] as? JsonArray ?: return corrupt()
-        val parsed = features.map { parseFeature(it) }
-        if (parsed.any { it == null }) {
-            return corrupt()
-        }
-        return Outcome.Success(parsed.filterNotNull())
-    }
-
-    private fun parseFeature(element: JsonElement): WayAlertFeature? {
-        val feature = element as? JsonObject ?: return null
-        if (feature.string("type") != FEATURE) {
-            return null
-        }
-        val properties = feature["properties"] as? JsonObject ?: return null
-        val kind =
-            when (properties.string("kind")) {
-                "railway_crossing" -> WayAlertFeatureKind.RailwayCrossing
-                "tunnel" -> WayAlertFeatureKind.Tunnel
-                "hazard" -> WayAlertFeatureKind.Hazard
-                "ford" -> WayAlertFeatureKind.Ford
-                "barrier" -> WayAlertFeatureKind.Barrier
-                else -> return null
-            }
-        val elementType =
-            when (properties.string("osmType")) {
-                "node" -> WayAlertElementType.Node
-                "way" -> WayAlertElementType.Way
-                else -> return null
-            }
-        val osmId = (properties["osmId"] as? JsonPrimitive)?.longOrNull ?: return null
-        if (osmId <= 0L) {
-            return null
-        }
-        val geometry = feature["geometry"] as? JsonObject ?: return null
-        val points = parseGeometry(geometry) ?: return null
-        if (elementType == WayAlertElementType.Node && points.size != 1) {
-            return null
-        }
-        if (elementType == WayAlertElementType.Way && points.size < MIN_WAY_POINTS) {
-            return null
-        }
-        if (kind == WayAlertFeatureKind.Tunnel && elementType != WayAlertElementType.Way) {
-            return null
-        }
-        return WayAlertFeature(
-            kind = kind,
-            elementType = elementType,
-            osmId = osmId,
-            geometry = points,
-        )
-    }
-
-    private fun parseGeometry(geometry: JsonObject): List<GeoPoint>? {
-        val coordinates = geometry["coordinates"] as? JsonArray ?: return null
-        return when (geometry.string("type")) {
-            POINT -> {
-                listOfNotNull(parsePoint(coordinates))
-            }
-
-            LINE_STRING -> {
-                if (coordinates.size < MIN_WAY_POINTS) {
-                    null
-                } else {
-                    coordinates.map { parsePoint(it) ?: return null }
-                }
-            }
-
-            else -> {
-                null
-            }
-        }
-    }
-
-    private fun parsePoint(element: JsonElement): GeoPoint? {
-        val pair = element as? JsonArray ?: return null
-        if (pair.size != POINT_COORDINATES) {
-            return null
-        }
-        val longitude = (pair[0] as? JsonPrimitive)?.doubleOrNull ?: return null
-        val latitude = (pair[1] as? JsonPrimitive)?.doubleOrNull ?: return null
-        if (!longitude.isFinite() || !latitude.isFinite()) {
-            return null
-        }
-        if (latitude !in -MAX_LATITUDE..MAX_LATITUDE || longitude !in -MAX_LONGITUDE..MAX_LONGITUDE) {
-            return null
-        }
-        return GeoPoint(latitude = latitude, longitude = longitude)
-    }
-
-    private fun JsonObject.string(key: String): String? =
-        (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotBlank() }
-
-    private fun corrupt(): Outcome<List<WayAlertFeature>> = Outcome.Failure(AppError.CorruptData)
+    /** One selected component file and the size the manifest declares. */
+    private data class Component(
+        val path: String,
+        val bytes: Long,
+    )
 
     companion object {
         /** The manifest component kind this reader owns. */
@@ -303,270 +221,100 @@ class RegionReader(
         const val RELATIONS_COMPONENT_FORMAT: String = "route-relations-json"
         const val RELATIONS_COMPONENT_FORMAT_VERSION: Int = 1
 
-        private const val FEATURE_COLLECTION = "FeatureCollection"
-        private const val FEATURE = "Feature"
-        private const val POINT = "Point"
-        private const val LINE_STRING = "LineString"
-        private const val POINT_COORDINATES = 2
-        private const val MIN_WAY_POINTS = 2
         private const val MIN_ROUTE_POINTS = 2
-        private const val MAX_LATITUDE = 90.0
-        private const val MAX_LONGITUDE = 180.0
+
+        /** The same bound the native reader repeats before it reads a file. */
         private const val MAX_COMPONENT_BYTES = 64L * 1024L * 1024L
     }
 }
 
-/**
- * The corridor geometry: the earliest point on the route where each feature
- * lies within the corridor, and the feature's closest distance to the line.
- *
- * The route is projected onto a local metre grid around its first point. At a
- * route's scale the equirectangular error is far below the corridor width, and
- * a projection keeps the segment-to-segment maths simple and testable.
- */
-internal object CorridorQuery {
-    /** Above this dot product the two segments count as parallel; the normal path stays stable. */
-    private const val PARALLEL_EPSILON = 1e-12
-
-    fun hits(
-        route: Route,
-        corridorMeters: Double,
-        features: List<WayAlertFeature>,
-    ): List<WayAlertHit> {
-        if (route.geometry.size < 2 || features.isEmpty()) {
-            return emptyList()
-        }
-        val origin = route.geometry.first()
-        val projection = LocalProjection(origin)
-        val routePoints = route.geometry.map(projection::project)
-        val routeLength = polylineLength(routePoints)
-        if (routeLength <= 0.0) {
-            return emptyList()
-        }
-        val routeAlong = cumulativeAlong(routePoints)
-        val routeBox = inflatedBox(routePoints, corridorMeters)
-        val scale = routeScale(route, routeLength)
-        val hits = mutableListOf<WayAlertHit>()
-        for (feature in features) {
-            val featurePoints = feature.geometry.map(projection::project)
-            if (!boxesTouch(inflatedBox(featurePoints, corridorMeters), routeBox)) {
-                continue
-            }
-            val contact = contactWithRoute(featurePoints, routePoints, routeAlong, corridorMeters) ?: continue
-            hits +=
-                WayAlertHit(
-                    feature = feature,
-                    alongRouteMeters = (contact.along * scale).coerceIn(0.0, scaledTotal(route, routeLength)),
-                    distanceFromRouteMeters = contact.distance,
-                )
-        }
-        return hits.sortedWith(compareBy({ it.alongRouteMeters }, { it.feature.osmId }))
+/** The native call, with its typed failure and a missing library both mapped. */
+private inline fun <T> runCatchingNative(call: () -> T): Outcome<T> =
+    try {
+        Outcome.Success(call())
+    } catch (error: RegionReadException) {
+        Outcome.Failure(error.toAppError())
+    } catch (error: LinkageError) {
+        Outcome.Failure(AppError.Internal(NATIVE_LINKAGE_ERROR))
     }
 
-    private fun routeScale(
-        route: Route,
-        routeLength: Double,
-    ): Double {
-        val total = route.distanceMeters
-        return if (total.isFinite() && total > 0.0) total / routeLength else 1.0
+private fun RegionReadException.toAppError(): AppError =
+    when (this) {
+        is RegionReadException.Unsupported -> AppError.Unsupported
+        is RegionReadException.InvalidInput -> AppError.InvalidInput
+        is RegionReadException.Io -> AppError.CorruptData
+        is RegionReadException.CorruptData -> AppError.CorruptData
     }
 
-    private fun scaledTotal(
-        route: Route,
-        routeLength: Double,
-    ): Double = if (route.distanceMeters.isFinite() && route.distanceMeters > 0.0) route.distanceMeters else routeLength
+private const val NATIVE_LINKAGE_ERROR: String = "regions.native"
 
-    private fun contactWithRoute(
-        feature: List<Point>,
-        route: List<Point>,
-        routeAlong: DoubleArray,
-        corridorMeters: Double,
-    ): Contact? {
-        var earliestAlong: Double? = null
-        var closestDistance = Double.MAX_VALUE
-        for (routeIndex in 0 until route.lastIndex) {
-            val start = route[routeIndex]
-            val end = route[routeIndex + 1]
-            val startAlong = routeAlong[routeIndex]
-            val segmentLength = distance(start, end)
-            if (feature.size == 1) {
-                val projection = projectOnSegment(feature[0], start, end)
-                if (projection.distance <= corridorMeters) {
-                    val along = startAlong + projection.t * segmentLength
-                    earliestAlong = min(earliestAlong ?: along, along)
-                    closestDistance = min(closestDistance, projection.distance)
-                }
-            } else {
-                for (featureIndex in 0 until feature.lastIndex) {
-                    val closest = closestBetween(start, end, feature[featureIndex], feature[featureIndex + 1])
-                    if (closest.distance <= corridorMeters) {
-                        val along = startAlong + closest.routeT * segmentLength
-                        earliestAlong = min(earliestAlong ?: along, along)
-                        closestDistance = min(closestDistance, closest.distance)
-                    }
-                }
-            }
-        }
-        val along = earliestAlong ?: return null
-        return Contact(along = along, distance = closestDistance)
+private fun LatLon.toGeoPoint(): GeoPoint = GeoPoint(latitude = latitude, longitude = longitude)
+
+private fun AlertKind.toModel(): WayAlertFeatureKind =
+    when (this) {
+        AlertKind.RAILWAY_CROSSING -> WayAlertFeatureKind.RailwayCrossing
+        AlertKind.TUNNEL -> WayAlertFeatureKind.Tunnel
+        AlertKind.HAZARD -> WayAlertFeatureKind.Hazard
+        AlertKind.FORD -> WayAlertFeatureKind.Ford
+        AlertKind.BARRIER -> WayAlertFeatureKind.Barrier
     }
 
-    private fun cumulativeAlong(route: List<Point>): DoubleArray {
-        val along = DoubleArray(route.size)
-        for (index in 1 until route.size) {
-            along[index] = along[index - 1] + distance(route[index - 1], route[index])
-        }
-        return along
+private fun OsmElementType.toModel(): WayAlertElementType =
+    when (this) {
+        OsmElementType.NODE -> WayAlertElementType.Node
+        OsmElementType.WAY -> WayAlertElementType.Way
     }
 
-    private fun polylineLength(points: List<Point>): Double {
-        var total = 0.0
-        for (index in 0 until points.lastIndex) {
-            total += distance(points[index], points[index + 1])
-        }
-        return total
-    }
-
-    /** The closest point to [point] on segment [start]-[end], as a fraction and a distance. */
-    private fun projectOnSegment(
-        point: Point,
-        start: Point,
-        end: Point,
-    ): Projection {
-        val dx = end.x - start.x
-        val dy = end.y - start.y
-        val lengthSquared = dx * dx + dy * dy
-        if (lengthSquared <= 0.0) {
-            return Projection(t = 0.0, distance = distance(point, start))
-        }
-        val t = (((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared).coerceIn(0.0, 1.0)
-        val closest = Point(start.x + t * dx, start.y + t * dy)
-        return Projection(t = t, distance = distance(point, closest))
-    }
-
-    /**
-     * The closest approach of two segments, after Ericson, Real-Time Collision
-     * Detection section 5.1.9. [routeT] is the fraction along the route
-     * segment and [distance] the separation at the closest points.
-     */
-    private fun closestBetween(
-        routeStart: Point,
-        routeEnd: Point,
-        featureStart: Point,
-        featureEnd: Point,
-    ): SegmentContact {
-        val d1x = routeEnd.x - routeStart.x
-        val d1y = routeEnd.y - routeStart.y
-        val d2x = featureEnd.x - featureStart.x
-        val d2y = featureEnd.y - featureStart.y
-        val rx = routeStart.x - featureStart.x
-        val ry = routeStart.y - featureStart.y
-        val a = d1x * d1x + d1y * d1y
-        val e = d2x * d2x + d2y * d2y
-        val f = d2x * rx + d2y * ry
-        var s: Double
-        var t: Double
-        if (a <= PARALLEL_EPSILON && e <= PARALLEL_EPSILON) {
-            s = 0.0
-            t = 0.0
-        } else if (a <= PARALLEL_EPSILON) {
-            s = 0.0
-            t = (f / e).coerceIn(0.0, 1.0)
-        } else {
-            val c = d1x * rx + d1y * ry
-            if (e <= PARALLEL_EPSILON) {
-                t = 0.0
-                s = (-c / a).coerceIn(0.0, 1.0)
-            } else {
-                val b = d1x * d2x + d1y * d2y
-                val denominator = a * e - b * b
-                s = if (abs(denominator) > PARALLEL_EPSILON) ((b * f - c * e) / denominator).coerceIn(0.0, 1.0) else 0.0
-                t = (b * s + f) / e
-                if (t < 0.0) {
-                    t = 0.0
-                    s = (-c / a).coerceIn(0.0, 1.0)
-                } else if (t > 1.0) {
-                    t = 1.0
-                    s = ((b - c) / a).coerceIn(0.0, 1.0)
-                }
-            }
-        }
-        val routePoint = Point(routeStart.x + s * d1x, routeStart.y + s * d1y)
-        val featurePoint = Point(featureStart.x + t * d2x, featureStart.y + t * d2y)
-        return SegmentContact(routeT = s, distance = distance(routePoint, featurePoint))
-    }
-
-    private fun inflatedBox(
-        points: List<Point>,
-        padding: Double,
-    ): Box {
-        var minX = Double.MAX_VALUE
-        var minY = Double.MAX_VALUE
-        var maxX = -Double.MAX_VALUE
-        var maxY = -Double.MAX_VALUE
-        for (point in points) {
-            minX = min(minX, point.x)
-            minY = min(minY, point.y)
-            maxX = max(maxX, point.x)
-            maxY = max(maxY, point.y)
-        }
-        return Box(minX - padding, minY - padding, maxX + padding, maxY + padding)
-    }
-
-    private fun boxesTouch(
-        first: Box,
-        second: Box,
-    ): Boolean = first.minX <= second.maxX && second.minX <= first.maxX && first.minY <= second.maxY && second.minY <= first.maxY
-
-    private fun distance(
-        first: Point,
-        second: Point,
-    ): Double = hypot(first.x - second.x, first.y - second.y)
-
-    private data class Point(
-        val x: Double,
-        val y: Double,
+private fun CoreAlertHit.toModel(): WayAlertHit =
+    WayAlertHit(
+        feature =
+            WayAlertFeature(
+                kind = feature.kind.toModel(),
+                elementType = feature.elementType.toModel(),
+                osmId = feature.osmId,
+                geometry = feature.geometry.map { it.toGeoPoint() },
+            ),
+        alongRouteMeters = alongRouteMeters,
+        distanceFromRouteMeters = distanceFromRouteMeters,
     )
 
-    private data class Projection(
-        val t: Double,
-        val distance: Double,
-    )
+private fun RouteKind.toModel(): RouteModel =
+    when (this) {
+        RouteKind.HIKING -> RouteModel.Hiking
+        RouteKind.CYCLING -> RouteModel.Cycling
+    }
 
-    private data class SegmentContact(
-        val routeT: Double,
-        val distance: Double,
-    )
-
-    private data class Contact(
-        val along: Double,
-        val distance: Double,
-    )
-
-    private data class Box(
-        val minX: Double,
-        val minY: Double,
-        val maxX: Double,
-        val maxY: Double,
-    )
-
-    /** WGS84 degrees to local metres, around the route's first point. */
-    private class LocalProjection(
-        origin: GeoPoint,
-    ) {
-        private val originLatitude = origin.latitude
-        private val originLongitude = origin.longitude
-        private val metresPerDegreeLongitude = METRES_PER_DEGREE * cos(Math.toRadians(originLatitude))
-
-        fun project(point: GeoPoint): Point =
-            Point(
-                x = (point.longitude - originLongitude) * metresPerDegreeLongitude,
-                y = (point.latitude - originLatitude) * METRES_PER_DEGREE,
+private fun RegionRelations.toModel(): RouteRelations {
+    val ways = LinkedHashMap<Long, List<GeoPoint>>(this.ways.size)
+    for (way in this.ways) {
+        ways[way.id] = way.points.map { it.toGeoPoint() }
+    }
+    val nodes =
+        this.nodes.map { node ->
+            RouteNetworkNode(
+                id = node.id,
+                point = node.point.toGeoPoint(),
+                network = RouteNetwork.fromTag(RouteModel.Cycling, node.network),
+                reference = node.reference,
             )
-
-        private companion object {
-            /** The mean degree of latitude; the corridor is tens of metres wide. */
-            const val METRES_PER_DEGREE = 111_320.0
         }
-    }
+    val relations =
+        this.relations.map { relation ->
+            val route = relation.route.toModel()
+            RouteRelation(
+                id = relation.id,
+                route = route,
+                network = RouteNetwork.fromTag(route, relation.network.ifEmpty { null }),
+                ref = relation.reference,
+                name = relation.name,
+                osmcSymbol = relation.osmcSymbol,
+                colour = relation.colour,
+                distanceMeters = relation.distanceMeters,
+                members =
+                    relation.members.map { member ->
+                        RouteRelationMember(wayId = member.wayId, role = member.role)
+                    },
+            )
+        }
+    return RouteRelations(ways = ways, relations = relations, nodes = nodes)
 }

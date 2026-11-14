@@ -1,3 +1,5 @@
+import buildlogic.useGrassRegionsInTests
+
 plugins {
     alias(libs.plugins.android.library)
 }
@@ -25,3 +27,5 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
 }
+
+useGrassRegionsInTests()

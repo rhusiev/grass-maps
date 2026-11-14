@@ -1,3 +1,4 @@
+import buildlogic.useGrassRegionsInTests
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.testing.Test
 
@@ -39,3 +40,5 @@ tasks.withType<Test>().configureEach {
         .withPropertyName("fixtureRegionPackage")
         .withPathSensitivity(PathSensitivity.RELATIVE)
 }
+
+useGrassRegionsInTests()

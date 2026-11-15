@@ -187,7 +187,7 @@ class DownloadsScreenTest {
                 region = CatalogFixture.LVIV,
                 state = DownloadTransferState.DOWNLOADING,
                 bytesDone = 76_100_977L,
-                bytesTotal = 152_201_954L,
+                bytesTotal = 10_000_000L,
             )
         val state =
             DownloadsScreen.state(
@@ -197,7 +197,7 @@ class DownloadsScreenTest {
         val row = state.availableRows.single { it.region == CatalogFixture.LVIV }
         assertEquals(DownloadRowStatus.DOWNLOADING, row.status)
         assertEquals(transfer, row.transfer)
-        assertEquals(50, DownloadsFormat.progressPercent(76_100_977L, 152_201_954L))
+        assertEquals(50, DownloadsFormat.progressPercent(5_000_000L, 10_000_000L))
     }
 
     @Test

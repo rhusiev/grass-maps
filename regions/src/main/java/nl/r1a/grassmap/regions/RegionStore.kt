@@ -110,8 +110,12 @@ class RegionStore(
     override suspend fun refresh(): Outcome<Unit> =
         refreshMutex.withLock {
             val currentToken = token
+            val fetchedCatalog =
+                // The catalogue is network contact like a package, so it names the
+                // same switch and is refused before a socket is opened.
+                network.request(policy.switch) { catalogClient.fetch(serverUrl, currentToken, policy) }
             val catalog =
-                when (val fetched = catalogClient.fetch(serverUrl, currentToken, policy)) {
+                when (val fetched = fetchedCatalog) {
                     is Outcome.Failure -> {
                         val problem = problemOf(fetched.error, tokenSent = currentToken != null)
                         log("catalog failed kind=${problem.kind} status=${problem.status}")

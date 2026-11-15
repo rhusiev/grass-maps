@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -91,6 +93,9 @@ fun DownloadsScreenContent(
         modifier =
             modifier
                 .background(SURFACE)
+                // Twenty-five oblast rows do not fit one screen, and the first-run
+                // offer sits above them, so the screen scrolls as one column.
+                .verticalScroll(rememberScrollState())
                 .padding(SCREEN_PADDING_DP.dp)
                 .widthIn(max = MAX_WIDTH_DP.dp),
         verticalArrangement = Arrangement.spacedBy(GAP_DP.dp),

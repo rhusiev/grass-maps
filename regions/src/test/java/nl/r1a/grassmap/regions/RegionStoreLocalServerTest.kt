@@ -85,7 +85,10 @@ class RegionStoreLocalServerTest {
                 val store = store(server.baseUrl)
                 try {
                     assertTrue(store.refresh() is Outcome.Success)
-                    val ids = store.data.value.catalog!!.regions.map { it.id }
+                    val ids =
+                        store.data.value.catalog!!
+                            .regions
+                            .map { it.id }
 
                     // Every entry is queued in one pass: no client-side subset and
                     // no queue length the catalogue can exceed.
@@ -143,20 +146,26 @@ class RegionStoreLocalServerTest {
                     assertEquals(Outcome.Failure(AppError.Server(401)), missing)
                     assertEquals(
                         DownloadProblemKind.TOKEN_REQUIRED,
-                        store.data.value.catalogProblem?.kind,
+                        store.data.value.catalogProblem
+                            ?.kind,
                     )
 
                     val wrong = store.setServer(server.baseUrl, "wrong-token-0123456789")
                     assertEquals(Outcome.Failure(AppError.Server(401)), wrong)
                     assertEquals(
                         DownloadProblemKind.TOKEN_REJECTED,
-                        store.data.value.catalogProblem?.kind,
+                        store.data.value.catalogProblem
+                            ?.kind,
                     )
 
                     val accepted = store.setServer(server.baseUrl, token)
                     assertEquals(Outcome.Success(Unit), accepted)
                     assertTrue(store.data.value.tokenPresent)
-                    assertFalse(store.data.value.toString().contains(token))
+                    assertFalse(
+                        store.data.value
+                            .toString()
+                            .contains(token),
+                    )
 
                     assertTrue(store.startDownload(CatalogFixture.LVIV) is Outcome.Success)
                     val done = withTimeout(60_000) { store.data.first { it.installed.size == 1 } }
@@ -213,7 +222,10 @@ class RegionStoreLocalServerTest {
 
                     assertEquals(Outcome.Success(Unit), store.remove(CatalogFixture.LVIV))
 
-                    assertTrue(store.data.value.installed.isEmpty())
+                    assertTrue(
+                        store.data.value.installed
+                            .isEmpty(),
+                    )
                     assertFalse(paths.regionDirectory(CatalogFixture.LVIV).exists())
                 } finally {
                     store.close()
@@ -245,7 +257,8 @@ class RegionStoreLocalServerTest {
                     assertEquals(Outcome.Failure(AppError.SwitchOff(SWITCH)), store.refresh())
                     assertEquals(
                         DownloadProblemKind.SWITCH_OFF,
-                        store.data.value.catalogProblem?.kind,
+                        store.data.value.catalogProblem
+                            ?.kind,
                     )
                     assertEquals(0, server.requestCount)
                 } finally {

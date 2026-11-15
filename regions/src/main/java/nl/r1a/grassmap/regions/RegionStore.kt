@@ -144,8 +144,11 @@ class RegionStore(
         if (!RegionIdentifiers.isSafeSegment(region)) {
             return Outcome.Failure(AppError.InvalidInput)
         }
-        val entry = mutable.value.catalog?.regions?.firstOrNull { it.id == region }
-            ?: return Outcome.Failure(AppError.NotFound)
+        val entry =
+            mutable.value.catalog
+                ?.regions
+                ?.firstOrNull { it.id == region }
+                ?: return Outcome.Failure(AppError.NotFound)
         if (mutable.value.transfer(region) != null) {
             return Outcome.Success(Unit)
         }
@@ -241,7 +244,10 @@ class RegionStore(
     }
 
     private suspend fun runDownload(region: String) {
-        val entry = mutable.value.catalog?.regions?.firstOrNull { it.id == region }
+        val entry =
+            mutable.value.catalog
+                ?.regions
+                ?.firstOrNull { it.id == region }
         if (entry == null || mutable.value.transfer(region) == null) {
             // Cancelled while it waited, or the catalogue changed under it.
             mutable.update { state -> state.copy(transfers = state.transfers.filterNot { it.region == region }) }
@@ -378,11 +384,25 @@ class RegionStore(
                 }
             }
 
-            AppError.Network -> DownloadProblem(DownloadProblemKind.NETWORK)
-            AppError.CorruptData -> DownloadProblem(DownloadProblemKind.CORRUPT_DATA)
-            AppError.Unsupported -> DownloadProblem(DownloadProblemKind.UNSUPPORTED)
-            is AppError.SwitchOff -> DownloadProblem(DownloadProblemKind.SWITCH_OFF)
-            else -> DownloadProblem(DownloadProblemKind.OTHER)
+            AppError.Network -> {
+                DownloadProblem(DownloadProblemKind.NETWORK)
+            }
+
+            AppError.CorruptData -> {
+                DownloadProblem(DownloadProblemKind.CORRUPT_DATA)
+            }
+
+            AppError.Unsupported -> {
+                DownloadProblem(DownloadProblemKind.UNSUPPORTED)
+            }
+
+            is AppError.SwitchOff -> {
+                DownloadProblem(DownloadProblemKind.SWITCH_OFF)
+            }
+
+            else -> {
+                DownloadProblem(DownloadProblemKind.OTHER)
+            }
         }
 
     private companion object {

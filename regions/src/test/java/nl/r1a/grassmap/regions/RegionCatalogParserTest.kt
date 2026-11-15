@@ -93,7 +93,11 @@ class RegionCatalogParserTest {
     fun aThirtyMetreAddonIsReadAsAPartWithItsSize() {
         val catalog = parse(CatalogFixture.withElevationAddon())
 
-        val addon = catalog.regions.single { it.id == CatalogFixture.LVIV }.addons.single()
+        val addon =
+            catalog.regions
+                .single { it.id == CatalogFixture.LVIV }
+                .addons
+                .single()
         assertEquals(CatalogPartKind.ELEVATION_30M, addon.kind)
         assertEquals("2026-01", addon.version)
         assertEquals(13_000_000L, addon.bytes)
@@ -117,7 +121,12 @@ class RegionCatalogParserTest {
                 }
             }
 
-        val unknown = parse(bytes).regions.first().parts.single { it.wireKind == "house-numbers" }
+        val unknown =
+            parse(bytes)
+                .regions
+                .first()
+                .parts
+                .single { it.wireKind == "house-numbers" }
         assertEquals(CatalogPartKind.OTHER, unknown.kind)
     }
 
@@ -224,8 +233,7 @@ class RegionCatalogParserTest {
         value: List<JsonElement>,
     ): JsonObject = withField(key, JsonArray(value))
 
-    private fun JsonObject.getArray(key: String): List<JsonElement> =
-        getValue(key) as JsonArray
+    private fun JsonObject.getArray(key: String): List<JsonElement> = getValue(key) as JsonArray
 
     private fun JsonObject.withParts(transform: (List<JsonObject>) -> List<JsonObject>): JsonObject {
         val parts = (getValue("parts") as JsonArray).map { it as JsonObject }

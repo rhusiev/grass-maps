@@ -14,13 +14,18 @@
 #   ./scripts/ci/android-map-goldens.sh --profile fixture [--update] [APK]
 #   ./scripts/ci/android-map-goldens.sh --profile standard [--style light|dark|both] [--update] [APK]
 #   ./scripts/ci/android-map-goldens.sh --profile contours [--style all|both|touring] [--update] [APK]
+#   ./scripts/ci/android-map-goldens.sh --profile raster [--positions raster-overlay-40] [--update] [APK]
 #   ./scripts/ci/android-map-goldens.sh --profile oblast \
 #       --region-package /hdd/t-0102-evidence/region/ua-46/2026-11-05-bench \
 #       --output /hdd/t-0102-evidence/oblast [APK]
 #
-# The fixture and standard profiles run with contours off, which keeps their
-# existing references valid; the contours profile runs with the fixture's
+# The fixture, standard and raster profiles run with contours off, which keeps
+# their existing references valid; the contours profile runs with the fixture's
 # committed contour archive on. --contours on|off overrides either default.
+#
+# The raster profile needs no tile server on this machine: the capture script
+# serves the committed fixture from test-data/map-goldens/raster-tiles on a
+# loopback port and forwards it to the device with `adb reverse`.
 #
 # Environment:
 #   GOLDEN_SERIAL          use this device instead of booting an AVD
@@ -77,7 +82,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -n "$PROFILE" ]] || {
-    echo "android-map-goldens.sh: --profile standard|contours|fixture|oblast is required" >&2
+    echo "android-map-goldens.sh: --profile standard|contours|fixture|raster|oblast is required" >&2
     exit 2
 }
 if [[ "$PROFILE" == "standard" || "$PROFILE" == "contours" ]]; then

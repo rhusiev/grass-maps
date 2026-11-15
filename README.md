@@ -549,11 +549,14 @@ HTTP is accepted only for a loopback test server; a remote source must use
 HTTPS.
 
 The layer draws at one of two placements (T-0514). `Overlay` is the default:
-`LayerSlot.Terrain`, above the base map's fills and below the contour, track,
-route, marker and label groups, so the map's own detail stays on top of the
-tiles. `Underlay` is `LayerSlot.Underlay`, the one group below the base map, so
-the base fills draw over the imagery. Both placements are the same layer, the
-same provider and the same gate; the placement picks the slot.
+`LayerSlot.Terrain`, above every base-style layer - fills, lines and symbols -
+and below the contour, track, route, marker and label groups. The base style's
+own labels live in `Base`, so at 40 % they show through the tiles instead of
+sitting above them. `Underlay` is `LayerSlot.Underlay`, the one group below
+`Base`: the base map draws over the imagery, and because the Standard and
+Touring styles start with an opaque background, an underlay is only visible in a
+style that leaves it a gap. Both placements are the same layer, the same
+provider and the same gate; the placement picks the slot.
 
 Transparency is a whole percent the layers panel shows, and the layer carries it
 as the style property `raster-opacity`: 40 % is `0.4`. The source spec has no
@@ -859,6 +862,22 @@ CI:
 ./scripts/ci/android-map-goldens.sh --profile fixture --update
 ./scripts/ci/android-map-goldens.sh --profile oblast --update \
   --region-package /hdd/t-0102-evidence/region/ua-46/2026-11-05-bench
+```
+
+The raster reference set in `test-data/map-goldens/raster/` is T-0514: the same
+camera twice at z13, once with the tile fixture as an overlay and once as an
+underlay, both at 40 %. `map_goldens.py` serves `test-data/map-goldens/raster-tiles`
+from a loopback HTTP server and forwards the port with `adb reverse`, so the
+capture needs no network; both positions drive `core.map.show_raster`, which is
+the app's own custom-source path. The underlay image shows no tiles, because the
+base style's first layer is an opaque background: that reference pins the slot,
+not the look.
+
+```sh
+GOLDEN_AVD_NAME=grassmaps-goldens-api29 \
+  ./scripts/ci/android-map-goldens.sh --profile raster --update
+GOLDEN_AVD_NAME=grassmaps-goldens-api29 \
+  ./scripts/ci/android-map-goldens.sh --profile raster
 ```
 
 The first `--update` run writes the reference set; every later run compares

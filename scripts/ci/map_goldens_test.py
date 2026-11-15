@@ -35,10 +35,12 @@ class FakeClient:
         self.answers = answers
         self.calls = 0
         self.params: list[object] = []
+        self.commands: list[str] = []
 
     def invoke(self, command: str, params: object = None) -> object:
         self.calls += 1
         self.params.append(params)
+        self.commands.append(command)
         answer = self.answers.pop(0)
         if isinstance(answer, BaseException):
             raise answer
@@ -240,6 +242,191 @@ class StandardPositionsTest(unittest.TestCase):
             map_goldens.default_reference("fixture", None),
             map_goldens.ROOT / "test-data" / "map-goldens" / "fixture",
         )
+
+
+class RasterPositionsTest(unittest.TestCase):
+    """The two T-0514 positions and the fixture each one draws."""
+
+    def test_the_profile_is_two_placements_at_one_camera(self) -> None:
+        positions = map_goldens.POSITIONS["raster"]
+
+        self.assertEqual(2, len(positions))
+        self.assertEqual(
+            {"raster-overlay-40", "raster-underlay-40"},
+            {position[0] for position in positions},
+        )
+        self.assertEqual(1, len({position[1:] for position in positions}))
+
+    def test_both_positions_draw_at_forty_percent(self) -> None:
+        self.assertEqual(40, map_goldens.RASTER_PERCENT)
+        for name, *_ in map_goldens.POSITIONS["raster"]:
+            self.assertTrue(name.endswith("-40"), name)
+
+    def test_each_position_names_its_placement(self) -> None:
+        self.assertEqual("overlay", map_goldens.raster_fixture_for("raster-overlay-40"))
+        self.assertEqual("underlay", map_goldens.raster_fixture_for("raster-underlay-40"))
+        self.assertIsNone(map_goldens.raster_fixture_for("place-a-z12"))
+
+    def test_the_raster_cases_stay_in_their_own_profile(self) -> None:
+        self.assertEqual(tuple(map_goldens.POSITIONS["raster"]), map_goldens.cases("raster"))
+        names = {case[0] for case in map_goldens.cases("standard")}
+        self.assertNotIn("raster-overlay-40", names)
+
+
+class RasterTileFixtureTest(unittest.TestCase):
+    """The committed tiles the loopback server answers from."""
+
+    def test_every_tile_the_rule_names_exists_at_256_pixels(self) -> None:
+        for zoom in map_goldens.RASTER_TILE_ZOOMS:
+            for column in range(2320, 2326):
+                for row in range(1504, 1512):
+                    name = map_goldens.raster_tile_name(f"/{zoom}/{column}/{row}.png")
+                    self.assertIsNotNone(name, (zoom, column, row))
+                    path = map_goldens.RASTER_TILES_DIR / name
+                    self.assertTrue(path.is_file(), name)
+                    self.assertEqual((256, 256), map_goldens.read_png_size(path))
+
+    def test_the_profiles_zoom_is_served(self) -> None:
+        zoom = int(map_goldens.POSITIONS["raster"][0][3])
+
+        name = map_goldens.raster_tile_name(f"/{zoom}/4640/3010.png")
+
+        self.assertIsNotNone(name)
+        self.assertTrue(name.startswith(f"z{zoom}/"))
+
+    def test_the_rule_covers_every_palette_entry(self) -> None:
+        names = {map_goldens.raster_tile_name(f"/13/{column}/0.png") for column in range(4)}
+
+        self.assertEqual(
+            {f"z13/tile-{index}.png" for index in range(map_goldens.RASTER_TILE_COLOURS)},
+            names,
+        )
+
+    def test_the_two_zooms_carry_different_palettes(self) -> None:
+        z12 = (map_goldens.RASTER_TILES_DIR / "z12" / "tile-0.png").read_bytes()
+        z13 = (map_goldens.RASTER_TILES_DIR / "z13" / "tile-0.png").read_bytes()
+
+        self.assertNotEqual(z12, z13)
+
+    def test_only_the_committed_zooms_are_served(self) -> None:
+        self.assertIsNone(map_goldens.raster_tile_name("/14/9280/6020.png"))
+        self.assertIsNone(map_goldens.raster_tile_name("/11/2320/1505.png"))
+
+    def test_a_path_that_is_not_a_tile_is_a_404(self) -> None:
+        for path in (
+            "/",
+            "/13/4640/3010",
+            "/13/4640/3010.jpg",
+            "/13/-1/3010.png",
+            "/13/../3010.png",
+            "/13/9999/9999.png",
+        ):
+            self.assertIsNone(map_goldens.raster_tile_name(path), path)
+
+
+class InvokeRasterTest(unittest.TestCase):
+    def test_not_ready_is_retried(self) -> None:
+        not_ready = control_client.ControlError(-32000, "not ready", {"kind": "not_ready"})
+        client = FakeClient([not_ready, "raster=set placement=overlay percent=40"])
+
+        with mock.patch.object(map_goldens.time, "sleep"):
+            result = map_goldens.invoke_raster(
+                client, map_goldens.RASTER_OVERLAY, "http://127.0.0.1:8765/{z}/{x}/{y}.png"
+            )
+
+        self.assertIn("percent=40", result)
+        self.assertEqual(2, client.calls)
+
+    def test_the_capture_asks_for_the_fixture_at_forty_percent(self) -> None:
+        client = FakeClient(["raster=set"])
+
+        map_goldens.invoke_raster(
+            client, map_goldens.RASTER_OVERLAY, "http://127.0.0.1:8765/{z}/{x}/{y}.png"
+        )
+
+        self.assertEqual(["core.map.show_raster"], client.commands)
+        self.assertEqual("http://127.0.0.1:8765/{z}/{x}/{y}.png", client.params[0]["tiles"])
+        self.assertEqual("overlay", client.params[0]["placement"])
+        self.assertEqual(40, client.params[0]["percent"])
+        self.assertEqual(12, client.params[0]["minZoom"])
+        self.assertEqual(13, client.params[0]["maxZoom"])
+
+    def test_an_underlay_is_the_same_template_at_the_other_placement(self) -> None:
+        client = FakeClient(["raster=set"])
+
+        map_goldens.invoke_raster(
+            client, map_goldens.RASTER_UNDERLAY, "http://127.0.0.1:8765/{z}/{x}/{y}.png"
+        )
+
+        self.assertEqual("underlay", client.params[0]["placement"])
+
+    def test_clearing_sends_a_null_template(self) -> None:
+        client = FakeClient(["raster=off"])
+
+        map_goldens.invoke_raster(client, None, None)
+
+        self.assertEqual({"tiles": None}, client.params[0])
+
+    def test_a_raster_position_without_the_fixture_is_refused(self) -> None:
+        client = FakeClient([])
+
+        with self.assertRaises(map_goldens.GoldenError):
+            map_goldens.invoke_raster(client, map_goldens.RASTER_UNDERLAY, None)
+
+        self.assertEqual(0, client.calls)
+
+
+class RasterCaptureWiringTest(unittest.TestCase):
+    """The capture draws the fixture once per placement, before the camera."""
+
+    def test_each_raster_position_applies_its_own_placement(self) -> None:
+        adb = mock.Mock()
+        adb.serial = "emulator-5580"
+        adb.logcat.return_value = ""
+        client = mock.Mock()
+        seen: list[tuple[object, str | None]] = []
+
+        def invoke_raster(_client, placement, url):
+            seen.append((placement, url))
+            return "raster=set"
+
+        def capture_position(_adb, _client, output, name, params):
+            return {
+                "name": name,
+                "file": str(output / f"{name}.png"),
+                "idle": True,
+                "camera_result": "idle=true",
+                "params": params,
+            }
+
+        tiles = mock.Mock()
+        tiles.url = "http://127.0.0.1:8765/{z}/{x}/{y}.png"
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "out"
+            with (
+                mock.patch.object(map_goldens, "airplane_mode", return_value=[]),
+                mock.patch.object(map_goldens, "prepare_device", return_value=[]),
+                mock.patch.object(map_goldens, "launch"),
+                mock.patch.object(map_goldens, "wait_for_channel", return_value=client),
+                mock.patch.object(map_goldens, "wait_for_first_frame"),
+                mock.patch.object(map_goldens, "invoke_route"),
+                mock.patch.object(map_goldens, "invoke_route_relations"),
+                mock.patch.object(map_goldens, "invoke_tracks"),
+                mock.patch.object(map_goldens, "invoke_raster", side_effect=invoke_raster),
+                mock.patch.object(map_goldens, "capture_position", side_effect=capture_position),
+                mock.patch.object(map_goldens.time, "sleep"),
+            ):
+                map_goldens.capture(adb, "raster", output, None, raster_tiles=tiles)
+
+            record = json.loads((output / "capture.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            [("overlay", tiles.url), ("underlay", tiles.url)],
+            seen,
+        )
+        self.assertEqual("core.map.show_raster", record["raster_command"])
+        self.assertEqual("test-data/map-goldens/raster-tiles", record["raster_fixture"])
 
 
 class ContoursPositionsTest(unittest.TestCase):

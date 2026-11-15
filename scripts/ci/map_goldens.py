@@ -43,12 +43,14 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import http.server
 import json
 import re
 import struct
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import zlib
 from collections.abc import Callable
@@ -185,6 +187,13 @@ POSITIONS = {
         ("fixture-east-z13", 49.9500, 23.9560, 13.0, 0.0, 0.0),
         ("fixture-north-z13", 49.9560, 23.9500, 13.0, 0.0, 0.0),
     ),
+    # T-0514: the same camera twice, once with the tile fixture over the base
+    # map and once under it, both at 40 %. The pair is the comparison: the base
+    # map and the tiles swap which one is on top, and every tile edge moves.
+    "raster": (
+        ("raster-overlay-40", 49.9500, 23.9500, 13.0, 0.0, 0.0),
+        ("raster-underlay-40", 49.9500, 23.9500, 13.0, 0.0, 0.0),
+    ),
     "oblast": (
         ("lviv-rynok-z16", 49.8419, 24.0316, 16.0, 0.0, 0.0),
         ("lviv-rynok-z13", 49.8419, 24.0316, 13.0, 0.0, 0.0),
@@ -251,6 +260,118 @@ TRACK_LOOKS_FIXTURE_PATH = ROOT / "test-data" / "map-goldens" / "track-looks.jso
 TRACK_LOOKS_FIXTURE = TRACK_LOOKS_FIXTURE_PATH.read_text(encoding="utf-8")
 TRACK_LOOKS_HIDDEN_FIXTURE_PATH = ROOT / "test-data" / "map-goldens" / "track-looks-hidden.json"
 TRACK_LOOKS_HIDDEN_FIXTURE = TRACK_LOOKS_HIDDEN_FIXTURE_PATH.read_text(encoding="utf-8")
+
+# T-0514: the raster profile's committed tiles. The server binds an ephemeral
+# loopback port and `adb reverse` forwards it, so the app fetches the fixture
+# over plain HTTP through its own custom-source path and no network is needed.
+RASTER_PROFILE = "raster"
+RASTER_TILES_DIR = ROOT / "test-data" / "map-goldens" / "raster-tiles"
+RASTER_TILE_ZOOMS = (12, 13)
+RASTER_TILE_MIN_ZOOM = min(RASTER_TILE_ZOOMS)
+RASTER_TILE_MAX_ZOOM = max(RASTER_TILE_ZOOMS)
+RASTER_TILE_COLOURS = 4
+RASTER_TILE_PATH = re.compile(r"^/(?P<z>\d{1,2})/(?P<x>\d{1,7})/(?P<y>\d{1,7})\.png$")
+RASTER_PERCENT = 40
+RASTER_OVERLAY = "overlay"
+RASTER_UNDERLAY = "underlay"
+RASTER_PLACEMENTS = {
+    "raster-overlay-40": RASTER_OVERLAY,
+    "raster-underlay-40": RASTER_UNDERLAY,
+}
+
+
+def raster_tile_name(path: str) -> str | None:
+    """The committed tile file for a request path, or None to answer 404.
+
+    Both zooms use the same lattice rule and a different palette, so a capture
+    at the wrong zoom is visible; z11 and below, and z14 and above, are 404 and
+    the base map shows through there.
+    """
+    match = RASTER_TILE_PATH.match(path)
+    if match is None:
+        return None
+    zoom = int(match["z"])
+    if zoom not in RASTER_TILE_ZOOMS:
+        return None
+    column = int(match["x"])
+    row = int(match["y"])
+    if not (0 <= column < 1 << zoom and 0 <= row < 1 << zoom):
+        return None
+    return f"z{zoom}/tile-{(column + 2 * row) % RASTER_TILE_COLOURS}.png"
+
+
+def raster_tile_url(port: int) -> str:
+    """The tile template the app is asked to draw."""
+    return f"http://127.0.0.1:{port}/{{z}}/{{x}}/{{y}}.png"
+
+
+def raster_fixture_for(name: str) -> str | None:
+    """The placement a raster position draws the fixture at, or None."""
+    return RASTER_PLACEMENTS.get(name)
+
+
+class RasterTileRequestHandler(http.server.BaseHTTPRequestHandler):
+    """Serves one committed fixture tile per path."""
+
+    def do_GET(self) -> None:
+        name = raster_tile_name(self.path)
+        if name is None:
+            self.send_error(404, "no raster fixture tile at this path")
+            return
+        body = (RASTER_TILES_DIR / name).read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", "image/png")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format: str, *args: object) -> None:
+        """Keep the harness output free of one line per tile."""
+
+
+class RasterTileServer:
+    """The loopback tile server the raster profile draws through.
+
+    It binds one ephemeral port on the host's loopback; `adb reverse` forwards
+    the same port on the device, so the app fetches the fixture the way it would
+    fetch a user's loopback test source. The port is known before the thread
+    starts, because the bind happens in the constructor.
+    """
+
+    def __init__(self) -> None:
+        try:
+            self._server = http.server.ThreadingHTTPServer(
+                ("127.0.0.1", 0), RasterTileRequestHandler
+            )
+        except OSError as error:
+            raise GoldenError(
+                f"the raster tile fixture could not bind a loopback port: {error}"
+            ) from error
+        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+
+    @property
+    def port(self) -> int:
+        return int(self._server.server_address[1])
+
+    @property
+    def url(self) -> str:
+        return raster_tile_url(self.port)
+
+    def start(self) -> "RasterTileServer":
+        self._thread.start()
+        return self
+
+    def stop(self) -> None:
+        """Stop the thread and close the port; safe before start and after a stop.
+
+        `shutdown()` waits for `serve_forever` to return, so it may only run
+        when that loop ever started; `server_close()` alone releases the port
+        otherwise.
+        """
+        if self._thread.is_alive():
+            self._server.shutdown()
+        self._server.server_close()
+        self._thread.join(timeout=5)
 
 
 def cases(profile: str) -> tuple[tuple[str, float, float, float, float, float], ...]:
@@ -409,6 +530,14 @@ class Adb:
 
     def logcat(self, *args: str, timeout_s: float = 60) -> str:
         return run([*self.prefix, "logcat", *args], timeout_s, check=False)
+
+    def reverse(self, port: int) -> None:
+        """Forward a device loopback port to the host, for the tile fixture."""
+        run([*self.prefix, "reverse", f"tcp:{port}", f"tcp:{port}"], 30)
+
+    def reverse_remove(self, port: int) -> None:
+        """Drop the forward; a device that has gone away is not an error."""
+        run([*self.prefix, "reverse", "--remove", f"tcp:{port}"], 30, check=False)
 
     def wait_for_device(self) -> None:
         deadline = time.monotonic() + DEVICE_DEADLINE_S
@@ -665,6 +794,46 @@ def invoke_tracks(
             if time.monotonic() >= deadline:
                 raise GoldenError(
                     f"track command did not answer within {CAMERA_READY_TIMEOUT_S:.0f}s"
+                ) from error
+        time.sleep(RETRY_PAUSE_S)
+
+
+def invoke_raster(
+    client: control_client.ControlClient,
+    placement: str | None,
+    tile_url: str | None,
+) -> str:
+    """Draw the tile fixture at a placement, or clear the layer.
+
+    The command is the app's own custom-source path: it turns the online-tiles
+    switch on, probes one tile through the gate, and sets the placement and the
+    transparency. It retries `not_ready` and a socket timeout, as the other
+    fixture commands do. A raster position without the fixture is refused here,
+    before the camera moves.
+    """
+    if placement is not None and tile_url is None:
+        raise GoldenError(
+            "a raster golden position needs the tile fixture; capture with --profile raster"
+        )
+    params: dict[str, object] = {"tiles": tile_url if placement is not None else None}
+    if placement is not None:
+        params["placement"] = placement
+        params["percent"] = RASTER_PERCENT
+        # The fixture serves exactly these zooms, and the command probes the
+        # source's lowest zoom before it accepts the template.
+        params["minZoom"] = RASTER_TILE_MIN_ZOOM
+        params["maxZoom"] = RASTER_TILE_MAX_ZOOM
+    deadline = time.monotonic() + CAMERA_READY_TIMEOUT_S
+    while True:
+        try:
+            return str(client.invoke("core.map.show_raster", params))
+        except control_client.ControlError as error:
+            if error.kind != "not_ready" or time.monotonic() >= deadline:
+                raise
+        except TimeoutError as error:
+            if time.monotonic() >= deadline:
+                raise GoldenError(
+                    f"raster command did not answer within {CAMERA_READY_TIMEOUT_S:.0f}s"
                 ) from error
         time.sleep(RETRY_PAUSE_S)
 
@@ -1075,6 +1244,7 @@ def capture(
     style: str | None,
     contours: bool | None = None,
     positions: tuple[tuple[str, float, float, float, float, float], ...] | None = None,
+    raster_tiles: RasterTileServer | None = None,
 ) -> dict[str, object]:
     if profile == "oblast" and not (output / "region.json").exists():
         raise GoldenError("oblast capture needs the installed region package")
@@ -1104,6 +1274,7 @@ def capture(
         current_route: str | None = None
         current_relations: str | None = None
         current_tracks: str | None = None
+        current_raster: str | None = None
         route_dark = style is not None and style.endswith("dark")
         selected = positions if positions is not None else cases(profile)
         for name, lat, lon, zoom, bearing, tilt in selected:
@@ -1120,6 +1291,10 @@ def capture(
             if tracks != current_tracks:
                 invoke_tracks(client, tracks)
                 current_tracks = tracks
+            raster = raster_fixture_for(name)
+            if raster != current_raster:
+                invoke_raster(client, raster, raster_tiles.url if raster_tiles else None)
+                current_raster = raster
             params = {
                 "lat": lat,
                 "lon": lon,
@@ -1153,6 +1328,10 @@ def capture(
                 "route_command": "core.map.set_route",
                 "route_relations_command": "core.map.set_route_relations",
                 "track_command": "core.map.set_tracks",
+                "raster_command": "core.map.show_raster",
+                "raster_fixture": (
+                    str(RASTER_TILES_DIR.relative_to(ROOT)) if raster_tiles is not None else None
+                ),
                 "screenshot": "adb exec-out screencap -p",
                 "positions": shots,
             },
@@ -1593,6 +1772,7 @@ def build_parser() -> argparse.ArgumentParser:
 def build_recapture(
     args: argparse.Namespace,
     captured: Path,
+    raster_tiles: RasterTileServer | None = None,
 ) -> Callable[[str, dict[str, object]], dict[str, object]] | None:
     """One-shot re-capture for a failed position, or None without a device.
 
@@ -1606,11 +1786,18 @@ def build_recapture(
         client = wait_for_channel(adb)
         if args.style is not None:
             invoke_style(client, args.style)
+        if raster_tiles is not None:
+            # The device side of the loopback port lives as long as this adb
+            # session; the capture that follows re-uses it.
+            adb.reverse(raster_tiles.port)
         route_dark = args.style is not None and args.style.endswith("dark")
 
         def recapture(name: str, params: dict[str, object]) -> dict[str, object]:
             invoke_route(client, route_fixture_for(name), dark=route_dark)
             invoke_route_relations(client, route_relations_fixture_for(name))
+            placement = raster_fixture_for(name)
+            if placement is not None:
+                invoke_raster(client, placement, raster_tiles.url if raster_tiles else None)
             return capture_position(adb, client, captured, name, params)
 
         return recapture
@@ -1648,14 +1835,25 @@ def main() -> int:
                 metadata = install_region_package(adb, package)
                 (output / "region.json").parent.mkdir(parents=True, exist_ok=True)
                 (output / "region.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
-            capture(
-                adb,
-                args.profile,
-                output,
-                args.style,
-                contours=contours_flag(args),
-                positions=selected_positions(args.profile, args.positions),
-            )
+            raster_tiles: RasterTileServer | None = None
+            try:
+                if args.profile == RASTER_PROFILE:
+                    raster_tiles = RasterTileServer().start()
+                    adb.reverse(raster_tiles.port)
+                    print(f"raster tile fixture on {raster_tiles.url}", file=sys.stderr)
+                capture(
+                    adb,
+                    args.profile,
+                    output,
+                    args.style,
+                    contours=contours_flag(args),
+                    positions=selected_positions(args.profile, args.positions),
+                    raster_tiles=raster_tiles,
+                )
+            finally:
+                if raster_tiles is not None:
+                    adb.reverse_remove(raster_tiles.port)
+                    raster_tiles.stop()
             return 0
         reference = (
             Path(args.reference)
@@ -1672,16 +1870,23 @@ def main() -> int:
             )
             return 0
         captured = Path(args.captured)
-        recapture = build_recapture(args, captured)
-        document = compare(
-            args.profile,
-            captured,
-            reference,
-            output,
-            args.style,
-            recapture=recapture,
-            positions=selected_positions(args.profile, args.positions),
-        )
+        raster_tiles: RasterTileServer | None = None
+        try:
+            if args.profile == RASTER_PROFILE:
+                raster_tiles = RasterTileServer().start()
+            recapture = build_recapture(args, captured, raster_tiles)
+            document = compare(
+                args.profile,
+                captured,
+                reference,
+                output,
+                args.style,
+                recapture=recapture,
+                positions=selected_positions(args.profile, args.positions),
+            )
+        finally:
+            if raster_tiles is not None:
+                raster_tiles.stop()
         return 0 if document["result"] == "pass" else 1
     except GoldenError as error:
         print(f"FAIL: {error}", file=sys.stderr)

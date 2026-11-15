@@ -933,6 +933,12 @@ class AppContainer(
                 observedFavouriteCommand(command) { favouritesBackup?.onMutation() }
             } +
             regionCommands({ regionDownloader }, regionNetwork, debuggable) +
+            rasterCommands(
+                settings = { rasterSettings },
+                enableOnlineTiles = ::setOnlineTilesEnabled,
+                probe = { source -> rasterTiles.probe(source) },
+                debuggable = debuggable,
+            ) +
             UnitsCommand({ unitSettings }) +
             SearchHistorySettingCommand({ searchHistorySettings }) +
             extraCommands(mapSession) +

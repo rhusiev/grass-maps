@@ -50,13 +50,21 @@ class RasterLayerSettings(
      * Validates [template], asks [probe] to fetch one tile through the network
      * gate, and only then makes the source active and stores it. A template
      * that cannot serve one tile never replaces a working source.
+     *
+     * [minZoom] and [maxZoom] are the zooms the template serves: the source
+     * never asks for a tile outside them, and the probe asks for [minZoom].
+     * The layers panel leaves the defaults; a fixture or a source with a fixed
+     * range narrows them.
      */
     suspend fun useCustom(
         template: String,
+        minZoom: Int = 0,
+        maxZoom: Int = RasterPresets.MAX_SUPPORTED_ZOOM,
         probe: suspend (RasterSource) -> Outcome<Unit>,
     ): Outcome<RasterSource> {
+        val parsed = RasterSources.custom(template.trim(), minZoom = minZoom, maxZoom = maxZoom)
         val source =
-            when (val parsed = RasterSources.custom(template.trim())) {
+            when (parsed) {
                 is Outcome.Failure -> return parsed
                 is Outcome.Success -> parsed.value
             }

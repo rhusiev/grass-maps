@@ -80,10 +80,11 @@ enum class LayerType {
  * Fixed z-order groups. Layers draw in this order, and in declaration order
  * inside a group.
  *
- * [Underlay] is the one group below the base map, so a raster layer there shows
- * through the base fills (T-0514). A raster overlay sits in [Terrain], which is
- * above the base fills and below the contour, track, route, marker and label
- * groups, so the map's own detail still draws on top of it.
+ * [Underlay] is the one group below [Base], so a raster layer there draws under
+ * every base-style layer, the opaque background included (T-0514). A raster
+ * overlay sits in [Terrain]: above every base-style layer - fills, lines and
+ * symbols - and below the contour, track, route, marker and label groups, so a
+ * base style's own labels show through it rather than above it.
  */
 enum class LayerSlot {
     Underlay,

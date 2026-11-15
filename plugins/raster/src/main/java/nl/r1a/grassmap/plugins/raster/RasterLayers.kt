@@ -14,15 +14,20 @@ import nl.r1a.grassmap.plugin.api.model.SlottedLayer
  * Where the online tile layer draws in the style's fixed z-order groups
  * (T-0514).
  *
- * Both placements draw below the map's own line and symbol groups, and both
- * stay behind the privacy gate: the placement changes the slot, never the tile
- * path.
+ * Both placements stay behind the privacy gate: the placement changes the
+ * slot, never the tile path.
  */
 enum class RasterPlacement {
-    /** Below every base layer, so the base map's fills draw over the tiles. */
+    /**
+     * Below every base-style layer. The base map draws over the tiles, so this
+     * placement needs a style whose background is not opaque to be visible.
+     */
     Underlay,
 
-    /** Above the base fills and below contours, tracks, routes, markers and labels. */
+    /**
+     * Above every base-style layer, and below the contour, track, route,
+     * marker and label groups.
+     */
     Overlay,
 }
 

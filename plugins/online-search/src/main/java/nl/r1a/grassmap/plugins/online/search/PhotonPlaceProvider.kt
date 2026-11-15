@@ -51,9 +51,10 @@ class PhotonPlaceProvider(
         limit: Int,
         cancellation: CancellationHandle,
     ): Outcome<List<PlaceHit>> {
-        if (query.isBlank() || limit !in 1..MAX_RESULTS) {
+        if (query.isBlank() || limit < 1) {
             return Outcome.Failure(AppError.InvalidInput)
         }
+        val clipped = limit.coerceAtMost(MAX_RESULTS)
         val viewport = context.viewport
         if (viewport != null && !viewport.isValid()) {
             return Outcome.Failure(AppError.InvalidInput)
@@ -62,7 +63,7 @@ class PhotonPlaceProvider(
             return Outcome.Failure(AppError.Cancelled)
         }
         return gate.request(NetworkSwitches.onlineSearch) {
-            fetch(query.trim(), context, limit, viewport, cancellation)
+            fetch(query.trim(), context, clipped, viewport, cancellation)
         }
     }
 
@@ -191,7 +192,10 @@ class PhotonPlaceProvider(
 
         const val MAX_ATTEMPTS: Int = 2
 
-        /** Photon returns at most a page this size; a caller asking for more is clipped. */
+        /**
+         * Photon returns at most a page this size; a caller asking for more is
+         * clipped. A limit below one is [AppError.InvalidInput].
+         */
         const val MAX_RESULTS: Int = 20
 
         private const val PARAM_QUERY = "q"

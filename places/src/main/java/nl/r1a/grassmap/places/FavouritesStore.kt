@@ -20,8 +20,8 @@ import java.nio.file.StandardCopyOption
  * missing file is an empty store; a corrupt file is [AppError.CorruptData] and
  * is never overwritten by a later mutation.
  *
- * The constructor does no I/O. [load], [save] and every mutation are the
- * lifecycle. Undo is scoped per action: [delete] returns a receipt that
+ * The constructor does no I/O. [load], [save], [replace] and every mutation are
+ * the lifecycle. Undo is scoped per action: [delete] returns a receipt that
  * [undoDelete] consumes, and the lists actions return [FavouriteMutation.undo]
  * tokens that [undoListAction] consumes. That is deliberately not a general
  * undo stack, which is T-0304's, and no command in `app` marks a favourites
@@ -449,6 +449,44 @@ class FavouritesStore(
             }
         }
 
+    /**
+     * Replaces the whole library with [document], which must be one
+     * [FavouritesGpx.write] produced. The bytes land unmodified, so a restored
+     * library is byte-identical to the copy, and the cached snapshot becomes the
+     * one the document holds.
+     *
+     * This is the only write path a restore may take: the mutex orders it
+     * against every mutation, so an edit in flight cannot overwrite the restore
+     * with a snapshot parsed before it. A document that does not parse is
+     * [AppError.CorruptData] and leaves the live file untouched.
+     */
+    suspend fun replace(document: ByteArray): Outcome<Unit> =
+        mutex.withLock {
+            when (val parsed = FavouritesGpx.read(document)) {
+                is Outcome.Failure -> {
+                    parsed
+                }
+
+                is Outcome.Success -> {
+                    when (val written = write(document)) {
+                        is Outcome.Failure -> {
+                            written
+                        }
+
+                        is Outcome.Success -> {
+                            cached = canonicalize(parsed.value.snapshot)
+                            // The library the receipts describe is gone, so an
+                            // undo from before the restore cannot re-add a record
+                            // or a list to the library that replaced it.
+                            receipts.clear()
+                            listReceipts.clear()
+                            Outcome.Success(Unit)
+                        }
+                    }
+                }
+            }
+        }
+
     private fun snapshot(): Outcome<FavouritesSnapshot> {
         cached?.let { return Outcome.Success(it) }
         if (!file.isFile) {
@@ -481,12 +519,25 @@ class FavouritesStore(
         if (!canonical.isValid()) {
             return Outcome.Failure(AppError.InvalidInput)
         }
+        return when (val written = write(FavouritesGpx.write(canonical))) {
+            is Outcome.Failure -> {
+                written
+            }
+
+            is Outcome.Success -> {
+                cached = canonical
+                Outcome.Success(canonical)
+            }
+        }
+    }
+
+    /** Writes [bytes] to a temporary sibling, syncs it and moves it over the file. */
+    private fun write(bytes: ByteArray): Outcome<Unit> {
         val parent = file.parentFile ?: return writeFailure(ERROR_ID, "no parent directory")
         return try {
             if (!parent.isDirectory && !parent.mkdirs()) {
                 return writeFailure(ERROR_ID, "cannot create $parent")
             }
-            val bytes = FavouritesGpx.write(canonical)
             val temporary = File(parent, file.name + TEMPORARY_SUFFIX)
             FileOutputStream(temporary).use { stream ->
                 stream.write(bytes)
@@ -498,8 +549,7 @@ class FavouritesStore(
                 StandardCopyOption.ATOMIC_MOVE,
                 StandardCopyOption.REPLACE_EXISTING,
             )
-            cached = canonical
-            Outcome.Success(canonical)
+            Outcome.Success(Unit)
         } catch (exception: IOException) {
             writeFailure(ERROR_ID, exception.message)
         } catch (exception: SecurityException) {

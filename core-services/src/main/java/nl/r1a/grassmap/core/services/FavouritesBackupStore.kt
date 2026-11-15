@@ -50,8 +50,10 @@ data class FavouritesBackupCopy(
  *
  * Every write goes to a temporary sibling, is flushed and moved atomically, so
  * a failed write leaves the previous copies intact. A failed capture also
- * removes the copy it just wrote. The constructor does no I/O; [capture],
- * [list], [read] and [restore] are the lifecycle.
+ * removes the copy it just wrote. The store only ever writes its own copies: a
+ * caller restores a library by reading the verified copy and handing the bytes
+ * to the library's own store, so two writers never race for one file. The
+ * constructor does no I/O; [capture], [list] and [read] are the lifecycle.
  */
 class FavouritesBackupStore(
     private val directory: File,
@@ -86,31 +88,6 @@ class FavouritesBackupStore(
      * [AppError.CorruptData].
      */
     suspend fun read(id: String): Outcome<ByteArray> = mutex.withLock { readLocked(id) }
-
-    /**
-     * Replaces [target] with the bytes of [id], atomically.
-     *
-     * The copy is verified before [target] is touched, so a missing or corrupt
-     * copy leaves the live file unchanged. A failed write is a typed error and
-     * also leaves the live file unchanged.
-     */
-    suspend fun restore(
-        id: String,
-        target: File,
-    ): Outcome<Unit> =
-        mutex.withLock {
-            when (val stored = readLocked(id)) {
-                is Outcome.Failure -> {
-                    stored
-                }
-
-                is Outcome.Success -> {
-                    AtomicFiles.write(target, ERROR_ID) { stream ->
-                        stream.write(stored.value)
-                    }
-                }
-            }
-        }
 
     private fun captureLocked(document: ByteArray): Outcome<FavouritesBackupCopy> {
         if (document.isEmpty()) {

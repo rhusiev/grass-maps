@@ -305,6 +305,13 @@ class AppContainer(
         LocationPermissionCoordinator(sharedLocation, locationPermissionStore)
 
     /**
+     * The one-time Android 13 notification prompt, shared by every recreation of
+     * the activity in this process. The process outlives an activity because the
+     * navigation service keeps it while guidance runs.
+     */
+    val notificationPermission: NotificationPermissionPrompt = NotificationPermissionPrompt()
+
+    /**
      * The `routing.engine` provider behind a host seam (T-0302). The plugin is
      * activated here rather than at startup, and the pack directory reaches it
      * through the host's pack access, so no routing path is read on Main.
@@ -737,8 +744,9 @@ class AppContainer(
     /**
      * The favourites library under the app's private files root (T-0201).
      *
-     * The access caches the parsed library, so [forgetFavourites] drops it after
-     * a backup restore replaces the file on disk.
+     * One instance is cached so every writer and every reader share the store's
+     * mutex and its parsed snapshot; a backup restore replaces the library
+     * through this store, so nothing has to drop the cache.
      */
     val favourites: FavouritesAccess
         get() =
@@ -758,7 +766,6 @@ class AppContainer(
                 scope = backupScope,
                 clock = favouritesBackupClock,
                 debounceMillis = favouritesBackupDebounceMillis,
-                onRestored = ::forgetFavourites,
                 onResult = { result ->
                     if (result is Outcome.Failure) {
                         Log.w(FAVOURITES_TAG, "favourites backup failed: ${result.error}")
@@ -780,11 +787,6 @@ class AppContainer(
 
     @Volatile
     private var cachedFavourites: FavouritesAccess? = null
-
-    /** Drops the parsed library after a restore replaced its file. */
-    internal fun forgetFavourites() {
-        synchronized(favouritesLock) { cachedFavourites = null }
-    }
 
     /**
      * The v1 privacy switches. Region downloads name

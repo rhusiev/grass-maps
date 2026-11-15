@@ -15,14 +15,16 @@ import java.io.File
  *
  * The copies live under the app's private files root and hold the exact
  * document [FavouritesAccess.export] produces, so a restore never re-encodes
- * the library. [restore] replaces the whole library file with the chosen copy
- * and drops the cached [FavouritesAccess]; it never merges the copy into the
- * live library. A missing or corrupt copy is a typed error and leaves the live
- * library untouched.
+ * the library. [restore] hands the verified copy to the favourites store, which
+ * replaces the whole library under its own mutex; it never merges the copy into
+ * the live library. A missing or corrupt copy is a typed error and leaves the
+ * live library untouched. The store the restore goes through is the one the app
+ * already holds, so every reader sees the replaced library without a cache to
+ * drop.
  *
  * The rotation rule and the wall clock are [FavouritesBackupStore]'s; the
  * debounce is [FavouritesBackupRecorder]'s. This class only supplies the
- * favourites export, the library file and the cache invalidation.
+ * favourites export and the verified copy a restore needs.
  */
 class LocalFavouritesBackup(
     root: File?,
@@ -30,7 +32,6 @@ class LocalFavouritesBackup(
     scope: CoroutineScope,
     clock: Clock = SystemClock,
     debounceMillis: Long = FavouritesBackupRecorder.DEFAULT_DEBOUNCE_MILLIS,
-    private val onRestored: () -> Unit = {},
     onResult: (Outcome<FavouritesBackupCopy>) -> Unit = {},
 ) {
     private val store: FavouritesBackupStore? =
@@ -46,8 +47,6 @@ class LocalFavouritesBackup(
                 onResult = onResult,
             )
         }
-
-    private val favouritesFile: File? = root?.let { directory -> File(directory, UserDataLayout.FAVOURITES_PATH) }
 
     /** Schedules one debounced copy after a successful mutation. */
     fun onMutation() {
@@ -72,16 +71,9 @@ class LocalFavouritesBackup(
     /** Replaces the whole library with [id]; a missing or corrupt copy changes nothing. */
     suspend fun restore(id: String): Outcome<Unit> {
         val backupStore = store ?: return Outcome.Failure(AppError.NotReady)
-        val target = favouritesFile ?: return Outcome.Failure(AppError.NotReady)
-        return when (val restored = backupStore.restore(id, target)) {
-            is Outcome.Failure -> {
-                restored
-            }
-
-            is Outcome.Success -> {
-                onRestored()
-                Outcome.Success(Unit)
-            }
+        return when (val stored = backupStore.read(id)) {
+            is Outcome.Failure -> stored
+            is Outcome.Success -> favourites().restore(stored.value)
         }
     }
 

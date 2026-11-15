@@ -96,6 +96,43 @@ class LocalFavouritesBackupTest {
         }
 
     @Test
+    fun aRestoreGoesThroughTheStoreSoAHeldInstanceFollowsIt() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val container = container(dispatcher)
+            val backup = requireNotNull(container.favouritesBackup)
+            val held = container.favourites
+
+            text(container.commandBus.invoke(FavouriteCommandIds.ADD, addParams("First")))
+            settle()
+            val firstCopy = backup.copies().valueOrFail().first()
+
+            text(container.commandBus.invoke(FavouriteCommandIds.ADD, addParams("Second")))
+            settle()
+            assertEquals(
+                listOf("First", "Second"),
+                held
+                    .load()
+                    .valueOrFail()
+                    .favourites
+                    .map { it.name },
+            )
+
+            assertEquals(Outcome.Success(Unit), backup.restore(firstCopy.id))
+
+            assertEquals(
+                listOf("First"),
+                held
+                    .load()
+                    .valueOrFail()
+                    .favourites
+                    .map { it.name },
+            )
+            text(container.commandBus.invoke(FavouriteCommandIds.ADD, addParams("Third")))
+            assertEquals(listOf("First", "Third"), names(container))
+        }
+
+    @Test
     fun restoreOfAMissingOrCorruptCopyLeavesTheLiveLibrary() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)

@@ -34,6 +34,12 @@ internal data class SpeedReading(
  * same way whether or not it reports a speed, and a replay fixture needs only
  * positions and times.
  *
+ * An interval is measured only when both fixes report a horizontal accuracy of
+ * [ACCEPTABLE_ACCURACY_METERS] or better: a coarse fix can land far from the
+ * previous one and read as a speed no ground truth supports. A refused interval
+ * leaves current, average and max as they were, and the next fix starts a new
+ * interval.
+ *
  * The average covers the last [SpeedTracker.AVERAGE_WINDOW_MILLIS] of fix time
  * and is distance over duration, so a longer interval weighs more than a
  * shorter one. Max is the largest current value since construction or
@@ -85,6 +91,12 @@ internal class SpeedTracker(
         if (durationMillis <= 0L) {
             return reading
         }
+        if (!isAccurate(previous) || !isAccurate(fix)) {
+            // A fix outside the radius is a jump, not travel: the interval is no
+            // measurement, so current, average and max keep their last value.
+            lastFix = fix
+            return reading
+        }
         val distanceMeters = haversineMeters(previous.position, fix.position)
         val metersPerSecond = distanceMeters * MILLIS_PER_SECOND / durationMillis
         samples.addLast(
@@ -104,6 +116,16 @@ internal class SpeedTracker(
     /** Clears the max; the next measured interval starts it again. */
     fun resetMax() {
         maxMetersPerSecond = null
+    }
+
+    /**
+     * Whether [fix] can bound an interval. The navigation session refuses the
+     * same radius before it feeds the route follower, so a reading the widgets
+     * show is one the guidance path would also act on.
+     */
+    private fun isAccurate(fix: LocationFix): Boolean {
+        val accuracy = fix.accuracyMeters
+        return accuracy.isFinite() && accuracy > 0.0 && accuracy <= ACCEPTABLE_ACCURACY_METERS
     }
 
     /** Ground distance by the haversine formula, metres. */
@@ -151,6 +173,15 @@ internal class SpeedTracker(
     internal companion object {
         /** The averaging window: the last minute of fix time. */
         const val AVERAGE_WINDOW_MILLIS: Long = 60_000L
+
+        /**
+         * The horizontal radius a fix needs before it can bound an interval,
+         * in metres. 15 m is the value the navigation session uses to refuse
+         * deviation evidence (`NavigationConfig.minimumHorizontalAccuracyMeters`),
+         * which a plugin cannot reach; it is chosen to agree with that path, not
+         * measured for this widget.
+         */
+        const val ACCEPTABLE_ACCURACY_METERS: Double = 15.0
 
         private const val MILLIS_PER_SECOND: Double = 1_000.0
 

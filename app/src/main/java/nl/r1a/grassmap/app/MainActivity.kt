@@ -51,7 +51,6 @@ import nl.r1a.grassmap.plugins.links.LinkTarget
  */
 class MainActivity : ComponentActivity() {
     private val container: AppContainer by lazy { (application as GrassMapsApplication).container }
-    private var notificationPermissionAsked = false
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
@@ -214,7 +213,8 @@ class MainActivity : ComponentActivity() {
     /**
      * Android 13 shows the foreground notification only with POST_NOTIFICATIONS.
      * The prompt follows the first active navigation and never appears on
-     * launch; a refusal leaves guidance running without the notification.
+     * launch; a refusal leaves guidance running without the notification. The
+     * asked fact lives in the container, so a recreation does not ask again.
      */
     private fun requestNotificationPermissionWhileNavigating() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
@@ -231,19 +231,20 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun requestNotificationPermission() {
-        if (notificationPermissionAsked) {
+        val prompt = container.notificationPermission
+        if (!prompt.shouldAsk(Build.VERSION.SDK_INT, isNotificationPermissionGranted())) {
             return
         }
-        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
-            return
-        }
-        notificationPermissionAsked = true
+        prompt.markAsked()
         try {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         } catch (exception: IllegalStateException) {
             // A launcher that cannot start must not retry on every state.
         }
     }
+
+    private fun isNotificationPermissionGranted(): Boolean =
+        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
     private companion object {
         val PERMISSIONS: Array<String> =

@@ -358,6 +358,8 @@ class RoutePlanner(
      * model is never written, so the profile keeps its defaults. A value equal
      * to the profile defaults is stored as no override, which is what the
      * preview's Reset action produces after the user picks every Normal.
+     * Setting what the plan already uses is not an edit: it adds no undo step
+     * and asks the engine for nothing.
      */
     suspend fun setPreferences(options: RouteOptions): Outcome<RoutePlanState> = revisePreferences(options)
 
@@ -365,16 +367,15 @@ class RoutePlanner(
     suspend fun resetPreferences(): Outcome<RoutePlanState> = revisePreferences(null)
 
     private suspend fun revisePreferences(override: RouteOptions?): Outcome<RoutePlanState> {
-        val current = _state.value
-        if (current.overridePreferences == override) {
-            return Outcome.Success(current)
-        }
         val snapshot =
             mutex.withLock {
-                ticket.incrementAndGet()
                 val currentState = _state.value
                 val profileDefaults = optionsForProfile(profile)
                 val nextOverride = override?.takeUnless { value -> value == profileDefaults }
+                if (currentState.overridePreferences == nextOverride) {
+                    return@withLock currentState
+                }
+                ticket.incrementAndGet()
                 rememberEdit(currentState)
                 val complete = currentState.start != null && currentState.destination != null
                 setState(

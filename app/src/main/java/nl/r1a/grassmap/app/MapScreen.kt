@@ -1137,7 +1137,9 @@ private fun MapContent(
                             )
                         when (val outcome = container.guidance.start(route, RouteProfile.Walk)) {
                             is Outcome.Failure -> {
-                                Toast.makeText(context, R.string.route_planner_start_unavailable, Toast.LENGTH_LONG).show()
+                                Toast
+                                    .makeText(context, guidanceStartFailureMessage(outcome.error), Toast.LENGTH_LONG)
+                                    .show()
                                 Log.w(TAG, "route start failed: ${outcome.error}")
                             }
 
@@ -1322,13 +1324,9 @@ private fun MapContent(
                         } else {
                             when (val outcome = container.guidance.start(route, RouteProfile.Walk, reroute = false)) {
                                 is Outcome.Failure -> {
-                                    val message =
-                                        if (outcome.error == AppError.PermissionDenied) {
-                                            R.string.location_permission_denied
-                                        } else {
-                                            R.string.route_planner_start_unavailable
-                                        }
-                                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                    Toast
+                                        .makeText(context, guidanceStartFailureMessage(outcome.error), Toast.LENGTH_LONG)
+                                        .show()
                                     Log.w(TAG, "track follow start failed: ${outcome.error}")
                                 }
 
@@ -2096,6 +2094,18 @@ private fun NavigationPhase.isActiveNavigation(): Boolean =
         this == NavigationPhase.Rerouting ||
         this == NavigationPhase.Paused ||
         this == NavigationPhase.Arrived
+
+/**
+ * The message a refused guidance start shows. A denied location permission is
+ * the one refusal the user can act on, so it names the permission; every other
+ * failure stays the generic "start unavailable".
+ */
+internal fun guidanceStartFailureMessage(error: AppError): Int =
+    if (error == AppError.PermissionDenied) {
+        R.string.location_permission_denied
+    } else {
+        R.string.route_planner_start_unavailable
+    }
 
 /** The alert host switch a navigation-screen chip owns. */
 private fun NavigationAlertSwitch.toAlertKind(): AlertKind =

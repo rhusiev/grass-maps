@@ -1,7 +1,5 @@
 package nl.r1a.grassmap.control
 
-import android.net.LocalServerSocket
-import android.net.LocalSocket
 import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -37,66 +35,115 @@ enum class ControlServerState {
  * must be admitted ([ControlPeerGate]), and the session must receive the bearer
  * token. One controller is served at a time; the listener accepts the next
  * connection after the current one ends.
+ *
+ * [stop] closes the connection being served, not only the listener, so a session
+ * a start left behind cannot answer a command after [stop] returned or overlap
+ * the next [start].
  */
-class ControlServer(
+class ControlServer internal constructor(
     private val socketName: String,
     private val token: ControlToken,
     private val endpoint: ControlEndpoint,
     private val admittedUids: Set<Int>,
-    private val onState: (ControlServerState) -> Unit = {},
-    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val maxFailedAuth: Int = ControlSession.DEFAULT_MAX_FAILED_AUTH,
-    private val log: ControlLog = ControlLog.None,
+    private val onState: (ControlServerState) -> Unit,
+    private val dispatcher: CoroutineDispatcher,
+    private val maxFailedAuth: Int,
+    private val log: ControlLog,
+    private val sockets: ControlSocketFactory,
 ) {
+    /**
+     * The production shape: the Linux abstract socket, the default tuning and
+     * the process log.
+     */
+    constructor(
+        socketName: String,
+        token: ControlToken,
+        endpoint: ControlEndpoint,
+        admittedUids: Set<Int>,
+        onState: (ControlServerState) -> Unit = {},
+        dispatcher: CoroutineDispatcher = Dispatchers.IO,
+        maxFailedAuth: Int = ControlSession.DEFAULT_MAX_FAILED_AUTH,
+        log: ControlLog = ControlLog.None,
+    ) : this(
+        socketName = socketName,
+        token = token,
+        endpoint = endpoint,
+        admittedUids = admittedUids,
+        onState = onState,
+        dispatcher = dispatcher,
+        maxFailedAuth = maxFailedAuth,
+        log = log,
+        sockets = AndroidControlSockets,
+    )
+
     private val exceptionHandler =
         CoroutineExceptionHandler { _, error ->
             Log.e(TAG, "control server coroutine failed", error)
         }
 
+    /**
+     * The lifecycle fields share one lock: a connection is adopted only while a
+     * start owns the server, and [stop] takes the live one to close it. Without
+     * that, a connection accepted as the owner stops would be served on, unseen.
+     */
+    private val stateLock = Any()
+
     // A cancelled scope cannot accept again, so each start creates a fresh one.
     private var scope: CoroutineScope? = null
-    private var serverSocket: LocalServerSocket? = null
+    private var listener: ControlListener? = null
     private var acceptJob: Job? = null
+    private var live: ControlPeer? = null
 
     fun start(): Outcome<Unit> {
         if (acceptJob != null) {
             return Outcome.Success(Unit)
         }
-        val socket =
-            try {
-                LocalServerSocket(socketName)
-            } catch (exception: IOException) {
-                onState(ControlServerState.BIND_FAILED)
-                return Outcome.Failure(AppError.Internal("control.bind"))
-            }
+        val listening =
+            sockets.listen(socketName)
+                ?: run {
+                    onState(ControlServerState.BIND_FAILED)
+                    return Outcome.Failure(AppError.Internal("control.bind"))
+                }
         val running = CoroutineScope(SupervisorJob() + dispatcher + exceptionHandler)
-        serverSocket = socket
-        scope = running
-        acceptJob = running.launch { acceptLoop(socket) }
+        synchronized(stateLock) {
+            listener = listening
+            scope = running
+            acceptJob = running.launch { acceptLoop(listening) }
+        }
         onState(ControlServerState.LISTENING)
         return Outcome.Success(Unit)
     }
 
     fun stop() {
-        val wasRunning = acceptJob != null
-        acceptJob = null
-        closeQuietly(serverSocket)
-        serverSocket = null
-        scope?.cancel()
-        scope = null
-        if (wasRunning) {
+        val stopped =
+            synchronized(stateLock) {
+                val wasRunning = acceptJob != null
+                acceptJob = null
+                listener?.close()
+                listener = null
+                scope?.cancel()
+                scope = null
+                live?.close()
+                live = null
+                wasRunning
+            }
+        if (stopped) {
             onState(ControlServerState.STOPPED)
         }
     }
 
-    private suspend fun acceptLoop(socket: LocalServerSocket) {
+    private suspend fun acceptLoop(listening: ControlListener) {
         while (currentCoroutineContext().isActive) {
             val connection =
                 try {
-                    withContext(dispatcher) { socket.accept() }
+                    withContext(dispatcher) { listening.accept() }
                 } catch (exception: IOException) {
                     break
                 } ?: break
+            if (!adopt(connection)) {
+                connection.close()
+                break
+            }
             try {
                 serve(connection)
             } catch (exception: CancellationException) {
@@ -106,32 +153,41 @@ class ControlServer(
             } catch (error: LinkageError) {
                 Log.e(TAG, "control session failed to link", error)
             } finally {
-                closeQuietly(connection)
+                release(connection)
+                connection.close()
             }
             onState(ControlServerState.CONNECTION_CLOSED)
         }
     }
 
-    private suspend fun serve(connection: LocalSocket) {
-        val peerUid =
-            try {
-                Outcome.Success(connection.peerCredentials.uid)
-            } catch (exception: IOException) {
-                Outcome.Failure(AppError.NotReady)
-            } catch (exception: RuntimeException) {
-                Outcome.Failure(AppError.NotReady)
+    /**
+     * Registers [connection] as the live one. False means the server stopped
+     * first, so the caller must close it instead of serving it.
+     */
+    private fun adopt(connection: ControlPeer): Boolean =
+        synchronized(stateLock) {
+            if (acceptJob == null) {
+                false
+            } else {
+                live = connection
+                true
             }
-        val uid =
-            when (peerUid) {
-                is Outcome.Success -> {
-                    peerUid.value
-                }
+        }
 
-                is Outcome.Failure -> {
-                    onState(ControlServerState.PEER_UID_UNAVAILABLE)
-                    return
-                }
+    private fun release(connection: ControlPeer) {
+        synchronized(stateLock) {
+            if (live === connection) {
+                live = null
             }
+        }
+    }
+
+    private suspend fun serve(connection: ControlPeer) {
+        val uid = connection.uid()
+        if (uid == null) {
+            onState(ControlServerState.PEER_UID_UNAVAILABLE)
+            return
+        }
         if (!ControlPeerGate.admits(uid, admittedUids)) {
             onState(ControlServerState.PEER_REFUSED)
             return
@@ -140,8 +196,8 @@ class ControlServer(
         val transport =
             try {
                 StreamFrameTransport(
-                    input = connection.inputStream,
-                    output = connection.outputStream,
+                    input = connection.input(),
+                    output = connection.output(),
                     ioDispatcher = dispatcher,
                 )
             } catch (exception: IOException) {
@@ -157,22 +213,6 @@ class ControlServer(
             ).run()
         } finally {
             transport.close()
-        }
-    }
-
-    private fun closeQuietly(socket: LocalSocket?) {
-        try {
-            socket?.close()
-        } catch (exception: IOException) {
-            // Closing a dead socket is best effort.
-        }
-    }
-
-    private fun closeQuietly(socket: LocalServerSocket?) {
-        try {
-            socket?.close()
-        } catch (exception: IOException) {
-            // Closing a dead listener is best effort.
         }
     }
 }

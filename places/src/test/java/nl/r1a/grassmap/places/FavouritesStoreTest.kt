@@ -91,6 +91,26 @@ class FavouritesStoreTest {
         }
 
     @Test
+    fun aReplaceEndsTheUndoScopeOfTheLibraryItRemoved() =
+        runTest {
+            val store = FavouritesStore(file)
+            val expected = snapshot()
+            store.save(expected)
+            val document =
+                when (val exported = store.export()) {
+                    is Outcome.Success -> exported.value
+                    is Outcome.Failure -> throw AssertionError("export failed: ${exported.error}")
+                }
+            val deleted = expected.favourites[0]
+            assertTrue(store.delete(deleted.id) is Outcome.Success)
+
+            assertEquals(Outcome.Success(Unit), store.replace(document))
+
+            assertEquals(Outcome.Failure(AppError.NotFound), store.undoDelete(deleted.id))
+            assertEquals(Outcome.Success(expected), store.load())
+        }
+
+    @Test
     fun anUndoReceiptIsConsumedOnce() =
         runTest {
             val store = FavouritesStore(file)

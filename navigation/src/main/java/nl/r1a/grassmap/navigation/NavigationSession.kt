@@ -621,7 +621,11 @@ class NavigationSession(
         const val INSTRUCTION_LOOKAHEAD_METERS = 1.0
         const val MILLIS_PER_SECOND = 1_000.0
 
-        /** A leg whose end is within this of the fix counts as not yet passed. */
+        /**
+         * Marks a leg passed once the travelled distance comes within this of
+         * its end: an end up to one metre ahead of the fix already counts as
+         * passed, so the last fix before an end does not keep its waypoint.
+         */
         const val LEG_PASSED_EPSILON_METERS = 1.0
     }
 }

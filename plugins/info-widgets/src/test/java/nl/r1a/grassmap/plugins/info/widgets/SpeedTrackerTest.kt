@@ -92,6 +92,30 @@ class SpeedTrackerTest {
     }
 
     @Test
+    fun anInaccurateJumpNeverBecomesTheMax() {
+        val tracker = SpeedTracker()
+        tracker.offer(SpeedReplay.initialFix())
+        val cruise = SpeedReplay.fixes(speedKmh = 5.0, seconds = 30)
+        cruise.forEach(tracker::offer)
+
+        // A fix whose own radius is 40 m lands 40 m north one second later: the
+        // raw interval reads 144 km/h, which is noise, not travel.
+        val jump =
+            fixAt(
+                position =
+                    SpeedReplay.start.copy(
+                        latitude = SpeedReplay.start.latitude + JUMP_METERS / METERS_PER_DEGREE,
+                    ),
+                accuracyMeters = JUMP_ACCURACY_METERS,
+                timeMillis = cruise.last().timeMillis + SpeedReplay.TICK_MILLIS,
+            )
+        tracker.offer(jump)
+
+        assertKmh(5.0, tracker.reading.maxMetersPerSecond)
+        assertKmh(5.0, tracker.reading.currentMetersPerSecond)
+    }
+
+    @Test
     fun aFixThatIsNotNewerChangesNothing() {
         val tracker = SpeedTracker()
         tracker.offer(SpeedReplay.initialFix())
@@ -125,5 +149,11 @@ class SpeedTrackerTest {
         actualMetersPerSecond: Double?,
     ) {
         assertEquals(expectedKmh, (actualMetersPerSecond ?: Double.NaN) * SpeedReplay.MPS_TO_KMH, SpeedReplay.TOLERANCE_KMH)
+    }
+
+    private companion object {
+        const val JUMP_METERS = 40.0
+        const val JUMP_ACCURACY_METERS = 40.0
+        const val METERS_PER_DEGREE = 111_320.0
     }
 }

@@ -226,6 +226,34 @@ class RoutePlannerOptionsTest {
             assertEquals(profileDefaults, engine.requests.last().options)
         }
 
+    @Test
+    fun applyingTheDefaultsThatAreAlreadyInForceIsNoEditAndNoRequest() =
+        runTest {
+            val engine = CapturingEngine()
+            val profileDefaults = RouteOptions(roughSurfaces = RoutePreference.DontMind)
+            val planner =
+                RoutePlanner(
+                    requestRoute = engine::route,
+                    clock = Clock { NOW_MILLIS },
+                    profile = RouteProfile.Walk,
+                    optionsForProfile = { profileDefaults },
+                )
+            planner.setPoint(RoutePlanRole.Start, START)
+            planner.setPoint(RoutePlanRole.Destination, DESTINATION)
+            planner.undo()
+            val afterUndo = planner.state.value
+            planner.redo()
+            val ready = planner.state.value
+            val requestsBefore = engine.requests.size
+
+            val outcome = planner.setPreferences(profileDefaults)
+
+            assertEquals(requestsBefore, engine.requests.size)
+            assertEquals(ready, planner.state.value)
+            assertEquals(Outcome.Success(ready), outcome)
+            assertEquals(Outcome.Success(afterUndo), planner.undo())
+        }
+
     private class CapturingHistory : RouteHistoryAccess {
         val entries = mutableListOf<RouteHistoryEntry>()
 

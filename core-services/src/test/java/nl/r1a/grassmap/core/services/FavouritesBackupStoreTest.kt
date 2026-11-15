@@ -67,44 +67,6 @@ class FavouritesBackupStoreTest {
         }
 
     @Test
-    fun aCopyRestoresToTheTargetFile() =
-        runTest {
-            assertTrue(store.capture(document(1)) is Outcome.Success)
-            clock.advanceSeconds(60)
-            val second = captureOrFail(document(2))
-            val target = File(root, "live/favourites.gpx")
-
-            assertEquals(Outcome.Success(Unit), store.restore(second.id, target))
-
-            assertArrayEquals(document(2), target.readBytes())
-        }
-
-    @Test
-    fun restoreOfAMissingCopyIsNotFoundAndLeavesTheTarget() =
-        runTest {
-            val live = "the live library".toByteArray()
-            val target = liveTarget(live)
-
-            assertEquals(Outcome.Failure(AppError.NotFound), store.restore("favourites-1-0001", target))
-
-            assertArrayEquals(live, target.readBytes())
-        }
-
-    @Test
-    fun restoreOfACorruptCopyIsCorruptDataAndLeavesTheTarget() =
-        runTest {
-            val copy = captureOrFail(document(1))
-            val stored = File(directory, "${copy.id}.gpx")
-            stored.writeBytes("<gpx>damaged after the copy</gpx>".toByteArray())
-            val live = "the live library".toByteArray()
-            val target = liveTarget(live)
-
-            assertEquals(Outcome.Failure(AppError.CorruptData), store.restore(copy.id, target))
-
-            assertArrayEquals(live, target.readBytes())
-        }
-
-    @Test
     fun aFailedWriteLeavesThePreviousCopiesIntact() =
         runTest {
             val first = captureOrFail(document(1))
@@ -158,13 +120,6 @@ class FavouritesBackupStoreTest {
             is Outcome.Success -> outcome.value
             is Outcome.Failure -> throw AssertionError("read failed: ${outcome.error}")
         }
-
-    private fun liveTarget(bytes: ByteArray): File {
-        val target = File(root, "live/favourites.gpx")
-        target.parentFile?.mkdirs()
-        target.writeBytes(bytes)
-        return target
-    }
 
     private fun copyFiles(): List<File> = (directory.listFiles() ?: emptyArray()).filter { file -> file.extension == "gpx" }
 

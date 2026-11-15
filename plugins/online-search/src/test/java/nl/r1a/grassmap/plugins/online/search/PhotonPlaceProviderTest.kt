@@ -103,6 +103,36 @@ class PhotonPlaceProviderTest {
         }
 
     @Test
+    fun aLimitAboveThePageSizeIsClippedInsteadOfRefused() =
+        runTest {
+            val transport = RecordingTransport(SUCCESS)
+            val provider = provider(transport = transport)
+
+            val outcome =
+                provider.search(
+                    query = "lviv",
+                    context = SearchContext(),
+                    limit = PhotonPlaceProvider.MAX_RESULTS + 1,
+                    cancellation = CancellationHandle.None,
+                )
+
+            assertTrue(outcome is Outcome.Success)
+            assertEquals(PhotonPlaceProvider.MAX_RESULTS.toString(), queryValue(transport.urls.single(), "limit"))
+        }
+
+    @Test
+    fun aLimitBelowOneIsInvalidInput() =
+        runTest {
+            val transport = RecordingTransport(SUCCESS)
+            val provider = provider(transport = transport)
+
+            val outcome = provider.search("lviv", SearchContext(), limit = 0, cancellation = CancellationHandle.None)
+
+            assertEquals(Outcome.Failure(AppError.InvalidInput), outcome)
+            assertEquals(0, transport.calls)
+        }
+
+    @Test
     fun oneFailedAttemptIsRetriedOnce() =
         runTest {
             val transport = RecordingTransport(Outcome.Failure(AppError.Network), SUCCESS)

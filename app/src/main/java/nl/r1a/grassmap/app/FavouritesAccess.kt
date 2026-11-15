@@ -58,6 +58,13 @@ class FavouritesAccess internal constructor(
 
     suspend fun import(bytes: ByteArray): Outcome<FavouriteImport> = access { store -> store.import(bytes) }
 
+    /**
+     * Replaces the whole library with [document], a backup copy. The store's
+     * mutex orders it against every mutation, and a document that does not parse
+     * changes nothing.
+     */
+    suspend fun restore(document: ByteArray): Outcome<Unit> = access { store -> store.replace(document) }
+
     suspend fun export(): Outcome<ByteArray> = access { store -> store.export() }
 
     private suspend fun <T> access(block: suspend (FavouritesStore) -> Outcome<T>): Outcome<T> {

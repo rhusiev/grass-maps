@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.map_raster.name">Онлайн-тайли</string>
+    <string name="plugin.map_raster.description">Малює растрові тайли з OpenStreetMap або з шаблону URL, який додає користувач.</string>
+    <string name="map_raster_panel_title">Онлайн-тайли</string>
+    <string name="map_raster_toggle">OpenStreetMap</string>
+    <string name="map_raster_on">Увімкнено</string>
+    <string name="map_raster_off">Вимкнено</string>
+    <string name="map_raster_sends">Сервер тайлів бачить, яку ділянку ви переглядаєте.</string>
+    <string name="map_raster_attribution">© OpenStreetMap contributors</string>
+    <string name="map_raster_custom_hint">Шаблон URL тайлів</string>
+    <string name="map_raster_custom_use">Використати</string>
+    <string name="map_raster_custom_terms">За власне джерело відповідаєте ви, і воно має дозволяти таке використання.</string>
+</resources>

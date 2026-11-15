@@ -90,14 +90,35 @@ enum class LayerSlot {
 }
 
 /**
+ * The raster tile source a [LayerSpec] carries itself. Raster tiles are not a
+ * mounted archive, so the layer owns the source instead of naming a logical
+ * `world`/`region`/`contours` id (T-0512).
+ *
+ * [tiles] are MapLibre tile URL templates such as
+ * `https://tile.openstreetmap.org/{z}/{x}/{y}.png`. [attributionHtml] is the
+ * credit the map's attribution overlay shows; it is required for a source
+ * whose licence asks for one. The engine fetches these URLs only through the
+ * host's network gate (map module), not around it.
+ */
+data class RasterSourceSpec(
+    val tiles: List<String>,
+    val tileSize: Int = 256,
+    val minZoom: Int = 0,
+    val maxZoom: Int = 24,
+    val attributionHtml: String? = null,
+)
+
+/**
  * One MapLibre style layer fragment. Values are style-spec JSON so a provider
  * stays free of map engine types; the host compiles them.
  *
- * A layer draws from [source], the mounted region or contour archive, or from
- * [data], an inline GeoJSON `FeatureCollection`. [data] exists for geometry a
- * plugin assembles itself, such as a route relation's member ways (T-0418);
- * it is not a second base source and is never written to disk. Exactly one of
- * the two is set, and a layer with [data] must not name [sourceLayer].
+ * A layer draws from [source], the mounted region or contour archive, from
+ * [data], an inline GeoJSON `FeatureCollection`, or from [raster], a tile URL
+ * template the layer brings itself. [data] exists for geometry a plugin
+ * assembles itself, such as a route relation's member ways (T-0418); it is not
+ * a second base source and is never written to disk. Exactly one of the three
+ * is set. A layer with [data] must not name [sourceLayer]; only a raster layer
+ * sets [raster].
  */
 data class LayerSpec(
     val id: LayerId,
@@ -105,6 +126,7 @@ data class LayerSpec(
     val source: SourceId? = null,
     val sourceLayer: String? = null,
     val data: String? = null,
+    val raster: RasterSourceSpec? = null,
     val minZoom: Float = 0f,
     val maxZoom: Float = 24f,
     val filter: JsonElement? = null,

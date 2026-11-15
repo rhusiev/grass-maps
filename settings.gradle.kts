@@ -59,4 +59,5 @@ include(
     ":plugins:track-library",
     ":plugins:contours",
     ":plugins:route-relations",
+    ":plugins:raster",
 )

@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -79,6 +80,7 @@ import nl.r1a.grassmap.plugin.api.service.NetworkGate
 import nl.r1a.grassmap.plugin.api.service.NetworkSwitches
 import nl.r1a.grassmap.plugin.api.service.PrivacySwitches
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.api.service.SwitchState
 import nl.r1a.grassmap.plugin.api.service.SystemClock
 import nl.r1a.grassmap.plugins.coordinates.Coordinates
 import nl.r1a.grassmap.plugins.map.controls.CameraModeController
@@ -89,6 +91,7 @@ import nl.r1a.grassmap.plugins.point.info.PointInfo
 import nl.r1a.grassmap.plugins.point.info.SelectedPointStore
 import nl.r1a.grassmap.plugins.proximity.alerts.ProximityAlertHost
 import nl.r1a.grassmap.plugins.proximity.alerts.ProximityAlertSink
+import nl.r1a.grassmap.plugins.raster.RasterSource
 import nl.r1a.grassmap.plugins.route.layer.RouteLayer
 import nl.r1a.grassmap.plugins.route.warnings.RouteWarningScanner
 import nl.r1a.grassmap.plugins.track.layer.TrackLayer
@@ -141,6 +144,7 @@ class AppContainer(
     private val searchHistorySettingsFileProvider: () -> File? = { null },
     private val onlineSearchSettingsFileProvider: () -> File? = { null },
     private val contoursSettingsFileProvider: () -> File? = { null },
+    private val rasterSettingsFileProvider: () -> File? = { null },
     private val routeHistoryFileProvider: () -> File? = { null },
     private val routingOptionsFileProvider: () -> File? = { null },
     private val alertSettingsFileProvider: () -> File? = { null },
@@ -236,6 +240,22 @@ class AppContainer(
      */
     val contoursSettings: ContoursSettings by lazy {
         ContoursSettings(contoursSettingsFileProvider(), override = { contoursOverride })
+    }
+
+    /**
+     * The online tile source (T-0512). Construction reads the settings file,
+     * so the map screen resolves it off Main.
+     */
+    val rasterSettings: RasterSourceSettings by lazy {
+        RasterSourceSettings(rasterSettingsFileProvider())
+    }
+
+    /**
+     * The online tile overlay (T-0512): the plugin provider, the tile client
+     * and the engine interceptor every tile request must pass.
+     */
+    val rasterTiles: RasterTilesAccess by lazy {
+        RasterTilesAccess(providerRegistry, networkGate)
     }
 
     /**
@@ -614,6 +634,28 @@ class AppContainer(
 
     /** Turns the online-search privacy switch on or off. */
     suspend fun setOnlineSearchEnabled(enabled: Boolean): Outcome<Unit> = privacySwitches.setEnabled(NetworkSwitches.onlineSearch, enabled)
+
+    /** The current privacy switch list, for a screen that reads it once. */
+    fun privacySwitchStates(): List<SwitchState> = privacySwitches.states()
+
+    /** The switch list whenever a permission changes. */
+    val privacyStates: Flow<List<SwitchState>>
+        get() = privacySwitches.changes
+
+    /** Whether the user allowed online raster tiles. */
+    val onlineTilesEnabled: Boolean
+        get() = privacySwitches.state(NetworkSwitches.onlineTiles).enabled
+
+    /** Turns the online-tiles privacy switch on or off. */
+    suspend fun setOnlineTilesEnabled(enabled: Boolean): Outcome<Unit> = privacySwitches.setEnabled(NetworkSwitches.onlineTiles, enabled)
+
+    /**
+     * Validates and probes a user URL template through the gate, then makes it
+     * the active source. The map screen observes [RasterSourceSettings.active]
+     * and swaps the layer. A failed probe keeps the previous source.
+     */
+    suspend fun useCustomRasterSource(template: String): Outcome<RasterSource> =
+        rasterSettings.useCustom(template) { source -> rasterTiles.probe(source) }
 
     /**
      * The one query path (T-0203, T-0212): offline rows first, then the opt-in

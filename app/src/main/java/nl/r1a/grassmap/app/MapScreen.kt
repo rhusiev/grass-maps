@@ -110,6 +110,7 @@ import nl.r1a.grassmap.plugin.api.provider.PlaceSource
 import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmap.plugin.api.service.NetworkSwitches
 import nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
@@ -129,6 +130,7 @@ import nl.r1a.grassmap.plugins.map.controls.ScaleBarUnit
 import nl.r1a.grassmap.plugins.point.info.PointInfoContract
 import nl.r1a.grassmap.plugins.point.info.PointInfoLabel
 import nl.r1a.grassmap.plugins.point.info.SelectedPointValue
+import nl.r1a.grassmap.plugins.raster.RasterLayerPanel
 import nl.r1a.grassmap.plugins.route.layer.RouteColourMode
 import nl.r1a.grassmap.plugins.route.layer.RouteLineDrawing
 import nl.r1a.grassmap.plugins.route.planner.RoutePlannerContract
@@ -199,6 +201,7 @@ private const val TRACK_IMPORT_NOTICE_MILLIS = 8_000L
 private const val BANNER_STACK_GAP_DP = 8
 private const val BANNER_TICK_MILLIS = 1_000L
 private const val CONTOURS_PANEL_TOP_DP = 80
+private const val PANEL_GAP_DP = 8
 private const val METRE_DECIMALS = 1
 private const val KILOMETRE_DECIMALS = 2
 private const val WHOLE_VALUE_MIN = 1.0
@@ -234,7 +237,7 @@ internal fun MapScreen(
         produceState<MapBundle?>(null) {
             value =
                 withContext(Dispatchers.IO) {
-                    prepareMapEngine(context.applicationContext)
+                    prepareMapEngine(context.applicationContext, container.rasterTiles.policy)
                     loadBundle(container, context.applicationContext)
                 }
             if (value == null) {
@@ -407,6 +410,9 @@ private fun MapContent(
     // only the search markers, which have to follow the map, collect it.
     val cameraNow: () -> Camera = remember(surface) { { surface.host.camera.value } }
     val contoursEnabled by container.contoursSettings.enabled.collectAsState()
+    val switchStates by container.privacyStates.collectAsState(initial = container.privacySwitchStates())
+    val onlineTilesEnabled = switchStates.firstOrNull { it.switch == NetworkSwitches.onlineTiles }?.enabled == true
+    val rasterSource by container.rasterSettings.active.collectAsState()
     val planFlow =
         remember(container) {
             container.streamAccess.subscribe<RoutePlanState>(RoutePlannerContract.stateStream)
@@ -771,23 +777,47 @@ private fun MapContent(
             )
         }
         if (!navigationActive) {
-            ContoursLayerPanel(
-                enabled = contoursEnabled,
-                onEnabledChange = { enabled ->
-                    scope.launch {
-                        withContext(Dispatchers.IO) {
-                            container.contoursSettings.setEnabled(enabled)
-                        }.onFailure { error ->
-                            Log.w(TAG, "contour toggle not saved: $error")
-                        }
-                    }
-                },
+            Column(
                 modifier =
                     Modifier
                         .align(Alignment.TopStart)
                         .statusBarsPadding()
                         .padding(top = CONTOURS_PANEL_TOP_DP.dp, start = BAR_PADDING_DP.dp),
-            )
+                verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
+            ) {
+                ContoursLayerPanel(
+                    enabled = contoursEnabled,
+                    onEnabledChange = { enabled ->
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                container.contoursSettings.setEnabled(enabled)
+                            }.onFailure { error ->
+                                Log.w(TAG, "contour toggle not saved: $error")
+                            }
+                        }
+                    },
+                )
+                RasterLayerPanel(
+                    enabled = onlineTilesEnabled,
+                    source = rasterSource,
+                    onEnabledChange = { enabled ->
+                        scope.launch {
+                            container.setOnlineTilesEnabled(enabled).onFailure { error ->
+                                Log.w(TAG, "online tiles switch failed: $error")
+                            }
+                        }
+                    },
+                    onCustomSource = { template ->
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                container.useCustomRasterSource(template)
+                            }.onFailure { error ->
+                                Log.w(TAG, "custom tile source rejected: $error")
+                            }
+                        }
+                    },
+                )
+            }
         }
         if (!navigationActive) {
             MapScaleOverlay(
@@ -1637,6 +1667,28 @@ private fun MapContent(
             is Outcome.Failure -> Log.w(TAG, "contour layers not applied: ${contours.error}")
         }
     }
+    LaunchedEffect(surface.host, bundle.style.id, onlineTilesEnabled, rasterSource) {
+        when (
+            val installed =
+                container.rasterTiles.apply(
+                    host = surface.host,
+                    styleId = bundle.style.id,
+                    enabled = onlineTilesEnabled,
+                    source = rasterSource,
+                )
+        ) {
+            is Outcome.Success -> {
+                Log.i(
+                    TAG,
+                    "online tiles ready enabled=$onlineTilesEnabled source=${rasterSource.displayName}",
+                )
+            }
+
+            is Outcome.Failure -> {
+                Log.w(TAG, "online tiles not applied: ${installed.error}")
+            }
+        }
+    }
 }
 
 /**
@@ -2249,9 +2301,10 @@ private suspend fun loadBundle(
     container: AppContainer,
     context: Context,
 ): MapBundle? {
-    // Resolve the layer switch on the caller's IO dispatcher before the screen
-    // collects it, so a settings read never lands on Main.
+    // Resolve the layer switches on the caller's IO dispatcher before the
+    // screen collects them, so a settings read never lands on Main.
     container.contoursSettings.isEnabled()
+    container.rasterSettings.current()
     val sources = MapSources.resolve(context, container.regionsRoot)
     val result =
         container.providerRegistry.invoke(STYLE_PLUGIN, MapLayerContract.REFERENCE) { provider ->

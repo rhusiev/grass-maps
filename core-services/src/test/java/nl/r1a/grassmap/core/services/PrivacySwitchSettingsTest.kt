@@ -87,4 +87,22 @@ class PrivacySwitchSettingsTest {
             assertFalse(state.enabled)
             assertEquals(1L, state.requests)
         }
+
+    @Test
+    fun changesPublishesTheNewStateWhenASwitchTurnsOn() =
+        runTest {
+            assertFalse(
+                settings.changes.value
+                    .first { it.switch == NetworkSwitches.onlineTiles }
+                    .enabled,
+            )
+
+            settings.setEnabled(NetworkSwitches.onlineTiles, true)
+
+            assertTrue(
+                settings.changes.value
+                    .first { it.switch == NetworkSwitches.onlineTiles }
+                    .enabled,
+            )
+        }
 }

@@ -1,0 +1,29 @@
+{
+  "id": "map.raster",
+  "name": "plugin.map_raster.name",
+  "description": "plugin.map_raster.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.raster.RasterPlugin",
+  "contributes": {
+    "providers": [
+      {
+        "contract": "map.layers",
+        "version": "1.0.0",
+        "capabilities": {
+          "styles": []
+        }
+      }
+    ]
+  },
+  "needs": {
+    "network": [
+      "network.online_tiles"
+    ],
+    "location": "none",
+    "regions": []
+  },
+  "activation": [
+    "provider"
+  ]
+}

@@ -59,6 +59,7 @@ import nl.r1a.grassmap.plugin.api.model.TrackingMode
 import nl.r1a.grassmap.plugin.api.provider.Route
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.map.DefaultMapRuntime
+import org.maplibre.compose.map.MapRuntimeOptions
 import org.maplibre.compose.map.MapState
 import org.maplibre.compose.map.MaplibreMap
 import org.maplibre.compose.map.RenderStats
@@ -67,6 +68,7 @@ import org.maplibre.compose.style.BaseStyle
 import org.maplibre.compose.util.DpPadding
 import org.maplibre.nativeffi.MaplibreAndroid
 import org.maplibre.spatialk.geojson.Position
+import java.util.concurrent.atomic.AtomicBoolean
 import org.maplibre.compose.camera.CameraUpdate as EngineCameraUpdate
 import org.maplibre.compose.map.MapEvent as EngineEvent
 
@@ -156,7 +158,7 @@ internal class MapHostState(
         spec: LayerSpec,
         owner: PluginId,
     ): Outcome<Unit> {
-        if (spec.data != null && spec.source != null) {
+        if (listOfNotNull(spec.source, spec.data, spec.raster).size > 1) {
             return Outcome.Failure(AppError.InvalidInput)
         }
         val report = StyleLayerCompiler.compileAll(listOf(SlottedLayer(slot, spec)))
@@ -348,14 +350,36 @@ internal fun MapSurface.screenProjector(): MapScreenProjector =
  * Loads the native engine off Main. MapLibre extracts and loads its native
  * library on the first call; doing that on Main trips the StrictMode disk-read
  * policy in debug builds. Call this before the first [rememberMapSurface].
+ *
+ * [interceptor] is installed on the default runtime before it exists, so every
+ * tile URL the engine asks for passes through the host's privacy gate (T-0512).
+ * The runtime refuses a later configuration, which is why this must stay the
+ * only place that creates it.
  */
-suspend fun prepareMapEngine(context: android.content.Context) {
+suspend fun prepareMapEngine(
+    context: android.content.Context,
+    tilePolicy: TileNetworkPolicy,
+) {
     withContext(Dispatchers.IO) {
         MaplibreAndroid.initialize(context)
+        if (runtimeConfigured.compareAndSet(false, true)) {
+            DefaultMapRuntime.configure(MapRuntimeOptions.Standard) {
+                requestInterceptor =
+                    GatedTileInterceptor(
+                        gate = tilePolicy.gate,
+                        switch = tilePolicy.switch,
+                        allowsUrl = tilePolicy.allowsUrl,
+                        userAgent = tilePolicy.userAgent,
+                    )
+            }
+        }
         // The default runtime creates MapLibre's cache file on first access.
         DefaultMapRuntime.instance
     }
 }
+
+/** The runtime takes its interceptor once; a later screen reuses it. */
+private val runtimeConfigured = AtomicBoolean(false)
 
 /**
  * Creates a maplibre-compose surface behind [MapHost]. The `BaseStyle.Json`

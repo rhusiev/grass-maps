@@ -1,5 +1,7 @@
 package nl.r1a.grassmap.plugin.api.service
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -28,6 +30,13 @@ interface PrivacySwitches {
 
     /** Every registered switch, in the order settings shows them. */
     fun states(): List<SwitchState>
+
+    /**
+     * Emits the full list whenever a switch is turned on or off, so a screen
+     * can follow the permission instead of reading it once. A host that does
+     * not publish changes emits nothing.
+     */
+    val changes: Flow<List<SwitchState>> get() = emptyFlow()
 
     /** Turns [switch] on or off. An unregistered switch is [AppError.NotFound]. */
     suspend fun setEnabled(

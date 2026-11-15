@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import nl.r1a.grassmap.plugin.api.model.LayerSpec
 import nl.r1a.grassmap.plugin.api.model.LayerType
+import nl.r1a.grassmap.plugin.api.model.RasterSourceSpec
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.SourceId
 import org.maplibre.compose.expressions.ast.Expression
@@ -87,13 +88,10 @@ internal object StyleLayerCompiler {
         }
 
     fun compile(spec: LayerSpec): CompiledLayer {
-        when (spec.type) {
-            LayerType.Raster,
-            LayerType.Hillshade,
-            -> throw StyleCompileException("Layer type '${spec.type}' is not rendered yet")
-
-            else -> Unit
+        if (spec.type == LayerType.Hillshade) {
+            throw StyleCompileException("Layer type '${spec.type}' is not rendered yet")
         }
+        validateRaster(spec)
         val supported = propertiesFor(spec.type)
         val properties = LinkedHashMap<String, Expression<*>>()
         for (section in listOf(spec.paint, spec.layout)) {
@@ -125,12 +123,65 @@ internal object StyleLayerCompiler {
             source = spec.source,
             sourceLayer = spec.sourceLayer.orEmpty(),
             data = data,
+            raster = spec.raster,
             minZoom = spec.minZoom,
             maxZoom = spec.maxZoom,
             filter = filter,
             properties = properties,
         )
     }
+
+    /**
+     * A raster layer owns its source, so it names no `source`/`sourceLayer`
+     * and carries no inline GeoJSON. The tile template must be resolvable by
+     * the engine: an absolute HTTP(S) URL with the three tile placeholders
+     * (T-0512). A local `http://127.0.0.1` fixture passes the same rule the
+     * app's custom-source path uses.
+     */
+    private fun validateRaster(spec: LayerSpec) {
+        val raster = spec.raster
+        if (spec.type != LayerType.Raster) {
+            if (raster != null) {
+                throw StyleCompileException("Layer ${spec.id} attaches a raster source to ${spec.type}")
+            }
+            return
+        }
+        if (raster == null) {
+            throw StyleCompileException("Raster layer ${spec.id} has no raster source")
+        }
+        if (spec.source != null || spec.sourceLayer != null || spec.data != null) {
+            throw StyleCompileException("Raster layer ${spec.id} must not name another source")
+        }
+        if (spec.filter != null) {
+            throw StyleCompileException("Raster layer ${spec.id} cannot have a filter")
+        }
+        if (raster.tiles.isEmpty()) {
+            throw StyleCompileException("Raster layer ${spec.id} has no tile URL")
+        }
+        if (raster.tileSize !in MIN_TILE_SIZE..MAX_TILE_SIZE) {
+            throw StyleCompileException("Raster layer ${spec.id} has tile size ${raster.tileSize}")
+        }
+        if (raster.minZoom !in MIN_ZOOM..MAX_ZOOM || raster.maxZoom !in raster.minZoom..MAX_ZOOM) {
+            throw StyleCompileException(
+                "Raster layer ${spec.id} has zoom ${raster.minZoom}..${raster.maxZoom}",
+            )
+        }
+        for (tile in raster.tiles) {
+            if (!isTileTemplate(tile)) {
+                throw StyleCompileException("Raster layer ${spec.id} has an invalid tile URL")
+            }
+        }
+    }
+
+    private fun isTileTemplate(tile: String): Boolean =
+        (tile.startsWith("https://") || tile.startsWith("http://")) &&
+            TILE_PLACEHOLDERS.all { placeholder -> placeholder in tile }
+
+    private const val MIN_TILE_SIZE = 1
+    private const val MAX_TILE_SIZE = 1024
+    private const val MIN_ZOOM = 0
+    private const val MAX_ZOOM = 24
+    private val TILE_PLACEHOLDERS = listOf("{z}", "{x}", "{y}")
 
     fun compileAll(layers: List<SlottedLayer>): StyleCompileReport {
         val compiled = mutableListOf<CompiledLayer>()
@@ -167,6 +218,7 @@ internal data class CompiledLayer(
     val source: SourceId?,
     val sourceLayer: String,
     val data: String?,
+    val raster: RasterSourceSpec?,
     val minZoom: Float,
     val maxZoom: Float,
     val filter: Expression<BooleanValue>?,

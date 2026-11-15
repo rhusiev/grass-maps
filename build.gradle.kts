@@ -99,6 +99,7 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
                 ":plugins:track-library",
                 ":plugins:contours",
                 ":plugins:route-relations",
+                ":plugins:raster",
             ),
         // testFixtures(project(":plugin-api")) is the module's own fixtures.
         ":plugin-api" to setOf(":plugin-api"),
@@ -148,6 +149,7 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         ":plugins:track-library" to setOf(":plugin-api"),
         ":plugins:contours" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:route-relations" to setOf(":plugin-api"),
+        ":plugins:raster" to setOf(":plugin-api"),
     )
 // Edges that ship in the debug APK and must never reach a release build
 // (architecture section 22). They are judged separately from the release

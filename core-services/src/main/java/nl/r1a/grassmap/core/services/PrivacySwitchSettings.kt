@@ -1,5 +1,8 @@
 package nl.r1a.grassmap.core.services
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -19,6 +22,10 @@ class PrivacySwitchSettings(
 ) : PrivacySwitches {
     private val registered: Set<SwitchId> = registry.toSet()
 
+    private val changeState = MutableStateFlow(states())
+
+    override val changes: StateFlow<List<SwitchState>> = changeState.asStateFlow()
+
     override fun state(switch: SwitchId): SwitchState =
         SwitchState(
             switch = switch,
@@ -36,6 +43,7 @@ class PrivacySwitchSettings(
             return Outcome.Failure(AppError.NotFound)
         }
         store.setEnabled(switch, enabled)
+        changeState.value = states()
         return Outcome.Success(Unit)
     }
 

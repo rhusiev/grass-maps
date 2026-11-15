@@ -505,8 +505,32 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/track-library` | the track library state, its folder definitions, the rename, describe, move and delete actions with one-step undo, and the four fixed orders and name search | `plugin-api` |
 | `plugins/contours` | the contour overlay for the Standard and Touring variants and the one-row layers panel that toggles it | `plugin-api`, `plugin-ui-api` |
 | `plugins/route-relations` | the hiking and cycling relation geometry assembler, the shared-way lane assignment, the OSMC waymark mapping, the cycling node-network numbers and the `MapHost` layers over an inline GeoJSON source | `plugin-api` |
+| `plugins/raster` | the online raster tile source: the OSM preset, the user URL template, the tile client behind the online-tiles switch and the layers-panel row | `plugin-api` |
 | `plugins/route-warnings` | the warning list for fords, steps, barriers, railway crossings and private ways, with its profile filter and distance order | `plugin-api` |
 | `plugins/proximity-alerts` | the proximity schedule for favourites, track waypoints and chosen place kinds: the three chosen radii, the one-per-approach latch and its lookup refresh | `plugin-api` |
+
+## Online tiles
+
+`plugins/raster` draws one online raster source over the active style (T-0512).
+The manifest names `network.online_tiles`, and the map screen's layers panel
+shows the row with the sentence the switch sends: the tile server sees which
+area is on screen.
+
+The preset is OpenStreetMap's own tile server, z0-z19, with the credit its
+licence requires shown in the map's attribution line. Its policy forbids
+offline bulk download, so `RasterOfflineDownload.prepare` refuses it. The same
+refusal applies to a custom template on the same host.
+
+Any other source is a user URL template with `{z}`, `{x}` and `{y}`. The app
+validates the template and fetches one tile through the gate before it makes
+the source active, so a broken template never replaces a working source. Plain
+HTTP is accepted only for a loopback test server; a remote source must use
+HTTPS.
+
+Every tile URL the engine asks for passes `GatedTileInterceptor`: the URL must
+match the active source's template, and `NetworkGate.request(online_tiles)`
+must allow it. A refused URL is rewritten to `local://`, so no socket opens.
+The engine's own tile cache is the only cache; the plugin adds no second one.
 
 ## Place card
 

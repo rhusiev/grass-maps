@@ -61,8 +61,8 @@ import nl.r1a.grassmap.plugin.api.host.ElevationAccess
 import nl.r1a.grassmap.plugin.api.host.NoElevationAccess
 import nl.r1a.grassmap.plugin.api.host.NoPlatformActions
 import nl.r1a.grassmap.plugin.api.host.NoRegionAccess
-import nl.r1a.grassmap.plugin.api.host.PlatformActions
 import nl.r1a.grassmap.plugin.api.host.NoRegionDownloadsAccess
+import nl.r1a.grassmap.plugin.api.host.PlatformActions
 import nl.r1a.grassmap.plugin.api.host.RegionAccess
 import nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess
 import nl.r1a.grassmap.plugin.api.host.RoutingOptionsAccess

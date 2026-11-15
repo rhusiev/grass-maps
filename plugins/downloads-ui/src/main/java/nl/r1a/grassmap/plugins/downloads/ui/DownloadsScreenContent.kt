@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -40,7 +41,6 @@ import nl.r1a.grassmap.plugin.api.model.DownloadTransferState
 import nl.r1a.grassmap.plugin.api.model.DownloadsState
 import nl.r1a.grassmap.plugin.api.model.FirstRunOffer
 import nl.r1a.grassmap.plugin.api.model.FirstRunOfferKind
-import java.util.Locale
 
 private val SURFACE = Color(0xFFF5F4F1)
 private val CARD = Color(0xFFFFFFFF)
@@ -603,7 +603,7 @@ private fun sizeAndDate(
     bytes: Long,
     isoDate: String?,
 ): String {
-    val date = DownloadsFormat.dataDate(isoDate, Locale.getDefault())
+    val date = DownloadsFormat.dataDate(isoDate, LocalConfiguration.current.locales[0])
     return if (date == null) {
         stringResource(R.string.downloads_size_only, DownloadsFormat.size(bytes))
     } else {

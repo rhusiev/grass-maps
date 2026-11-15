@@ -99,7 +99,8 @@ class DebugApplication : GrassMapsApplication() {
                     contoursEnabled = { container.contoursSettings.isEnabled() },
                 ),
                 ShowNavigationScreenCommand(session, container.navigationScreenFixture),
-            ) + placeCardCommands { container } + favouritesListsCommands() + trackLibraryCommands()
+            ) + placeCardCommands { container } + favouritesListsCommands() + trackLibraryCommands() +
+                downloadsScreenCommands { container }
         }
 
     /** Debug builds treat the developer as the AI-control switch holder. */

@@ -86,6 +86,7 @@ import nl.r1a.grassmap.plugin.api.error.onFailure
 import nl.r1a.grassmap.plugin.api.host.MapEvent
 import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.model.CameraUpdate
+import nl.r1a.grassmap.plugin.api.model.DownloadsState
 import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
 import nl.r1a.grassmap.plugin.api.model.FavouriteSort
 import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
@@ -117,6 +118,8 @@ import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartStretch
 import nl.r1a.grassmap.plugin.ui.api.NavigationScreenStatus
 import nl.r1a.grassmap.plugins.contours.ContoursLayerPanel
+import nl.r1a.grassmap.plugins.downloads.ui.DownloadsScreenContent
+import nl.r1a.grassmap.plugins.downloads.ui.DownloadsUiContract
 import nl.r1a.grassmap.plugins.favourites.ui.FavouritesUiContract
 import nl.r1a.grassmap.plugins.guidance.ui.GuidanceInput
 import nl.r1a.grassmap.plugins.guidance.ui.GuidancePanelContent
@@ -395,6 +398,7 @@ private fun MapContent(
     val selectedRows = remember(selectedPoint, container.strings) { PointInfoLabel.rows(selectedPoint, container.strings) }
     val placeCard by PlaceCardSession.card.collectAsState()
     val listsVisible by FavouritesListsSession.visible.collectAsState()
+    val downloadsVisible by DownloadsScreenSession.visible.collectAsState()
     val listsQuerySequence = remember { longArrayOf(0L) }
     val libraryVisible by TrackLibraryScreen.visible.collectAsState()
     val libraryQuerySequence = remember { longArrayOf(0L) }
@@ -1620,6 +1624,64 @@ private fun MapContent(
                 modifier = Modifier.fillMaxSize(),
             )
         }
+        if (downloadsVisible && !navigationActive) {
+            val downloadsFlow =
+                remember(container) {
+                    container.streamAccess.subscribe<DownloadsState>(DownloadsUiContract.stateStream)
+                }
+            val downloadsState by downloadsFlow.collectAsState(initial = DownloadsState())
+            var serverFormVisible by remember { mutableStateOf(false) }
+            DownloadsScreenContent(
+                state = downloadsState,
+                preferUkrainian = Locale.getDefault().language == "uk",
+                showServerForm = serverFormVisible,
+                onOpenRegion = { region ->
+                    scope.launch {
+                        invokeDownloadsCommand(container, DownloadsUiContract.selectRegion, listParams("region" to region))
+                    }
+                },
+                onCloseSheet = {
+                    scope.launch {
+                        invokeDownloadsCommand(container, DownloadsUiContract.selectRegion, listParams("region" to ""))
+                    }
+                },
+                onDownload = { region ->
+                    scope.launch {
+                        invokeDownloadsCommand(container, DownloadsUiContract.downloadRegion, listParams("region" to region))
+                    }
+                },
+                onCancel = { region ->
+                    scope.launch {
+                        invokeDownloadsCommand(container, DownloadsUiContract.cancelRegion, listParams("region" to region))
+                    }
+                },
+                onRemove = { region ->
+                    scope.launch {
+                        invokeDownloadsCommand(container, DownloadsUiContract.removeRegion, listParams("region" to region))
+                    }
+                },
+                onRefresh = {
+                    scope.launch {
+                        invokeDownloadsCommand(container, DownloadsUiContract.refresh, JsonObject(emptyMap()))
+                    }
+                },
+                onSaveServer = { url, token ->
+                    serverFormVisible = false
+                    scope.launch {
+                        invokeDownloadsCommand(
+                            container,
+                            DownloadsUiContract.setServer,
+                            buildJsonObject {
+                                put("url", url)
+                                put("token", token)
+                            },
+                        )
+                    }
+                },
+                onTokenSettings = { serverFormVisible = !serverFormVisible },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
         val shareConfirmation = trackShareConfirmation
         if (shareConfirmation != null) {
             val confirmContent =
@@ -2270,6 +2332,17 @@ private fun controlBarLabels(context: Context): ControlBarLabels =
     )
 
 /** Runs one lists command and logs a typed failure; the sheet keeps its state. */
+/** Runs one downloads command and logs a typed failure; the screen keeps its state. */
+private suspend fun invokeDownloadsCommand(
+    container: AppContainer,
+    id: CommandId,
+    params: JsonObject,
+) {
+    container.commandBus.invoke(id, params).onFailure { error ->
+        Log.w(TAG, "downloads command $id failed: $error")
+    }
+}
+
 private suspend fun invokeListsCommand(
     container: AppContainer,
     id: CommandId,

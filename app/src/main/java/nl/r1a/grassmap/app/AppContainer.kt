@@ -62,6 +62,7 @@ import nl.r1a.grassmap.plugin.api.host.NoElevationAccess
 import nl.r1a.grassmap.plugin.api.host.NoPlatformActions
 import nl.r1a.grassmap.plugin.api.host.NoRegionAccess
 import nl.r1a.grassmap.plugin.api.host.PlatformActions
+import nl.r1a.grassmap.plugin.api.host.NoRegionDownloadsAccess
 import nl.r1a.grassmap.plugin.api.host.RegionAccess
 import nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess
 import nl.r1a.grassmap.plugin.api.host.RoutingOptionsAccess
@@ -98,6 +99,7 @@ import nl.r1a.grassmap.plugins.track.layer.TrackLayer
 import nl.r1a.grassmap.plugins.track.library.TrackFolderStore
 import nl.r1a.grassmap.plugins.way.alerts.WayAlertHost
 import nl.r1a.grassmap.plugins.way.alerts.WayAlertSink
+import nl.r1a.grassmap.regions.DownloadPolicy
 import nl.r1a.grassmap.regions.GateNetworkAccess
 import nl.r1a.grassmap.regions.HttpDownloadTransport
 import nl.r1a.grassmap.regions.NetworkAccess
@@ -106,6 +108,7 @@ import nl.r1a.grassmap.regions.RegionElevation
 import nl.r1a.grassmap.regions.RegionMountResolver
 import nl.r1a.grassmap.regions.RegionPaths
 import nl.r1a.grassmap.regions.RegionReader
+import nl.r1a.grassmap.regions.RegionStore
 import nl.r1a.grassmap.routing.RouteHistorySetting
 import nl.r1a.grassmap.routing.RouteHistoryStore
 import java.io.File
@@ -651,6 +654,14 @@ class AppContainer(
     /** Turns the online-tiles privacy switch on or off. */
     suspend fun setOnlineTilesEnabled(enabled: Boolean): Outcome<Unit> = privacySwitches.setEnabled(NetworkSwitches.onlineTiles, enabled)
 
+    /** Whether the user allowed region downloads and update checks. */
+    val regionDownloadsEnabled: Boolean
+        get() = privacySwitches.state(NetworkSwitches.regionUpdates).enabled
+
+    /** Turns the region-download privacy switch on or off. */
+    suspend fun setRegionDownloadsEnabled(enabled: Boolean): Outcome<Unit> =
+        privacySwitches.setEnabled(NetworkSwitches.regionUpdates, enabled)
+
     /**
      * Validates and probes a user URL template through the gate, then makes it
      * the active source. The map screen observes [RasterSourceSettings.active]
@@ -846,6 +857,25 @@ class AppContainer(
     /** The region store root, or null when the app has no files directory. */
     val regionsRoot: File? by lazy { regionsRootProvider() }
 
+    /**
+     * The region store behind the downloads screen (T-0504). It shares the
+     * app-private root and the gated network path with the downloader below.
+     * Its worker fetches nothing until the screen asks for the catalogue, and
+     * every request names `network.region_updates`.
+     */
+    val regionStore: RegionStore? by lazy {
+        regionsRoot?.let { root ->
+            RegionStore(
+                paths = RegionPaths(root),
+                policy = DownloadPolicy(switch = NetworkSwitches.regionUpdates),
+                network = regionNetwork,
+                scope = processScope,
+                transport = HttpDownloadTransport(),
+                log = { message -> Log.i(REGIONS_TAG, message) },
+            )
+        }
+    }
+
     /** The region downloader over the app-private region store, or null without a root. */
     val regionDownloader: RegionDownloader? by lazy {
         regionsRoot?.let { root ->
@@ -945,6 +975,7 @@ class AppContainer(
             routingEngines = routingEngineAccess,
             routeHistoryAccess = routeHistory,
             routingOptionsAccess = RoutingOptionsAccess { profile -> routingOptionsSettings.forProfile(profile) },
+            regionDownloadsAccess = regionStore ?: NoRegionDownloadsAccess,
             elevationAccess = elevationAccess,
             logger = pluginLogger,
         )

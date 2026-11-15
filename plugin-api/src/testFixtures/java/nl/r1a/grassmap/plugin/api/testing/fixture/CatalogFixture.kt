@@ -21,7 +21,7 @@ import java.nio.file.Path
  * the T-0501 build does not produce yet: the `world` overview and an
  * `elevation-30m` add-on (T-0502 and T-0509).
  */
-internal object CatalogFixture {
+object CatalogFixture {
     const val REGION_COUNT: Int = 25
     const val VERSION: String = "2026-11-03"
     const val WORLD_ID: String = "world"

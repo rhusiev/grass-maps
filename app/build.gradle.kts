@@ -249,6 +249,7 @@ dependencies {
     implementation(project(":plugins:contours"))
     implementation(project(":plugins:route-relations"))
     implementation(project(":plugins:raster"))
+    implementation(project(":plugins:downloads-ui"))
 
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("org.jetbrains.compose.ui:ui:1.12.1")

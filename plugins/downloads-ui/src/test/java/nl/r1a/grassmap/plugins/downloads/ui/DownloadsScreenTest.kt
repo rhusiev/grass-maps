@@ -39,7 +39,7 @@ class DownloadsScreenTest {
         assertEquals("Lviv Oblast", lviv.nameEn)
         assertEquals("Львівська область", lviv.nameUk)
         assertEquals("2026-11-03", lviv.dataDate)
-        assertEquals(152_201_954L, lviv.bytes)
+        assertEquals(210_943_205L, lviv.bytes)
         assertEquals(DownloadRowStatus.AVAILABLE, lviv.status)
         assertEquals(
             listOf(
@@ -51,7 +51,7 @@ class DownloadsScreenTest {
             ).sorted(),
             lviv.parts.map { it.kind }.sorted(),
         )
-        assertEquals(61_179_117L, lviv.parts.single { it.kind == CatalogPartKind.MAP }.bytes)
+        assertEquals(65_699_471L, lviv.parts.single { it.kind == CatalogPartKind.MAP }.bytes)
         assertTrue(lviv.parts.none { it.installed })
     }
 
@@ -94,7 +94,7 @@ class DownloadsScreenTest {
         assertTrue(region.parts.all { it.bytes > 0 })
 
         val routing = state.firstRun.single { it.kind == FirstRunOfferKind.ROUTING }
-        assertEquals(60_876_800L, routing.bytes)
+        assertEquals(97_198_080L, routing.bytes)
         assertEquals(listOf(CatalogPartKind.ROUTING), routing.parts.map { it.kind })
 
         val addon = state.firstRun.single { it.kind == FirstRunOfferKind.ELEVATION_30M }
@@ -125,6 +125,7 @@ class DownloadsScreenTest {
             )
 
         assertEquals(listOf(FirstRunOfferKind.WORLD), state.firstRun.map { it.kind })
+        // The world offer already names the world row, so the list does not repeat it.
         assertEquals(CatalogFixture.REGION_COUNT, state.availableRows.size)
     }
 

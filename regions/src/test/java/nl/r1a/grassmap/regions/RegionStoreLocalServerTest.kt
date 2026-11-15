@@ -353,6 +353,6 @@ class RegionStoreLocalServerTest {
         val SWITCH: SwitchId = SwitchId("network.region_updates")
         val PACKAGE_PATH = Regex("""/([a-z0-9][a-z0-9._-]*)/([a-z0-9][a-z0-9._-]*)/package\.zip""")
         const val SLOW_CHUNK_BYTES = 4096
-        const val SLOW_CHUNK_DELAY_MS = 15L
+        const val SLOW_CHUNK_DELAY_MS = 40L
     }
 }

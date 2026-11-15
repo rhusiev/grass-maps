@@ -12,6 +12,7 @@ plugins/contours	16
 plugins/coordinates	11
 plugins/dev-tools	4
 plugins/direct-engine	25
+plugins/downloads-ui	39
 plugins/example	1
 plugins/favourites-ui	42
 plugins/gpx	33

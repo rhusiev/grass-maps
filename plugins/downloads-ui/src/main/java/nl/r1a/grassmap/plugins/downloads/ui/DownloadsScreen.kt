@@ -51,6 +51,15 @@ object DownloadsScreen {
         val rows = catalog?.regions.orEmpty().map { entry -> row(data, entry) }
         val selected = selectedRegion?.let { id -> rows.firstOrNull { it.region == id } }
         val detected = detectedRegion?.takeIf { id -> rows.any { it.region == id } }
+        val firstRun = firstRun(data, detected)
+        // While the first-run offer is on screen it already names these regions,
+        // so the list below it does not repeat them.
+        val offered =
+            if (firstRun.isNotEmpty() && rows.none { it.isInstalled }) {
+                firstRun.map { it.region }.toSet()
+            } else {
+                emptySet()
+            }
         return DownloadsState(
             serverUrl = data.serverUrl.ifBlank { DownloadsDefaults.SERVER_URL },
             tokenPresent = data.tokenPresent,
@@ -60,8 +69,8 @@ object DownloadsScreen {
             selected = selected,
             detectedRegion = detected,
             installedRows = rows.filter { it.isInstalled },
-            availableRows = rows.filterNot { it.isInstalled },
-            firstRun = firstRun(data, detected),
+            availableRows = rows.filterNot { it.isInstalled }.filterNot { it.region in offered },
+            firstRun = firstRun,
         )
     }
 

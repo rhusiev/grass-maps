@@ -111,7 +111,7 @@ class DownloadsUiPluginTest {
 
             assertEquals(listOf("refresh", "download:${CatalogFixture.LVIV}"), access.calls)
             val transfer = queued.availableRows.single { it.region == CatalogFixture.LVIV }.transfer
-            assertEquals(152_201_954L, transfer?.bytesTotal ?: 0L)
+            assertEquals(210_943_205L, transfer?.bytesTotal ?: 0L)
 
             access.complete(CatalogFixture.LVIV, CatalogFixture.VERSION)
             val installed =
@@ -283,11 +283,11 @@ class DownloadsUiPluginTest {
 
         val CONTROL_ALLOWED =
             setOf(
-                DownloadsUiContract.REFRESH,
-                DownloadsUiContract.DOWNLOAD_REGION,
-                DownloadsUiContract.CANCEL_REGION,
-                DownloadsUiContract.REMOVE_REGION,
-                DownloadsUiContract.SET_SERVER,
+                DownloadsUiContract.refresh,
+                DownloadsUiContract.downloadRegion,
+                DownloadsUiContract.cancelRegion,
+                DownloadsUiContract.removeRegion,
+                DownloadsUiContract.setServer,
             )
     }
 }

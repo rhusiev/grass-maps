@@ -113,9 +113,11 @@ internal class PackInstaller(
         private const val NANOS_PER_MILLI = 1_000_000L
 
         /**
-         * The files `ValhallaPack.inspect` requires: the config, an extract,
-         * the admin database and the timezone database.
+         * The files `ValhallaPack.inspect` requires: the config and the extract.
+         * The admin and timezone databases are not copied: a route reads neither,
+         * no T-0501 package ships them, and the country build's copies are
+         * 135,671,808 B together (T-0515).
          */
-        val REQUIRED_FILES = listOf("valhalla.json", "tiles.tar", "admins.sqlite", "timezones.sqlite")
+        val REQUIRED_FILES = listOf("valhalla.json", "tiles.tar")
     }
 }

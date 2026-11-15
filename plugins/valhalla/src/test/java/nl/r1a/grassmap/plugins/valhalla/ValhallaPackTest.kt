@@ -36,8 +36,8 @@ class ValhallaPackTest {
     @Test
     fun aPackWithoutAConfigIsIncomplete() {
         val pack = directory()
-        write(pack, ValhallaPack.ADMINS_FILE)
-        write(pack, ValhallaPack.TIMEZONES_FILE)
+        write(pack, ADMINS)
+        write(pack, TIMEZONES)
         write(pack, ValhallaPack.TILES_ARCHIVE)
 
         val status = ValhallaPack.inspect(pack.absolutePath)
@@ -50,8 +50,8 @@ class ValhallaPackTest {
     fun aPackWithoutTilesIsIncomplete() {
         val pack = directory()
         writeConfig(pack)
-        write(pack, ValhallaPack.ADMINS_FILE)
-        write(pack, ValhallaPack.TIMEZONES_FILE)
+        write(pack, ADMINS)
+        write(pack, TIMEZONES)
 
         val status = ValhallaPack.inspect(pack.absolutePath)
 
@@ -63,8 +63,8 @@ class ValhallaPackTest {
     fun anUnreadableConfigIsUnusable() {
         val pack = directory()
         File(pack, ValhallaPack.CONFIG_FILE).writeText("{ not json")
-        write(pack, ValhallaPack.ADMINS_FILE)
-        write(pack, ValhallaPack.TIMEZONES_FILE)
+        write(pack, ADMINS)
+        write(pack, TIMEZONES)
         write(pack, ValhallaPack.TILES_ARCHIVE)
 
         val status = ValhallaPack.inspect(pack.absolutePath)
@@ -76,8 +76,8 @@ class ValhallaPackTest {
     fun aTarExtractMakesThePackReady() {
         val pack = directory()
         writeConfig(pack)
-        write(pack, ValhallaPack.ADMINS_FILE)
-        write(pack, ValhallaPack.TIMEZONES_FILE)
+        write(pack, ADMINS)
+        write(pack, TIMEZONES)
         write(pack, ValhallaPack.TILES_ARCHIVE)
 
         val status = ValhallaPack.inspect(pack.absolutePath) as ValhallaPackStatus.Ready
@@ -89,8 +89,8 @@ class ValhallaPackTest {
     fun aTileDirectoryMakesThePackReady() {
         val pack = directory()
         writeConfig(pack)
-        write(pack, ValhallaPack.ADMINS_FILE)
-        write(pack, ValhallaPack.TIMEZONES_FILE)
+        write(pack, ADMINS)
+        write(pack, TIMEZONES)
         write(File(pack, "${ValhallaPack.TILES_DIRECTORY}/2/000/041"), "739.gph")
 
         val status = ValhallaPack.inspect(pack.absolutePath) as ValhallaPackStatus.Ready
@@ -102,8 +102,8 @@ class ValhallaPackTest {
     fun theLocalConfigReplacesEveryForeignAbsolutePath() {
         val pack = directory()
         writeConfig(pack)
-        write(pack, ValhallaPack.ADMINS_FILE)
-        write(pack, ValhallaPack.TIMEZONES_FILE)
+        write(pack, ADMINS)
+        write(pack, TIMEZONES)
         write(pack, ValhallaPack.TILES_ARCHIVE)
         val configDirectory = directory()
 
@@ -121,8 +121,8 @@ class ValhallaPackTest {
 
         assertEquals(File(pack, ValhallaPack.TILES_ARCHIVE).absolutePath, mjolnir.path("tile_extract"))
         assertEquals("", mjolnir.path("tile_dir"))
-        assertEquals(File(pack, ValhallaPack.ADMINS_FILE).absolutePath, mjolnir.path("admin"))
-        assertEquals(File(pack, ValhallaPack.TIMEZONES_FILE).absolutePath, mjolnir.path("timezone"))
+        assertEquals("", mjolnir.path("admin"))
+        assertEquals("", mjolnir.path("timezone"))
         assertEquals("", mjolnir.path("landmarks"))
         assertEquals("", mjolnir.path("traffic_extract"))
         assertEquals("", mjolnir.path("transit_dir"))
@@ -142,8 +142,8 @@ class ValhallaPackTest {
     fun aTileDirectoryConfigClearsTheForeignTarPath() {
         val pack = directory()
         writeConfig(pack)
-        write(pack, ValhallaPack.ADMINS_FILE)
-        write(pack, ValhallaPack.TIMEZONES_FILE)
+        write(pack, ADMINS)
+        write(pack, TIMEZONES)
         write(File(pack, "${ValhallaPack.TILES_DIRECTORY}/2/000/041"), "739.gph")
 
         val written =
@@ -166,8 +166,8 @@ class ValhallaPackTest {
     fun optionalEntriesThePackShipsAreKeptAndTheRestOfTheConfigSurvives() {
         val pack = directory()
         writeConfig(pack)
-        write(pack, ValhallaPack.ADMINS_FILE)
-        write(pack, ValhallaPack.TIMEZONES_FILE)
+        write(pack, ADMINS)
+        write(pack, TIMEZONES)
         write(pack, ValhallaPack.TILES_ARCHIVE)
         write(pack, "landmarks.sqlite")
         write(pack, "traffic.tar")
@@ -199,6 +199,25 @@ class ValhallaPackTest {
         )
     }
 
+    @Test
+    fun aPackWithoutTheAdminAndTimezoneDatabasesIsReadyAndTheConfigClearsThem() {
+        val pack = directory()
+        writeConfig(pack)
+        write(pack, ValhallaPack.TILES_ARCHIVE)
+
+        val status = ValhallaPack.inspect(pack.absolutePath) as ValhallaPackStatus.Ready
+        val written = ValhallaPackConfig.write(status, directory())
+        val mjolnir =
+            Json
+                .parseToJsonElement(written.readText())
+                .jsonObject
+                .getValue("mjolnir")
+                .jsonObject
+
+        assertEquals("", mjolnir.path("admin"))
+        assertEquals("", mjolnir.path("timezone"))
+    }
+
     private fun JsonObject.path(key: String): String = getValue(key).jsonPrimitive.content
 
     private fun writeConfig(directory: File) {
@@ -222,6 +241,10 @@ class ValhallaPackTest {
         }
 
     private companion object {
+        /** A pack may still ship the two databases; a route does not read them (T-0515). */
+        const val ADMINS = "admins.sqlite"
+        const val TIMEZONES = "timezones.sqlite"
+
         /** A config built on another machine, with every path absolute. */
         const val FOREIGN_CONFIG =
             """

@@ -1105,21 +1105,26 @@ formats them in the user's units. A value is null until an interval has been
 measured, so one fix shows a dash rather than a zero.
 
 The speed is the haversine ground distance between two consecutive fixes
-divided by the time between them. The fix's own `speedMetersPerSecond` is not
-read, so the widget reports what the fixes show, not the GNSS chip's Doppler
-estimate, and every source answers the same way. Average is the distance
-travelled inside a 60 s window of fix time over the time it took
-(`SpeedTracker.AVERAGE_WINDOW_MILLIS`), so a longer interval weighs more than a
-shorter one. One 20 km/h interval inside the window moves a steady 5 km/h
+divided by the time between them, and an interval counts only when both fixes
+report a horizontal accuracy of 15 m or better
+(`SpeedTracker.ACCEPTABLE_ACCURACY_METERS`, the same radius the navigation
+session refuses deviation evidence at). A coarse fix can land far from the
+previous one and read as a speed no ground truth supports; a refused interval
+leaves current, average and max as they were. The fix's own
+`speedMetersPerSecond` is not read, so the widget reports what the fixes show,
+not the GNSS chip's Doppler estimate, and every source answers the same way.
+Average is the distance travelled inside a 60 s window of fix time over the time
+it took (`SpeedTracker.AVERAGE_WINDOW_MILLIS`), so a longer interval weighs more
+than a shorter one. One 20 km/h interval inside the window moves a steady 5 km/h
 average to 5.25 km/h. Max is the largest current value since the plugin
 activated. `SpeedTracker.resetMax()` clears it and the next measured interval
 starts it again. Nothing binds that reset yet, because the widget action belongs
 to the shell's widget UI in T-0605.
 
-Not measured: the chip's Doppler speed, accuracy weighting, outlier rejection
-and smoothing. A stationary phone can read a small non-zero speed from position
-noise, and a long gap between fixes is one interval, so the reading is the
-average over the whole gap.
+Not measured: the chip's Doppler speed, outlier rejection beyond the accuracy
+gate, and smoothing. A stationary phone can read a small non-zero speed from
+position noise, and a long gap between fixes is one interval, so the reading is
+the average over the whole gap.
 
 The acceptance line is "on a replay at known speeds the widgets are within
 0.5 km/h." The acceptance tests are `SpeedTrackerTest` for the derivation and
@@ -1679,7 +1684,9 @@ Android 14 and later require the `FOREGROUND_SERVICE_LOCATION` permission and a
 declared `location` type; `startForeground` passes the type explicitly. Android
 13 and later show the notification only with the `POST_NOTIFICATIONS` runtime
 permission, so the activity asks for it when guidance becomes active; a refusal
-leaves guidance running without the notification. The service returns
+leaves guidance running without the notification. The asked fact lives in the
+container, so a recreation of the activity does not open the dialog again. The
+service returns
 `START_NOT_STICKY`: after a process death there is no session to resume, and a
 restarted service would hold location for nothing. If the location permission
 is revoked while the service starts, it catches `SecurityException`, ends the

@@ -122,10 +122,11 @@ step "Rust tests"
 ( cd "$ROOT/rust/grass-regions" && "$CARGO" test --locked ) || fail "rust tests (grass-regions)"
 ( cd "$ROOT/tools/pipeline/osm-extract" && "$CARGO" test --locked ) || fail "rust tests (osm-extract)"
 
-step "Script tests (map goldens, benchmark, test count)"
+step "Script tests (map goldens, benchmark, test count, oblast pipeline)"
 python3 scripts/ci/map_goldens_test.py || fail "script tests (map goldens)"
 python3 scripts/ci/android_benchmark_test.py || fail "script tests (benchmark)"
 python3 scripts/ci/test_count_test.py || fail "script tests (test count)"
+python3 scripts/ci/oblast_pipeline_test.py || fail "script tests (oblast pipeline)"
 
 step "Translations (English and Ukrainian)"
 ./gradlew --console=plain checkTranslations || fail "translations"

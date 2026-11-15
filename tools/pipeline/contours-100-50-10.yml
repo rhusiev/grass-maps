@@ -1,0 +1,24 @@
+# Planetiler schema: 100 m / 50 m / 10 m contour ladder from the 90 m DEM.
+# 100 m (index) from z11, 50 m from z12, all 10 m lines from z13, so the
+# Standard style can show 100/50/10 at z12/13/14 and Touring one zoom earlier.
+# The all-oblast build runs this once over the country DEM and every oblast
+# pack extracts its own polygon from the result (T-0501).
+schema_name: Grass Maps contours (100-50-10)
+attribution: Copernicus DEM GLO-30
+args:
+  area: ukraine
+sources:
+  contours:
+    type: geopackage
+    local_path: ua-contours.gpkg
+layers:
+  - id: contours
+    features:
+      - source: contours
+        geometry: line
+        min_zoom: "${ int(feature.tags.ele) % 100 == 0 ? 11 : int(feature.tags.ele) % 50 == 0 ? 12 : 13 }"
+        attributes:
+          - key: ele
+            value: "${ int(feature.tags.ele) }"
+          - key: idx
+            value: "${ int(feature.tags.ele) % 100 == 0 }"

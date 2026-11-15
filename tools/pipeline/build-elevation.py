@@ -45,13 +45,17 @@ GRID_INDEX_ENTRY_BYTES = 32
 GRID_ENCODING_DEFLATE_PREDICTOR = 1
 
 
-def source_tile(source, latitude, longitude):
-    """The GLO-30 tile covering the north-west corner of a 1-degree cell."""
-    name = (
+def source_tile_name(latitude, longitude):
+    """The GLO-30 tile file name for the north-west corner of a 1-degree cell."""
+    return (
         f"Copernicus_DSM_COG_10_{latitude_name(latitude)}_00_"
         f"{longitude_name(longitude)}_00_DEM.tif"
     )
-    path = pathlib.Path(source) / name
+
+
+def source_tile(source, latitude, longitude):
+    """The GLO-30 tile covering the north-west corner of a 1-degree cell."""
+    path = pathlib.Path(source) / source_tile_name(latitude, longitude)
     if not path.is_file():
         raise SystemExit(f"missing GLO-30 tile: {path}")
     return path
@@ -101,8 +105,12 @@ def round_cell_index(value):
     return int(rounded)
 
 
-def grid_tiles(bbox):
-    """Yield (latitude, longitude, west, south, east, north) per 1-degree cell."""
+def grid_tiles(source, bbox, skip_missing=False):
+    """Yield (latitude, longitude, west, south, east, north) per 1-degree cell.
+
+    A cell whose GLO-30 tile does not exist is sea-only in the source dataset;
+    with [skip_missing] it is omitted instead of aborting the build.
+    """
     min_lon, min_south, max_lon, max_north = bbox
     first_lon_cell = int(np.floor(min_lon))
     first_lat_cell = int(np.floor(min_south))
@@ -115,6 +123,8 @@ def grid_tiles(bbox):
             east = min(max_lon, float(longitude + 1))
             north = min(max_north, float(latitude + 1))
             if west >= east or south >= north:
+                continue
+            if skip_missing and not (pathlib.Path(source) / source_tile_name(latitude, longitude)).is_file():
                 continue
             yield latitude, longitude, west, south, east, north
 
@@ -190,13 +200,14 @@ def encode_grid_tile(values):
     return zlib.compress(raw, 9)
 
 
-def build_grid(source, bbox, output):
+def build_grid(source, bbox, output, skip_missing=False):
     entries = []
     payload = bytearray()
-    tile_count = sum(1 for _ in grid_tiles(bbox))
+    tiles = list(grid_tiles(source, bbox, skip_missing))
+    tile_count = len(tiles)
     data_offset = GRID_HEADER_BYTES + tile_count * GRID_INDEX_ENTRY_BYTES
     print(f"grid: {tile_count} tile(s), 3 arcsec cells")
-    for latitude, longitude, west, south, east, north in grid_tiles(bbox):
+    for latitude, longitude, west, south, east, north in tiles:
         values, source_west, source_north, pixel_width, pixel_height = load_tile(source, latitude, longitude)
         cells = cells_for_tile(
             values,
@@ -226,9 +237,10 @@ def build_grid(source, bbox, output):
         payload += compressed
         data_offset += len(compressed)
         valid = cells[cells != NO_DATA]
+        height_range = f"{valid.min()}..{valid.max()} m" if valid.size else "no data"
         print(
             f"  N{latitude:02d}E{longitude:03d}: {rows}x{columns} cells, "
-            f"{len(compressed)} B, height {valid.min()}..{valid.max()} m"
+            f"{len(compressed)} B, height {height_range}"
         )
     header = struct.pack(
         "<4sHHIIIIII",
@@ -268,10 +280,10 @@ def bilinear_nodes(values, west, north, pixel_width, pixel_height, west_out, nor
     return top * (1.0 - wy[:, None]) + bottom * wy[:, None]
 
 
-def build_hgt(source, bbox, output_directory):
+def build_hgt(source, bbox, output_directory, skip_missing=False):
     output = pathlib.Path(output_directory)
     output.mkdir(parents=True, exist_ok=True)
-    for latitude, longitude, _west, _south, _east, _north in grid_tiles(bbox):
+    for latitude, longitude, _west, _south, _east, _north in grid_tiles(source, bbox, skip_missing):
         values, source_west, source_north, pixel_width, pixel_height = load_tile(source, latitude, longitude)
         nodes = bilinear_nodes(
             values,
@@ -290,19 +302,25 @@ def build_hgt(source, bbox, output_directory):
         path = directory / f"{cell_name(latitude, longitude)}.hgt"
         path.write_bytes(integers.astype(">i2").tobytes())
         valid = integers[integers != NO_DATA]
-        print(
-            f"  {path}: {path.stat().st_size} B, height {valid.min()}..{valid.max()} m"
-        )
+        height_range = f"{valid.min()}..{valid.max()} m" if valid.size else "no data"
+        print(f"  {path}: {path.stat().st_size} B, height {height_range}")
 
 
-def parse_bbox(text):
+def parse_bbox(text, snap=False):
     try:
         west, south, east, north = (float(value) for value in text.split(","))
     except ValueError:
         raise SystemExit(f"bbox must be W,S,E,N: {text}") from None
     if not (west < east and south < north):
         raise SystemExit(f"bbox has no area: {text}")
-    return west, south, east, north
+    if snap:
+        # A grid cell is 1/1200 degree; an oblast outline gives an arbitrary
+        # bbox, so grow it outward to the cell edges the format stores.
+        west = np.floor(west * GRID_CELLS_PER_DEGREE) / GRID_CELLS_PER_DEGREE
+        south = np.floor(south * GRID_CELLS_PER_DEGREE) / GRID_CELLS_PER_DEGREE
+        east = np.ceil(east * GRID_CELLS_PER_DEGREE) / GRID_CELLS_PER_DEGREE
+        north = np.ceil(north * GRID_CELLS_PER_DEGREE) / GRID_CELLS_PER_DEGREE
+    return float(west), float(south), float(east), float(north)
 
 
 def main():
@@ -313,12 +331,22 @@ def main():
         command.add_argument("--source", required=True, help="directory with the GLO-30 COG tiles")
         command.add_argument("--bbox", required=True, help="W,S,E,N in degrees")
         command.add_argument("--out", required=True, help="output file or directory")
+        command.add_argument(
+            "--snap-bbox",
+            action="store_true",
+            help="grow the bbox outward to the 3 arcsec cell edges the grid stores",
+        )
+        command.add_argument(
+            "--skip-missing",
+            action="store_true",
+            help="omit a 1-degree cell whose GLO-30 tile does not exist (sea-only cells)",
+        )
     args = parser.parse_args()
-    bbox = parse_bbox(args.bbox)
+    bbox = parse_bbox(args.bbox, args.snap_bbox)
     if args.command == "grid":
-        build_grid(args.source, bbox, args.out)
+        build_grid(args.source, bbox, args.out, args.skip_missing)
     else:
-        build_hgt(args.source, bbox, args.out)
+        build_hgt(args.source, bbox, args.out, args.skip_missing)
 
 
 if __name__ == "__main__":

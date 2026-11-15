@@ -119,6 +119,13 @@ cells); it is built in under a second. A whole-oblast grid is the same rule per
 container is expected to land in the same range because it adds an index and
 uses the same deflate predictor.
 
+An oblast outline gives an arbitrary bbox, so the all-oblast build passes
+`--snap-bbox` to grow it outward to the 3 arcsec cell edges the format stores.
+It also passes `--skip-missing`: a 1-degree cell whose GLO-30 tile does not
+exist is a sea-only cell in the source dataset, so the grid omits it instead of
+inventing heights, and the manifest lists it under
+`elevationSource.missingTiles`.
+
 `tools/pipeline/build-elevation.py hgt` writes the other consumer: 1 arcsec
 `.hgt` tiles for Valhalla's Skadi sampler, 3601x3601 int16 big-endian nodes per
 1-degree cell. A node is the bilinear GLO-30 sample at that node, edges clamped.
@@ -407,8 +414,77 @@ Ukraine PBF. It carries no node numbers because the source snapshot has no
 `*cn_ref` junction there. `provenance.json` records the source digest, the
 extraction revision and that data gap. The T-0418 pack was not rebuilt.
 
-### Search section and features
+## All-oblast build (T-0501)
 
+`build-oblasts.sh` builds every Ukrainian oblast package from one monthly
+country build: the country vector tile archive, the country contour archive,
+the country Valhalla tile build and the GLO-30 source tiles. Every package is a
+slice of those artefacts plus a search section extracted from the same PBF, so
+the manifest of every package names the same build digests.
+
+```sh
+tools/pipeline/build-oblasts.sh \
+  --contours /hdd/t-0501-work/pipeline/country-contours/ua-contours.pmtiles \
+  --routing-tar /hdd/t-0501-work/pipeline/country-routing/tiles.tar \
+  --build-contours --build-routing --routing-elevation \
+  --dem /hdd/t-0501-work/dem \
+  --out /hdd/t-0501-oblasts
+```
+
+On this machine the script re-executes itself under `agent-lock run gm-data`,
+so the country build and the oblast loop never run beside another data job.
+`--build-contours` and `--build-routing` build the country artefacts from the
+PBF and the DEM; without them the command takes existing archives, which is how
+a monthly rebuild reuses an unchanged DEM and contour archive.
+
+Oblast set: the `admin_level=4` polygons tagged `ISO3166-2=UA-*`, 27 units.
+Kyiv city (UA-30) folds into Kyiv Oblast (UA-32) and Sevastopol (UA-40) into
+Crimea (UA-43), leaving 25 packages. A Russian-mirror boundary without an ISO
+tag is skipped. `boundary_packages` in `oblast_pipeline.py` holds the rule and
+`scripts/ci/oblast_pipeline_test.py` covers both folds.
+
+Per oblast the command runs, in order: `pmtiles extract` for the map (z8-14)
+and for the contours, `osmium extract --strategy=smart` for the OSM extract,
+`build-elevation.py grid` for the 90 m grid, the search section and feature
+component from that extract, the way-alert and route-relation components, and
+`valhalla_build_extract --geojson-dir` for the routing part. Each stage writes
+a report with its wall time and peak RSS.
+
+The package is `<region>/<version>/` with `map.pmtiles`, `contours.pmtiles`,
+`elevation.bin`, the eight search files, `features.bin`,
+`way-alerts.geojson`, `relations.json` and `routing.tar`. `routing.tar` is a
+Valhalla tile extract holding the tiles whose 0.25-degree cell intersects the
+oblast polygon; its `pipeline.routingSource.sha256` is the digest of the one
+country `tiles.tar`, so every installed routing part can be traced to that
+build. The footprint is the exact oblast polygon, not a buffered one; a border
+pan shows only the installed oblast until T-0503's resolver lands.
+
+`manifest.json` follows `data-formats.md` section 2. `pipeline` carries the
+bounding box, the source archives and digests for map, contours, elevation,
+search, way alerts, route relations and routing, and the fold under
+`includes`. `elevationSource.missingTiles` lists the 1-degree cells the source
+DEM does not carry, which are sea-only cells the grid omits instead of
+inventing heights.
+
+`catalog.json` follows `server-protocol.md` section 2: `format`, `generated`,
+`attribution`, a `build` block with the country digests, and one entry per
+region with `id`, `name` (uk and en), `kind`, `parent`, `bbox`, `outline`,
+`version`, `size_bytes` and `parts`. The outlines are Douglas-Peucker
+simplified at 0.004 degrees; the exact polygons stay under `boundaries/`.
+
+`metrics.json` records, per oblast, the wall time of its build, the peak RSS
+over its stages, the bytes on disk, the routing bytes and tile count, and every
+stage's time and peak RSS. Host stages are sampled through the process tree at
+4 Hz; container stages read the container cgroup's `memory.peak`.
+
+Sea and land polygons: the country map archive was built with the deliberately
+empty `land-polygons-split-3857` and `water-polygons-split-3857` stubs, because
+`osmdata.openstreetmap.de` was unreachable when it was built. The oblast packs
+inherit that, so a coastline has no sea polygon behind it. Every manifest and
+the catalog record the stub state; replacing it means rebuilding the country
+map archive, not the oblast packages.
+
+### Search section and features
 The search section is real data. `tools/pipeline/fixture-places.tsv` is the
 authored place list: four places inside the fixture bbox, one with a phone,
 website, `opening_hours` and `wheelchair`, one with a brand, one with no tags and

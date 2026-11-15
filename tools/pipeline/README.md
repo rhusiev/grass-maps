@@ -468,11 +468,11 @@ a report with its wall time and peak RSS.
 The package is `<region>/<version>/` with `map.pmtiles`, `contours.pmtiles`,
 `elevation.bin`, the eight search files, `features.bin`,
 `way-alerts.geojson`, `relations.json` and `routing.tar`. `routing.tar` is a
-Valhalla tile extract holding the tiles whose 0.25-degree cell intersects the
-oblast polygon; its `pipeline.routingSource.sha256` is the digest of the one
-country `tiles.tar`, so every installed routing part can be traced to that
-build. The footprint is the exact oblast polygon, not a buffered one; a border
-pan shows only the installed oblast until T-0503's resolver lands.
+Valhalla tile extract holding the tiles of every level whose grid cell
+intersects the oblast polygon; its `pipeline.routingSource.sha256` is the digest
+of the one country `tiles.tar`, so every installed routing part can be traced to
+that build. The footprint is the exact oblast polygon, not a buffered one; a
+border pan shows only the installed oblast until T-0503's resolver lands.
 
 `manifest.json` follows `data-formats.md` section 2. `pipeline` carries the
 bounding box, the source archives and digests for map, contours, elevation,
@@ -562,7 +562,9 @@ What the numbers say, against `data-formats.md`:
 - Routing is 1.47 GiB in 2,080 tiles, 37 % more tiles than the 1,523 in the
   country extract, because a border tile belongs to every neighbouring oblast's
   part. Storing a shared border tile once is T-0515's job; until then the
-  catalog's per-region routing sizes add up to more than the one build.
+  catalog's per-region routing sizes add up to more than the one build. The
+  verification section below measures the duplicates: 480 shared tiles and
+  509,421,544 B of extra payload.
 - The contour archive is 343,568,573 B for the country and the 25 extracts sum
   to 345 MiB. The design's ~160 MB estimate was for the old 10/20 m ladder; the
   100/50/10 ladder at z11-14 measures about twice that.
@@ -573,6 +575,120 @@ What the numbers say, against `data-formats.md`:
   packages of their own; their manifests name them under `pipeline.includes`.
   Crimea's elevation lists the two sea-only cells the DEM does not carry,
   Odesa's and Kherson's one each.
+
+### Routing part verification (T-0515)
+
+`tools/pipeline/verify_routing_packs.py` checks the routing claims that the
+phone run cannot repeat on a desk. It reads the packs and the pack code, writes
+nothing, and exits 1 on any failure:
+
+    tools/pipeline/verify_routing_packs.py \
+        --packs /hdd/t-0501-oblasts \
+        --country /hdd/t-0501-work/pipeline/country-routing
+
+Measured on the T-0501 build (2026-11-03, 25 packages, 3.3 GiB):
+
+| Check | Result |
+|---|---|
+| Grid coverage | 25 of 25 packages exact, 2,080 tiles, 0 missing, 0 extra |
+| Border join | 2,080 of 2,080 tiles byte-identical to the country build |
+| Duplicates | 480 tiles in two or more packages, 604 extra copies, 509,421,544 B |
+| Runtime databases | failed before this change, the pack code now clears both |
+
+The grid rule is every tile of every level whose cell intersects the oblast
+polygon, not its bounding box. A bounding-box rule would have added 14 to 55
+tiles per package, and the polygons match exactly.
+`pipeline.routingSource.selection` states the polygon rule and
+`valhalla_build_extract --geojson-dir` implements it. The manifest records the
+tile count only, not the list, so `routing.tar` is the only per-package tile
+list.
+
+A border pair: `2/000/807/271.gph` is in ua-63 and `2/000/807/272.gph` is in
+ua-09. Their headers read `graphid 0x628b3a` and `0x628b42`, level 2, tileids
+807271 and 807272, base corners (37.75, 50.0) and (38.0, 50.0). Each copy is
+byte-identical to the country tile, so the two sides of the border cannot name a
+different node. A tile that two packages share, `1/050/610.gph` (4,904,168 B, in
+ua-32 and ua-74), hashes to `c05ede8a…` in both and in the country build.
+
+The duplicates are structural, not only a border effect. Every level-0 and
+level-1 tile is a coarse hierarchy tile that several oblast polygons intersect,
+so 14 level-0 tiles are carried 59 times and 109 level-1 tiles 232 times:
+
+| Level | Copies | Unique tiles | Extra bytes |
+|---|---|---|---|
+| 0 | 59 | 14 | 141,645,296 |
+| 1 | 232 | 109 | 138,361,856 |
+| 2 | 1,789 | 1,353 | 229,414,392 |
+| all | 2,080 | 1,476 | 509,421,544 |
+
+The packages carry 1,574,961,728 B of tile payload against 1,065,583,360 B of
+unique tiles, and their `routing.tar` files total 1,578,895,360 B. Forty-seven
+country tiles are in no package (43,176 B, 33 of them empty zero-node tiles).
+They are the sea and border cells outside every oblast polygon.
+
+#### What a phone run must still prove
+
+1. The native engine starts with `mjolnir.tile_extract` empty and
+   `mjolnir.tile_dir` set, and returns a route. The app writes that config, and
+   Valhalla's `GraphReader` falls back to `tile_dir` when no extract loads, but
+   only the device proves the AAR.
+2. A pack with no `admins.sqlite` and no `timezones.sqlite` starts and routes,
+   and the guidance and arrival time stay acceptable. `ValhallaPackTest` pins
+   the config values, not the engine.
+3. A route across an oblast border with both packs installed runs continuously.
+   The ua-63 and ua-09 pair above crosses 38.0 E.
+4. A route that needs an oblast that is not installed reaches the missing-region
+   prompt. No such code exists today. T-0511 owns it.
+
+#### Open gaps
+
+- `ValhallaPack.inspect` required `admins.sqlite` and `timezones.sqlite`, and
+  the local config pointed the engine at both. No T-0501 package ships either
+  file. A bare package directory returned `ValhallaPackProblem.Incomplete` for
+  its missing `valhalla.json`, and a pack with a config and tiles returned
+  `Incomplete` for its missing `admins.sqlite`. Both reach the user as
+  `AppError.RoutingPackUnavailable(Incomplete)`, so no T-0501 pack could route.
+  This change removes the requirement and clears both paths.
+- The two databases exist only in the country build, where `admins.sqlite` is
+  12,537,856 B and `timezones.sqlite` is 123,133,952 B. A pack that copied them
+  would pay 135,671,808 B for the pair.
+- A border tile is stored twice. `data-formats.md` section 2 asks the app to
+  mount each grid tile once across the installed parts, and nothing mounts
+  routing tiles yet: `TileKind` has `MAP` and `CONTOURS`, and the app reads one
+  pack directory (`AppContainer.ROUTING_PACK_DIRECTORY`).
+- `manifest.json` records `pipeline.routingSource.tiles` as a count. A package
+  cannot show which tiles it holds without opening `routing.tar`.
+- `data-formats.md` section 2 lists the part as `routing/`, a directory. The
+  packages ship `routing.tar`, so that text is stale.
+- The package ships a tar, so a build cannot route from loose tiles until the
+  package format changes.
+
+#### Loose tiles and shared tiles: design, not yet built
+
+Two changes are designed and measured, and neither is a small edit.
+
+Loose tiles need a package-format change. A component is one file with `bytes`
+and `sha256`, and a directory of 42 to 116 tile files has no single digest.
+Shipping `tiles/` therefore needs a new `packageFormat`, a manifest component
+that names a directory, and an installer that writes many files. The directory
+form of the country build measures 1,523 files and 1,065,583,360 B of payload,
+1,068,990,464 B on disk against 1,068,339,200 B for the tar. It waits for the
+first phone proof above, because the format change is only worth it if the
+engine routes from `tile_dir`.
+
+Shared tiles need the per-oblast routing mount. `valhalla_build_extract` slices
+per polygon, so a border tile lands in every neighbouring package. A mount that
+keeps one copy per tile path removes the extra copies from the phone:
+509,421,544 B today, of which 280,007,152 B is level 0 and 1 and 229,414,392 B
+is level 2. A country-wide hierarchy part would also remove the level-0 and
+level-1 copies from the download: 124,705,872 B shipped once instead of
+404,713,024 B carried now, a saving of 280,007,152 B over the 25 packages. Both
+wait for a task that mounts routing tiles across the installed parts. T-0504
+installs the parts and no task names the mount.
+
+After both changes the country would ship 1,476 unique level-2 tiles,
+940,877,488 B, and one hierarchy part of 124,705,872 B, against 1,574,961,728 B
+of repeated payload today.
 
 ### Search section and features
 The search section is real data. `tools/pipeline/fixture-places.tsv` is the

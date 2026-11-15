@@ -3441,8 +3441,15 @@ add-on as separate parts with sizes; the oblast comes from the bbox that
 contains the first fix. The plugin publishes `downloads.ui.state`; its commands
 are `downloads.ui.refresh`, `download_region`, `cancel_region`, `remove_region`,
 `select_region` and `set_server`. The token is a command parameter and never a
-state field. `app` still has to construct the store and host
-`DownloadsScreenContent`; the screen has no route yet.
+state field.
+
+`app` constructs `RegionStore` over its private region root, passes it to
+`PluginHost` as `PluginServices.regionDownloads`, and hosts
+`DownloadsScreenContent`. The map has no maps entry point yet, so the debug
+build opens the screen with `core.downloads.show` and closes it with
+`core.downloads.hide`; `core.downloads.switch` turns `network.region_updates`
+on, because the switch starts off and no settings screen owns it until
+milestone 6. Every transfer still goes through the `downloads.ui` commands.
 
 ## Privacy
 

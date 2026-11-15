@@ -423,13 +423,28 @@ slice of those artefacts plus a search section extracted from the same PBF, so
 the manifest of every package names the same build digests.
 
 ```sh
+# A first build, or one whose DEM or routing changed: build both country
+# artefacts, then every oblast package.
 tools/pipeline/build-oblasts.sh \
-  --contours /hdd/t-0501-work/pipeline/country-contours/ua-contours.pmtiles \
-  --routing-tar /hdd/t-0501-work/pipeline/country-routing/tiles.tar \
   --build-contours --build-routing --routing-elevation \
   --dem /hdd/t-0501-work/dem \
   --out /hdd/t-0501-oblasts
+
+# A monthly rebuild whose DEM and contour archive did not change:
+tools/pipeline/build-oblasts.sh \
+  --contours /hdd/t-0501-work/pipeline/country-contours/ua-contours.pmtiles \
+  --build-routing --routing-elevation \
+  --dem /hdd/t-0501-work/dem \
+  --out /hdd/t-0501-oblasts
 ```
+
+The country map archive is an input: the bench Planetiler profile builds it
+(`grass-maps-bench`), not this command. The DEM is static, so its contour
+archive is rebuilt only when the DEM changes. The contour stage warps the
+GLO-30 tiles to a 90 m surface (`gdalwarp -r average`) and cuts the
+100/50/10 m lines from that surface, so a contour line and the elevation grid
+describe the same terrain; contouring the raw 30 m tiles produces about ten
+times the linework and the surface noise T-0417 measured.
 
 On this machine the script re-executes itself under `agent-lock run gm-data`,
 so the country build and the oblast loop never run beside another data job.
@@ -483,6 +498,81 @@ empty `land-polygons-split-3857` and `water-polygons-split-3857` stubs, because
 inherit that, so a coastline has no sea polygon behind it. Every manifest and
 the catalog record the stub state; replacing it means rebuilding the country
 map archive, not the oblast packages.
+
+### Measured all-oblast build (T-0501)
+
+Conditions: 8 cores, 31 GB RAM, outputs under `/hdd`, `gm-data`, the
+2026-11-03 Ukraine extract (883,214,645 B, sha256 `ff46165a…`), the bench
+Planetiler archive `ukraine-final.pmtiles` (1,030,529,076 B, `bee6252b…`) and
+118 GLO-30 tiles. The DEM covered 121 one-degree cells; three are sea-only and
+the source carries no tile for them. The routing build ran with grades.
+
+| Country stage | Time | Peak RSS | Output |
+|---|---|---|---|
+| `gdalbuildvrt` over 118 DEM tiles | 1 s | - | `ua.vrt` |
+| `gdalwarp` to 90 m, cut to the oblast union | 74 s | 2.5 GiB | `ua-90m.tif` |
+| `gdal_contour` 10 m | 41 s | 2.2 GiB | `ua-contours.gpkg`, 924 MB |
+| Planetiler 100/50/10, z11-14 | 34 s | 3.8 GiB | `ua-contours.pmtiles`, 343,568,573 B |
+| `build-elevation.py hgt` | 74 s | 0.6 GiB | 118 HGT tiles, 2.9 GB (build input) |
+| `valhalla_build_admins` | 36 s | 0.7 GiB | `admins.sqlite` |
+| `valhalla_build_tiles` | 483 s | 8.9 GiB | 1,523 tiles, grades on 1,482 |
+| `valhalla_build_extract` | 20 s | 1.1 GiB | `tiles.tar`, 1,068,339,200 B |
+
+Country preparation is 762 s of measured stages. The oblast loop is 1,228 s for
+all 25 packages; every package takes 34-70 s and peaks at 3.8-4.8 GiB, almost
+all of it `osmium extract --strategy=smart` reading the 883 MB country extract.
+Every manifest names `routingSource.sha256` = `335fcbdc…`, the one country
+`tiles.tar`.
+
+| Oblast | Build | Peak RSS | Package | Routing | Tiles |
+|---|---|---|---|---|---|
+| `ua-05` Vinnytsia | 39 s | 3.88 GiB | 145 MiB | 58 MiB | 85 |
+| `ua-07` Volyn | 35 s | 3.86 GiB | 85 MiB | 34 MiB | 67 |
+| `ua-09` Luhansk | 49 s | 3.82 GiB | 128 MiB | 48 MiB | 89 |
+| `ua-12` Dnipropetrovsk | 56 s | 3.90 GiB | 181 MiB | 81 MiB | 99 |
+| `ua-14` Donetsk | 58 s | 3.92 GiB | 199 MiB | 84 MiB | 88 |
+| `ua-18` Zhytomyr | 38 s | 3.88 GiB | 128 MiB | 58 MiB | 98 |
+| `ua-21` Zakarpattia | 54 s | 3.96 GiB | 130 MiB | 42 MiB | 53 |
+| `ua-23` Zaporizhzhia | 51 s | 3.87 GiB | 97 MiB | 47 MiB | 91 |
+| `ua-26` Ivano-Frankivsk | 56 s | 3.88 GiB | 144 MiB | 66 MiB | 54 |
+| `ua-32` Kyiv, with Kyiv city | 63 s | 3.97 GiB | 259 MiB | 138 MiB | 100 |
+| `ua-35` Kirovohrad | 41 s | 3.83 GiB | 126 MiB | 62 MiB | 88 |
+| `ua-43` Crimea, with Sevastopol | 45 s | 3.90 GiB | 139 MiB | 65 MiB | 93 |
+| `ua-46` Lviv | 70 s | 4.76 GiB | 201 MiB | 93 MiB | 78 |
+| `ua-48` Mykolaiv | 40 s | 3.87 GiB | 118 MiB | 54 MiB | 83 |
+| `ua-51` Odesa | 66 s | 3.90 GiB | 140 MiB | 58 MiB | 116 |
+| `ua-53` Poltava | 41 s | 3.86 GiB | 129 MiB | 63 MiB | 94 |
+| `ua-56` Rivne | 34 s | 3.88 GiB | 86 MiB | 36 MiB | 70 |
+| `ua-59` Sumy | 37 s | 3.85 GiB | 90 MiB | 30 MiB | 81 |
+| `ua-61` Ternopil | 36 s | 3.84 GiB | 112 MiB | 58 MiB | 55 |
+| `ua-63` Kharkiv | 48 s | 3.90 GiB | 178 MiB | 83 MiB | 105 |
+| `ua-65` Kherson | 36 s | 3.87 GiB | 82 MiB | 45 MiB | 96 |
+| `ua-68` Khmelnytskyi | 37 s | 3.87 GiB | 116 MiB | 49 MiB | 69 |
+| `ua-71` Cherkasy | 63 s | 3.88 GiB | 143 MiB | 68 MiB | 82 |
+| `ua-74` Chernihiv | 69 s | 3.88 GiB | 116 MiB | 49 MiB | 104 |
+| `ua-77` Chernivtsi | 66 s | 3.84 GiB | 82 MiB | 37 MiB | 42 |
+
+What the numbers say, against `data-formats.md`:
+
+- The 25 packages total 3.27 GiB installed, against the design's 2.3 GB on the
+  phone for all Ukraine. The excess is spread over every part: routing
+  1.47 GiB against 983 MiB, contours 345 MiB against ~160 MB, search plus the
+  feature component 313 MiB against the 100-160 MB search estimate, map
+  1,070 MiB against 983 MiB.
+- Routing is 1.47 GiB in 2,080 tiles, 37 % more tiles than the 1,523 in the
+  country extract, because a border tile belongs to every neighbouring oblast's
+  part. Storing a shared border tile once is T-0515's job; until then the
+  catalog's per-region routing sizes add up to more than the one build.
+- The contour archive is 343,568,573 B for the country and the 25 extracts sum
+  to 345 MiB. The design's ~160 MB estimate was for the old 10/20 m ladder; the
+  100/50/10 ladder at z11-14 measures about twice that.
+- The map component sums to 1,070 MiB. Every oblast carries its own z8-10
+  tiles, so the low zooms are repeated across neighbours; the world overview
+  (T-0502) and the shared-source resolver (T-0503) are where that shrinks.
+- Kyiv city and Sevastopol are inside the Kyiv and Crimea packages rather than
+  packages of their own; their manifests name them under `pipeline.includes`.
+  Crimea's elevation lists the two sea-only cells the DEM does not carry,
+  Odesa's and Kherson's one each.
 
 ### Search section and features
 The search section is real data. `tools/pipeline/fixture-places.tsv` is the

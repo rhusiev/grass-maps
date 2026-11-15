@@ -471,6 +471,16 @@ def _part_kind(kind: str) -> str:
     return PART_KINDS.get(kind, kind)
 
 
+# The catalog's download rows are the five parts server-protocol.md names. The
+# way-alert and route-relation components are map content, so their size sits
+# in the map row; the manifest still declares them separately.
+CATALOG_PARTS = {
+    "features": "search",
+    "way-alerts": "map",
+    "relations": "map",
+}
+
+
 def write_catalog(root: pathlib.Path, spec: dict) -> dict:
     boundaries = json.loads((pathlib.Path(spec["boundaries"])).read_text())
     names = {package["id"].upper(): package for package in boundaries["packages"]}
@@ -483,6 +493,7 @@ def write_catalog(root: pathlib.Path, spec: dict) -> dict:
         parts = {}
         for entry in manifest["components"]:
             kind = _part_kind(entry["kind"])
+            kind = CATALOG_PARTS.get(kind, kind)
             part = parts.setdefault(kind, {"kind": kind, "version": entry["version"], "size_bytes": 0})
             part["size_bytes"] += entry["bytes"]
         region_entry = {
@@ -695,7 +706,7 @@ def main(argv: list[str] | None = None) -> int:
     metrics.add_argument("--stages", required=True, type=pathlib.Path)
     metrics.add_argument("--seconds", required=True, type=float)
     metrics.add_argument("--routing-tiles", required=True, type=int)
-    metrics.add_argument("--disk-bytes", required=True, type=int)
+    metrics.add_argument("--disk-bytes", type=int)
     metrics.add_argument("--build", type=pathlib.Path)
 
     run = subparsers.add_parser("run", help="run one stage with a measurement report")
@@ -750,7 +761,9 @@ def main(argv: list[str] | None = None) -> int:
             "seconds": args.seconds,
             "peakRssBytes": max((report["peakRssBytes"] for report in stages), default=0),
             "peakRssMethod": PEAK_METHOD,
-            "diskBytes": args.disk_bytes,
+            "diskBytes": args.disk_bytes
+            if args.disk_bytes is not None
+            else sum(entry["bytes"] for entry in manifest["components"]) + args.manifest.stat().st_size,
             "routing": {
                 "tiles": args.routing_tiles,
                 "bytes": parts.get(ROUTING_KIND, {}).get("bytes", 0),
@@ -767,9 +780,8 @@ def main(argv: list[str] | None = None) -> int:
                 for report in stages
             ],
         }
-        if args.build and args.build.is_file():
-            record["build"] = json.loads(args.build.read_text())
-        document = write_metrics(args.file, record)
+        build = json.loads(args.build.read_text()) if args.build and args.build.is_file() else None
+        document = write_metrics(args.file, record, build)
         print(f"metrics: {manifest['region']} in {args.file} ({len(document['regions'])} regions)")
         return 0
     if args.command == "run":

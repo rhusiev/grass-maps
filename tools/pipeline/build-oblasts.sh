@@ -34,6 +34,7 @@
 #   --build-contours     build the country contour archive from the DEM first
 #   --build-routing      build the country Valhalla tiles from the PBF first
 #   --routing-elevation  with --build-routing, sample GLO-30 grades into the graph
+#   --routing-grades    the reused --routing-tar already carries GLO-30 grades
 #   --land-polygons KIND what the --map archive was built with: `stub` (the
 #                        empty sea/land archives, the current state) or `real`
 #   --keep-work          keep the per-oblast OSM extract and search TSV
@@ -77,6 +78,7 @@ WORK=""
 BUILD_CONTOURS=0
 BUILD_ROUTING=0
 ROUTING_ELEVATION=0
+ROUTING_GRADES=0
 KEEP_WORK=0
 LAND_POLYGONS="stub"
 
@@ -102,6 +104,7 @@ while [[ $# -gt 0 ]]; do
         --build-contours) BUILD_CONTOURS=1; shift ;;
         --build-routing) BUILD_ROUTING=1; shift ;;
         --routing-elevation) ROUTING_ELEVATION=1; shift ;;
+        --routing-grades) ROUTING_GRADES=1; shift ;;
         --land-polygons) LAND_POLYGONS="$2"; shift 2 ;;
         --keep-work) KEEP_WORK=1; shift ;;
         -h | --help) sed -n '2,/^$/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -217,11 +220,28 @@ if [[ "$BUILD_CONTOURS" -eq 1 ]]; then
     run_container gdal-buildvrt "$WORK/stages/country/gdal-buildvrt.json" "$GDAL_IMAGE" \
         --volume "$DEM":/dem:ro,Z --volume "$contours_dir":/data:Z \
         bash -c 'gdalbuildvrt /data/ua.vrt /dem/*.tif'
+    python3 - "$WORK/boundaries/boundaries" "$contours_dir/ukraine.geojson" <<'GEOM'
+import json
+import pathlib
+import sys
+
+features = [
+    json.loads(path.read_text())
+    for path in sorted(pathlib.Path(sys.argv[1]).glob("ua-*.geojson"))
+]
+json.dump({"type": "FeatureCollection", "features": features}, open(sys.argv[2], "w"))
+GEOM
+    run_container gdal-warp-90m "$WORK/stages/country/gdal-warp-90m.json" "$GDAL_IMAGE" \
+        --volume "$DEM":/dem:ro,Z --volume "$contours_dir":/data:Z \
+        gdalwarp -overwrite -multi -t_srs EPSG:4326 -tr 0.000833333 0.000833333 -r average \
+        -cutline /data/ukraine.geojson -crop_to_cutline \
+        -dstnodata -9999 -co COMPRESS=DEFLATE -co PREDICTOR=2 -co TILED=YES \
+        /data/ua.vrt /data/ua-90m.tif
     run_container gdal-contour "$WORK/stages/country/gdal-contour.json" "$GDAL_IMAGE" \
-        --volume "$contours_dir":/data:Z \
-        gdal_contour -i "$CONTOUR_INTERVAL" -a ele -f GPKG -nln contours /data/ua.vrt /data/ua-contours.gpkg
+        --volume "$DEM":/dem:ro,Z --volume "$contours_dir":/data:Z \
+        gdal_contour -i "$CONTOUR_INTERVAL" -a ele -f GPKG -nln contours /data/ua-90m.tif /data/ua-contours.gpkg
     run_host planetiler-contours "$WORK/stages/country/planetiler-contours.json" --cwd "$contours_dir" \
-        "$JAVA" "-Xmx$PLANETILER_HEAP" -jar "$PLANETILER" generate-custom contours-100-50-10.yml \
+        "$JAVA" "-Xmx$PLANETILER_HEAP" -jar "$PLANETILER" generate-custom --schema=contours-100-50-10.yml \
         --output=ua-contours.pmtiles --force --minzoom=11 --tmpdir="$contours_dir/tmp"
     CONTOURS="$contours_dir/ua-contours.pmtiles"
 fi
@@ -246,12 +266,10 @@ import sys
 
 packages = json.load(open(sys.argv[1]))["packages"]
 print(
-    ",".join(
-        f"{min(package['bbox'][0] for package in packages)},"
-        f"{min(package['bbox'][1] for package in packages)},"
-        f"{max(package['bbox'][2] for package in packages)},"
-        f"{max(package['bbox'][3] for package in packages)}"
-    )
+    f"{min(package['bbox'][0] for package in packages)},"
+    f"{min(package['bbox'][1] for package in packages)},"
+    f"{max(package['bbox'][2] for package in packages)},"
+    f"{max(package['bbox'][3] for package in packages)}"
 )
 PY
 )" --out "$routing_dir/elevation" --skip-missing
@@ -288,7 +306,7 @@ else
         --mjolnir-admin /data/admins.sqlite >"$WORK/routing-config.json"
 fi
 routing_grades="none"
-if [[ "$ROUTING_ELEVATION" -eq 1 && "$BUILD_ROUTING" -eq 1 ]]; then
+if [[ "$ROUTING_ELEVATION" -eq 1 || "$ROUTING_GRADES" -eq 1 ]]; then
     routing_grades="GLO-30 grades sampled from the DEM HGT tiles"
 fi
 routing_build="valhalla_build_tiles over the country PBF, sliced per oblast by valhalla_build_extract --geojson-dir"
@@ -426,11 +444,9 @@ JSON
     python3 "$PY" manifest --spec "$WORK/spec-$region.json" --boundaries "$TABLE"
 
     local seconds=$((SECONDS - started))
-    local disk_bytes
-    disk_bytes="$(du -sb "$pack" | cut -f1)"
     python3 "$PY" metrics --file "$OUT/metrics.json" --manifest "$pack/manifest.json" \
         --stages "$stages" --seconds "$seconds" --routing-tiles "$routing_tiles" \
-        --disk-bytes "$disk_bytes" --build "$WORK/build.json"
+        --build "$WORK/build.json"
 
     rm -rf "$OUT/$region"
     mkdir -p "$OUT/$region"

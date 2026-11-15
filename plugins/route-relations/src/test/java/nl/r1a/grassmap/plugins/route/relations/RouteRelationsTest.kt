@@ -129,6 +129,40 @@ class RouteRelationsTest {
     }
 
     @Test
+    fun aMemberThatDoesNotMeetItsNeighbourStaysASeparateSegment() {
+        val first = listOf(GeoPoint(1.0, 1.0), GeoPoint(1.0, 2.0))
+        val second = listOf(GeoPoint(2.0, 4.0), GeoPoint(2.0, 3.0))
+        val component =
+            RouteRelations(
+                ways = mapOf(1L to first, 2L to second),
+                relations =
+                    listOf(
+                        RouteRelation(
+                            id = 1L,
+                            route = Route.Hiking,
+                            network = RouteNetwork.HikingLocal,
+                            ref = null,
+                            name = null,
+                            osmcSymbol = null,
+                            colour = null,
+                            distanceMeters = null,
+                            members = listOf(RouteRelationMember(1L, null), RouteRelationMember(2L, null)),
+                        ),
+                    ),
+            )
+
+        val assembled = RouteRelationsGeometry.assemble(component).single()
+
+        assertEquals(listOf(1L, 2L), assembled.segments.map { it.wayId })
+        assertEquals(listOf(1.0, 2.0), assembled.segments[0].points.map { it.longitude })
+        assertEquals(listOf(3.0, 4.0), assembled.segments[1].points.map { it.longitude })
+        assertTrue(
+            "a chart must see the gap, so the segments stay separate",
+            assembled.segments[0].points.last() != assembled.segments[1].points.first(),
+        )
+    }
+
+    @Test
     fun aSharedWayGivesEachRelationItsOwnLane() {
         val assembled = RouteRelationsGeometry.assemble(fixture)
 

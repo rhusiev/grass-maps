@@ -146,6 +146,18 @@
     <string name="elevation_chart_way_steps">Сходи</string>
     <string name="elevation_chart_strip_share">%1$s%% %2$s</string>
 
+    <string name="relation_analysis_untitled">Маршрут</string>
+    <string name="relation_analysis_ref">№ %1$s</string>
+    <string name="relation_analysis_close">Закрити графік маршруту</string>
+    <string name="relation_analysis_hiking_international">Міжнародний пішохідний маршрут</string>
+    <string name="relation_analysis_hiking_national">Національний пішохідний маршрут</string>
+    <string name="relation_analysis_hiking_regional">Регіональний пішохідний маршрут</string>
+    <string name="relation_analysis_hiking_local">Місцевий пішохідний маршрут</string>
+    <string name="relation_analysis_cycling_international">Міжнародний веломаршрут</string>
+    <string name="relation_analysis_cycling_national">Національний веломаршрут</string>
+    <string name="relation_analysis_cycling_regional">Регіональний веломаршрут</string>
+    <string name="relation_analysis_cycling_local">Місцевий веломаршрут</string>
+
     <string name="track_analysis_distance">Відстань</string>
     <string name="track_analysis_ascent">Підйом</string>
     <string name="track_analysis_moving">У русі</string>

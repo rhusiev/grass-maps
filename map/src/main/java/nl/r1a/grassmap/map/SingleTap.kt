@@ -19,9 +19,9 @@ import kotlin.math.max
  * A tap is one pointer, down for less than [MapGestures.TAP_MAX_MILLIS] and
  * moved no more than [MapGestures.TAP_MAX_TRAVEL_DP]. A second finger, a longer
  * hold (that is the long press, which has its own owner) or a moving finger
- * reports nothing. The map screen only uses the point to hit-test a track, so
- * a tap that is the first half of a double tap may also select a track; the
- * engine still zooms, and selection is idempotent.
+ * reports nothing. The map screen uses the point to hit-test a track or a route
+ * relation, so a tap that is the first half of a double tap may also select one;
+ * the engine still zooms, and selection is idempotent.
  */
 internal suspend fun PointerInputScope.detectSingleTap(onTap: (ScreenOffset) -> Unit) {
     val density = this

@@ -146,6 +146,18 @@
     <string name="elevation_chart_way_steps">Steps</string>
     <string name="elevation_chart_strip_share">%1$s%% %2$s</string>
 
+    <string name="relation_analysis_untitled">Route relation</string>
+    <string name="relation_analysis_ref">ref %1$s</string>
+    <string name="relation_analysis_close">Close the relation chart</string>
+    <string name="relation_analysis_hiking_international">International hiking route</string>
+    <string name="relation_analysis_hiking_national">National hiking route</string>
+    <string name="relation_analysis_hiking_regional">Regional hiking route</string>
+    <string name="relation_analysis_hiking_local">Local hiking route</string>
+    <string name="relation_analysis_cycling_international">International cycling route</string>
+    <string name="relation_analysis_cycling_national">National cycling route</string>
+    <string name="relation_analysis_cycling_regional">Regional cycling route</string>
+    <string name="relation_analysis_cycling_local">Local cycling route</string>
+
     <string name="track_analysis_distance">Distance</string>
     <string name="track_analysis_ascent">Ascent</string>
     <string name="track_analysis_moving">Moving</string>

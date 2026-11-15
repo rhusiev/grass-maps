@@ -142,16 +142,57 @@ class ElevationProfiler(
         durationMillis: Long,
         departureEpochMillis: Long,
     ): ElevationProfile {
+        val sampled = lineSamples(listOf(positions), listOf(elevations))
+        return timedProfile(sampled.samples, sampled.distanceMeters, durationMillis, departureEpochMillis)
+    }
+
+    /**
+     * The profile of a chain of lines, such as a route relation's member ways
+     * (T-0420).
+     *
+     * Each inner list is one line and is measured on its own: the step from the
+     * last point of one line to the first point of the next is not added, so a
+     * gap in the relation stays a gap on the axis instead of becoming a
+     * straight line between two unrelated places. [elevations] runs parallel to
+     * [lines]; a null height is skipped without moving the distance, as in
+     * [lineProfile].
+     */
+    fun linesProfile(
+        lines: List<List<GeoPoint>>,
+        elevations: List<List<Double?>>,
+        durationMillis: Long,
+        departureEpochMillis: Long,
+    ): ElevationProfile {
+        val sampled = lineSamples(lines, elevations)
+        return timedProfile(sampled.samples, sampled.distanceMeters, durationMillis, departureEpochMillis)
+    }
+
+    private fun lineSamples(
+        lines: List<List<GeoPoint>>,
+        elevations: List<List<Double?>>,
+    ): LineSamples {
         val samples = mutableListOf<ElevationSample>()
         var totalDistanceMeters = 0.0
-        for (index in positions.indices) {
-            val position = positions[index]
-            if (index > 0) {
-                totalDistanceMeters += distanceMeters(positions[index - 1], position)
+        for ((lineIndex, line) in lines.withIndex()) {
+            var lineDistanceMeters = 0.0
+            for (index in line.indices) {
+                if (index > 0) {
+                    lineDistanceMeters += distanceMeters(line[index - 1], line[index])
+                }
+                val elevation = elevations.getOrNull(lineIndex)?.getOrNull(index) ?: continue
+                samples += ElevationSample(distanceMeters = totalDistanceMeters + lineDistanceMeters, elevationMeters = elevation)
             }
-            val elevation = elevations.getOrNull(index) ?: continue
-            samples += ElevationSample(distanceMeters = totalDistanceMeters, elevationMeters = elevation)
+            totalDistanceMeters += lineDistanceMeters
         }
+        return LineSamples(samples, totalDistanceMeters)
+    }
+
+    private fun timedProfile(
+        samples: List<ElevationSample>,
+        totalDistanceMeters: Double,
+        durationMillis: Long,
+        departureEpochMillis: Long,
+    ): ElevationProfile {
         if (samples.size < MINIMUM_SAMPLES || totalDistanceMeters <= 0.0) {
             return ElevationProfile(durationMillis = durationMillis.takeIf { it > 0 })
         }
@@ -166,6 +207,11 @@ class ElevationProfiler(
             }
         return ElevationProfile(samples = timed, durationMillis = durationMillis.takeIf { it > 0 })
     }
+
+    private data class LineSamples(
+        val samples: List<ElevationSample>,
+        val distanceMeters: Double,
+    )
 
     private companion object {
         const val MINIMUM_SAMPLES = 2

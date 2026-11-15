@@ -132,6 +132,9 @@ import nl.r1a.grassmap.plugins.point.info.SelectedPointValue
 import nl.r1a.grassmap.plugins.route.layer.RouteColourMode
 import nl.r1a.grassmap.plugins.route.layer.RouteLineDrawing
 import nl.r1a.grassmap.plugins.route.planner.RoutePlannerContract
+import nl.r1a.grassmap.plugins.route.relations.AssembledRoute
+import nl.r1a.grassmap.plugins.route.relations.RouteRelationTap
+import nl.r1a.grassmap.plugins.route.relations.RouteRelationsGeometry
 import nl.r1a.grassmap.plugins.route.relations.RouteRelationsMapController
 import nl.r1a.grassmap.plugins.track.library.TrackLibraryContract
 import nl.r1a.grassmap.routing.selectedRoute
@@ -152,6 +155,7 @@ import nl.r1a.grassmap.ui.shell.NavigationAlertSwitch
 import nl.r1a.grassmap.ui.shell.NavigationScreenHost
 import nl.r1a.grassmap.ui.shell.NavigationSheet
 import nl.r1a.grassmap.ui.shell.PlaceCardHost
+import nl.r1a.grassmap.ui.shell.RelationAnalysisPanel
 import nl.r1a.grassmap.ui.shell.RoutePlanPanel
 import nl.r1a.grassmap.ui.shell.RoutePreviewTime
 import nl.r1a.grassmap.ui.shell.SearchScreenHost
@@ -511,6 +515,37 @@ private fun MapContent(
                 climbs = analysisClimbs,
             )
         }
+    // The route relation a tap selected (T-0420). Its chart is the analysis of
+    // the assembled member ways, so it shares the track analysis engine and the
+    // same chart; only the geometry source differs.
+    var selectedRelation by remember { mutableStateOf<AssembledRoute?>(null) }
+    var relationTapSequence by remember { mutableIntStateOf(0) }
+    val relationElevation =
+        remember(container) {
+            RelationElevation(container.elevationAccess) { message -> Log.i(TAG, message) }
+        }
+    val relationProfile by
+        produceState<ElevationProfile?>(null, selectedRelation) {
+            val route = selectedRelation
+            value = null
+            if (route != null) {
+                value = withContext(Dispatchers.Default) { relationElevation.profile(route) }
+            }
+        }
+    val relationChart =
+        remember(relationProfile) {
+            elevationChartState(relationProfile ?: ElevationProfile())
+        }
+    val relationSummary =
+        remember(selectedRelation, relationProfile) {
+            selectedRelation?.let { route -> relationAnalysisSummary(route, relationProfile) }
+        }
+    // The track analysis and the relation chart are one panel at a time.
+    LaunchedEffect(analysisTrack) {
+        if (analysisTrack != null) {
+            selectedRelation = null
+        }
+    }
     // One scan per produced route and profile (T-0409). The effect restarts on
     // a new selected route or a profile change, and a cancelled scan never
     // writes its result, so a late answer cannot replace a newer one.
@@ -656,18 +691,18 @@ private fun MapContent(
                 }
             },
             onTap = { point ->
+                relationTapSequence += 1
+                val tapSequence = relationTapSequence
+                val scale = metresPerDp(point, cameraNow().zoom)
                 val id =
                     TrackTap.hit(
                         tracks = container.tracks.drawn.value,
                         tap = point,
-                        metresPerDp = metresPerDp(point, cameraNow().zoom),
+                        metresPerDp = scale,
                     )
 
-                if (id == null) {
-                    selectedTrack = null
-                    selectedSummary = null
-                    selectedFolderName = null
-                } else {
+                if (id != null) {
+                    selectedRelation = null
                     scope.launch {
                         val summary = container.tracks.summaries().firstOrNull { row -> row.id.value == id }
                         when (val outcome = container.tracks.stored(TrackId(id))) {
@@ -686,6 +721,37 @@ private fun MapContent(
                                 selectedSummary = null
                                 selectedFolderName = null
                                 Log.w(TAG, "selected track not loaded: ${outcome.error}")
+                            }
+                        }
+                    }
+                } else {
+                    selectedTrack = null
+                    selectedSummary = null
+                    selectedFolderName = null
+                    scope.launch {
+                        val outcome = withContext(Dispatchers.IO) { container.regionData.routeRelations() }
+                        if (tapSequence != relationTapSequence) {
+                            return@launch
+                        }
+                        when (outcome) {
+                            is Outcome.Failure -> {
+                                selectedRelation = null
+                                Log.w(TAG, "route relations not read for a tap: ${outcome.error}")
+                            }
+
+                            is Outcome.Success -> {
+                                val hit =
+                                    withContext(Dispatchers.Default) {
+                                        RouteRelationTap.hit(
+                                            routes = RouteRelationsGeometry.assemble(outcome.value),
+                                            tap = point,
+                                            metresPerDp = scale,
+                                        )
+                                    }
+                                selectedRelation = hit
+                                if (hit != null) {
+                                    TrackAnalysisSession.hide()
+                                }
                             }
                         }
                     }
@@ -1186,6 +1252,21 @@ private fun MapContent(
                         }
                     }
                 },
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding(),
+            )
+        }
+        val relation = selectedRelation
+        val relationSummaryNow = relationSummary
+        if (!navigationActive && relation != null && relationSummaryNow != null) {
+            RelationAnalysisPanel(
+                summary = relationSummaryNow,
+                chart = relationChart,
+                strings = container.strings,
+                dark = isSystemInDarkTheme(),
+                onClose = { selectedRelation = null },
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)

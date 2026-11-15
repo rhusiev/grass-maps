@@ -171,6 +171,30 @@ class ElevationProfilerTest {
         assertTrue(profile.samples.isEmpty())
     }
 
+    /** A relation's way chain must not add the jump across a gap between members. */
+    @Test
+    fun aRelationWayChainKeepsItsGapsOutOfTheDistance() {
+        val first = listOf(GeoPoint(49.8400, 24.0300), GeoPoint(49.8410, 24.0300))
+        val second = listOf(GeoPoint(49.8500, 24.0300), GeoPoint(49.8490, 24.0300))
+
+        val profile =
+            profiler.linesProfile(
+                lines = listOf(first, second),
+                elevations = listOf(listOf(300.0, 320.0), listOf(340.0, 360.0)),
+                durationMillis = 0L,
+                departureEpochMillis = 0L,
+            )
+
+        val firstLength = profiler.lineProfile(first, listOf(300.0, 320.0), 0L, 0L).distanceMeters
+        val secondLength = profiler.lineProfile(second, listOf(340.0, 360.0), 0L, 0L).distanceMeters
+        assertEquals(4, profile.samples.size)
+        assertEquals(firstLength, profile.samples[1].distanceMeters, 1e-9)
+        assertEquals(firstLength, profile.samples[2].distanceMeters, 1e-9)
+        assertEquals(firstLength + secondLength, profile.samples.last().distanceMeters, 1e-9)
+        assertEquals(firstLength + secondLength, profile.distanceMeters, 1e-9)
+        assertNull(profile.durationMillis)
+    }
+
     /**
      * A noisy track's chart must end where the analysis ends. The raw sum over the
      * same fixes is 40 % longer than the walk, so a profile that accumulated raw

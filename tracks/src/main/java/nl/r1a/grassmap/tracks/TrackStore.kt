@@ -174,7 +174,11 @@ interface TrackStore {
      */
     suspend fun removeToTrash(id: TrackId): Outcome<TrackRemoval>
 
-    /** Puts a removed track, its metadata and its folder back. */
+    /**
+     * Puts a removed track, its metadata, its folder and its document back.
+     * When two records shared one document, either record's undo restores the
+     * document, so the deletes may be undone in any order.
+     */
     suspend fun restoreFromTrash(removal: TrackRemoval): Outcome<Unit>
 
     /** Re-reads a directory-backed store; an in-memory store has nothing to do. */

@@ -31,9 +31,14 @@ data class TrackFolder(
  * JSON index beside the track documents. The per-track folder id lives on the
  * track sidecar; this file only names the folders.
  *
- * A missing or unreadable index is an empty library, never an exception, so one
- * bad file cannot hide the tracks. A null [file] keeps the folders in memory,
- * which is what the unit tests and a build without a files root use.
+ * A missing index is an empty library, never an exception, so one bad file
+ * cannot hide the tracks. An index this build cannot read - damaged bytes, a
+ * schema from a newer build, or a file the process cannot open - is also read
+ * as an empty library, but every change that would rewrite it is refused
+ * ([AppError.CorruptData], [AppError.Unsupported] or [AppError.Internal]), so
+ * the file on disk survives for the build that can use it. A null [file] keeps
+ * the folders in memory, which is what the unit tests and a build without a
+ * files root use.
  *
  * Folder names are trimmed, non-blank, at most [MAX_NAME_LENGTH] characters and
  * unique without regard to case. A name that breaks a rule is
@@ -45,6 +50,9 @@ class TrackFolderStore(
 ) {
     private val mutex = Mutex()
     private var loaded = false
+
+    /** Why the index cannot be rewritten, or null when it can. */
+    private var indexFailure: AppError? = null
     private val folders = mutableListOf<TrackFolder>()
 
     suspend fun load(): List<TrackFolder> =
@@ -63,6 +71,7 @@ class TrackFolderStore(
         mutex.withLock {
             withContext(Dispatchers.IO) {
                 ensureLoaded()
+                rewriteRefusal()?.let { refusal -> return@withContext refusal }
                 val cleaned = validName(name, exceptId = null) ?: return@withContext Outcome.Failure(AppError.InvalidInput)
                 val folder = TrackFolder(id = idSource(), name = cleaned)
                 folders += folder
@@ -81,6 +90,7 @@ class TrackFolderStore(
         mutex.withLock {
             withContext(Dispatchers.IO) {
                 ensureLoaded()
+                rewriteRefusal()?.let { refusal -> return@withContext refusal }
                 val index = folders.indexOfFirst { folder -> folder.id == id }
                 if (index < 0) {
                     return@withContext Outcome.Failure(AppError.NotFound)
@@ -102,6 +112,7 @@ class TrackFolderStore(
         mutex.withLock {
             withContext(Dispatchers.IO) {
                 ensureLoaded()
+                rewriteRefusal()?.let { refusal -> return@withContext refusal }
                 val index = folders.indexOfFirst { folder -> folder.id == id }
                 if (index < 0) {
                     return@withContext Outcome.Failure(AppError.NotFound)
@@ -126,6 +137,7 @@ class TrackFolderStore(
         mutex.withLock {
             withContext(Dispatchers.IO) {
                 ensureLoaded()
+                rewriteRefusal()?.let { refusal -> return@withContext refusal }
                 if (folders.any { existing -> existing.id == folder.id }) {
                     return@withContext Outcome.Failure(AppError.InvalidInput)
                 }
@@ -141,14 +153,37 @@ class TrackFolderStore(
             }
         }
 
+    /**
+     * The refusal a change answers when the index on disk is not one this build
+     * can rewrite. Reading stays tolerant; writing must not replace a file that
+     * was not read.
+     */
+    private fun rewriteRefusal(): Outcome.Failure? = indexFailure?.let { failure -> Outcome.Failure(failure) }
+
     private fun ensureLoaded() {
         if (loaded) {
             return
         }
-        val text = readIndex()
         folders.clear()
-        if (text != null) {
-            folders += decode(text)
+        indexFailure = null
+        val target = file
+        if (target != null && target.isFile) {
+            val text =
+                try {
+                    target.readText()
+                } catch (exception: IOException) {
+                    null
+                } catch (exception: SecurityException) {
+                    null
+                }
+            if (text == null) {
+                indexFailure = AppError.Internal(ERROR_ID, "the folder index could not be read")
+            } else {
+                when (val decoded = decode(text)) {
+                    is Outcome.Success -> folders += decoded.value
+                    is Outcome.Failure -> indexFailure = decoded.error
+                }
+            }
         }
         loaded = true
     }
@@ -167,31 +202,27 @@ class TrackFolderStore(
         return if (collision) null else cleaned
     }
 
-    private fun readIndex(): String? {
-        val target = file ?: return null
-        return try {
-            target.takeIf { it.isFile }?.readText()
-        } catch (exception: IOException) {
-            null
-        } catch (exception: SecurityException) {
-            null
-        }
-    }
-
-    private fun decode(text: String): List<TrackFolder> =
+    /**
+     * The folders [text] names, or why this build must not rewrite it. A schema
+     * this build does not know is [AppError.Unsupported]: a newer build's folder
+     * names must not be replaced by this one's empty list.
+     */
+    private fun decode(text: String): Outcome<List<TrackFolder>> =
         try {
             val index = INDEX_JSON.decodeFromString<FolderIndex>(text)
             if (index.schema != SCHEMA_VERSION) {
-                emptyList()
+                Outcome.Failure(AppError.Unsupported)
             } else {
-                index.folders.filter { folder ->
-                    folder.id.isNotBlank() && folder.name.isNotBlank() && folder.name.length <= MAX_NAME_LENGTH
-                }
+                Outcome.Success(
+                    index.folders.filter { folder ->
+                        folder.id.isNotBlank() && folder.name.isNotBlank() && folder.name.length <= MAX_NAME_LENGTH
+                    },
+                )
             }
         } catch (exception: SerializationException) {
-            emptyList()
+            Outcome.Failure(AppError.CorruptData)
         } catch (exception: IllegalArgumentException) {
-            emptyList()
+            Outcome.Failure(AppError.CorruptData)
         }
 
     private fun encode(): ByteArray =

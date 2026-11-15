@@ -195,6 +195,33 @@ class GpxExportTest {
         }
 
     @Test
+    fun theInclusiveLongitudeEndIsWritableAndRoundTrips() =
+        runTest {
+            val track =
+                Track(
+                    name = "antimeridian west",
+                    segments = listOf(TrackSegment(listOf(TrackPoint(GeoPoint(0.0, -180.0))))),
+                )
+
+            val exported = export(ImportedEntities(tracks = listOf(track)))
+
+            GpxSchema11.assertValid(exported)
+            assertEquals(
+                -180.0,
+                parse(exported)
+                    .entities.tracks
+                    .single()
+                    .segments
+                    .single()
+                    .points
+                    .single()
+                    .position
+                    .longitude,
+                0.0,
+            )
+        }
+
+    @Test
     fun aCancelledExportReturnsCancelled() =
         runTest {
             val entities =

@@ -165,6 +165,22 @@ internal object TrackSidecarJson {
         )
     }
 
+    /**
+     * The document hash a sidecar names, or null when even that field cannot be
+     * read. This is deliberately weaker than [decode]: the store asks it of
+     * every sidecar on disk, including one this build skips, before it deletes
+     * the document that record still needs.
+     */
+    fun documentHashOf(text: String): String? {
+        val root =
+            try {
+                Json.parseToJsonElement(text) as? JsonObject
+            } catch (exception: SerializationException) {
+                null
+            } ?: return null
+        return root.string(DOCUMENT_HASH)?.takeIf { hash -> hash.isNotBlank() }
+    }
+
     private fun decodeStyle(json: JsonObject): TrackStyle? {
         val colour = json.string(COLOUR) ?: return null
         val width = json.double(WIDTH)?.toFloat() ?: return null

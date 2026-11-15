@@ -160,6 +160,70 @@ class TrackLibraryStoreTest {
         }
 
     @Test
+    fun theOlderOfTwoDeletesOfOneDocumentUndoesFirst() =
+        runTest {
+            val store = store()
+            val first = record(SOURCE_MULTI, index = 0)
+            val second = record(SOURCE_MULTI, index = 1)
+            store.save(first, SOURCE_MULTI)
+            store.save(second, null)
+
+            val firstRemoval = success(store.removeToTrash(first.id))
+            val secondRemoval = success(store.removeToTrash(second.id))
+
+            // The second delete parked the shared document under its own
+            // token. Undoing the first record must find it there: answering
+            // success for a record no document backs hides the track again.
+            assertEquals(Outcome.Success(Unit), store.restoreFromTrash(firstRemoval))
+            assertArrayEquals(SOURCE_MULTI, File(root, "${hashOf(SOURCE_MULTI)}.gpx").readBytes())
+            assertEquals(first.id, success(store.get(first.id)).id)
+
+            assertEquals(Outcome.Success(Unit), store.restoreFromTrash(secondRemoval))
+
+            assertEquals(setOf(first.id, second.id), store.summaries().map { summary -> summary.id }.toSet())
+            assertArrayEquals(SOURCE_MULTI, File(root, "${hashOf(SOURCE_MULTI)}.gpx").readBytes())
+        }
+
+    @Test
+    fun theNewerOfTwoDeletesOfOneDocumentUndoesFirst() =
+        runTest {
+            val store = store()
+            val first = record(SOURCE_MULTI, index = 0)
+            val second = record(SOURCE_MULTI, index = 1)
+            store.save(first, SOURCE_MULTI)
+            store.save(second, null)
+
+            val firstRemoval = success(store.removeToTrash(first.id))
+            val secondRemoval = success(store.removeToTrash(second.id))
+
+            assertEquals(Outcome.Success(Unit), store.restoreFromTrash(secondRemoval))
+            assertEquals(second.id, success(store.get(second.id)).id)
+
+            assertEquals(Outcome.Success(Unit), store.restoreFromTrash(firstRemoval))
+
+            assertEquals(setOf(first.id, second.id), store.summaries().map { summary -> summary.id }.toSet())
+            assertArrayEquals(SOURCE_MULTI, File(root, "${hashOf(SOURCE_MULTI)}.gpx").readBytes())
+        }
+
+    @Test
+    fun anUndoWhoseDocumentIsGoneAnswersNotFound() =
+        runTest {
+            val store = store()
+            val first = record(SOURCE_MULTI, index = 0)
+            val second = record(SOURCE_MULTI, index = 1)
+            store.save(first, SOURCE_MULTI)
+            store.save(second, null)
+            val firstRemoval = success(store.removeToTrash(first.id))
+            val secondRemoval = success(store.removeToTrash(second.id))
+            // The purge removed the token that held the shared document, so the
+            // first record's undo can no longer put its geometry back.
+            File(root, TrackTrash.DIRECTORY + "/" + secondRemoval.token).deleteRecursively()
+
+            assertEquals(Outcome.Failure(AppError.NotFound), store.restoreFromTrash(firstRemoval))
+            assertTrue(store.summaries().isEmpty())
+        }
+
+    @Test
     fun aReloadKeepsThePendingDeleteForItsUndo() =
         runTest {
             val store = store()
@@ -204,8 +268,8 @@ class TrackLibraryStoreTest {
     fun aDeletedSharedDocumentStaysForTheOtherTrack() =
         runTest {
             val store = store()
-            val first = record(SOURCE_MULTI, index = 0, count = 2)
-            val second = record(SOURCE_MULTI, index = 1, count = 2)
+            val first = record(SOURCE_MULTI, index = 0)
+            val second = record(SOURCE_MULTI, index = 1)
             store.save(first, SOURCE_MULTI)
             store.save(second, null)
 
@@ -253,15 +317,14 @@ class TrackLibraryStoreTest {
     private fun record(
         bytes: ByteArray,
         index: Int = 0,
-        count: Int = 1,
     ): StoredTrack {
         val track = trackOf(bytes.decodeToString().split('|')[index])
         return StoredTrack(
-            id = TrackIdentity.of(bytes, index, count),
+            id = TrackIdentity.of(bytes, index),
             name = "Track $index",
             track = track,
             analysis = TrackAnalyzer().analyze(track),
-            style = TrackPalette.styleFor(TrackIdentity.of(bytes, index, count)),
+            style = TrackPalette.styleFor(TrackIdentity.of(bytes, index)),
             trackIndex = index,
         )
     }

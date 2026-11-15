@@ -252,10 +252,18 @@ internal object GpxParser {
         }
     }
 
+    /**
+     * GPX 1.1's `longitudeType` is `minInclusive -180` and `maxExclusive 180`,
+     * and `latitudeType` is inclusive at both ends. The writer applies the same
+     * bounds, so a point this build keeps is always one it can write back.
+     */
     private fun isWgs84(
         latitude: Double,
         longitude: Double,
-    ): Boolean = latitude in MIN_LATITUDE..MAX_LATITUDE && longitude in MIN_LONGITUDE..MAX_LONGITUDE
+    ): Boolean =
+        latitude in MIN_LATITUDE..MAX_LATITUDE &&
+            longitude >= MIN_LONGITUDE &&
+            longitude < MAX_LONGITUDE
 
     private fun documentBuilder(): DocumentBuilder {
         val factory = DocumentBuilderFactory.newInstance()

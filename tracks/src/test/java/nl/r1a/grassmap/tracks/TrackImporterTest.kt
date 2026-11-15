@@ -12,7 +12,9 @@ import nl.r1a.grassmap.plugin.api.model.ImportWarning
 import nl.r1a.grassmap.plugin.api.model.ImportWarningCode
 import nl.r1a.grassmap.plugin.api.model.ImportedEntities
 import nl.r1a.grassmap.plugin.api.model.Track
+import nl.r1a.grassmap.plugin.api.model.TrackKind
 import nl.r1a.grassmap.plugin.api.model.TrackPoint
+import nl.r1a.grassmap.plugin.api.model.TrackRoute
 import nl.r1a.grassmap.plugin.api.model.TrackSegment
 import nl.r1a.grassmap.plugin.api.provider.FileFormat
 import nl.r1a.grassmap.plugin.api.provider.FileFormatContract
@@ -191,18 +193,69 @@ class TrackImporterTest {
 
             assertEquals(listOf("Morning", "Evening"), imported.tracks.map { it.name })
             assertEquals(listOf(0, 1), imported.tracks.map { it.trackIndex })
-            assertEquals(
-                66,
-                imported.tracks[0]
-                    .id.value.length,
-            )
-            assertEquals(
-                imported.tracks[0]
-                    .id.value
-                    .removeSuffix(":0") + ":1",
-                imported.tracks[1].id.value,
-            )
+            val hash = TrackIdentity.documentHash(BYTES)
+            assertEquals(hash, imported.tracks[0].id.value)
+            assertEquals("$hash:1", imported.tracks[1].id.value)
             assertEquals(2, store.all().size)
+        }
+
+    @Test
+    fun theFirstRecordOfADocumentKeepsTheBareHash() =
+        runTest {
+            val store = InMemoryTrackStore()
+            val importer =
+                TrackImporter(
+                    resolver(mutableListOf()) {
+                        format(
+                            ImportResult(
+                                entities =
+                                    ImportedEntities(
+                                        tracks =
+                                            listOf(
+                                                track("Morning"),
+                                                track("Evening"),
+                                            ),
+                                    ),
+                            ),
+                        )
+                    },
+                    store,
+                )
+
+            val imported = success(importer.importFile("two.gpx", BYTES, CancellationHandle.None))
+
+            // The first record's id must not depend on how many records the
+            // document holds: a build that learns another element family
+            // appends records, and the ones already stored keep their name.
+            val hash = TrackIdentity.documentHash(BYTES)
+            assertEquals(listOf(hash, "$hash:1"), imported.tracks.map { it.id.value })
+        }
+
+    @Test
+    fun aTrackBesideARouteKeepsTheBareHash() =
+        runTest {
+            val store = InMemoryTrackStore()
+            val importer =
+                TrackImporter(
+                    resolver(mutableListOf()) {
+                        format(
+                            ImportResult(
+                                entities =
+                                    ImportedEntities(
+                                        tracks = listOf(track("Walk")),
+                                        routes = listOf(route("Plan")),
+                                    ),
+                            ),
+                        )
+                    },
+                    store,
+                )
+
+            val imported = success(importer.importFile("walk.gpx", BYTES, CancellationHandle.None))
+
+            val hash = TrackIdentity.documentHash(BYTES)
+            assertEquals(listOf(hash, "$hash:1"), imported.tracks.map { it.id.value })
+            assertEquals(listOf(TrackKind.Track, TrackKind.Route), imported.tracks.map { it.kind })
         }
 
     @Test
@@ -325,6 +378,16 @@ class TrackImporterTest {
                             TrackPoint(GeoPoint(49.84001, 24.03), 301.0, null),
                         ),
                     ),
+                ),
+        )
+
+    private fun route(name: String): TrackRoute =
+        TrackRoute(
+            name = name,
+            points =
+                listOf(
+                    TrackPoint(GeoPoint(49.84, 24.03)),
+                    TrackPoint(GeoPoint(49.84001, 24.03)),
                 ),
         )
 

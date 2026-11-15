@@ -24,9 +24,11 @@ import java.nio.file.StandardCopyOption
  * - `<hash>.gpx` - the imported document exactly as it arrived, named by its
  *   SHA-256, so importing the same file again targets the same file;
  * - `<id>.json` - the sidecar beside it: styling, cached analysis, the document
- *   index, the record kind and the document hash it belongs to. The id is
- *   `hash` for a one-record document and `hash:<index>` for each record of a
- *   multi-record one;
+ *   index, the record kind and the document hash it belongs to. The id is the
+ *   document hash for the document's first record and `hash:<index>` for each
+ *   later one, so a record keeps its id when a build starts reading another
+ *   element family; a sidecar an older build named `hash:0` is moved to the
+ *   bare hash on the first load;
  * - `<id>.route.json` - the recompute sidecar of a saved route (T-0411): the
  *   profile, the three-step options and the waypoint chain. It is a second file
  *   on purpose. Losing it costs the recompute, never the track, so a route
@@ -42,7 +44,10 @@ import java.nio.file.StandardCopyOption
  * atomically, so a failed write leaves the previous file intact. A missing or
  * corrupt sidecar, a document whose bytes no longer match its hash, or a file
  * the reader rejects is skipped and logged; the rest of the library still
- * loads. No call throws, and file I/O runs on [Dispatchers.IO].
+ * loads. Removing a record deletes its document only when no sidecar on disk
+ * still names it, including one a load skipped, and the trash undo restores a
+ * document whichever of its records is undone first. No call throws, and file
+ * I/O runs on [Dispatchers.IO].
  *
  * The store is the single writer. [reload] re-reads the directory after another
  * component replaced it, such as a backup restore.
@@ -274,8 +279,7 @@ class FileTrackStore(
                 deleteRecompute(id)
                 sidecars.remove(id)
                 records.remove(id)
-                val documentStillUsed = sidecars.values.any { it.documentHash == sidecar.documentHash }
-                if (!documentStillUsed) {
+                if (!documentStillNeeded(sidecar.documentHash)) {
                     val document = File(root, documentFileName(sidecar.documentHash))
                     if (document.exists() && !document.delete()) {
                         log("track ${id.value}: the document could not be deleted")
@@ -306,8 +310,7 @@ class FileTrackStore(
                 parkRecompute(id, directory)
                 records.remove(id)
                 sidecars.remove(id)
-                val documentStillUsed = sidecars.values.any { other -> other.documentHash == sidecar.documentHash }
-                if (!documentStillUsed) {
+                if (!documentStillNeeded(sidecar.documentHash)) {
                     val document = File(root, documentFileName(sidecar.documentHash))
                     if (document.exists() && !moveFile(document, File(directory, document.name))) {
                         log("track ${id.value}: the document could not be parked")
@@ -332,13 +335,13 @@ class FileTrackStore(
                 if (TrackTrash.isExpired(directory, clock())) {
                     return@withContext Outcome.Failure(AppError.NotFound)
                 }
-                val parked =
+                val parkedSidecars =
                     directory
                         .listFiles()
                         ?.filter { it.isFile && it.name.endsWith(SIDECAR_SUFFIX) && !it.name.endsWith(ROUTE_SIDECAR_SUFFIX) }
                         .orEmpty()
                 val sidecarText =
-                    parked.singleOrNull()?.let { file ->
+                    parkedSidecars.singleOrNull()?.let { file ->
                         try {
                             file.readText()
                         } catch (exception: IOException) {
@@ -357,15 +360,20 @@ class FileTrackStore(
                 }
                 // The document goes back first and the sidecar last: the
                 // sidecar is what makes the track visible, so a failed move
-                // leaves a receipt that can still be retried.
-                val documents = directory.listFiles().orEmpty().filter { it.isFile && it.name.endsWith(DOCUMENT_SUFFIX) }
-                for (document in documents) {
-                    val restored = File(root, documentFileName(sidecar.documentHash))
-                    if (!restored.exists() && !moveFile(document, restored)) {
+                // leaves a receipt that can still be retried. Two records of
+                // one document are parked by two deletes and the later delete
+                // takes the document, so an undo of the earlier record must
+                // look in the other tokens too, not only its own.
+                val document = File(root, documentFileName(sidecar.documentHash))
+                if (!document.exists()) {
+                    val parkedDocument =
+                        findParkedDocument(sidecar.documentHash, directory)
+                            ?: return@withContext Outcome.Failure(AppError.NotFound)
+                    if (!moveFile(parkedDocument, document)) {
                         return@withContext writeFailure("cannot restore the document of ${sidecar.id}")
                     }
                 }
-                if (!moveFile(parked.single(), target)) {
+                if (!moveFile(parkedSidecars.single(), target)) {
                     return@withContext writeFailure("cannot restore the sidecar of ${sidecar.id}")
                 }
                 restoreRecompute(TrackId(sidecar.id), directory)
@@ -401,18 +409,11 @@ class FileTrackStore(
         if (loaded) {
             return
         }
-        val files =
-            root
-                .listFiles()
-                ?.filter {
-                    it.isFile && it.name.endsWith(SIDECAR_SUFFIX) && !it.name.endsWith(ROUTE_SIDECAR_SUFFIX) &&
-                        !it.name.startsWith(TEMPORARY_PREFIX)
-                }.orEmpty()
-                .sortedBy { it.name }
+        val files = sidecarFiles()
         for (file in files) {
             val sidecar = readSidecar(file) ?: continue
-            val id = TrackId(sidecar.id)
-            if (file.name != sidecarFileName(id)) {
+            val storedId = TrackId(sidecar.id)
+            if (file.name != sidecarFileName(storedId)) {
                 log("track ${sidecar.id}: the sidecar name does not match its id")
                 continue
             }
@@ -447,6 +448,11 @@ class FileTrackStore(
                 log("track ${sidecar.id}: the sidecar kind does not match the document")
                 continue
             }
+            // An older build appended its document index to the first record
+            // of every multi-record document too. That record's id is the bare
+            // hash now, so its sidecar is renamed once; without the rename a
+            // re-import would add a second record instead of updating it.
+            val id = canonicalId(storedId, sidecar, bytes)
             val corrected =
                 when (sidecar.kind) {
                     TrackKind.Route -> CorrectedTrack(record.track, ElevationCorrectionReport(ElevationSource.NoDem))
@@ -561,6 +567,90 @@ class FileTrackStore(
     }
 
     private fun sidecarFile(id: TrackId): File = File(root, sidecarFileName(id))
+
+    /**
+     * The id this build gives the record [sidecar] names, after moving a
+     * sidecar an older build keyed with its document index. The old name stands
+     * when the canonical file already exists or the move fails, so the record
+     * still loads; the next load retries the rename.
+     */
+    private fun canonicalId(
+        stored: TrackId,
+        sidecar: TrackSidecar,
+        bytes: ByteArray,
+    ): TrackId {
+        val canonical = TrackIdentity.of(bytes, sidecar.trackIndex)
+        if (canonical == stored) {
+            return stored
+        }
+        val target = sidecarFile(canonical)
+        if (target.exists()) {
+            log("track ${sidecar.id}: ${target.name} already exists; the older id is kept")
+            return stored
+        }
+        if (!writeAtomically(target, TrackSidecarJson.encode(sidecar.copy(id = canonical.value)).toByteArray())) {
+            log("track ${sidecar.id}: the sidecar could not be moved to ${canonical.value}")
+            return stored
+        }
+        val source = sidecarFile(stored)
+        if (!source.exists() || source.delete()) {
+            log("track ${sidecar.id}: the sidecar was moved to ${canonical.value}")
+            return canonical
+        }
+        target.delete()
+        log("track ${sidecar.id}: the older sidecar name could not be removed")
+        return stored
+    }
+
+    /** Every sidecar directly under the root, in name order. */
+    private fun sidecarFiles(): List<File> =
+        root
+            .listFiles()
+            .orEmpty()
+            .filter {
+                it.isFile && it.name.endsWith(SIDECAR_SUFFIX) && !it.name.endsWith(ROUTE_SIDECAR_SUFFIX) &&
+                    !it.name.startsWith(TEMPORARY_PREFIX)
+            }.sortedBy { it.name }
+
+    /**
+     * True when a sidecar on disk still names [documentHash]. Reading the
+     * directory rather than [sidecars] matters: a record this load skipped - a
+     * broken sidecar, a hash or kind mismatch - is not in the map, and deleting
+     * its document would take the only copy of the geometry it would show.
+     */
+    private fun documentStillNeeded(documentHash: String): Boolean =
+        sidecarFiles().any { file ->
+            val text =
+                try {
+                    file.readText()
+                } catch (exception: IOException) {
+                    null
+                } catch (exception: SecurityException) {
+                    null
+                }
+            text != null && TrackSidecarJson.documentHashOf(text) == documentHash
+        }
+
+    /**
+     * The parked copy of [documentHash]: this token's when it has one, else the
+     * copy another token holds. Two records of one document are parked by two
+     * deletes, and the later delete takes the document, so the undo of an
+     * earlier record finds it in that token's directory.
+     */
+    private fun findParkedDocument(
+        documentHash: String,
+        own: File,
+    ): File? {
+        val name = documentFileName(documentHash)
+        File(own, name).takeIf { it.isFile }?.let { return it }
+        return File(root, TrackTrash.DIRECTORY)
+            .listFiles()
+            .orEmpty()
+            .asSequence()
+            .filter { directory -> directory.isDirectory && directory.path != own.path }
+            .map { directory -> File(directory, name) }
+            .firstOrNull { document -> document.isFile }
+    }
 
     private fun recomputeFile(id: TrackId): File = File(root, recomputeFileName(id))
 

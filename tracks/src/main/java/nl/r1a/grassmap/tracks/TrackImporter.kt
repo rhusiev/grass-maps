@@ -60,9 +60,10 @@ data class ImportPreview(
  * A missing height is filled from [elevationCorrection] before the profile is
  * computed, so the stored analysis includes the DEM heights (T-0403).
  *
- * The id of each record is the document hash ([TrackIdentity]), so a repeated
- * import updates the same records and keeps their styling. A failed save stops
- * the import; records already written stay, and a retry is idempotent.
+ * The id of each record is the document hash and the record's position in the
+ * document ([TrackIdentity]), so a repeated import updates the same records and
+ * keeps their styling. A failed save stops the import; records already written
+ * stay, and a retry is idempotent.
  *
  * [previewFile] runs the same format resolution and parse without the write, so
  * the share confirm step counts the tracks it is about to store.
@@ -141,7 +142,7 @@ class TrackImporter(
         val waypoints = result.entities.waypoints
         val stored = mutableListOf<StoredTrack>()
         for ((index, record) in records.withIndex()) {
-            val saved = storedRecord(fileName, bytes, record, index, records.size, waypoints)
+            val saved = storedRecord(fileName, bytes, record, index, waypoints)
             when (val outcome = store.save(saved, bytes)) {
                 is Outcome.Success -> stored += outcome.value
                 is Outcome.Failure -> return outcome
@@ -155,10 +156,9 @@ class TrackImporter(
         bytes: ByteArray,
         record: DocumentRecord,
         index: Int,
-        count: Int,
         waypoints: List<TrackWaypoint>,
     ): StoredTrack {
-        val id = TrackIdentity.of(bytes, index, count)
+        val id = TrackIdentity.of(bytes, index)
         // A route is a plan, not a travelled line: the DEM is not sampled for
         // it, so its stored profile never carries invented heights.
         val corrected =

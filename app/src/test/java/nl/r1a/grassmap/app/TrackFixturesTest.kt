@@ -12,6 +12,7 @@ import nl.r1a.grassmap.tracks.ImportReport
 import nl.r1a.grassmap.tracks.TrackId
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -102,10 +103,18 @@ class TrackFixturesTest {
                 report.tracks.map { it.name },
             )
             assertEquals(listOf(0, 1), report.tracks.map { it.trackIndex })
-            assertTrue(
+            // The first record is the bare document hash whatever else the
+            // document holds; the second appends its index to the same hash.
+            assertFalse(
                 report.tracks[0]
                     .id.value
-                    .endsWith(":0"),
+                    .contains(':'),
+            )
+            assertEquals(
+                report.tracks[0].id.value,
+                report.tracks[1]
+                    .id.value
+                    .substringBefore(':'),
             )
             assertTrue(
                 report.tracks[1]

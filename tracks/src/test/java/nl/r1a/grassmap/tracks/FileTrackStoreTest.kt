@@ -2,6 +2,7 @@ package nl.r1a.grassmap.tracks
 
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
@@ -192,11 +193,11 @@ class FileTrackStoreTest {
             val rejectedBytes = "bad".toByteArray()
             val rejected =
                 StoredTrack(
-                    id = TrackIdentity.of(rejectedBytes, index = 0, count = 1),
+                    id = TrackIdentity.of(rejectedBytes, index = 0),
                     name = "Rejected",
                     track = trackOf(SOURCE_A.decodeToString()),
                     analysis = TrackAnalyzer().analyze(trackOf(SOURCE_A.decodeToString())),
-                    style = TrackPalette.styleFor(TrackIdentity.of(rejectedBytes, index = 0, count = 1)),
+                    style = TrackPalette.styleFor(TrackIdentity.of(rejectedBytes, index = 0)),
                 )
             success(store.save(rejected, rejectedBytes))
 
@@ -212,8 +213,8 @@ class FileTrackStoreTest {
         runTest {
             val store = store()
             val bytes = SOURCE_MULTI
-            val first = success(store.save(record(bytes, index = 0, count = 2), bytes))
-            val second = success(store.save(record(bytes, index = 1, count = 2), bytes))
+            val first = success(store.save(record(bytes, index = 0), bytes))
+            val second = success(store.save(record(bytes, index = 1), bytes))
             val document = File(root, "${hashOf(bytes)}.gpx")
 
             assertEquals(Outcome.Success(Unit), store.remove(first.id))
@@ -223,6 +224,54 @@ class FileTrackStoreTest {
             assertEquals(Outcome.Success(Unit), store.remove(second.id))
             assertFalse(document.exists())
             assertEquals(emptyList<StoredTrack>(), store.all())
+        }
+
+    @Test
+    fun removingARecordKeepsADocumentASidecarOnDiskStillNames() =
+        runTest {
+            val store = store()
+            val record = success(store.save(record(SOURCE_MULTI, index = 0), SOURCE_MULTI))
+            // A sidecar this load skips - it names a record the document does
+            // not have - is not in the loaded map, but the document is still
+            // the only copy of the geometry it would show.
+            val orphan = File(root, "${hashOf(SOURCE_MULTI)}:1.json")
+            orphan.writeText(
+                """{"id":"${hashOf(SOURCE_MULTI)}:1","documentHash":"${hashOf(SOURCE_MULTI)}","trackIndex":1}""",
+            )
+            val reopened = store()
+            assertEquals(1, reopened.all().size)
+
+            assertEquals(Outcome.Success(Unit), reopened.remove(record.id))
+
+            assertTrue(File(root, "${hashOf(SOURCE_MULTI)}.gpx").isFile)
+            assertTrue(orphan.isFile)
+        }
+
+    @Test
+    fun anOlderMultiRecordLibraryIsReadAndAReimportUpdatesIt() =
+        runTest {
+            val store = store()
+            val first = success(store.save(record(SOURCE_MULTI, index = 0), SOURCE_MULTI))
+            success(store.save(record(SOURCE_MULTI, index = 1), SOURCE_MULTI))
+            val style = TrackStyle(colour = "#B00020", widthDp = 6f)
+            store.setStyle(first.id, style)
+            // An older build appended `:0` to the first record of every
+            // multi-record document, so an existing library names it that way.
+            rekey(first.id, "${hashOf(SOURCE_MULTI)}:0")
+
+            val reopened = store()
+            assertEquals(Outcome.Success(Unit), reopened.reload())
+
+            val hash = hashOf(SOURCE_MULTI)
+            assertEquals(setOf(hash, "$hash:1"), reopened.all().map { it.id.value }.toSet())
+            assertEquals(style, success(reopened.get(TrackId(hash))).style)
+            assertFalse(File(root, "$hash:0.json").exists())
+
+            success(reopened.save(record(SOURCE_MULTI, index = 0), null))
+            success(reopened.save(record(SOURCE_MULTI, index = 1), null))
+
+            assertEquals(setOf(hash, "$hash:1"), reopened.all().map { it.id.value }.toSet())
+            assertEquals(style, success(reopened.get(TrackId(hash))).style)
         }
 
     @Test
@@ -280,7 +329,7 @@ class FileTrackStoreTest {
                             ),
                         ),
                 )
-            val id = TrackIdentity.of(source, 0, 1)
+            val id = TrackIdentity.of(source, 0)
             val record =
                 StoredTrack(
                     id = id,
@@ -320,7 +369,7 @@ class FileTrackStoreTest {
         runTest {
             val source = "stripped".toByteArray()
             val stripped = strippedTrack()
-            val id = TrackIdentity.of(source, index = 0, count = 1)
+            val id = TrackIdentity.of(source, index = 0)
             val reader = TrackDocumentReader { Outcome.Success(ImportedEntities(tracks = listOf(stripped))) }
             val correction = TrackElevationCorrection(ElevationAccess { Outcome.Success(300.0) })
             val record =
@@ -366,7 +415,7 @@ class FileTrackStoreTest {
         runTest {
             val source = "no dem".toByteArray()
             val stripped = strippedTrack()
-            val id = TrackIdentity.of(source, index = 0, count = 1)
+            val id = TrackIdentity.of(source, index = 0)
             val reader = TrackDocumentReader { Outcome.Success(ImportedEntities(tracks = listOf(stripped))) }
             val record =
                 StoredTrack(
@@ -407,6 +456,23 @@ class FileTrackStoreTest {
                     ),
                 ),
         )
+
+    /** Renames a sidecar to an older id, as the build before this change wrote it. */
+    private fun rekey(
+        from: TrackId,
+        older: String,
+    ) {
+        val source = File(root, "${from.value}.json")
+        val json = Json.parseToJsonElement(source.readText()).jsonObject
+        val rewritten =
+            buildJsonObject {
+                json.forEach { (key, value) ->
+                    put(key, if (key == "id") JsonPrimitive(older) else value)
+                }
+            }
+        File(root, "$older.json").writeText(rewritten.toString())
+        source.delete()
+    }
 
     private fun withholdStatistics(text: String): String {
         val root = Json.parseToJsonElement(text).jsonObject
@@ -472,14 +538,13 @@ class FileTrackStoreTest {
     private fun record(
         bytes: ByteArray,
         index: Int = 0,
-        count: Int = 1,
     ): StoredTrack =
         StoredTrack(
-            id = TrackIdentity.of(bytes, index, count),
+            id = TrackIdentity.of(bytes, index),
             name = "Track $index",
             track = trackOf(bytes.decodeToString().split('|')[index]),
             analysis = TrackAnalyzer().analyze(trackOf(bytes.decodeToString().split('|')[index])),
-            style = TrackPalette.styleFor(TrackIdentity.of(bytes, index, count)),
+            style = TrackPalette.styleFor(TrackIdentity.of(bytes, index)),
             trackIndex = index,
         )
 

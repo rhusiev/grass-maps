@@ -2520,9 +2520,13 @@ profile. T-0401 adds the file store behind that path:
   the `hidden` map flag of T-0415, the cached profile, the document index, the
   record's `kind` and the hash it belongs to, plus the library metadata of
   T-0414: the name, the description and the folder id;
-- the id is the document hash. A document with several records appends
-  `:<index>` to every one, so one file stays one file and each record keeps a
-  stable id. The record order is every `<trk>` first, then every `<rte>`;
+- the id is the document hash for the document's first record, and each later
+  record appends `:<index>` to it, so one file stays one file and a record
+  keeps its id when a build starts reading another element family. The record
+  order is every `<trk>` first, then every `<rte>`. A sidecar an older build
+  named `<hash>:0` - the first record of a multi-record document - is moved to
+  the bare hash on the first load, so the next import updates that record
+  instead of adding a duplicate;
 - a saved route also has `<id>.route.json`, its recompute sidecar (T-0411).
 
 A record is a `<trk>` or a `<rte>`. `TrackKind` says which, it comes from the
@@ -2541,7 +2545,9 @@ keeps the record's name, description, folder and, for a saved route, its
 recompute sidecar: the id is the document hash, so an export that is opened
 again is the same record and still recomputes. A missing
 or corrupt sidecar, a hash mismatch or a document the format rejects skips that
-one track and logs it; the rest of the library still loads. Every call returns
+one track and logs it; the rest of the library still loads. Removing a record
+deletes its document only when no sidecar on disk still names it, including a
+record this load skipped. Every call returns
 a typed `Outcome`, and file I/O runs on `Dispatchers.IO`. Every successful write
 raises the store's revision, so a view that caches the library reloads instead
 of keeping a snapshot.
@@ -2616,11 +2622,15 @@ rewrites that track's sidecar, and the folder definitions live in
 point for the nearest order; a load derives it from the document when an older
 sidecar has none. The GPX document is never rewritten. A delete parks the sidecar and
 document in `.trash`; the in-memory token is process-scoped and a reload keeps
-every parked token, so two deletes undo in reverse order and each restores its
-track to the same folder. The same scoped receipt stack reverses folder and
+every parked token, so two deletes undo in the reverse order they were made and
+each restores its track to the same folder. Two records of one document undo in
+either order, because the undo that runs first looks for the parked document in
+every token, not only its own. The same scoped receipt stack reverses folder and
 track changes one step at a time. A folder index the build cannot read leaves
 each sidecar's folder id in place, so only the folder name is unresolved and a
-later edit cannot unfil the track. The state follows the store's revision,
+later edit cannot unfil the track; a change to the folders answers
+`CorruptData`, or `Unsupported` for an index from a newer build, instead of
+writing over a file this build did not read. The state follows the store's revision,
 which rises after every write, so a track that the share-sheet import stores
 appears on an already open library without a restart. The debug channel opens
 the screen with `core.track.library_show`; T-0416 owns the share-sheet import.
@@ -3302,7 +3312,8 @@ time to `deleted-at` inside the parked token, because a move keeps the moved
 file's mtime and that time is the track's last save, not the deletion. At every
 process start the application starts a purge of the tokens older than seven
 days on an IO thread, so the first screen does not wait for it. An undo inside
-the window puts the document, sidecar and folder back and removes the token.
+the window puts the document, sidecar and folder back and removes the token,
+and two records of one document undo in either order.
 An undo after the window answers `TrackLibraryUndo.NOT_APPLICABLE` and restores
 nothing. The seven-day window is a user decision of 2026-11-14.
 

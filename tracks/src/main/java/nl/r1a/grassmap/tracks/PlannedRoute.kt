@@ -136,7 +136,7 @@ class PlannedRouteSaver(
                 is Outcome.Success -> written.value
                 is Outcome.Failure -> return written
             }
-        val id = TrackIdentity.of(bytes, index = 0, count = 1)
+        val id = TrackIdentity.of(bytes, index = 0)
         val line = document.routes.single()
         val track = Track(name = name, segments = listOf(TrackSegment(line.points)))
         val record =

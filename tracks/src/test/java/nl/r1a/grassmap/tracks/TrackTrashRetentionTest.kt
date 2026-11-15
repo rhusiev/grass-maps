@@ -132,7 +132,7 @@ class TrackTrashRetentionTest {
 
     private fun record(bytes: ByteArray): StoredTrack {
         val track = trackOf(bytes.decodeToString())
-        val id = TrackIdentity.of(bytes, 0, 1)
+        val id = TrackIdentity.of(bytes, 0)
         return StoredTrack(
             id = id,
             name = "Track 0",

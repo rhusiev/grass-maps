@@ -4,6 +4,7 @@ import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -116,6 +117,37 @@ class TrackFolderStoreTest {
             index.writeText("""{"schema":2,"folders":[{"id":"f1","name":"Hikes"}]}""")
 
             assertTrue(TrackFolderStore(index).load().isEmpty())
+        }
+
+    @Test
+    fun aCorruptIndexRefusesAChangeAndKeepsTheFile() =
+        runTest {
+            index.parentFile?.mkdirs()
+            index.writeText("{not json")
+            val before = index.readBytes()
+            val store = TrackFolderStore(index, idSource = { "folder-1" })
+
+            assertEquals(Outcome.Failure(AppError.CorruptData), store.create("Hikes"))
+            assertEquals(Outcome.Failure(AppError.CorruptData), store.rename("folder-1", "Hikes"))
+            assertEquals(Outcome.Failure(AppError.CorruptData), store.remove("folder-1"))
+            assertEquals(
+                Outcome.Failure(AppError.CorruptData),
+                store.restore(TrackFolder("folder-2", "Bike"), index = 0),
+            )
+            assertArrayEquals(before, index.readBytes())
+            assertTrue(store.load().isEmpty())
+        }
+
+    @Test
+    fun anIndexFromANewerSchemaRefusesAChangeAndKeepsTheFile() =
+        runTest {
+            index.parentFile?.mkdirs()
+            index.writeText("""{"schema":2,"folders":[{"id":"f1","name":"Hikes"}]}""")
+            val before = index.readBytes()
+            val store = TrackFolderStore(index, idSource = { "folder-1" })
+
+            assertEquals(Outcome.Failure(AppError.Unsupported), store.create("Hikes"))
+            assertArrayEquals(before, index.readBytes())
         }
 
     @Test

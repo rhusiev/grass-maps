@@ -78,6 +78,28 @@ class GpxParserTest {
         }
 
     @Test
+    fun theLongitudeBoundaryMatchesTheSchema() =
+        runTest {
+            val result = import(LONGITUDE_EDGES.toByteArray())
+
+            // GPX 1.1's longitudeType is minInclusive -180 and maxExclusive
+            // 180, the same bound the writer applies, so the parser must not
+            // keep a point the writer could never write back.
+            val points =
+                result.entities.tracks
+                    .single()
+                    .segments
+                    .single()
+                    .points
+            assertEquals(listOf(-180.0, 179.9999), points.map { it.position.longitude })
+            assertTrue(
+                result.warnings.contains(
+                    ImportWarning(ImportWarningCode.OutOfRangeCoordinates, "trk[0]/trkseg[0]/trkpt[2]"),
+                ),
+            )
+        }
+
+    @Test
     fun malformedXmlIsATypedFailure() =
         runTest {
             assertEquals(
@@ -191,6 +213,21 @@ class GpxParserTest {
                 <rtept lat="49.86" lon="24.06"/>
               </rte>
               <wpt lat="49.87" lon="24.07"><name>Spring</name><ele>350</ele></wpt>
+            </gpx>
+            """.trimIndent()
+
+        val LONGITUDE_EDGES =
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <gpx version="1.1" creator="test" xmlns="http://www.topografix.com/GPX/1/1">
+              <trk>
+                <name>Edges</name>
+                <trkseg>
+                  <trkpt lat="0" lon="-180"/>
+                  <trkpt lat="0" lon="179.9999"/>
+                  <trkpt lat="0" lon="180"/>
+                </trkseg>
+              </trk>
             </gpx>
             """.trimIndent()
 

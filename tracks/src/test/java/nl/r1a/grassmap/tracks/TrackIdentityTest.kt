@@ -14,7 +14,7 @@ import org.junit.Test
 class TrackIdentityTest {
     @Test
     fun aOneTrackDocumentIsNamedByItsHash() {
-        val id = TrackIdentity.of(BYTES, index = 0, count = 1)
+        val id = TrackIdentity.of(BYTES, index = 0)
 
         assertEquals(TrackIdentity.documentHash(BYTES), id.value)
         assertEquals(64, id.value.length)
@@ -23,10 +23,12 @@ class TrackIdentityTest {
 
     @Test
     fun furtherTracksAppendTheirDocumentIndex() {
-        val first = TrackIdentity.of(BYTES, index = 0, count = 2)
-        val second = TrackIdentity.of(BYTES, index = 1, count = 2)
+        val first = TrackIdentity.of(BYTES, index = 0)
+        val second = TrackIdentity.of(BYTES, index = 1)
 
-        assertEquals("${TrackIdentity.documentHash(BYTES)}:0", first.value)
+        // The first record is the bare hash whatever the document holds, so
+        // learning another element family cannot rename it.
+        assertEquals(TrackIdentity.documentHash(BYTES), first.value)
         assertEquals("${TrackIdentity.documentHash(BYTES)}:1", second.value)
         assertTrue(TrackIdentity.isWellFormed(first))
         assertTrue(TrackIdentity.isWellFormed(second))
@@ -63,7 +65,7 @@ class TrackPaletteTest {
 
     @Test
     fun theSameIdAlwaysGetsTheSameStyle() {
-        val id = TrackIdentity.of("bytes".toByteArray(), index = 0, count = 1)
+        val id = TrackIdentity.of("bytes".toByteArray(), index = 0)
 
         assertEquals(TrackPalette.styleFor(id), TrackPalette.styleFor(id))
     }

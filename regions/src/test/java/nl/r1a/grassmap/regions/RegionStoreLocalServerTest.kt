@@ -290,24 +290,14 @@ class RegionStoreLocalServerTest {
     ): TestHttpServer =
         TestHttpServer { exchange ->
             val expected = requiredToken?.let { "${BearerToken.SCHEME} $it" }
-            if (expected != null && exchange.requestHeaders.getFirst(TestHttpServer.AUTHORIZATION) != expected) {
-                send(exchange, 401, ByteArray(0))
-                return@TestHttpServer
-            }
+            val refused = expected != null && exchange.requestHeaders.getFirst(TestHttpServer.AUTHORIZATION) != expected
             val path = exchange.requestURI.path
+            val match = PACKAGE_PATH.matchEntire(path)
             when {
-                path == "/${DownloadsDefaults.CATALOG_FILE}" -> {
-                    send(exchange, 200, catalog)
-                }
-
-                else -> {
-                    val match = PACKAGE_PATH.matchEntire(path)
-                    if (match == null) {
-                        send(exchange, 404, ByteArray(0))
-                    } else {
-                        send(exchange, 200, fixturePackage(match.groupValues[1], match.groupValues[2]))
-                    }
-                }
+                refused -> send(exchange, 401, ByteArray(0))
+                path == "/${DownloadsDefaults.CATALOG_FILE}" -> send(exchange, 200, catalog)
+                match == null -> send(exchange, 404, ByteArray(0))
+                else -> send(exchange, 200, fixturePackage(match.groupValues[1], match.groupValues[2]))
             }
         }
 
@@ -319,24 +309,24 @@ class RegionStoreLocalServerTest {
         TestHttpServer { exchange ->
             if (exchange.requestURI.path == "/${DownloadsDefaults.CATALOG_FILE}") {
                 send(exchange, 200, catalog)
-                return@TestHttpServer
-            }
-            exchange.responseHeaders.set(TestHttpServer.CONTENT_TYPE, TestHttpServer.APPLICATION_ZIP)
-            exchange.sendResponseHeaders(200, body.size.toLong())
-            try {
-                exchange.responseBody.use { out ->
-                    var offset = 0
-                    while (offset < body.size) {
-                        val length = minOf(SLOW_CHUNK_BYTES, body.size - offset)
-                        out.write(body, offset, length)
-                        out.flush()
-                        offset += length
-                        Thread.sleep(SLOW_CHUNK_DELAY_MS)
+            } else {
+                exchange.responseHeaders.set(TestHttpServer.CONTENT_TYPE, TestHttpServer.APPLICATION_ZIP)
+                exchange.sendResponseHeaders(200, body.size.toLong())
+                try {
+                    exchange.responseBody.use { out ->
+                        var offset = 0
+                        while (offset < body.size) {
+                            val length = minOf(SLOW_CHUNK_BYTES, body.size - offset)
+                            out.write(body, offset, length)
+                            out.flush()
+                            offset += length
+                            Thread.sleep(SLOW_CHUNK_DELAY_MS)
+                        }
                     }
+                } catch (exception: IOException) {
+                    // The client cancelled and closed the connection; the test asserts
+                    // on the client's state, not on the server's write.
                 }
-            } catch (exception: IOException) {
-                // The client cancelled and closed the connection; the test asserts on
-                // the client's state, not on the server's write.
             }
         }
 

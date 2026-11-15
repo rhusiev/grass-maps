@@ -2331,7 +2331,6 @@ private fun controlBarLabels(context: Context): ControlBarLabels =
         moveRightDescription = context.getString(R.string.control_move_right_description),
     )
 
-/** Runs one lists command and logs a typed failure; the sheet keeps its state. */
 /** Runs one downloads command and logs a typed failure; the screen keeps its state. */
 private suspend fun invokeDownloadsCommand(
     container: AppContainer,
@@ -2343,6 +2342,7 @@ private suspend fun invokeDownloadsCommand(
     }
 }
 
+/** Runs one lists command and logs a typed failure; the sheet keeps its state. */
 private suspend fun invokeListsCommand(
     container: AppContainer,
     id: CommandId,

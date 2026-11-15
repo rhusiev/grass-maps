@@ -37,6 +37,7 @@ Usage:
         --region-package /hdd/t-0102-evidence/region/ua-46/2026-11-05-bench \
         --output /hdd/t-0102-evidence/oblast
     map_goldens.py compare --profile fixture --captured /hdd/t-0102-evidence/fixture
+    map_goldens.py install-region --region-package test-data/regions/fixture-mini
 """
 
 from __future__ import annotations
@@ -446,12 +447,20 @@ def airplane_mode(adb: Adb) -> list[str]:
 
 
 def resolve_package_path(source: Path) -> Path:
-    """Accept a version directory or a region root that holds `current`."""
+    """Accept a version directory, a region directory or a regions root."""
     if (source / "manifest.json").is_file():
         return source
-    candidates = sorted(source.glob("*/*/manifest.json"))
+    candidates = {
+        candidate.parent
+        for pattern in ("*/manifest.json", "*/*/manifest.json")
+        for candidate in source.glob(pattern)
+    }
     if len(candidates) == 1:
-        return candidates[0].parent
+        return candidates.pop()
+    if candidates:
+        raise GoldenError(
+            f"{source} holds several region packages; pass one version directory"
+        )
     raise GoldenError(
         f"{source} is neither a package with manifest.json nor a region root with one version"
     )
@@ -1544,6 +1553,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Capture and compare map goldens.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    install_parser = subparsers.add_parser("install-region")
+    install_parser.add_argument("--serial", default=None)
+    install_parser.add_argument("--region-package", required=True)
+
     capture_parser = subparsers.add_parser("capture")
     capture_parser.add_argument("--serial", default=None)
     capture_parser.add_argument("--profile", choices=sorted(POSITIONS), required=True)
@@ -1609,6 +1622,13 @@ def build_recapture(
 def main() -> int:
     args = build_parser().parse_args()
     try:
+        if args.command == "install-region":
+            adb = Adb(resolve_serial(args.serial))
+            adb.wait_for_device()
+            package = resolve_package_path(Path(args.region_package))
+            metadata = install_region_package(adb, package)
+            print(f"region:{metadata['region']}/{metadata['version']}")
+            return 0
         if args.command == "capture":
             adb = Adb(resolve_serial(args.serial))
             adb.wait_for_device()

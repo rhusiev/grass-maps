@@ -167,21 +167,30 @@ manifest entry. Build-logic unit tests cover both rules and run with the rest of
 ```
 
 The device check installs and launches the debug APK and fails on a crash, on
-a StrictMode policy violation, and on a launch that never reports a map. The
-map assertion reads the app's own `GrassMapsMap: map-ready region=... contours=...`
-line, which `MapScreen` writes once the map surface has a style bundle and the
-host's `setStyle` and `applyStyleDiff` calls have returned, so a process that
-survives with a blank map fails. It does not prove that a frame reached the
-screen: the line is written before one is drawn, and a device whose GPU renders
-nothing still writes it. A style or layer diff the host rejects leaves the map
-empty and writes that line too, so those warnings are a failure from the same
+a StrictMode policy violation, and on a launch that never renders the map. It
+first copies the committed `test-data/regions/fixture-mini` pack (a 192 KB
+version directory) into the app's private `files/regions` with `run-as`, the
+same mechanism the oblast goldens use, so the map opens on the installed-pack
+path and not on the bundled asset. The map assertion reads the app's own
+`GrassMapsMap: map-ready region=... contours=...` line and requires it to name
+`region:fixture-mini/2026-11-03-1`; a copy that failed leaves the asset in place
+and fails there. The check then waits for the debug harness's
+`first-full-frame-ms=` line, which is the app's own report that MapLibre drew a
+full frame. `map-ready` is written before a frame is drawn, so a device that
+renders nothing still writes it; this line does not. Five seconds after that
+frame the process must still be the same pid, with no fatal exception and no
+composition error. That window is where T-0512's `LayoutNode cannot be cast to
+MapNode` fired: 0.8 s after `map-ready` and 0.2 s after the first frame on the
+local emulator. A style or layer diff the host rejects leaves the map empty and
+writes the readiness line too, so those warnings are a failure from the same
 stream. The crash and StrictMode checks sample the log once, 8 s after the
 launch; a violation logged after that sample is not in it. Widening it is not
 free: a sample taken after the map was ready caught two ~9 s `DiskReadViolation`s
 from the emulator's cold page cache on the UI thread, which would fail the job
-on runner timing rather than on a defect. CI runs it on an API 29 x86_64
-emulator, where the line arrived 26 s after the launch and named
-`region=fixture-mini-map.pmtiles contours=true`.
+on runner timing rather than on a defect. The post-frame check reads the log
+again but judges only fatals and composition errors, never StrictMode, so that
+flake stays out. CI runs it on an API 29 x86_64 emulator, where the readiness
+line measured 26 s after the launch before the pack was installed.
 Debug builds install the policy through `DebugApplication`, which extends the
 main `GrassMapsApplication` and is also the marker the script requires, so an
 APK without the policy cannot pass by staying silent.

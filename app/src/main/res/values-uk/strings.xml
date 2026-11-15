@@ -16,6 +16,8 @@
     <string name="plugin.point_info.description">Відстань і азимут від вашого місця до точки, яку ви натиснули й утримали.</string>
     <string name="plugin.point_info.selection">Вибрана точка</string>
 
+    <string name="map_layers_toggle">Шари</string>
+
     <string name="control_zoom_in_label">+</string>
     <string name="control_zoom_in_description">Наблизити</string>
     <string name="control_zoom_out_label">-</string>

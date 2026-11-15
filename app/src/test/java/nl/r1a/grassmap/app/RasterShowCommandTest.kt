@@ -161,7 +161,11 @@ class RasterShowCommandTest {
     fun aSecondCallWithTheSameTemplateKeepsTheActiveSource() =
         runTest {
             var probes = 0
-            val fixture = Fixture(probe = { probes += 1; Outcome.Success(Unit) })
+            val fixture =
+                Fixture(probe = {
+                    probes += 1
+                    Outcome.Success(Unit)
+                })
 
             fixture.command.execute(params(template, "overlay", 100))
             fixture.command.execute(params(template, "underlay", 40))

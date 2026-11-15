@@ -7,7 +7,7 @@ first product asset lands.
 
 | Asset or data | Licence | Notes |
 |---|---|---|
-| MapLibre Native | BSD-2-Clause | map renderer, reached through maplibre-compose |
+| MapLibre Native | BSD-2-Clause | map renderer, reached through maplibre-compose; its copyright notice is in `NOTICE`. The engine draws its own logo in the bottom-left corner and the sources' attribution at the bottom end; the app keeps both visible and draws its own credit pill above the logo. The logo is optional under the licence, the source credits are not |
 | Protomaps basemaps | BSD-3-Clause | vector basemap schema and build tooling |
 | OpenStreetMap data | ODbL-1.0 | © OpenStreetMap contributors; region packs are derived data |
 | OpenStreetMap tile server (`tile.openstreetmap.org`) | ODbL-1.0 | Online raster tiles (T-0512), © OpenStreetMap contributors; view-only under the OSMF tile policy, and the preset refuses an offline bulk download |

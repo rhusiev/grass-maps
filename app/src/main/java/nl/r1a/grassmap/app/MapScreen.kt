@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -39,6 +40,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -206,6 +208,11 @@ private const val BANNER_STACK_GAP_DP = 8
 private const val BANNER_TICK_MILLIS = 1_000L
 private const val CONTOURS_PANEL_TOP_DP = 80
 private const val PANEL_GAP_DP = 8
+private val LAYERS_BUTTON_BACKGROUND = Color(0xCC000000)
+private const val LAYERS_BUTTON_CORNER_DP = 8
+private const val LAYERS_BUTTON_HORIZONTAL_DP = 12
+private const val LAYERS_BUTTON_VERTICAL_DP = 6
+private const val LAYERS_BUTTON_FONT_SP = 13
 private const val METRE_DECIMALS = 1
 private const val KILOMETRE_DECIMALS = 2
 private const val WHOLE_VALUE_MIN = 1.0
@@ -419,6 +426,11 @@ private fun MapContent(
     val switchStates by container.privacyStates.collectAsState(initial = container.privacySwitchStates())
     val onlineTilesEnabled = switchStates.firstOrNull { it.switch == NetworkSwitches.onlineTiles }?.enabled == true
     val rasterLayer by container.rasterSettings.active.collectAsState()
+    // The layers cards are closed until the user opens them: a permanently open
+    // card covers the map's centre on a phone, and the T-0109 layers sheet is
+    // where they belong. This is view state, not a setting; the switches inside
+    // the cards are the persisted state.
+    var layersOpen by rememberSaveable { mutableStateOf(false) }
     val planFlow =
         remember(container) {
             container.streamAccess.subscribe<RoutePlanState>(RoutePlannerContract.stateStream)
@@ -791,58 +803,64 @@ private fun MapContent(
                         .padding(top = CONTOURS_PANEL_TOP_DP.dp, start = BAR_PADDING_DP.dp),
                 verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
             ) {
-                ContoursLayerPanel(
-                    enabled = contoursEnabled,
-                    onEnabledChange = { enabled ->
-                        scope.launch {
-                            withContext(Dispatchers.IO) {
-                                container.contoursSettings.setEnabled(enabled)
-                            }.onFailure { error ->
-                                Log.w(TAG, "contour toggle not saved: $error")
-                            }
-                        }
-                    },
+                LayersToggle(
+                    open = layersOpen,
+                    onToggle = { layersOpen = !layersOpen },
                 )
-                RasterLayerPanel(
-                    enabled = onlineTilesEnabled,
-                    source = rasterLayer.source,
-                    placement = rasterLayer.placement,
-                    percent = rasterLayer.transparencyPercent,
-                    onEnabledChange = { enabled ->
-                        scope.launch {
-                            container.setOnlineTilesEnabled(enabled).onFailure { error ->
-                                Log.w(TAG, "online tiles switch failed: $error")
+                if (layersOpen) {
+                    ContoursLayerPanel(
+                        enabled = contoursEnabled,
+                        onEnabledChange = { enabled ->
+                            scope.launch {
+                                withContext(Dispatchers.IO) {
+                                    container.contoursSettings.setEnabled(enabled)
+                                }.onFailure { error ->
+                                    Log.w(TAG, "contour toggle not saved: $error")
+                                }
                             }
-                        }
-                    },
-                    onPlacementChange = { placement ->
-                        scope.launch {
-                            withContext(Dispatchers.IO) {
-                                container.setRasterPlacement(placement)
-                            }.onFailure { error ->
-                                Log.w(TAG, "online tiles placement not saved: $error")
+                        },
+                    )
+                    RasterLayerPanel(
+                        enabled = onlineTilesEnabled,
+                        source = rasterLayer.source,
+                        placement = rasterLayer.placement,
+                        percent = rasterLayer.transparencyPercent,
+                        onEnabledChange = { enabled ->
+                            scope.launch {
+                                container.setOnlineTilesEnabled(enabled).onFailure { error ->
+                                    Log.w(TAG, "online tiles switch failed: $error")
+                                }
                             }
-                        }
-                    },
-                    onTransparencyChange = { percent, store ->
-                        scope.launch {
-                            withContext(Dispatchers.IO) {
-                                container.setRasterTransparency(percent, store)
-                            }.onFailure { error ->
-                                Log.w(TAG, "online tiles transparency not saved: $error")
+                        },
+                        onPlacementChange = { placement ->
+                            scope.launch {
+                                withContext(Dispatchers.IO) {
+                                    container.setRasterPlacement(placement)
+                                }.onFailure { error ->
+                                    Log.w(TAG, "online tiles placement not saved: $error")
+                                }
                             }
-                        }
-                    },
-                    onCustomSource = { template ->
-                        scope.launch {
-                            withContext(Dispatchers.IO) {
-                                container.useCustomRasterSource(template)
-                            }.onFailure { error ->
-                                Log.w(TAG, "custom tile source rejected: $error")
+                        },
+                        onTransparencyChange = { percent, store ->
+                            scope.launch {
+                                withContext(Dispatchers.IO) {
+                                    container.setRasterTransparency(percent, store)
+                                }.onFailure { error ->
+                                    Log.w(TAG, "online tiles transparency not saved: $error")
+                                }
                             }
-                        }
-                    },
-                )
+                        },
+                        onCustomSource = { template ->
+                            scope.launch {
+                                withContext(Dispatchers.IO) {
+                                    container.useCustomRasterSource(template)
+                                }.onFailure { error ->
+                                    Log.w(TAG, "custom tile source rejected: $error")
+                                }
+                            }
+                        },
+                    )
+                }
             }
         }
         if (!navigationActive) {
@@ -2283,6 +2301,43 @@ private fun formatDistanceValue(
     value: Double,
     decimals: Int,
 ): String = String.format(Locale.getDefault(), "%.${decimals}f", value)
+
+/**
+ * The one small button the layers controls hide behind.
+ *
+ * The contours and raster cards are closed until this is pressed. A card that
+ * is always open covers the map's centre on a phone, and it sat inside the map
+ * goldens' comparison window (T-0514 cadence). The cards themselves are
+ * unchanged and their switches are the persisted state; this button only
+ * decides whether they are on screen. T-0109's layers sheet replaces it.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun LayersToggle(
+    open: Boolean,
+    onToggle: () -> Unit,
+) {
+    BasicText(
+        text = stringResource(R.string.map_layers_toggle),
+        style =
+            TextStyle(
+                color = Color.White,
+                fontSize = LAYERS_BUTTON_FONT_SP.sp,
+            ),
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(LAYERS_BUTTON_CORNER_DP.dp))
+                .background(LAYERS_BUTTON_BACKGROUND)
+                .toggleable(
+                    value = open,
+                    role = Role.Button,
+                    onValueChange = { onToggle() },
+                ).padding(
+                    horizontal = LAYERS_BUTTON_HORIZONTAL_DP.dp,
+                    vertical = LAYERS_BUTTON_VERTICAL_DP.dp,
+                ),
+    )
+}
 
 @Suppress("ktlint:standard:function-naming")
 @Composable

@@ -32,11 +32,21 @@ class DownloadsUiManifestTest {
         )
         for (command in commands) {
             val id = command.getValue("id").jsonPrimitive.content
-            assertEquals("$id undoable", false, command.getValue("undoable").jsonPrimitive.content.toBoolean())
+            assertEquals(
+                "$id undoable",
+                false,
+                command
+                    .getValue("undoable")
+                    .jsonPrimitive.content
+                    .toBoolean(),
+            )
             assertEquals(
                 "$id control allowlist",
                 id in CONTROL_ALLOWED,
-                command.getValue("allowlistedForControl").jsonPrimitive.content.toBoolean(),
+                command
+                    .getValue("allowlistedForControl")
+                    .jsonPrimitive.content
+                    .toBoolean(),
             )
             assertEquals(
                 "$id dispatcher",
@@ -45,11 +55,19 @@ class DownloadsUiManifestTest {
             )
             assertTrue(
                 "$id implementation",
-                command.getValue("implementation").jsonPrimitive.content.isNotBlank(),
+                command
+                    .getValue("implementation")
+                    .jsonPrimitive.content
+                    .isNotBlank(),
             )
         }
 
-        val stream = contributes.getValue("streams").jsonArray.single().jsonObject
+        val stream =
+            contributes
+                .getValue("streams")
+                .jsonArray
+                .single()
+                .jsonObject
         assertEquals(DownloadsUiContract.STATE_STREAM_ID, stream.getValue("id").jsonPrimitive.content)
         assertEquals(DownloadsUiContract.STATE_VALUE_TYPE, stream.getValue("valueType").jsonPrimitive.content)
         assertEquals(DownloadsUiContract.STATE_SERIALIZER, stream.getValue("serializer").jsonPrimitive.content)
@@ -87,7 +105,11 @@ class DownloadsUiManifestTest {
 
         assertEquals(
             setOf("command", "stream", "ui"),
-            manifest.getValue("activation").jsonArray.map { it.jsonPrimitive.content }.toSet(),
+            manifest
+                .getValue("activation")
+                .jsonArray
+                .map { it.jsonPrimitive.content }
+                .toSet(),
         )
     }
 

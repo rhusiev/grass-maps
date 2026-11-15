@@ -47,8 +47,7 @@ object CatalogFixture {
      * The committed catalogue with the 30 m elevation add-on on [region],
      * exactly as server-protocol.md section 2 declares it.
      */
-    fun withElevationAddon(region: String = LVIV): ByteArray =
-        withRegion(region) { entry -> JsonObject(entry + ("addons" to addons())) }
+    fun withElevationAddon(region: String = LVIV): ByteArray = withRegion(region) { entry -> JsonObject(entry + ("addons" to addons())) }
 
     /** The world entry and the 30 m add-on together, the way a full catalogue reads. */
     fun withWorldAndElevationAddon(region: String = LVIV): ByteArray =
@@ -68,7 +67,13 @@ object CatalogFixture {
     private fun worldEntry(): JsonObject =
         buildJsonObject {
             put("id", WORLD_ID)
-            put("name", buildJsonObject { put("en", "World overview"); put("uk", "Огляд світу") })
+            put(
+                "name",
+                buildJsonObject {
+                    put("en", "World overview")
+                    put("uk", "Огляд світу")
+                },
+            )
             put("kind", "world")
             put(
                 "bbox",

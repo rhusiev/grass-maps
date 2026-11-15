@@ -59,8 +59,7 @@ internal class RecordingContext(
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun stateFlow(): Flow<DownloadsState> =
-        streams.single { it.id == DownloadsUiContract.stateStream }.flow as Flow<DownloadsState>
+    fun stateFlow(): Flow<DownloadsState> = streams.single { it.id == DownloadsUiContract.stateStream }.flow as Flow<DownloadsState>
 }
 
 internal class FakeServices(
@@ -178,8 +177,9 @@ internal class FakeDownloadsAccess(
         mutable.update { data ->
             data.copy(
                 transfers = data.transfers.filterNot { it.region == region },
-                problems = data.problems.filterNot { it.region == region } +
-                    RegionProblem(region, problem),
+                problems =
+                    data.problems.filterNot { it.region == region } +
+                        RegionProblem(region, problem),
             )
         }
     }

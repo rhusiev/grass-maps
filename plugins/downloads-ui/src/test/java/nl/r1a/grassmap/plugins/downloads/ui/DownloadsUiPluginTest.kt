@@ -54,7 +54,10 @@ class DownloadsUiPluginTest {
             assertTrue(context.commands.none { it.policy.undoable })
             assertEquals(
                 CONTROL_ALLOWED,
-                context.commands.filter { it.policy.allowlistedForControl }.map { it.id }.toSet(),
+                context.commands
+                    .filter { it.policy.allowlistedForControl }
+                    .map { it.id }
+                    .toSet(),
             )
             assertEquals(
                 FakeDownloadsAccess.SERVER,

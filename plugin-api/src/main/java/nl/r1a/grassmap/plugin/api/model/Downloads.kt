@@ -74,13 +74,19 @@ enum class CatalogPartKind {
         fun fromWire(wire: String): CatalogPartKind =
             when {
                 wire == "map" -> MAP
+
                 wire == "contours" -> CONTOURS
+
                 wire == "elevation" -> ELEVATION
+
                 // A package carries the search section as several components
                 // (`search-terms`, `search-places`, ...), one part to the screen.
                 wire == "search" || wire.startsWith("search-") -> SEARCH
+
                 wire == "routing" -> ROUTING
+
                 wire == ELEVATION_30M_WIRE -> ELEVATION_30M
+
                 else -> OTHER
             }
     }

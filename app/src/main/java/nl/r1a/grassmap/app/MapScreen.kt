@@ -48,6 +48,10 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
@@ -68,9 +72,11 @@ import nl.r1a.grassmap.map.prepareMapEngine
 import nl.r1a.grassmap.map.rememberMapSurface
 import nl.r1a.grassmap.navigation.NavigationCameraController
 import nl.r1a.grassmap.navigation.NavigationPhase
+import nl.r1a.grassmap.navigation.NavigationState
 import nl.r1a.grassmap.navigation.RouteRelation
 import nl.r1a.grassmap.places.SEARCH_SCREEN_COMMAND
 import nl.r1a.grassmap.places.SearchScreenSession
+import nl.r1a.grassmap.places.SearchScreenState
 import nl.r1a.grassmap.places.SearchScreenStatus
 import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.contract.PluginId
@@ -78,6 +84,7 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.error.onFailure
 import nl.r1a.grassmap.plugin.api.host.MapEvent
+import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.model.CameraUpdate
 import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
 import nl.r1a.grassmap.plugin.api.model.FavouriteSort
@@ -87,6 +94,7 @@ import nl.r1a.grassmap.plugin.api.model.RouteHistoryEntry
 import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanRole
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
+import nl.r1a.grassmap.plugin.api.model.ScreenOffset
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleId
@@ -274,6 +282,13 @@ private fun BindMapSession(
     }
 }
 
+/**
+ * The map screen's content: the map plus the overlays that read long-lived
+ * state. A per-frame or per-fix value is never collected here. The camera is
+ * read at the event that needs it, the navigation state is read by
+ * [NavigationOverlay], and the search markers are read by [SearchOverlay], so
+ * a pan or a fix re-runs one leaf and not this body.
+ */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 private fun MapContent(
@@ -356,13 +371,20 @@ private fun MapContent(
         }
     var layout by remember { mutableStateOf(MapControlCommands.DEFAULT_ORDER) }
     var isEditing by remember { mutableStateOf(false) }
+    // The bar's buttons and labels are built from the layout, the mode and the
+    // strings, so a camera frame, a fix or a banner does not rebuild them.
+    val controlBarButtons =
+        remember(layout, context, cameraMode) { controlButtons(layout, context, cameraMode) }
+    val controlBarTexts = remember(context) { controlBarLabels(context) }
     var distance by remember { mutableStateOf<DistanceReadout?>(null) }
     val selectionFlow =
         remember(container) {
             container.streamAccess.subscribe<SelectedPointValue>(PointInfoContract.selectionStream)
         }
     val selectedPoint by selectionFlow.collectAsState(initial = SelectedPointValue())
-    val selectedRows = PointInfoLabel.rows(selectedPoint, container.strings)
+    // Derived from the selection alone: a camera frame, a fix or a banner must
+    // not rebuild these rows.
+    val selectedRows = remember(selectedPoint, container.strings) { PointInfoLabel.rows(selectedPoint, container.strings) }
     val placeCard by PlaceCardSession.card.collectAsState()
     val listsVisible by FavouritesListsSession.visible.collectAsState()
     val listsQuerySequence = remember { longArrayOf(0L) }
@@ -376,7 +398,10 @@ private fun MapContent(
             val allowed = withContext(Dispatchers.IO) { container.onlineSearchSettings.positionAllowed }
             allowed.collect { value = it }
         }
-    val searchCamera by surface.host.camera.collectAsState()
+    // The camera is rewritten on every move event. This screen reads it at the
+    // moment an event needs it, so a pan does not recompose the map content;
+    // only the search markers, which have to follow the map, collect it.
+    val cameraNow: () -> Camera = remember(surface) { { surface.host.camera.value } }
     val contoursEnabled by container.contoursSettings.enabled.collectAsState()
     val planFlow =
         remember(container) {
@@ -441,12 +466,15 @@ private fun MapContent(
     // Following a track (T-0412): the card's Follow track action asks where to
     // start. The sheet keeps the position it opened with so its hints do not
     // jitter with every fix, and Start rebuilds the route from the fix of that
-    // moment.
-    val followPosition =
-        container.cameraModes.position
-            .collectAsState()
-            .value
-            ?.position
+    // moment. The fix is read at the tap, not collected: collecting it would
+    // recompose the screen on every fix.
+    val followPositionNow: () -> GeoPoint? =
+        remember(container) {
+            {
+                container.cameraModes.position.value
+                    ?.position
+            }
+        }
     var followSheet by remember { mutableStateOf<FollowTrackSheetState?>(null) }
     // The share-sheet import's notice (T-0416) and the confirm that precedes it.
     val trackShare by container.trackShare.notice.collectAsState()
@@ -531,16 +559,24 @@ private fun MapContent(
         val active = store ?: return@LaunchedEffect
         layout = withContext(Dispatchers.IO) { active.load(DEFAULT_PROFILE) }
     }
-    val navigationState by container.navigation.state.collectAsState()
+    // The navigation engine publishes on every fix. This screen reads the
+    // coarse gate below and nothing else, so a fix re-runs the navigation
+    // overlay alone, not the map, the search, the planner and the track panels
+    // behind it.
     val navigationFixture by container.navigationScreenFixture.state.collectAsState()
-    val activeNavigation = navigationFixture?.state ?: navigationState
-    val navigationActive = navigationFixture != null || activeNavigation.phase.isActiveNavigation()
+    val navigationActive by
+        produceState(activeNavigationNow(container)) {
+            combine(
+                container.navigationScreenFixture.state,
+                container.navigation.state,
+                ::isNavigationActive,
+            ).collect { active -> value = active }
+        }
     // The guidance camera belongs to the process, not this composition, so a
     // re-created Activity keeps the switches the user set for this trip. The
     // container collects navigation state into it; a fresh trip applies the
     // profile defaults in GuidanceStarter.
     val navigationCamera = container.navigationCamera
-    val navigationCameraSettings by navigationCamera.settings.collectAsState()
     var navigationWasActive by remember { mutableStateOf(false) }
     LaunchedEffect(navigationActive) {
         if (navigationActive) {
@@ -551,57 +587,7 @@ private fun MapContent(
             navigationCamera.resetCamera()
         }
     }
-    val navigationAlerts by
-        produceState(initialValue = NavigationAlertState(), navigationActive) {
-            if (navigationActive) {
-                value = NavigationAlertState()
-                container.navigationAlertBanners.state.collect { value = it }
-            }
-        }
-    LaunchedEffect(navigationActive) {
-        if (!navigationActive) {
-            return@LaunchedEffect
-        }
-        while (true) {
-            delay(BANNER_TICK_MILLIS)
-            container.navigationAlertBanners.onTick()
-        }
-    }
     val alertProfile by container.alertSettings.active.collectAsState()
-    val alertSettings = alertProfile.settings
-    val speedCurrentFlow =
-        remember(container) {
-            container.streamAccess.subscribe<SpeedWidgetValue>(InfoWidgetsContract.speedCurrentStream)
-        }
-    val speedAverageFlow =
-        remember(container) {
-            container.streamAccess.subscribe<SpeedWidgetValue>(InfoWidgetsContract.speedAverageStream)
-        }
-    val speedMaxFlow =
-        remember(container) {
-            container.streamAccess.subscribe<SpeedWidgetValue>(InfoWidgetsContract.speedMaxStream)
-        }
-    val speedCurrent by
-        produceState(initialValue = SpeedWidgetValue(null), navigationActive) {
-            if (navigationActive) {
-                value = SpeedWidgetValue(null)
-                speedCurrentFlow.collect { value = it }
-            }
-        }
-    val speedAverage by
-        produceState(initialValue = SpeedWidgetValue(null), navigationActive) {
-            if (navigationActive) {
-                value = SpeedWidgetValue(null)
-                speedAverageFlow.collect { value = it }
-            }
-        }
-    val speedMax by
-        produceState(initialValue = SpeedWidgetValue(null), navigationActive) {
-            if (navigationActive) {
-                value = SpeedWidgetValue(null)
-                speedMaxFlow.collect { value = it }
-            }
-        }
     var navigationSheet by remember { mutableStateOf(NavigationSheet.Collapsed) }
     var alertsPageVisible by rememberSaveable { mutableStateOf(false) }
     var navigationDestination by rememberSaveable { mutableStateOf<String?>(null) }
@@ -619,87 +605,23 @@ private fun MapContent(
             navigationFixture?.let { fixture -> navigationSheet = fixture.sheet }
         }
     }
-    LaunchedEffect(navigationCameraSettings.autoCentre) {
-        if (navigationCameraSettings.autoCentre) {
-            cameraPanned = false
-        }
-    }
-    LaunchedEffect(cameraPanned, navigationCameraSettings.autoCentre, panSequence) {
-        if (cameraPanned && navigationCameraSettings.autoCentre) {
-            delay(NavigationCameraController.RECENTRE_DELAY_MILLIS)
-            cameraPanned = false
-        }
-    }
-    val guidance =
-        remember(activeNavigation, container.strings) {
-            val route = activeNavigation.activeRoute
-            if (route == null) {
-                null
-            } else {
-                val total = route.distanceMeters
-                val along = (total - activeNavigation.remainingDistanceMeters).coerceIn(0.0, total)
-                val status =
-                    when {
-                        activeNavigation.phase == NavigationPhase.Arrived -> GuidanceStatus.Arrived
-                        activeNavigation.relation == RouteRelation.OffRoute -> GuidanceStatus.OffRoute
-                        else -> GuidanceStatus.Following
-                    }
-                guidancePanel(GuidanceInput(route, along, status), container.strings)
-            }
-        }
-    val navigationScreen =
-        remember(
-            activeNavigation,
-            guidance,
-            speedCurrent,
-            speedAverage,
-            speedMax,
-            navigationAlerts,
-            navigationFixture,
-            navigationCameraSettings,
-            alertSettings,
-            navigationDestination,
-            navigationNextStop,
-        ) {
-            val fixture = navigationFixture
-            navigationScreenState(
-                NavigationScreenInput(
-                    state = activeNavigation,
-                    panel = guidance,
-                    speedCurrentMetersPerSecond =
-                        fixture?.speedCurrentMetersPerSecond ?: speedCurrent.speedMetersPerSecond,
-                    speedAverageMetersPerSecond =
-                        fixture?.speedAverageMetersPerSecond ?: speedAverage.speedMetersPerSecond,
-                    speedMaxMetersPerSecond =
-                        fixture?.speedMaxMetersPerSecond ?: speedMax.speedMetersPerSecond,
-                    alerts = fixture?.alerts ?: navigationAlerts.banners.map { it.banner },
-                    destination = fixture?.destination ?: navigationDestination,
-                    nextStopName = fixture?.nextStopName ?: navigationNextStop,
-                    signalLost = fixture?.signalLost ?: navigationAlerts.signalLost,
-                    camera = navigationCameraSettings,
-                    alertSettings = alertSettings,
-                ),
-                container.strings,
-                Locale.getDefault(),
-                ZoneId.systemDefault(),
-            ).copy(recentreVisible = cameraPanned)
-        }
     val dark = navigationFixture?.dark ?: isSystemInDarkTheme()
-    val activity = context as? Activity
-    DisposableEffect(navigationActive, navigationScreen.status) {
-        if (!navigationActive || activity == null) {
-            onDispose { }
-        } else {
-            activity.setNavigationStatusBar(navigationScreen.status)
-            onDispose { activity.restoreStatusBar() }
-        }
-    }
     val drawnRoute = remember(plan.selected) { plan.selectedRoute() }
-    val routeToDraw = if (navigationActive) activeNavigation.activeRoute else drawnRoute
-    LaunchedEffect(routeToDraw, navigationActive) {
-        container.routeLayer
-            .draw(routeToDraw, routeLineDrawing(navigationActive))
-            .onFailure { error -> Log.w(TAG, "route not drawn: $error") }
+    // The trip's route while navigating, the planned one otherwise. The state
+    // stream is read inside the effect, so a fix does not recompose the screen;
+    // only a route that actually changed redraws.
+    LaunchedEffect(container, surface.host, navigationActive, drawnRoute) {
+        val routes =
+            if (navigationActive) {
+                container.navigation.state.map { state -> state.activeRoute }
+            } else {
+                flowOf<Route?>(null)
+            }
+        routes.distinctUntilChanged().collect { activeRoute ->
+            container.routeLayer
+                .draw(mapRouteToDraw(navigationActive, activeRoute, drawnRoute), routeLineDrawing(navigationActive))
+                .onFailure { error -> Log.w(TAG, "route not drawn: $error") }
+        }
     }
     LaunchedEffect(plan.generation) {
         if (plan.generation == 0L) {
@@ -738,7 +660,7 @@ private fun MapContent(
                     TrackTap.hit(
                         tracks = container.tracks.drawn.value,
                         tap = point,
-                        metresPerDp = metresPerDp(point, searchCamera.zoom),
+                        metresPerDp = metresPerDp(point, cameraNow().zoom),
                     )
 
                 if (id == null) {
@@ -814,8 +736,8 @@ private fun MapContent(
         }
         if (!navigationActive) {
             MapControlBar(
-                layout = controlButtons(layout, context, cameraMode),
-                labels = controlBarLabels(context),
+                layout = controlBarButtons,
+                labels = controlBarTexts,
                 isEditing = isEditing,
                 onInvoke = { id ->
                     scope.launch {
@@ -904,11 +826,9 @@ private fun MapContent(
             )
         }
         if (!navigationActive) {
-            SearchScreenHost(
-                hits = searchState.hits,
-                loading = searchState.status == SearchScreenStatus.LOADING,
-                failed = searchState.status == SearchScreenStatus.FAILED,
-                camera = searchCamera,
+            SearchOverlay(
+                surface = surface,
+                state = searchState,
                 viewport = viewport,
                 anchorOffset = screenOffset,
                 onQueryChange = { text ->
@@ -923,7 +843,7 @@ private fun MapContent(
                                     sequence = sequence,
                                     index = SearchScreenSession.DEFAULT_INDEX,
                                     limit = SearchScreenSession.DEFAULT_LIMIT,
-                                    position = searchCamera.center,
+                                    position = cameraNow().center,
                                     positionAllowed = positionAllowed,
                                 ),
                             ).onFailure { error ->
@@ -971,7 +891,7 @@ private fun MapContent(
                                     sequence = sequence,
                                     index = SearchScreenSession.DEFAULT_INDEX,
                                     limit = SearchScreenSession.DEFAULT_LIMIT,
-                                    position = searchCamera.center,
+                                    position = cameraNow().center,
                                     positionAllowed = positionAllowed,
                                 ),
                             ).onFailure { error ->
@@ -990,7 +910,7 @@ private fun MapContent(
                                     query = text,
                                     index = SearchScreenSession.DEFAULT_INDEX,
                                     limit = SearchScreenSession.DEFAULT_LIMIT,
-                                    position = searchCamera.center,
+                                    position = cameraNow().center,
                                     positionAllowed = positionAllowed,
                                 ),
                             ).onFailure { error -> Log.w(TAG, "search pick not recorded: $error") }
@@ -1003,11 +923,6 @@ private fun MapContent(
                             .onFailure { error -> Log.w(TAG, "search clear failed: $error") }
                     }
                 },
-                modifier = Modifier.fillMaxSize(),
-                cardModifier =
-                    Modifier
-                        .statusBarsPadding()
-                        .padding(BAR_PADDING_DP.dp),
                 onlineSearchEnabled = onlineSearchEnabled,
                 positionAllowed = positionAllowed,
                 onEnableOnlineSearch = {
@@ -1293,7 +1208,7 @@ private fun MapContent(
                         .navigationBarsPadding(),
                 onFollow = {
                     val track = analysisTrack
-                    val plan = track?.followPlan(followPosition)
+                    val plan = track?.followPlan(followPositionNow())
                     if (track == null || plan == null) {
                         Log.w(TAG, "track follow has no line")
                     } else {
@@ -1318,7 +1233,7 @@ private fun MapContent(
                 onSelect = { start -> followSheet = openFollowSheet.copy(selected = start) },
                 onStart = {
                     scope.launch {
-                        val route = openFollowSheet.track.followRoute(openFollowSheet.selected, followPosition)
+                        val route = openFollowSheet.track.followRoute(openFollowSheet.selected, followPositionNow())
                         if (route == null) {
                             Log.w(TAG, "track follow built no route")
                         } else {
@@ -1345,52 +1260,18 @@ private fun MapContent(
             )
         }
         if (navigationActive) {
-            NavigationScreenHost(
-                state = navigationScreen,
-                strings = container.strings,
+            NavigationOverlay(
+                container = container,
+                surface = surface,
                 sheet = navigationSheet,
-                dark = dark,
-                turnCard = { modifier ->
-                    GuidancePanelContent(navigationScreen.turn, container.strings, modifier)
-                },
+                destination = navigationDestination,
+                nextStop = navigationNextStop,
+                cameraPanned = cameraPanned,
+                panSequence = panSequence,
+                onCameraPanned = { panned -> cameraPanned = panned },
                 onSheetChange = { sheet -> navigationSheet = sheet },
-                onEnd = {
-                    container.navigation.stop()
-                    container.navigationScreenFixture.clear()
-                    navigationSheet = NavigationSheet.Collapsed
-                },
-                onPause = { container.navigation.pause() },
-                onResume = { container.navigation.resume() },
-                onDone = {
-                    container.navigation.dismiss()
-                    container.navigationScreenFixture.clear()
-                    navigationSheet = NavigationSheet.Collapsed
-                },
-                onRecentre = {
-                    cameraPanned = false
-                    navigationCamera.clearPan()
-                    activeNavigation.fix?.position?.let { position ->
-                        scope.launch {
-                            surface.host.animateCamera(CameraUpdate(center = position)).onFailure { error ->
-                                Log.w(TAG, "navigation recentre rejected: $error")
-                            }
-                        }
-                    }
-                },
-                onCameraAutoZoom = navigationCamera::setAutoZoom,
-                onCameraAutoCentre = navigationCamera::setAutoCentre,
-                onCameraTilt = { enabled -> scope.launch { navigationCamera.setTilt(enabled) } },
-                onAlertSwitch = { switch, enabled ->
-                    container.alerts.setEnabled(switch.toAlertKind(), enabled)
-                },
-                onResetToProfile = {
-                    navigationCamera.setAutoZoom(true)
-                    navigationCamera.setAutoCentre(true)
-                    scope.launch { navigationCamera.setTilt(true) }
-                    container.alertSettings.activate(container.alertSettings.activeProfile())
-                },
                 onOpenAlerts = { alertsPageVisible = true },
-                modifier = Modifier.fillMaxSize(),
+                dark = dark,
             )
         }
         if (alertsPageVisible) {
@@ -1608,8 +1489,8 @@ private fun MapContent(
                             TrackLibraryContract.setSort,
                             listParams(
                                 "sort" to sort.wireName,
-                                "latitude" to searchCamera.center.latitude.toString(),
-                                "longitude" to searchCamera.center.longitude.toString(),
+                                "latitude" to cameraNow().center.latitude.toString(),
+                                "longitude" to cameraNow().center.longitude.toString(),
                             ),
                         )
                     }
@@ -1675,6 +1556,240 @@ private fun MapContent(
             is Outcome.Failure -> Log.w(TAG, "contour layers not applied: ${contours.error}")
         }
     }
+}
+
+/**
+ * The search field and its result markers. The markers are projected from the
+ * map's own camera, so this leaf is the one place that collects it: a pan
+ * re-runs the markers, not the map content behind them.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun SearchOverlay(
+    surface: MapSurface,
+    state: SearchScreenState,
+    viewport: IntSize,
+    anchorOffset: ScreenOffset,
+    onQueryChange: (String) -> Unit,
+    onSelect: (String) -> Unit,
+    onSubmit: (String) -> Unit,
+    onPick: (String) -> Unit,
+    onClear: () -> Unit,
+    onlineSearchEnabled: Boolean,
+    positionAllowed: Boolean,
+    onEnableOnlineSearch: () -> Unit,
+    onAllowPosition: (Boolean) -> Unit,
+) {
+    val camera by surface.host.camera.collectAsState()
+    SearchScreenHost(
+        hits = state.hits,
+        loading = state.status == SearchScreenStatus.LOADING,
+        failed = state.status == SearchScreenStatus.FAILED,
+        camera = camera,
+        viewport = viewport,
+        anchorOffset = anchorOffset,
+        onQueryChange = onQueryChange,
+        onSelect = onSelect,
+        onSubmit = onSubmit,
+        onPick = onPick,
+        onClear = onClear,
+        modifier = Modifier.fillMaxSize(),
+        cardModifier =
+            Modifier
+                .statusBarsPadding()
+                .padding(BAR_PADDING_DP.dp),
+        onlineSearchEnabled = onlineSearchEnabled,
+        positionAllowed = positionAllowed,
+        onEnableOnlineSearch = onEnableOnlineSearch,
+        onAllowPosition = onAllowPosition,
+    )
+}
+
+/**
+ * The navigation screen. The engine publishes a state on every fix, so this
+ * leaf collects that state and builds the screen from it: a fix re-runs the
+ * screen alone, not the map content behind it.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun NavigationOverlay(
+    container: AppContainer,
+    surface: MapSurface,
+    sheet: NavigationSheet,
+    destination: String?,
+    nextStop: String?,
+    cameraPanned: Boolean,
+    panSequence: Int,
+    onCameraPanned: (Boolean) -> Unit,
+    onSheetChange: (NavigationSheet) -> Unit,
+    onOpenAlerts: () -> Unit,
+    dark: Boolean,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val navigationState by container.navigation.state.collectAsState()
+    val fixture by container.navigationScreenFixture.state.collectAsState()
+    val active = fixture?.state ?: navigationState
+    val navigationCamera = container.navigationCamera
+    val cameraSettings by navigationCamera.settings.collectAsState()
+    val alertSettings =
+        container.alertSettings.active
+            .collectAsState()
+            .value.settings
+    val navigationAlerts by
+        produceState(initialValue = NavigationAlertState()) {
+            container.navigationAlertBanners.state.collect { value = it }
+        }
+    LaunchedEffect(container) {
+        while (true) {
+            delay(BANNER_TICK_MILLIS)
+            container.navigationAlertBanners.onTick()
+        }
+    }
+    val speedCurrentFlow =
+        remember(container) {
+            container.streamAccess.subscribe<SpeedWidgetValue>(InfoWidgetsContract.speedCurrentStream)
+        }
+    val speedAverageFlow =
+        remember(container) {
+            container.streamAccess.subscribe<SpeedWidgetValue>(InfoWidgetsContract.speedAverageStream)
+        }
+    val speedMaxFlow =
+        remember(container) {
+            container.streamAccess.subscribe<SpeedWidgetValue>(InfoWidgetsContract.speedMaxStream)
+        }
+    val speedCurrent by
+        produceState(initialValue = SpeedWidgetValue(null)) {
+            speedCurrentFlow.collect { value = it }
+        }
+    val speedAverage by
+        produceState(initialValue = SpeedWidgetValue(null)) {
+            speedAverageFlow.collect { value = it }
+        }
+    val speedMax by
+        produceState(initialValue = SpeedWidgetValue(null)) {
+            speedMaxFlow.collect { value = it }
+        }
+    LaunchedEffect(cameraSettings.autoCentre) {
+        if (cameraSettings.autoCentre) {
+            onCameraPanned(false)
+        }
+    }
+    LaunchedEffect(cameraPanned, cameraSettings.autoCentre, panSequence) {
+        if (cameraPanned && cameraSettings.autoCentre) {
+            delay(NavigationCameraController.RECENTRE_DELAY_MILLIS)
+            onCameraPanned(false)
+        }
+    }
+    val guidance =
+        remember(active, container.strings) {
+            val route = active.activeRoute
+            if (route == null) {
+                null
+            } else {
+                val total = route.distanceMeters
+                val along = (total - active.remainingDistanceMeters).coerceIn(0.0, total)
+                val status =
+                    when {
+                        active.phase == NavigationPhase.Arrived -> GuidanceStatus.Arrived
+                        active.relation == RouteRelation.OffRoute -> GuidanceStatus.OffRoute
+                        else -> GuidanceStatus.Following
+                    }
+                guidancePanel(GuidanceInput(route, along, status), container.strings)
+            }
+        }
+    val navigationScreen =
+        remember(
+            active,
+            guidance,
+            speedCurrent,
+            speedAverage,
+            speedMax,
+            navigationAlerts,
+            fixture,
+            cameraSettings,
+            alertSettings,
+            destination,
+            nextStop,
+        ) {
+            navigationScreenState(
+                NavigationScreenInput(
+                    state = active,
+                    panel = guidance,
+                    speedCurrentMetersPerSecond =
+                        fixture?.speedCurrentMetersPerSecond ?: speedCurrent.speedMetersPerSecond,
+                    speedAverageMetersPerSecond =
+                        fixture?.speedAverageMetersPerSecond ?: speedAverage.speedMetersPerSecond,
+                    speedMaxMetersPerSecond =
+                        fixture?.speedMaxMetersPerSecond ?: speedMax.speedMetersPerSecond,
+                    alerts = fixture?.alerts ?: navigationAlerts.banners.map { it.banner },
+                    destination = fixture?.destination ?: destination,
+                    nextStopName = fixture?.nextStopName ?: nextStop,
+                    signalLost = fixture?.signalLost ?: navigationAlerts.signalLost,
+                    camera = cameraSettings,
+                    alertSettings = alertSettings,
+                ),
+                container.strings,
+                Locale.getDefault(),
+                ZoneId.systemDefault(),
+            ).copy(recentreVisible = cameraPanned)
+        }
+    val activity = context as? Activity
+    DisposableEffect(navigationScreen.status) {
+        if (activity == null) {
+            onDispose { }
+        } else {
+            activity.setNavigationStatusBar(navigationScreen.status)
+            onDispose { activity.restoreStatusBar() }
+        }
+    }
+    NavigationScreenHost(
+        state = navigationScreen,
+        strings = container.strings,
+        sheet = sheet,
+        dark = dark,
+        turnCard = { modifier ->
+            GuidancePanelContent(navigationScreen.turn, container.strings, modifier)
+        },
+        onSheetChange = onSheetChange,
+        onEnd = {
+            container.navigation.stop()
+            container.navigationScreenFixture.clear()
+            onSheetChange(NavigationSheet.Collapsed)
+        },
+        onPause = { container.navigation.pause() },
+        onResume = { container.navigation.resume() },
+        onDone = {
+            container.navigation.dismiss()
+            container.navigationScreenFixture.clear()
+            onSheetChange(NavigationSheet.Collapsed)
+        },
+        onRecentre = {
+            onCameraPanned(false)
+            navigationCamera.clearPan()
+            active.fix?.position?.let { position ->
+                scope.launch {
+                    surface.host.animateCamera(CameraUpdate(center = position)).onFailure { error ->
+                        Log.w(TAG, "navigation recentre rejected: $error")
+                    }
+                }
+            }
+        },
+        onCameraAutoZoom = navigationCamera::setAutoZoom,
+        onCameraAutoCentre = navigationCamera::setAutoCentre,
+        onCameraTilt = { enabled -> scope.launch { navigationCamera.setTilt(enabled) } },
+        onAlertSwitch = { switch, enabled ->
+            container.alerts.setEnabled(switch.toAlertKind(), enabled)
+        },
+        onResetToProfile = {
+            navigationCamera.setAutoZoom(true)
+            navigationCamera.setAutoCentre(true)
+            scope.launch { navigationCamera.setTilt(true) }
+            container.alertSettings.activate(container.alertSettings.activeProfile())
+        },
+        onOpenAlerts = onOpenAlerts,
+        modifier = Modifier.fillMaxSize(),
+    )
 }
 
 /**
@@ -2088,12 +2203,48 @@ internal fun routeLineDrawing(navigationActive: Boolean): RouteLineDrawing =
         RouteLineDrawing.Coloured(mode = RouteColourMode.Slope, dark = false)
     }
 
+/**
+ * The route the map draws. A trip draws its own route, which may be a reroute
+ * that no planned route matches; the map draws the plan only when no trip owns
+ * it, so a route left on the engine after a trip ends never replaces the plan.
+ */
+internal fun mapRouteToDraw(
+    navigationActive: Boolean,
+    activeRoute: Route?,
+    plannedRoute: Route?,
+): Route? = if (navigationActive) activeRoute else plannedRoute
+
 /** The phases that keep the navigation screen on top of the map. */
 private fun NavigationPhase.isActiveNavigation(): Boolean =
     this == NavigationPhase.Following ||
         this == NavigationPhase.Rerouting ||
         this == NavigationPhase.Paused ||
         this == NavigationPhase.Arrived
+
+/**
+ * The gate's value at this instant, so a screen re-created mid-trip shows the
+ * navigation overlay on its first frame. It reads the two holders' current
+ * values and observes neither; the flows collected by the composition keep the
+ * answer current from then on.
+ */
+private fun activeNavigationNow(container: AppContainer): Boolean =
+    isNavigationActive(
+        container.navigationScreenFixture.state.value,
+        container.navigation.state.value,
+    )
+
+/**
+ * Whether the navigation screen owns the map. A shown fixture owns it whatever
+ * the live phase, so the golden harness and the emulator acceptance can draw
+ * the screen without a session; otherwise only an active phase does.
+ *
+ * The map screen reads this coarse answer, never the state it comes from, so a
+ * fix does not recompose the map content.
+ */
+internal fun isNavigationActive(
+    fixture: NavigationScreenFixture?,
+    state: NavigationState,
+): Boolean = fixture != null || state.phase.isActiveNavigation()
 
 /**
  * The message a refused guidance start shows. A denied location permission is

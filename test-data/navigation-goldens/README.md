@@ -11,7 +11,7 @@ command `core.nav.show_screen` fills the production screen with
 navigation state, not a picture.
 
 The comparator is the map goldens' 108x192 mean-RGB block grid with the same
-32-per-channel delta and 5 % mismatch tolerance, applied to the full frame. The
+32-per-channel delta and 1 % mismatch tolerance, applied to the full frame. The
 status-bar clock and icons are inside the tolerance. A recapture on the same
 AVD and renderer still compares at about 0.01 %, so the gate is that the
 expected positions move and every position passes with a wide margin, not

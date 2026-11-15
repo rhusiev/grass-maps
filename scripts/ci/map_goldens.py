@@ -16,7 +16,8 @@ attribution), and finally to a 108 x 192 grid of mean RGB blocks. At a fixed
 camera the central 540 x 960 window covers the same ground on every 1080-wide
 device of that shape, so the same crop is compared on each of them. A block
 mismatches when any RGB channel differs by more than BLOCK_DELTA from the
-golden; the test fails when more than MAX_MISMATCH_PERCENT of blocks mismatch.
+golden; the test fails when more than MAX_MISMATCH_PERCENT (1 %) of blocks
+mismatch.
 Block means absorb GPU anti-aliasing and label rasterisation differences; a
 blank, wrong or shifted map still changes most blocks.
 
@@ -120,14 +121,20 @@ INSTALL_RETRY_PAUSE_S = 5.0
 FIRST_FRAME_TIMEOUT_S = 180.0
 DEVICE_DEADLINE_S = 180.0
 BLOCK_DELTA = 32
-MAX_MISMATCH_PERCENT = 5.0
+# Measured, not assumed. At the fixed head the first full run after the
+# relation goldens were recaptured put all 80 Standard positions at 0.0 %
+# block mismatch. The previous 5 % bound had admitted the contour seam on 13
+# consecutive cadences, at 3.265 % on one position and 3.675 % at its worst,
+# so 1 % is the gate the fixed references can carry.
+MAX_MISMATCH_PERCENT = 1.0
 GRID_WIDTH = 108
 GRID_HEIGHT = 192
 # The AVD the committed goldens were captured on. A reference set is only
 # meaningful within one screen shape: the block grid crops each image to its
 # own centre, so a capture from the default `grassmaps-bench` AVD (1080x2400)
-# over a 1080x1920 reference scores a whole-frame vertical offset at about 4 %,
-# passes the 5 % tolerance and leaves a flake for the next reader.
+# over a 1080x1920 reference scores a whole-frame vertical offset at about 4 %.
+# The size check names that cause instead of reporting it as a tolerance
+# failure.
 COMMITTED_AVD_NAME = "grassmaps-goldens-api29"
 DEVICE_REGION_STAGE = "/data/local/tmp/grass-map-golden-region"
 # The app's Standard style ids. `light` is the default id the app loads.

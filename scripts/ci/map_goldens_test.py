@@ -768,6 +768,71 @@ class CompareRecaptureTest(unittest.TestCase):
             self.assertNotIn("recaptured", document["positions"][0])
 
 
+class MismatchToleranceTest(unittest.TestCase):
+    """The gate rejects the 2 % seam the previous 5 % bound admitted."""
+
+    WIDTH = 216
+    HEIGHT = 384
+    BLOCKS = map_goldens.GRID_WIDTH * map_goldens.GRID_HEIGHT
+    # The bound this change replaced. The 2 % pair below passed under it.
+    PREVIOUS_MAX_MISMATCH_PERCENT = 5.0
+
+    def _pair(self, directory: str, mismatched_blocks: int) -> tuple[Path, Path]:
+        """Two solid images whose windows differ on `mismatched_blocks` blocks."""
+        root = Path(directory)
+        reference = root / "reference.png"
+        candidate = root / "candidate.png"
+        base = bytes((128, 128, 128)) * (self.WIDTH * self.HEIGHT)
+        map_goldens.write_png(reference, self.WIDTH, self.HEIGHT, base)
+        changed = bytearray(base)
+        left, top, window_width, window_height = map_goldens.comparison_window(
+            self.WIDTH, self.HEIGHT
+        )
+        for index in range(mismatched_blocks):
+            row, column = divmod(index, map_goldens.GRID_WIDTH)
+            x0 = left + column * window_width // map_goldens.GRID_WIDTH
+            x1 = left + (column + 1) * window_width // map_goldens.GRID_WIDTH
+            y0 = top + row * window_height // map_goldens.GRID_HEIGHT
+            y1 = top + (row + 1) * window_height // map_goldens.GRID_HEIGHT
+            for y in range(y0, y1):
+                for x in range(x0, x1):
+                    offset = (y * self.WIDTH + x) * 3
+                    changed[offset : offset + 3] = bytes((255, 255, 255))
+        map_goldens.write_png(candidate, self.WIDTH, self.HEIGHT, bytes(changed))
+        return reference, candidate
+
+    def test_two_percent_of_blocks_fail_where_five_percent_passed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            reference, candidate = self._pair(directory, round(self.BLOCKS * 0.02))
+
+            result = map_goldens.compare_images(reference, candidate)
+
+            self.assertGreater(result["mismatch_percent"], map_goldens.MAX_MISMATCH_PERCENT)
+            self.assertLessEqual(
+                result["mismatch_percent"], self.PREVIOUS_MAX_MISMATCH_PERCENT
+            )
+            self.assertFalse(result["pass"])
+
+    def test_an_identical_pair_passes_at_zero(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            reference, candidate = self._pair(directory, 0)
+
+            result = map_goldens.compare_images(reference, candidate)
+
+            self.assertEqual(0, result["mismatched_blocks"])
+            self.assertEqual(0.0, result["mismatch_percent"])
+            self.assertTrue(result["pass"])
+
+    def test_the_boundary_is_one_percent(self) -> None:
+        # BLOCKS // 100 is at most 1 %, and one more block is above it.
+        with tempfile.TemporaryDirectory() as directory:
+            reference, candidate = self._pair(directory, self.BLOCKS // 100)
+            self.assertTrue(map_goldens.compare_images(reference, candidate)["pass"])
+        with tempfile.TemporaryDirectory() as directory:
+            reference, candidate = self._pair(directory, self.BLOCKS // 100 + 1)
+            self.assertFalse(map_goldens.compare_images(reference, candidate)["pass"])
+
+
 class UpdateReferenceGuardTest(unittest.TestCase):
     """A reference set must stay within one screen shape."""
 

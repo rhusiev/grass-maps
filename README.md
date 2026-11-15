@@ -722,7 +722,7 @@ The Standard goldens in `test-data/map-goldens/standard/light/` and
 variants. They run in CI on the API 29 emulator with the `swangle` software
 renderer. `swiftshader_indirect` zeroes the green channel of every text colour,
 which turns light labels on the dark style magenta; `swangle` renders them
-correctly, and the comparator and its 5 % tolerance are unchanged. The
+correctly, and the comparison metric is unchanged. The
 committed set is that renderer's own output: 1080x1920 API 29 `swangle`
 captures, promoted from the CI artifact rather than by raising the tolerance.
 Recapture with `--update` on the same emulator, never from a different device
@@ -769,12 +769,17 @@ half of that area, which drops the status bar, scale bar, control bar and
 attribution, and then to a 108x192 grid of mean RGB blocks. At a fixed camera
 the central 540x960 window covers the same ground on every 1080-wide device of
 one shape. The comparison refuses a capture and a reference of different sizes
-and names both sizes, because the crop follows each image and a whole-frame
-offset can stay under the tolerance. The test fails when more than 5 % of
-blocks differ by more than 32 on any channel. Block means absorb GPU
-anti-aliasing and label rasterisation; a blank, wrong or shifted map still
-changes most blocks. The run writes `comparison.json` and one diff image per
-position.
+and names both sizes, because the crop follows each image: a whole-frame offset
+would otherwise be scored as a tolerance failure rather than as the wrong
+screen shape. The test fails when more than 1 % of blocks differ by more than
+32 on any channel. Block means absorb GPU anti-aliasing and label rasterisation;
+a blank, wrong or shifted map still changes most blocks.
+
+The run writes `comparison.json` and one diff image per position. The 1 % bound
+is measured: at the fixed head, the first full run after the relation goldens
+were recaptured put all 80 Standard positions at 0.0 % block mismatch, while the
+previous 5 % bound had admitted the contour seam on 13 consecutive cadences, at
+3.265 % on one position and 3.675 % at its worst.
 
 A position over the tolerance is re-captured once through the control channel
 before the run calls it a failure. The compare run passes the serial the
@@ -1597,7 +1602,7 @@ session.
 The goldens are `test-data/navigation-goldens/light|dark/following.png`,
 `expanded.png` and `alert.png`, captured at 1080x1920 on the API 29 AVD. Each is
 the whole frame, compared with the map goldens' 108x192 mean-RGB block grid over
-the full frame and the same 5 % tolerance. Capture or compare with:
+the full frame and the same 1 % tolerance. Capture or compare with:
 
 ```sh
 ./scripts/ci/android-navigation-goldens.sh            # compare

@@ -1175,5 +1175,132 @@ class RecordFailureTest(unittest.TestCase):
             self.assertTrue((output / "failure.json").is_file())
 
 
+class ResolvePackagePathTest(unittest.TestCase):
+    def test_accepts_a_version_directory_a_region_directory_and_a_regions_root(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            version = root / "fixture-mini" / "2026-11-03-1"
+            version.mkdir(parents=True)
+            (version / "manifest.json").write_text("{}")
+            self.assertEqual(map_goldens.resolve_package_path(version), version)
+            self.assertEqual(map_goldens.resolve_package_path(version.parent), version)
+            self.assertEqual(map_goldens.resolve_package_path(root), version)
+
+    def test_refuses_a_root_with_two_packages(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for region in ("ua-46", "ua-74"):
+                version = root / region / "v1"
+                version.mkdir(parents=True)
+                (version / "manifest.json").write_text("{}")
+            with self.assertRaises(map_goldens.GoldenError):
+                map_goldens.resolve_package_path(root)
+
+
+class InstallRegionPackageTest(unittest.TestCase):
+    def test_copies_the_manifest_and_every_component_and_points_current(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            package = Path(directory) / "fixture-mini" / "2026-11-03-1"
+            package.mkdir(parents=True)
+            (package / "manifest.json").write_text(
+                json.dumps(
+                    {
+                        "region": "fixture-mini",
+                        "version": "2026-11-03-1",
+                        "components": [
+                            {"file": "map.pmtiles"},
+                            {"file": "contours.pmtiles"},
+                        ],
+                    }
+                )
+            )
+            (package / "map.pmtiles").write_bytes(b"map")
+            (package / "contours.pmtiles").write_bytes(b"contours")
+            adb = mock.Mock()
+            current: dict[str, str] = {}
+
+            def record_push(source: Path, target: str) -> None:
+                if target.endswith("/current"):
+                    current["text"] = Path(source).read_text()
+
+            adb.push.side_effect = record_push
+
+            metadata = map_goldens.install_region_package(adb, package)
+
+        self.assertEqual(
+            metadata,
+            {
+                "region": "fixture-mini",
+                "version": "2026-11-03-1",
+                "layout": "files/regions/fixture-mini/2026-11-03-1",
+            },
+        )
+        self.assertEqual(current["text"], "2026-11-03-1\n")
+        copies = [call.args for call in adb.shell.call_args_list if call.args[2:3] == ("cp",)]
+        self.assertEqual(
+            copies,
+            [
+                (
+                    "run-as",
+                    map_goldens.PACKAGE,
+                    "cp",
+                    f"{map_goldens.DEVICE_REGION_STAGE}/manifest.json",
+                    "files/regions/fixture-mini/2026-11-03-1/manifest.json",
+                ),
+                (
+                    "run-as",
+                    map_goldens.PACKAGE,
+                    "cp",
+                    f"{map_goldens.DEVICE_REGION_STAGE}/map.pmtiles",
+                    "files/regions/fixture-mini/2026-11-03-1/map.pmtiles",
+                ),
+                (
+                    "run-as",
+                    map_goldens.PACKAGE,
+                    "cp",
+                    f"{map_goldens.DEVICE_REGION_STAGE}/contours.pmtiles",
+                    "files/regions/fixture-mini/2026-11-03-1/contours.pmtiles",
+                ),
+                (
+                    "run-as",
+                    map_goldens.PACKAGE,
+                    "cp",
+                    f"{map_goldens.DEVICE_REGION_STAGE}/current",
+                    "files/regions/fixture-mini/current",
+                ),
+            ],
+        )
+
+
+class InstallRegionCommandTest(unittest.TestCase):
+    def test_prints_the_region_name_the_app_logs(self) -> None:
+        argv = ["map_goldens.py", "install-region", "--region-package", "packs/ua-46"]
+        with (
+            mock.patch.object(sys, "argv", argv),
+            mock.patch.object(map_goldens, "Adb") as adb_class,
+            mock.patch.object(map_goldens, "resolve_serial", return_value="emulator-5554"),
+            mock.patch.object(
+                map_goldens,
+                "resolve_package_path",
+                return_value=Path("packs/ua-46/2026-11-05"),
+            ),
+            mock.patch.object(
+                map_goldens,
+                "install_region_package",
+                return_value={
+                    "region": "ua-46",
+                    "version": "2026-11-05",
+                    "layout": "files/regions/ua-46/2026-11-05",
+                },
+            ),
+            mock.patch("builtins.print") as printed,
+        ):
+            self.assertEqual(map_goldens.main(), 0)
+
+        adb_class.assert_called_once_with("emulator-5554")
+        adb_class.return_value.wait_for_device.assert_called_once_with()
+        printed.assert_called_once_with("region:ua-46/2026-11-05")
+
+
 if __name__ == "__main__":
     unittest.main()

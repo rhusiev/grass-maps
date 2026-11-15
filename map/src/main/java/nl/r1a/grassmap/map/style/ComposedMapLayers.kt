@@ -1,20 +1,13 @@
 package nl.r1a.grassmap.map.style
 
 import android.util.Log
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -76,9 +69,6 @@ import org.maplibre.compose.layers.LayerDefaults
 import org.maplibre.compose.layers.LineLayer
 import org.maplibre.compose.layers.RasterLayer
 import org.maplibre.compose.layers.SymbolLayer
-import org.maplibre.compose.map.LocalMapState
-import org.maplibre.compose.overlay.AttributionLinks
-import org.maplibre.compose.overlay.attributions
 import org.maplibre.compose.sources.CustomVectorTileSourceOptions
 import org.maplibre.compose.sources.GeoJsonData
 import org.maplibre.compose.sources.TileCoordinate
@@ -133,37 +123,6 @@ internal fun ComposedMapLayers(session: MapHostState) {
             LayerSlot.Markers -> MarkerLayerSlot(session, styleReady)
             else -> Unit
         }
-    }
-    MapAttribution()
-}
-
-/**
- * The map's visible credit: one line per source that declares an attribution,
- * including a raster tile source a plugin adds (T-0512). The OSM policy asks
- * for a visible credit, so this is text on the map and not a hidden info
- * button. A style with no attributed source draws nothing.
- */
-@Suppress("ktlint:standard:function-naming")
-@Composable
-@MaplibreComposable
-private fun MapAttribution() {
-    val mapState = LocalMapState.current ?: return
-    val attributions = mapState.style.attributions()
-    if (attributions.isEmpty()) return
-    Box(modifier = Modifier.fillMaxSize()) {
-        AttributionLinks(
-            attributions = attributions,
-            modifier =
-                Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(ATTRIBUTION_MARGIN_DP.dp)
-                    .background(ATTRIBUTION_BACKGROUND, RoundedCornerShape(ATTRIBUTION_CORNER_DP.dp))
-                    .padding(
-                        horizontal = ATTRIBUTION_HORIZONTAL_PADDING_DP.dp,
-                        vertical = ATTRIBUTION_VERTICAL_PADDING_DP.dp,
-                    ),
-            textStyle = TextStyle(color = Color.White, fontSize = ATTRIBUTION_FONT_SP.sp),
-        )
     }
 }
 
@@ -498,12 +457,6 @@ private const val ROUTE_ARROW_HALO_DP = 1.5
 private const val ROUTE_ARROW_PADDING_DP = 4
 private val ROUTE_COLOR = Color(0xFF2E7D32)
 private val ROUTE_ARROW_COLOR = Color.White
-private val ATTRIBUTION_BACKGROUND = Color(0x99000000)
-private const val ATTRIBUTION_FONT_SP = 10
-private const val ATTRIBUTION_MARGIN_DP = 4
-private const val ATTRIBUTION_CORNER_DP = 4
-private const val ATTRIBUTION_HORIZONTAL_PADDING_DP = 6
-private const val ATTRIBUTION_VERTICAL_PADDING_DP = 2
 
 /**
  * The three logical sources of T-0020, each resolved to one object: the base

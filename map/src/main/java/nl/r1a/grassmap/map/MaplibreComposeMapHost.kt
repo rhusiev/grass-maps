@@ -1,5 +1,7 @@
 package nl.r1a.grassmap.map
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -283,58 +285,62 @@ fun MapSurfaceView(
     val panSink = rememberUpdatedState(onManualPan)
     val tapSink = rememberUpdatedState(onTap)
     val projector = remember(surface) { surface.screenProjector() }
-    MaplibreMap(
-        modifier =
-            modifier
-                .pointerInput(surface) {
-                    detectTwoFingerTap { from, to ->
-                        val camera = cameraModel(surface.state.cameraPosition)
-                        when (val action = twoFingerTapAction(setting.value.isEnabled(), camera.zoom, from, to, projector)) {
-                            is TwoFingerTapAction.ZoomOut -> {
-                                scope.launch {
-                                    surface.host.moveCamera(CameraUpdate(zoom = action.zoom))
+    Box(modifier = modifier) {
+        MaplibreMap(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .pointerInput(surface) {
+                        detectTwoFingerTap { from, to ->
+                            val camera = cameraModel(surface.state.cameraPosition)
+                            when (val action = twoFingerTapAction(setting.value.isEnabled(), camera.zoom, from, to, projector)) {
+                                is TwoFingerTapAction.ZoomOut -> {
+                                    scope.launch {
+                                        surface.host.moveCamera(CameraUpdate(zoom = action.zoom))
+                                    }
+                                }
+
+                                is TwoFingerTapAction.Distance -> {
+                                    distanceSink.value(action.meters)
+                                }
+
+                                TwoFingerTapAction.Ignored -> {
+                                    Unit
                                 }
                             }
-
-                            is TwoFingerTapAction.Distance -> {
-                                distanceSink.value(action.meters)
-                            }
-
-                            TwoFingerTapAction.Ignored -> {
-                                Unit
-                            }
                         }
-                    }
-                }.pointerInput(surface) {
-                    detectLongPress { point ->
-                        projector.geoPointAt(point)?.let { selected -> selectionSink.value(selected) }
-                    }
-                }.pointerInput(surface) {
-                    detectSingleTap { point -> projector.geoPointAt(point)?.let { tapped -> tapSink.value(tapped) } }
-                }.pointerInput(surface) {
-                    // Observe a one-finger drag for the navigation camera
-                    // without consuming it: the map's own pan still runs.
-                    awaitPointerEventScope {
-                        var panning = false
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Initial)
-                            val pressed = event.changes.count { change -> change.pressed }
-                            if (event.type == PointerEventType.Move && pressed == 1) {
-                                val change = event.changes.first()
-                                if (change.previousPressed && change.position != change.previousPosition && !panning) {
-                                    panning = true
-                                    panSink.value()
+                    }.pointerInput(surface) {
+                        detectLongPress { point ->
+                            projector.geoPointAt(point)?.let { selected -> selectionSink.value(selected) }
+                        }
+                    }.pointerInput(surface) {
+                        detectSingleTap { point -> projector.geoPointAt(point)?.let { tapped -> tapSink.value(tapped) } }
+                    }.pointerInput(surface) {
+                        // Observe a one-finger drag for the navigation camera
+                        // without consuming it: the map's own pan still runs.
+                        awaitPointerEventScope {
+                            var panning = false
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                val pressed = event.changes.count { change -> change.pressed }
+                                if (event.type == PointerEventType.Move && pressed == 1) {
+                                    val change = event.changes.first()
+                                    if (change.previousPressed && change.position != change.previousPosition && !panning) {
+                                        panning = true
+                                        panSink.value()
+                                    }
+                                } else if (pressed == 0) {
+                                    panning = false
                                 }
-                            } else if (pressed == 0) {
-                                panning = false
                             }
                         }
-                    }
-                },
-        state = surface.state,
-        interactions = interactions,
-        uiOptions = uiOptions,
-    )
+                    },
+            state = surface.state,
+            interactions = interactions,
+            uiOptions = uiOptions,
+        )
+        MapAttributionOverlay(style = surface.state.style)
+    }
 }
 
 /** Projects screen points to map points through the attached engine. */

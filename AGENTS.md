@@ -92,6 +92,10 @@ document, section 3, plus the build and module rules of this repository.
   fails. README's CI run-cost section records the measured durations; set a
   bound from a measurement, not a guess
 - Check the plugin boundary rule: `./gradlew checkPluginBoundaries`
+- A change that removes or merges tests updates
+  `scripts/ci/test-count-baseline.txt` in the same commit with
+  `scripts/ci/test-count.sh --update`. The gate fails when a module falls below
+  its recorded count, so a module losing most of its tests cannot stay green
 - Check plugin manifests: `./gradlew checkPluginManifests`
 - Check the privacy guards (dependency denylist and merged manifests):
   `./gradlew checkPrivacyGuards`

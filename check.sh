@@ -103,17 +103,29 @@ step "Build :app:assembleDebug"
 ./gradlew --console=plain :app:assembleDebug || fail "build"
 
 step "Unit tests"
-./gradlew --console=plain test || fail "unit tests (Gradle test task)"
-scripts/ci/test-count.sh || fail "unit tests (empty suite)"
+# The count floor judges a task that passed. When the test task itself fails,
+# the gate is already red and a partial report set would report every module
+# that never got to run as a lost test, so the count is not judged.
+test_task_failed=0
+./gradlew --console=plain test || {
+    fail "unit tests (Gradle test task)"
+    test_task_failed=1
+}
+if [[ $test_task_failed -eq 0 ]]; then
+    scripts/ci/test-count.sh || fail "unit tests (count floor)"
+else
+    echo "Test counts not judged: the Gradle test task failed above."
+fi
 
 step "Rust tests"
 ( cd "$ROOT/rust/grass-core" && "$CARGO" test --locked ) || fail "rust tests (grass-core)"
 ( cd "$ROOT/rust/grass-regions" && "$CARGO" test --locked ) || fail "rust tests (grass-regions)"
 ( cd "$ROOT/tools/pipeline/osm-extract" && "$CARGO" test --locked ) || fail "rust tests (osm-extract)"
 
-step "Script tests (map goldens, benchmark)"
+step "Script tests (map goldens, benchmark, test count)"
 python3 scripts/ci/map_goldens_test.py || fail "script tests (map goldens)"
 python3 scripts/ci/android_benchmark_test.py || fail "script tests (benchmark)"
+python3 scripts/ci/test_count_test.py || fail "script tests (test count)"
 
 step "Translations (English and Ukrainian)"
 ./gradlew --console=plain checkTranslations || fail "translations"

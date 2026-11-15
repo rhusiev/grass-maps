@@ -1,8 +1,17 @@
 #!/usr/bin/env bash
 #
-# Installs the debug APK on the connected device or emulator, launches it and
-# checks that the process stays alive. It fails on a crash and on any
-# StrictMode policy violation logged by the UI thread.
+# Installs the debug APK on the connected device or emulator, launches it,
+# checks that the process stays alive and that the map reports ready. It fails
+# on a crash and on any StrictMode policy violation logged by the UI thread.
+#
+# What the map-ready check proves: `MapScreen` logs
+# `GrassMapsMap: map-ready region=<name> contours=<bool>` once the map surface
+# has a style bundle and the host's `setStyle` and `applyStyleDiff` calls have
+# returned. A process that survives with a blank map therefore fails here.
+# What it does not prove: that any pixel reached the screen. The line is written
+# before a frame is drawn, and a swiftshader device that renders nothing still
+# writes it. A style the host rejects is caught separately, because it is logged
+# as a warning and leaves the map empty.
 #
 # The debug build installs the StrictMode policy through DebugApplication.
 # The `GrassMapsStrictMode` marker is required, so a build without the policy
@@ -21,9 +30,35 @@ APK="${1:-app/build/outputs/apk/debug/app-debug.apk}"
 PKG="nl.r1a.grassmap"
 ACTIVITY="${SMOKE_ACTIVITY:-nl.r1a.grassmap.app.MainActivity}"
 SETTLE_SECONDS="${SMOKE_SETTLE_SECONDS:-8}"
+MAP_READY_SECONDS="${SMOKE_MAP_READY_SECONDS:-120}"
 DEVICE_DEADLINE_SECONDS="${SMOKE_DEVICE_DEADLINE_SECONDS:-180}"
 LOGCAT_CLEAR_ATTEMPTS="${SMOKE_LOGCAT_CLEAR_ATTEMPTS:-5}"
 LOGCAT_CLEAR_RETRY_SECONDS="${SMOKE_LOGCAT_CLEAR_RETRY_SECONDS:-2}"
+
+# wait_for_map_ready SECONDS
+#
+# Polls the app's own readiness line. The deadline is the bound on a slow first
+# frame; the line arrives well before it on a healthy device.
+wait_for_map_ready() {
+    local seconds="$1"
+    local deadline=$((SECONDS + seconds))
+    local log
+    while true; do
+        log="$(timeout 30 adb logcat -d -s GrassMapsMap:I 2>/dev/null || true)"
+        if grep -q 'map-ready' <<<"$log"; then
+            echo "OK: the map reported ready"
+            grep 'map-ready' <<<"$log" | tail -n 1
+            return 0
+        fi
+        if ((SECONDS >= deadline)); then
+            echo "FAIL: the map did not report ready in ${seconds}s" >&2
+            echo "The process may be alive with no map surface, style or layers." >&2
+            timeout 30 adb logcat -d -t 400 >&2 || true
+            return 1
+        fi
+        sleep 2
+    done
+}
 
 if [[ ! -f "$APK" ]]; then
     echo "FAIL: APK not found: $APK" >&2
@@ -92,6 +127,8 @@ if [[ -z "$pid" ]]; then
 fi
 echo "OK: $PKG is running with pid $pid"
 
+wait_for_map_ready "$MAP_READY_SECONDS"
+
 log="$(timeout 60 adb logcat -d --pid="$pid")"
 
 if ! grep -q 'GrassMapsStrictMode.*StrictMode thread policy enabled' <<<"$log"; then
@@ -103,6 +140,13 @@ fi
 if grep -q 'FATAL EXCEPTION' <<<"$log"; then
     echo "FAIL: the app logged a fatal exception:" >&2
     grep -A 20 'FATAL EXCEPTION' <<<"$log" >&2
+    exit 1
+fi
+
+if grep -q 'style rejected\|style layers rejected' <<<"$log"; then
+    echo "FAIL: the map host rejected the style or the layer diff:" >&2
+    grep 'style rejected\|style layers rejected' <<<"$log" >&2
+    echo "The map-ready line is still written in that case, so it is checked here." >&2
     exit 1
 fi
 

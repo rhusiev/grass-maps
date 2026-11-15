@@ -118,10 +118,13 @@ the root, Android lint, `:app:assembleDebug`, the JVM unit tests,
 `lintStyleRules`, `:plugins:example:check`, `checkPrivacyGuards`, and two
 unsigned release builds at different paths compared byte for byte. The
 reproducibility script also runs `checkReleaseApkPlugins` over the rebuilt
-release APK, so a development plugin in a release build fails the gate. The test
-count is reported; an empty suite fails the gate, so deleting the last test
-cannot pass CI. Every step prints its duration, and the total is printed at the
-end.
+release APK, so a development plugin in a release build fails the gate. Every
+module's executed test count is compared with `scripts/ci/test-count-baseline.txt`
+and the gate fails when a module falls below its recorded floor, so a module
+that keeps three tests out of a hundred and twenty cannot stay green. The
+baseline is a floor: `--update` rewrites it from a full test run, and a change
+that removes tests on purpose updates it in the same commit. Every step prints
+its duration, and the total is printed at the end.
 
 `checkTranslations` checks every module with `src/main/res/values*/strings.xml`:
 each string key and `plurals` name must exist in English (`values`) and Ukrainian
@@ -163,8 +166,16 @@ manifest entry. Build-logic unit tests cover both rules and run with the rest of
 ./scripts/ci/android-smoke.sh app/build/outputs/apk/debug/app-debug.apk
 ```
 
-The device check installs and launches the debug APK and fails on a crash or
-on a StrictMode policy violation. CI runs it on an API 29 x86_64 emulator.
+The device check installs and launches the debug APK and fails on a crash, on
+a StrictMode policy violation, and on a launch that never renders the map. The
+map assertion reads the app's own `GrassMapsMap: map-ready region=... contours=...`
+line, which `MapScreen` writes once the map surface has a style bundle and the
+host's `setStyle` and `applyStyleDiff` calls have returned, so a process that
+survives with a blank map fails. It does not prove that a frame reached the
+screen: the line is written before one is drawn, and a device whose GPU renders
+nothing still writes it. A style or layer diff the host rejects leaves the map
+empty and writes that line too, so those warnings are a separate failure. CI
+runs it on an API 29 x86_64 emulator.
 Debug builds install the policy through `DebugApplication`, which extends the
 main `GrassMapsApplication` and is also the marker the script requires, so an
 APK without the policy cannot pass by staying silent.

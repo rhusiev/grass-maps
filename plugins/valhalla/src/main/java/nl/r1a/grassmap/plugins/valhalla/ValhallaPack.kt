@@ -54,13 +54,15 @@ internal class ValhallaPackException(
  * non-null path says nothing about the pack. Every route therefore inspects the
  * directory first, and the engine reports the exact problem instead of failing
  * inside the native constructor.
+ *
+ * A route needs the config and the tiles, nothing else: an `admins.sqlite` or
+ * `timezones.sqlite` the pack still ships is not required and the engine is not
+ * pointed at it (T-0515).
  */
 internal object ValhallaPack {
     const val CONFIG_FILE = "valhalla.json"
     const val TILES_ARCHIVE = "tiles.tar"
     const val TILES_DIRECTORY = "tiles"
-    const val ADMINS_FILE = "admins.sqlite"
-    const val TIMEZONES_FILE = "timezones.sqlite"
 
     fun inspect(path: String?): ValhallaPackStatus {
         val directory = path?.let(::File)
@@ -76,11 +78,6 @@ internal object ValhallaPack {
         val config = File(directory, CONFIG_FILE)
         if (!config.isFile) {
             return notReady(ValhallaPackProblem.Incomplete, "${directory.absolutePath} has no $CONFIG_FILE")
-        }
-        for (name in listOf(ADMINS_FILE, TIMEZONES_FILE)) {
-            if (!File(directory, name).isFile) {
-                return notReady(ValhallaPackProblem.Incomplete, "${directory.absolutePath} has no $name")
-            }
         }
         val tiles =
             tilesIn(directory) ?: return notReady(
@@ -163,20 +160,34 @@ internal object ValhallaPackConfig {
 
     private fun devicePaths(pack: ValhallaPackStatus.Ready): Map<String, JsonElement> {
         val tiles = pack.tiles
-        val paths =
+        val shipped =
             mapOf(
                 "tile_extract" to (tiles as? ValhallaTiles.Extract)?.archive,
                 "tile_dir" to (tiles as? ValhallaTiles.Directory)?.directory,
-                "admin" to File(pack.directory, ValhallaPack.ADMINS_FILE),
-                "timezone" to File(pack.directory, ValhallaPack.TIMEZONES_FILE),
                 "landmarks" to File(pack.directory, LANDMARKS_FILE),
                 "traffic_extract" to File(pack.directory, TRAFFIC_FILE),
                 "transit_dir" to File(pack.directory, TRANSIT_DIRECTORY),
                 "transit_feeds_dir" to File(pack.directory, TRANSIT_FEEDS_DIRECTORY),
             )
-        return paths.mapValues { (_, file) -> JsonPrimitive(file?.takeIf { it.exists() }?.absolutePath ?: NONE) } +
-            ("max_cache_size" to JsonPrimitive(MAX_CACHE_BYTES))
+        return shipped.mapValues { (_, file) ->
+            JsonPrimitive(file?.takeIf { it.exists() }?.absolutePath ?: NONE)
+        } + unreadDatabases() + ("max_cache_size" to JsonPrimitive(MAX_CACHE_BYTES))
     }
+
+    /**
+     * The two databases Valhalla can read at run time and a route does not need.
+     *
+     * A pack may still carry them, and a config built on the build machine names
+     * absolute paths for both, so each is cleared instead of left pointing at a
+     * path that cannot exist here. The country build's copies are 135,671,808 B
+     * and no T-0501 package ships either, so a pack that adds them pays that per
+     * pack (T-0515).
+     */
+    private fun unreadDatabases(): Map<String, JsonElement> =
+        mapOf(
+            "admin" to JsonPrimitive(NONE),
+            "timezone" to JsonPrimitive(NONE),
+        )
 
     private fun additionalData(
         root: JsonObject,

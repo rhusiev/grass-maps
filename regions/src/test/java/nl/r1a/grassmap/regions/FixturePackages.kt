@@ -53,6 +53,23 @@ internal object FixturePackages {
     fun atVersion(version: String): ByteArray = withManifest(transform = { manifest -> manifest.replace(FIXTURE_VERSION, version) })
 
     /**
+     * The fixture re-tagged as [region] at [version]. A catalogue names a package
+     * per region and version, so a local-server test needs one per entry; the
+     * component bytes stay the committed fixture's, which is all a reader checks.
+     */
+    fun at(
+        region: String,
+        version: String,
+    ): ByteArray =
+        withManifest(
+            transform = { manifest ->
+                manifest
+                    .replace("\"region\": \"${TestRegions.DEFAULT_REGION}\"", "\"region\": \"$region\"")
+                    .replace(FIXTURE_VERSION, version)
+            },
+        )
+
+    /**
      * The fixture files with the way-alert component replaced by [geojson] and
      * its manifest entry's size and hash updated. The rest of the package is
      * unchanged, so a test can reinstall a changed package under the same

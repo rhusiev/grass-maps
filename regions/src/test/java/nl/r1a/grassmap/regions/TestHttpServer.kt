@@ -5,6 +5,7 @@ import com.sun.net.httpserver.HttpServer
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.util.Collections
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -16,6 +17,7 @@ internal class TestHttpServer(
     handler: TestHttpServer.(HttpExchange) -> Unit,
 ) : AutoCloseable {
     private val server = HttpServer.create(InetSocketAddress(InetAddress.getByName(HOST), 0), 0)
+    private val executor = Executors.newCachedThreadPool { runnable -> Thread(runnable, "test-http").apply { isDaemon = true } }
     private val requests = Collections.synchronizedList(mutableListOf<String?>())
     private val count = AtomicInteger()
 
@@ -29,6 +31,9 @@ internal class TestHttpServer(
                 exchange.close()
             }
         }
+        // A handler that streams slowly must not stop another request from being
+        // answered: the default executor is one thread for the whole server.
+        server.executor = executor
         server.start()
     }
 
@@ -65,6 +70,7 @@ internal class TestHttpServer(
 
     override fun close() {
         server.stop(0)
+        executor.shutdownNow()
     }
 
     companion object {

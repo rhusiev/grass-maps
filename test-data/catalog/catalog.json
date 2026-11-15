@@ -1,0 +1,1153 @@
+{
+  "format": 1,
+  "generated": "2026-11-15T12:47:27Z",
+  "attribution": [
+    "© OpenStreetMap contributors",
+    "Copernicus DEM GLO-30 © European Union, ESA"
+  ],
+  "build": {
+    "version": "2026-11-03",
+    "osmTimestamp": "2026-11-03T21:24:23Z",
+    "pbfArchive": "ukraine-latest.osm.pbf",
+    "pbfSha256": "ff46165a08b21fc4271aa6d5f199e55d0c9b786bcfd8f50e0f7c31f82248347f",
+    "mapArchive": "ukraine-final.pmtiles",
+    "mapSha256": "bee6252be2e6d9387f72884ca60fd5613d55339cad95fb5d2528ff22a2330cfe",
+    "contoursArchive": "ua-contours.pmtiles",
+    "contoursSha256": "e9f71cdc1dc1a0beec2a762257a93df851ab96051ccda3c5a48d92549ffd1555",
+    "routingBuildSha256": "335fcbdc9edc08a37ce9dccbc9bad2e514a9437f9a102db2debee4326665e52f",
+    "landPolygons": "stub archives: the land and water polygon archives are empty, so a coastline has no sea polygon (osmdata.openstreetmap.de was unreachable at archive build time)"
+  },
+  "regions": [
+    {
+      "id": "ua-05",
+      "name": {
+        "uk": "Вінницька область",
+        "en": "Vinnytsia Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        27.3716586,
+        48.0654044,
+        30.0207736,
+        49.8890807
+      ],
+      "outline": "outlines/ua-05.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 152201954,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 17116271
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 3643542
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 61179117
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 60876800
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 9386224
+        }
+      ]
+    },
+    {
+      "id": "ua-07",
+      "name": {
+        "uk": "Волинська область",
+        "en": "Volyn Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        23.6053661,
+        50.2872511,
+        26.1072604,
+        51.969265
+      ],
+      "outline": "outlines/ua-07.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 89005827,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 10403064
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 2926483
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 35673446
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 35665920
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 4336914
+        }
+      ]
+    },
+    {
+      "id": "ua-09",
+      "name": {
+        "uk": "Луганська область",
+        "en": "Luhansk Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        37.83667,
+        47.8249387,
+        40.2278093,
+        50.088449
+      ],
+      "outline": "outlines/ua-09.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 134121136,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 15062634
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 3685737
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 50295322
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 50728960
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 14348483
+        }
+      ]
+    },
+    {
+      "id": "ua-12",
+      "name": {
+        "uk": "Дніпропетровська область",
+        "en": "Dnipropetrovsk Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        32.9595518,
+        47.4566155,
+        36.9368344,
+        49.1939422
+      ],
+      "outline": "outlines/ua-12.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 189384933,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 12487642
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 3957368
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 61907626
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 84940800
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 26091497
+        }
+      ]
+    },
+    {
+      "id": "ua-14",
+      "name": {
+        "uk": "Донецька область",
+        "en": "Donetsk Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        36.5419522,
+        46.687677,
+        39.0914413,
+        49.2339965
+      ],
+      "outline": "outlines/ua-14.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 208248787,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 12815284
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 3661295
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 59170130
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 88535040
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 44067038
+        }
+      ]
+    },
+    {
+      "id": "ua-18",
+      "name": {
+        "uk": "Житомирська область",
+        "en": "Zhytomyr Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        27.1864173,
+        49.5836448,
+        29.7352238,
+        51.6811359
+      ],
+      "outline": "outlines/ua-18.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 134178844,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 17233528
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 3880698
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 41811467
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 61112320
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 10140831
+        }
+      ]
+    },
+    {
+      "id": "ua-21",
+      "name": {
+        "uk": "Закарпатська область",
+        "en": "Zakarpattia Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        22.137059,
+        47.896894,
+        24.6274681,
+        49.0973238
+      ],
+      "outline": "outlines/ua-21.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 136080080,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 32963611
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 3277761
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 43673203
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 44042240
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 12123265
+        }
+      ]
+    },
+    {
+      "id": "ua-23",
+      "name": {
+        "uk": "Запорізька область",
+        "en": "Zaporizhia Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        34.1394646,
+        46.1464862,
+        37.2486286,
+        48.1449302
+      ],
+      "outline": "outlines/ua-23.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 101288425,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 7069788
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 2297256
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 38172394
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 49274880
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 4474107
+        }
+      ]
+    },
+    {
+      "id": "ua-26",
+      "name": {
+        "uk": "Івано-Франківська область",
+        "en": "Ivano-Frankivsk Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        23.5470764,
+        47.7243679,
+        25.6530995,
+        49.5477701
+      ],
+      "outline": "outlines/ua-26.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 151243117,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 26285007
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 4018086
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 44069741
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 68700160
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 8170123
+        }
+      ]
+    },
+    {
+      "id": "ua-32",
+      "name": {
+        "uk": "Київська область",
+        "en": "Kyiv Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        29.2675489,
+        49.1786197,
+        32.1610264,
+        51.5531668
+      ],
+      "outline": "outlines/ua-32.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 271580684,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 15168054
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 4682405
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 70343429
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 144977920
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 36408876
+        }
+      ],
+      "includes": [
+        "UA-30"
+      ]
+    },
+    {
+      "id": "ua-35",
+      "name": {
+        "uk": "Кіровоградська область",
+        "en": "Kirovohrad Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        29.7493056,
+        47.7488944,
+        33.8943109,
+        49.2447143
+      ],
+      "outline": "outlines/ua-35.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 132213643,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 12024326
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 4136268
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 45282494
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 65095680
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 5674875
+        }
+      ]
+    },
+    {
+      "id": "ua-43",
+      "name": {
+        "uk": "Автономна Республіка Крим",
+        "en": "Autonomous Republic of Crimea"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        32.201579,
+        44.184598,
+        36.6815681,
+        46.22958
+      ],
+      "outline": "outlines/ua-43.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 145760432,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 15148485
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 1995808
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 38328760
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 68587520
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 21699859
+        }
+      ],
+      "includes": [
+        "UA-40"
+      ]
+    },
+    {
+      "id": "ua-46",
+      "name": {
+        "uk": "Львівська область",
+        "en": "Lviv Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        22.6408214,
+        48.7182803,
+        25.4270223,
+        50.6489605
+      ],
+      "outline": "outlines/ua-46.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 210943205,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 21613640
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 4528060
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 65699471
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 97198080
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 21903954
+        }
+      ]
+    },
+    {
+      "id": "ua-48",
+      "name": {
+        "uk": "Миколаївська область",
+        "en": "Mykolaiv Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        30.2068714,
+        46.3447972,
+        33.1836885,
+        48.2322044
+      ],
+      "outline": "outlines/ua-48.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 123462384,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 7809216
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 2929066
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 45991595
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 56371200
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 10361307
+        }
+      ]
+    },
+    {
+      "id": "ua-51",
+      "name": {
+        "uk": "Одеська область",
+        "en": "Odesa Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        28.2139355,
+        45.0531988,
+        31.3049776,
+        48.2332855
+      ],
+      "outline": "outlines/ua-51.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 146881685,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 15462318
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 5675240
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 53602821
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 60999680
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 11141626
+        }
+      ]
+    },
+    {
+      "id": "ua-53",
+      "name": {
+        "uk": "Полтавська область",
+        "en": "Poltava Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        32.0838638,
+        48.7233941,
+        35.4907973,
+        50.5535118
+      ],
+      "outline": "outlines/ua-53.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 135495347,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 12126216
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 3889333
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 44615981
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 65843200
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 9020617
+        }
+      ]
+    },
+    {
+      "id": "ua-56",
+      "name": {
+        "uk": "Рівненська область",
+        "en": "Rivne Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        25.0841286,
+        50.0040426,
+        27.7346382,
+        51.950066
+      ],
+      "outline": "outlines/ua-56.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 90565332,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 11598798
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 3661075
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 33381062
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 37662720
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 4261677
+        }
+      ]
+    },
+    {
+      "id": "ua-59",
+      "name": {
+        "uk": "Сумська область",
+        "en": "Sumy Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        32.9426042,
+        50.1102415,
+        35.6926624,
+        52.3667139
+      ],
+      "outline": "outlines/ua-59.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 93900732,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 14026993
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 4436260
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 38420587
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 31293440
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 5723452
+        }
+      ]
+    },
+    {
+      "id": "ua-61",
+      "name": {
+        "uk": "Тернопільська область",
+        "en": "Ternopil Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        24.7161724,
+        48.5074845,
+        26.44363,
+        50.2668879
+      ],
+      "outline": "outlines/ua-61.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 117026198,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 11127269
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 2357984
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 35302857
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 60784640
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 7453448
+        }
+      ]
+    },
+    {
+      "id": "ua-63",
+      "name": {
+        "uk": "Харківська область",
+        "en": "Kharkiv Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        34.8563132,
+        48.531178,
+        38.093529,
+        50.4594753
+      ],
+      "outline": "outlines/ua-63.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 186590301,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 17702182
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 4189968
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 64205838
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 86517760
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 13974553
+        }
+      ]
+    },
+    {
+      "id": "ua-65",
+      "name": {
+        "uk": "Херсонська область",
+        "en": "Kherson Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        31.1590964,
+        45.7565682,
+        35.4680391,
+        47.600194
+      ],
+      "outline": "outlines/ua-65.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 86234600,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 3848861
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 2370809
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 26159464
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 46858240
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 6997226
+        }
+      ]
+    },
+    {
+      "id": "ua-68",
+      "name": {
+        "uk": "Хмельницька область",
+        "en": "Khmelnytskyi Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        26.1327293,
+        48.4510834,
+        27.8983712,
+        50.5947282
+      ],
+      "outline": "outlines/ua-68.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 121555619,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 14190252
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 2841765
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 42633225
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 51036160
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 10854217
+        }
+      ]
+    },
+    {
+      "id": "ua-71",
+      "name": {
+        "uk": "Черкаська область",
+        "en": "Cherkasy Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        29.6060329,
+        48.4519816,
+        32.8961836,
+        50.2286322
+      ],
+      "outline": "outlines/ua-71.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 149422914,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 12444836
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 3997882
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 51385701
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 71424000
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 10170495
+        }
+      ]
+    },
+    {
+      "id": "ua-74",
+      "name": {
+        "uk": "Чернігівська область",
+        "en": "Chernihiv Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        30.4820663,
+        50.3455646,
+        33.500716,
+        52.3797464
+      ],
+      "outline": "outlines/ua-74.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 121831032,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 14880114
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 4009267
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 36977525
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 51630080
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 14334046
+        }
+      ]
+    },
+    {
+      "id": "ua-77",
+      "name": {
+        "uk": "Чернівецька область",
+        "en": "Chernivtsi Oblast"
+      },
+      "kind": "region",
+      "parent": "ua",
+      "bbox": [
+        24.9084553,
+        47.7250583,
+        27.5296327,
+        48.6757227
+      ],
+      "outline": "outlines/ua-77.geojson",
+      "version": "2026-11-03",
+      "size_bytes": 86279902,
+      "parts": [
+        {
+          "kind": "contours",
+          "version": "2026-11-03",
+          "size_bytes": 11376564
+        },
+        {
+          "kind": "elevation",
+          "version": "2026-11-03",
+          "size_bytes": 2272001
+        },
+        {
+          "kind": "map",
+          "version": "2026-11-03",
+          "size_bytes": 29163548
+        },
+        {
+          "kind": "routing",
+          "version": "2026-11-03",
+          "size_bytes": 38737920
+        },
+        {
+          "kind": "search",
+          "version": "2026-11-03",
+          "size_bytes": 4729869
+        }
+      ]
+    }
+  ]
+}

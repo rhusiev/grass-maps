@@ -92,6 +92,13 @@ interface PluginServices {
     val routingEngines: RoutingEngineAccess get() = NoRoutingEngines
 
     /**
+     * The region catalogue, packages and transfers behind
+     * `plugins/downloads-ui` (T-0504). Inert until `app` wires the region
+     * store, so a build without it shows the empty screen instead of failing.
+     */
+    val regionDownloads: RegionDownloadsAccess get() = NoRegionDownloadsAccess
+
+    /**
      * The planner's reuse history behind `planner` (T-0304).
      * Inert until `app` wires the persisted store, so a build without history
      * still plans.

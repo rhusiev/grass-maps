@@ -21,6 +21,21 @@ data class RegionRequest(
     val token: BearerToken?,
 )
 
+/** The stage one download has reached; the screen names it and the store records it. */
+enum class DownloadStage {
+    /** The archive body is arriving. */
+    ARCHIVE,
+
+    /** The archive arrived and its files are being checked and installed. */
+    VERIFY,
+}
+
+/** How far one download has got. [bytesDone] counts archive bytes only. */
+data class DownloadProgress(
+    val bytesDone: Long,
+    val stage: DownloadStage,
+)
+
 /**
  * The regions download pipeline: gate the request, download the zip, extract to
  * a staging directory under `.incoming`, verify the manifest and every declared
@@ -43,12 +58,13 @@ class RegionDownloader(
         policy: DownloadPolicy,
         access: NetworkAccess,
         cancellation: CancellationHandle = CancellationHandle.None,
+        onProgress: (DownloadProgress) -> Unit = {},
     ): Outcome<InstalledRegion> {
         validate(request)?.let { return it }
         return installMutex.withLock {
             access.request(policy.switch) {
                 try {
-                    perform(request, policy, cancellation)
+                    perform(request, policy, cancellation, onProgress)
                 } catch (exception: CancellationException) {
                     throw exception
                 } catch (exception: Exception) {
@@ -75,6 +91,7 @@ class RegionDownloader(
         request: RegionRequest,
         policy: DownloadPolicy,
         cancellation: CancellationHandle,
+        onProgress: (DownloadProgress) -> Unit,
     ): Outcome<InstalledRegion> {
         val nonce = UUID.randomUUID().toString()
         val work = paths.newWorkDirectory(request.region, request.version)
@@ -82,7 +99,7 @@ class RegionDownloader(
             return Outcome.Failure(AppError.Internal(INTERNAL_ID))
         }
         try {
-            return downloadInto(request, policy, cancellation, work, nonce)
+            return downloadInto(request, policy, cancellation, work, nonce, onProgress)
         } finally {
             work.deleteRecursively()
         }
@@ -94,13 +111,15 @@ class RegionDownloader(
         cancellation: CancellationHandle,
         work: File,
         nonce: String,
+        onProgress: (DownloadProgress) -> Unit,
     ): Outcome<InstalledRegion> {
         logStart(request)
         val archive = File(work, PACKAGE_FILE)
-        when (val downloaded = downloadArchive(request, policy, cancellation, archive)) {
+        when (val downloaded = downloadArchive(request, policy, cancellation, archive, onProgress)) {
             is Outcome.Failure -> return downloaded
             is Outcome.Success -> Unit
         }
+        onProgress(DownloadProgress(bytesDone = archive.length(), stage = DownloadStage.VERIFY))
         val staging = File(work, STAGING_DIRECTORY)
         when (val extracted = extractor.extract(archive, staging, policy, cancellation)) {
             is Outcome.Failure -> return extracted
@@ -150,6 +169,7 @@ class RegionDownloader(
         policy: DownloadPolicy,
         cancellation: CancellationHandle,
         target: File,
+        onProgress: (DownloadProgress) -> Unit,
     ): Outcome<Unit> {
         val transfer =
             DownloadRequest(
@@ -159,6 +179,7 @@ class RegionDownloader(
             )
         return try {
             FileOutputStream(target).use { out ->
+                var written = 0L
                 val result =
                     transport.get(transfer) { buffer, length ->
                         if (cancellation.isCancelled()) {
@@ -169,6 +190,8 @@ class RegionDownloader(
                         } catch (exception: IOException) {
                             return@get Outcome.Failure(AppError.Internal(INTERNAL_ID))
                         }
+                        written += length
+                        onProgress(DownloadProgress(bytesDone = written, stage = DownloadStage.ARCHIVE))
                         Outcome.Success(Unit)
                     }
                 when (result) {

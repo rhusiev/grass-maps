@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.map
 
+import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -171,6 +172,7 @@ internal class MapHostState(
         layers.value =
             layers.value.filterNot { it.spec.id == spec.id } +
             OwnedLayer(owner = owner, slot = slot, spec = spec)
+        Log.i("GrassMapsMap", "probe: host addLayer ${spec.id} slot=$slot raster=${spec.raster?.tiles} total=${layers.value.size}")
         return Outcome.Success(Unit)
     }
 

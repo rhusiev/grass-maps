@@ -314,6 +314,7 @@ class RasterTileRequestHandler(http.server.BaseHTTPRequestHandler):
     """Serves one committed fixture tile per path."""
 
     def do_GET(self) -> None:
+        print(f"PROBE raster tile request {self.path}", file=sys.stderr, flush=True)
         name = raster_tile_name(self.path)
         if name is None:
             self.send_error(404, "no raster fixture tile at this path")

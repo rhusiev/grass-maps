@@ -647,6 +647,7 @@ private fun StyleLayerNode(
 
         LayerType.Raster -> {
             val raster = layer.raster ?: return
+            Log.i(TAG, "probe: compose raster ${layer.id} tiles=${raster.tiles}")
             val tileSource =
                 rememberRasterTileSource(
                     tiles = raster.tiles,
@@ -656,6 +657,7 @@ private fun StyleLayerNode(
                     maxZoom = raster.maxZoom
                     attributionHtml = raster.attributionHtml
                 }
+            Log.i(TAG, "probe: raster instance ${System.identityHashCode(tileSource)} for ${layer.id} tiles=${layer.raster?.tiles}")
             RasterLayer(
                 id = layer.id,
                 source = tileSource,

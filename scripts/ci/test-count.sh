@@ -76,8 +76,13 @@ report_files() {
 }
 
 # Every directory holding JVM test sources, buildSrc excluded.
+#
+# Any `build` directory is pruned, not only the root one: Spotless copies
+# sources into `<module>/build/spotless-clean` before it checks them, and that
+# copy holds the module's test sources. Without the prune, a module whose
+# format check actually ran reads as a second module that ran no tests.
 module_dirs() {
-    find "$ROOT" -path "$ROOT/build" -prune -o \
+    find "$ROOT" -type d -name build -prune -o \
         -type d -path '*/src/test' -print | sort
 }
 

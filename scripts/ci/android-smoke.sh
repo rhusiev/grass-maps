@@ -13,6 +13,12 @@
 # writes it. A style the host rejects is caught separately, because it is logged
 # as a warning and leaves the map empty.
 #
+# The crash and StrictMode checks keep the log sample they always had: one read
+# 8 s after the launch. A violation logged after that read is not in it. Reading
+# later widens the window into the region load and catches an emulator's cold
+# page-cache reads on the UI thread: the run that tried it failed on two
+# DiskReadViolations of about 9 s.
+#
 # The debug build installs the StrictMode policy through DebugApplication.
 # The `GrassMapsStrictMode` marker is required, so a build without the policy
 # cannot pass this check by logging nothing.
@@ -38,7 +44,9 @@ LOGCAT_CLEAR_RETRY_SECONDS="${SMOKE_LOGCAT_CLEAR_RETRY_SECONDS:-2}"
 # wait_for_map_ready SECONDS
 #
 # Polls the app's own readiness line. The deadline is the bound on a slow first
-# frame; the line arrives well before it on a healthy device.
+# frame; the line arrives well before it on a healthy device. A style the host
+# rejected leaves the map empty and still writes the readiness line, so the
+# rejection is a failure here, from the same stream.
 wait_for_map_ready() {
     local seconds="$1"
     local deadline=$((SECONDS + seconds))
@@ -48,6 +56,12 @@ wait_for_map_ready() {
         if grep -q 'map-ready' <<<"$log"; then
             echo "OK: the map reported ready"
             grep 'map-ready' <<<"$log" | tail -n 1
+            if grep -q 'style rejected\|style layers rejected' <<<"$log"; then
+                echo "FAIL: the map host rejected the style or the layer diff:" >&2
+                grep 'style rejected\|style layers rejected' <<<"$log" >&2
+                echo "The map-ready line is written in that case too, so it is checked here." >&2
+                return 1
+            fi
             return 0
         fi
         if ((SECONDS >= deadline)); then
@@ -127,8 +141,10 @@ if [[ -z "$pid" ]]; then
 fi
 echo "OK: $PKG is running with pid $pid"
 
-wait_for_map_ready "$MAP_READY_SECONDS"
-
+# The crash and StrictMode checks read the log at this point, 8 s after the
+# launch, exactly as they did before the map assertion. Reading it later would
+# widen the window and turn an emulator's slow cold read on the UI thread into
+# an intermittent failure of this job.
 log="$(timeout 60 adb logcat -d --pid="$pid")"
 
 if ! grep -q 'GrassMapsStrictMode.*StrictMode thread policy enabled' <<<"$log"; then
@@ -143,13 +159,6 @@ if grep -q 'FATAL EXCEPTION' <<<"$log"; then
     exit 1
 fi
 
-if grep -q 'style rejected\|style layers rejected' <<<"$log"; then
-    echo "FAIL: the map host rejected the style or the layer diff:" >&2
-    grep 'style rejected\|style layers rejected' <<<"$log" >&2
-    echo "The map-ready line is still written in that case, so it is checked here." >&2
-    exit 1
-fi
-
 violations="$(grep -c 'StrictMode policy violation' <<<"$log" || true)"
 if [[ "$violations" != "0" ]]; then
     echo "FAIL: $violations StrictMode policy violation(s) on the UI thread:" >&2
@@ -158,3 +167,5 @@ if [[ "$violations" != "0" ]]; then
 fi
 
 echo "OK: no StrictMode policy violations logged"
+
+wait_for_map_ready "$MAP_READY_SECONDS"

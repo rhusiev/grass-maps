@@ -1128,7 +1128,9 @@ One test-only edge is declared separately in `moduleTestDependencyAllowlist`:
 follower's acceptance test feeds the real engine's route through the Ferrostar
 mapper. `plugins/guidance-ui`'s tests depend on `navigation` (T-0310), because
 the panel's acceptance feeds the real session's published state into the panel.
-Both reach no runtime classpath.
+`plugins/downloads-ui`'s tests depend on `regions` (T-0504), because the screen
+tests read the catalogue the pipeline wrote through the real parser. None of
+them reaches a runtime classpath.
 
 ## Plugin manifests
 

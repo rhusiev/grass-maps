@@ -65,7 +65,7 @@ internal class RecordingContext(
 
 internal class FakeServices(
     override val regionDownloads: RegionDownloadsAccess,
-    fixes: Flow<LocationFix?> = emptyFlow(),
+    fixesFlow: Flow<LocationFix?> = emptyFlow(),
 ) : PluginServices {
     override val streams: StreamAccess =
         object : StreamAccess {
@@ -74,7 +74,7 @@ internal class FakeServices(
 
     override val location: LocationService =
         object : LocationService {
-            override val fixes: Flow<LocationFix?> = fixes
+            override val fixes: Flow<LocationFix?> = fixesFlow
 
             override fun hasPermission(): Boolean = false
         }

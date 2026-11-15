@@ -25,6 +25,7 @@
     <string name="downloads_download">Download %1$s</string>
     <string name="downloads_download_short">Download</string>
     <string name="downloads_cancel">Cancel</string>
+    <string name="downloads_close">Close</string>
     <string name="downloads_remove_region">Remove region</string>
     <string name="downloads_up_to_date">Up to date</string>
     <string name="downloads_downloading">Downloading %1$d%%</string>

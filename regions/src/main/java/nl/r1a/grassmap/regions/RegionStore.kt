@@ -25,6 +25,7 @@ import nl.r1a.grassmap.plugin.api.model.DownloadsData
 import nl.r1a.grassmap.plugin.api.model.DownloadsDefaults
 import nl.r1a.grassmap.plugin.api.model.InstalledPack
 import nl.r1a.grassmap.plugin.api.model.RegionProblem
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -64,14 +65,18 @@ class RegionStore(
     private val queue = Channel<String>(Channel.UNLIMITED)
     private val worker = scope.launch(Dispatchers.IO) { drain() }
 
+    // The worker reads these while a caller may be replacing them.
+    @Volatile
     private var serverUrl: String = DownloadsDefaults.SERVER_URL
+
+    @Volatile
     private var token: BearerToken? = null
 
     /** The stop flag of the transfer that is running, if any. */
-    private val activeFlags = mutableMapOf<String, AtomicBoolean>()
+    private val activeFlags = ConcurrentHashMap<String, AtomicBoolean>()
 
     /** Completed when a region's transfer has stopped and its work directory is gone. */
-    private val finishing = mutableMapOf<String, CompletableDeferred<Unit>>()
+    private val finishing = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
 
     override suspend fun setServer(
         url: String,
@@ -146,14 +151,21 @@ class RegionStore(
                 state = DownloadTransferState.WAITING,
                 bytesTotal = entry.bytes,
             )
+        // The deferred exists before the worker can see the region, so a fast
+        // transfer cannot finish before its cancellation handle is registered.
+        finishing[region] = CompletableDeferred()
         mutable.update { state ->
             state.copy(
                 transfers = state.transfers + queued,
                 problems = state.problems.filterNot { it.region == region },
             )
         }
-        finishing[region] = CompletableDeferred()
-        queue.trySend(region)
+        val enqueued = queue.trySend(region)
+        if (enqueued.isFailure) {
+            mutable.update { state -> state.copy(transfers = state.transfers.filterNot { it.region == region }) }
+            finishing.remove(region)
+            return Outcome.Failure(AppError.Internal(QUEUE_ID))
+        }
         return Outcome.Success(Unit)
     }
 
@@ -371,6 +383,7 @@ class RegionStore(
 
     private companion object {
         const val REMOVE_ID = "region.store.remove"
+        const val QUEUE_ID = "region.store.queue"
         const val HTTP_UNAUTHORIZED = 401
     }
 }

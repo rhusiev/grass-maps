@@ -123,7 +123,7 @@ class RegionCatalogParserTest {
 
     @Test
     fun anUnknownRegionKindIsNotTreatedAsAnOblast() {
-        val bytes = CatalogFixture.withRegion(CatalogFixture.VINNYTSIA) { it.withField("kind", "continent") }
+        val bytes = CatalogFixture.withRegion(CatalogFixture.VINNYTSIA) { it.withField("kind", JsonPrimitive("continent")) }
 
         val catalog = parse(bytes)
         assertEquals(CatalogRegionKind.OTHER, catalog.regions.first().kind)
@@ -181,7 +181,7 @@ class RegionCatalogParserTest {
 
     @Test
     fun anOutlineThatEscapesTheServerIsCorrupt() {
-        val bytes = CatalogFixture.withRegion(CatalogFixture.VINNYTSIA) { it.withField("outline", "../ua-05.geojson") }
+        val bytes = CatalogFixture.withRegion(CatalogFixture.VINNYTSIA) { it.withField("outline", JsonPrimitive("../ua-05.geojson")) }
 
         assertEquals(Outcome.Failure(AppError.CorruptData), RegionCatalogParser.parse(bytes))
     }

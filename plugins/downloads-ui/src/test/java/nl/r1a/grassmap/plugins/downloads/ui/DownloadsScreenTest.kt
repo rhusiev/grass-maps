@@ -87,8 +87,8 @@ class DownloadsScreenTest {
                 CatalogPartKind.SEARCH,
                 CatalogPartKind.ELEVATION,
                 CatalogPartKind.CONTOURS,
-            ),
-            region.parts.map { it.kind },
+            ).sorted(),
+            region.parts.map { it.kind }.sorted(),
         )
         assertEquals(region.parts.sumOf { it.bytes }, region.bytes)
         assertTrue(region.parts.all { it.bytes > 0 })

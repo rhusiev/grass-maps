@@ -25,6 +25,7 @@
     <string name="downloads_download">Завантажити %1$s</string>
     <string name="downloads_download_short">Завантажити</string>
     <string name="downloads_cancel">Скасувати</string>
+    <string name="downloads_close">Закрити</string>
     <string name="downloads_remove_region">Видалити регіон</string>
     <string name="downloads_up_to_date">Актуально</string>
     <string name="downloads_downloading">Завантаження %1$d%%</string>

@@ -326,7 +326,7 @@ private fun RegionSheet(
                     style = TextStyle(color = MUTED, fontSize = BODY_FONT_SP.sp),
                 )
             }
-            ActionButton(text = stringResource(R.string.downloads_cancel), onClick = onClose, quiet = true)
+            ActionButton(text = stringResource(R.string.downloads_close), onClick = onClose, quiet = true)
         }
         Spacer(modifier = Modifier.height(GAP_DP.dp))
         SectionLabel(stringResource(R.string.downloads_parts_title))
@@ -335,7 +335,7 @@ private fun RegionSheet(
         }
         Spacer(modifier = Modifier.height(GAP_DP.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(GAP_DP.dp)) {
-            if (row.isInstalled) {
+            if (row.isInstalled && row.transfer == null) {
                 ActionButton(
                     text = stringResource(R.string.downloads_remove_region),
                     onClick = { onRemove(row.region) },
@@ -495,7 +495,8 @@ private fun ActionButton(
         }
     val ink =
         when {
-            quiet || destructive -> INK
+            destructive -> DANGER
+            quiet -> INK
             else -> Color.White
         }
     Box(
@@ -583,17 +584,14 @@ private fun partLabel(kind: CatalogPartKind): String =
     }
 
 @Composable
-private fun problemText(problem: DownloadProblem): String =
-    when (problem.kind) {
-        DownloadProblemKind.TOKEN_REQUIRED -> stringResource(R.string.downloads_token_required)
-        DownloadProblemKind.TOKEN_REJECTED -> stringResource(R.string.downloads_token_rejected)
-        DownloadProblemKind.SWITCH_OFF -> stringResource(R.string.downloads_failed_switch_off)
-        DownloadProblemKind.NETWORK -> stringResource(R.string.downloads_failed_network)
-        DownloadProblemKind.SERVER -> stringResource(R.string.downloads_failed_server, problem.status.toString())
-        DownloadProblemKind.CORRUPT_DATA -> stringResource(R.string.downloads_failed_corrupt)
-        DownloadProblemKind.UNSUPPORTED -> stringResource(R.string.downloads_failed_unsupported)
-        DownloadProblemKind.STORAGE, DownloadProblemKind.OTHER -> stringResource(R.string.downloads_failed_other)
+private fun problemText(problem: DownloadProblem): String {
+    val key = DownloadsProblemText.key(problem.kind)
+    return if (problem.kind == DownloadProblemKind.SERVER) {
+        stringResource(key, problem.status.toString())
+    } else {
+        stringResource(key)
     }
+}
 
 @Composable
 private fun sizeAndDate(

@@ -244,6 +244,22 @@ class MapHostStateTest {
     }
 
     @Test
+    fun addLayerReplacesALayerWithTheSameIdWhereverItMoved() {
+        val session = session()
+
+        session.addLayer(LayerSlot.Base, backgroundSpec("same"), PluginId("example"))
+        session.addLayer(LayerSlot.Underlay, backgroundSpec("same"), PluginId("example"))
+
+        assertEquals(1, session.layers.value.size)
+        assertEquals(
+            LayerSlot.Underlay,
+            session.layers.value
+                .single()
+                .slot,
+        )
+    }
+
+    @Test
     fun addLayerRejectsAnUnsupportedProperty() {
         val session = session()
 

@@ -418,7 +418,7 @@ private fun MapContent(
     val contoursEnabled by container.contoursSettings.enabled.collectAsState()
     val switchStates by container.privacyStates.collectAsState(initial = container.privacySwitchStates())
     val onlineTilesEnabled = switchStates.firstOrNull { it.switch == NetworkSwitches.onlineTiles }?.enabled == true
-    val rasterSource by container.rasterSettings.active.collectAsState()
+    val rasterLayer by container.rasterSettings.active.collectAsState()
     val planFlow =
         remember(container) {
             container.streamAccess.subscribe<RoutePlanState>(RoutePlannerContract.stateStream)
@@ -805,11 +805,31 @@ private fun MapContent(
                 )
                 RasterLayerPanel(
                     enabled = onlineTilesEnabled,
-                    source = rasterSource,
+                    source = rasterLayer.source,
+                    placement = rasterLayer.placement,
+                    percent = rasterLayer.transparencyPercent,
                     onEnabledChange = { enabled ->
                         scope.launch {
                             container.setOnlineTilesEnabled(enabled).onFailure { error ->
                                 Log.w(TAG, "online tiles switch failed: $error")
+                            }
+                        }
+                    },
+                    onPlacementChange = { placement ->
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                container.setRasterPlacement(placement)
+                            }.onFailure { error ->
+                                Log.w(TAG, "online tiles placement not saved: $error")
+                            }
+                        }
+                    },
+                    onTransparencyChange = { percent, store ->
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                container.setRasterTransparency(percent, store)
+                            }.onFailure { error ->
+                                Log.w(TAG, "online tiles transparency not saved: $error")
                             }
                         }
                     },
@@ -1731,20 +1751,21 @@ private fun MapContent(
             is Outcome.Failure -> Log.w(TAG, "contour layers not applied: ${contours.error}")
         }
     }
-    LaunchedEffect(surface.host, bundle.style.id, onlineTilesEnabled, rasterSource) {
+    LaunchedEffect(surface.host, bundle.style.id, onlineTilesEnabled, rasterLayer) {
         when (
             val installed =
                 container.rasterTiles.apply(
                     host = surface.host,
                     styleId = bundle.style.id,
                     enabled = onlineTilesEnabled,
-                    source = rasterSource,
+                    layer = rasterLayer,
                 )
         ) {
             is Outcome.Success -> {
                 Log.i(
                     TAG,
-                    "online tiles ready enabled=$onlineTilesEnabled source=${rasterSource.displayName}",
+                    "online tiles ready enabled=$onlineTilesEnabled source=${rasterLayer.source.displayName} " +
+                        "placement=${rasterLayer.placement} percent=${rasterLayer.transparencyPercent}",
                 )
             }
 

@@ -661,6 +661,7 @@ private fun StyleLayerNode(
                 source = tileSource,
                 minZoom = layer.minZoom,
                 maxZoom = layer.maxZoom,
+                opacity = layer.expression<FloatValue>("raster-opacity") ?: const(1f),
             )
         }
 

@@ -7,6 +7,9 @@
     <string name="map_raster_on">Увімкнено</string>
     <string name="map_raster_off">Вимкнено</string>
     <string name="map_raster_sends">Сервер тайлів бачить, яку ділянку ви переглядаєте.</string>
+    <string name="map_raster_underlay">Підкладка</string>
+    <string name="map_raster_overlay">Накладка</string>
+    <string name="map_raster_transparency">Прозорість</string>
     <string name="map_raster_attribution">© OpenStreetMap contributors</string>
     <string name="map_raster_custom_hint">Шаблон URL тайлів</string>
     <string name="map_raster_custom_use">Використати</string>

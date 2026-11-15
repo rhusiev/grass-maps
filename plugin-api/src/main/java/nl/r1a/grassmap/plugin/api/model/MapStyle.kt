@@ -79,8 +79,14 @@ enum class LayerType {
 /**
  * Fixed z-order groups. Layers draw in this order, and in declaration order
  * inside a group.
+ *
+ * [Underlay] is the one group below the base map, so a raster layer there shows
+ * through the base fills (T-0514). A raster overlay sits in [Terrain], which is
+ * above the base fills and below the contour, track, route, marker and label
+ * groups, so the map's own detail still draws on top of it.
  */
 enum class LayerSlot {
+    Underlay,
     Base,
     Terrain,
     Overlays,
@@ -99,6 +105,9 @@ enum class LayerSlot {
  * credit the map's attribution overlay shows; it is required for a source
  * whose licence asks for one. The engine fetches these URLs only through the
  * host's network gate (map module), not around it.
+ *
+ * The source carries no transparency: a layer sets the `raster-opacity` paint
+ * property instead, which is the style property the renderer applies (T-0514).
  */
 data class RasterSourceSpec(
     val tiles: List<String>,

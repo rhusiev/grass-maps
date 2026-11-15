@@ -1,8 +1,10 @@
 package nl.r1a.grassmap.plugins.raster
 
+import kotlinx.serialization.json.JsonPrimitive
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerType
+import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.StyleId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -10,13 +12,17 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The raster layer and the provider that shows or removes it. */
+/** The `raster-opacity` value a layer carries, exactly as the style writes it. */
+private fun rasterOpacity(layer: SlottedLayer): String =
+    (layer.spec.paint[RasterTransparency.RASTER_OPACITY_PROPERTY] as? JsonPrimitive)?.content
+        ?: throw AssertionError("no raster-opacity on ${layer.spec.id}")
+
+/** The raster layer, its placement and transparency, and the provider that shows it. */
 class RasterLayerTest {
     @Test
     fun theOsmLayerCarriesItsTileTemplateAndAttribution() {
         val layer = RasterLayers.layer(RasterPresets.openStreetMap)
 
-        assertEquals(LayerSlot.Base, layer.slot)
         assertEquals(RasterLayers.LAYER_ID, layer.spec.id)
         assertEquals(LayerType.Raster, layer.spec.type)
         val raster = layer.spec.raster ?: throw AssertionError("no raster source")
@@ -28,6 +34,36 @@ class RasterLayerTest {
         assertEquals(19, raster.maxZoom)
         assertEquals(256, raster.tileSize)
         assertTrue(raster.attributionHtml.orEmpty(), raster.attributionHtml.orEmpty().contains("OpenStreetMap"))
+    }
+
+    @Test
+    fun anOverlayDrawsAboveTheBaseMapAndAnUnderlayBelowIt() {
+        val overlay = RasterLayers.layer(RasterPresets.openStreetMap, RasterPlacement.Overlay)
+        val underlay = RasterLayers.layer(RasterPresets.openStreetMap, RasterPlacement.Underlay)
+
+        assertEquals(LayerSlot.Terrain, overlay.slot)
+        assertEquals(LayerSlot.Underlay, underlay.slot)
+    }
+
+    @Test
+    fun fortyPercentIsTheRasterOpacityStyleProperty() {
+        val layer =
+            RasterLayers.layer(
+                source = RasterPresets.openStreetMap,
+                placement = RasterPlacement.Overlay,
+                opacity = RasterTransparency.opacityOf(40),
+            )
+
+        assertEquals("0.4", rasterOpacity(layer))
+    }
+
+    @Test
+    fun anOpacityOutsideTheRangeIsClampedToTheStyleProperty() {
+        val above = RasterLayers.layer(RasterPresets.openStreetMap, opacity = 1.5f)
+        val below = RasterLayers.layer(RasterPresets.openStreetMap, opacity = -0.2f)
+
+        assertEquals("1.0", rasterOpacity(above))
+        assertEquals("0.0", rasterOpacity(below))
     }
 
     @Test
@@ -61,5 +97,23 @@ class RasterLayerTest {
         provider.show(null)
         assertTrue(provider.layers(style).isEmpty())
         assertFalse(provider.allows("https://tile.openstreetmap.org/5/10/20.png"))
+    }
+
+    @Test
+    fun theProviderCarriesThePlacementAndTransparencyOntoTheLayer() {
+        val provider = RasterLayerProvider()
+        provider.show(
+            source = RasterPresets.openStreetMap,
+            placement = RasterPlacement.Underlay,
+            opacity = RasterTransparency.opacityOf(40),
+        )
+
+        val layer = provider.layers(StyleId("standard")).single()
+
+        assertEquals(LayerSlot.Underlay, layer.slot)
+        assertEquals("0.4", rasterOpacity(layer))
+        // The gate answers for the shown source whatever its slot: an underlay
+        // is still an online source, not an offline one.
+        assertTrue(provider.allows("https://tile.openstreetmap.org/5/10/20.png"))
     }
 }

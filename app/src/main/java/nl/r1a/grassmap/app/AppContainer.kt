@@ -92,6 +92,7 @@ import nl.r1a.grassmap.plugins.point.info.PointInfo
 import nl.r1a.grassmap.plugins.point.info.SelectedPointStore
 import nl.r1a.grassmap.plugins.proximity.alerts.ProximityAlertHost
 import nl.r1a.grassmap.plugins.proximity.alerts.ProximityAlertSink
+import nl.r1a.grassmap.plugins.raster.RasterPlacement
 import nl.r1a.grassmap.plugins.raster.RasterSource
 import nl.r1a.grassmap.plugins.route.layer.RouteLayer
 import nl.r1a.grassmap.plugins.route.warnings.RouteWarningScanner
@@ -245,11 +246,12 @@ class AppContainer(
     }
 
     /**
-     * The online tile source (T-0512). Construction reads the settings file,
-     * so the map screen resolves it off Main.
+     * The online raster layer (T-0512): its source, placement and transparency
+     * (T-0514). Construction reads the settings file, so the map screen
+     * resolves it off Main.
      */
-    val rasterSettings: RasterSourceSettings by lazy {
-        RasterSourceSettings(rasterSettingsFileProvider())
+    val rasterSettings: RasterLayerSettings by lazy {
+        RasterLayerSettings(rasterSettingsFileProvider())
     }
 
     /**
@@ -664,11 +666,27 @@ class AppContainer(
 
     /**
      * Validates and probes a user URL template through the gate, then makes it
-     * the active source. The map screen observes [RasterSourceSettings.active]
+     * the active source. The map screen observes [RasterLayerSettings.active]
      * and swaps the layer. A failed probe keeps the previous source.
      */
     suspend fun useCustomRasterSource(template: String): Outcome<RasterSource> =
         rasterSettings.useCustom(template) { source -> rasterTiles.probe(source) }
+
+    /**
+     * Moves the online raster layer under the base map or over it, and stores
+     * the choice. The map screen observes [RasterLayerSettings.active] and
+     * moves the same layer, so no tile is fetched again.
+     */
+    fun setRasterPlacement(placement: RasterPlacement): Outcome<Unit> = rasterSettings.setPlacement(placement)
+
+    /**
+     * Sets the layer's transparency in whole percent. [store] writes it to the
+     * settings file, which a drag does once rather than on every step.
+     */
+    fun setRasterTransparency(
+        percent: Int,
+        store: Boolean,
+    ): Outcome<Unit> = rasterSettings.setTransparencyPercent(percent, store)
 
     /**
      * The one query path (T-0203, T-0212): offline rows first, then the opt-in

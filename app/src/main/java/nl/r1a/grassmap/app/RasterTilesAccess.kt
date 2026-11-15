@@ -15,6 +15,7 @@ import nl.r1a.grassmap.plugin.api.service.NetworkSwitches
 import nl.r1a.grassmap.plugins.raster.RasterLayerProvider
 import nl.r1a.grassmap.plugins.raster.RasterSource
 import nl.r1a.grassmap.plugins.raster.RasterTileClient
+import nl.r1a.grassmap.plugins.raster.RasterTransparency
 
 internal val RASTER_PLUGIN: PluginId = PluginId("map.raster")
 
@@ -60,24 +61,25 @@ class RasterTilesAccess(
         }
 
     /**
-     * Removes the previous raster layer and adds [source]'s layer when
-     * [enabled]. Disabling clears the provider before the layer goes away, so a
-     * tile already queued in the engine is blocked at the interceptor.
+     * Shows [layer]'s source over the style when [enabled]. Disabling clears
+     * the provider before the layer goes away, so a tile already queued in the
+     * engine is blocked at the interceptor.
+     *
+     * An enabled call adds the layer without removing the previous one first:
+     * the layer keeps its id, so the host replaces it in place. A slider drag
+     * therefore changes one style property and keeps the engine's tiles, while
+     * a placement change moves the same layer to another slot.
      */
     suspend fun apply(
         host: MapHost,
         styleId: StyleId,
         enabled: Boolean,
-        source: RasterSource,
+        layer: RasterLayerState,
     ): Outcome<Unit> {
         if (!enabled) {
             provider?.show(null)
             provider = null
             return host.removeLayers(pluginId)
-        }
-        val removed = host.removeLayers(pluginId)
-        if (removed is Outcome.Failure) {
-            return removed
         }
         return when (val resolved = resolveProvider()) {
             is Outcome.Failure -> {
@@ -86,7 +88,11 @@ class RasterTilesAccess(
 
             is Outcome.Success -> {
                 val raster = resolved.value
-                raster.show(source)
+                raster.show(
+                    source = layer.source,
+                    placement = layer.placement,
+                    opacity = RasterTransparency.opacityOf(layer.transparencyPercent),
+                )
                 provider = raster
                 install(host, raster, styleId)
             }

@@ -9,39 +9,42 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugins.raster.RasterPlacement
 import nl.r1a.grassmap.plugins.raster.RasterPresets
 import nl.r1a.grassmap.plugins.raster.RasterSource
 import nl.r1a.grassmap.plugins.raster.RasterSources
+import nl.r1a.grassmap.plugins.raster.RasterTransparency
 import java.io.File
 import java.io.IOException
 
 /**
- * The active online tile source (T-0512). It lives in the host, not in the
+ * The online raster layer itself (T-0512): the active tile source, where it
+ * draws and how transparent it is (T-0514). It lives in the host, not in the
  * plugin, because the choice outlives a plugin activation; the contents of
  * `settings/raster.json` are the persisted state.
  *
  * Construction reads the file, so resolve it off Main. A missing, unreadable or
- * corrupt file reads as the OSM preset, which is also the only preset.
+ * corrupt file reads as the OSM preset over the base map at full opacity, which
+ * is also the only preset. A file from before T-0514 lacks the placement and
+ * transparency keys and reads with their defaults.
  */
-class RasterSourceSettings(
+class RasterLayerSettings(
     private val file: File? = null,
     default: RasterSource = RasterPresets.openStreetMap,
 ) {
-    private val state = MutableStateFlow(load(file) ?: default)
+    private val state = MutableStateFlow(load(file) ?: initial(default))
 
-    /** The source the map should draw, observed by the map screen. */
-    val active: StateFlow<RasterSource> = state.asStateFlow()
+    /** The layer the map screen draws, observed as one value so a redraw never mixes two settings. */
+    val active: StateFlow<RasterLayerState> = state.asStateFlow()
 
-    fun current(): RasterSource = state.value
+    fun current(): RasterLayerState = state.value
 
     /** Switches back to the OSM preset and stores it. */
-    fun useOpenStreetMap(): Outcome<Unit> {
-        state.value = RasterPresets.openStreetMap
-        return persist(RasterPresets.openStreetMap)
-    }
+    fun useOpenStreetMap(): Outcome<Unit> = update { it.copy(source = RasterPresets.openStreetMap) }
 
     /**
      * Validates [template], asks [probe] to fetch one tile through the network
@@ -61,17 +64,40 @@ class RasterSourceSettings(
             is Outcome.Failure -> return reachable
             is Outcome.Success -> Unit
         }
-        state.value = source
-        return when (val saved = persist(source)) {
+        return when (val saved = update { it.copy(source = source) }) {
             is Outcome.Failure -> saved
             is Outcome.Success -> Outcome.Success(source)
         }
     }
 
-    private fun persist(source: RasterSource): Outcome<Unit> {
+    fun setPlacement(placement: RasterPlacement): Outcome<Unit> = update { it.copy(placement = placement) }
+
+    /**
+     * Sets the transparency. [store] writes the settings file: a drag updates
+     * the map on every step and stores the value the finger leaves, so a drag
+     * is one write and not one per frame.
+     */
+    fun setTransparencyPercent(
+        percent: Int,
+        store: Boolean = true,
+    ): Outcome<Unit> =
+        update(store) {
+            it.copy(transparencyPercent = percent.coerceIn(RasterTransparency.MIN_PERCENT, RasterTransparency.MAX_PERCENT))
+        }
+
+    private fun update(
+        store: Boolean = true,
+        next: (RasterLayerState) -> RasterLayerState,
+    ): Outcome<Unit> {
+        val updated = next(state.value)
+        state.value = updated
+        return if (store) persist(updated) else Outcome.Success(Unit)
+    }
+
+    private fun persist(layer: RasterLayerState): Outcome<Unit> {
         val target = file ?: return Outcome.Success(Unit)
         return try {
-            writeAtomically(target, encode(source))
+            writeAtomically(target, encode(layer))
             Outcome.Success(Unit)
         } catch (exception: IOException) {
             Outcome.Failure(AppError.Internal(ERROR_ID, exception.message))
@@ -93,13 +119,15 @@ class RasterSourceSettings(
         }
     }
 
-    private fun encode(source: RasterSource): String =
+    private fun encode(layer: RasterLayerState): String =
         buildJsonObject {
-            put(SOURCE_KEY, source.id)
-            if (!source.isOpenStreetMap()) {
-                put(TEMPLATE_KEY, source.tileUrlTemplate)
-                put(ATTRIBUTION_KEY, source.attributionHtml)
+            put(SOURCE_KEY, layer.source.id)
+            if (!layer.source.isOpenStreetMap()) {
+                put(TEMPLATE_KEY, layer.source.tileUrlTemplate)
+                put(ATTRIBUTION_KEY, layer.source.attributionHtml)
             }
+            put(PLACEMENT_KEY, layer.placement.name.lowercase())
+            put(TRANSPARENCY_KEY, layer.transparencyPercent)
         }.toString()
 
     private companion object {
@@ -107,8 +135,18 @@ class RasterSourceSettings(
         const val SOURCE_KEY = "source"
         const val TEMPLATE_KEY = "template"
         const val ATTRIBUTION_KEY = "attribution"
+        const val PLACEMENT_KEY = "placement"
+        const val TRANSPARENCY_KEY = "transparency"
+        const val DEFAULT_TRANSPARENCY_PERCENT = RasterTransparency.MAX_PERCENT
 
-        fun load(file: File?): RasterSource? {
+        fun initial(source: RasterSource): RasterLayerState =
+            RasterLayerState(
+                source = source,
+                placement = RasterPlacement.Overlay,
+                transparencyPercent = DEFAULT_TRANSPARENCY_PERCENT,
+            )
+
+        fun load(file: File?): RasterLayerState? {
             if (file == null || !file.isFile) {
                 return null
             }
@@ -122,6 +160,18 @@ class RasterSourceSettings(
                 } catch (exception: SecurityException) {
                     null
                 } ?: return null
+            val source = loadSource(root) ?: return null
+            return initial(source).copy(
+                placement = placementOf((root[PLACEMENT_KEY] as? JsonPrimitive)?.contentOrNull),
+                transparencyPercent =
+                    (root[TRANSPARENCY_KEY] as? JsonPrimitive)
+                        ?.intOrNull
+                        ?.coerceIn(RasterTransparency.MIN_PERCENT, RasterTransparency.MAX_PERCENT)
+                        ?: DEFAULT_TRANSPARENCY_PERCENT,
+            )
+        }
+
+        fun loadSource(root: JsonObject): RasterSource? {
             val id = (root[SOURCE_KEY] as? JsonPrimitive)?.contentOrNull
             if (id == RasterPresets.OPEN_STREET_MAP_ID) {
                 return RasterPresets.openStreetMap
@@ -136,5 +186,17 @@ class RasterSourceSettings(
                 is Outcome.Failure -> null
             }
         }
+
+        fun placementOf(text: String?): RasterPlacement =
+            RasterPlacement.entries.firstOrNull { it.name.equals(text, ignoreCase = true) }
+                ?: RasterPlacement.Overlay
     }
 }
+
+/** One raster layer: the source it draws, where, and how transparent it is. */
+data class RasterLayerState(
+    val source: RasterSource,
+    val placement: RasterPlacement,
+    /** The transparency the control shows, as whole percent of `raster-opacity`. */
+    val transparencyPercent: Int,
+)

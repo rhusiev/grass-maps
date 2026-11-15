@@ -41,6 +41,8 @@ internal object StyleLayerCompiler {
             "circle-stroke-width",
         )
 
+    private val RASTER_PROPERTIES = setOf("raster-opacity")
+
     private val SYMBOL_PROPERTIES =
         setOf(
             "icon-allow-overlap",
@@ -84,6 +86,7 @@ internal object StyleLayerCompiler {
             LayerType.Line -> LINE_PROPERTIES
             LayerType.Circle -> CIRCLE_PROPERTIES
             LayerType.Symbol -> SYMBOL_PROPERTIES
+            LayerType.Raster -> RASTER_PROPERTIES
             else -> emptySet()
         }
 

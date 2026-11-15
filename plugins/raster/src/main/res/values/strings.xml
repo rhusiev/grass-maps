@@ -7,6 +7,9 @@
     <string name="map_raster_on">On</string>
     <string name="map_raster_off">Off</string>
     <string name="map_raster_sends">The tile server sees which area you look at.</string>
+    <string name="map_raster_underlay">Underlay</string>
+    <string name="map_raster_overlay">Overlay</string>
+    <string name="map_raster_transparency">Transparency</string>
     <string name="map_raster_attribution">© OpenStreetMap contributors</string>
     <string name="map_raster_custom_hint">Tile URL template</string>
     <string name="map_raster_custom_use">Use</string>

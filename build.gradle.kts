@@ -2,6 +2,7 @@ import buildlogic.CheckPrivacyDependenciesTask
 import buildlogic.CheckTranslationsTask
 import buildlogic.LintPluginManifestsTask
 import buildlogic.LintStyleRulesTask
+import buildlogic.ModuleBoundaryRules
 
 buildscript {
     repositories {
@@ -51,8 +52,54 @@ allprojects {
 // Feature modules never import :core or :core-services; the only
 // feature-to-feature edges are navigation -> routing, alerts -> navigation and
 // planner -> routing. Anything else is a build failure, not a convention.
+//
+// :app is the composition root and depends on everything it wires, so it is
+// checked too: its release allowlist is exactly the documented graph, which
+// makes a new edge there a deliberate edit rather than a silent one. Its
+// development plugins sit in the debug lane below, so a release configuration
+// cannot take one.
 val moduleDependencyAllowlist: Map<String, Set<String>> =
     mapOf(
+        // Composition root. `README.md` records that app depends on every
+        // module; the list is written out so an edge nobody documented fails.
+        ":app" to
+            setOf(
+                ":plugin-api",
+                ":plugin-ui-api",
+                ":core",
+                ":core-services",
+                ":map",
+                ":regions",
+                ":routing",
+                ":navigation",
+                ":alerts",
+                ":planner",
+                ":places",
+                ":tracks",
+                ":ui-shell",
+                ":plugins:style-standard",
+                ":plugins:gpx",
+                ":plugins:info-widgets",
+                ":plugins:map-controls",
+                ":plugins:point-info",
+                ":plugins:osm-places",
+                ":plugins:online-search",
+                ":plugins:favourites-ui",
+                ":plugins:guidance-ui",
+                ":plugins:links",
+                ":plugins:share",
+                ":plugins:coordinates",
+                ":plugins:valhalla",
+                ":plugins:direct-engine",
+                ":plugins:way-alerts",
+                ":plugins:proximity-alerts",
+                ":plugins:route-warnings",
+                ":plugins:track-layer",
+                ":plugins:route-layer",
+                ":plugins:track-library",
+                ":plugins:contours",
+                ":plugins:route-relations",
+            ),
         // testFixtures(project(":plugin-api")) is the module's own fixtures.
         ":plugin-api" to setOf(":plugin-api"),
         ":plugin-ui-api" to setOf(":plugin-api"),
@@ -102,11 +149,29 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         ":plugins:contours" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:route-relations" to setOf(":plugin-api"),
     )
+// Edges that ship in the debug APK and must never reach a release build
+// (architecture section 22). They are judged separately from the release
+// allowlist, so moving any of them onto `implementation` fails here as well as
+// in `checkReleaseApkPlugins`.
+val moduleDebugOnlyDependencyAllowlist: Map<String, Set<String>> =
+    mapOf(
+        ":app" to
+            setOf(
+                ":control",
+                ":devtools",
+                ":plugins:example",
+                ":plugins:synthetic-data",
+                ":plugins:dev-tools",
+                ":plugins:nav-simulator",
+            ),
+    )
 // Test-only edges are separate so a test fixture cannot quietly become a
 // production dependency. :control's info-widgets edge is the accepted T-0113
 // control-fixture exception.
 val moduleTestDependencyAllowlist: Map<String, Set<String>> =
     mapOf(
+        // testFixtures(project(":plugin-api")) from app's own tests.
+        ":app" to setOf(":plugin-api"),
         ":plugin-api" to setOf(":plugin-api"),
         ":regions" to setOf(":plugin-api"),
         ":control" to setOf(":plugins:info-widgets"),
@@ -137,14 +202,17 @@ val moduleTestDependencyAllowlist: Map<String, Set<String>> =
         ":plugins:route-relations" to setOf(":plugin-api"),
     )
 val moduleBoundaryViolations = objects.listProperty(String::class.java)
+val moduleBoundaryEdges = objects.property(Int::class.java).convention(0)
 
 tasks.register("checkPluginBoundaries") {
     group = "verification"
     description = "Fails when a module depends on a project outside its documented allowlist."
     inputs.property("violations", moduleBoundaryViolations)
+    inputs.property("edges", moduleBoundaryEdges)
 
     doLast {
         val violations = (inputs.properties["violations"] as List<*>).map { it.toString() }.sorted()
+        val edges = (inputs.properties["edges"] as Number).toInt()
         if (violations.isNotEmpty()) {
             throw GradleException(
                 buildString {
@@ -153,6 +221,11 @@ tasks.register("checkPluginBoundaries") {
                     for ((module, allowed) in moduleDependencyAllowlist.entries.sortedBy { it.key }) {
                         appendLine("  $module -> ${allowed.sorted().joinToString(", ").ifEmpty { "no project modules" }}")
                     }
+                    appendLine("Allowed only on a debug configuration:")
+                    for ((module, allowed) in moduleDebugOnlyDependencyAllowlist.entries.sortedBy { it.key }) {
+                        appendLine("  $module -> ${allowed.sorted().joinToString(", ")}")
+                    }
+                    appendLine("Test-only edges are listed per module in build.gradle.kts.")
                     appendLine("Found these undeclared project dependencies:")
                     violations.forEach { appendLine("  $it") }
                     append(
@@ -162,28 +235,41 @@ tasks.register("checkPluginBoundaries") {
                 },
             )
         }
-        println("Module boundaries OK")
+        // A count proves the check looked at something: a filter that silently
+        // matched no configuration would otherwise report a pass.
+        println("Module boundaries OK ($edges project edges checked)")
     }
 }
 
 subprojects {
     afterEvaluate {
-        if (path != ":app") {
-            configurations.forEach { configuration ->
-                val isTest = configuration.name.contains("test", ignoreCase = true)
-                val allowed =
-                    (if (isTest) moduleTestDependencyAllowlist[path] else moduleDependencyAllowlist[path])
-                        .orEmpty()
-                configuration.dependencies
-                    .filterIsInstance<ProjectDependency>()
-                    .filterNot { it.path in allowed }
-                    .forEach { dependency ->
-                        moduleBoundaryViolations.add(
-                            "${project.path} (${configuration.name}) -> ${dependency.path}",
-                        )
-                    }
-            }
-        }
+        // Only a declarable configuration carries the edges a build file states.
+        // A resolvable one such as debugUnitTestCompileClasspath gains the
+        // tested variant as a project dependency when it resolves - the module
+        // depending on itself - and that dependency is not a decision anyone
+        // made here, so it is not judged.
+        val edges =
+            configurations
+                .filterNot { it.isCanBeResolved }
+                .flatMap { configuration ->
+                    configuration.dependencies
+                        .filterIsInstance<ProjectDependency>()
+                        .map { dependency ->
+                            ModuleBoundaryRules.Edge(
+                                module = path,
+                                configuration = configuration.name,
+                                dependency = dependency.path,
+                            )
+                        }
+                }
+        ModuleBoundaryRules
+            .violations(
+                edges = edges,
+                release = moduleDependencyAllowlist,
+                debugOnly = moduleDebugOnlyDependencyAllowlist,
+                test = moduleTestDependencyAllowlist,
+            ).forEach { violation -> moduleBoundaryViolations.add(violation.toString()) }
+        moduleBoundaryEdges.set(moduleBoundaryEdges.get() + edges.size)
     }
 
     plugins.withId("com.android.library") {

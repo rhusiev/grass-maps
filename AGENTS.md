@@ -107,7 +107,9 @@ document, section 3, plus the build and module rules of this repository.
   add an edge without a design decision
 - A module under `plugins/` may declare `plugin-api`, plus `plugin-ui-api` only
   when it contributes Compose UI. `./gradlew checkPluginBoundaries` fails
-  otherwise
+  otherwise. It checks `app` too: `app`'s release allowlist is exactly the
+  graph `README.md` documents, and the development plugins are allowed only on
+  a debug configuration
 - Feature modules never import `core` or `core-services`. They take the service
   and host interfaces they need in their constructors, and `app` wires the
   implementations

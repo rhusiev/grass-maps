@@ -136,7 +136,12 @@ feature modules receive it as a `plugin-api` interface and never take an
 Android `Context`. `core-services` implements it over the application's
 resources; `app` wires `AndroidStrings` in the composition root.
 
-`checkPluginBoundaries` enforces the plugin module dependency rule.
+`checkPluginBoundaries` enforces the plugin module dependency rule. It checks
+`app` as well as every library: `app`'s release allowlist is exactly the
+documented graph, and the development plugins are allowed only on a debug
+configuration, so neither a new edge nor a debug-only plugin on the release
+path goes unnoticed. A configuration name it cannot classify is a failure
+rather than a silent pass.
 `checkPluginManifests` validates every `src/main/plugin.json`: unique plugin
 ids, namespaced command and stream ids, command implementations, setting
 defaults and scopes, dispatch policies, and stream serializers. The plugin
@@ -1037,9 +1042,14 @@ synthetic fixes, and on `:routing` for the stable route JSON form a passed route
 uses. It reaches no core internals, changes no navigation policy and lets the
 session decide arrival.
 
-`./gradlew checkPluginBoundaries` checks every module and fails with each
-violating module, configuration and dependency. Modules wire this task into
-`check`.
+`./gradlew checkPluginBoundaries` checks every module, `app` included, and
+fails with each violating module, configuration and dependency. It judges the
+declarable configurations only: a resolvable one such as
+`debugUnitTestCompileClasspath` gains the tested variant as a project
+dependency when it resolves, and that edge is the module depending on itself,
+not an edge any build file asked for. Edges are judged per lane, so
+`debugImplementation` may take a development plugin that `implementation` may
+not. Modules wire this task into `check`.
 
 Feature modules never import `core` or `core-services`. They take the host and
 service interfaces they need in their constructors, and `app` wires the

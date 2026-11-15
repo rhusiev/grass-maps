@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.downloads_ui.name">Карти</string>
+    <string name="plugin.downloads_ui.description">Показує сервер карт, його регіони та їхні частини й завантажує їх.</string>
+
+    <string name="downloads_title">Карти</string>
+    <string name="downloads_first_run_title">Завантажити для початку</string>
+    <string name="downloads_on_this_phone">На цьому телефоні</string>
+    <string name="downloads_available">Доступні</string>
+    <string name="downloads_empty">Ще немає карт</string>
+    <string name="downloads_refresh">Перевірити нові карти</string>
+
+    <string name="downloads_world_overview">Огляд світу</string>
+    <string name="downloads_world_detail">Країни, головні дороги й міста всюди. Використовується при віддаленні та там, де область не завантажена</string>
+    <string name="downloads_region_detail">Карта, пошук, висоти та ізолінії</string>
+    <string name="downloads_you_are_here">Ви тут, за GPS на цьому телефоні</string>
+    <string name="downloads_routing_for">Маршрутизація для %1$s</string>
+    <string name="downloads_routing_detail">Пішохідні та велосипедні напрямки</string>
+    <string name="downloads_elevation_30m_for">Висоти 30 м для %1$s</string>
+    <string name="downloads_elevation_30m_detail">Детальніші схили та ізолінії</string>
+
+    <string name="downloads_size_and_date">%1$s · дані від %2$s</string>
+    <string name="downloads_size_only">%1$s</string>
+
+    <string name="downloads_download">Завантажити %1$s</string>
+    <string name="downloads_download_short">Завантажити</string>
+    <string name="downloads_cancel">Скасувати</string>
+    <string name="downloads_remove_region">Видалити регіон</string>
+    <string name="downloads_up_to_date">Актуально</string>
+    <string name="downloads_downloading">Завантаження %1$d%%</string>
+    <string name="downloads_downloading_unknown">Завантаження</string>
+    <string name="downloads_verifying">Перевірка файлів</string>
+    <string name="downloads_waiting">Очікування</string>
+    <string name="downloads_failed_network">Немає з\'єднання - завантаження зупинилося</string>
+    <string name="downloads_failed_server">Сервер відповів %1$s</string>
+    <string name="downloads_failed_corrupt">Завантаження пошкоджене - спробуйте ще раз</string>
+    <string name="downloads_failed_unsupported">Карти цього сервера потребують новішої програми</string>
+    <string name="downloads_failed_switch_off">Завантаження вимкнене</string>
+    <string name="downloads_failed_other">Завантаження не вдалося</string>
+
+    <string name="downloads_token_required">Цей сервер потребує токен завантаження</string>
+    <string name="downloads_token_rejected">Токен завантаження не прийнято</string>
+    <string name="downloads_token_settings">Налаштування токена</string>
+    <string name="downloads_server_address">Адреса сервера</string>
+    <string name="downloads_token_field">Токен завантаження · лише якщо сервер його просить</string>
+    <string name="downloads_token_placeholder">Вставте токен, який вам надіслали</string>
+    <string name="downloads_server_sees">Сервер бачить ваш токен, вашу IP-адресу та які карти ви завантажуєте.</string>
+    <string name="downloads_save">Зберегти</string>
+
+    <string name="downloads_parts_title">Частини в цьому пакеті</string>
+    <string name="downloads_part_map">Карта</string>
+    <string name="downloads_part_search">Пошук</string>
+    <string name="downloads_part_elevation">Висоти</string>
+    <string name="downloads_part_contours">Ізолінії</string>
+    <string name="downloads_part_routing">Маршрутизація</string>
+    <string name="downloads_part_elevation_30m">Висоти 30 м</string>
+    <string name="downloads_part_other">Інші дані</string>
+</resources>

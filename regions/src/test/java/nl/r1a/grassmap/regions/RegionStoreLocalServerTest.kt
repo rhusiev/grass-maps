@@ -15,6 +15,7 @@ import nl.r1a.grassmap.plugin.api.model.DownloadProblemKind
 import nl.r1a.grassmap.plugin.api.model.DownloadTransferState
 import nl.r1a.grassmap.plugin.api.model.DownloadsData
 import nl.r1a.grassmap.plugin.api.model.DownloadsDefaults
+import nl.r1a.grassmap.plugin.api.testing.fixture.CatalogFixture
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

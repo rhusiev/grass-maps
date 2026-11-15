@@ -60,4 +60,5 @@ include(
     ":plugins:contours",
     ":plugins:route-relations",
     ":plugins:raster",
+    ":plugins:downloads-ui",
 )

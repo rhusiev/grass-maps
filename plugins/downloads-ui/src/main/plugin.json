@@ -1,0 +1,91 @@
+{
+  "id": "downloads.ui",
+  "name": "plugin.downloads_ui.name",
+  "description": "plugin.downloads_ui.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.downloads.ui.DownloadsUiPlugin",
+  "contributes": {
+    "commands": [
+      {
+        "id": "downloads.ui.refresh",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "doc": "Fetches the map catalogue again and re-reads the installed packages.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.DownloadsRefreshCommand"
+      },
+      {
+        "id": "downloads.ui.download_region",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "doc": "Queues one region's package and returns the screen state. Parameter: region.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.DownloadRegionCommand"
+      },
+      {
+        "id": "downloads.ui.cancel_region",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "doc": "Cancels a region's download and returns the state once its work directory is gone. Parameter: region.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.CancelRegionDownloadCommand"
+      },
+      {
+        "id": "downloads.ui.remove_region",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "doc": "Removes an installed region from the phone. Parameter: region.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.RemoveRegionCommand"
+      },
+      {
+        "id": "downloads.ui.select_region",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "doc": "Opens the sheet of one region, or closes it with an empty region. Parameter: region.",
+        "undoable": false,
+        "allowlistedForControl": false,
+        "dispatcher": "default",
+        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.SelectRegionCommand"
+      },
+      {
+        "id": "downloads.ui.set_server",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "doc": "Sets the map server and its optional download token, then fetches the catalogue. Parameters: url, and optionally token; an empty token clears it.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.SetMapServerCommand"
+      }
+    ],
+    "streams": [
+      {
+        "id": "downloads.ui.state",
+        "valueType": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "serializer": "nl.r1a.grassmap.plugin.api.model.DownloadsState.serializer"
+      }
+    ]
+  },
+  "needs": {
+    "network": [
+      "network.region_updates"
+    ],
+    "location": "while_in_use",
+    "regions": []
+  },
+  "activation": [
+    "command",
+    "stream",
+    "ui"
+  ]
+}

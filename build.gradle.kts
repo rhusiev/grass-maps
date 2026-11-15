@@ -100,6 +100,7 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
                 ":plugins:contours",
                 ":plugins:route-relations",
                 ":plugins:raster",
+                ":plugins:downloads-ui",
             ),
         // testFixtures(project(":plugin-api")) is the module's own fixtures.
         ":plugin-api" to setOf(":plugin-api"),
@@ -150,6 +151,10 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         ":plugins:contours" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:route-relations" to setOf(":plugin-api"),
         ":plugins:raster" to setOf(":plugin-api"),
+        // The downloads screen draws the catalogue the host stores; the store
+        // itself is :regions, which the plugin reaches only through the
+        // plugin-api host access.
+        ":plugins:downloads-ui" to setOf(":plugin-api"),
     )
 // Edges that ship in the debug APK and must never reach a release build
 // (architecture section 22). They are judged separately from the release
@@ -202,6 +207,10 @@ val moduleTestDependencyAllowlist: Map<String, Set<String>> =
         // only; the plugin's runtime classpath is :plugin-api plus UI.
         ":plugins:contours" to setOf(":plugin-api", ":regions", ":plugin-ui-api"),
         ":plugins:route-relations" to setOf(":plugin-api"),
+        // T-0504: the downloads screen's tests read the real catalogue through
+        // the real parser and the screen model. Test only; the plugin's runtime
+        // classpath is :plugin-api and Compose.
+        ":plugins:downloads-ui" to setOf(":plugin-api", ":regions"),
     )
 val moduleBoundaryViolations = objects.listProperty(String::class.java)
 val moduleBoundaryEdges = objects.property(Int::class.java).convention(0)

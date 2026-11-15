@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmap.plugin.api.testing.fixture
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -9,7 +9,6 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -41,32 +40,7 @@ internal object CatalogFixture {
     fun withWorld(): ByteArray =
         withCatalog { root ->
             val regions = root.getValue(REGIONS) as JsonArray
-            val world =
-                buildJsonObject {
-                    put("id", WORLD_ID)
-                    put("name", buildJsonObject { put("en", "World overview"); put("uk", "Огляд світу") })
-                    put("kind", "world")
-                    put(
-                        "bbox",
-                        buildJsonArray { listOf(-180.0, -85.0, 180.0, 85.0).forEach { add(JsonPrimitive(it)) } },
-                    )
-                    put("outline", "outlines/world.geojson")
-                    put("version", VERSION)
-                    put("size_bytes", 74_000_000L)
-                    put(
-                        "parts",
-                        buildJsonArray {
-                            add(
-                                buildJsonObject {
-                                    put("kind", "map")
-                                    put("version", VERSION)
-                                    put("size_bytes", 74_000_000L)
-                                },
-                            )
-                        },
-                    )
-                }
-            JsonObject(root + (REGIONS to JsonArray(listOf(world) + regions)))
+            JsonObject(root + (REGIONS to JsonArray(listOf(worldEntry()) + regions)))
         }
 
     /**
@@ -74,21 +48,57 @@ internal object CatalogFixture {
      * exactly as server-protocol.md section 2 declares it.
      */
     fun withElevationAddon(region: String = LVIV): ByteArray =
-        withRegion(region) { entry ->
-            JsonObject(
-                entry +
-                    (
-                        "addons" to
-                            buildJsonArray {
-                                add(
-                                    buildJsonObject {
-                                        put("id", "elevation-30m")
-                                        put("version", "2026-01")
-                                        put("size_bytes", 13_000_000L)
-                                    },
-                                )
-                            }
-                    ),
+        withRegion(region) { entry -> JsonObject(entry + ("addons" to addons())) }
+
+    /** The world entry and the 30 m add-on together, the way a full catalogue reads. */
+    fun withWorldAndElevationAddon(region: String = LVIV): ByteArray =
+        withCatalog { root ->
+            val regions =
+                (root.getValue(REGIONS) as JsonArray).map { element ->
+                    val entry = element.jsonObject
+                    if (entry.getValue("id").jsonPrimitive.content == region) {
+                        JsonObject(entry + ("addons" to addons()))
+                    } else {
+                        entry
+                    }
+                }
+            JsonObject(root + (REGIONS to JsonArray(listOf(worldEntry()) + regions)))
+        }
+
+    private fun worldEntry(): JsonObject =
+        buildJsonObject {
+            put("id", WORLD_ID)
+            put("name", buildJsonObject { put("en", "World overview"); put("uk", "Огляд світу") })
+            put("kind", "world")
+            put(
+                "bbox",
+                buildJsonArray { listOf(-180.0, -85.0, 180.0, 85.0).forEach { add(JsonPrimitive(it)) } },
+            )
+            put("outline", "outlines/world.geojson")
+            put("version", VERSION)
+            put("size_bytes", 74_000_000L)
+            put(
+                "parts",
+                buildJsonArray {
+                    add(
+                        buildJsonObject {
+                            put("kind", "map")
+                            put("version", VERSION)
+                            put("size_bytes", 74_000_000L)
+                        },
+                    )
+                },
+            )
+        }
+
+    private fun addons(): JsonArray =
+        buildJsonArray {
+            add(
+                buildJsonObject {
+                    put("id", "elevation-30m")
+                    put("version", "2026-01")
+                    put("size_bytes", 13_000_000L)
+                },
             )
         }
 

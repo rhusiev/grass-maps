@@ -11,6 +11,7 @@ import nl.r1a.grassmap.plugin.api.model.CatalogPartKind
 import nl.r1a.grassmap.plugin.api.model.CatalogRegionKind
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.RegionCatalog
+import nl.r1a.grassmap.plugin.api.testing.fixture.CatalogFixture
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

@@ -374,6 +374,8 @@ data class DownloadsState(
     val catalogProblem: DownloadProblem? = null,
     /** The region the sheet is open on, or null when it is closed. */
     val selectedRegion: String? = null,
+    /** The selected region's row, ready to draw, or null when the sheet is closed. */
+    val selected: DownloadRow? = null,
     /** The region the last fix falls in, when there was one. */
     val detectedRegion: String? = null,
     /** Rows on the phone, then rows offered, in catalogue order. */

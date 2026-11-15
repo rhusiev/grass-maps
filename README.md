@@ -9,8 +9,10 @@ This repository holds the app as far as it is built: the Gradle build, the
 module layout, the plugin boundary rule, the command bus and the plugin host,
 plus the map, search, places, routing, navigation, tracks and analysis features
 of milestones 1-4, with milestone 4 still in progress. Milestone 5 (downloads)
-and milestone 6 (profiles, the configured screen and the release) are not
-started.
+is in progress: the all-oblast pipeline (T-0501), one logical tile source per
+kind (T-0503) and the downloads screen (T-0504) have landed; updates, raster
+areas, the self-hosted server and the 30 m add-on are still to come. Milestone
+6 (profiles, the configured screen and the release) is not started.
 
 ## Build
 
@@ -433,6 +435,14 @@ input, so the route-relation reader and layer tests read real pipeline output.
 as test fixtures; `PagedProviderContractSuite` covers limits, paging, ordering,
 concurrency and cancellation. See `tools/pipeline/README.md`.
 
+`test-data/catalog/catalog.json` is the catalogue the T-0501 all-oblast build
+wrote, copied unchanged. `regions` reads it with the real catalogue parser and
+serves it from a loopback server to download all 25 oblasts; `plugins/downloads-ui`
+reads it through the same parser to check the screen's rows. The world entry and
+the 30 m elevation add-on that the build does not produce yet are added by
+`CatalogFixture` in the plugin-api test fixtures, in the shape
+`design/server-protocol.md` section 2 declares.
+
 `test-data/search/coordinate-notations.tsv` is the T-0206 coordinate vector set:
 18 accepted notations with their points and 13 refused near misses with their
 reason. `plugins/coordinates` reads it to prove the parser, and the app's
@@ -508,6 +518,7 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/raster` | the online raster tile source: the OSM preset, the user URL template, the tile client behind the online-tiles switch and the layers-panel row | `plugin-api` |
 | `plugins/route-warnings` | the warning list for fords, steps, barriers, railway crossings and private ways, with its profile filter and distance order | `plugin-api` |
 | `plugins/proximity-alerts` | the proximity schedule for favourites, track waypoints and chosen place kinds: the three chosen radii, the one-per-approach latch and its lookup refresh | `plugin-api` |
+| `plugins/downloads-ui` | the downloads screen: catalogue rows with their parts and data date, the first-run offer, the region sheet, the refresh, download, cancel, remove and server commands, and their state stream | `plugin-api` |
 
 ## Online tiles
 
@@ -3358,9 +3369,38 @@ parser, and checks the declared map and contours files for size and a PMTiles
 v3 header. Its result is `None`, `Mounted` or `Invalid` with a typed
 `RegionMountProblem` (`MissingPointer`, `CorruptPointer`, `MissingVersion`,
 `CorruptManifest`, `UnsupportedPackage`, `MissingMap`, `CorruptMap`,
-`CorruptContours`, `MultipleRegions`). More than one installed region is
-reported, not guessed; the two-oblast resolver is T-0503. It never hashes a
-whole file, so it is safe to call while the map is starting.
+`CorruptContours`). `resolveAll` returns every region in the store as one
+`RegionMounts`: the packs that mount, in region-id order, and the ones that do
+not with their problem. It never hashes a whole file, so it is safe to call
+while the map is starting.
+
+`RegionCatalogParser` reads the server's `catalog.json`
+(server-protocol.md section 2): format, generated, attribution and every region
+with its names, kind, parent, bbox, outline, version, size, parts and add-ons.
+An unknown `format` is `Unsupported`; a missing bbox or name, a repeated region
+or part kind, a part without a size and an outline path that escapes the server
+are `CorruptData`. An unknown part kind keeps its wire name as
+`CatalogPartKind.OTHER`, and an unknown region kind is `OTHER` rather than an
+oblast, so a newer server's additive fields still draw. A region's data date is
+the leading ISO date of its version, which is the monthly build's OSM date.
+
+`RegionCatalogClient` fetches `<base>/catalog.json` through the same
+`DownloadTransport` as a package, so the privacy switch, the redirect rule, the
+timeouts and the bearer token behave identically. The body is capped at 4 MiB;
+a non-2xx status is `Server(status, retryAfter)` and its body is never parsed.
+
+`RegionStore` (T-0504) is the host side of the downloads screen. It holds the
+catalogue, the installed packs and one queue of transfers; a single worker takes
+regions in the order they were queued, and the queue has no length limit, so
+every region a catalogue offers can be queued. Progress is reported per chunk
+while the archive arrives and once more when the files are checked. A transfer
+that fails records a typed `DownloadProblem` on the region and drops the
+transfer; a 401 becomes `TOKEN_REQUIRED` when no token was sent and
+`TOKEN_REJECTED` when one was. Cancel sets a cooperative flag and returns only
+after the worker has stopped, so the work directory is already deleted and
+nothing was mounted. Remove deletes the region directory and re-reads the store.
+The token lives only in the store: the published data says whether one is
+present, and no log line, row or state carries its value.
 
 The way-alert component is optional, so an older package still mounts and
 opens. `RegionReader` (T-0319) reads `way-alerts.geojson` from the mounted
@@ -3387,8 +3427,20 @@ this command in any build, so `allowlistedForControl` alone is not the gate.
 Cleartext is permitted only in a debuggable build, so the trigger can reach
 `adb reverse`; the debug manifest allows it only for `127.0.0.1` and
 `localhost` through `app/src/debug/res/xml/network_security_config.xml`, and
-release keeps the platform default of no cleartext. No downloads UI exists yet;
-T-0504 owns it.
+release keeps the platform default of no cleartext.
+
+`plugins/downloads-ui` (T-0504) owns the downloads screen. `DownloadsScreen`
+turns one `DownloadsData` into the list rows, the first-run offer and the region
+sheet: a row carries its parts with sizes, its data date (the installed one when
+the region is on the phone), its transfer or its typed problem. First run offers
+the world overview when the catalogue has one, then the detected oblast's map
+with its search, elevation and contours, its routing and its 30 m elevation
+add-on as separate parts with sizes; the oblast comes from the bbox that
+contains the first fix. The plugin publishes `downloads.ui.state`; its commands
+are `downloads.ui.refresh`, `download_region`, `cancel_region`, `remove_region`,
+`select_region` and `set_server`. The token is a command parameter and never a
+state field. `app` still has to construct the store and host
+`DownloadsScreenContent`; the screen has no route yet.
 
 ## Privacy
 

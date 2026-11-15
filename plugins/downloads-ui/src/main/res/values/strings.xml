@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.downloads_ui.name">Maps</string>
+    <string name="plugin.downloads_ui.description">Shows the map server, its regions and their parts, and downloads them.</string>
+
+    <string name="downloads_title">Maps</string>
+    <string name="downloads_first_run_title">Download to start</string>
+    <string name="downloads_on_this_phone">On this phone</string>
+    <string name="downloads_available">Available</string>
+    <string name="downloads_empty">No maps yet</string>
+    <string name="downloads_refresh">Check for new maps</string>
+
+    <string name="downloads_world_overview">World overview</string>
+    <string name="downloads_world_detail">Countries, main roads and cities everywhere. Used when zoomed out and where no oblast is loaded</string>
+    <string name="downloads_region_detail">Map, search, elevation and contours</string>
+    <string name="downloads_you_are_here">You are here, by GPS on this phone</string>
+    <string name="downloads_routing_for">Routing for %1$s</string>
+    <string name="downloads_routing_detail">Walking and cycling directions</string>
+    <string name="downloads_elevation_30m_for">30 m elevation for %1$s</string>
+    <string name="downloads_elevation_30m_detail">Finer slopes and contour lines</string>
+
+    <string name="downloads_size_and_date">%1$s · data of %2$s</string>
+    <string name="downloads_size_only">%1$s</string>
+
+    <string name="downloads_download">Download %1$s</string>
+    <string name="downloads_download_short">Download</string>
+    <string name="downloads_cancel">Cancel</string>
+    <string name="downloads_remove_region">Remove region</string>
+    <string name="downloads_up_to_date">Up to date</string>
+    <string name="downloads_downloading">Downloading %1$d%%</string>
+    <string name="downloads_downloading_unknown">Downloading</string>
+    <string name="downloads_verifying">Checking the files</string>
+    <string name="downloads_waiting">Waiting</string>
+    <string name="downloads_failed_network">No connection - the download stopped</string>
+    <string name="downloads_failed_server">The server answered %1$s</string>
+    <string name="downloads_failed_corrupt">The download was damaged - try again</string>
+    <string name="downloads_failed_unsupported">This server\'s maps need a newer app</string>
+    <string name="downloads_failed_switch_off">Downloads are switched off</string>
+    <string name="downloads_failed_other">The download failed</string>
+
+    <string name="downloads_token_required">This server needs a download token</string>
+    <string name="downloads_token_rejected">The download token is not accepted</string>
+    <string name="downloads_token_settings">Token settings</string>
+    <string name="downloads_server_address">Server address</string>
+    <string name="downloads_token_field">Download token · only if the server asks for one</string>
+    <string name="downloads_token_placeholder">Paste the token you were sent</string>
+    <string name="downloads_server_sees">The server sees your token, your IP address and which maps you fetch.</string>
+    <string name="downloads_save">Save</string>
+
+    <string name="downloads_parts_title">Parts in this package</string>
+    <string name="downloads_part_map">Map</string>
+    <string name="downloads_part_search">Search</string>
+    <string name="downloads_part_elevation">Elevation</string>
+    <string name="downloads_part_contours">Contours</string>
+    <string name="downloads_part_routing">Routing</string>
+    <string name="downloads_part_elevation_30m">30 m elevation</string>
+    <string name="downloads_part_other">Other data</string>
+</resources>

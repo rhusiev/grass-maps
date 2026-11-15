@@ -1,6 +1,5 @@
 package nl.r1a.grassmap.control
 
-import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -78,7 +77,7 @@ class ControlServer internal constructor(
 
     private val exceptionHandler =
         CoroutineExceptionHandler { _, error ->
-            Log.e(TAG, "control server coroutine failed", error)
+            log.error("control server coroutine failed", error)
         }
 
     /**
@@ -149,9 +148,9 @@ class ControlServer internal constructor(
             } catch (exception: CancellationException) {
                 throw exception
             } catch (exception: Exception) {
-                Log.e(TAG, "control session failed", exception)
+                log.error("control session failed", exception)
             } catch (error: LinkageError) {
-                Log.e(TAG, "control session failed to link", error)
+                log.error("control session failed to link", error)
             } finally {
                 release(connection)
                 connection.close()
@@ -216,5 +215,3 @@ class ControlServer internal constructor(
         }
     }
 }
-
-private const val TAG = "GrassMapsControl"

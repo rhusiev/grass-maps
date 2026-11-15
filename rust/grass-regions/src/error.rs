@@ -7,7 +7,7 @@
 /// verifier already accepted the mount. `Unsupported` is a format or version
 /// this reader does not know, and `InvalidInput` is a query the caller built
 /// wrongly.
-#[derive(Debug, thiserror::Error, uniffi::Error, PartialEq, Eq)]
+#[derive(Debug, Clone, thiserror::Error, uniffi::Error, PartialEq, Eq)]
 pub enum RegionReadError {
     #[error("the component file is missing or unreadable")]
     Io,

@@ -47,7 +47,8 @@ import nl.r1a.grassmap.regions.core.RegionReader as NativeRegionReader
  *   `RouteRelations` here, so no caller or plugin sees a native type;
  * - the per-mount caches: the selected component and the assembled relations
  *   are kept for the reader's lifetime, and the parsed feature list is kept
- *   inside the native reader.
+ *   inside the native reader against the component's file identity, so a
+ *   same-version reinstall of that component is read again.
  *
  * The component is `way-alerts.geojson`, a GeoJSON `FeatureCollection` whose
  * features carry `kind` (`railway_crossing`, `tunnel`, `hazard`, `ford` or

@@ -52,5 +52,36 @@ internal object FixturePackages {
     /** The same package tagged as [version], with unchanged component bytes. */
     fun atVersion(version: String): ByteArray = withManifest(transform = { manifest -> manifest.replace(FIXTURE_VERSION, version) })
 
+    /**
+     * The fixture files with the way-alert component replaced by [geojson] and
+     * its manifest entry's size and hash updated. The rest of the package is
+     * unchanged, so a test can reinstall a changed package under the same
+     * version.
+     */
+    fun filesWithWayAlerts(geojson: String): LinkedHashMap<String, ByteArray> {
+        val files = files()
+        val bytes = geojson.toByteArray()
+        files[WAY_ALERTS_FILE] = bytes
+        val manifest = String(files.getValue(RegionIdentifiers.MANIFEST_FILE), Charsets.UTF_8)
+        val component = WAY_ALERTS_COMPONENT.find(manifest) ?: error("the fixture has no way-alert component")
+        val updated =
+            component.value
+                .replace(BYTES_FIELD, """"bytes": ${bytes.size}""")
+                .replace(SHA256_FIELD, """"sha256": "${sha256(bytes)}"""")
+        files[RegionIdentifiers.MANIFEST_FILE] = manifest.replace(component.value, updated).toByteArray(Charsets.UTF_8)
+        return files
+    }
+
     const val FIXTURE_VERSION = "2026-11-03-1"
+
+    private const val WAY_ALERTS_FILE = "way-alerts.geojson"
+    private val WAY_ALERTS_COMPONENT = Regex("""\{[^{}]*"kind": "way-alerts"[^{}]*?}""")
+    private val BYTES_FIELD = Regex(""""bytes": \d+""")
+    private val SHA256_FIELD = Regex(""""sha256": "[0-9a-f]{64}"""")
+
+    private fun sha256(bytes: ByteArray): String =
+        java.security.MessageDigest
+            .getInstance("SHA-256")
+            .digest(bytes)
+            .joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
 }

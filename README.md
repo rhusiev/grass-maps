@@ -1848,11 +1848,15 @@ Since T-0321 the component read, its parse and both queries run in
 keeps the mount contract - it parses the manifest, selects the component and
 checks its format, version, declared size and file - and maps the native values
 onto `WayAlertHit` and `RouteRelations`, so no caller or plugin sees a native
-type. The parsed feature list is cached inside the native reader against the
-component path and declared size, and the read is off Main. The native library
-loads on the first query too, so a missing or mismatched library is an
-`Internal("regions.native")` failure rather than a crash, and a Rust panic is
-`Internal("regions.native.panic")`. The Kotlin corridor maths and GeoJSON
+type. The parsed feature list, or the failure that reading or parsing it
+produced, is cached inside the native reader against the component path,
+declared size and the file's identity (device, inode, size and modification
+time), and the read is off Main. One caller reads and parses; a concurrent first
+caller waits for that result. A same-version reinstall replaces the file behind
+the same path, so the changed identity makes the next query read it again. The
+native library loads on the first query too, so a missing or mismatched library
+is an `Internal("regions.native")` failure rather than a crash, and a Rust panic
+is `Internal("regions.native.panic")`. The Kotlin corridor maths and GeoJSON
 parser are gone; the fixtures that pinned them were not edited.
 
 The kinds are a railway crossing, a tunnel and a hazard. A ford or a barrier
@@ -3265,9 +3269,15 @@ version directory is then renamed into place and `current` is replaced by an
 fsynced temporary file plus an atomic rename. The pointer is the commit point:
 a crash before it leaves the previous version current and usable; a crash after
 the version-directory rename but before the pointer rename leaves an unused new
-directory, which a retry verifies and reuses. A failed verification or a crash
-during extraction leaves only a `.incoming` directory that the next attempt
-ignores.
+directory, which a retry verifies and reuses. A current version that fails
+verification is quarantined under `.incoming` until its verified replacement is
+in place, and put back if the rename fails; a rename that cannot put it back
+reports `Internal("region.install.rollback")` and keeps the quarantine. Every
+install first restores a quarantine whose version `current` still names and
+whose directory is missing, and deletes the stale ones, so a kill in that window
+cannot leave `current` naming a directory that only exists in quarantine. A
+failed verification or a crash during extraction leaves only a `.incoming`
+directory that the next attempt ignores.
 
 `RegionMountResolver` is the read-only side of the store. It reads
 `<region>/current`, parses `<version>/manifest.json` with the same strict

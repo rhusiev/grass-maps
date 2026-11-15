@@ -80,9 +80,10 @@ internal class MapHostState(
     initialStyle: StyleSpec,
     initialCamera: Camera,
     val ageLabel: PuckAgeFormatter = PuckAgeFormatter.None,
+    private val appTiles: Map<SourceId, MapTileSource> = emptyMap(),
     val sourceResolver: (SourceId) -> String?,
 ) {
-    val style = mutableStateOf(buildBaseStyle(initialStyle, sourceResolver) ?: emptyBuiltStyle())
+    val style = mutableStateOf(buildBaseStyle(initialStyle, sourceResolver, appTiles) ?: emptyBuiltStyle())
     val layers = mutableStateOf<List<OwnedLayer>>(emptyList())
     val puck = mutableStateOf<PuckDisplay?>(null)
     val puckAnimating = mutableStateOf(false)
@@ -121,7 +122,7 @@ internal class MapHostState(
 
     /** Loads [style] and makes it the style later diffs must match. */
     fun applyStyle(style: StyleSpec): Outcome<Unit> {
-        val built = buildBaseStyle(style, sourceResolver) ?: return Outcome.Failure(AppError.InvalidInput)
+        val built = buildBaseStyle(style, sourceResolver, appTiles) ?: return Outcome.Failure(AppError.InvalidInput)
         // The first composition can call setStyle with the style this state was
         // built from. Reloading it would clear styleReady and re-run the engine
         // for nothing, so an unchanged style is a successful no-op.
@@ -249,7 +250,7 @@ internal data class OwnedLayer(
 
 internal data class BuiltStyle(
     val json: BaseStyle.Json,
-    val uris: Map<SourceId, String>,
+    val plan: SourcePlan,
 )
 
 /**
@@ -392,8 +393,9 @@ fun rememberMapSurface(
     initialCamera: Camera,
     sourceResolver: (SourceId) -> String?,
     ageLabel: PuckAgeFormatter = PuckAgeFormatter.None,
+    appTiles: Map<SourceId, MapTileSource> = emptyMap(),
 ): MapSurface {
-    val session = remember(initialStyle.id) { MapHostState(initialStyle, initialCamera, ageLabel, sourceResolver) }
+    val session = remember(initialStyle.id) { MapHostState(initialStyle, initialCamera, ageLabel, appTiles, sourceResolver) }
     val state =
         rememberMapState(
             baseStyle = session.style.value.json,
@@ -639,13 +641,13 @@ class MaplibreComposeMapHost internal constructor(
 private fun buildBaseStyle(
     style: StyleSpec,
     resolver: (SourceId) -> String?,
+    appTiles: Map<SourceId, MapTileSource>,
 ): BuiltStyle? {
     val root = parseStyleObject(style.baseStyleJson) ?: return null
+    val plan = planSources(style, resolver, appTiles)
     val sources = LinkedHashMap<String, JsonObject>()
-    val uris = LinkedHashMap<SourceId, String>()
     for (source in style.sources) {
-        val uri = resolver(source.id) ?: continue
-        uris[source.id] = uri
+        val uri = plan.uris[source.id] ?: continue
         sources[source.id.value] = source.toJson(uri)
     }
     val document =
@@ -656,10 +658,10 @@ private fun buildBaseStyle(
                     "layers" to JsonArray(emptyList()),
                 ),
         )
-    return BuiltStyle(BaseStyle.Json(document.toString()), uris)
+    return BuiltStyle(BaseStyle.Json(document.toString()), plan)
 }
 
-private fun emptyBuiltStyle(): BuiltStyle = BuiltStyle(BaseStyle.Empty, emptyMap())
+private fun emptyBuiltStyle(): BuiltStyle = BuiltStyle(BaseStyle.Empty, SourcePlan(emptyMap(), emptyList()))
 
 /** A monotonic millisecond clock for the frame-driven puck animation. */
 private fun elapsedMillis(): Long = System.nanoTime() / NANOS_PER_MILLI

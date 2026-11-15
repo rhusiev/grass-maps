@@ -103,7 +103,6 @@ import nl.r1a.grassmap.regions.HttpDownloadTransport
 import nl.r1a.grassmap.regions.NetworkAccess
 import nl.r1a.grassmap.regions.RegionDownloader
 import nl.r1a.grassmap.regions.RegionElevation
-import nl.r1a.grassmap.regions.RegionMount
 import nl.r1a.grassmap.regions.RegionMountResolver
 import nl.r1a.grassmap.regions.RegionPaths
 import nl.r1a.grassmap.regions.RegionReader
@@ -459,23 +458,26 @@ class AppContainer(
     /**
      * The mounted region's directory, read once. Both region readers use it so
      * the mount is resolved once and an invalid mount is logged once.
+     *
+     * The map mounts every installed pack (T-0503), but the way-alert and
+     * relation readers still read one: the first mounted pack in region-id
+     * order. A second installed oblast is named in the log so that narrower
+     * coverage is visible rather than silent.
      */
     private val mountedRegionDirectory: File? by lazy {
         val root = regionsRoot ?: return@lazy null
-        when (val mount = RegionMountResolver(root).resolve()) {
-            is RegionMount.Mounted -> {
-                mount.region.directory
-            }
-
-            is RegionMount.Invalid -> {
-                Log.w(REGIONS_TAG, "region mount invalid: ${mount.problem}")
-                null
-            }
-
-            RegionMount.None -> {
-                null
-            }
+        val mounts = RegionMountResolver(root).resolveAll()
+        val mounted = mounts.installed.firstOrNull()
+        if (mounts.installed.size > 1) {
+            Log.i(
+                REGIONS_TAG,
+                "region readers use ${mounted?.region}: ${mounts.installed.size} packs are installed",
+            )
         }
+        mounts.broken.firstOrNull()?.let { broken ->
+            Log.w(REGIONS_TAG, "region mount invalid: ${broken.region} ${broken.problem}")
+        }
+        mounted?.directory
     }
 
     /**

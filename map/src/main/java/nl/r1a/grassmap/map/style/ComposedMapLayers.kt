@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonArray
@@ -28,6 +30,7 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import nl.r1a.grassmap.map.MapHostState
+import nl.r1a.grassmap.map.MapTileSource
 import nl.r1a.grassmap.map.PuckAgeFormatter
 import nl.r1a.grassmap.map.PuckDisplay
 import nl.r1a.grassmap.map.PuckGeometry
@@ -76,9 +79,12 @@ import org.maplibre.compose.layers.SymbolLayer
 import org.maplibre.compose.map.LocalMapState
 import org.maplibre.compose.overlay.AttributionLinks
 import org.maplibre.compose.overlay.attributions
+import org.maplibre.compose.sources.CustomVectorTileSourceOptions
 import org.maplibre.compose.sources.GeoJsonData
+import org.maplibre.compose.sources.TileCoordinate
 import org.maplibre.compose.sources.VectorSource
 import org.maplibre.compose.sources.getBaseSource
+import org.maplibre.compose.sources.rememberCustomVectorTileSource
 import org.maplibre.compose.sources.rememberGeoJsonSource
 import org.maplibre.compose.sources.rememberRasterTileSource
 import org.maplibre.compose.util.DpPadding
@@ -107,7 +113,7 @@ internal fun ComposedMapLayers(session: MapHostState) {
                 }
             }
         }
-    val sources = rememberBaseSources()
+    val sources = rememberBaseSources(session)
     for (slot in LayerSlot.entries) {
         for ((layer, layerSlot) in compiled) {
             if (layerSlot != slot) continue
@@ -499,18 +505,57 @@ private const val ATTRIBUTION_CORNER_DP = 4
 private const val ATTRIBUTION_HORIZONTAL_PADDING_DP = 6
 private const val ATTRIBUTION_VERTICAL_PADDING_DP = 2
 
+/**
+ * The three logical sources of T-0020, each resolved to one object: the base
+ * style's source of that id, which the engine loads from a URI, or the app's
+ * own tile source (T-0503). A source the app supplies is never also declared
+ * in the base style, so one tile has one source and draws once.
+ */
 @Composable
 @MaplibreComposable
-private fun rememberBaseSources(): Map<SourceId, VectorSource> {
-    val world = getBaseSource<VectorSource>(MapSourceIds.WORLD.value)
-    val region = getBaseSource<VectorSource>(MapSourceIds.REGION.value)
-    val contours = getBaseSource<VectorSource>(MapSourceIds.CONTOURS.value)
+private fun rememberBaseSources(session: MapHostState): Map<SourceId, VectorSource> {
+    val declared = session.style.value.plan.app
+    val app =
+        buildMap {
+            for (source in declared) {
+                key(source.id) {
+                    val options =
+                        CustomVectorTileSourceOptions {
+                            minZoom = source.minZoom
+                            maxZoom = source.maxZoom
+                        }
+                    put(
+                        source.id,
+                        rememberCustomVectorTileSource(options) { coordinate ->
+                            loadAppTile(source.tiles, coordinate)
+                        },
+                    )
+                }
+            }
+        }
+    val base =
+        buildMap {
+            for (id in LOGICAL_SOURCE_IDS) {
+                getBaseSource<VectorSource>(id.value)?.let { put(id, it) }
+            }
+        }
     return buildMap {
-        world?.let { put(MapSourceIds.WORLD, it) }
-        region?.let { put(MapSourceIds.REGION, it) }
-        contours?.let { put(MapSourceIds.CONTOURS, it) }
+        for (id in LOGICAL_SOURCE_IDS) {
+            (app[id] ?: base[id])?.let { put(id, it) }
+        }
     }
 }
+
+/** One tile from the app's source, read off the engine's thread. */
+private suspend fun loadAppTile(
+    tiles: MapTileSource,
+    coordinate: TileCoordinate,
+): ByteArray =
+    withContext(Dispatchers.IO) {
+        tiles.tile(coordinate.zoomLevel, coordinate.x, coordinate.y)
+    } ?: ByteArray(0)
+
+private val LOGICAL_SOURCE_IDS = listOf(MapSourceIds.WORLD, MapSourceIds.REGION, MapSourceIds.CONTOURS)
 
 @Suppress("ktlint:standard:function-naming")
 @Composable

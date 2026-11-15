@@ -701,8 +701,21 @@ made.
 maplibre-compose 0.20 (OpenGL) and no other module imports that library. A
 `MapLayerProvider` supplies MapLibre style-spec JSON; `map` compiles it to
 Compose layer nodes and draws the layers in fixed slots. The logical source IDs
-are `world` (z0-z7), `region` (z8-z14) and `contours` (z9-z14). The host
-resolves each ID to a mounted archive and skips layers whose source is absent.
+are `world` (z0-z7), `region` (z8-z14) and `contours` (z9-z14). Each ID is one
+logical source: the host resolves it to the installed packs by component kind,
+and skips layers whose source is absent.
+
+One logical source per kind means a tile reaches the map once. `world` and
+`region` both read the `map` component of every installed pack. `contours`
+reads their `contours` component. The map asks the app for one tile at a time
+(`MapTileSource` in `map`), and the first pack in region-id order that holds the
+tile serves it. Both packs come from one country build, so a tile on a border is
+present in both neighbours byte for byte. The second copy is therefore never
+requested, and a border label draws once. A source the app supplies tiles for is
+never also written into the base style with a URI, so one tile is never loaded
+twice. `SourcePlan` in `map` holds that rule. The app path uses
+maplibre-compose's `CustomVectorTileSource`, so the device runs no tile server
+and opens no listener.
 
 `MapHost.setTracks(List<MapTrack>)` draws the stored tracks. `map` turns the
 list into one GeoJSON `MultiLineString` per track in the `Overlays` slot, so a
@@ -727,21 +740,23 @@ that form until the render path is fixed.
 
 The map resolves its sources in a fixed order:
 
-1. exactly one installed region package whose `current` pointer, manifest and
-   declared map/contours files validate, read from the app's region store;
+1. every installed region package whose `current` pointer, manifest and
+   declared map/contours files validate, read from the app's region store, as
+   one logical source per component kind;
 2. the whole-oblast archive `lviv-protomaps.pmtiles` (plus
    `lviv-contours-10m.pmtiles`) pushed to the app's external files directory;
 3. the small T-0015 fixture (`fixture-mini-map.pmtiles`) copied out of the
    debug assets.
 
-An installed region that fails to mount is never silently ignored. The map
-still opens on the next source, and the screen shows the slim
-"Map data needs re-download" banner. The mount validates the `current`
-pointer, the manifest and the map/contours file size and PMTiles v3 header
-only; full sha256 verification stays in the download pipeline, so a cold start
-never hashes an oblast. A package whose `map.pmtiles` is truncated or is not a
-PMTiles archive is therefore corrupt at mount time too. The mount never writes,
-downloads or quarantines; those actions belong to `RegionDownloader`.
+A pack that fails to mount never hides one that mounted. The map opens on the
+packs that mounted and on the next source in this order, and the screen shows
+the slim "Map data needs re-download" banner for the first pack that did not.
+The mount validates the `current` pointer, the manifest and the map/contours
+file size and PMTiles v3 header only; full sha256 verification stays in the
+download pipeline, so a cold start never hashes an oblast. A package whose
+`map.pmtiles` is truncated or is not a PMTiles archive is therefore corrupt at
+mount time too. The mount never writes, downloads or quarantines; those actions
+belong to `RegionDownloader`.
 
 The debug-only `core.map.set_style` command selects a style id and applies its
 layers in place; the golden harness uses it to capture the light and dark

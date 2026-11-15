@@ -9,7 +9,6 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
 class RegionMountResolverTest {
-    private val fixture = FixturePackages.loadedRegion()
     private val root: Path = Files.createTempDirectory("grass-region-mount")
 
     @After
@@ -21,10 +20,10 @@ class RegionMountResolverTest {
     fun aValidInstalledRegionMountsItsMapAndContours() {
         install()
 
-        val mount = resolve()
+        val mounts = mounts()
 
-        assertTrue("expected a mount, got $mount", mount is RegionMount.Mounted)
-        val mounted = (mount as RegionMount.Mounted).region
+        assertTrue("expected one mount, got ${mounts.broken}", mounts.broken.isEmpty())
+        val mounted = mounts.installed.single()
         assertEquals("fixture-mini", mounted.region)
         assertEquals(FixturePackages.FIXTURE_VERSION, mounted.version)
         assertTrue(mounted.map.isFile)
@@ -37,7 +36,10 @@ class RegionMountResolverTest {
 
     @Test
     fun anEmptyStoreHasNoRegion() {
-        assertEquals(RegionMount.None, resolve())
+        val mounts = mounts()
+
+        assertTrue(mounts.installed.isEmpty())
+        assertTrue(mounts.broken.isEmpty())
     }
 
     @Test
@@ -45,21 +47,15 @@ class RegionMountResolverTest {
         install()
         Files.delete(regionDirectory().resolve(RegionPaths.CURRENT_FILE))
 
-        assertEquals(
-            RegionMount.Invalid("fixture-mini", RegionMountProblem.MissingPointer),
-            resolve(),
-        )
+        assertOnlyBroken(RegionMountProblem.MissingPointer)
     }
 
     @Test
     fun aCurrentPointerToAMissingVersionIsInvalid() {
-        copyPackage()
+        installRegion(regionDirectory(), "fixture-mini")
         Files.writeString(regionDirectory().resolve(RegionPaths.CURRENT_FILE), "2099-01-01-1\n")
 
-        assertEquals(
-            RegionMount.Invalid("fixture-mini", RegionMountProblem.MissingVersion("2099-01-01-1")),
-            resolve(),
-        )
+        assertOnlyBroken(RegionMountProblem.MissingVersion("2099-01-01-1"))
     }
 
     @Test
@@ -67,10 +63,7 @@ class RegionMountResolverTest {
         install()
         Files.writeString(regionDirectory().resolve(RegionPaths.CURRENT_FILE), "../2026-11-03-1\n")
 
-        assertEquals(
-            RegionMount.Invalid("fixture-mini", RegionMountProblem.CorruptPointer),
-            resolve(),
-        )
+        assertOnlyBroken(RegionMountProblem.CorruptPointer)
     }
 
     @Test
@@ -78,20 +71,14 @@ class RegionMountResolverTest {
         install()
         Files.writeString(versionDirectory().resolve(RegionIdentifiers.MANIFEST_FILE), "{not json")
 
-        assertEquals(
-            RegionMount.Invalid("fixture-mini", RegionMountProblem.CorruptManifest),
-            resolve(),
-        )
+        assertOnlyBroken(RegionMountProblem.CorruptManifest)
     }
 
     @Test
     fun aManifestWithoutAMapComponentIsInvalid() {
         install(manifest = { it.replace(Regex("\"kind\":\\s*\"map\""), "\"kind\": \"mapx\"") })
 
-        assertEquals(
-            RegionMount.Invalid("fixture-mini", RegionMountProblem.MissingMap),
-            resolve(),
-        )
+        assertOnlyBroken(RegionMountProblem.MissingMap)
     }
 
     @Test
@@ -100,10 +87,7 @@ class RegionMountResolverTest {
         val map = versionDirectory().resolve("map.pmtiles")
         Files.write(map, ByteArray(16))
 
-        assertEquals(
-            RegionMount.Invalid("fixture-mini", RegionMountProblem.CorruptMap),
-            resolve(),
-        )
+        assertOnlyBroken(RegionMountProblem.CorruptMap)
     }
 
     @Test
@@ -114,10 +98,7 @@ class RegionMountResolverTest {
         bytes[0] = 'X'.code.toByte()
         Files.write(map, bytes)
 
-        assertEquals(
-            RegionMount.Invalid("fixture-mini", RegionMountProblem.CorruptMap),
-            resolve(),
-        )
+        assertOnlyBroken(RegionMountProblem.CorruptMap)
     }
 
     @Test
@@ -132,10 +113,7 @@ class RegionMountResolverTest {
         }
         Files.write(map, bytes)
 
-        assertEquals(
-            RegionMount.Invalid("fixture-mini", RegionMountProblem.CorruptMap),
-            resolve(),
-        )
+        assertOnlyBroken(RegionMountProblem.CorruptMap)
     }
 
     @Test
@@ -146,10 +124,7 @@ class RegionMountResolverTest {
         bytes[0] = 'X'.code.toByte()
         Files.write(contours, bytes)
 
-        assertEquals(
-            RegionMount.Invalid("fixture-mini", RegionMountProblem.CorruptContours),
-            resolve(),
-        )
+        assertOnlyBroken(RegionMountProblem.CorruptContours)
     }
 
     @Test
@@ -157,46 +132,79 @@ class RegionMountResolverTest {
         install()
         Files.delete(versionDirectory().resolve("contours.pmtiles"))
 
-        assertEquals(
-            RegionMount.Invalid("fixture-mini", RegionMountProblem.CorruptContours),
-            resolve(),
-        )
+        assertOnlyBroken(RegionMountProblem.CorruptContours)
     }
 
     @Test
-    fun moreThanOneInstalledRegionIsReportedNotGuessed() {
+    fun everyInstalledRegionMountsTogether() {
         install()
         val second = root.resolve("ua-46")
-        Files.createDirectories(second)
+        installRegion(second, region = "ua-46")
 
-        assertEquals(
-            RegionMount.Invalid(null, RegionMountProblem.MultipleRegions(listOf("fixture-mini", "ua-46"))),
-            resolve(),
-        )
+        val mounts = mounts()
+
+        assertEquals(listOf("fixture-mini", "ua-46"), mounts.installed.map { it.region })
+        assertTrue("no pack may report a problem: ${mounts.broken}", mounts.broken.isEmpty())
     }
 
-    private fun resolve(): RegionMount = RegionMountResolver(root.toFile()).resolve()
+    @Test
+    fun aBrokenPackIsReportedWithoutHidingAWorkingOne() {
+        install()
+        val broken = root.resolve("ua-46").also { Files.createDirectories(it) }
+
+        val mounts = mounts()
+
+        assertEquals(listOf("fixture-mini"), mounts.installed.map { it.region })
+        assertEquals(listOf("ua-46"), mounts.broken.map { it.region })
+        assertEquals(RegionMountProblem.MissingPointer, mounts.broken.single().problem)
+        assertTrue(Files.isDirectory(broken))
+    }
+
+    private fun mounts(): RegionMounts = RegionMountResolver(root.toFile()).resolveAll()
+
+    /** The store holds one region, and its problem is [problem]. */
+    private fun assertOnlyBroken(problem: RegionMountProblem) {
+        val mounts = mounts()
+        assertTrue("expected no mount, got ${mounts.installed}", mounts.installed.isEmpty())
+        assertEquals(listOf("fixture-mini"), mounts.broken.map { it.region })
+        assertEquals(problem, mounts.broken.single().problem)
+    }
 
     private fun regionDirectory(): Path = root.resolve("fixture-mini")
 
     private fun versionDirectory(): Path = regionDirectory().resolve(FixturePackages.FIXTURE_VERSION)
 
     private fun install(manifest: (String) -> String = { it }) {
-        copyPackage(manifest)
-        Files.writeString(regionDirectory().resolve(RegionPaths.CURRENT_FILE), FixturePackages.FIXTURE_VERSION + "\n")
+        installRegion(regionDirectory(), "fixture-mini", manifest)
     }
 
-    private fun copyPackage(manifest: (String) -> String = { it }) {
-        val target = versionDirectory()
+    /**
+     * Installs the fixture package as [region] under [directory], with the
+     * manifest naming that region, so the store can hold two packs.
+     */
+    private fun installRegion(
+        directory: Path,
+        region: String,
+        manifest: (String) -> String = { it },
+    ) {
+        val target = directory.resolve(FixturePackages.FIXTURE_VERSION)
         Files.createDirectories(target)
         FixturePackages.files().forEach { (name, bytes) ->
-            val content = if (name == RegionIdentifiers.MANIFEST_FILE) manifest(String(bytes, Charsets.UTF_8)).toByteArray() else bytes
+            val content =
+                if (name == RegionIdentifiers.MANIFEST_FILE) {
+                    manifest(String(bytes, Charsets.UTF_8))
+                        .replace("\"region\": \"fixture-mini\"", "\"region\": \"$region\"")
+                        .toByteArray(Charsets.UTF_8)
+                } else {
+                    bytes
+                }
             Files.copy(
                 byteArrayAsStream(content),
                 target.resolve(name),
                 StandardCopyOption.REPLACE_EXISTING,
             )
         }
+        Files.writeString(directory.resolve(RegionPaths.CURRENT_FILE), FixturePackages.FIXTURE_VERSION + "\n")
     }
 
     private fun byteArrayAsStream(bytes: ByteArray) = bytes.inputStream()

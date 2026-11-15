@@ -2,8 +2,6 @@ package nl.r1a.grassmap.regions
 
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
-import java.io.BufferedInputStream
-import java.io.DataInputStream
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -39,27 +37,35 @@ sealed interface RegionMountProblem {
     data object CorruptMap : RegionMountProblem
 
     data object CorruptContours : RegionMountProblem
-
-    data class MultipleRegions(
-        val regions: List<String>,
-    ) : RegionMountProblem
 }
 
-/** The read-only mount result for the region store. */
+/** The mount result for one installed region directory. */
 sealed interface RegionMount {
-    /** No region directory is installed. */
-    data object None : RegionMount
-
     data class Mounted(
         val region: MountedRegion,
     ) : RegionMount
 
-    /** A region directory is installed, but its pointer, manifest or files failed. */
+    /** The region directory exists, but its pointer, manifest or files failed. */
     data class Invalid(
-        val region: String?,
+        val region: String,
         val problem: RegionMountProblem,
     ) : RegionMount
 }
+
+/** One installed region that cannot mount, with the reason the screen shows. */
+data class BrokenRegion(
+    val region: String,
+    val problem: RegionMountProblem,
+)
+
+/**
+ * Every region in the store: the ones that mount, in region-id order, and the
+ * ones that do not. A broken pack never hides a working one.
+ */
+data class RegionMounts(
+    val installed: List<MountedRegion>,
+    val broken: List<BrokenRegion>,
+)
 
 /**
  * Read-only mount of the installed region packages. It never downloads, writes
@@ -74,16 +80,21 @@ sealed interface RegionMount {
 class RegionMountResolver(
     private val root: File,
 ) {
-    fun resolve(): RegionMount {
-        val regions = installedRegions()
-        if (regions.isEmpty()) {
-            return RegionMount.None
+    /**
+     * Every region in the store, mounted or broken (T-0503). The map mounts all
+     * of them as one logical source per kind; a single-region reader takes the
+     * first of [RegionMounts.installed].
+     */
+    fun resolveAll(): RegionMounts {
+        val installed = mutableListOf<MountedRegion>()
+        val broken = mutableListOf<BrokenRegion>()
+        for (region in installedRegions()) {
+            when (val result = mount(region)) {
+                is RegionMount.Mounted -> installed += result.region
+                is RegionMount.Invalid -> broken += BrokenRegion(result.region, result.problem)
+            }
         }
-        if (regions.size > 1) {
-            return RegionMount.Invalid(region = null, problem = RegionMountProblem.MultipleRegions(regions))
-        }
-        val region = regions.single()
-        return mount(region)
+        return RegionMounts(installed, broken)
     }
 
     private fun installedRegions(): List<String> {
@@ -191,60 +202,8 @@ class RegionMountResolver(
         if (file.length() != component.bytes) {
             return null
         }
-        return if (hasPmtilesHeader(file)) file else null
+        return if (PmtilesHeader.read(file) != null) file else null
     }
-
-    private fun hasPmtilesHeader(file: File): Boolean {
-        val fileLength = file.length()
-        val header = ByteArray(PMTILES_HEADER_BYTES)
-        try {
-            DataInputStream(BufferedInputStream(file.inputStream())).use { input ->
-                input.readFully(header)
-            }
-        } catch (exception: IOException) {
-            return false
-        } catch (exception: SecurityException) {
-            return false
-        }
-        for (index in PMTILES_MAGIC.indices) {
-            if (header[index] != PMTILES_MAGIC[index]) {
-                return false
-            }
-        }
-        if (header[PMTILES_VERSION_OFFSET].toInt() != PMTILES_FORMAT_VERSION) {
-            return false
-        }
-        // The directories and the tile data must lie inside the declared file
-        // before native code opens it: a header that points past the end is a
-        // crash, not a corrupt map.
-        val rootLength = unsignedLong(header, ROOT_LENGTH_OFFSET)
-        if (rootLength == 0L) {
-            return false
-        }
-        return fits(fileLength, unsignedLong(header, ROOT_OFFSET), rootLength) &&
-            fits(fileLength, unsignedLong(header, METADATA_OFFSET), unsignedLong(header, METADATA_LENGTH_OFFSET)) &&
-            fits(fileLength, unsignedLong(header, LEAF_OFFSET), unsignedLong(header, LEAF_LENGTH_OFFSET)) &&
-            fits(fileLength, unsignedLong(header, DATA_OFFSET), unsignedLong(header, DATA_LENGTH_OFFSET)) &&
-            unsignedLong(header, ADDRESSED_TILES_OFFSET) > 0
-    }
-
-    /** A little-endian u64 that does not fit a non-negative Long is rejected by [fits]. */
-    private fun unsignedLong(
-        header: ByteArray,
-        offset: Int,
-    ): Long {
-        var value = 0L
-        for (index in 0 until 8) {
-            value = value or ((header[offset + index].toLong() and 0xFF) shl (8 * index))
-        }
-        return value
-    }
-
-    private fun fits(
-        fileLength: Long,
-        offset: Long,
-        length: Long,
-    ): Boolean = offset >= 0L && length >= 0L && offset <= fileLength && length <= fileLength - offset
 
     private fun invalid(
         region: String,
@@ -256,17 +215,5 @@ class RegionMountResolver(
         const val CONTOURS_KIND = "contours"
         const val PMTILES_FORMAT = "pmtiles"
         const val PMTILES_FORMAT_VERSION = 3
-        const val PMTILES_HEADER_BYTES = 127
-        const val PMTILES_VERSION_OFFSET = 7
-        const val ROOT_OFFSET = 8
-        const val ROOT_LENGTH_OFFSET = 16
-        const val METADATA_OFFSET = 24
-        const val METADATA_LENGTH_OFFSET = 32
-        const val LEAF_OFFSET = 40
-        const val LEAF_LENGTH_OFFSET = 48
-        const val DATA_OFFSET = 56
-        const val DATA_LENGTH_OFFSET = 64
-        const val ADDRESSED_TILES_OFFSET = 72
-        val PMTILES_MAGIC = "PMTiles".toByteArray(Charsets.US_ASCII)
     }
 }

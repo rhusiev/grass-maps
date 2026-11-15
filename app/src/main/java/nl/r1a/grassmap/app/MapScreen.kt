@@ -259,6 +259,7 @@ internal fun MapScreen(
             initialCamera = loaded.sources.camera,
             sourceResolver = { loaded.sources.uri(it) },
             ageLabel = ageLabel,
+            appTiles = loaded.sources.tileSources,
         )
     BindMapSession(container, container.mapSession, surface)
     MapContent(container, surface, loaded, harness)

@@ -1,31 +1,42 @@
 package nl.r1a.grassmap.app
 
 import android.content.Context
+import nl.r1a.grassmap.map.MapTileSource
 import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
 import nl.r1a.grassmap.plugin.api.model.SourceId
-import nl.r1a.grassmap.regions.RegionMount
 import nl.r1a.grassmap.regions.RegionMountProblem
 import nl.r1a.grassmap.regions.RegionMountResolver
+import nl.r1a.grassmap.regions.RegionMounts
+import nl.r1a.grassmap.regions.RegionTileSources
+import nl.r1a.grassmap.regions.TileKind
 import java.io.File
 
 /**
- * Resolves the logical map sources to local PMTiles archives, in this order:
+ * Resolves the logical map sources of T-0020, in this order:
  *
- * 1. exactly one installed region package whose pointer, manifest and
- *    map/contours files validate, from the app's region store;
+ * 1. every installed and mounted region package in the app's region store, as
+ *    one logical source per component kind: `world` and `region` read the
+ *    `map` components of all packs, `contours` their `contours` components;
  * 2. the whole-oblast archive pushed to the app's files directory;
  * 3. the small T-0015 fixture (`fixture-mini-map.pmtiles`) copied out of the
  *    debug assets, with its own `fixture-mini-contours.pmtiles` component.
  *
+ * A shared border tile is present in both neighbouring packs, byte for byte.
+ * Reading them as one source per kind means the first pack in region-id order
+ * serves it and the second copy is never requested, so its labels draw once.
+ * `world` reads the same `map` components as `region`, and an oblast pack
+ * carries no z0-z7 tiles, so its low-zoom layers stay empty until a world
+ * overview pack is installed.
+ *
  * An installed region that fails to mount is not silently ignored: the map
  * still opens on the next source, and [regionProblem] carries the typed reason
- * so the screen can show "needs re-download". `world` has no archive on this
- * machine, so its low-zoom layers are skipped.
+ * so the screen can show "needs re-download".
  */
 internal class MapSources private constructor(
     private val uris: Map<SourceId, String>,
+    val tileSources: Map<SourceId, MapTileSource>,
     val camera: Camera,
     val regionName: String,
     val hasContours: Boolean,
@@ -66,25 +77,22 @@ internal class MapSources private constructor(
             directories: List<File>,
             fixture: () -> File?,
             contoursFixture: () -> File? = { null },
-            mount: (File) -> RegionMount = { root -> RegionMountResolver(root).resolve() },
+            mount: (File) -> RegionMounts = { root -> RegionMountResolver(root).resolveAll() },
         ): MapSources {
-            val mountResult = regionsRoot?.let(mount) ?: RegionMount.None
-            val mounted = (mountResult as? RegionMount.Mounted)?.region
-            val invalid = mountResult as? RegionMount.Invalid
-            val problem = invalid?.problem
-            if (mounted != null) {
-                val uris =
-                    buildMap {
-                        put(MapSourceIds.REGION, pmtilesUri(mounted.map))
-                        mounted.contours?.let { put(MapSourceIds.CONTOURS, pmtilesUri(it)) }
-                    }
+            val mounts = regionsRoot?.let(mount)
+            val problem = mounts?.broken?.firstOrNull()
+            val tiles = mounts?.let { RegionTileSources.open(it.installed) } ?: RegionTileSources.empty()
+            if (tiles.has(TileKind.MAP)) {
                 return MapSources(
-                    uris = uris,
+                    uris = emptyMap(),
+                    tileSources = tileSourcesOf(tiles),
                     camera = LVIV_CAMERA,
-                    regionName = "region:${mounted.region}/${mounted.version}",
-                    hasContours = mounted.contours != null,
-                    regionProblem = null,
-                    problemRegion = null,
+                    regionName = packName(tiles),
+                    hasContours = tiles.has(TileKind.CONTOURS),
+                    // A broken pack is reported even when the others mounted, so
+                    // its "needs re-download" banner is never lost.
+                    regionProblem = problem?.problem,
+                    problemRegion = problem?.region,
                 )
             }
             val lviv = directories.map { File(it, LVIV_ARCHIVE) }.firstOrNull { it.isUsable() }
@@ -104,13 +112,39 @@ internal class MapSources private constructor(
                 }
             return MapSources(
                 uris = uris,
+                tileSources = emptyMap(),
                 camera = if (lviv != null) LVIV_CAMERA else FIXTURE_CAMERA,
                 regionName = name,
                 hasContours = contours != null,
-                regionProblem = problem,
-                problemRegion = invalid?.region,
+                regionProblem = problem?.problem,
+                problemRegion = problem?.region,
             )
         }
+
+        /**
+         * The one logical source per kind. `world` and `region` are two source
+         * ids with two zoom bands over the same `map` components, so they share
+         * one reader and no tile is served twice.
+         */
+        private fun tileSourcesOf(tiles: RegionTileSources): Map<SourceId, MapTileSource> {
+            val map =
+                MapTileSource { zoom, x, y ->
+                    tiles.tile(TileKind.MAP, zoom, x, y)?.bytes
+                }
+            val sources = linkedMapOf(MapSourceIds.WORLD to map, MapSourceIds.REGION to map)
+            if (tiles.has(TileKind.CONTOURS)) {
+                sources[MapSourceIds.CONTOURS] =
+                    MapTileSource { zoom, x, y ->
+                        tiles.tile(TileKind.CONTOURS, zoom, x, y)?.bytes
+                    }
+            }
+            return sources
+        }
+
+        /** `region:<id>/<version>` for one pack, `regions:<id>,<id>` for several. */
+        private fun packName(tiles: RegionTileSources): String =
+            tiles.packs.singleOrNull()?.let { "region:${it.region}/${it.version}" }
+                ?: "regions:${tiles.regions.joinToString(",")}"
 
         private fun copyAsset(
             context: Context,

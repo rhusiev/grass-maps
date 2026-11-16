@@ -100,6 +100,55 @@ class SimplifyTest(unittest.TestCase):
         self.assertEqual(pipeline.simplify_ring(ring, 0.0), ring)
 
 
+ROUTING_LISTING_HASH = "3ce123a83370fdc1ba033e1c8951f66e6bdd2e1ee61e9459643165301ae0e7d5"
+
+
+def write_routing_directory(directory: Path) -> None:
+    """The two-file routing directory whose listing hash the app test repeats."""
+    (directory / "tiles" / "0" / "003").mkdir(parents=True)
+    (directory / "tiles" / "0" / "003" / "110.gph").write_bytes(b"tile-a")
+    (directory / "valhalla.json").write_bytes(b"{}")
+
+
+class DirectoryComponentTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self._temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._temp.cleanup)
+        self.pack = Path(self._temp.name)
+        self.routing = self.pack / "routing"
+        write_routing_directory(self.routing)
+
+    def test_listing_is_sorted_path_size_hash_lines(self) -> None:
+        self.assertEqual(
+            pipeline.directory_listing(self.routing),
+            "tiles/0/003/110.gph\t6\t30e5f1e49470e0e241c3d7c75b2b8be5b246abd8268686363a8d092d90a728f4\n"
+            "valhalla.json\t2\t44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\n",
+        )
+
+    def test_component_hashes_the_listing_and_sums_the_sizes(self) -> None:
+        entry = pipeline.directory_component("routing", "routing", "valhalla-tile-directory", 1, "v1", self.pack)
+        self.assertEqual(entry["sha256"], ROUTING_LISTING_HASH)
+        self.assertEqual(entry["bytes"], 8)
+        self.assertEqual(entry["type"], "directory")
+        self.assertEqual(entry["file"], "routing")
+
+    def test_a_changed_file_changes_the_component_hash(self) -> None:
+        (self.routing / "tiles" / "0" / "003" / "110.gph").write_bytes(b"tile-b")
+        entry = pipeline.directory_component("routing", "routing", "valhalla-tile-directory", 1, "v1", self.pack)
+        self.assertNotEqual(entry["sha256"], ROUTING_LISTING_HASH)
+
+    def test_a_symbolic_link_is_refused(self) -> None:
+        (self.routing / "link.gph").symlink_to(self.routing / "valhalla.json")
+        with self.assertRaises(SystemExit):
+            pipeline.directory_listing(self.routing)
+
+    def test_a_directory_without_files_is_refused(self) -> None:
+        empty = self.pack / "empty"
+        empty.mkdir()
+        with self.assertRaises(SystemExit):
+            pipeline.directory_component("routing", "empty", "valhalla-tile-directory", 1, "v1", self.pack)
+
+
 class ManifestTest(unittest.TestCase):
     def setUp(self) -> None:
         self._temp = tempfile.TemporaryDirectory()
@@ -115,7 +164,7 @@ class ManifestTest(unittest.TestCase):
             json.dumps({"type": "FeatureCollection", "features": [{"properties": {"kind": "ford"}}]})
         )
         (self.pack / "relations.json").write_text(json.dumps({"relations": [{"network": "iwn"}], "ways": []}))
-        (self.pack / "routing.tar").write_bytes(b"x")
+        write_routing_directory(self.pack / "routing")
         self.dem = self.root / "dem"
         self.dem.mkdir()
         (self.dem / "Copernicus_DSM_COG_10_N49_00_E023_00_DEM.tif").write_bytes(b"x")
@@ -153,6 +202,10 @@ class ManifestTest(unittest.TestCase):
         self.assertEqual(len(files), len(set(files)))
         self.assertIn("routing", kinds)
         self.assertIn("features", kinds)
+        routing = next(entry for entry in manifest["components"] if entry["kind"] == "routing")
+        self.assertEqual(routing["file"], "routing")
+        self.assertEqual(routing["type"], "directory")
+        self.assertEqual(routing["sha256"], ROUTING_LISTING_HASH)
         self.assertEqual(manifest["pipeline"]["routingSource"]["sha256"], "d" * 64)
 
     def test_boundary_table_supplies_the_bbox_and_the_fold(self) -> None:
@@ -198,8 +251,8 @@ class CatalogTest(unittest.TestCase):
              "version": "2026-11-04", "bytes": 7, "sha256": "c" * 64, "standIn": False},
             {"kind": "features", "file": "features.bin", "format": "place-features", "formatVersion": 1,
              "version": "2026-11-04", "bytes": 3, "sha256": "e" * 64, "standIn": False},
-            {"kind": "routing", "file": "routing.tar", "format": "valhalla-tiles", "formatVersion": 1,
-             "version": "2026-11-04", "bytes": 70, "sha256": "d" * 64, "standIn": False},
+            {"kind": "routing", "file": "routing", "type": "directory", "format": "valhalla-tile-directory",
+             "formatVersion": 1, "version": "2026-11-04", "bytes": 70, "sha256": "d" * 64, "standIn": False},
         ]
         manifest = {
             "region": "ua-46",

@@ -409,8 +409,24 @@ PY
         valhalla_build_extract -c "/data/slice/$region.json" \
         -e "/data/packs/$region/routing.tar" -g "/data/slice/$region" -O -v
 
+    # The package ships the slice as a directory, so the app can merge the tiles
+    # of several packs. index.bin only describes the tar and is not copied.
+    mkdir -p "$pack/routing/tiles"
+    tar -xf "$pack/routing.tar" -C "$pack/routing/tiles" --exclude=index.bin
+    rm -f "$pack/routing.tar"
+    python3 - "$WORK/routing-config.json" "$pack/routing/valhalla.json" <<'PY'
+import json
+import sys
+
+config = json.load(open(sys.argv[1]))
+config["mjolnir"]["tile_extract"] = ""
+config["mjolnir"]["tile_dir"] = ""
+config["additional_data"]["elevation"] = ""
+json.dump(config, open(sys.argv[2], "w"), indent=2)
+PY
+
     local routing_tiles
-    routing_tiles="$(tar -tf "$pack/routing.tar" | grep -c '\.gph$' || true)"
+    routing_tiles="$(find "$pack/routing/tiles" -name '*.gph' | wc -l)"
     if [[ "$routing_tiles" -eq 0 ]]; then
         echo "build-oblasts.sh: $region sliced no routing tiles" >&2
         exit 1

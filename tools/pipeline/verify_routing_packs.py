@@ -34,13 +34,17 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
+from oblast_pipeline import directory_files, directory_listing
+
 DEFAULT_PACKS = Path("/hdd/t-0501-oblasts")
 DEFAULT_COUNTRY = Path("/hdd/t-0501-work/pipeline/country-routing")
 COUNTRY_TAR = "tiles.tar"
 COUNTRY_INDEX = "index.bin"
 BOUNDARIES = "boundaries"
 MANIFEST = "manifest.json"
-ROUTING_PART = "routing.tar"
+ROUTING_DIRECTORY = "routing"
+ROUTING_TILES = "tiles"
+LEGACY_ROUTING_ARCHIVE = "routing.tar"
 TILE_SUFFIX = ".gph"
 EXPECTED_PACKAGES = 25
 RUNTIME_DATABASES = ("admins.sqlite", "timezones.sqlite")
@@ -135,11 +139,17 @@ class Package:
 
     region: str
     directory: Path
-    archive: tarfile.TarFile
-    members: dict[str, tarfile.TarInfo]
+    sizes: dict[str, int]
+    archive: tarfile.TarFile | None = None
 
     def names(self) -> set[str]:
-        return set(self.members)
+        return set(self.sizes)
+
+    def read(self, name: str) -> bytes:
+        """One tile's bytes, from the routing directory or the legacy tar."""
+        if self.archive is not None:
+            return self.archive.extractfile(name).read()
+        return (self.directory / ROUTING_DIRECTORY / ROUTING_TILES / name).read_bytes()
 
 
 def decoded_cell(path: str) -> Cell:
@@ -325,18 +335,30 @@ def read_packages(root: Path, report: Report) -> dict[str, Package]:
             continue
         version = sorted(item.name for item in directory.iterdir())[0]
         part = directory / version
-        if not (part / ROUTING_PART).is_file():
-            report.fail("grid", f"{directory.name}: no {ROUTING_PART} in {part}")
-            continue
-        archive = tarfile.open(part / ROUTING_PART)
-        members = {
-            member.name: member
-            for member in archive.getmembers()
-            if member.name.endswith(TILE_SUFFIX)
-        }
-        packages[directory.name] = Package(
-            region=directory.name, directory=part, archive=archive, members=members
-        )
+        tiles = part / ROUTING_DIRECTORY / ROUTING_TILES
+        legacy = part / LEGACY_ROUTING_ARCHIVE
+        if tiles.is_dir():
+            sizes = {
+                path.relative_to(tiles).as_posix(): path.stat().st_size
+                for path in tiles.rglob(f"*{TILE_SUFFIX}")
+            }
+            packages[directory.name] = Package(
+                region=directory.name, directory=part, sizes=sizes
+            )
+        elif legacy.is_file():
+            archive = tarfile.open(legacy)
+            sizes = {
+                member.name: member.size
+                for member in archive.getmembers()
+                if member.name.endswith(TILE_SUFFIX)
+            }
+            packages[directory.name] = Package(
+                region=directory.name, directory=part, sizes=sizes, archive=archive
+            )
+        else:
+            report.fail(
+                "grid", f"{directory.name}: no {ROUTING_DIRECTORY}/ in {part}"
+            )
     return packages
 
 
@@ -351,9 +373,9 @@ def ownership(
     owners: dict[str, list[str]] = defaultdict(list)
     sizes: dict[str, int] = {}
     for package in packages.values():
-        for name, member in package.members.items():
+        for name, size in package.sizes.items():
             owners[name].append(package.region)
-            sizes[name] = member.size
+            sizes[name] = size
     return owners, sizes
 
 
@@ -367,6 +389,22 @@ def check_build(packages: dict[str, Package], report: Report) -> None:
         report.fail("join", f"packages name {len(sources)} different routing builds")
         return
     report.line("join", f"every package names routing build {sources.pop()}")
+
+
+def component_matches(package: Package, part: dict) -> bool:
+    """The manifest's size and hash equal the package's routing files."""
+    if package.archive is not None:
+        path = package.directory / LEGACY_ROUTING_ARCHIVE
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        return part["bytes"] == path.stat().st_size and part["sha256"] == digest
+    root = package.directory / ROUTING_DIRECTORY
+    listing = directory_listing(root)
+    files = [path for _, path in directory_files(root)]
+    return (
+        part.get("type") == "directory"
+        and part["bytes"] == sum(path.stat().st_size for path in files)
+        and part["sha256"] == hashlib.sha256(listing.encode("utf-8")).hexdigest()
+    )
 
 
 def check_package(package: Package, country: Country, report: Report) -> None:
@@ -389,15 +427,13 @@ def check_package(package: Package, country: Country, report: Report) -> None:
         report.fail(
             "grid",
             f"{package.region}: manifest says {declared['tiles']} tiles "
-            f"and the tar holds {len(actual)}",
+            f"and the package holds {len(actual)}",
         )
     part = next(item for item in manifest["components"] if item["kind"] == "routing")
-    path = package.directory / ROUTING_PART
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    if part["bytes"] != path.stat().st_size or part["sha256"] != digest:
+    if not component_matches(package, part):
         report.fail(
             "grid",
-            f"{package.region}: the routing component does not match {ROUTING_PART}",
+            f"{package.region}: the routing component does not match its files",
         )
     if missing:
         report.fail(
@@ -415,8 +451,8 @@ def check_package(package: Package, country: Country, report: Report) -> None:
         f"missing {len(missing)}, extra {len(extra)}",
     )
 
-    for name, member in package.members.items():
-        data = package.archive.extractfile(member).read()
+    for name in package.sizes:
+        data = package.read(name)
         if hashlib.sha256(data).hexdigest() != country.digests[name]:
             report.fail(
                 "join", f"{package.region}: {name} differs from the country build"
@@ -432,7 +468,7 @@ def check_package(package: Package, country: Country, report: Report) -> None:
             report.fail("join", f"{package.region}: {name} base is not its cell origin")
     report.line(
         "join",
-        f"{package.region}: {len(package.members)} tiles identical to the build",
+        f"{package.region}: {len(package.sizes)} tiles identical to the build",
     )
 
 

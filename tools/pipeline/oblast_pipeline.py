@@ -56,8 +56,10 @@ SEARCH_FILES = (
 )
 
 ROUTING_KIND = "routing"
-ROUTING_FILE = "routing.tar"
-ROUTING_FORMAT = "valhalla-tiles"
+ROUTING_DIRECTORY = "routing"
+ROUTING_FORMAT = "valhalla-tile-directory"
+DIRECTORY_TYPE = "directory"
+LISTING_FIELD_SEPARATOR = "\t"
 
 STAGE_PARTS = {
     "search-places": "search",
@@ -250,6 +252,62 @@ def _sha256(path: pathlib.Path) -> str:
     return digest.hexdigest()
 
 
+def directory_files(directory: pathlib.Path) -> list[tuple[str, pathlib.Path]]:
+    """Every regular file under a directory component, as (relative path, file).
+
+    The list is sorted by the UTF-8 bytes of the relative path, which uses `/`
+    on every host. A symbolic link, a name with a tab or a line break, or a
+    directory with no file is refused, because the listing could not describe it.
+    """
+    found = []
+    for path in directory.rglob("*"):
+        if path.is_symlink():
+            raise SystemExit(f"manifest: {path} is a symbolic link")
+        if not path.is_file():
+            continue
+        relative = path.relative_to(directory).as_posix()
+        if any(ord(char) < 0x20 for char in relative):
+            raise SystemExit(f"manifest: {relative!r} holds a control character")
+        found.append((relative, path))
+    if not found:
+        raise SystemExit(f"manifest: directory component {directory.name} holds no file")
+    return sorted(found, key=lambda item: item[0].encode("utf-8"))
+
+
+def directory_listing(directory: pathlib.Path) -> str:
+    """The canonical listing of a directory component.
+
+    One line per regular file, sorted by the UTF-8 bytes of its path relative to
+    the directory: `<path> TAB <size in decimal bytes> TAB <sha256 in lower-case
+    hex> LF`. Every line ends with LF, so the last one does too. The component's
+    `sha256` is the SHA-256 of this text encoded as UTF-8 and its `bytes` is the
+    sum of the file sizes. `PackageVerifier` in the app computes the same text.
+    """
+    return "".join(
+        LISTING_FIELD_SEPARATOR.join((relative, str(path.stat().st_size), _sha256(path))) + "\n"
+        for relative, path in directory_files(directory)
+    )
+
+
+def directory_component(kind, directory, fmt, format_version, version, pack):
+    path = pathlib.Path(pack) / directory
+    if not path.is_dir():
+        raise SystemExit(f"manifest: missing component directory {directory}")
+    files = directory_files(path)
+    listing = directory_listing(path)
+    return {
+        "kind": kind,
+        "file": directory,
+        "type": DIRECTORY_TYPE,
+        "format": fmt,
+        "formatVersion": format_version,
+        "version": version,
+        "bytes": sum(file.stat().st_size for _, file in files),
+        "sha256": hashlib.sha256(listing.encode("utf-8")).hexdigest(),
+        "standIn": False,
+    }
+
+
 def component(kind, file, fmt, format_version, version, pack, zooms=None):
     path = pathlib.Path(pack) / file
     if not path.is_file():
@@ -280,7 +338,7 @@ def manifest_components(pack, version) -> list[dict]:
     entries.append(component("features", "features.bin", "place-features", 1, version, pack))
     entries.append(component("way-alerts", "way-alerts.geojson", "way-alerts-geojson", 1, version, pack))
     entries.append(component("relations", "relations.json", "route-relations-json", 1, version, pack))
-    entries.append(component(ROUTING_KIND, ROUTING_FILE, ROUTING_FORMAT, 1, version, pack))
+    entries.append(directory_component(ROUTING_KIND, ROUTING_DIRECTORY, ROUTING_FORMAT, 1, version, pack))
     kinds = [entry["kind"] for entry in entries]
     files = [entry["file"] for entry in entries]
     if len(set(kinds)) != len(kinds) or len(set(files)) != len(files):
@@ -404,7 +462,7 @@ def write_manifest(spec: dict, boundaries: dict | None = None) -> dict:
             "tiles": spec["routingTiles"],
             "selection": "valhalla_build_extract --geojson-dir=<oblast>, every tile intersecting the polygon",
             "elevationGrades": spec["routingGrades"],
-            "slicedFile": ROUTING_FILE,
+            "slicedDirectory": ROUTING_DIRECTORY,
         },
     }
     if includes:

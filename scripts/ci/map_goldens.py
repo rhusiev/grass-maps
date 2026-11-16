@@ -1281,7 +1281,7 @@ def capture(
     if profile == "oblast" and not (output / "region.json").exists():
         raise GoldenError("oblast capture needs the installed region package")
     conditions = {
-        "airplane_mode": radio_conditions(adb, raster_tiles),
+        "radios": radio_conditions(adb, raster_tiles),
         "system_dialogs": prepare_device(adb),
     }
     if output.exists():

@@ -26,6 +26,9 @@
 # The raster profile needs no tile server on this machine: the capture script
 # serves the committed fixture from test-data/map-goldens/raster-tiles on a
 # loopback port and forwards it to the device with `adb reverse`.
+# It is the one profile that runs with the radios on: MapLibre sends no HTTP
+# tile request while Android reports no network. The app's privacy gate still
+# blocks every URL outside the fixture template.
 #
 # Environment:
 #   GOLDEN_SERIAL          use this device instead of booting an AVD

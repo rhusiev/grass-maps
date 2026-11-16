@@ -204,8 +204,14 @@ class RegionResumeTest {
             ranges += header
             val start = header?.removePrefix("bytes=")?.removeSuffix("-")?.toLongOrNull() ?: 0L
             when {
-                header == null -> reply(exchange, mode, 200, archive, null)
-                mode == Mode.IGNORE_RANGE -> reply(exchange, mode, 200, archive, null)
+                header == null -> {
+                    reply(exchange, mode, 200, archive, null)
+                }
+
+                mode == Mode.IGNORE_RANGE -> {
+                    reply(exchange, mode, 200, archive, null)
+                }
+
                 start >= archive.size && start == archive.size.toLong() -> {
                     exchange.responseHeaders.set("Content-Range", "bytes */${archive.size}")
                     exchange.sendResponseHeaders(416, -1)

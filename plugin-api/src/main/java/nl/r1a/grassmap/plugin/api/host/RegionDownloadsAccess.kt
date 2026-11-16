@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.DownloadsData
+import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
 
 /**
  * The region store as the downloads screen reads it (T-0504).
@@ -52,6 +53,19 @@ interface RegionDownloadsAccess {
 
     /** Removes an installed region from the phone. */
     suspend fun remove(region: String): Outcome<Unit>
+
+    /**
+     * Sets whether transfers may use a metered network. A host that cannot
+     * keep the choice answers [AppError.NotReady].
+     */
+    suspend fun setMobileDataPolicy(policy: MobileDataPolicy): Outcome<Unit> = Outcome.Failure(AppError.NotReady)
+
+    /**
+     * Lets the transfers that wait for an unmetered network run on a metered one
+     * now. The choice ends when no transfer is left, so the policy itself does
+     * not change.
+     */
+    suspend fun useMobileDataNow(): Outcome<Unit> = Outcome.Failure(AppError.NotReady)
 }
 
 /** The source a host uses before the region store is wired. */

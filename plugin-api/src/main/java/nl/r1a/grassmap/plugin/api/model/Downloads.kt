@@ -235,11 +235,28 @@ enum class DownloadTransferState {
     /** Queued behind another region, or waiting for the network. */
     WAITING,
 
+    /**
+     * Held back because the network is metered and the policy is
+     * [MobileDataPolicy.WIFI_ONLY]. It continues on its own when an unmetered
+     * network returns, or at once after the user chooses mobile data for it.
+     */
+    WAITING_FOR_WIFI,
+
     /** The archive body is arriving. */
     DOWNLOADING,
 
     /** The archive arrived and its files are being checked and installed. */
     VERIFYING,
+}
+
+/** Whether a download may use a metered network such as mobile data. */
+@Serializable
+enum class MobileDataPolicy {
+    /** A transfer waits while the network is metered. This is the default. */
+    WIFI_ONLY,
+
+    /** A transfer runs on any network. */
+    ANY,
 }
 
 /**
@@ -268,6 +285,9 @@ data class DownloadsData(
     val problems: List<RegionProblem> = emptyList(),
     val serverUrl: String = "",
     val tokenPresent: Boolean = false,
+    val mobileDataPolicy: MobileDataPolicy = MobileDataPolicy.WIFI_ONLY,
+    /** True while the current network is metered. */
+    val networkMetered: Boolean = false,
 ) {
     /** The transfer for [region], or null when nothing is in flight for it. */
     fun transfer(region: String): DownloadTransfer? = transfers.firstOrNull { it.region == region }

@@ -7,6 +7,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -24,6 +26,7 @@ import nl.r1a.grassmap.plugin.api.model.DownloadTransferState
 import nl.r1a.grassmap.plugin.api.model.DownloadsData
 import nl.r1a.grassmap.plugin.api.model.DownloadsDefaults
 import nl.r1a.grassmap.plugin.api.model.InstalledPack
+import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
 import nl.r1a.grassmap.plugin.api.model.RegionProblem
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
@@ -52,8 +55,18 @@ class RegionStore(
     private val scope: CoroutineScope,
     transport: DownloadTransport = HttpDownloadTransport(),
     private val log: (String) -> Unit = {},
+    private val metered: MeteredNetworkMonitor = NeverMetered,
+    initialMobileDataPolicy: MobileDataPolicy = MobileDataPolicy.WIFI_ONLY,
+    private val onMobileDataPolicyChanged: (MobileDataPolicy) -> Unit = {},
 ) : RegionDownloadsAccess {
-    private val mutable = MutableStateFlow(DownloadsData(serverUrl = DownloadsDefaults.SERVER_URL))
+    private val mutable =
+        MutableStateFlow(
+            DownloadsData(
+                serverUrl = DownloadsDefaults.SERVER_URL,
+                mobileDataPolicy = initialMobileDataPolicy,
+                networkMetered = metered.isMetered.value,
+            ),
+        )
     override val data: StateFlow<DownloadsData> = mutable.asStateFlow()
 
     private val catalogClient = RegionCatalogClient(transport)
@@ -72,8 +85,15 @@ class RegionStore(
      */
     private val claimMutex = Mutex()
 
+    /** The user's "download now on mobile data" choice; it ends when the queue empties. */
+    private val mobileDataNow = MutableStateFlow(false)
+
     private val queue = Channel<String>(Channel.UNLIMITED)
     private val worker = scope.launch(Dispatchers.IO) { drain() }
+    private val meteredWatcher =
+        scope.launch {
+            metered.isMetered.collect { isMetered -> mutable.update { it.copy(networkMetered = isMetered) } }
+        }
 
     // The worker reads these while a caller may be replacing them.
     @Volatile
@@ -195,7 +215,7 @@ class RegionStore(
         var stopped: CompletableDeferred<Unit>? = null
         claimMutex.withLock {
             val transfer = mutable.value.transfer(region) ?: return Outcome.Success(Unit)
-            if (transfer.state == DownloadTransferState.WAITING) {
+            if (transfer.state.isQueued()) {
                 // Still in the queue: removing the transfer is enough, and the
                 // worker claims nothing for a region without one.
                 mutable.update { state -> state.copy(transfers = state.transfers.filterNot { it.region == region }) }
@@ -241,10 +261,22 @@ class RegionStore(
         return Outcome.Success(Unit)
     }
 
+    override suspend fun setMobileDataPolicy(policy: MobileDataPolicy): Outcome<Unit> {
+        mutable.update { it.copy(mobileDataPolicy = policy) }
+        onMobileDataPolicyChanged(policy)
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun useMobileDataNow(): Outcome<Unit> {
+        mobileDataNow.value = true
+        return Outcome.Success(Unit)
+    }
+
     /** Stops the worker. The store is single-use after this. */
     fun close() {
         queue.close()
         worker.cancel()
+        meteredWatcher.cancel()
         for (pending in finishing.values) {
             pending.complete(Unit)
         }
@@ -257,7 +289,29 @@ class RegionStore(
         }
     }
 
+    /** True when a transfer may use the network as it is now. */
+    private fun mayTransfer(): Boolean =
+        mutable.value.mobileDataPolicy == MobileDataPolicy.ANY ||
+            !metered.isMetered.value ||
+            mobileDataNow.value
+
+    /**
+     * Holds [region] in WAITING_FOR_WIFI until a transfer may run, or until the
+     * user removed it from the queue. The worker is single, so every transfer
+     * behind this one waits too, which is right: the policy is global.
+     */
+    private suspend fun awaitAllowedNetwork(region: String) {
+        if (mayTransfer()) {
+            return
+        }
+        updateTransfer(region) { it.copy(state = DownloadTransferState.WAITING_FOR_WIFI) }
+        log("download waits for an unmetered network region=$region")
+        combine(mutable, metered.isMetered, mobileDataNow) { state, _, _ -> state }
+            .first { state -> state.transfer(region) == null || mayTransfer() }
+    }
+
     private suspend fun runDownload(region: String) {
+        awaitAllowedNetwork(region)
         val entry =
             mutable.value.catalog
                 ?.regions
@@ -283,6 +337,7 @@ class RegionStore(
             finish(region)
             return
         }
+        var paused = false
         try {
             val url = RegionServerUrls.packageArchive(serverUrl, region, entry.version)
             if (url == null) {
@@ -295,8 +350,9 @@ class RegionStore(
                     request = RegionRequest(url = url, region = region, version = entry.version, token = token),
                     policy = policy,
                     access = network,
-                    cancellation = CancellationHandle { flag.get() },
+                    cancellation = CancellationHandle { flag.get() || !mayTransfer() },
                     onProgress = { progress -> publishProgress(region, progress) },
+                    keepPartialOnCancel = { !flag.get() },
                 )
             when (outcome) {
                 is Outcome.Success -> {
@@ -311,6 +367,10 @@ class RegionStore(
                 }
 
                 is Outcome.Failure -> {
+                    if (outcome.error == AppError.Cancelled && !flag.get()) {
+                        paused = pause(region)
+                        return
+                    }
                     if (outcome.error == AppError.Cancelled) {
                         mutable.update { state ->
                             state.copy(
@@ -325,9 +385,28 @@ class RegionStore(
             }
         } finally {
             activeFlags.remove(region)
-            finish(region)
+            if (!paused) {
+                finish(region)
+            }
+            if (mutable.value.transfers.isEmpty()) {
+                mobileDataNow.value = false
+            }
         }
     }
+
+    /**
+     * The network turned metered under a running transfer. The partial archive
+     * stays, the transfer goes back to the end of the queue and waits.
+     */
+    private suspend fun pause(region: String): Boolean =
+        claimMutex.withLock {
+            if (mutable.value.transfer(region) == null) {
+                false
+            } else {
+                updateTransfer(region) { it.copy(state = DownloadTransferState.WAITING_FOR_WIFI) }
+                queue.trySend(region).isSuccess
+            }
+        }
 
     /** Records a problem and drops the transfer, so the row shows the failure once. */
     private fun recordProblem(
@@ -430,6 +509,9 @@ class RegionStore(
                 DownloadProblem(DownloadProblemKind.OTHER)
             }
         }
+
+    private fun DownloadTransferState.isQueued(): Boolean =
+        this == DownloadTransferState.WAITING || this == DownloadTransferState.WAITING_FOR_WIFI
 
     private companion object {
         const val REMOVE_ID = "region.store.remove"

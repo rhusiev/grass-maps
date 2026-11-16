@@ -70,10 +70,18 @@ class RegionStoreSelfHostedServerTest {
             val store = store()
             try {
                 assertEquals(Outcome.Failure(AppError.Server(401)), store.setServer(url, null))
-                assertEquals(DownloadProblemKind.TOKEN_REQUIRED, store.data.value.catalogProblem?.kind)
+                assertEquals(
+                    DownloadProblemKind.TOKEN_REQUIRED,
+                    store.data.value.catalogProblem
+                        ?.kind,
+                )
 
                 assertEquals(Outcome.Failure(AppError.Server(401)), store.setServer(url, "wrong-token-0123456789"))
-                assertEquals(DownloadProblemKind.TOKEN_REJECTED, store.data.value.catalogProblem?.kind)
+                assertEquals(
+                    DownloadProblemKind.TOKEN_REJECTED,
+                    store.data.value.catalogProblem
+                        ?.kind,
+                )
 
                 assertEquals(Outcome.Success(Unit), store.setServer(url, token))
                 installLviv(store)
@@ -136,14 +144,23 @@ class RegionStoreSelfHostedServerTest {
         val output = Files.createDirectories(work.resolve("pipeline-out"))
         Files.write(output.resolve("catalog.json"), CatalogFixture.bytes())
         val version = Files.createDirectories(output.resolve(CatalogFixture.LVIV).resolve(CatalogFixture.VERSION))
-        ZipInputStream(FixturePackages.at(CatalogFixture.LVIV).inputStream()).use { zip ->
+        ZipInputStream(FixturePackages.at(CatalogFixture.LVIV, CatalogFixture.VERSION).inputStream()).use { zip ->
             generateSequence { zip.nextEntry }.forEach { entry ->
                 Files.write(version.resolve(entry.name), zip.readBytes())
             }
         }
         val packs = work.resolve("packs")
         val (status, text) =
-            runCommand(listOf("python3", "-I", serverDirectory.resolve("publish-packs.py").toString(), output.toString(), "--dest", packs.toString()))
+            runCommand(
+                listOf(
+                    "python3",
+                    "-I",
+                    serverDirectory.resolve("publish-packs.py").toString(),
+                    output.toString(),
+                    "--dest",
+                    packs.toString(),
+                ),
+            )
         assertEquals(text, 0, status)
         return packs
     }
@@ -157,17 +174,21 @@ class RegionStoreSelfHostedServerTest {
             )
         assertEquals(text, 0, status)
         tokensFile = file
-        return text.lines().first { it.startsWith(TOKEN_PREFIX) }.removePrefix(TOKEN_PREFIX).trim()
+        return text
+            .lines()
+            .first { it.startsWith(TOKEN_PREFIX) }
+            .removePrefix(TOKEN_PREFIX)
+            .trim()
     }
 
-        private fun startServer(
+    private fun startServer(
         packs: Path,
         requireTokens: Boolean,
     ): String {
         val port = ServerSocket(0).use { it.localPort }
         val builder = ProcessBuilder("python3", "-m", "gm_server").directory(serverDirectory.toFile())
         builder.redirectErrorStream(true)
-        builder.redirectOutput(ProcessBuilder.Redirect.DISCARD)
+        builder.redirectOutput(ProcessBuilder.Redirect.to(java.io.File("/dev/null")))
         builder.environment().apply {
             put("GM_PACKS_DIR", packs.toString())
             put("GM_STATE_DIR", work.resolve("state").toString())

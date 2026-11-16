@@ -6,7 +6,8 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 
-_RANGE = re.compile(r"^bytes=(\d*)-(\d*)$")
+MAX_RANGE_DIGITS = 18
+_RANGE = re.compile(rf"^bytes=(\d{{0,{MAX_RANGE_DIGITS}}})-(\d{{0,{MAX_RANGE_DIGITS}}})$")
 
 
 class RangeKind(Enum):

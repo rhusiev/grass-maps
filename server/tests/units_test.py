@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from gm_server import token_cli  # noqa: E402
 from gm_server.config import Config, ConfigError  # noqa: E402
-from gm_server.limits import Limiter  # noqa: E402
+from gm_server.limits import MAX_TRACKED_KEYS, Limiter, ip_key  # noqa: E402
 from gm_server.ranges import RangeKind, parse_range  # noqa: E402
 from gm_server.tokens import TokenStore, hash_token, read_entries  # noqa: E402
 from gm_server.usage import UsageStore  # noqa: E402
@@ -37,6 +37,10 @@ class RangeTest(unittest.TestCase):
         for header in (None, "", "bytes=abc", "items=1-2", "bytes=1-2,5-6", "bytes=-", "bytes=9-3"):
             self.assertEqual(parse_range(header, SIZE).kind, RangeKind.FULL, header)
 
+    def test_over_long_numbers_are_malformed_not_an_error(self) -> None:
+        for header in ("bytes=" + "9" * 5000 + "-", "bytes=0-" + "9" * 5000, "bytes=-" + "9" * 5000):
+            self.assertEqual(parse_range(header, SIZE).kind, RangeKind.FULL)
+
     def test_start_past_the_end_is_unsatisfiable(self) -> None:
         self.assertEqual(parse_range("bytes=100-", SIZE).kind, RangeKind.UNSATISFIABLE)
         self.assertEqual(parse_range("bytes=-0", SIZE).kind, RangeKind.UNSATISFIABLE)
@@ -56,6 +60,36 @@ class LimiterTest(unittest.TestCase):
         self.assertGreater(limiter.ban_remaining("ip"), 0)
         now[0] = 200.0
         self.assertEqual(limiter.ban_remaining("ip"), 0)
+
+    def test_maps_stay_bounded_under_many_distinct_keys(self) -> None:
+        now = [0.0]
+        limiter = Limiter(5, 1, 3, 600, 100, clock=lambda: now[0])
+        for index in range(MAX_TRACKED_KEYS * 2):
+            limiter.record_failure(f"ip{index}")
+            limiter.rate_retry_after(f"key{index}")
+        self.assertLessEqual(len(limiter._failures), MAX_TRACKED_KEYS)
+        self.assertLessEqual(len(limiter._hits), MAX_TRACKED_KEYS)
+        now[0] = 10_000.0
+        limiter.rate_retry_after("later")
+        limiter.record_failure("later")
+        self.assertEqual(len(limiter._hits), 1)
+        self.assertEqual(len(limiter._failures), 1)
+
+    def test_expired_bans_are_swept_without_a_lookup(self) -> None:
+        now = [0.0]
+        limiter = Limiter(5, 1, 1, 600, 100, clock=lambda: now[0])
+        for index in range(50):
+            limiter.record_failure(f"ip{index}")
+        self.assertEqual(len(limiter._banned_until), 50)
+        now[0] = 1_000.0
+        limiter.record_failure("fresh")
+        self.assertEqual(set(limiter._banned_until), {"fresh"})
+
+    def test_ip_key_uses_the_64_prefix_for_ipv6_and_the_full_ipv4_address(self) -> None:
+        self.assertEqual(ip_key("203.0.113.7"), "203.0.113.7")
+        self.assertEqual(ip_key("2001:db8:1:2:aaaa:bbbb:cccc:dddd"), "2001:db8:1:2::/64")
+        self.assertEqual(ip_key("::ffff:203.0.113.7"), "203.0.113.7")
+        self.assertIsNone(ip_key("not-an-ip"))
 
     def test_concurrency_slots_are_returned(self) -> None:
         limiter = Limiter(0, 1, 0, 1, 1)

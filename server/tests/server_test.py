@@ -195,6 +195,28 @@ class LimitTest(unittest.TestCase):
         self.assertEqual(server.request("/catalog.json", headers={"X-Forwarded-For": "203.0.113.1"}).status, 200)
         self.assertEqual(server.request("/catalog.json", headers={"X-Forwarded-For": "203.0.113.2"}).status, 429)
 
+    def test_ipv6_clients_share_a_limit_inside_one_64_prefix(self) -> None:
+        server = RunningServer(require_tokens=False, rate_per_minute=1, trust_forwarded=True)
+        self.addCleanup(server.close)
+        same_prefix = ("2001:db8:1:2::1", "2001:db8:1:2:ffff::9")
+        self.assertEqual(server.request("/catalog.json", headers={"X-Forwarded-For": same_prefix[0]}).status, 200)
+        self.assertEqual(server.request("/catalog.json", headers={"X-Forwarded-For": same_prefix[1]}).status, 429)
+        other = {"X-Forwarded-For": "2001:db8:1:3::1"}
+        self.assertEqual(server.request("/catalog.json", headers=other).status, 200)
+
+    def test_ipv4_clients_stay_separate_by_full_address(self) -> None:
+        server = RunningServer(require_tokens=False, rate_per_minute=1, trust_forwarded=True)
+        self.addCleanup(server.close)
+        self.assertEqual(server.request("/catalog.json", headers={"X-Forwarded-For": "203.0.113.1"}).status, 200)
+        self.assertEqual(server.request("/catalog.json", headers={"X-Forwarded-For": "203.0.113.2"}).status, 200)
+
+    def test_a_huge_range_number_is_served_as_the_whole_file(self) -> None:
+        server = RunningServer()
+        self.addCleanup(server.close)
+        header = {"Range": "bytes=0-" + "9" * 5000}
+        response = server.request(PACKAGE_PATH, headers=header, token=server.token)
+        self.assertEqual((response.status, response.body), (200, PACKAGE))
+
 
 if __name__ == "__main__":
     unittest.main()

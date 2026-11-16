@@ -8,7 +8,7 @@ from pathlib import Path
 
 from gm_server.config import Config
 from gm_server.files import content_type, resolve
-from gm_server.limits import CONCURRENT_RETRY_S, Limiter
+from gm_server.limits import CONCURRENT_RETRY_S, Limiter, ip_key
 from gm_server.ranges import RangeKind, parse_range
 from gm_server.tokens import TokenStore
 from gm_server.usage import UsageStore
@@ -136,10 +136,10 @@ class Handler(BaseHTTPRequestHandler):
     def _client_ip(self) -> str:
         if self.service.config.trust_forwarded:
             forwarded = self.headers.get("X-Forwarded-For", "")
-            last = forwarded.split(",")[-1].strip()
-            if last:
-                return last
-        return self.client_address[0]
+            key = ip_key(forwarded.split(",")[-1].strip())
+            if key is not None:
+                return key
+        return ip_key(self.client_address[0]) or self.client_address[0]
 
     def _send_file(self, file: Path, identity: Identity, send_body: bool) -> None:
         try:

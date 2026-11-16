@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import threading
 import time
 from collections import deque
@@ -9,6 +10,27 @@ from collections.abc import Callable
 
 RATE_WINDOW_S = 60
 CONCURRENT_RETRY_S = 5
+MAX_TRACKED_KEYS = 10_000
+SWEEP_INTERVAL_S = 30
+IPV6_PREFIX_BITS = 64
+
+
+def ip_key(address: str) -> str | None:
+    """Returns the key an IP counts under, or None when [address] is no IP.
+
+    IPv4 keeps the full address. IPv6 collapses to its /64 prefix, because a
+    client owns a whole /64 and could otherwise rotate inside it.
+    """
+    try:
+        parsed = ipaddress.ip_address(address)
+    except ValueError:
+        return None
+    if isinstance(parsed, ipaddress.IPv6Address):
+        if parsed.ipv4_mapped is not None:
+            return str(parsed.ipv4_mapped)
+        network = ipaddress.ip_network((parsed, IPV6_PREFIX_BITS), strict=False)
+        return str(network)
+    return str(parsed)
 
 
 class Limiter:
@@ -34,6 +56,23 @@ class Limiter:
         self._active: dict[str, int] = {}
         self._failures: dict[str, deque[float]] = {}
         self._banned_until: dict[str, float] = {}
+        self._last_sweep = clock()
+
+    def _sweep_locked(self, now: float) -> None:
+        """Drops expired entries now and then, and caps every map's size."""
+        if now - self._last_sweep >= SWEEP_INTERVAL_S:
+            self._last_sweep = now
+            for key in [k for k, w in self._hits.items() if not w or w[-1] <= now - RATE_WINDOW_S]:
+                del self._hits[key]
+            for key in [
+                k for k, w in self._failures.items() if not w or w[-1] <= now - self._ban_window_s
+            ]:
+                del self._failures[key]
+            for key in [k for k, until in self._banned_until.items() if until <= now]:
+                del self._banned_until[key]
+        for tracked in (self._hits, self._failures, self._banned_until):
+            while len(tracked) >= MAX_TRACKED_KEYS:
+                del tracked[next(iter(tracked))]
 
     def ban_remaining(self, ip: str) -> int:
         """Returns the seconds left of [ip]'s ban, 0 when it is not banned."""
@@ -53,13 +92,14 @@ class Limiter:
             return
         with self._lock:
             now = self._clock()
+            self._sweep_locked(now)
             window = self._failures.setdefault(ip, deque())
             window.append(now)
             while window and window[0] <= now - self._ban_window_s:
                 window.popleft()
             if len(window) >= self._ban_failures:
                 self._banned_until[ip] = now + self._ban_seconds
-                window.clear()
+                del self._failures[ip]
 
     def rate_retry_after(self, key: str) -> int:
         """Counts a request for [key]. Returns 0 if allowed, else seconds to wait."""
@@ -67,6 +107,7 @@ class Limiter:
             return 0
         with self._lock:
             now = self._clock()
+            self._sweep_locked(now)
             window = self._hits.setdefault(key, deque())
             while window and window[0] <= now - RATE_WINDOW_S:
                 window.popleft()

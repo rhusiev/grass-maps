@@ -351,12 +351,13 @@ runner minutes but not wall time to a push run. The native follower replay
 first ran in run `42979708400` at 7 min 04 s (6 min 43 s in the emulator step).
 The goldens job was split on 2026-11-16: one job ran all sets on one emulator
 and took 1 h 55 m to 3 h 05 m, and run `a36dca45` was cancelled at its
-210-minute bound. Now one job builds the APK and five jobs (`standard`,
-`contours`, `fixture`, `navigation`, `raster`) each boot their own emulator and
-run in parallel; `scripts/ci/android-goldens-ci.sh APK SET` runs one set, and
-with no set it runs all five in order on one emulator, as a local run does. The
-per-set bound is 120 minutes, chosen rather than derived until per-set times
-are measured.
+210-minute bound. Now one job builds the APK and six jobs (`standard-light`,
+`standard-dark`, `contours`, `fixture`, `navigation`, `raster`) each boot their
+own emulator and run in parallel; `scripts/ci/android-goldens-ci.sh APK SET`
+runs one set, and with no set it runs Standard (both styles), contours,
+fixture, navigation and raster in order on one emulator, as a local run does.
+On run `903d1cc8` Standard light took ~46 min, dark ~42 min and the other four
+sets ~46 min together, so the per-set bound is 100 minutes.
 
 A job that regularly uses most of its timeout is the same risk as one that
 fails. Both produce a red run that says nothing about the code. Set a timeout

@@ -90,15 +90,17 @@ jobs:
     name: Map goldens - ${{ matrix.set }} (API 29, swangle)
     needs: build-apk
     runs-on: ubuntu-latest
-    # One job ran all five sets on one emulator and took 1 h 55 m to 3 h 05 m;
-    # run a36dca45 was cancelled at its 210-minute bound. Each set now boots
-    # its own emulator in parallel, so the bound is per set. 120 minutes is
-    # chosen, not derived: re-measure from the per-set run times and tighten.
-    timeout-minutes: 120
+    # One job ran every set on one emulator and took 1 h 55 m to 3 h 05 m;
+    # run a36dca45 was cancelled at its 210-minute bound. Measured on run
+    # 903d1cc8 (2 h 37 m): build and boot ~23 min, Standard light ~46 min,
+    # dark ~42 min, the other four sets ~46 min together. Each set now boots
+    # its own emulator in parallel, the longest ~70 min with the APK fetch and
+    # boot; 100 minutes leaves a margin of about 40 %.
+    timeout-minutes: 100
     strategy:
       fail-fast: false
       matrix:
-        set: [standard, contours, fixture, navigation, raster]
+        set: [standard-light, standard-dark, contours, fixture, navigation, raster]
     steps:
       - name: Check out
         uses: actions/checkout@v7

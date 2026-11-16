@@ -11,6 +11,7 @@ import nl.r1a.grassmap.plugin.api.command.CommandResult
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.DownloadsState
+import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
 
 /**
  * The downloads commands (T-0504). Each returns the published screen state, so
@@ -140,6 +141,40 @@ class SetMapServerCommand(
     }
 }
 
+/** Sets whether downloads may use mobile data. Parameter: policy, `wifi_only` or `any`. */
+class SetMobileDataPolicyCommand(
+    private val session: DownloadsUiSession,
+) : Command<JsonElement, DownloadsState>(
+        id = DownloadsUiContract.setMobileData,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = DownloadsState.serializer(),
+        doc = "Sets the mobile-data download policy. Parameter: policy, wifi_only or any.",
+        policy = TRANSFER_POLICY,
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<DownloadsState>> {
+        val policy =
+            when (params.text(PARAM_POLICY)) {
+                POLICY_WIFI_ONLY -> MobileDataPolicy.WIFI_ONLY
+                POLICY_ANY -> MobileDataPolicy.ANY
+                else -> return Outcome.Failure(AppError.InvalidInput)
+            }
+        return session.result(session.setMobileData(policy))
+    }
+}
+
+/** Lets the downloads that wait for Wi-Fi run on mobile data now. */
+class UseMobileDataNowCommand(
+    private val session: DownloadsUiSession,
+) : Command<JsonElement, DownloadsState>(
+        id = DownloadsUiContract.useMobileDataNow,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = DownloadsState.serializer(),
+        doc = "Lets the downloads that wait for Wi-Fi continue on mobile data until the queue is empty.",
+        policy = TRANSFER_POLICY,
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<DownloadsState>> = session.result(session.useMobileDataNow())
+}
+
 private fun DownloadsUiSession.result(outcome: Outcome<DownloadsState>): Outcome<CommandResult<DownloadsState>> =
     when (outcome) {
         is Outcome.Success -> Outcome.Success(CommandResult(outcome.value))
@@ -166,3 +201,6 @@ private fun JsonElement.rawText(key: String): String? {
 private const val PARAM_REGION = "region"
 private const val PARAM_URL = "url"
 private const val PARAM_TOKEN = "token"
+private const val PARAM_POLICY = "policy"
+private const val POLICY_WIFI_ONLY = "wifi_only"
+private const val POLICY_ANY = "any"

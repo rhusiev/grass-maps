@@ -45,6 +45,7 @@ import nl.r1a.grassmap.plugin.api.model.DownloadTransferState
 import nl.r1a.grassmap.plugin.api.model.DownloadsState
 import nl.r1a.grassmap.plugin.api.model.FirstRunOffer
 import nl.r1a.grassmap.plugin.api.model.FirstRunOfferKind
+import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
 
 private val SURFACE = Color(0xFFF5F4F1)
 private val CARD = Color(0xFFFFFFFF)
@@ -100,6 +101,8 @@ fun DownloadsScreenContent(
     onSaveServer: (String, String) -> Unit,
     onTokenSettings: () -> Unit,
     modifier: Modifier = Modifier,
+    onSetMobileData: (Boolean) -> Unit = {},
+    onUseMobileDataNow: () -> Unit = {},
 ) {
     val close = stringResource(R.string.downloads_close)
     Column(
@@ -155,6 +158,12 @@ fun DownloadsScreenContent(
         if (showServerForm) {
             ServerForm(serverUrl = state.serverUrl, onSave = onSaveServer)
         }
+
+        MobileDataCard(
+            state = state,
+            onSetMobileData = onSetMobileData,
+            onUseMobileDataNow = onUseMobileDataNow,
+        )
 
         state.catalogProblem?.let { problem -> ProblemLine(problem) }
 
@@ -424,6 +433,13 @@ private fun TransferLine(transfer: DownloadTransfer) {
             )
         }
 
+        DownloadTransferState.WAITING_FOR_WIFI -> {
+            BasicText(
+                text = stringResource(R.string.downloads_waiting_for_wifi),
+                style = TextStyle(color = MUTED, fontSize = BODY_FONT_SP.sp),
+            )
+        }
+
         DownloadTransferState.VERIFYING -> {
             BasicText(
                 text = stringResource(R.string.downloads_verifying),
@@ -540,6 +556,37 @@ private fun ActionButton(
             text = text,
             style = TextStyle(color = ink, fontSize = ACTION_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
         )
+    }
+}
+
+/**
+ * The mobile-data policy and, while a download waits for Wi-Fi, the one-off
+ * way past it. The policy button names the policy it switches to.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun MobileDataCard(
+    state: DownloadsState,
+    onSetMobileData: (Boolean) -> Unit,
+    onUseMobileDataNow: () -> Unit,
+) {
+    val wifiOnly = state.mobileDataPolicy == MobileDataPolicy.WIFI_ONLY
+    Card {
+        SectionLabel(stringResource(R.string.downloads_mobile_data_title))
+        ActionButton(
+            text =
+                stringResource(
+                    if (wifiOnly) R.string.downloads_mobile_data_wifi_only else R.string.downloads_mobile_data_any,
+                ),
+            onClick = { onSetMobileData(wifiOnly) },
+            quiet = true,
+        )
+        if (state.waitingForWifi) {
+            ActionButton(
+                text = stringResource(R.string.downloads_use_mobile_data_now),
+                onClick = onUseMobileDataNow,
+            )
+        }
     }
 }
 

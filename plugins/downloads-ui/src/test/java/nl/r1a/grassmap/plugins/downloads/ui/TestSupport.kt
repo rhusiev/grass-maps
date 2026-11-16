@@ -25,6 +25,7 @@ import nl.r1a.grassmap.plugin.api.model.DownloadsData
 import nl.r1a.grassmap.plugin.api.model.DownloadsState
 import nl.r1a.grassmap.plugin.api.model.InstalledPack
 import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
 import nl.r1a.grassmap.plugin.api.model.RegionCatalog
 import nl.r1a.grassmap.plugin.api.model.RegionProblem
 import nl.r1a.grassmap.plugin.api.provider.Provider
@@ -153,6 +154,17 @@ internal class FakeDownloadsAccess(
     override suspend fun remove(region: String): Outcome<Unit> {
         calls += "remove:$region"
         mutable.update { data -> data.copy(installed = data.installed.filterNot { it.region == region }) }
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun setMobileDataPolicy(policy: MobileDataPolicy): Outcome<Unit> {
+        calls += "mobile:${policy.name}"
+        mutable.update { it.copy(mobileDataPolicy = policy) }
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun useMobileDataNow(): Outcome<Unit> {
+        calls += "mobile-now"
         return Outcome.Success(Unit)
     }
 

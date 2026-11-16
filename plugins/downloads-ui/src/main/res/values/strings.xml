@@ -56,4 +56,9 @@
     <string name="downloads_part_routing">Routing</string>
     <string name="downloads_part_elevation_30m">30 m elevation</string>
     <string name="downloads_part_other">Other data</string>
+    <string name="downloads_waiting_for_wifi">Waiting for Wi-Fi</string>
+    <string name="downloads_use_mobile_data_now">Download now on mobile data</string>
+    <string name="downloads_mobile_data_title">Mobile data</string>
+    <string name="downloads_mobile_data_wifi_only">Wi-Fi only</string>
+    <string name="downloads_mobile_data_any">Wi-Fi and mobile data</string>
 </resources>

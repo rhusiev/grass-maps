@@ -20,10 +20,13 @@ import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.DownloadProblem
 import nl.r1a.grassmap.plugin.api.model.DownloadProblemKind
 import nl.r1a.grassmap.plugin.api.model.DownloadRowStatus
+import nl.r1a.grassmap.plugin.api.model.DownloadTransfer
+import nl.r1a.grassmap.plugin.api.model.DownloadTransferState
 import nl.r1a.grassmap.plugin.api.model.DownloadsState
 import nl.r1a.grassmap.plugin.api.model.FirstRunOfferKind
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
 import nl.r1a.grassmap.plugin.api.testing.fixture.CatalogFixture
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -38,7 +41,7 @@ import org.junit.Test
  */
 class DownloadsUiPluginTest {
     @Test
-    fun activationDeclaresSixCommandsAndOneStateStream() =
+    fun activationDeclaresEightCommandsAndOneStateStream() =
         runBlocking {
             val access = FakeDownloadsAccess()
             val context = context(access)
@@ -181,6 +184,40 @@ class DownloadsUiPluginTest {
         }
 
     @Test
+    fun theMobileDataPolicyIsSetAndAnUnknownValueIsRefused() =
+        runBlocking {
+            val access = FakeDownloadsAccess()
+            val context = context(access)
+            DownloadsUiPlugin().activate(context)
+            val command = context.command(DownloadsUiContract.setMobileData)
+
+            val state = stateOf(command.invokeRaw(json("policy" to "any")))
+            val refused = command.invokeRaw(json("policy" to "always"))
+
+            assertEquals(MobileDataPolicy.ANY, state.mobileDataPolicy)
+            assertEquals(Outcome.Failure(AppError.InvalidInput), refused)
+            assertEquals(listOf("mobile:ANY"), access.calls.filter { it.startsWith("mobile") })
+        }
+
+    @Test
+    fun aTransferWaitingForWifiIsReportedAndTheMobileDataChoiceReachesTheStore() =
+        runBlocking {
+            val access = FakeDownloadsAccess()
+            val context = context(access)
+            DownloadsUiPlugin().activate(context)
+            access.transfer(
+                CatalogFixture.LVIV,
+                DownloadTransfer(CatalogFixture.LVIV, DownloadTransferState.WAITING_FOR_WIFI),
+            )
+
+            val state = stateOf(context.command(DownloadsUiContract.useMobileDataNow).invokeRaw(JsonObject(emptyMap())))
+
+            assertTrue(state.waitingForWifi)
+            assertEquals(MobileDataPolicy.WIFI_ONLY, state.mobileDataPolicy)
+            assertEquals("mobile-now", access.calls.last())
+        }
+
+    @Test
     fun anEmptyTokenClearsIt() =
         runBlocking {
             val access = FakeDownloadsAccess()
@@ -291,6 +328,8 @@ class DownloadsUiPluginTest {
                 DownloadsUiContract.cancelRegion,
                 DownloadsUiContract.removeRegion,
                 DownloadsUiContract.setServer,
+                DownloadsUiContract.setMobileData,
+                DownloadsUiContract.useMobileDataNow,
             )
     }
 }

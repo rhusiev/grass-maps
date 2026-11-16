@@ -16,6 +16,7 @@ import nl.r1a.grassmap.plugin.api.model.DownloadsData
 import nl.r1a.grassmap.plugin.api.model.DownloadsState
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
 
 /**
  * The downloads screen's state and actions inside `plugins/downloads-ui`
@@ -66,6 +67,10 @@ class DownloadsUiSession(
     suspend fun cancel(region: String): Outcome<DownloadsState> = result(access.cancel(region))
 
     suspend fun remove(region: String): Outcome<DownloadsState> = result(access.remove(region))
+
+    suspend fun setMobileData(policy: MobileDataPolicy): Outcome<DownloadsState> = result(access.setMobileDataPolicy(policy))
+
+    suspend fun useMobileDataNow(): Outcome<DownloadsState> = result(access.useMobileDataNow())
 
     suspend fun setServer(
         url: String,

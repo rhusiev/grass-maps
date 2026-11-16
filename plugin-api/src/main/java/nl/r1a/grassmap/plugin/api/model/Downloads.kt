@@ -409,4 +409,7 @@ data class DownloadsState(
     val availableRows: List<DownloadRow> = emptyList(),
     /** What first run offers, in the order the screen draws it. */
     val firstRun: List<FirstRunOffer> = emptyList(),
+    val mobileDataPolicy: MobileDataPolicy = MobileDataPolicy.WIFI_ONLY,
+    /** True while at least one transfer waits for an unmetered network. */
+    val waitingForWifi: Boolean = false,
 )

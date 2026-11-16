@@ -1742,6 +1742,20 @@ private fun MapContent(
                 },
                 onTokenSettings = { serverFormVisible = !serverFormVisible },
                 modifier = Modifier.fillMaxSize(),
+                onSetMobileData = { wifiOnlyToAny ->
+                    scope.launch {
+                        invokeDownloadsCommand(
+                            container,
+                            DownloadsUiContract.setMobileData,
+                            listParams("policy" to if (wifiOnlyToAny) "any" else "wifi_only"),
+                        )
+                    }
+                },
+                onUseMobileDataNow = {
+                    scope.launch {
+                        invokeDownloadsCommand(container, DownloadsUiContract.useMobileDataNow, JsonObject(emptyMap()))
+                    }
+                },
             )
         }
         val shareConfirmation = trackShareConfirmation

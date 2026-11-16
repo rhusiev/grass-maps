@@ -21,6 +21,8 @@ object DownloadsUiContract {
     const val REMOVE_REGION: String = "downloads.ui.remove_region"
     const val SELECT_REGION: String = "downloads.ui.select_region"
     const val SET_SERVER: String = "downloads.ui.set_server"
+    const val SET_MOBILE_DATA: String = "downloads.ui.set_mobile_data"
+    const val USE_MOBILE_DATA_NOW: String = "downloads.ui.use_mobile_data_now"
 
     val stateStream: StreamId = StreamId(STATE_STREAM_ID)
 
@@ -30,7 +32,9 @@ object DownloadsUiContract {
     val removeRegion: CommandId = CommandId(REMOVE_REGION)
     val selectRegion: CommandId = CommandId(SELECT_REGION)
     val setServer: CommandId = CommandId(SET_SERVER)
+    val setMobileData: CommandId = CommandId(SET_MOBILE_DATA)
+    val useMobileDataNow: CommandId = CommandId(USE_MOBILE_DATA_NOW)
 
     val commands: List<CommandId> =
-        listOf(refresh, downloadRegion, cancelRegion, removeRegion, selectRegion, setServer)
+        listOf(refresh, downloadRegion, cancelRegion, removeRegion, selectRegion, setServer, setMobileData, useMobileDataNow)
 }

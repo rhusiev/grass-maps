@@ -124,6 +124,8 @@ class DownloadsUiManifestTest {
                 DownloadsUiContract.CANCEL_REGION,
                 DownloadsUiContract.REMOVE_REGION,
                 DownloadsUiContract.SET_SERVER,
+                DownloadsUiContract.SET_MOBILE_DATA,
+                DownloadsUiContract.USE_MOBILE_DATA_NOW,
             )
     }
 }

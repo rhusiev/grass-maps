@@ -6,6 +6,7 @@ import nl.r1a.grassmap.plugin.api.model.CatalogRegion
 import nl.r1a.grassmap.plugin.api.model.DownloadPartRow
 import nl.r1a.grassmap.plugin.api.model.DownloadRow
 import nl.r1a.grassmap.plugin.api.model.DownloadRowStatus
+import nl.r1a.grassmap.plugin.api.model.DownloadTransferState
 import nl.r1a.grassmap.plugin.api.model.DownloadsData
 import nl.r1a.grassmap.plugin.api.model.DownloadsDefaults
 import nl.r1a.grassmap.plugin.api.model.DownloadsState
@@ -71,6 +72,8 @@ object DownloadsScreen {
             installedRows = rows.filter { it.isInstalled },
             availableRows = rows.filterNot { it.isInstalled }.filterNot { it.region in offered },
             firstRun = firstRun,
+            mobileDataPolicy = data.mobileDataPolicy,
+            waitingForWifi = data.transfers.any { it.state == DownloadTransferState.WAITING_FOR_WIFI },
         )
     }
 

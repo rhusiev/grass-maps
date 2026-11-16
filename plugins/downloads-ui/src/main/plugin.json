@@ -66,6 +66,26 @@
         "allowlistedForControl": true,
         "dispatcher": "io",
         "implementation": "nl.r1a.grassmap.plugins.downloads.ui.SetMapServerCommand"
+      },
+      {
+        "id": "downloads.ui.set_mobile_data",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "doc": "Sets the mobile-data download policy. Parameter: policy, wifi_only or any.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.SetMobileDataPolicyCommand"
+      },
+      {
+        "id": "downloads.ui.use_mobile_data_now",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "doc": "Lets the downloads that wait for Wi-Fi continue on mobile data until the queue is empty.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.UseMobileDataNowCommand"
       }
     ],
     "streams": [

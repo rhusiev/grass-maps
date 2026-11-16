@@ -56,4 +56,9 @@
     <string name="downloads_part_routing">Маршрутизація</string>
     <string name="downloads_part_elevation_30m">Висоти 30 м</string>
     <string name="downloads_part_other">Інші дані</string>
+    <string name="downloads_waiting_for_wifi">Очікування Wi-Fi</string>
+    <string name="downloads_use_mobile_data_now">Завантажити зараз через мобільний інтернет</string>
+    <string name="downloads_mobile_data_title">Мобільний інтернет</string>
+    <string name="downloads_mobile_data_wifi_only">Лише Wi-Fi</string>
+    <string name="downloads_mobile_data_any">Wi-Fi і мобільний інтернет</string>
 </resources>

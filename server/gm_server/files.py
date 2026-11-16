@@ -9,6 +9,18 @@ SEGMENT = r"[a-z0-9][a-z0-9._-]*"
 _PACK_FILE = re.compile(rf"^/({SEGMENT})/({SEGMENT})/(package\.zip|manifest\.json)$")
 _OUTLINE = re.compile(rf"^/outlines/({SEGMENT}\.geojson)$")
 CATALOG_PATH = "/catalog.json"
+_SEGMENT_ONLY = re.compile(rf"^{SEGMENT}$")
+_OUTLINE_NAME = re.compile(rf"^{SEGMENT}\.geojson$")
+
+
+def is_served_segment(name: str) -> bool:
+    """True when the server would serve a region or version directory [name]."""
+    return _SEGMENT_ONLY.match(name) is not None
+
+
+def is_served_outline(name: str) -> bool:
+    """True when the server would serve an outline file called [name]."""
+    return _OUTLINE_NAME.match(name) is not None
 
 CONTENT_TYPES = {
     ".json": "application/json",

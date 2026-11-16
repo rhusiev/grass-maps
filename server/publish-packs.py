@@ -26,6 +26,10 @@ import sys
 import zipfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from gm_server.files import is_served_outline, is_served_segment  # noqa: E402
+
 MANIFEST = "manifest.json"
 PACKAGE = "package.zip"
 CATALOG = "catalog.json"
@@ -33,52 +37,84 @@ OUTLINES = "outlines"
 STORED_SUFFIXES = {".pmtiles", ".tar", ".zst", ".gz"}
 
 
+def refuse_symlink(path: Path) -> None:
+    """Stops the publish when [path] is a symbolic link. Links are never followed."""
+    if path.is_symlink():
+        raise SystemExit(f"publish-packs: {path} is a symbolic link, refusing to follow it")
+
+
 def build_archive(source: Path, target: Path) -> None:
-    """Zips the files under [source] into [target], written atomically."""
-    temp = target.with_name(f".{target.name}.tmp")
-    try:
-        with zipfile.ZipFile(temp, "w") as archive:
-            for file in sorted(source.rglob("*")):
-                if not file.is_file() or file.name.startswith("."):
-                    continue
-                method = zipfile.ZIP_STORED if file.suffix in STORED_SUFFIXES else zipfile.ZIP_DEFLATED
-                archive.write(file, file.relative_to(source).as_posix(), compress_type=method)
-        os.replace(temp, target)
-    finally:
-        temp.unlink(missing_ok=True)
+    """Zips the files under [source] into [target]. The caller renames it."""
+    with zipfile.ZipFile(target, "w") as archive:
+        for file in sorted(source.rglob("*")):
+            refuse_symlink(file)
+            if not file.is_file() or file.name.startswith("."):
+                continue
+            method = zipfile.ZIP_STORED if file.suffix in STORED_SUFFIXES else zipfile.ZIP_DEFLATED
+            archive.write(file, file.relative_to(source).as_posix(), compress_type=method)
 
 
 def copy_atomic(source: Path, target: Path) -> None:
     """Copies [source] to [target] so a reader never sees half a file."""
+    refuse_symlink(source)
     target.parent.mkdir(parents=True, exist_ok=True)
     temp = target.with_name(f".{target.name}.tmp")
     shutil.copyfile(source, temp)
     os.replace(temp, target)
 
 
+def check_name(path: Path, served: bool) -> None:
+    """Stops the publish when the server would answer 404 for [path]'s name."""
+    if not served:
+        raise SystemExit(f"publish-packs: the server would not serve the name of {path}")
+
+
 def publish_version(source: Path, dest: Path) -> bool:
-    """Publishes one version directory. Returns False when it was already there."""
+    """Publishes one version directory. Returns False when it was already there.
+
+    Both files are written under temporary names first. Only when both exist
+    are they renamed, the archive first. A version missing either file is
+    published again from scratch.
+    """
+    refuse_symlink(source)
+    refuse_symlink(source / MANIFEST)
     if not (source / MANIFEST).is_file():
         raise SystemExit(f"publish-packs: {source} has no {MANIFEST}")
     dest.mkdir(parents=True, exist_ok=True)
-    if (dest / PACKAGE).exists():
+    if (dest / PACKAGE).exists() and (dest / MANIFEST).exists():
         return False
-    build_archive(source, dest / PACKAGE)
-    copy_atomic(source / MANIFEST, dest / MANIFEST)
+    temp_package = dest / f".{PACKAGE}.tmp"
+    temp_manifest = dest / f".{MANIFEST}.tmp"
+    try:
+        build_archive(source, temp_package)
+        shutil.copyfile(source / MANIFEST, temp_manifest)
+        os.replace(temp_package, dest / PACKAGE)
+        os.replace(temp_manifest, dest / MANIFEST)
+    finally:
+        temp_package.unlink(missing_ok=True)
+        temp_manifest.unlink(missing_ok=True)
     return True
 
 
 def publish(source: Path, dest: Path) -> int:
     """Publishes every version under [source]. Returns how many were new."""
+    refuse_symlink(source / CATALOG)
     if not (source / CATALOG).is_file():
         raise SystemExit(f"publish-packs: {source} has no {CATALOG}")
     added = 0
-    for region in sorted(path for path in source.iterdir() if path.is_dir()):
-        for version in sorted(path for path in region.iterdir() if (path / MANIFEST).is_file()):
+    for region in sorted(source.iterdir()):
+        refuse_symlink(region)
+        if not region.is_dir():
+            continue
+        for version in sorted(path for path in region.iterdir() if (path / MANIFEST).exists()):
+            check_name(region, is_served_segment(region.name))
+            check_name(version, is_served_segment(version.name))
             if publish_version(version, dest / region.name / version.name):
                 added += 1
                 print(f"published {region.name}/{version.name}")
+    refuse_symlink(source / OUTLINES)
     for outline in sorted((source / OUTLINES).glob("*.geojson")):
+        check_name(outline, is_served_outline(outline.name))
         copy_atomic(outline, dest / OUTLINES / outline.name)
     copy_atomic(source / CATALOG, dest / CATALOG)
     return added

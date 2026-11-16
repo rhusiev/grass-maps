@@ -225,6 +225,56 @@ class PublishTest(unittest.TestCase):
             self.assertEqual((dest / "catalog.json").read_text(), '{"format": 1}')
             self.assertEqual(publisher.publish(source, dest), 0)
 
+    def _pipeline_output(self, temp: str) -> tuple[Path, Path, Path]:
+        source, dest = Path(temp) / "out", Path(temp) / "served"
+        version = source / "ua-46" / "2026-11-03"
+        version.mkdir(parents=True)
+        (version / "manifest.json").write_text("{}")
+        (version / "map.pmtiles").write_bytes(b"tiles")
+        (source / "catalog.json").write_text("{}")
+        return source, dest, version
+
+    def test_symlinks_are_refused_not_followed(self) -> None:
+        publisher = load_publisher()
+        secret = Path(tempfile.mkdtemp()) / "secret.txt"
+        secret.write_text("secret")
+        self.addCleanup(secret.unlink)
+        for link_name in ("leak.txt", "manifest.json"):
+            with tempfile.TemporaryDirectory() as temp:
+                source, dest, version = self._pipeline_output(temp)
+                link = version / link_name
+                link.unlink(missing_ok=True)
+                link.symlink_to(secret)
+                with self.assertRaises(SystemExit) as raised:
+                    publisher.publish(source, dest)
+                self.assertIn(link_name, str(raised.exception))
+                self.assertFalse((dest / "ua-46" / "2026-11-03" / "package.zip").exists())
+        with tempfile.TemporaryDirectory() as temp:
+            source, dest, _ = self._pipeline_output(temp)
+            (source / "catalog.json").unlink()
+            (source / "catalog.json").symlink_to(secret)
+            with self.assertRaises(SystemExit):
+                publisher.publish(source, dest)
+
+    def test_names_the_server_would_404_are_rejected(self) -> None:
+        publisher = load_publisher()
+        with tempfile.TemporaryDirectory() as temp:
+            source, dest, version = self._pipeline_output(temp)
+            version.rename(version.with_name("Bad Version"))
+            with self.assertRaises(SystemExit):
+                publisher.publish(source, dest)
+
+    def test_a_version_missing_its_manifest_is_published_again(self) -> None:
+        publisher = load_publisher()
+        with tempfile.TemporaryDirectory() as temp:
+            source, dest, _ = self._pipeline_output(temp)
+            self.assertEqual(publisher.publish(source, dest), 1)
+            published = dest / "ua-46" / "2026-11-03"
+            (published / "manifest.json").unlink()
+            self.assertEqual(publisher.publish(source, dest), 1)
+            self.assertTrue((published / "manifest.json").is_file())
+            self.assertEqual(sorted(path.name for path in published.iterdir()), ["manifest.json", "package.zip"])
+
 
 if __name__ == "__main__":
     unittest.main()

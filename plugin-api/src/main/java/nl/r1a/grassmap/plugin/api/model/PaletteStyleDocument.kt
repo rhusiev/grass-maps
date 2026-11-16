@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.style.standard
+package nl.r1a.grassmap.plugin.api.model
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -10,20 +10,14 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.plugin.api.model.LayerId
-import nl.r1a.grassmap.plugin.api.model.LayerSlot
-import nl.r1a.grassmap.plugin.api.model.LayerSpec
-import nl.r1a.grassmap.plugin.api.model.LayerType
-import nl.r1a.grassmap.plugin.api.model.MapSource
-import nl.r1a.grassmap.plugin.api.model.MapSourceIds
-import nl.r1a.grassmap.plugin.api.model.SlottedLayer
-import nl.r1a.grassmap.plugin.api.model.SourceId
-import nl.r1a.grassmap.plugin.api.model.StyleId
 
 /**
- * The authored Standard style, split into one layer list and a light/dark
- * palette pair. Every colour in the list is a palette token, so both variants
- * have the same layers, the same draw order and the same cost.
+ * An authored style document (the Standard and Touring styles), split into one
+ * layer list and a light/dark palette pair. Every colour in the list is a
+ * palette token, so both variants have the same layers, the same draw order and
+ * the same cost. The base document carries only the version, glyphs and sprite,
+ * so two documents with the same three values give byte-equal base styles and a
+ * switch between them updates layers in place.
  *
  * Layers are split across the logical sources by zoom: `world` for z0-z7 and
  * `region` for z8-z14. The contour overlay is a separate plugin
@@ -35,16 +29,19 @@ import nl.r1a.grassmap.plugin.api.model.StyleId
  * zeroed, which turns light dark-theme labels magenta; the render-path fix is
  * reported separately, so the style data avoids the broken form.
  */
-internal class StandardStyle private constructor(
+class PaletteStyleDocument private constructor(
     private val baseStyleJson: String,
     private val variantPalettes: Map<StyleId, JsonObject>,
     private val variantZoomOffsets: Map<StyleId, Float>,
     private val layers: List<JsonObject>,
 ) {
+    /** The style JSON without layers; the same bytes for every variant. */
     fun baseStyle(): String = baseStyleJson
 
+    /** The variant ids in the document order. */
     fun variants(): List<StyleId> = variantPalettes.keys.toList()
 
+    /** The layers of [styleId] with palette tokens resolved, or none for an unknown id. */
     fun layersFor(styleId: StyleId): List<SlottedLayer> {
         val palette = variantPalettes[styleId] ?: return emptyList()
         val offset = variantZoomOffsets[styleId] ?: 0f
@@ -135,7 +132,8 @@ internal class StandardStyle private constructor(
         private const val MAX_ZOOM = 24f
         private const val TOKEN_PREFIX = "@"
 
-        fun parse(json: String): StandardStyle {
+        /** Parses an authored style document. */
+        fun parse(json: String): PaletteStyleDocument {
             val root = Json.parseToJsonElement(json).jsonObject
             val base =
                 buildJsonObject {
@@ -157,7 +155,7 @@ internal class StandardStyle private constructor(
                 offsets[styleId] = (zoomOffsets[id] as? JsonPrimitive)?.floatOrNull ?: 0f
             }
             val layers = (root["layers"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
-            return StandardStyle(
+            return PaletteStyleDocument(
                 baseStyleJson = base.toString(),
                 variantPalettes = resolved,
                 variantZoomOffsets = offsets,
@@ -188,6 +186,7 @@ internal class StandardStyle private constructor(
                 }
             }
 
+        /** The logical sources every authored style draws from. */
         val sources: List<MapSource> =
             listOf(
                 MapSource(MapSourceIds.WORLD, minZoom = 0, maxZoom = 7),

@@ -3,6 +3,7 @@ package nl.r1a.grassmap.plugins.style.standard
 import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerType
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
+import nl.r1a.grassmap.plugin.api.model.PaletteStyleDocument
 import nl.r1a.grassmap.plugin.api.model.StyleId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -13,16 +14,14 @@ class StandardMapLayerProviderTest {
     private val provider = StandardMapLayerProvider()
     private val light = StyleId("standard")
     private val dark = StyleId("standard-dark")
-    private val touringLight = StyleId("touring")
-    private val touringDark = StyleId("touring-dark")
 
     @Test
-    fun fourVariantsShareOneBaseDocument() {
+    fun lightAndDarkShareOneBaseDocument() {
         val styles = provider.styles()
 
-        assertEquals(listOf(light, dark, touringLight, touringDark), styles.map { it.id })
+        assertEquals(listOf(light, dark), styles.map { it.id })
         assertEquals(styles[0].baseStyleJson, styles[1].baseStyleJson)
-        assertEquals(StandardStyle.sources, styles[0].sources)
+        assertEquals(PaletteStyleDocument.sources, styles[0].sources)
     }
 
     @Test
@@ -42,7 +41,7 @@ class StandardMapLayerProviderTest {
 
     @Test
     fun theBaseStyleAddsNoOverlayLayers() {
-        for (styleId in listOf(light, dark, touringLight, touringDark)) {
+        for (styleId in listOf(light, dark)) {
             val overlays = provider.layers(styleId).filter { it.slot == LayerSlot.Overlays }
 
             assertTrue("$styleId: contours are the contour plugin's layers", overlays.isEmpty())
@@ -50,28 +49,20 @@ class StandardMapLayerProviderTest {
     }
 
     @Test
-    fun touringStartsEachLayerOneZoomEarlier() {
-        val standardLayer =
+    fun standardOffersOnlyItsTwoVariants() {
+        assertEquals(listOf(light, dark), provider.styles().map { it.id })
+        assertTrue(provider.layers(StyleId("touring")).isEmpty())
+    }
+
+    @Test
+    fun standardKeepsTheAuthoredZoomRange() {
+        val layer =
             provider.layers(light).first {
                 it.spec.id.value
                     .endsWith("__region") && it.spec.minZoom == 13f
             }
-        val touringLayer = provider.layers(touringLight).first { it.spec.id == standardLayer.spec.id }
 
-        assertEquals(12f, touringLayer.spec.minZoom)
-        assertEquals(standardLayer.spec.maxZoom, touringLayer.spec.maxZoom)
-    }
-
-    @Test
-    fun touringLightAndDarkShareLayerIdsButSwapPaletteColours() {
-        val lightLayers = provider.layers(touringLight)
-        val darkLayers = provider.layers(touringDark)
-
-        assertEquals(lightLayers.map { it.spec.id }, darkLayers.map { it.spec.id })
-        assertNotEquals(
-            lightLayers.map { it.spec.paint },
-            darkLayers.map { it.spec.paint },
-        )
+        assertEquals(13f, layer.spec.minZoom)
     }
 
     @Test
@@ -89,7 +80,7 @@ class StandardMapLayerProviderTest {
     @Test
     fun everyColourTokenIsResolved() {
         val paints =
-            listOf(light, dark, touringLight, touringDark).flatMap { styleId ->
+            listOf(light, dark).flatMap { styleId ->
                 provider.layers(styleId).map { it.spec.paint.toString() }
             }
 

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -1670,10 +1671,29 @@ private fun MapContent(
                 }
             val downloadsState by downloadsFlow.collectAsState(initial = DownloadsState())
             var serverFormVisible by remember { mutableStateOf(false) }
+            val closeDownloads = {
+                scope.launch {
+                    invokeDownloadsCommand(container, DownloadsUiContract.selectRegion, listParams("region" to ""))
+                }
+                DownloadsScreenSession.hide()
+            }
+            // System back leaves the sheet first, then the screen. Without this
+            // the screen is a dead end: it covers the map and the only other
+            // control that closes it is the header's chevron.
+            BackHandler {
+                if (downloadsState.selected != null) {
+                    scope.launch {
+                        invokeDownloadsCommand(container, DownloadsUiContract.selectRegion, listParams("region" to ""))
+                    }
+                } else {
+                    closeDownloads()
+                }
+            }
             DownloadsScreenContent(
                 state = downloadsState,
                 preferUkrainian = LocalConfiguration.current.locales[0].language == "uk",
                 showServerForm = serverFormVisible,
+                onClose = closeDownloads,
                 onOpenRegion = { region ->
                     scope.launch {
                         invokeDownloadsCommand(container, DownloadsUiContract.selectRegion, listParams("region" to region))

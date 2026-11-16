@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,11 +22,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -53,6 +57,9 @@ private val BORDER = Color(0xFFE3E1DC)
 private const val CARD_CORNER_DP = 16
 private const val CARD_PADDING_DP = 14
 private const val SCREEN_PADDING_DP = 16
+private const val BACK_TOUCH_DP = 8
+private const val BACK_GLYPH_SP = 28
+private const val BACK_GLYPH = "\u2039"
 private const val GAP_DP = 10
 private const val TITLE_FONT_SP = 26
 private const val LABEL_FONT_SP = 12
@@ -69,6 +76,10 @@ private const val PROGRESS_BAR_DP = 4
  * callbacks go back to the plugin's commands. The shell hosts this content and
  * owns the route, the sheet position and the server form's visibility.
  *
+ * [onClose] leaves the screen. The screen is a full-screen overlay on the map,
+ * so it needs its own way out: a back chevron in the header, next to the
+ * title, and the shell's system-back handler both call it.
+ *
  * The server form is where a token is typed. It is a write-only field: the
  * state says only whether a token is stored ([DownloadsState.tokenPresent]),
  * and the entered value goes straight to [onSaveServer], never to a row.
@@ -79,6 +90,7 @@ fun DownloadsScreenContent(
     state: DownloadsState,
     preferUkrainian: Boolean,
     showServerForm: Boolean,
+    onClose: () -> Unit,
     onOpenRegion: (String) -> Unit,
     onCloseSheet: () -> Unit,
     onDownload: (String) -> Unit,
@@ -89,6 +101,7 @@ fun DownloadsScreenContent(
     onTokenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val close = stringResource(R.string.downloads_close)
     Column(
         modifier =
             modifier
@@ -96,6 +109,7 @@ fun DownloadsScreenContent(
                 // Twenty-five oblast rows do not fit one screen, and the first-run
                 // offer sits above them, so the screen scrolls as one column.
                 .verticalScroll(rememberScrollState())
+                .statusBarsPadding()
                 .padding(SCREEN_PADDING_DP.dp)
                 .widthIn(max = MAX_WIDTH_DP.dp),
         verticalArrangement = Arrangement.spacedBy(GAP_DP.dp),
@@ -103,7 +117,17 @@ fun DownloadsScreenContent(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(GAP_DP.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
+            BasicText(
+                text = BACK_GLYPH,
+                style = TextStyle(color = INK, fontSize = BACK_GLYPH_SP.sp),
+                modifier =
+                    Modifier
+                        .clickable(onClick = onClose)
+                        .semantics { contentDescription = close }
+                        .padding(BACK_TOUCH_DP.dp),
+            )
             Column(modifier = Modifier.weight(1f)) {
                 BasicText(
                     text = stringResource(R.string.downloads_title),

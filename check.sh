@@ -129,6 +129,9 @@ python3 scripts/ci/android_benchmark_test.py || fail "script tests (benchmark)"
 python3 scripts/ci/test_count_test.py || fail "script tests (test count)"
 python3 scripts/ci/oblast_pipeline_test.py || fail "script tests (oblast pipeline)"
 
+step "Region package server tests"
+python3 -m unittest discover -s server/tests -p '*_test.py' || fail "region package server tests"
+
 step "Translations (English and Ukrainian)"
 ./gradlew --console=plain checkTranslations || fail "translations"
 

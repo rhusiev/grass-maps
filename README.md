@@ -459,6 +459,18 @@ the 30 m elevation add-on that the build does not produce yet are added by
 `CatalogFixture` in the plugin-api test fixtures, in the shape
 `design/server-protocol.md` section 2 declares.
 
+`server/` is the region package server (T-0510): one standard-library Python
+service in a container that serves `catalog.json` and
+`<region>/<version>/package.zip` with `Range`, checks bearer tokens or runs open
+(`GM_REQUIRE_TOKENS`), and applies a per-key rate limit, concurrency cap and
+monthly byte quota. With tokens off the key is the client IP. It sits behind a
+reverse proxy on the external docker network `caddy`.
+`server/publish-packs.py` turns a `build-oblasts.sh` output directory into the
+served layout, building each `package.zip`. `server/README.md` covers
+configuration, tokens, running and publishing. `server/tests` run in
+`./check.sh`; `RegionStoreSelfHostedServerTest` downloads a region from the
+running service through the real client.
+
 `test-data/search/coordinate-notations.tsv` is the T-0206 coordinate vector set:
 18 accepted notations with their points and 13 refused near misses with their
 reason. `plugins/coordinates` reads it to prove the parser, and the app's

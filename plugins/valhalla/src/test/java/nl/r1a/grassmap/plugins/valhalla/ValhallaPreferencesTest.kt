@@ -34,7 +34,43 @@ class ValhallaPreferencesTest {
     }
 
     @Test
-    fun busyRoadsUseRoadsOnBikeAndLivingStreetsOnFoot() {
+    fun stepsMapToStepPenaltyOnFoot() {
+        val expected =
+            mapOf(
+                RouteProfile.Walk to Triple(480.0, 30.0, 0.0),
+                RouteProfile.Hike to Triple(480.0, 20.0, 0.0),
+            )
+
+        for ((profile, values) in expected) {
+            val avoid = ValhallaProfiles.costingOptions(profile, RouteOptions(steps = RoutePreference.Avoid))
+            val normal = ValhallaProfiles.costingOptions(profile, RouteOptions())
+            val dontMind = ValhallaProfiles.costingOptions(profile, RouteOptions(steps = RoutePreference.DontMind))
+
+            assertEquals("$profile avoid", values.first, avoid.value("step_penalty"))
+            assertEquals("$profile normal", values.second, normal.value("step_penalty"))
+            assertEquals("$profile don't mind", values.third, dontMind.value("step_penalty"))
+        }
+    }
+
+    @Test
+    fun trailDifficultyMapsToMaxHikingDifficultyForHikeOnly() {
+        val steps =
+            mapOf(
+                RoutePreference.Avoid to 2.0,
+                RoutePreference.Normal to 5.0,
+                RoutePreference.DontMind to 6.0,
+            )
+        for ((step, expected) in steps) {
+            val hike = ValhallaProfiles.costingOptions(RouteProfile.Hike, RouteOptions(trailDifficulty = step))
+            assertEquals("hike $step", expected, hike.value("max_hiking_difficulty"))
+        }
+
+        val walk = ValhallaProfiles.costingOptions(RouteProfile.Walk, RouteOptions(trailDifficulty = RoutePreference.DontMind))
+        assertEquals("walk keeps T1", 1.0, walk.value("max_hiking_difficulty"))
+    }
+
+    @Test
+    fun busyRoadsUseRoadsOnBikeOnly() {
         val bike =
             mapOf(
                 RoutePreference.Normal to 0.3,
@@ -44,26 +80,17 @@ class ValhallaPreferencesTest {
         for ((step, expected) in bike) {
             val options = ValhallaProfiles.costingOptions(RouteProfile.Bike, RouteOptions(busyRoads = step))
             assertEquals("bike $step", expected, options.value("use_roads"))
-            assertFalse("a bike step must not add a pedestrian key", options.containsKey("use_living_streets"))
         }
 
-        val foot =
-            mapOf(
-                RoutePreference.Normal to null,
-                RoutePreference.Avoid to 1.0,
-                RoutePreference.DontMind to 0.0,
-            )
         for (profile in listOf(RouteProfile.Walk, RouteProfile.Hike)) {
-            for ((step, expected) in foot) {
-                val options = ValhallaProfiles.costingOptions(profile, RouteOptions(busyRoads = step))
-                assertEquals("$profile $step", expected, options.value("use_living_streets"))
-                assertFalse("a foot step must not add a bicycle key", options.containsKey("use_roads"))
-            }
+            val options = ValhallaProfiles.costingOptions(profile, RouteOptions(busyRoads = RoutePreference.Avoid))
+            assertEquals("$profile must not change", ValhallaProfiles.costingOptions(profile, RouteOptions()), options)
+            assertFalse("$profile has no use_living_streets", options.containsKey("use_living_streets"))
         }
     }
 
     @Test
-    fun roughSurfacesUseBadSurfaceAvoidanceOnBikeAndTracksOnFoot() {
+    fun roughSurfacesUseBadSurfaceAvoidanceOnBikeOnly() {
         val bike =
             mapOf(
                 RoutePreference.Normal to 0.5,
@@ -73,22 +100,26 @@ class ValhallaPreferencesTest {
         for ((step, expected) in bike) {
             val options = ValhallaProfiles.costingOptions(RouteProfile.Bike, RouteOptions(roughSurfaces = step))
             assertEquals("bike $step", expected, options.value("avoid_bad_surfaces"))
-            assertFalse("a bike step must not add a pedestrian key", options.containsKey("use_tracks"))
         }
 
-        val foot =
-            mapOf(
-                RoutePreference.Normal to null,
-                RoutePreference.Avoid to 0.0,
-                RoutePreference.DontMind to 1.0,
-            )
         for (profile in listOf(RouteProfile.Walk, RouteProfile.Hike)) {
-            for ((step, expected) in foot) {
-                val options = ValhallaProfiles.costingOptions(profile, RouteOptions(roughSurfaces = step))
-                assertEquals("$profile $step", expected, options.value("use_tracks"))
-                assertFalse("a foot step must not add a bicycle key", options.containsKey("avoid_bad_surfaces"))
-            }
+            val options = ValhallaProfiles.costingOptions(profile, RouteOptions(roughSurfaces = RoutePreference.Avoid))
+            assertEquals("$profile must not change", ValhallaProfiles.costingOptions(profile, RouteOptions()), options)
+            assertFalse("$profile has no use_tracks", options.containsKey("use_tracks"))
         }
+    }
+
+    @Test
+    fun bikeIgnoresFootAttributes() {
+        val options =
+            ValhallaProfiles.costingOptions(
+                RouteProfile.Bike,
+                RouteOptions(steps = RoutePreference.Avoid, trailDifficulty = RoutePreference.Avoid),
+            )
+
+        assertEquals(ValhallaProfiles.costingOptions(RouteProfile.Bike, RouteOptions()), options)
+        assertFalse(options.containsKey("step_penalty"))
+        assertFalse(options.containsKey("max_hiking_difficulty"))
     }
 
     @Test
@@ -116,14 +147,16 @@ class ValhallaPreferencesTest {
                     hills = RoutePreference.Avoid,
                     busyRoads = RoutePreference.Avoid,
                     roughSurfaces = RoutePreference.Avoid,
+                    steps = RoutePreference.Avoid,
+                    trailDifficulty = RoutePreference.Avoid,
                 ),
             )
 
         assertEquals(base, extreme)
         assertNull(base.value("use_hills"))
         assertNull(base.value("use_roads"))
-        assertNull(base.value("use_living_streets"))
-        assertNull(base.value("use_tracks"))
+        assertNull(base.value("step_penalty"))
+        assertNull(base.value("max_hiking_difficulty"))
         assertNull(base.value("avoid_bad_surfaces"))
     }
 

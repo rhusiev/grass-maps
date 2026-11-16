@@ -44,33 +44,65 @@ T-0308 elevation pack needs.
 ## Route preferences (T-0308, three steps in T-0421)
 
 The preferences are per-profile settings, not a global switch.
-`RouteOptions` carries three independent steps - hills, busy roads and rough
-surfaces - each `Avoid`, `Normal` or `DontMind`. `plugins/valhalla` applies them
-only to the costing named by that request, so setting bike to avoid hills cannot
-change the walk body. `Normal` keeps the tuned profile value or, when the
-profile does not name the key, Valhalla's own default.
+`RouteOptions` stores five independent steps - hills, steps, trail difficulty,
+busy roads and rough surfaces - each `Avoid`, `Normal` or `DontMind`. Each
+profile shows and sends only its own set (`RouteAttribute.forProfile`): walk has
+hills and steps, hike adds trail difficulty, bike has hills, busy roads and
+rough surfaces. `plugins/valhalla` applies them only to the costing named by that
+request, so setting bike to avoid hills cannot change the walk body. `Normal`
+keeps the tuned profile value.
 
-`use_hills`, `use_roads`, `use_living_streets` and `use_tracks` read as
-willingness, 0 to 1. `avoid_bad_surfaces` reads as avoidance, 0 to 1.
+`use_hills` and `use_roads` read as willingness, 0 to 1. `avoid_bad_surfaces`
+reads as avoidance, 0 to 1. `step_penalty` is seconds per step transition.
+`max_hiking_difficulty` is a `sac_scale` limit, 0 to 6, and a hard filter.
 
 | Attribute | Profile | Avoid | Normal | Don't mind |
 |---|---|---|---|---|
 | Hills | walk / hike / bike | `use_hills` 0.0 | tuned 0.5 / 0.9 / 0.4 | `use_hills` 1.0 |
+| Steps | walk / hike | `step_penalty` 480 | tuned 30 / 20 | `step_penalty` 0 |
+| Trail difficulty | hike | `max_hiking_difficulty` 2 | tuned 5 | `max_hiking_difficulty` 6 |
 | Busy roads | bike | `use_roads` 0.0 | tuned 0.3 | `use_roads` 1.0 |
-| Busy roads | walk / hike | `use_living_streets` 1.0 | Valhalla default | `use_living_streets` 0.0 |
 | Rough surfaces | bike | `avoid_bad_surfaces` 1.0 | tuned 0.5 | `avoid_bad_surfaces` 0.0 |
-| Rough surfaces | walk / hike | `use_tracks` 0.0 | Valhalla default | `use_tracks` 1.0 |
 | Any | car | unchanged | unchanged | unchanged |
 
-Pedestrian costing has no `use_roads` or `avoid_bad_surfaces`, so the on-foot
-steps name the closest pedestrian options instead of keys Valhalla would ignore.
-Car is out of v1 and keeps its profile. The direct engine has no costing, so a
-preference never moves its geodesic; it accepts the request unchanged.
+The design handoff of 2026-11-13 drops busy roads and rough surfaces from the
+foot sheets, so walk and hike no longer send `use_living_streets` or
+`use_tracks`. The Q43 rule that "Don't mind" on foot keeps the extremes now
+applies to the foot keys that remain: `step_penalty` 0, `use_hills` 1.0 and
+`max_hiking_difficulty` 6. Pedestrian costing has no `use_roads` or
+`avoid_bad_surfaces`. Car is out of v1 and keeps its profile. The direct engine
+has no costing, so a preference never moves its geodesic; it accepts the request
+unchanged.
 
-Only the bike hills `Avoid` step has a measured Lviv ascent run
-(`hills/bike-hills.json`). The busy-roads and rough-surfaces keys are checked at
-request level only; they are not measured against Valhalla 3.9.1 until a measured
-run exists.
+Valhalla 3.9.1 silently ignores a key it does not know, so only a run that
+changes the route proves a key. Measured offline on `/hdd/t-0518-merged`
+(Lviv and Ternopil oblast tiles) with the `valhalla_service` container, one
+`route` per step and `trace_attributes` with `map_snap` for the edge counts.
+Each pair differs only in the one key. The avoid and don't-mind routes differ in
+every row except `max_hiking_difficulty`:
+
+| Key | Pair (Lviv) | Avoid | Don't mind |
+|---|---|---|---|
+| bike `use_hills` | centre - Vynnyky | 11.896 km, 2516 s, 198 edges | 10.702 km, 2797 s, 193 edges |
+| bike `use_roads` | centre - Vynnyky | 12.010 km, 2594 s, 211 edges | 10.038 km, 2161 s, 153 edges |
+| bike `avoid_bad_surfaces` | centre - Briukhovychi | 11.223 km, 2597 s, 197 edges | 9.496 km, 2541 s, 183 edges |
+| pedestrian `use_hills` | centre - Briukhovychi | 9.334 km, 7505 s, 147 edges | 8.961 km, 7082 s, 147 edges |
+| pedestrian `step_penalty` | centre - Sykhiv | 6.975 km, 5366 s, 213 edges | 6.663 km, 5126 s, 216 edges |
+
+Of 18 pairs per key, bike hills changed 9, bike `use_roads` 18, bike
+`avoid_bad_surfaces` 3, pedestrian `use_hills` 17 and pedestrian `step_penalty`
+17, for avoid against don't mind. A key that does not change a pair means the
+pair has no alternative, not that the key is ignored.
+
+`step_penalty` 480, 600 and 1000 give identical routes on all 18 pairs, so the
+engine clamps the value at 480 or lower and 480 is the strongest avoidance.
+
+`max_hiking_difficulty` is not proven by effect. Across 150 random pedestrian
+pairs inside 23.3-23.6 E, 48.7-49.0 N, limits 1 and 6 returned the same route every
+time, because the pack holds almost no edge above `sac_scale` 1 (one 0.609 km
+`sac_scale:1` segment in the scan). The key is documented in Valhalla's
+pedestrian costing and the app sends it, but the hike Avoid value 2 has no
+measured route. A pack with mountain trails is the next check.
 
 The settings model is `RoutingOptionsSettings`, one entry per profile,
 defaulting every unset profile to `RouteOptions()`. The planner reads it through

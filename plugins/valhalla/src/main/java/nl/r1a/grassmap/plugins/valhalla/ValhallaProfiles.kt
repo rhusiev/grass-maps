@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
+import nl.r1a.grassmap.plugin.api.provider.RouteAttribute
 import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 import nl.r1a.grassmap.plugin.api.provider.RoutePreference
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
@@ -90,29 +91,23 @@ internal object ValhallaProfiles {
 
     /**
      * The costing options for one request: the tuned profile document with the
-     * three preferences applied when a step is not [RoutePreference.Normal]
-     * (T-0421).
+     * profile's own attributes applied when a step is not
+     * [RoutePreference.Normal] (T-0421).
      *
-     * Valhalla reads `use_hills`, `use_roads`, `use_living_streets` and
-     * `use_tracks` as willingness, 0 to 1, and `avoid_bad_surfaces` as
-     * avoidance, 0 to 1. `Normal` keeps the profile's tuned value or, when the
-     * profile does not name the key, Valhalla's own default. The steps are a
-     * cost preference, not an access rule: an avoided way is still used when no
-     * other route exists.
+     * Only the attributes in [RouteAttribute.forProfile] are read, so a stored
+     * value for an attribute the profile does not show never reaches the body.
+     * `Normal` keeps the profile's tuned value. The steps are a cost
+     * preference, not an access rule, with one exception: `max_hiking_difficulty`
+     * filters out trails above the limit. The mapping, with the per-key effect
+     * in `test-data/routing/README.md`:
+     * - hills (all three): `use_hills` 0.0 / tuned / 1.0
+     * - steps (walk, hike): `step_penalty` [STEP_PENALTY_AVOID_S] / tuned / 0
+     * - trail difficulty (hike): `max_hiking_difficulty`
+     *   [TRAIL_DIFFICULTY_AVOID] / tuned / [MAX_HIKING_DIFFICULTY]
+     * - busy roads (bike): `use_roads` 0.0 / tuned / 1.0
+     * - rough surfaces (bike): `avoid_bad_surfaces` 1.0 / tuned / 0.0
      *
-     * The mapping is:
-     * - hills: `use_hills` 0.0 / tuned / 1.0 for walk, hike and bike
-     * - busy roads: bike `use_roads` 0.0 / tuned / 1.0; walk and hike
-     *   `use_living_streets` 1.0 / tuned / 0.0
-     * - rough surfaces: bike `avoid_bad_surfaces` 1.0 / tuned / 0.0; walk and
-     *   hike `use_tracks` 0.0 / tuned / 1.0
-     *
-     * Pedestrian costing has no `use_roads` or `avoid_bad_surfaces`, so the on
-     * foot steps use the closest pedestrian option instead of a key Valhalla
-     * ignores. Car is out of v1 and keeps its profile.
-     *
-     * The setting is applied only to the profile in the request, so another
-     * profile's options cannot appear in this body.
+     * Car is out of v1 and keeps its profile.
      */
     fun costingOptions(
         profile: RouteProfile,
@@ -120,21 +115,12 @@ internal object ValhallaProfiles {
     ): JsonObject {
         val base = of(profile).costingOptions
         val overrides = mutableMapOf<String, JsonPrimitive>()
-        when (profile) {
-            RouteProfile.Walk, RouteProfile.Hike -> {
-                applyPreference(overrides, USE_HILLS_KEY, options.hills, avoid = 0.0, dontMind = 1.0)
-                applyPreference(overrides, USE_LIVING_STREETS_KEY, options.busyRoads, avoid = 1.0, dontMind = 0.0)
-                applyPreference(overrides, USE_TRACKS_KEY, options.roughSurfaces, avoid = 0.0, dontMind = 1.0)
-            }
-
-            RouteProfile.Bike -> {
-                applyPreference(overrides, USE_HILLS_KEY, options.hills, avoid = 0.0, dontMind = 1.0)
-                applyPreference(overrides, USE_ROADS_KEY, options.busyRoads, avoid = 0.0, dontMind = 1.0)
-                applyPreference(overrides, AVOID_BAD_SURFACES_KEY, options.roughSurfaces, avoid = 1.0, dontMind = 0.0)
-            }
-
-            RouteProfile.Car -> {
-                Unit
+        for (attribute in RouteAttribute.forProfile(profile)) {
+            val mapping = mappingFor(profile, attribute) ?: continue
+            when (options[attribute]) {
+                RoutePreference.Avoid -> overrides[mapping.key] = mapping.avoid
+                RoutePreference.Normal -> Unit
+                RoutePreference.DontMind -> overrides[mapping.key] = mapping.dontMind
             }
         }
         if (overrides.isEmpty()) {
@@ -143,29 +129,58 @@ internal object ValhallaProfiles {
         return JsonObject(base + overrides)
     }
 
-    /**
-     * Applies one step to one key. [avoid] and [dontMind] are the values in the
-     * direction the key reads, which is not the same direction for every key.
-     */
-    private fun applyPreference(
-        overrides: MutableMap<String, JsonPrimitive>,
-        key: String,
-        preference: RoutePreference,
-        avoid: Double,
-        dontMind: Double,
-    ) {
-        when (preference) {
-            RoutePreference.Avoid -> overrides[key] = JsonPrimitive(avoid)
-            RoutePreference.Normal -> Unit
-            RoutePreference.DontMind -> overrides[key] = JsonPrimitive(dontMind)
+    /** One attribute's Valhalla key and the values of its two non-normal steps. */
+    private class StepMapping(
+        val key: String,
+        val avoid: JsonPrimitive,
+        val dontMind: JsonPrimitive,
+    )
+
+    private fun mappingFor(
+        profile: RouteProfile,
+        attribute: RouteAttribute,
+    ): StepMapping? =
+        when (attribute) {
+            RouteAttribute.Hills -> {
+                StepMapping(USE_HILLS_KEY, JsonPrimitive(0.0), JsonPrimitive(1.0))
+            }
+
+            RouteAttribute.Steps -> {
+                StepMapping(STEP_PENALTY_KEY, JsonPrimitive(STEP_PENALTY_AVOID_S), JsonPrimitive(0.0))
+            }
+
+            RouteAttribute.TrailDifficulty -> {
+                StepMapping(
+                    MAX_HIKING_DIFFICULTY_KEY,
+                    JsonPrimitive(TRAIL_DIFFICULTY_AVOID),
+                    JsonPrimitive(MAX_HIKING_DIFFICULTY),
+                )
+            }
+
+            RouteAttribute.BusyRoads -> {
+                StepMapping(USE_ROADS_KEY, JsonPrimitive(0.0), JsonPrimitive(1.0)).takeIf { profile == RouteProfile.Bike }
+            }
+
+            RouteAttribute.RoughSurfaces -> {
+                StepMapping(AVOID_BAD_SURFACES_KEY, JsonPrimitive(1.0), JsonPrimitive(0.0))
+                    .takeIf { profile == RouteProfile.Bike }
+            }
         }
-    }
 
     private const val USE_HILLS_KEY = "use_hills"
     private const val USE_ROADS_KEY = "use_roads"
-    private const val USE_LIVING_STREETS_KEY = "use_living_streets"
-    private const val USE_TRACKS_KEY = "use_tracks"
     private const val AVOID_BAD_SURFACES_KEY = "avoid_bad_surfaces"
+    private const val STEP_PENALTY_KEY = "step_penalty"
+    private const val MAX_HIKING_DIFFICULTY_KEY = "max_hiking_difficulty"
+
+    /** Valhalla's top of the `sac_scale` range: every trail grade is allowed. */
+    private const val MAX_HIKING_DIFFICULTY = 6
+
+    /** T2, easy mountain hiking: the lowest grade above plain footpaths. */
+    private const val TRAIL_DIFFICULTY_AVOID = 2
+
+    /** Eight minutes per step transition: the strongest avoidance the engine honours. */
+    private const val STEP_PENALTY_AVOID_S = 480.0
 
     /** The committed document, compared verbatim by the profile test. */
     fun document(): JsonObject =

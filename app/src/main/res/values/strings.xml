@@ -203,4 +203,15 @@
         <item quantity="one">Downloading %1$d map</item>
         <item quantity="other">Downloading %1$d maps</item>
     </plurals>
+    <string name="map_update_channel_name">Map updates</string>
+    <string name="map_update_channel_description">Tells you when maps update in the background</string>
+    <string name="map_update_applies_at_next_start">The maps apply the next time you start the app</string>
+    <plurals name="map_update_installed">
+        <item quantity="one">%1$d map updated</item>
+        <item quantity="other">%1$d maps updated</item>
+    </plurals>
+    <plurals name="map_update_waiting">
+        <item quantity="one">%1$d map update waits for Wi-Fi</item>
+        <item quantity="other">%1$d map updates wait for Wi-Fi</item>
+    </plurals>
 </resources>

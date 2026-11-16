@@ -87,6 +87,9 @@ open class GrassMapsApplication : Application() {
             downloadService = AndroidDownloadServiceHandle(this) { message -> Log.w("DownloadService", message) },
             downloadsSettingsFileProvider = { File(filesDir, DOWNLOADS_SETTINGS_PATH) },
             meteredNetwork = meteredNetworkMonitor(),
+            autoUpdateLedgerFileProvider = { File(filesDir, AUTO_UPDATE_LEDGER_PATH) },
+            autoUpdateScheduler = AndroidAutoUpdateScheduler(this),
+            autoUpdateNotifier = AndroidAutoUpdateNotifier(this),
             beepSink = AndroidBeepSink(this),
             alertEffectSink = AndroidAlertEffects(this),
         )
@@ -104,6 +107,7 @@ open class GrassMapsApplication : Application() {
         // process start, here: the park directory needs no store, so no plugin
         // host is built for it, and the IO dispatcher keeps the first screen
         // from waiting on it.
+        maintenanceScope.launch { container.applyAutoUpdateSchedule() }
         maintenanceScope.launch {
             TrackTrash.purge(
                 File(filesDir, UserDataLayout.TRACKS_DIRECTORY),
@@ -255,6 +259,7 @@ open class GrassMapsApplication : Application() {
         const val CONTOURS_SETTINGS_PATH = "settings/contours.json"
         const val RASTER_SETTINGS_PATH = "settings/raster.json"
         const val DOWNLOADS_SETTINGS_PATH = "settings/downloads.json"
+        const val AUTO_UPDATE_LEDGER_PATH = "settings/auto-update.json"
         const val ROUTING_OPTIONS_SETTINGS_PATH = "settings/routing-options.json"
         const val ALERT_SETTINGS_PATH = "settings/alerts.json"
         const val DEV_TOOLS_GPX_ASSET = "mock-walk.gpx"

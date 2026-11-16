@@ -208,4 +208,19 @@
         <item quantity="many">Завантажуємо %1$d мап</item>
         <item quantity="other">Завантажуємо %1$d мапи</item>
     </plurals>
+    <string name="map_update_channel_name">Оновлення мап</string>
+    <string name="map_update_channel_description">Повідомляє, коли мапи оновлюються у фоні</string>
+    <string name="map_update_applies_at_next_start">Мапи застосуються під час наступного запуску застосунку</string>
+    <plurals name="map_update_installed">
+        <item quantity="one">Оновлено %1$d мапу</item>
+        <item quantity="few">Оновлено %1$d мапи</item>
+        <item quantity="many">Оновлено %1$d мап</item>
+        <item quantity="other">Оновлено %1$d мапи</item>
+    </plurals>
+    <plurals name="map_update_waiting">
+        <item quantity="one">%1$d оновлення мапи чекає на Wi-Fi</item>
+        <item quantity="few">%1$d оновлення мап чекають на Wi-Fi</item>
+        <item quantity="many">%1$d оновлень мап чекають на Wi-Fi</item>
+        <item quantity="other">%1$d оновлення мап чекають на Wi-Fi</item>
+    </plurals>
 </resources>

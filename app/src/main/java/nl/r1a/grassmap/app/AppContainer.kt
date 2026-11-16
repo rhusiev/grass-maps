@@ -69,6 +69,7 @@ import nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess
 import nl.r1a.grassmap.plugin.api.host.RoutingOptionsAccess
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
+import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
 import nl.r1a.grassmap.plugin.api.provider.CoordinateParser
 import nl.r1a.grassmap.plugin.api.provider.PlaceProvider
 import nl.r1a.grassmap.plugin.api.provider.PlaceProviderContract
@@ -101,7 +102,11 @@ import nl.r1a.grassmap.plugins.track.layer.TrackLayer
 import nl.r1a.grassmap.plugins.track.library.TrackFolderStore
 import nl.r1a.grassmap.plugins.way.alerts.WayAlertHost
 import nl.r1a.grassmap.plugins.way.alerts.WayAlertSink
+import nl.r1a.grassmap.regions.AutoUpdateNotifier
+import nl.r1a.grassmap.regions.AutoUpdateRun
+import nl.r1a.grassmap.regions.AutoUpdater
 import nl.r1a.grassmap.regions.DownloadPolicy
+import nl.r1a.grassmap.regions.FileAutoUpdateLedger
 import nl.r1a.grassmap.regions.GateNetworkAccess
 import nl.r1a.grassmap.regions.HttpDownloadTransport
 import nl.r1a.grassmap.regions.MeteredNetworkMonitor
@@ -171,6 +176,11 @@ class AppContainer(
     private val downloadService: DownloadServiceHandle = NoDownloadServiceHandle,
     private val downloadsSettingsFileProvider: () -> File? = { null },
     private val meteredNetwork: MeteredNetworkMonitor = NeverMetered,
+    /** The monthly map update (T-0508): its ledger file, wake-up and notice. Absent in tests. */
+    private val autoUpdateLedgerFileProvider: () -> File? = { null },
+    private val autoUpdateScheduler: AutoUpdateScheduler = NoAutoUpdateScheduler,
+    private val autoUpdateNotifier: AutoUpdateNotifier = AutoUpdateNotifier {},
+    private val autoUpdateClock: java.time.Clock = java.time.Clock.systemUTC(),
     /** The audio backend for turn beeps (T-0318); the app wires the Android one. */
     private val beepSink: BeepSink = NoopBeepSink,
     /** The tone and vibration backend for alerts (T-0317); Noop by default. */
@@ -908,9 +918,61 @@ class AppContainer(
                 log = { message -> Log.i(REGIONS_TAG, message) },
                 metered = meteredNetwork,
                 initialMobileDataPolicy = downloadsSettings.load(),
-                onMobileDataPolicyChanged = { policy -> downloadsSettings.save(policy) },
+                onMobileDataPolicyChanged = { policy ->
+                    downloadsSettings.save(policy)
+                    applyAutoUpdateSchedule()
+                },
+                initialAutoUpdate = downloadsSettings.loadAutoUpdate(),
+                onAutoUpdateChanged = { enabled ->
+                    downloadsSettings.saveAutoUpdate(enabled)
+                    applyAutoUpdateSchedule()
+                },
             ).also { store -> keepServiceInStep(store) }
         }
+    }
+
+    /**
+     * The monthly update over [regionStore] (T-0508). Its check goes through
+     * the same privacy gate as every region request and runs only while the
+     * `network.region_updates` switch is on.
+     */
+    val autoUpdater: AutoUpdater? by lazy {
+        regionStore?.let { store ->
+            AutoUpdater(
+                access = store,
+                ledger = FileAutoUpdateLedger(autoUpdateLedgerFileProvider()),
+                clock = autoUpdateClock,
+                isSwitchOn = { regionDownloadsEnabled },
+                notifier = autoUpdateNotifier,
+                log = { message -> Log.i(REGIONS_TAG, message) },
+            )
+        }
+    }
+
+    /**
+     * Runs one update window: the check, and for a queued update the notice
+     * once it settles. The notice waits on [processScope], so the wake-up that
+     * called this can end while the download service keeps the process alive.
+     */
+    suspend fun runAutoUpdateWindow(): AutoUpdateRun? {
+        val updater = autoUpdater ?: return null
+        val run = updater.runIfDue()
+        if (run is AutoUpdateRun.Queued) {
+            processScope.launch { updater.announce(run) }
+        }
+        return run
+    }
+
+    /**
+     * Brings the system wake-up in line with the stored choices. The app calls
+     * it at start, and the store calls it when a choice changes. Call it off Main.
+     */
+    fun applyAutoUpdateSchedule() {
+        val settings = DownloadsSettings(downloadsSettingsFileProvider())
+        autoUpdateScheduler.apply(
+            enabled = settings.loadAutoUpdate(),
+            wifiOnly = settings.load() == MobileDataPolicy.WIFI_ONLY,
+        )
     }
 
     /** Runs the download service exactly while a transfer is in flight (T-0505). */

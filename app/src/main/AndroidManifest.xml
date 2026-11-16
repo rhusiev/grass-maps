@@ -17,6 +17,8 @@
          runtime permission is granted; the activity asks for it when guidance
          starts and navigation still runs if the answer is no. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- T-0508: lets the persisted update job survive a reboot. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name="nl.r1a.grassmap.app.GrassMapsApplication"
@@ -113,5 +115,12 @@
             android:name="nl.r1a.grassmap.app.DownloadService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- T-0508: the system wakes this about once a day to run the monthly
+             map update. It starts no activity and exports nothing. -->
+        <service
+            android:name="nl.r1a.grassmap.app.AutoUpdateJobService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>
 </manifest>

@@ -3638,6 +3638,30 @@ The notification then reads "Waiting for Wi-Fi - N maps, X MB" with the action
 and does not change the stored policy. Android 15 caps `dataSync` services; if
 the system ends the service the transfer resumes through the Range request.
 
+Automatic updates (T-0508). Installed maps update once a month without the
+user opening the app. `AutoUpdater` (`regions`) runs one window: it does
+nothing while the choice `DownloadsData.autoUpdate` (default on, command
+`downloads.ui.set_auto_update`, stored in `settings/downloads.json` beside the
+mobile-data policy) is off, while the `network.region_updates` switch is off,
+before 30 days have passed since the last recorded check, or within a day of a
+failed attempt. Under `WIFI_ONLY` on a metered network it also does nothing and
+sends no request. Otherwise it fetches the catalogue through `refresh()`, which
+passes the privacy gate, and queues `updateAll()`. `AutoUpdateLedger`
+(`settings/auto-update.json`) keeps `lastCheckMs` and `lastAttemptMs`. A check
+is recorded when the catalogue showed nothing new or an update installed or
+waits for Wi-Fi. A failure records only the attempt, so the next daily window
+retries and a dead server is asked once a day, not in a loop.
+`AutoUpdateScheduler` wakes the app about once a day through the platform
+`JobScheduler`: it needs no Google component, as F-Droid requires, and it
+enforces the unmetered-network constraint itself. The job is `persisted`
+(`RECEIVE_BOOT_COMPLETED`) and requires an unmetered network under `WIFI_ONLY`.
+`AutoUpdateJobService` runs the window. The notification in channel
+`map_updates` reads "N maps updated" or "N map updates wait for Wi-Fi", and says
+that the maps apply the next time the app starts. A queued update outlives the
+job: `DownloadService` keeps the process alive while the transfer runs. The
+check does not run while the process is dead and no wake-up arrives, for example
+after a force stop.
+
 `app` constructs `RegionStore` over its private region root, passes it to
 `PluginHost` as `PluginServices.regionDownloads`, and hosts
 `DownloadsScreenContent`. The map has no maps entry point yet, so the debug

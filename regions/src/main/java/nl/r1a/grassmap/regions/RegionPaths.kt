@@ -10,6 +10,7 @@ import java.util.UUID
  * <root>/<region>/<version>/        one installed package
  * <root>/<region>/current           the active version, atomically replaced
  * <root>/.incoming/                 downloads, staging and quarantine
+ * <root>/.routing/                  the merged routing tiles ([RoutingMount])
  * ```
  *
  * Region and version are validated path segments before they reach here.
@@ -27,6 +28,8 @@ class RegionPaths(
     fun currentFile(region: String): File = File(regionDirectory(region), CURRENT_FILE)
 
     fun incomingDirectory(): File = File(root, INCOMING_DIRECTORY)
+
+    fun routingMountDirectory(): File = File(root, ROUTING_MOUNT_DIRECTORY)
 
     /**
      * The place a current version is kept while its verified replacement is
@@ -53,6 +56,9 @@ class RegionPaths(
     companion object {
         const val CURRENT_FILE: String = "current"
         const val INCOMING_DIRECTORY: String = ".incoming"
+
+        /** Dot-prefixed, so the mount resolver never reads it as a region. */
+        const val ROUTING_MOUNT_DIRECTORY: String = ".routing"
 
         /** The first word of every quarantine directory name under `.incoming`. */
         const val QUARANTINE_PREFIX: String = "invalid"

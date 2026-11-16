@@ -103,6 +103,7 @@ import nl.r1a.grassmap.regions.DownloadPolicy
 import nl.r1a.grassmap.regions.GateNetworkAccess
 import nl.r1a.grassmap.regions.HttpDownloadTransport
 import nl.r1a.grassmap.regions.MountedRegion
+import nl.r1a.grassmap.regions.MountedRoutingPacks
 import nl.r1a.grassmap.regions.NetworkAccess
 import nl.r1a.grassmap.regions.RegionDownloader
 import nl.r1a.grassmap.regions.RegionElevation
@@ -871,6 +872,11 @@ class AppContainer(
     /** The region store root, or null when the app has no files directory. */
     val regionsRoot: File? by lazy { regionsRootProvider() }
 
+    /** The merged routing view over the installed packs (T-0518), or null without a store. */
+    private val mountedRoutingPacks: MountedRoutingPacks? by lazy {
+        regionsRoot?.let { root -> MountedRoutingPacks(root) { message -> Log.i(ROUTING_MOUNT_TAG, message) } }
+    }
+
     /**
      * The region store behind the downloads screen (T-0504). It shares the
      * app-private root and the gated network path with the downloader below.
@@ -988,9 +994,10 @@ class AppContainer(
             trackLibraryAccess = trackLibrary,
             platformActions = platformActions,
             routingPacks = {
-                routingFilesProvider()?.let { root ->
-                    File(root, ROUTING_PACK_DIRECTORY).absolutePath
-                }
+                mountedRoutingPacks?.packDirectory()
+                    ?: routingFilesProvider()?.let { root ->
+                        File(root, ROUTING_PACK_DIRECTORY).absolutePath
+                    }
             },
             routingEngines = routingEngineAccess,
             routeHistoryAccess = routeHistory,
@@ -1042,6 +1049,7 @@ class AppContainer(
         const val ROUTE_LAYER_TAG = "GrassMapsRoute"
         const val TRACK_LIBRARY_INDEX = ".library.json"
         const val ROUTING_PACK_DIRECTORY = "valhalla"
+        private const val ROUTING_MOUNT_TAG = "RoutingMount"
 
         /** The most places one proximity lookup asks the index for (T-0413). */
         const val PROXIMITY_POI_LIMIT = 50

@@ -15,6 +15,11 @@ data class RegionComponent(
     val sha256: String,
     val standIn: Boolean,
     val zoomLevels: List<Int>,
+    /**
+     * True when [file] names a directory. [bytes] is then the sum of its file
+     * sizes and [sha256] the hash of its canonical listing ([ComponentListing]).
+     */
+    val isDirectory: Boolean = false,
 )
 
 /** The archive a package was built from, for provenance in the manifest. */

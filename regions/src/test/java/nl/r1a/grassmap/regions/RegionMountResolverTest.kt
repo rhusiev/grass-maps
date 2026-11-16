@@ -2,6 +2,7 @@ package nl.r1a.grassmap.regions
 
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.nio.file.Files
@@ -158,6 +159,68 @@ class RegionMountResolverTest {
         assertEquals(listOf("ua-46"), mounts.broken.map { it.region })
         assertEquals(RegionMountProblem.MissingPointer, mounts.broken.single().problem)
         assertTrue(Files.isDirectory(broken))
+    }
+
+    @Test
+    fun aPackWithoutRoutingHasNoRoutingPart() {
+        install()
+
+        assertNull(mounts().installed.single().routing)
+    }
+
+    @Test
+    fun aRoutingTarIsALegacyArchive() {
+        install { manifest -> asRouting(manifest, "routing.tar", directory = false) }
+
+        assertEquals(RoutingPart.LegacyArchive, mounts().installed.single().routing)
+    }
+
+    @Test
+    fun aRoutingDirectoryOfTheRightFormatIsMounted() {
+        install { manifest -> asRouting(manifest, "contours.pmtiles", directory = true) }
+        val routing = versionDirectory().resolve("contours.pmtiles")
+        Files.delete(routing)
+        Files.createDirectories(routing)
+
+        val part = mounts().installed.single().routing
+
+        assertEquals(routing.toFile(), (part as RoutingPart.Directory).directory)
+    }
+
+    @Test
+    fun aRoutingDirectoryThatIsMissingIsUnusableAndTheMapStillMounts() {
+        install { manifest -> asRouting(manifest, "contours.pmtiles", directory = true) }
+
+        val mounted = mounts().installed.single()
+
+        assertEquals(RoutingPart.Unusable, mounted.routing)
+        assertTrue(mounted.map.isFile)
+    }
+
+    /**
+     * Turns the contours component into a routing one. The mount reads the
+     * manifest without verifying file hashes, so the stand-in file is enough.
+     */
+    private fun asRouting(
+        manifest: String,
+        file: String,
+        directory: Boolean,
+    ): String {
+        val renamed =
+            manifest
+                .replace("\"kind\": \"contours\"", "\"kind\": \"routing\"")
+                .replace("\"file\": \"contours.pmtiles\"", "\"file\": \"$file\"")
+        if (!directory) {
+            return renamed
+        }
+        val start = renamed.indexOf("\"kind\": \"routing\"")
+        val end = renamed.indexOf("}", start)
+        val block =
+            renamed
+                .substring(start, end)
+                .replace("\"format\": \"pmtiles\"", "\"format\": \"${RoutingLayout.FORMAT}\", \"type\": \"directory\"")
+                .replace("\"formatVersion\": 3", "\"formatVersion\": ${RoutingLayout.FORMAT_VERSION}")
+        return renamed.substring(0, start) + block + renamed.substring(end)
     }
 
     private fun mounts(): RegionMounts = RegionMountResolver(root.toFile()).resolveAll()

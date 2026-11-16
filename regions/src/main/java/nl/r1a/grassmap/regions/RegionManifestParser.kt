@@ -102,6 +102,7 @@ object RegionManifestParser {
         if (!RegionIdentifiers.isSafeFileName(file)) {
             return null
         }
+        val isDirectory = parseIsDirectory(json["type"]) ?: return null
         val format = json.string("format") ?: return null
         val formatVersion = json.int("formatVersion") ?: return null
         if (formatVersion < 1) {
@@ -126,7 +127,20 @@ object RegionManifestParser {
             sha256 = sha256,
             standIn = json.boolean("standIn") ?: false,
             zoomLevels = parseZoomLevels(json["zoomLevels"]) ?: return null,
+            isDirectory = isDirectory,
         )
+    }
+
+    /** A missing `type` is a file; only `file` and `directory` are known. */
+    private fun parseIsDirectory(element: JsonElement?): Boolean? {
+        if (element == null) {
+            return false
+        }
+        return when ((element as? JsonPrimitive)?.takeIf { it.isString }?.content) {
+            TYPE_FILE -> false
+            TYPE_DIRECTORY -> true
+            else -> null
+        }
     }
 
     private fun parseZoomLevels(element: JsonElement?): List<Int>? {
@@ -195,6 +209,8 @@ object RegionManifestParser {
 
     private fun corrupt(): Outcome<RegionManifest> = Outcome.Failure(AppError.CorruptData)
 
+    private const val TYPE_FILE = "file"
+    private const val TYPE_DIRECTORY = "directory"
     private const val FEATURES_KIND = "features"
     private const val FEATURES_FORMAT = "place-features"
     private const val FEATURES_FORMAT_VERSION = 1

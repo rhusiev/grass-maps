@@ -4,15 +4,14 @@ import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import java.io.File
-import java.io.FileInputStream
 import java.io.IOException
 import java.nio.file.Files
-import java.security.MessageDigest
 
 /**
  * Checks an extracted package against its manifest: every declared file must be
  * present with the declared size and sha256, and nothing else may be a regular
- * file. Symbolic links are refused, because the package reader never creates
+ * file. A directory component is checked file by file through its canonical
+ * listing ([ComponentListing]). Symbolic links are refused, because the package reader never creates
  * them and a link could point at another app's data.
  */
 internal class PackageVerifier {
@@ -22,13 +21,14 @@ internal class PackageVerifier {
         cancellation: CancellationHandle,
     ): Outcome<Unit> {
         val declared = manifest.components.map { it.file }.toSet()
+        val directories = manifest.components.filter { it.isDirectory }.map { "${it.file}/" }
         for (component in manifest.components) {
             when (val checked = verifyComponent(directory, component, cancellation)) {
                 is Outcome.Failure -> return checked
                 is Outcome.Success -> Unit
             }
         }
-        return verifyNoExtraFiles(directory, declared)
+        return verifyNoExtraFiles(directory, declared, directories)
     }
 
     private fun verifyComponent(
@@ -36,6 +36,9 @@ internal class PackageVerifier {
         component: RegionComponent,
         cancellation: CancellationHandle,
     ): Outcome<Unit> {
+        if (component.isDirectory) {
+            return verifyDirectory(File(directory, component.file), component, cancellation)
+        }
         val file = File(directory, component.file)
         if (!file.isFile || Files.isSymbolicLink(file.toPath())) {
             return Outcome.Failure(AppError.CorruptData)
@@ -43,7 +46,7 @@ internal class PackageVerifier {
         if (file.length() != component.bytes) {
             return Outcome.Failure(AppError.CorruptData)
         }
-        return when (val hashed = sha256(file, cancellation)) {
+        return when (val hashed = FileDigest.sha256(file, cancellation)) {
             is Outcome.Failure -> {
                 hashed
             }
@@ -58,9 +61,35 @@ internal class PackageVerifier {
         }
     }
 
+    /**
+     * A directory component is the sum of its files: the scan hashes every
+     * regular file, and the declared size and listing hash must match. A
+     * tampered, extra, missing or renamed file changes one of them.
+     */
+    private fun verifyDirectory(
+        directory: File,
+        component: RegionComponent,
+        cancellation: CancellationHandle,
+    ): Outcome<Unit> {
+        if (!directory.isDirectory || Files.isSymbolicLink(directory.toPath())) {
+            return Outcome.Failure(AppError.CorruptData)
+        }
+        val files =
+            when (val scanned = ComponentListing.scan(directory, cancellation)) {
+                is Outcome.Failure -> return scanned
+                is Outcome.Success -> scanned.value
+            }
+        val matches =
+            files.isNotEmpty() &&
+                ComponentListing.totalBytes(files) == component.bytes &&
+                ComponentListing.digest(files) == component.sha256
+        return if (matches) Outcome.Success(Unit) else Outcome.Failure(AppError.CorruptData)
+    }
+
     private fun verifyNoExtraFiles(
         directory: File,
         declared: Set<String>,
+        directoryPrefixes: List<String>,
     ): Outcome<Unit> {
         val root = directory.toPath()
         val paths =
@@ -76,11 +105,14 @@ internal class PackageVerifier {
                 if (path == root) {
                     continue
                 }
-                val relative = root.relativize(path).toString()
+                val relative = root.relativize(path).joinToString("/") { it.toString() }
                 if (Files.isDirectory(path)) {
                     continue
                 }
-                val extra = relative != RegionIdentifiers.MANIFEST_FILE && relative !in declared
+                val extra =
+                    relative != RegionIdentifiers.MANIFEST_FILE &&
+                        relative !in declared &&
+                        directoryPrefixes.none { relative.startsWith(it) }
                 if (Files.isSymbolicLink(path) || extra) {
                     return Outcome.Failure(AppError.CorruptData)
                 }
@@ -91,37 +123,5 @@ internal class PackageVerifier {
             paths.close()
         }
         return Outcome.Success(Unit)
-    }
-
-    private fun sha256(
-        file: File,
-        cancellation: CancellationHandle,
-    ): Outcome<String> {
-        val digest = MessageDigest.getInstance(SHA256_ALGORITHM)
-        try {
-            FileInputStream(file).use { input ->
-                val buffer = ByteArray(HASH_BUFFER_BYTES)
-                while (true) {
-                    if (cancellation.isCancelled()) {
-                        return Outcome.Failure(AppError.Cancelled)
-                    }
-                    val read = input.read(buffer)
-                    if (read < 0) {
-                        break
-                    }
-                    if (read > 0) {
-                        digest.update(buffer, 0, read)
-                    }
-                }
-            }
-        } catch (exception: IOException) {
-            return Outcome.Failure(AppError.CorruptData)
-        }
-        return Outcome.Success(digest.digest().joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) })
-    }
-
-    private companion object {
-        const val SHA256_ALGORITHM = "SHA-256"
-        const val HASH_BUFFER_BYTES = 64 * 1024
     }
 }

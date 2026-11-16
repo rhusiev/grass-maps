@@ -14,6 +14,7 @@ data class MountedRegion(
     val map: File,
     val contours: File?,
     val manifest: RegionManifest,
+    val routing: RoutingPart? = null,
 )
 
 /** Why an installed region cannot be mounted. */
@@ -160,8 +161,30 @@ class RegionMountResolver(
                 map = mapFile,
                 contours = contours,
                 manifest = manifest,
+                routing = routingPart(directory, manifest),
             ),
         )
+    }
+
+    /**
+     * What the routing component declares, checked lightly like the rest of the
+     * mount. A routing problem never hides the map: the region still mounts.
+     */
+    private fun routingPart(
+        directory: File,
+        manifest: RegionManifest,
+    ): RoutingPart? {
+        val component = manifest.components.firstOrNull { it.kind == RoutingLayout.KIND } ?: return null
+        if (!component.isDirectory) {
+            return RoutingPart.LegacyArchive
+        }
+        val routing = File(directory, component.file)
+        val supported =
+            component.format == RoutingLayout.FORMAT &&
+                component.formatVersion == RoutingLayout.FORMAT_VERSION &&
+                routing.isDirectory &&
+                !Files.isSymbolicLink(routing.toPath())
+        return if (supported) RoutingPart.Directory(routing, component.sha256) else RoutingPart.Unusable
     }
 
     private fun readManifest(

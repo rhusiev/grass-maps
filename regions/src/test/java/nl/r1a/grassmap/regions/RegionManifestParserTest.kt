@@ -157,6 +157,35 @@ class RegionManifestParserTest {
         }
     }
 
+    @Test
+    fun aDirectoryTypeMarksTheComponentAsADirectory() {
+        val manifest = success(parse(withContoursType("directory")))
+
+        assertTrue(manifest.components.single { it.kind == "contours" }.isDirectory)
+        assertFalse(manifest.components.single { it.kind == "map" }.isDirectory)
+    }
+
+    @Test
+    fun aFileTypeIsAPlainFile() {
+        val manifest = success(parse(withContoursType("file")))
+
+        assertFalse(manifest.components.single { it.kind == "contours" }.isDirectory)
+    }
+
+    @Test
+    fun anUnknownTypeIsCorrupt() {
+        val outcome = parse(withContoursType("socket"))
+
+        assertTrue(outcome is Outcome.Failure)
+    }
+
+    private fun withContoursType(type: String): ByteArray =
+        rewrittenComponents { components ->
+            components.map { component ->
+                if (kindOf(component) == "contours") JsonObject(component + ("type" to JsonPrimitive(type))) else component
+            }
+        }
+
     private fun rewritten(
         from: String,
         to: String,

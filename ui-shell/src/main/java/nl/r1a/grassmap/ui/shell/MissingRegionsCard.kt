@@ -42,16 +42,16 @@ private const val BYTES_PER_GB = BYTES_PER_MB * 1024.0
 private const val SMALL_SIZE_LIMIT = 10.0
 private const val PERCENT = 100L
 
-private const val TITLE_KEY = "route_planner_missing_title"
-private const val TITLE_MANY_KEY = "route_planner_missing_title_many"
-private const val SUMMARY_KEY = "route_planner_missing_summary"
-private const val DETAILS_KEY = "route_planner_missing_details"
-private const val HIDE_DETAILS_KEY = "route_planner_missing_hide_details"
-private const val DOWNLOAD_KEY = "route_planner_missing_download"
-private const val PROGRESS_KEY = "route_planner_missing_progress"
-private const val PROBLEM_KEY = "route_planner_missing_problem"
-private const val PART_LINE_KEY = "route_planner_missing_part_line"
-private const val FALLBACK_REGION_KEY = "route_planner_missing_region_fallback"
+private const val MISSING_TITLE_KEY = "route_planner_missing_title"
+private const val MISSING_TITLE_MANY_KEY = "route_planner_missing_title_many"
+private const val MISSING_SUMMARY_KEY = "route_planner_missing_summary"
+private const val MISSING_DETAILS_KEY = "route_planner_missing_details"
+private const val MISSING_HIDE_DETAILS_KEY = "route_planner_missing_hide_details"
+private const val MISSING_DOWNLOAD_KEY = "route_planner_missing_download"
+private const val MISSING_PROGRESS_KEY = "route_planner_missing_progress"
+private const val MISSING_PROBLEM_KEY = "route_planner_missing_problem"
+private const val MISSING_PART_LINE_KEY = "route_planner_missing_part_line"
+private const val MISSING_FALLBACK_REGION_KEY = "route_planner_missing_region_fallback"
 
 private val PART_KEYS =
     mapOf(
@@ -88,7 +88,7 @@ internal fun MissingRegionsCard(
     ) {
         val title = missingTitle(missing, strings, preferUkrainian)
         CardText(title, ROUTE_WARNING_TITLE_COLOR, TITLE_FONT_SP, FontWeight.Bold)
-        val summary = strings.resolve(SUMMARY_KEY, listOf(formatSize(missing.bytes)))
+        val summary = strings.resolve(MISSING_SUMMARY_KEY, listOf(formatSize(missing.bytes)))
         CardText(summary, ROUTE_WARNING_SUMMARY_COLOR, BODY_FONT_SP)
         if (detailsVisible) {
             missing.regions.forEach { region ->
@@ -97,11 +97,11 @@ internal fun MissingRegionsCard(
         }
         if (download == null || download.problem != null) {
             if (download?.problem != null) {
-                CardText(strings.resolve(PROBLEM_KEY), ROUTE_WARNING_TITLE_COLOR, BODY_FONT_SP)
+                CardText(strings.resolve(MISSING_PROBLEM_KEY), ROUTE_WARNING_TITLE_COLOR, BODY_FONT_SP)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(CARD_GAP_DP.dp)) {
-                CardButton(strings.resolve(DOWNLOAD_KEY), ROUTE_ACTION_COLOR, onDownload)
-                val toggle = strings.resolve(if (detailsVisible) HIDE_DETAILS_KEY else DETAILS_KEY)
+                CardButton(strings.resolve(MISSING_DOWNLOAD_KEY), ROUTE_ACTION_COLOR, onDownload)
+                val toggle = strings.resolve(if (detailsVisible) MISSING_HIDE_DETAILS_KEY else MISSING_DETAILS_KEY)
                 CardButton(toggle, ROUTE_CHIP_COLOR) { detailsVisible = !detailsVisible }
             }
         } else {
@@ -119,12 +119,12 @@ private fun RegionParts(
     showName: Boolean,
 ) {
     if (showName) {
-        val name = region.name(preferUkrainian) ?: strings.resolve(FALLBACK_REGION_KEY)
+        val name = region.name(preferUkrainian) ?: strings.resolve(MISSING_FALLBACK_REGION_KEY)
         CardText(name, ROUTE_WARNING_TITLE_COLOR, BODY_FONT_SP, FontWeight.Bold)
     }
     region.parts.forEach { part ->
         val partName = PART_KEYS[part.kind]?.let { strings.resolve(it) } ?: part.kind.name
-        val line = strings.resolve(PART_LINE_KEY, listOf(partName, formatSize(part.bytes)))
+        val line = strings.resolve(MISSING_PART_LINE_KEY, listOf(partName, formatSize(part.bytes)))
         CardText(line, ROUTE_WARNING_SUMMARY_COLOR, BODY_FONT_SP)
     }
 }
@@ -135,11 +135,11 @@ private fun missingTitle(
     preferUkrainian: Boolean,
 ): String {
     val first = missing.regions.firstOrNull()
-    val name = first?.name(preferUkrainian) ?: strings.resolve(FALLBACK_REGION_KEY)
+    val name = first?.name(preferUkrainian) ?: strings.resolve(MISSING_FALLBACK_REGION_KEY)
     return if (missing.regions.size > 1) {
-        strings.resolve(TITLE_MANY_KEY, listOf(name, (missing.regions.size - 1).toString()))
+        strings.resolve(MISSING_TITLE_MANY_KEY, listOf(name, (missing.regions.size - 1).toString()))
     } else {
-        strings.resolve(TITLE_KEY, listOf(name))
+        strings.resolve(MISSING_TITLE_KEY, listOf(name))
     }
 }
 
@@ -149,7 +149,7 @@ private fun progressText(
 ): String {
     val percent = if (download.bytesTotal > 0) download.bytesDone * PERCENT / download.bytesTotal else 0L
     return strings.resolve(
-        PROGRESS_KEY,
+        MISSING_PROGRESS_KEY,
         listOf(formatSize(download.bytesDone), formatSize(download.bytesTotal), percent.toString()),
     )
 }

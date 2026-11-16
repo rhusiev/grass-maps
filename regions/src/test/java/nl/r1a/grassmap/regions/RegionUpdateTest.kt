@@ -28,6 +28,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.File
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -85,7 +86,7 @@ class RegionUpdateTest {
         }
 
     @Test
-    fun anUpdateReplacesTheOldVersionAndTheMountFollowsThePointer() =
+    fun anUpdateKeepsTheOldFilesReadableUntilTheNextStartSweepsThem() =
         withStore { store ->
             install(store, CatalogFixture.LVIV)
             setCatalog(mapOf(CatalogFixture.LVIV to NEW_VERSION))
@@ -95,6 +96,11 @@ class RegionUpdateTest {
             awaitIdle(store)
 
             assertEquals(NEW_VERSION, mountedVersion(CatalogFixture.LVIV))
+            assertEquals(listOf(OLD_VERSION, NEW_VERSION), versionDirectories(CatalogFixture.LVIV).sorted())
+            assertTrue(File(paths.versionDirectory(CatalogFixture.LVIV, OLD_VERSION), MAP_FILE).isFile)
+
+            SupersededVersions.sweep(paths.root)
+
             assertEquals(listOf(NEW_VERSION), versionDirectories(CatalogFixture.LVIV))
             assertEquals(
                 NEW_VERSION,
@@ -382,6 +388,7 @@ class RegionUpdateTest {
         const val THIRD_REGION = "ua-07"
         const val UNINSTALLED_REGION = "ua-09"
         const val OLD_VERSION = "2026-10-01"
+        const val MAP_FILE = "map.pmtiles"
         const val NEW_VERSION = CatalogFixture.VERSION
         const val ALERTS_FILE = "way-alerts.geojson"
         const val TIMEOUT_MS = 60_000L

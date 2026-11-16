@@ -115,6 +115,7 @@ import nl.r1a.grassmap.regions.RegionMountResolver
 import nl.r1a.grassmap.regions.RegionPaths
 import nl.r1a.grassmap.regions.RegionReaders
 import nl.r1a.grassmap.regions.RegionStore
+import nl.r1a.grassmap.regions.SupersededVersions
 import nl.r1a.grassmap.routing.RouteHistorySetting
 import nl.r1a.grassmap.routing.RouteHistoryStore
 import java.io.File
@@ -877,8 +878,12 @@ class AppContainer(
     /** The production network path for region downloads. */
     val regionNetwork: NetworkAccess = GateNetworkAccess(networkGate)
 
-    /** The region store root, or null when the app has no files directory. */
-    val regionsRoot: File? by lazy { regionsRootProvider() }
+    /**
+     * The region store root, or null when the app has no files directory. The
+     * first access sweeps the versions an earlier update superseded, before any
+     * mount or install in this process (T-0507).
+     */
+    val regionsRoot: File? by lazy { regionsRootProvider()?.also(SupersededVersions::sweep) }
 
     /** The merged routing view over the installed packs (T-0518), or null without a store. */
     private val mountedRoutingPacks: MountedRoutingPacks? by lazy {

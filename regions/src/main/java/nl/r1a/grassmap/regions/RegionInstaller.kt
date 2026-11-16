@@ -26,12 +26,11 @@ data class InstalledRegion(
  * replaces the region's `current` pointer.
  *
  * The pointer is the commit point. A failure or a cancel before it leaves the
- * pointer on the previous version, which is still present and mounted. Once the
- * pointer names the new version, every other version directory of the region is
- * deleted, so an update does not keep two archives. A crash between the pointer
- * replace and that delete leaves an unused old directory, which the next
- * install of the region removes. The rename of the version directory and the
- * pointer replace are both atomic on the same filesystem.
+ * pointer on the previous version, which is still present and mounted. The old
+ * version directory stays after the flip, because the running process reads its
+ * files through readers that open once. [SupersededVersions] deletes it at the
+ * next process start. The rename of the version directory and the pointer
+ * replace are both atomic on the same filesystem.
  *
  * A current version that fails verification is quarantined under `.incoming`
  * until the verified replacement is in place, and put back if the move fails.
@@ -97,7 +96,6 @@ internal class RegionInstaller(
 
             is Outcome.Success -> {
                 targetState.quarantine?.deleteRecursively()
-                removeOtherVersions(regionDirectory, request.version)
                 Outcome.Success(
                     InstalledRegion(
                         manifest = manifest,
@@ -121,28 +119,6 @@ internal class RegionInstaller(
     ) {
         // A failed restore is left to the next install's sweep, as after a crash.
         state.quarantine?.let { move(it, target) }
-    }
-
-    /**
-     * Deletes every version directory except [keep]. A symbolic link is removed
-     * as a link and never followed, so a linked test or tool layout loses only
-     * the link.
-     */
-    private fun removeOtherVersions(
-        regionDirectory: File,
-        keep: String,
-    ) {
-        val entries = regionDirectory.listFiles() ?: return
-        for (entry in entries) {
-            if (entry.name == keep || entry.name == RegionPaths.CURRENT_FILE) {
-                continue
-            }
-            if (Files.isSymbolicLink(entry.toPath())) {
-                Files.deleteIfExists(entry.toPath())
-            } else if (entry.isDirectory) {
-                entry.deleteRecursively()
-            }
-        }
     }
 
     /** The target's state after verification: reuse it, or clear it for the new copy. */

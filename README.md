@@ -3467,10 +3467,11 @@ fsynced temporary file plus an atomic rename. The pointer is the commit point:
 a crash before it leaves the previous version current and usable; a crash after
 the version-directory rename but before the pointer rename leaves an unused new
 directory, which a retry verifies and reuses. After the pointer names the new
-version, the installer deletes every other version directory of the region, so
-an update never keeps two archives. A crash between the pointer rename and that
-delete leaves an unused old directory, which the next install of the region
-removes. A current version that fails
+version, the installer keeps the old version directory, because the running
+process still reads its files. `SupersededVersions.sweep` deletes it at the next
+process start, before anything mounts a region, and keeps only the version
+`current` names. A crash at any point leaves `current` naming a complete
+version. A current version that fails
 verification is quarantined under `.incoming` until its verified replacement is
 in place, and put back if the rename fails; a rename that cannot put it back
 reports `Internal("region.install.rollback")` and keeps the quarantine. Every
@@ -3486,7 +3487,10 @@ differs from the installed one. "Update all" (`RegionDownloadsAccess.updateAll`,
 command `downloads.ui.update_all`) fetches the catalogue, then queues each of
 them through `startDownload`, one claim at a time, so the `claimMutex` rule for
 WAITING and DOWNLOADING moves holds. An update downloads, verifies and stages
-the whole new archive, routing part included, beside the old version. The old
+the whole new archive, routing part included, beside the old version. It takes
+effect at the next app start: the routing engine reopens on a mount change, but
+the map, search and elevation readers open once per process and keep reading
+the old directory until then. The old
 version stays current and mounted until the pointer flips, and a failed
 download, a failed check or a cancel before the flip leaves it untouched. The
 installer checks for a cancel just before the move, and the flip is the commit

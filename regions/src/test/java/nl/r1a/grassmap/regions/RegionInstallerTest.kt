@@ -152,14 +152,14 @@ class RegionInstallerTest {
     }
 
     @Test
-    fun anUpdateRemovesTheOldVersionAfterThePointerFlips() {
+    fun anUpdateKeepsTheOldVersionDirectoryAfterThePointerFlips() {
         install().value()
         assertEquals(setOf(VERSION), versionNames())
 
         install(filesAt(NEXT_VERSION), version = NEXT_VERSION).value()
 
         assertEquals(NEXT_VERSION, CurrentPointer.read(paths.regionDirectory(REGION)))
-        assertEquals(setOf(NEXT_VERSION), versionNames())
+        assertEquals(setOf(VERSION, NEXT_VERSION), versionNames())
     }
 
     @Test

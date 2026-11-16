@@ -58,6 +58,8 @@ class RegionStore(
     private val metered: MeteredNetworkMonitor = NeverMetered,
     initialMobileDataPolicy: MobileDataPolicy = MobileDataPolicy.WIFI_ONLY,
     private val onMobileDataPolicyChanged: (MobileDataPolicy) -> Unit = {},
+    /** A test seam: runs after a transfer decided to pause and before it takes the claim lock. */
+    private val beforePause: suspend (String) -> Unit = {},
 ) : RegionDownloadsAccess {
     private val mutable =
         MutableStateFlow(
@@ -87,6 +89,8 @@ class RegionStore(
 
     /** The user's "download now on mobile data" choice; it ends when the queue empties. */
     private val mobileDataNow = MutableStateFlow(false)
+
+    private val partials = PartialArchives(paths)
 
     private val queue = Channel<String>(Channel.UNLIMITED)
     private val worker = scope.launch(Dispatchers.IO) { drain() }
@@ -189,6 +193,10 @@ class RegionStore(
                     state = DownloadTransferState.WAITING,
                     bytesTotal = entry.bytes,
                 )
+            if (mutable.value.transfers.isEmpty()) {
+                // The mobile-data choice ends with the queue it was made for.
+                mobileDataNow.value = false
+            }
             // The deferred exists before the worker can see the region, so a fast
             // transfer cannot finish before its cancellation handle is registered.
             finishing[region] = CompletableDeferred()
@@ -219,6 +227,7 @@ class RegionStore(
                 // Still in the queue: removing the transfer is enough, and the
                 // worker claims nothing for a region without one.
                 mutable.update { state -> state.copy(transfers = state.transfers.filterNot { it.region == region }) }
+                partials.discard(region)
                 finishing.remove(region)?.complete(Unit)
                 return Outcome.Success(Unit)
             }
@@ -268,7 +277,12 @@ class RegionStore(
     }
 
     override suspend fun useMobileDataNow(): Outcome<Unit> {
-        mobileDataNow.value = true
+        claimMutex.withLock {
+            // With nothing queued there is nothing for the choice to apply to.
+            if (mutable.value.transfers.isNotEmpty()) {
+                mobileDataNow.value = true
+            }
+        }
         return Outcome.Success(Unit)
     }
 
@@ -368,7 +382,7 @@ class RegionStore(
 
                 is Outcome.Failure -> {
                     if (outcome.error == AppError.Cancelled && !flag.get()) {
-                        paused = pause(region)
+                        paused = pause(region, flag)
                         return
                     }
                     if (outcome.error == AppError.Cancelled) {
@@ -388,25 +402,41 @@ class RegionStore(
             if (!paused) {
                 finish(region)
             }
-            if (mutable.value.transfers.isEmpty()) {
-                mobileDataNow.value = false
-            }
         }
     }
 
     /**
      * The network turned metered under a running transfer. The partial archive
-     * stays, the transfer goes back to the end of the queue and waits.
+     * stays, the transfer goes back to the end of the queue and waits. Returns
+     * false when nothing was requeued, so the caller finishes the transfer.
+     *
+     * The decision is made under the lock [cancel] takes: a cancel that set
+     * [flag] after the worker saw the pause is a user cancel, so the transfer
+     * is dropped and its partial archive deleted.
      */
-    private suspend fun pause(region: String): Boolean =
-        claimMutex.withLock {
-            if (mutable.value.transfer(region) == null) {
+    private suspend fun pause(
+        region: String,
+        flag: AtomicBoolean,
+    ): Boolean {
+        beforePause(region)
+        return claimMutex.withLock {
+            if (flag.get()) {
+                mutable.update { state ->
+                    state.copy(
+                        transfers = state.transfers.filterNot { it.region == region },
+                        problems = state.problems.filterNot { it.region == region },
+                    )
+                }
+                partials.discard(region)
+                false
+            } else if (mutable.value.transfer(region) == null) {
                 false
             } else {
                 updateTransfer(region) { it.copy(state = DownloadTransferState.WAITING_FOR_WIFI) }
                 queue.trySend(region).isSuccess
             }
         }
+    }
 
     /** Records a problem and drops the transfer, so the row shows the failure once. */
     private fun recordProblem(

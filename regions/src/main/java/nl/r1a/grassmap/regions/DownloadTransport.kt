@@ -24,9 +24,11 @@ data class TransportResult(
     val retryAfterSeconds: Long? = null,
     /** The full size a `416` named in `Content-Range` of the form "bytes star slash size", when it did. */
     val totalBytes: Long? = null,
+    /** True for a `206` that does not continue the file on disk; no body was read. */
+    val rangeRejected: Boolean = false,
 ) {
     val isSuccess: Boolean
-        get() = status in SUCCESS_RANGE
+        get() = status in SUCCESS_RANGE && !rangeRejected
 
     private companion object {
         val SUCCESS_RANGE: IntRange = 200..299

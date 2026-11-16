@@ -240,7 +240,7 @@ class RegionDownloader(
                 rangeStart = resumeFrom,
             )
         return try {
-            FileOutputStream(target, true).use { out ->
+            FileOutputStream(target, resumeFrom > 0).use { out ->
                 var written = resumeFrom
                 val result =
                     transport.get(
@@ -290,18 +290,16 @@ class RegionDownloader(
     ): ArchiveFetch =
         when (result) {
             is Outcome.Failure -> {
-                // A 206 that does not match the file on disk is the only
-                // CorruptData a resumed request can get before any byte is written.
-                if (resumeFrom > 0 && result.error == AppError.CorruptData) {
-                    ArchiveFetch.RESTART
-                } else {
-                    ArchiveFetch.failed(result.error)
-                }
+                ArchiveFetch.failed(result.error)
             }
 
             is Outcome.Success -> {
                 val status = result.value
                 when {
+                    status.rangeRejected -> {
+                        if (resumeFrom > 0) ArchiveFetch.RESTART else ArchiveFetch.failed(AppError.CorruptData)
+                    }
+
                     status.isSuccess -> {
                         out.flush()
                         out.fd.sync()

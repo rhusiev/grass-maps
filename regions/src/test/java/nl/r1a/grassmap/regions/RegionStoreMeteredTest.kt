@@ -1,12 +1,15 @@
 package nl.r1a.grassmap.regions
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
@@ -18,6 +21,7 @@ import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
 import nl.r1a.grassmap.plugin.api.testing.fixture.CatalogFixture
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -161,6 +165,7 @@ class RegionStoreMeteredTest {
                             .isEmpty(),
                     )
                     network.metered.value = false
+                    delay(SETTLE_MS)
                     assertEquals(0, packageRanges.size)
                 } finally {
                     store.close()
@@ -196,6 +201,120 @@ class RegionStoreMeteredTest {
             }
         }
 
+    @Test
+    fun aCancelDuringThePauseWindowStopsTheTransferAndKeepsNothing() =
+        runBlocking<Unit> {
+            val body = fixturePackageBytes()
+            val reached = CompletableDeferred<Unit>()
+            val proceed = CompletableDeferred<Unit>()
+            server(slowBody = body).use { server ->
+                val store =
+                    store(server.baseUrl, beforePause = {
+                        reached.complete(Unit)
+                        proceed.await()
+                    })
+                try {
+                    store.startDownload(CatalogFixture.LVIV)
+                    withTimeout(WAIT_MS) {
+                        store.data.first { it.transfer(CatalogFixture.LVIV)?.bytesDone.let { done -> done != null && done > 0 } }
+                    }
+                    network.metered.value = true
+                    withTimeout(WAIT_MS) { reached.await() }
+                    val cancelling = launch { store.cancel(CatalogFixture.LVIV) }
+                    delay(SETTLE_MS)
+                    proceed.complete(Unit)
+
+                    withTimeout(WAIT_MS) { cancelling.join() }
+                    network.metered.value = false
+                    delay(SETTLE_MS)
+
+                    assertTrue(
+                        store.data.value.transfers
+                            .isEmpty(),
+                    )
+                    assertTrue(
+                        store.data.value.installed
+                            .isEmpty(),
+                    )
+                    assertEquals(1, packageRanges.size)
+                    assertEquals(0L, partialSize())
+                } finally {
+                    store.close()
+                }
+            }
+        }
+
+    @Test
+    fun cancellingAPausedTransferDeletesItsPartialArchive() =
+        runBlocking<Unit> {
+            server(slowBody = fixturePackageBytes()).use { server ->
+                val store = store(server.baseUrl)
+                try {
+                    store.startDownload(CatalogFixture.LVIV)
+                    withTimeout(WAIT_MS) {
+                        store.data.first { it.transfer(CatalogFixture.LVIV)?.bytesDone.let { done -> done != null && done > 0 } }
+                    }
+                    network.metered.value = true
+                    awaitState(store, DownloadTransferState.WAITING_FOR_WIFI)
+                    assertTrue(partialSize() > 0)
+
+                    store.cancel(CatalogFixture.LVIV)
+
+                    assertEquals(0, partialDirectories())
+                } finally {
+                    store.close()
+                }
+            }
+        }
+
+    @Test
+    fun theMobileDataChoiceEndsWhenCancellingEmptiesTheQueue() =
+        runBlocking<Unit> {
+            network.metered.value = true
+            server(slowBody = fixturePackageBytes()).use { server ->
+                val store = store(server.baseUrl)
+                try {
+                    store.startDownload(CatalogFixture.LVIV)
+                    awaitState(store, DownloadTransferState.WAITING_FOR_WIFI)
+                    store.useMobileDataNow()
+                    awaitState(store, DownloadTransferState.DOWNLOADING)
+                    store.cancel(CatalogFixture.LVIV)
+
+                    store.startDownload(CatalogFixture.LVIV)
+
+                    awaitState(store, DownloadTransferState.WAITING_FOR_WIFI)
+                } finally {
+                    store.close()
+                }
+            }
+        }
+
+    @Test
+    fun theMobileDataChoiceOnAnEmptyQueueDoesNothing() =
+        runBlocking<Unit> {
+            network.metered.value = true
+            server().use { server ->
+                val store = store(server.baseUrl)
+                try {
+                    store.useMobileDataNow()
+                    store.startDownload(CatalogFixture.LVIV)
+
+                    awaitState(store, DownloadTransferState.WAITING_FOR_WIFI)
+                    delay(SETTLE_MS)
+                    assertFalse(packageRanges.isNotEmpty())
+                } finally {
+                    store.close()
+                }
+            }
+        }
+
+    private fun partialDirectories(): Int =
+        paths
+            .incomingDirectory()
+            .listFiles()
+            .orEmpty()
+            .count { it.name.startsWith(PARTIAL) }
+
     private fun partialSize(): Long =
         paths
             .incomingDirectory()
@@ -223,6 +342,7 @@ class RegionStoreMeteredTest {
         baseUrl: String,
         policy: MobileDataPolicy = MobileDataPolicy.WIFI_ONLY,
         onPolicyChanged: (MobileDataPolicy) -> Unit = {},
+        beforePause: suspend (String) -> Unit = {},
     ): RegionStore {
         val store =
             RegionStore(
@@ -245,6 +365,7 @@ class RegionStoreMeteredTest {
                 metered = network,
                 initialMobileDataPolicy = policy,
                 onMobileDataPolicyChanged = onPolicyChanged,
+                beforePause = beforePause,
             )
         store.setServer(baseUrl, null)
         return store
@@ -292,6 +413,7 @@ class RegionStoreMeteredTest {
         val SWITCH: SwitchId = SwitchId("network.region_updates")
         const val PARTIAL = "partial"
         const val WAIT_MS = 60_000L
+        const val SETTLE_MS = 500L
         const val CHUNK_BYTES = 4096
         const val CHUNK_DELAY_MS = 30L
     }

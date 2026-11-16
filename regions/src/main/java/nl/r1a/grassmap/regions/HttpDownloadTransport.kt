@@ -103,10 +103,8 @@ class HttpDownloadTransport : DownloadTransport {
     ): Outcome<TransportResult> {
         val declared = connection.contentLengthLong
         val offset =
-            when (val accepted = acceptedOffset(connection, status, rangeStart, declared, policy)) {
-                is Outcome.Success -> accepted.value
-                is Outcome.Failure -> return accepted
-            }
+            acceptedOffset(connection, status, rangeStart, declared, policy)
+                ?: return Outcome.Success(TransportResult(status, rangeRejected = true))
         if (declared > policy.boundedMaxPackageBytes) {
             return Outcome.Failure(AppError.CorruptData)
         }
@@ -128,10 +126,10 @@ class HttpDownloadTransport : DownloadTransport {
     }
 
     /**
-     * The archive byte a successful response starts at. A `206` must answer the
+     * The archive byte a successful response starts at, or null for a rejected range. A `206` must answer the
      * range that was asked for and run to the end of the file, otherwise the
-     * bytes cannot be appended to what is on disk and the response is
-     * [AppError.CorruptData]. Any other success restarts at 0, which for a
+     * bytes cannot be appended to what is on disk and the result is null, which
+     * the caller reports as [TransportResult.rangeRejected]. Any other success restarts at 0, which for a
      * range request is the `200` of a server that ignores `Range`.
      */
     private fun acceptedOffset(
@@ -140,9 +138,9 @@ class HttpDownloadTransport : DownloadTransport {
         rangeStart: Long,
         declared: Long,
         policy: DownloadPolicy,
-    ): Outcome<Long> {
+    ): Long? {
         if (status != HTTP_PARTIAL_CONTENT) {
-            return Outcome.Success(0L)
+            return 0L
         }
         val range = ContentRange.parse(connection.getHeaderField(CONTENT_RANGE_HEADER))
         val total = range?.total
@@ -154,7 +152,7 @@ class HttpDownloadTransport : DownloadTransport {
                 range.last == total - 1 &&
                 total <= policy.boundedMaxPackageBytes &&
                 (declared < 0 || declared == range.last - range.first + 1)
-        return if (matches) Outcome.Success(rangeStart) else Outcome.Failure(AppError.CorruptData)
+        return if (matches) rangeStart else null
     }
 
     private suspend fun copyBody(

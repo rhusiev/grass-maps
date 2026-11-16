@@ -1,0 +1,4 @@
+#!/bin/sh
+# Manage tokens. On the host: server/gm-token --file ./config/tokens.json list
+# In the container: docker compose exec gm-server gm-token list
+cd "$(dirname "$0")" && exec python3 -m gm_server.token_cli "$@"

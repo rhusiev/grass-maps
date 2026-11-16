@@ -1,0 +1,146 @@
+"""Unit tests: range parsing, limiter clock, usage persistence, token CLI, publisher."""
+
+from __future__ import annotations
+
+import io
+import json
+import sys
+import tempfile
+import unittest
+import zipfile
+from contextlib import redirect_stdout
+from datetime import datetime, timezone
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from gm_server import token_cli  # noqa: E402
+from gm_server.config import Config, ConfigError  # noqa: E402
+from gm_server.limits import Limiter  # noqa: E402
+from gm_server.ranges import RangeKind, parse_range  # noqa: E402
+from gm_server.tokens import TokenStore, hash_token, read_entries  # noqa: E402
+from gm_server.usage import UsageStore  # noqa: E402
+from support import load_publisher  # noqa: E402
+
+SIZE = 100
+
+
+class RangeTest(unittest.TestCase):
+    def test_open_ended_bounded_and_suffix(self) -> None:
+        self.assertEqual(parse_range("bytes=10-", SIZE).first, 10)
+        bounded = parse_range("bytes=10-1000", SIZE)
+        self.assertEqual((bounded.first, bounded.last, bounded.length), (10, 99, 90))
+        suffix = parse_range("bytes=-30", SIZE)
+        self.assertEqual((suffix.first, suffix.last), (70, 99))
+
+    def test_missing_malformed_and_multiple_ranges_select_the_whole_file(self) -> None:
+        for header in (None, "", "bytes=abc", "items=1-2", "bytes=1-2,5-6", "bytes=-", "bytes=9-3"):
+            self.assertEqual(parse_range(header, SIZE).kind, RangeKind.FULL, header)
+
+    def test_start_past_the_end_is_unsatisfiable(self) -> None:
+        self.assertEqual(parse_range("bytes=100-", SIZE).kind, RangeKind.UNSATISFIABLE)
+        self.assertEqual(parse_range("bytes=-0", SIZE).kind, RangeKind.UNSATISFIABLE)
+
+
+class LimiterTest(unittest.TestCase):
+    def test_window_slides_and_ban_expires(self) -> None:
+        now = [0.0]
+        limiter = Limiter(2, 1, 2, 600, 100, clock=lambda: now[0])
+        self.assertEqual(limiter.rate_retry_after("k"), 0)
+        self.assertEqual(limiter.rate_retry_after("k"), 0)
+        self.assertGreater(limiter.rate_retry_after("k"), 0)
+        now[0] = 61.0
+        self.assertEqual(limiter.rate_retry_after("k"), 0)
+        limiter.record_failure("ip")
+        limiter.record_failure("ip")
+        self.assertGreater(limiter.ban_remaining("ip"), 0)
+        now[0] = 200.0
+        self.assertEqual(limiter.ban_remaining("ip"), 0)
+
+    def test_concurrency_slots_are_returned(self) -> None:
+        limiter = Limiter(0, 1, 0, 1, 1)
+        self.assertTrue(limiter.acquire("k"))
+        self.assertFalse(limiter.acquire("k"))
+        limiter.release("k")
+        self.assertTrue(limiter.acquire("k"))
+
+
+class UsageTest(unittest.TestCase):
+    def test_counts_survive_a_restart_and_reset_in_a_new_month(self) -> None:
+        clock = [datetime(2026, 11, 20, tzinfo=timezone.utc)]
+        with tempfile.TemporaryDirectory() as temp:
+            usage = UsageStore(Path(temp), now=lambda: clock[0])
+            usage.add("k", 500)
+            usage.flush()
+            self.assertEqual(UsageStore(Path(temp), now=lambda: clock[0]).used("k"), 500)
+            self.assertEqual(usage.seconds_to_next_month(), 11 * 86400)
+            clock[0] = datetime(2026, 12, 1, tzinfo=timezone.utc)
+            self.assertEqual(UsageStore(Path(temp), now=lambda: clock[0]).used("k"), 0)
+
+
+class ConfigTest(unittest.TestCase):
+    def test_defaults_require_tokens(self) -> None:
+        config = Config.from_env({})
+        self.assertTrue(config.require_tokens)
+        self.assertEqual((config.rate_per_minute, config.max_concurrent), (60, 4))
+
+    def test_bad_values_are_refused(self) -> None:
+        for env in ({"GM_REQUIRE_TOKENS": "maybe"}, {"GM_PORT": "x"}, {"GM_ANON_KEY": "mac"}):
+            with self.assertRaises(ConfigError):
+                Config.from_env(env)
+
+
+class TokenCliTest(unittest.TestCase):
+    def test_create_list_disable_enable_delete_and_the_secret_is_not_stored(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "tokens.json"
+            out = io.StringIO()
+            with redirect_stdout(out):
+                self.assertEqual(token_cli.main(["--file", str(path), "create", "--label", "phone"]), 0)
+            token = out.getvalue().split("token (shown once): ")[1].strip()
+            self.assertGreaterEqual(len(token), 43)
+            self.assertNotIn(token, path.read_text())
+            self.assertEqual(oct(path.stat().st_mode & 0o777), "0o600")
+            entry = read_entries(path)[0]
+            self.assertEqual(entry.sha256, hash_token(token))
+            store = TokenStore(path)
+            self.assertIsNotNone(store.lookup(token))
+            with redirect_stdout(io.StringIO()):
+                token_cli.main(["--file", str(path), "disable", entry.token_id])
+            self.assertIsNone(store.lookup(token))
+            token_cli.main(["--file", str(path), "enable", entry.token_id])
+            self.assertIsNotNone(store.lookup(token))
+            token_cli.main(["--file", str(path), "delete", entry.token_id])
+            self.assertEqual(json.loads(path.read_text()), {"tokens": []})
+            self.assertEqual(token_cli.main(["--file", str(path), "delete", "deadbeef"]), 1)
+
+
+class PublishTest(unittest.TestCase):
+    def test_zips_a_version_directory_with_nested_components_and_keeps_published_ones(self) -> None:
+        publisher = load_publisher()
+        with tempfile.TemporaryDirectory() as temp:
+            source, dest = Path(temp) / "out", Path(temp) / "served"
+            version = source / "ua-46" / "2026-11-03"
+            (version / "routing").mkdir(parents=True)
+            (version / "manifest.json").write_text("{}")
+            (version / "map.pmtiles").write_bytes(b"tiles")
+            (version / "routing" / "0.gph").write_bytes(b"graph")
+            (source / "outlines").mkdir()
+            (source / "outlines" / "ua-46.geojson").write_text("{}")
+            (source / "boundaries").mkdir()
+            (source / "catalog.json").write_text('{"format": 1}')
+
+            self.assertEqual(publisher.publish(source, dest), 1)
+            published = dest / "ua-46" / "2026-11-03"
+            with zipfile.ZipFile(published / "package.zip") as archive:
+                self.assertEqual(
+                    sorted(archive.namelist()), ["manifest.json", "map.pmtiles", "routing/0.gph"]
+                )
+            self.assertEqual((published / "manifest.json").read_text(), "{}")
+            self.assertTrue((dest / "outlines" / "ua-46.geojson").is_file())
+            self.assertEqual((dest / "catalog.json").read_text(), '{"format": 1}')
+            self.assertEqual(publisher.publish(source, dest), 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

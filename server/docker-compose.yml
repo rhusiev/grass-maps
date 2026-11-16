@@ -1,0 +1,34 @@
+# Region package server. Sits behind an existing Caddy on the external docker
+# network "caddy"; no port is published and there is no TLS in here.
+services:
+  gm-server:
+    build: .
+    image: grassmaps-server:local
+    container_name: grassmaps-server
+    restart: unless-stopped
+    user: "${GM_UID:-10001}:${GM_GID:-10001}"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      GM_TOKENS_FILE: /config/tokens.json
+      GM_TRUST_FORWARDED: "1"
+    expose:
+      - "8080"
+    volumes:
+      - ${GM_PACKS_HOST_DIR:-./packs}:/packs:ro
+      - ./config:/config
+      - ./state:/state
+    networks:
+      - caddy
+
+networks:
+  caddy:
+    external: true

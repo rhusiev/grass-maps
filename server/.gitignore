@@ -1,0 +1,5 @@
+.env
+config/
+state/
+packs/
+__pycache__/

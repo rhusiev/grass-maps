@@ -4,10 +4,14 @@ import kotlinx.coroutines.CoroutineScope
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.host.NoRegionDownloadsAccess
 import nl.r1a.grassmap.plugin.api.host.NoRoutingOptionsAccess
+import nl.r1a.grassmap.plugin.api.host.NoRoutingPacks
+import nl.r1a.grassmap.plugin.api.host.RegionDownloadsAccess
 import nl.r1a.grassmap.plugin.api.host.RouteHistoryAccess
 import nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess
 import nl.r1a.grassmap.plugin.api.host.RoutingOptionsAccess
+import nl.r1a.grassmap.plugin.api.host.RoutingPackAccess
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanRole
@@ -35,6 +39,8 @@ class RoutePlannerSession(
     clock: Clock,
     history: RouteHistoryAccess,
     options: RoutingOptionsAccess = NoRoutingOptionsAccess,
+    downloads: RegionDownloadsAccess = NoRegionDownloadsAccess,
+    packs: RoutingPackAccess = NoRoutingPacks,
     annotationScope: CoroutineScope? = null,
     log: (String) -> Unit = {},
 ) {
@@ -49,6 +55,8 @@ class RoutePlannerSession(
             optionsForProfile = { profile -> options.forProfile(profile) },
             alternatives = DEFAULT_ALTERNATIVES,
             history = history,
+            downloads = downloads,
+            packs = packs,
         )
 
     val state = planner.state
@@ -101,6 +109,9 @@ class RoutePlannerSession(
         val entry = planner.recent.value.getOrNull(index) ?: return Outcome.Failure(AppError.InvalidInput)
         return planner.reuse(entry)
     }
+
+    /** Downloads the regions the failed route needs, then routes again (T-0511). */
+    suspend fun downloadMissing(): Outcome<RoutePlanState> = planner.downloadMissing()
 
     suspend fun clear(): Outcome<RoutePlanState> = planner.clear()
 

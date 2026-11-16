@@ -297,6 +297,21 @@ class ReuseRouteHistoryCommand(
     }
 }
 
+/** Downloads the regions a failed route needs, rebuilds the routing mount and routes again. */
+class DownloadMissingRegionsCommand(
+    private val session: RoutePlannerSession,
+) : Command<JsonElement, RoutePlanState>(
+        id = RoutePlannerContract.downloadMissing,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = RoutePlanState.serializer(),
+        doc =
+            "Downloads the regions the failed route is missing and routes again once they are installed. " +
+                "Returns at once with the download state; progress arrives on the state stream.",
+        policy = PLANNER_POLICY,
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<RoutePlanState>> = result(session.downloadMissing())
+}
+
 /** Closes the plan and removes its route. */
 class ClearRoutePlanCommand(
     private val session: RoutePlannerSession,

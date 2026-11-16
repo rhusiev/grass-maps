@@ -156,6 +156,16 @@
         "allowlistedForControl": true,
         "dispatcher": "io",
         "implementation": "nl.r1a.grassmap.plugins.route.planner.ReuseRouteHistoryCommand"
+      },
+      {
+        "id": "route.planner.download_missing",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "doc": "Downloads the regions the failed route is missing and routes again once they are installed. Returns at once with the download state; progress arrives on the state stream.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.route.planner.DownloadMissingRegionsCommand"
       }
     ],
     "streams": [

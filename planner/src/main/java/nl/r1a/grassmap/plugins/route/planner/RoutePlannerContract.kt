@@ -34,6 +34,7 @@ object RoutePlannerContract {
     const val UNDO: String = "route.planner.undo"
     const val REDO: String = "route.planner.redo"
     const val REUSE_HISTORY: String = "route.planner.reuse_history"
+    const val DOWNLOAD_MISSING: String = "route.planner.download_missing"
 
     val stateStream: StreamId = StreamId(STATE_STREAM_ID)
     val historyStream: StreamId = StreamId(HISTORY_STREAM_ID)
@@ -53,6 +54,7 @@ object RoutePlannerContract {
     val undo: CommandId = CommandId(UNDO)
     val redo: CommandId = CommandId(REDO)
     val reuseHistory: CommandId = CommandId(REUSE_HISTORY)
+    val downloadMissing: CommandId = CommandId(DOWNLOAD_MISSING)
 
     val commands: List<CommandId> =
         listOf(
@@ -71,5 +73,6 @@ object RoutePlannerContract {
             undo,
             redo,
             reuseHistory,
+            downloadMissing,
         )
 }

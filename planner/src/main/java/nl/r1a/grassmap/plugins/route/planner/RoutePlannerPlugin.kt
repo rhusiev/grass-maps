@@ -46,6 +46,8 @@ class RoutePlannerPlugin(
                 clock = context.services.clock,
                 history = context.services.routeHistory,
                 options = context.services.routingOptions,
+                downloads = context.services.regionDownloads,
+                packs = context.services.routingPacks,
                 annotationScope = pluginScope,
                 log = { message -> context.services.logger.warn(LOG_TAG, message) },
             )
@@ -65,6 +67,7 @@ class RoutePlannerPlugin(
         context.addCommand(UndoRoutePlanCommand(session))
         context.addCommand(RedoRoutePlanCommand(session))
         context.addCommand(ReuseRouteHistoryCommand(session))
+        context.addCommand(DownloadMissingRegionsCommand(session))
         context.addStream(
             StreamDescriptor(
                 id = RoutePlannerContract.stateStream,

@@ -109,6 +109,18 @@ class RoutePlannerPluginTest {
         }
 
     @Test
+    fun downloadMissingWithoutAMissingRegionPromptIsInvalidInput() =
+        runTest {
+            val context = context()
+            RoutePlannerPlugin().activate(context)
+
+            assertEquals(
+                Outcome.Failure(AppError.InvalidInput),
+                context.command(RoutePlannerContract.downloadMissing).invokeRaw(JsonObject(emptyMap())),
+            )
+        }
+
+    @Test
     fun beginAsksForTheStartThenTheDestinationAndRoutes() =
         runTest {
             val engine = FakeEngine()

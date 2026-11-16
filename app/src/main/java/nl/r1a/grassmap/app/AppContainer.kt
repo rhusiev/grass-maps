@@ -8,6 +8,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.alerts.AlertEffectSink
@@ -102,9 +104,11 @@ import nl.r1a.grassmap.plugins.way.alerts.WayAlertSink
 import nl.r1a.grassmap.regions.DownloadPolicy
 import nl.r1a.grassmap.regions.GateNetworkAccess
 import nl.r1a.grassmap.regions.HttpDownloadTransport
+import nl.r1a.grassmap.regions.MeteredNetworkMonitor
 import nl.r1a.grassmap.regions.MountedRegion
 import nl.r1a.grassmap.regions.MountedRoutingPacks
 import nl.r1a.grassmap.regions.NetworkAccess
+import nl.r1a.grassmap.regions.NeverMetered
 import nl.r1a.grassmap.regions.RegionDownloader
 import nl.r1a.grassmap.regions.RegionElevation
 import nl.r1a.grassmap.regions.RegionMountResolver
@@ -162,6 +166,10 @@ class AppContainer(
     val documentSaver: DocumentSaveCoordinator = DocumentSaveCoordinator(),
     /** The navigation foreground service (T-0314); absent in tests. */
     private val navigationService: NavigationServiceHandle = NoNavigationServiceHandle,
+    /** The download foreground service and its inputs (T-0505); absent in tests. */
+    private val downloadService: DownloadServiceHandle = NoDownloadServiceHandle,
+    private val downloadsSettingsFileProvider: () -> File? = { null },
+    private val meteredNetwork: MeteredNetworkMonitor = NeverMetered,
     /** The audio backend for turn beeps (T-0318); the app wires the Android one. */
     private val beepSink: BeepSink = NoopBeepSink,
     /** The tone and vibration backend for alerts (T-0317); Noop by default. */
@@ -885,6 +893,7 @@ class AppContainer(
      */
     val regionStore: RegionStore? by lazy {
         regionsRoot?.let { root ->
+            val downloadsSettings = DownloadsSettings(downloadsSettingsFileProvider())
             RegionStore(
                 paths = RegionPaths(root),
                 policy = DownloadPolicy(switch = NetworkSwitches.regionUpdates),
@@ -892,7 +901,20 @@ class AppContainer(
                 scope = processScope,
                 transport = HttpDownloadTransport(),
                 log = { message -> Log.i(REGIONS_TAG, message) },
-            )
+                metered = meteredNetwork,
+                initialMobileDataPolicy = downloadsSettings.load(),
+                onMobileDataPolicyChanged = { policy -> downloadsSettings.save(policy) },
+            ).also { store -> keepServiceInStep(store) }
+        }
+    }
+
+    /** Runs the download service exactly while a transfer is in flight (T-0505). */
+    private fun keepServiceInStep(store: RegionStore) {
+        processScope.launch {
+            store.data
+                .map { it.transfers.isNotEmpty() }
+                .distinctUntilChanged()
+                .collect { active -> if (active) downloadService.start() else downloadService.stop() }
         }
     }
 

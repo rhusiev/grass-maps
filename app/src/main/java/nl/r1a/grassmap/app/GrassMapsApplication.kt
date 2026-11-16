@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Application
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
 import android.os.Build
 import android.os.Debug
 import android.util.Log
@@ -30,6 +31,8 @@ import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.service.LocationService
+import nl.r1a.grassmap.regions.MeteredNetworkMonitor
+import nl.r1a.grassmap.regions.NeverMetered
 import nl.r1a.grassmap.tracks.TrackTrash
 import java.io.File
 import java.io.IOException
@@ -81,9 +84,17 @@ open class GrassMapsApplication : Application() {
             platformActions = AndroidPlatformActions(this, documentSaver),
             documentSaver = documentSaver,
             navigationService = AndroidNavigationServiceHandle(this),
+            downloadService = AndroidDownloadServiceHandle(this) { message -> Log.w("DownloadService", message) },
+            downloadsSettingsFileProvider = { File(filesDir, DOWNLOADS_SETTINGS_PATH) },
+            meteredNetwork = meteredNetworkMonitor(),
             beepSink = AndroidBeepSink(this),
             alertEffectSink = AndroidAlertEffects(this),
         )
+    }
+
+    private fun meteredNetworkMonitor(): MeteredNetworkMonitor {
+        val manager = getSystemService(ConnectivityManager::class.java) ?: return NeverMetered
+        return AndroidMeteredNetworkMonitor(manager).also { it.register() }
     }
 
     override fun onCreate() {
@@ -243,6 +254,7 @@ open class GrassMapsApplication : Application() {
         const val ONLINE_SEARCH_SETTINGS_PATH = "settings/online-search.json"
         const val CONTOURS_SETTINGS_PATH = "settings/contours.json"
         const val RASTER_SETTINGS_PATH = "settings/raster.json"
+        const val DOWNLOADS_SETTINGS_PATH = "settings/downloads.json"
         const val ROUTING_OPTIONS_SETTINGS_PATH = "settings/routing-options.json"
         const val ALERT_SETTINGS_PATH = "settings/alerts.json"
         const val DEV_TOOLS_GPX_ASSET = "mock-walk.gpx"

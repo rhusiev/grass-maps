@@ -3457,6 +3457,16 @@ cannot leave `current` naming a directory that only exists in quarantine. A
 failed verification or a crash during extraction leaves only a `.incoming`
 directory that the next attempt ignores.
 
+A killed or failed archive resumes (T-0505). The zip lives in a fixed directory,
+`.incoming/partial~<region>~<version>/package.zip`, which a Network, Server or
+Internal failure, a kill and a pause keep. The next attempt asks for
+`Range: bytes=<size>-`. `HttpDownloadTransport` accepts only a 206 whose
+`Content-Range` starts at that offset and names the same total. A 200 restarts
+the file from zero, and a 416 with `bytes */<total>` means the file is complete
+(or stale, when the sizes differ). Resumed bytes are never trusted: the
+whole-package verification above runs on every download. Success, a user cancel
+and corrupt data delete the directory, and a newer version removes older ones.
+
 `RegionMountResolver` is the read-only side of the store. It reads
 `<region>/current`, parses `<version>/manifest.json` with the same strict
 parser, and checks the declared map and contours files for size and a PMTiles
@@ -3551,6 +3561,25 @@ contains the first fix. The plugin publishes `downloads.ui.state`; its commands
 are `downloads.ui.refresh`, `download_region`, `cancel_region`, `remove_region`,
 `select_region` and `set_server`. The token is a command parameter and never a
 state field.
+
+Background and metered (T-0505). A transfer outlives the screen: `app` starts
+`DownloadService`, a `dataSync` foreground service, while the transfer list is
+not empty and stops it when the list is empty. It follows the navigation
+service pattern and needs no WorkManager or Google component, which F-Droid
+builds require. Its notification shows "Downloading N maps" with a progress bar.
+The transfer itself runs in the store's single worker, not in the service.
+`MobileDataPolicy` is `WIFI_ONLY` (default) or `ANY`, stored in
+`settings/downloads.json` by `DownloadsSettings` and set with
+`downloads.ui.set_mobile_data`. `MeteredNetworkMonitor` reports whether
+the default network lacks `NET_CAPABILITY_NOT_METERED`
+(`AndroidMeteredNetworkMonitor`, which needs `ACCESS_NETWORK_STATE`). While the
+network is metered under `WIFI_ONLY`, a queued transfer is `WAITING_FOR_WIFI`
+and a running one stops, keeps its partial archive and joins the queue again.
+The notification then reads "Waiting for Wi-Fi - N maps, X MB" with the action
+"Download now on mobile data", and the screen offers the same through
+`downloads.ui.use_mobile_data_now`. That choice lasts until the queue is empty
+and does not change the stored policy. Android 15 caps `dataSync` services; if
+the system ends the service the transfer resumes through the Range request.
 
 `app` constructs `RegionStore` over its private region root, passes it to
 `PluginHost` as `PluginServices.regionDownloads`, and hosts

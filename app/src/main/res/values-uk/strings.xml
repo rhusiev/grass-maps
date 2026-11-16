@@ -188,4 +188,20 @@
     <string name="track_library_action_failed">Не вдалося змінити бібліотеку треків</string>
     <string name="track_export_saved">Трек збережено</string>
     <string name="track_export_failed">Трек не збережено: %1$s</string>
+    <string name="download_notification_channel_name">Завантаження мап</string>
+    <string name="download_notification_channel_description">Показує завантаження мап, що тривають у фоні</string>
+    <string name="download_notification_starting">Готуємо завантаження мапи</string>
+    <string name="download_notification_use_mobile_data">Завантажити зараз через мобільні дані</string>
+    <plurals name="download_notification_waiting">
+        <item quantity="one">Чекаємо на Wi-Fi · %1$d мапа, %2$d МБ</item>
+        <item quantity="few">Чекаємо на Wi-Fi · %1$d мапи, %2$d МБ</item>
+        <item quantity="many">Чекаємо на Wi-Fi · %1$d мап, %2$d МБ</item>
+        <item quantity="other">Чекаємо на Wi-Fi · %1$d мапи, %2$d МБ</item>
+    </plurals>
+    <plurals name="download_notification_downloading">
+        <item quantity="one">Завантажуємо %1$d мапу</item>
+        <item quantity="few">Завантажуємо %1$d мапи</item>
+        <item quantity="many">Завантажуємо %1$d мап</item>
+        <item quantity="other">Завантажуємо %1$d мапи</item>
+    </plurals>
 </resources>

@@ -187,4 +187,16 @@
     <string name="track_library_action_failed">The track library change failed</string>
     <string name="track_export_saved">Track saved</string>
     <string name="track_export_failed">Track not saved: %1$s</string>
+    <string name="download_notification_channel_name">Map downloads</string>
+    <string name="download_notification_channel_description">Shows map downloads that run in the background</string>
+    <string name="download_notification_starting">Preparing map download</string>
+    <string name="download_notification_use_mobile_data">Download now on mobile data</string>
+    <plurals name="download_notification_waiting">
+        <item quantity="one">Waiting for Wi-Fi · %1$d map, %2$d MB</item>
+        <item quantity="other">Waiting for Wi-Fi · %1$d maps, %2$d MB</item>
+    </plurals>
+    <plurals name="download_notification_downloading">
+        <item quantity="one">Downloading %1$d map</item>
+        <item quantity="other">Downloading %1$d maps</item>
+    </plurals>
 </resources>

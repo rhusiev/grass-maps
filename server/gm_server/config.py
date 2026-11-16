@@ -34,6 +34,8 @@ class Config:
         host: Listen address.
         port: Listen port.
         socket_timeout_s: Idle time after which a connection is dropped.
+        max_connections: Connections served at once. More get 503.
+        header_deadline_s: Wall-clock time a client has to send its headers.
     """
 
     packs_dir: Path
@@ -51,6 +53,8 @@ class Config:
     host: str
     port: int
     socket_timeout_s: int
+    max_connections: int
+    header_deadline_s: int
 
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None) -> Config:
@@ -97,4 +101,6 @@ class Config:
             host=text("GM_HOST", "0.0.0.0"),
             port=number("GM_PORT", 8080),
             socket_timeout_s=number("GM_SOCKET_TIMEOUT_S", 30),
+            max_connections=number("GM_MAX_CONNECTIONS", 256),
+            header_deadline_s=number("GM_HEADER_DEADLINE_S", 10),
         )

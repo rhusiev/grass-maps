@@ -19,7 +19,7 @@ services:
         required: false
     environment:
       GM_TOKENS_FILE: /config/tokens.json
-      GM_TRUST_FORWARDED: "1"
+      GM_TRUST_FORWARDED: "${GM_TRUST_FORWARDED:-1}"
     expose:
       - "8080"
     volumes:

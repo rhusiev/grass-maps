@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import socket
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -19,6 +21,13 @@ BEARER_PREFIX = "bearer "
 HEALTH_PATH = "/healthz"
 ANONYMOUS_KEY = "anonymous"
 TOKEN_FILE_RETRY_S = 30
+BUSY_RETRY_S = 5
+LISTEN_BACKLOG = 128
+BUSY_RESPONSE = (
+    b"HTTP/1.0 503 Service Unavailable\r\n"
+    + f"Retry-After: {BUSY_RETRY_S}\r\n".encode()
+    + b"Content-Length: 0\r\nConnection: close\r\n\r\n"
+)
 
 
 class Service:
@@ -56,6 +65,29 @@ class Handler(BaseHTTPRequestHandler):
     def setup(self) -> None:
         self.timeout = self.service.config.socket_timeout_s
         super().setup()
+        self._header_timer = threading.Timer(
+            self.service.config.header_deadline_s, self._cut_connection
+        )
+        self._header_timer.daemon = True
+        self._header_timer.start()
+
+    def parse_request(self) -> bool:
+        """Parses the request line and headers, then ends the header deadline."""
+        try:
+            return super().parse_request()
+        finally:
+            self._header_timer.cancel()
+
+    def finish(self) -> None:
+        self._header_timer.cancel()
+        super().finish()
+
+    def _cut_connection(self) -> None:
+        LOG.info("header deadline passed, dropping the connection")
+        try:
+            self.connection.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
 
     def do_GET(self) -> None:  # noqa: N802 - the name http.server dispatches on
         self._handle(send_body=True)
@@ -210,12 +242,38 @@ class Handler(BaseHTTPRequestHandler):
             LOG.info("%s %s %s %d", who, self.command, self.path, status)
 
 
-def create_server(config: Config) -> ThreadingHTTPServer:
+class GmServer(ThreadingHTTPServer):
+    """A threading server with a listen backlog and a cap on open connections."""
+
+    request_queue_size = LISTEN_BACKLOG
+    daemon_threads = True
+    service: Service
+
+    def __init__(self, config: Config, handler: type[BaseHTTPRequestHandler]) -> None:
+        self._slots = threading.BoundedSemaphore(max(config.max_connections, 1))
+        super().__init__((config.host, config.port), handler)
+
+    def process_request(self, request, client_address) -> None:  # noqa: ANN001
+        if not self._slots.acquire(blocking=False):
+            try:
+                request.sendall(BUSY_RESPONSE)
+            except OSError:
+                pass
+            self.shutdown_request(request)
+            return
+        super().process_request(request, client_address)
+
+    def process_request_thread(self, request, client_address) -> None:  # noqa: ANN001
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._slots.release()
+
+
+def create_server(config: Config) -> GmServer:
     """Builds the HTTP server for [config]. The caller runs ``serve_forever``."""
     service = Service(config)
     handler = type("BoundHandler", (Handler,), {"service": service})
-    server = ThreadingHTTPServer((config.host, config.port), handler)
-    server.daemon_threads = True
-    server.request_queue_size = 128
-    server.service = service  # type: ignore[attr-defined]
+    server = GmServer(config, handler)
+    server.service = service
     return server

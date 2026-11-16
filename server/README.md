@@ -48,7 +48,9 @@ All settings are environment variables. Put them in `.env` (see `.env.example`).
 | `GM_BAN_FAILURES` | `20` | Failed token checks from one IP in `GM_BAN_WINDOW_S` that ban it. `0` disables |
 | `GM_BAN_WINDOW_S` | `600` | Window of that count |
 | `GM_BAN_SECONDS` | `3600` | Length of a ban |
-| `GM_TRUST_FORWARDED` | `1` in compose | Take the client IP from the last `X-Forwarded-For` entry |
+| `GM_TRUST_FORWARDED` | `1` in compose, `0` without | Take the client IP from the last `X-Forwarded-For` entry. With no header, the socket address is used. Set it in `.env` to change it |
+| `GM_MAX_CONNECTIONS` | `256` | Open connections. More get `503` with `Retry-After` |
+| `GM_HEADER_DEADLINE_S` | `10` | Wall-clock time a client has to send its request headers |
 | `GM_PACKS_HOST_DIR` | `./packs` | Host directory mounted read-only at `/packs` |
 | `GM_UID`, `GM_GID` | `10001` | User of the container process. It must own `config/` and `state/` |
 
@@ -66,6 +68,21 @@ The app already honours `Retry-After`.
 `GM_TRUST_FORWARDED=1` is only safe behind a proxy that sets `X-Forwarded-For`
 itself. Caddy does. When the server is reachable directly, leave it at `0`:
 a client could then pick its own key.
+
+Any container on the shared `caddy` network can reach the service directly and
+set `X-Forwarded-For` itself. This is accepted here: every container on that
+network belongs to the owner.
+
+IPv6 clients count by their `/64` prefix, IPv4 clients by the full address.
+That applies to the ban list and to the tokens-off limit and quota key.
+
+A client that reads its body slowly holds one concurrency slot of its key for
+as long as it takes. The slots per key (`GM_MAX_CONCURRENT`) and the global
+connection cap bound that. The 30 s socket timeout limits each single read or
+write, not the whole response.
+
+A token file that cannot be read or parsed makes every request answer `503`
+and does not count as a failed login. The log names the file once per version.
 
 With tokens on and no enabled token in the file, every request gets 401 and the
 log says so at start.

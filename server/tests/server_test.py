@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import socket
 import sys
+import time
 import unittest
 from pathlib import Path
 
@@ -230,6 +232,45 @@ class LimitTest(unittest.TestCase):
         header = {"Range": "bytes=0-" + "9" * 5000}
         response = server.request(PACKAGE_PATH, headers=header, token=server.token)
         self.assertEqual((response.status, response.body), (200, PACKAGE))
+
+
+class ConnectionLimitTest(unittest.TestCase):
+    def test_the_listen_backlog_is_set_before_listening(self) -> None:
+        server = RunningServer()
+        self.addCleanup(server.close)
+        self.assertEqual(type(server.server).request_queue_size, 128)
+
+    def test_connections_past_the_cap_get_503(self) -> None:
+        server = RunningServer(max_connections=2, header_deadline_s=30)
+        self.addCleanup(server.close)
+        idle = [socket.create_connection(("127.0.0.1", server.port)) for _ in range(2)]
+        self.addCleanup(lambda: [conn.close() for conn in idle])
+        time.sleep(0.3)
+        refused = server.request("/healthz")
+        self.assertEqual(refused.status, 503)
+        self.assertEqual(refused.headers["retry-after"], "5")
+        idle.pop().close()
+        time.sleep(0.5)
+        self.assertEqual(server.request("/healthz").status, 200)
+
+    def test_a_client_dripping_its_headers_is_cut_at_the_deadline(self) -> None:
+        server = RunningServer(header_deadline_s=1)
+        self.addCleanup(server.close)
+        conn = socket.create_connection(("127.0.0.1", server.port))
+        self.addCleanup(conn.close)
+        conn.settimeout(5)
+        started = time.monotonic()
+        try:
+            for byte in b"GET /healthz HTTP/1.1\r\nX: y\r\n":
+                conn.sendall(bytes([byte]))
+                time.sleep(0.2)
+        except OSError:
+            pass
+        self.assertLess(time.monotonic() - started, 4)
+        try:
+            self.assertEqual(conn.recv(100), b"")
+        except OSError:
+            pass
 
 
 if __name__ == "__main__":

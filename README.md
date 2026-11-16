@@ -11,7 +11,8 @@ plus the map, search, places, routing, navigation, tracks and analysis features
 of milestones 1-4, with milestone 4 still in progress. Milestone 5 (downloads)
 is in progress: the all-oblast pipeline (T-0501), one logical tile source per
 kind (T-0503) and the downloads screen (T-0504) have landed; updates, raster
-areas, the self-hosted server and the 30 m add-on are still to come. Milestone
+areas and the self-hosted server are still to come; the 30 m add-on (T-0509)
+is its own package. Milestone
 6 (profiles, the configured screen and the release) is not started.
 
 ## Build
@@ -455,9 +456,30 @@ concurrency and cancellation. See `tools/pipeline/README.md`.
 wrote, copied unchanged. `regions` reads it with the real catalogue parser and
 serves it from a loopback server to download all 25 oblasts; `plugins/downloads-ui`
 reads it through the same parser to check the screen's rows. The world entry and
-the 30 m elevation add-on that the build does not produce yet are added by
+the 30 m elevation add-on that the catalogue does not carry yet are added by
 `CatalogFixture` in the plugin-api test fixtures, in the shape
 `design/server-protocol.md` section 2 declares.
+
+The 30 m elevation add-on (T-0509) is a package of its own, not a part of the
+oblast pack: `<region>-elevation-30m` (for example `ua-46-elevation-30m`), at
+`<root>/<region>-elevation-30m/<version>/` with a `current` pointer, holding one
+`elevation.bin` of 1 arcsec cells. It follows the same model as every region
+(directory, version, `current`), so the server serves it as
+`/<region>-elevation-30m/<version>/package.zip` with no change. The catalogue
+lists it as `addons: [{id, version, size_bytes}]` on the region entry, and
+`RegionCatalog.download(id)` resolves a region id or an add-on package id. The
+manifest parser accepts a manifest without `features` only for an add-on id
+with exactly one `elevation` component. The mount resolver skips add-on
+directories, so an add-on never shows as a region or as a broken one. The
+downloads screen reports an installed add-on as `ELEVATION_30M` in the region's
+`InstalledPack.parts`. It offers the add-on's Download button once the region is
+installed, and removing a region removes its add-on. `mountedElevation` reads
+the add-on first and the oblast's 90 m grid where the add-on has no cell, and it
+resolves the add-on once per process: an add-on installed while the app runs
+takes effect at the next start, as updates do. Not done: the add-on is not
+updated with its region (T-0508), and only the first mounted region gets
+elevation at all. Lviv's add-on measured 31,573,392 bytes against 4,528,060 for
+the 90 m grid of the same oblast.
 
 `server/` is the region package server (T-0510): one standard-library Python
 service in a container that serves `catalog.json` and

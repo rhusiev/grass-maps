@@ -127,8 +127,12 @@ internal class MapHostState(
         val built = buildBaseStyle(style, sourceResolver, appTiles) ?: return Outcome.Failure(AppError.InvalidInput)
         // The first composition can call setStyle with the style this state was
         // built from. Reloading it would clear styleReady and re-run the engine
-        // for nothing, so an unchanged style is a successful no-op.
-        if (style.id == loadedStyleId && built == this.style.value) {
+        // for nothing, so an unchanged style is a successful no-op. Styles that
+        // share one base document (Standard and Touring) differ only in their
+        // layers, so a switch between them records the new id and keeps the
+        // loaded style.
+        if (built == this.style.value) {
+            loadedStyleId = style.id
             return Outcome.Success(Unit)
         }
         styleReady.value = false

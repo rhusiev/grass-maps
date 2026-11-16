@@ -189,6 +189,19 @@ class MapHostStateTest {
     }
 
     @Test
+    fun switchingToAStyleWithTheSameBaseDocumentKeepsTheLoadedStyle() {
+        val session = session()
+        session.onStyleLoaded()
+        val generation = session.styleGeneration.value
+
+        assertEquals(Outcome.Success(Unit), session.applyStyle(style(StyleId("touring"))))
+
+        assertEquals(StyleId("touring"), session.loadedStyleId)
+        assertTrue("a layers-only switch must not clear styleReady", session.styleReady.value)
+        assertEquals(generation, session.styleGeneration.value)
+    }
+
+    @Test
     fun setStyleWithTheLoadedStyleIsANoOp() {
         val session = session()
         session.onStyleLoaded()

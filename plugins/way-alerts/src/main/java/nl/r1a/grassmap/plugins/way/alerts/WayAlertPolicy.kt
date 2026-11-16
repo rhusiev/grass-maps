@@ -24,15 +24,18 @@ import nl.r1a.grassmap.plugin.api.provider.RouteProfile
  * The distances are about 20 to 40 seconds at the profile's nominal speed, so
  * the rider hears the alert before the feature is visible and has time to act:
  *
- * | Feature | Hike (5 km/h) | Bike (18 km/h) |
- * |---|---|---|
- * | Railway crossing | 50 m, 36 s | 150 m, 30 s |
- * | Tunnel | - | 200 m, 40 s |
- * | Hazard, ford, barrier | 30 m, 22 s | 100 m, 20 s |
+ * | Feature | Walk (4 km/h) | Hike (5 km/h) | Bike (18 km/h) |
+ * |---|---|---|---|
+ * | Railway crossing | 100 m, then 50 m | 50 m, 36 s | 150 m, 30 s |
+ * | Tunnel | - | - | 200 m, 40 s |
+ * | Hazard, ford, barrier | - | 30 m, 22 s | 100 m, 20 s |
  *
- * Walking and driving get no way alerts: the product scope gives railway
- * crossings and hazards to bike and hike, and tunnels to bike only. A profile
- * with no distance returns null and the schedule skips the feature.
+ * Walking gets the railway crossing only, in two stages (T-0322, round 5 of
+ * the navigation design): the first alert at 100 m, the second at 50 m. Hike
+ * and bike keep their single distance. Driving gets no way alerts, and walking
+ * gets no tunnel or hazard alert: the product scope gives hazards to bike and
+ * hike, and tunnels to bike only. A profile with no distance returns null and
+ * the schedule skips the feature.
  */
 object WayAlertDistance {
     const val CORRIDOR_METERS: Double = 30.0
@@ -49,14 +52,44 @@ object WayAlertDistance {
      */
     const val RELEASE_METERS: Double = 50.0
 
+    /** The walking railway-crossing stages (T-0322): the first alert, then the second. */
+    const val WALK_RAILWAY_FIRST_METERS: Double = 100.0
+    const val WALK_RAILWAY_SECOND_METERS: Double = 50.0
+
+    /**
+     * The first alert distance for the profile and kind, or null for none. A
+     * profile with several stages returns its farthest one; [stagesFor] has all.
+     */
     fun metersFor(
         profile: RouteProfile,
         kind: WayAlertFeatureKind,
-    ): Double? =
+    ): Double? = stagesFor(profile, kind).firstOrNull()
+
+    /**
+     * Every alert distance for the profile and kind, farthest first. Empty when
+     * the profile gets no alert for the kind. Each stage announces once per
+     * approach.
+     */
+    fun stagesFor(
+        profile: RouteProfile,
+        kind: WayAlertFeatureKind,
+    ): List<Double> =
         when (profile) {
-            RouteProfile.Bike -> bikeMeters(kind)
-            RouteProfile.Hike -> hikeMeters(kind)
-            RouteProfile.Walk, RouteProfile.Car -> null
+            RouteProfile.Bike -> listOf(bikeMeters(kind))
+            RouteProfile.Hike -> listOfNotNull(hikeMeters(kind))
+            RouteProfile.Walk -> walkStages(kind)
+            RouteProfile.Car -> emptyList()
+        }
+
+    private fun walkStages(kind: WayAlertFeatureKind): List<Double> =
+        when (kind) {
+            WayAlertFeatureKind.RailwayCrossing -> listOf(WALK_RAILWAY_FIRST_METERS, WALK_RAILWAY_SECOND_METERS)
+
+            WayAlertFeatureKind.Tunnel,
+            WayAlertFeatureKind.Hazard,
+            WayAlertFeatureKind.Ford,
+            WayAlertFeatureKind.Barrier,
+            -> emptyList()
         }
 
     private fun bikeMeters(kind: WayAlertFeatureKind): Double =
@@ -112,6 +145,12 @@ private data class FeatureKey(
 
 private fun WayAlertFeature.key(): FeatureKey = FeatureKey(elementType, osmId)
 
+/** One alert stage of one feature: the latch unit, so each stage announces once. */
+private data class StageKey(
+    val feature: FeatureKey,
+    val stageMeters: Double,
+)
+
 /** Where a host sends each due cue; the app bridges it to the alert host. */
 fun interface WayAlertSink {
     fun emit(cue: WayAlertCue)
@@ -143,6 +182,13 @@ object NoopWayAlertSink : WayAlertSink {
  * replacement route does not pass at all loses its latch with that route,
  * because the schedule can no longer measure a distance to it.
  *
+ * A profile may have several alert stages for a kind: walking gets a railway
+ * crossing at 100 m and again at 50 m (T-0322). Each stage has its own latch,
+ * so each announces once per approach. A state that makes several stages due
+ * at once, for example the first fix of a trip 40 m from the crossing, sends
+ * one cue and latches all of them, so the walker is not told twice in a row. A
+ * feature's latches release together, beyond its farthest stage.
+ *
  * A terminal phase and [reset] clear every latch, so a new trip starts clean
  * even when its route revision starts at zero. A paused phase keeps the cache
  * and the latches but emits nothing: a feature that is behind the rider at
@@ -166,7 +212,7 @@ class WayAlertSchedule(
 
     private var loadedRevision: Long? = null
     private var hits: List<WayAlertHit> = emptyList()
-    private val latched = mutableSetOf<FeatureKey>()
+    private val latched = mutableSetOf<StageKey>()
     private val mutex = Mutex()
 
     /** Changes the profile; the next state reads the new distances. */
@@ -211,22 +257,24 @@ class WayAlertSchedule(
 
         val cues = mutableListOf<WayAlertCue>()
         for (hit in hits) {
-            val threshold = WayAlertDistance.metersFor(profile, hit.feature.kind) ?: continue
+            val stages = WayAlertDistance.stagesFor(profile, hit.feature.kind)
+            val farthest = stages.firstOrNull() ?: continue
             val ahead = hit.alongRouteMeters - state.alongRouteMeters
             if (!ahead.isFinite()) {
                 continue
             }
             val key = hit.feature.key()
             if (ahead < -WayAlertDistance.RELEASE_METERS ||
-                ahead > threshold + WayAlertDistance.RELEASE_METERS
+                ahead > farthest + WayAlertDistance.RELEASE_METERS
             ) {
-                latched.remove(key)
+                latched.removeAll { it.feature == key }
                 continue
             }
-            if (ahead < 0.0 || ahead > threshold) {
+            if (ahead < 0.0) {
                 continue
             }
-            if (latched.add(key)) {
+            val isNewStageDue = stages.filter { ahead <= it }.map { latched.add(StageKey(key, it)) }.any { it }
+            if (isNewStageDue) {
                 cues +=
                     WayAlertCue(
                         feature = hit.feature,
@@ -254,7 +302,8 @@ class WayAlertSchedule(
 
             is Outcome.Success -> {
                 hits = outcome.value
-                latched.retainAll(hits.map { it.feature.key() }.toSet())
+                val present = hits.map { it.feature.key() }.toSet()
+                latched.retainAll { it.feature in present }
                 log("way-alert features=${hits.size} revision=$revision corridor_m=${WayAlertDistance.CORRIDOR_METERS}")
             }
         }

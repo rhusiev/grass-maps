@@ -2006,9 +2006,10 @@ parser are gone; the fixtures that pinned them were not edited.
 The kinds are a railway crossing, a tunnel and a hazard. A ford or a barrier
 node uses the hazard kind and the hazard switch. Each kind has its own switch,
 and all three are off by default, like the T-0317 alerts. The product scope
-gives crossings and hazards to bike and hike, and tunnels to bike only;
-walking and driving get no way alerts, so their distance is null and the
-feature is skipped. The component is extracted from OSM (T-0319A):
+gives crossings and hazards to bike and hike, and tunnels to bike only.
+Walking gets the railway crossing alone, in two stages, at 100 m and again at
+50 m (T-0322, round 5 of the navigation design). Driving gets no way alerts. A
+profile and kind with no distance return null, and the feature is skipped. The component is extracted from OSM (T-0319A):
 `osm-extract --way-alerts` writes it from the region's PBF, the fixture uses its
 own small OSM input, and the Lviv pack carries 18,009 extracted features. A
 package without the component still opens and reports no features.
@@ -2035,11 +2036,11 @@ and 11.6 s with an empty target directory.
 The corridor is 30 m wide and the warning is 20 to 40 seconds of travel before
 the feature:
 
-| Feature | Hike, 5 km/h | Bike, 18 km/h |
-|---|---|---|
-| Railway crossing | 50 m, 36 s | 150 m, 30 s |
-| Tunnel | - | 200 m, 40 s |
-| Hazard, ford, barrier | 30 m, 22 s | 100 m, 20 s |
+| Feature | Walk, 4 km/h | Hike, 5 km/h | Bike, 18 km/h |
+|---|---|---|---|
+| Railway crossing | 100 m, then 50 m | 50 m, 36 s | 150 m, 30 s |
+| Tunnel | - | - | 200 m, 40 s |
+| Hazard, ford, barrier | - | 30 m, 22 s | 100 m, 20 s |
 
 The corridor is also the answer to "close enough to matter": the route line
 and the OSM geometry both carry metre-level noise, a barrier at the verge is
@@ -2060,8 +2061,14 @@ starts at zero again.
 element type keeps a node and a way with the same numeric id apart. A reroute
 does not re-arm a feature that the replacement route still passes: a crossing
 announced 150 m ahead is not announced again at 120 m. A latch releases only
-when the feature is 50 m beyond its alert distance, either behind the rider or
-that far beyond the distance ahead (`WayAlertDistance.RELEASE_METERS`). A route
+when the feature is 50 m beyond its farthest alert distance, either behind the rider or
+that far beyond the distance ahead (`WayAlertDistance.RELEASE_METERS`).
+`WayAlertDistance.stagesFor` lists a profile's distances, farthest first, and
+`metersFor` returns the first. Each stage has its own latch, so the walking
+crossing alerts once at 100 m and once at 50 m per approach, and a walker who
+lingers or jitters around either distance hears nothing more. A state that
+makes both stages due at once, such as the first fix of a trip 40 m from the
+crossing, sends one cue and latches both. A route
 that takes the rider past the feature, or away from it and back, announces it
 once more on the next approach, and a feature the replacement route does not
 pass at all loses its latch with that route. That is hysteresis, not a reroute

@@ -49,7 +49,15 @@ class WayAlertScheduleTest {
         assertEquals(100.0, WayAlertDistance.metersFor(RouteProfile.Bike, WayAlertFeatureKind.Barrier)!!, 0.0)
         assertEquals(50.0, WayAlertDistance.metersFor(RouteProfile.Hike, WayAlertFeatureKind.RailwayCrossing)!!, 0.0)
         assertNull(WayAlertDistance.metersFor(RouteProfile.Hike, WayAlertFeatureKind.Tunnel))
+        assertEquals(100.0, WayAlertDistance.metersFor(RouteProfile.Walk, WayAlertFeatureKind.RailwayCrossing)!!, 0.0)
+        assertEquals(
+            listOf(100.0, 50.0),
+            WayAlertDistance.stagesFor(RouteProfile.Walk, WayAlertFeatureKind.RailwayCrossing),
+        )
+        assertEquals(listOf(150.0), WayAlertDistance.stagesFor(RouteProfile.Bike, WayAlertFeatureKind.RailwayCrossing))
+        assertEquals(listOf(50.0), WayAlertDistance.stagesFor(RouteProfile.Hike, WayAlertFeatureKind.RailwayCrossing))
         assertNull(WayAlertDistance.metersFor(RouteProfile.Walk, WayAlertFeatureKind.Hazard))
+        assertNull(WayAlertDistance.metersFor(RouteProfile.Walk, WayAlertFeatureKind.Tunnel))
         assertNull(WayAlertDistance.metersFor(RouteProfile.Car, WayAlertFeatureKind.RailwayCrossing))
         assertEquals(
             "the re-arm distance is chosen and named, not a literal inside the rule",
@@ -58,6 +66,116 @@ class WayAlertScheduleTest {
             0.0,
         )
     }
+
+    @Test
+    fun aWalkerIsAlertedTwiceAtACrossingAt100mAnd50m() =
+        runTest {
+            val hit = hit(route, CROSSING_ID)
+            val schedule = scheduleOf(RouteProfile.Walk)
+
+            assertTrue(schedule.onState(state(hit.alongRouteMeters - 101.0)).isEmpty())
+            val first = schedule.onState(state(hit.alongRouteMeters - 100.0)).single()
+            assertEquals(100.0, first.distanceAheadMeters, 0.01)
+            assertTrue(schedule.onState(state(hit.alongRouteMeters - 51.0)).isEmpty())
+            val second = schedule.onState(state(hit.alongRouteMeters - 50.0)).single()
+            assertEquals(50.0, second.distanceAheadMeters, 0.01)
+            assertEquals(CROSSING_ID, second.feature.osmId)
+            assertTrue(schedule.onState(state(hit.alongRouteMeters - 20.0)).isEmpty())
+        }
+
+    @Test
+    fun eachWalkStageAnnouncesOnceWhenTheWalkerLingersOrJitters() =
+        runTest {
+            val hit = hit(route, CROSSING_ID)
+            val schedule = scheduleOf(RouteProfile.Walk)
+            val aheadSequence = listOf(100.0, 100.0, 101.0, 99.0, 100.0, 60.0, 50.0, 51.0, 49.0, 50.0, 50.0, 70.0, 49.5, 30.0)
+
+            val cues = aheadSequence.flatMap { schedule.onState(state(hit.alongRouteMeters - it)) }
+
+            assertEquals(listOf(100.0, 50.0), cues.map { it.distanceAheadMeters })
+        }
+
+    @Test
+    fun aWalkerFirstSeenInsideTheSecondStageGetsOneCue() =
+        runTest {
+            val hit = hit(route, CROSSING_ID)
+            val schedule = scheduleOf(RouteProfile.Walk)
+
+            assertEquals(1, schedule.onState(state(hit.alongRouteMeters - 40.0)).size)
+            assertTrue(schedule.onState(state(hit.alongRouteMeters - 30.0)).isEmpty())
+        }
+
+    @Test
+    fun aWalkerStartingInsideTheFirstStageStillGetsTheSecond() =
+        runTest {
+            val hit = hit(route, CROSSING_ID)
+            val schedule = scheduleOf(RouteProfile.Walk)
+
+            assertEquals(80.0, schedule.onState(state(hit.alongRouteMeters - 80.0)).single().distanceAheadMeters, 0.01)
+            assertEquals(50.0, schedule.onState(state(hit.alongRouteMeters - 50.0)).single().distanceAheadMeters, 0.01)
+        }
+
+    @Test
+    fun aRerouteDoesNotRepeatEitherWalkStage() =
+        runTest {
+            val hit = hit(route, CROSSING_ID)
+            val schedule = scheduleOf(RouteProfile.Walk)
+
+            assertEquals(1, schedule.onState(state(hit.alongRouteMeters - 100.0, revision = 0L)).size)
+            assertTrue(schedule.onState(state(hit.alongRouteMeters - 80.0, revision = 1L)).isEmpty())
+            assertEquals(1, schedule.onState(state(hit.alongRouteMeters - 50.0, revision = 1L)).size)
+            assertTrue(schedule.onState(state(hit.alongRouteMeters - 40.0, revision = 2L)).isEmpty())
+        }
+
+    @Test
+    fun aNewTripReArmsBothWalkStages() =
+        runTest {
+            val hit = hit(route, CROSSING_ID)
+            val schedule = scheduleOf(RouteProfile.Walk)
+            val trip = listOf(100.0, 50.0)
+
+            assertEquals(2, trip.sumOf { schedule.onState(state(hit.alongRouteMeters - it)).size })
+            assertTrue(schedule.onState(state(0.0, phase = WayAlertPhase.Stopped)).isEmpty())
+            assertEquals(2, trip.sumOf { schedule.onState(state(hit.alongRouteMeters - it)).size })
+        }
+
+    @Test
+    fun aWalkReplayOverTheTestRegionAlertsTwiceAtTheCrossingOnly() =
+        runTest {
+            val schedule = scheduleOf(RouteProfile.Walk)
+            val cues = mutableListOf<WayAlertCue>()
+            var along = 0.0
+            while (along <= ROUTE_LENGTH_METERS) {
+                cues += schedule.onState(state(along))
+                along += STEP_METERS
+            }
+
+            assertEquals(
+                "walking gets the crossing alone, not the tunnel or the hazard",
+                listOf(CROSSING_ID, CROSSING_ID),
+                cues.map { it.feature.osmId },
+            )
+            val (first, second) = cues.map { it.distanceAheadMeters }
+            assertTrue("first alert within one step of 100 m: $first", first <= 100.0 && first > 100.0 - STEP_METERS)
+            assertTrue("second alert within one step of 50 m: $second", second <= 50.0 && second > 50.0 - STEP_METERS)
+        }
+
+    @Test
+    fun aBikeAndAHikeKeepTheirSingleCrossingAlert() =
+        runTest {
+            val hit = hit(route, CROSSING_ID)
+            for ((profile, meters) in listOf(RouteProfile.Bike to 150.0, RouteProfile.Hike to 50.0)) {
+                val schedule = scheduleOf(profile)
+                val cues = mutableListOf<WayAlertCue>()
+                var ahead = 200.0
+                while (ahead >= 0.0) {
+                    cues += schedule.onState(state(hit.alongRouteMeters - ahead)).crossings()
+                    ahead -= 1.0
+                }
+                assertEquals("$profile alerts once", 1, cues.size)
+                assertEquals(meters, cues.single().distanceAheadMeters, 0.01)
+            }
+        }
 
     @Test
     fun aRailwayCrossingAlertsAtTheSetDistance() =

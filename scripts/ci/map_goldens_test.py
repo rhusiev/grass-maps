@@ -160,6 +160,22 @@ class InvokeStyleTest(unittest.TestCase):
             map_goldens.invoke_style(client, "dark")
 
 
+class TouringPositionsTest(unittest.TestCase):
+    def test_touring_draws_the_standard_cases(self) -> None:
+        self.assertEqual(map_goldens.cases("standard"), map_goldens.cases("touring"))
+        self.assertEqual(40, len(map_goldens.cases("touring")))
+
+    def test_touring_styles_use_the_touring_style_ids(self) -> None:
+        self.assertEqual("touring", map_goldens.STYLE_IDS["touring-light"])
+        self.assertEqual("touring-dark", map_goldens.STYLE_IDS["touring-dark"])
+
+    def test_touring_references_sit_beside_standard(self) -> None:
+        self.assertEqual(
+            map_goldens.ROOT / "test-data" / "map-goldens" / "touring" / "touring-dark",
+            map_goldens.default_reference("touring", "touring-dark"),
+        )
+
+
 class StandardPositionsTest(unittest.TestCase):
     def test_ten_places_at_three_zooms(self) -> None:
         positions = map_goldens.POSITIONS["standard"]

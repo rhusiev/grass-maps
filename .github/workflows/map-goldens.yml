@@ -21,6 +21,8 @@ on:
       - dev
     paths:
       - 'plugins/style-standard/**'   # the style itself
+      - 'plugins/style-touring/**'
+      - 'plugins/layers-panel/**'
       - 'app/src/main/assets/sprites/**'
       - 'app/src/main/assets/fonts/**'
       - 'test-data/map-goldens/**'    # the references and their fixtures
@@ -100,7 +102,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        set: [standard-light, standard-dark, contours, fixture, navigation, raster]
+        set: [standard-light, standard-dark, touring-light, touring-dark, contours, fixture, navigation, raster]
     steps:
       - name: Check out
         uses: actions/checkout@v7

@@ -13,13 +13,14 @@
 # Usage:
 #   ./scripts/ci/android-map-goldens.sh --profile fixture [--update] [APK]
 #   ./scripts/ci/android-map-goldens.sh --profile standard [--style light|dark|both] [--update] [APK]
+#   ./scripts/ci/android-map-goldens.sh --profile touring [--style touring|touring-light|touring-dark] [--update] [APK]
 #   ./scripts/ci/android-map-goldens.sh --profile contours [--style all|both|touring] [--update] [APK]
 #   ./scripts/ci/android-map-goldens.sh --profile raster [--positions raster-overlay-40] [--update] [APK]
 #   ./scripts/ci/android-map-goldens.sh --profile oblast \
 #       --region-package /hdd/t-0102-evidence/region/ua-46/2026-11-05-bench \
 #       --output /hdd/t-0102-evidence/oblast [APK]
 #
-# The fixture, standard and raster profiles run with contours off, which keeps
+# The fixture, standard, touring and raster profiles run with contours off, which keeps
 # their existing references valid; the contours profile runs with the fixture's
 # committed contour archive on. --contours on|off overrides either default.
 #
@@ -85,14 +86,17 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -n "$PROFILE" ]] || {
-    echo "android-map-goldens.sh: --profile standard|contours|fixture|raster|oblast is required" >&2
+    echo "android-map-goldens.sh: --profile standard|touring|contours|fixture|raster|oblast is required" >&2
     exit 2
 }
 if [[ "$PROFILE" == "standard" || "$PROFILE" == "contours" ]]; then
     STYLE="${STYLE:-both}"
 fi
-if [[ -n "$STYLE" && "$PROFILE" != "standard" && "$PROFILE" != "contours" ]]; then
-    echo "android-map-goldens.sh: --style applies to --profile standard or contours" >&2
+if [[ "$PROFILE" == "touring" ]]; then
+    STYLE="${STYLE:-touring}"
+fi
+if [[ -n "$STYLE" && "$PROFILE" != "standard" && "$PROFILE" != "touring" && "$PROFILE" != "contours" ]]; then
+    echo "android-map-goldens.sh: --style applies to --profile standard, touring or contours" >&2
     exit 2
 fi
 case "$CONTOURS" in

@@ -140,7 +140,8 @@ GRID_HEIGHT = 192
 # failure.
 COMMITTED_AVD_NAME = "grassmaps-goldens-api29"
 DEVICE_REGION_STAGE = "/data/local/tmp/grass-map-golden-region"
-# The app's Standard style ids. `light` is the default id the app loads.
+# The app's style ids. `light` is the default id the app loads. The Touring
+# ids belong to the `touring` profile and the contours touring references.
 STYLE_IDS = {
     "light": "standard",
     "dark": "standard-dark",
@@ -255,6 +256,12 @@ TRACK_CASES = {
         ("track-looks-hidden-z15", 49.9520, 23.9502, 15.0, 0.0, 0.0),
     ),
 }
+# T-0109: Touring draws the Standard profile's cases, so the two reference sets
+# show the same places and differ only in the style.
+POSITIONS["touring"] = POSITIONS["standard"]
+ROUTE_CASES["touring"] = ROUTE_CASES["standard"]
+ROUTE_RELATION_CASES["touring"] = ROUTE_RELATION_CASES["standard"]
+TRACK_CASES["touring"] = TRACK_CASES["standard"]
 TRACK_POSITION_NAMES = frozenset(case[0] for cases in TRACK_CASES.values() for case in cases)
 TRACK_LOOKS_FIXTURE_PATH = ROOT / "test-data" / "map-goldens" / "track-looks.json"
 TRACK_LOOKS_FIXTURE = TRACK_LOOKS_FIXTURE_PATH.read_text(encoding="utf-8")

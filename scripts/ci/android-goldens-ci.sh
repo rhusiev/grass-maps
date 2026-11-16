@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
 # The CI golden run, as named sets: `standard` (Standard light and dark;
-# `standard-light` and `standard-dark` run one style each),
+# `standard-light` and `standard-dark` run one style each), `touring` (the same
+# cases in the Touring style; `touring-light` and `touring-dark` run one each),
 # `contours` (the fixture's contour archive on), `fixture` (the T-0102 set,
 # contours off), `navigation`, and `raster` (overlay and underlay over the
 # loopback tile fixture; the one set that turns the radios on, so it runs last).
@@ -21,8 +22,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 APK="${1:-$ROOT/app/build/outputs/apk/debug/app-debug.apk}"
 shift || true
-readonly ALL_SETS=(standard contours fixture navigation raster)
-readonly KNOWN_SETS=(standard standard-light standard-dark contours fixture navigation raster)
+readonly ALL_SETS=(standard touring contours fixture navigation raster)
+readonly KNOWN_SETS=(standard standard-light standard-dark touring touring-light touring-dark contours fixture navigation raster)
 if (($# > 0)); then
     SETS=("$@")
 else
@@ -45,6 +46,14 @@ run_set() {
         standard-light | standard-dark)
             GOLDEN_SKIP_REBOOT="$skip_reboot" ./scripts/ci/android-map-goldens.sh --profile standard \
                 --style "${1#standard-}" --output "$ROOT/build/map-goldens/$1" "$APK"
+            ;;
+        touring)
+            GOLDEN_SKIP_REBOOT="$skip_reboot" ./scripts/ci/android-map-goldens.sh --profile touring \
+                --style touring "$APK"
+            ;;
+        touring-light | touring-dark)
+            GOLDEN_SKIP_REBOOT="$skip_reboot" ./scripts/ci/android-map-goldens.sh --profile touring \
+                --style "$1" --output "$ROOT/build/map-goldens/$1" "$APK"
             ;;
         contours)
             GOLDEN_SKIP_REBOOT="$skip_reboot" ./scripts/ci/android-map-goldens.sh --profile contours \

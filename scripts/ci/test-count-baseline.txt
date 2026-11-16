@@ -18,6 +18,7 @@ plugins/favourites-ui	42
 plugins/gpx	33
 plugins/guidance-ui	16
 plugins/info-widgets	31
+plugins/layers-panel	5
 plugins/links	63
 plugins/map-controls	20
 plugins/nav-simulator	12
@@ -31,6 +32,7 @@ plugins/route-relations	10
 plugins/route-warnings	12
 plugins/share	49
 plugins/style-standard	10
+plugins/style-touring	9
 plugins/synthetic-data	20
 plugins/track-layer	6
 plugins/track-library	39

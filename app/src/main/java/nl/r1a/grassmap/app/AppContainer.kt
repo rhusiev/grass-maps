@@ -60,7 +60,6 @@ import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.ElevationAccess
 import nl.r1a.grassmap.plugin.api.host.NoElevationAccess
 import nl.r1a.grassmap.plugin.api.host.NoPlatformActions
-import nl.r1a.grassmap.plugin.api.host.NoRegionAccess
 import nl.r1a.grassmap.plugin.api.host.NoRegionDownloadsAccess
 import nl.r1a.grassmap.plugin.api.host.PlatformActions
 import nl.r1a.grassmap.plugin.api.host.RegionAccess
@@ -103,12 +102,13 @@ import nl.r1a.grassmap.plugins.way.alerts.WayAlertSink
 import nl.r1a.grassmap.regions.DownloadPolicy
 import nl.r1a.grassmap.regions.GateNetworkAccess
 import nl.r1a.grassmap.regions.HttpDownloadTransport
+import nl.r1a.grassmap.regions.MountedRegion
 import nl.r1a.grassmap.regions.NetworkAccess
 import nl.r1a.grassmap.regions.RegionDownloader
 import nl.r1a.grassmap.regions.RegionElevation
 import nl.r1a.grassmap.regions.RegionMountResolver
 import nl.r1a.grassmap.regions.RegionPaths
-import nl.r1a.grassmap.regions.RegionReader
+import nl.r1a.grassmap.regions.RegionReaders
 import nl.r1a.grassmap.regions.RegionStore
 import nl.r1a.grassmap.routing.RouteHistorySetting
 import nl.r1a.grassmap.routing.RouteHistoryStore
@@ -461,38 +461,34 @@ class AppContainer(
     }
 
     /**
-     * The mounted region's directory, read once. Both region readers use it so
-     * the mount is resolved once and an invalid mount is logged once.
-     *
-     * The map mounts every installed pack (T-0503), but the way-alert and
-     * relation readers still read one: the first mounted pack in region-id
-     * order. A second installed oblast is named in the log so that narrower
-     * coverage is visible rather than silent.
+     * The mounted regions, read once. The way-alert and relation readers use
+     * every mounted pack (T-0516), and the mount is resolved once, so an
+     * invalid mount is logged once.
      */
-    private val mountedRegionDirectory: File? by lazy {
-        val root = regionsRoot ?: return@lazy null
+    private val mountedRegions: List<MountedRegion> by lazy {
+        val root = regionsRoot ?: return@lazy emptyList()
         val mounts = RegionMountResolver(root).resolveAll()
-        val mounted = mounts.installed.firstOrNull()
-        if (mounts.installed.size > 1) {
-            Log.i(
-                REGIONS_TAG,
-                "region readers use ${mounted?.region}: ${mounts.installed.size} packs are installed",
-            )
-        }
         mounts.broken.firstOrNull()?.let { broken ->
             Log.w(REGIONS_TAG, "region mount invalid: ${broken.region} ${broken.problem}")
         }
-        mounted?.directory
+        mounts.installed
+    }
+
+    /** The first mounted pack, for the components that still read one region. */
+    private val mountedRegionDirectory: File? by lazy {
+        mountedRegions.firstOrNull()?.directory
     }
 
     /**
-     * The mounted region's way-alert features (T-0319). The reader loads the
-     * native library and opens the component on the first query, off Main; an
-     * older package without it is a success with no features, and an unmounted
-     * region is the inert source.
+     * The installed packs' way-alert features and route relations (T-0319,
+     * T-0418). Every mounted pack answers (T-0516), in region-id order, so the
+     * first pack that holds a shared feature or relation serves it. The reader
+     * loads the native library and opens each component on the first query, off
+     * Main; an older package without a component contributes nothing, and no
+     * mounted pack is the inert source.
      */
     private val regionAccess: RegionAccess by lazy {
-        mountedRegionDirectory?.let(::RegionReader) ?: NoRegionAccess
+        RegionReaders.open(mountedRegions)
     }
 
     /** The mounted region's components for feature wiring outside this container. */

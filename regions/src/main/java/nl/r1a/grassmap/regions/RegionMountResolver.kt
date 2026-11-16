@@ -98,7 +98,36 @@ class RegionMountResolver(
         return RegionMounts(installed, broken)
     }
 
-    private fun installedRegions(): List<String> {
+    /**
+     * The version directory of [region]'s 30 m elevation add-on, or null when
+     * none is installed or its pointer, manifest or file does not check out
+     * (T-0509). The add-on is optional, so a damaged one is simply absent here.
+     */
+    fun elevationAddon(region: String): File? {
+        val addon = RegionIdentifiers.elevationAddonPackage(region)
+        val addonDirectory = File(root, addon)
+        val version = CurrentPointer.read(addonDirectory) ?: return null
+        val directory = File(addonDirectory, version)
+        val manifest = (readManifest(directory, addon, version) as? Outcome.Success)?.value ?: return null
+        val component = manifest.components.singleOrNull() ?: return null
+        val file = File(directory, component.file)
+        val isIntact = file.isFile && !Files.isSymbolicLink(file.toPath()) && file.length() == component.bytes
+        return directory.takeIf { isIntact }
+    }
+
+    /**
+     * The versions of the add-ons that are installed, by package id. An add-on
+     * is not a region: the map never mounts it and it never counts as broken.
+     */
+    fun addonVersions(): Map<String, String> =
+        storeDirectories()
+            .filter { RegionIdentifiers.isAddonPackage(it) }
+            .mapNotNull { id -> CurrentPointer.read(File(root, id))?.let { id to it } }
+            .toMap()
+
+    private fun installedRegions(): List<String> = storeDirectories().filterNot { RegionIdentifiers.isAddonPackage(it) }
+
+    private fun storeDirectories(): List<String> {
         val directories =
             try {
                 root.listFiles()

@@ -57,6 +57,8 @@ object RegionIdentifiers {
     const val ZOOM_LEVEL_COUNT: Int = 2
 
     private const val MAX_SEGMENT_LENGTH: Int = 64
+    private const val ELEVATION_30M_SUFFIX = "-elevation-30m"
+    private val ADDON_SUFFIXES = listOf(ELEVATION_30M_SUFFIX)
     private val SEGMENT = Regex("[a-z0-9][a-z0-9._-]*")
 
     /** Names a version may never use: they are the region's own control files. */
@@ -72,6 +74,12 @@ object RegionIdentifiers {
 
     /** A component file name inside a package: one segment, not the manifest. */
     fun isSafeFileName(value: String): Boolean = isSafeSegment(value) && value != MANIFEST_FILE
+
+    /** True for the package id of an add-on, `<region>-<add-on id>` (T-0509). */
+    fun isAddonPackage(id: String): Boolean = ADDON_SUFFIXES.any { id.endsWith(it) && id.length > it.length }
+
+    /** The package id of the 30 m elevation add-on of [region]. */
+    fun elevationAddonPackage(region: String): String = region + ELEVATION_30M_SUFFIX
 
     fun isSha256(value: String): Boolean = value.length == SHA256_HEX_LENGTH && value.all { it in '0'..'9' || it in 'a'..'f' }
 }

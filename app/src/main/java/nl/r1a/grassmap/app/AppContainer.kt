@@ -494,11 +494,6 @@ class AppContainer(
         mounts.installed
     }
 
-    /** The first mounted pack, for the components that still read one region. */
-    private val mountedRegionDirectory: File? by lazy {
-        mountedRegions.firstOrNull()?.directory
-    }
-
     /**
      * The installed packs' way-alert features and route relations (T-0319,
      * T-0418). Every mounted pack answers (T-0516), in region-id order, so the
@@ -525,12 +520,17 @@ class AppContainer(
     val routeWarnings: RouteWarningScanner by lazy { RouteWarningScanner(regionAccess) }
 
     /**
-     * The mounted region's DEM reader (T-0308), or null when no region is
+     * The first mounted region's DEM reader (T-0308), or null when no region is
      * mounted. The track importer keeps the null, so its correction pass can
-     * report that the track kept its own heights (T-0403).
+     * report that the track kept its own heights (T-0403). The region's 30 m
+     * add-on, when installed, is read first (T-0509). The add-on is resolved
+     * once with the mount, so one installed while the app runs takes effect at
+     * the next start, as an update does.
      */
     private val mountedElevation: RegionElevation? by lazy {
-        mountedRegionDirectory?.let(::RegionElevation)
+        mountedRegions.firstOrNull()?.let { mounted ->
+            RegionElevation(mounted.directory, regionsRoot?.let { RegionMountResolver(it).elevationAddon(mounted.region) })
+        }
     }
 
     /**

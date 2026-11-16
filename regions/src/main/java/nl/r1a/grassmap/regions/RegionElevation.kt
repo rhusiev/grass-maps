@@ -24,7 +24,9 @@ private const val ELEVATION_MAX_SAMPLES = 16_000_000
  *
  * The component is a 32-byte header, one 32-byte index entry per 1-degree
  * tile, and zlib-compressed int16 cells. A cell measures 3 arcsec (about 90 m)
- * and carries the mean of the GLO-30 samples it covers. The header and entry
+ * and carries the mean of the GLO-30 samples it covers. The 30 m add-on uses
+ * the same container with 1 arcsec cells; the reader takes the cell size from
+ * each tile's own bounds and size, so it needs no flag for it. The header and entry
  * layout is recorded in `tools/pipeline/README.md`; `formatVersion` is 1.
  *
  * The constructor does no I/O. The manifest and index are read on the first
@@ -38,11 +40,12 @@ private const val ELEVATION_MAX_SAMPLES = 16_000_000
  */
 class RegionElevation(
     private val directory: File,
+    private val addonDirectory: File? = null,
 ) : ElevationAccess {
     private val loadMutex = Mutex()
 
     @Volatile
-    private var loaded: Outcome<ElevationSource?>? = null
+    private var loaded: Outcome<ElevationSources>? = null
 
     override suspend fun elevationMeters(position: GeoPoint): Outcome<Double?> {
         if (!position.latitude.isFinite() || !position.longitude.isFinite()) {
@@ -51,19 +54,33 @@ class RegionElevation(
         return withContext(Dispatchers.IO) {
             when (val source = load()) {
                 is Outcome.Failure -> source
-                is Outcome.Success -> Outcome.Success(source.value?.heightAt(position))
+                is Outcome.Success -> Outcome.Success(source.value.heightAt(position))
             }
         }
     }
 
-    private suspend fun load(): Outcome<ElevationSource?> {
+    private suspend fun load(): Outcome<ElevationSources> {
         loaded?.let { return it }
         return loadMutex.withLock {
-            loaded ?: read().also { loaded = it }
+            loaded ?: readAll().also { loaded = it }
         }
     }
 
-    private fun read(): Outcome<ElevationSource?> {
+    /**
+     * The 30 m add-on grid first, the oblast's own 3 arcsec grid for the rest
+     * (T-0509). The add-on is optional: one that is missing, unreadable or of
+     * an unknown format is skipped, so a damaged add-on never takes away the
+     * heights the oblast pack already gives.
+     */
+    private fun readAll(): Outcome<ElevationSources> {
+        val fine = addonDirectory?.let { (read(it) as? Outcome.Success)?.value }
+        return when (val base = read(directory)) {
+            is Outcome.Failure -> if (fine == null) base else Outcome.Success(ElevationSources(fine, null))
+            is Outcome.Success -> Outcome.Success(ElevationSources(fine, base.value))
+        }
+    }
+
+    private fun read(directory: File): Outcome<ElevationSource?> {
         val region = directory.parentFile?.name
         val version = directory.name
         if (region.isNullOrBlank() || version.isBlank()) {
@@ -122,6 +139,14 @@ class RegionElevation(
         private const val STAND_IN_FORMAT = "stand-in"
         private const val MAX_COMPONENT_BYTES = 64L * 1024L * 1024L
     }
+}
+
+/** The grids a reader consults: the finer add-on grid first, then the oblast's own. */
+private class ElevationSources(
+    private val fine: ElevationSource?,
+    private val base: ElevationSource?,
+) {
+    fun heightAt(position: GeoPoint): Double? = fine?.heightAt(position) ?: base?.heightAt(position)
 }
 
 /** One parsed `elevation.bin`; immutable after construction. */

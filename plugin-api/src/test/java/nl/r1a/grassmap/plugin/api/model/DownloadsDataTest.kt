@@ -34,6 +34,16 @@ class DownloadsDataTest {
         assertFalse(unknown.hasMixedBuilds)
     }
 
+    @Test
+    fun anAddonDownloadsUnderItsOwnPackageId() {
+        val addon = CatalogAddon(id = "elevation-30m", version = "2026-01", bytes = 30)
+        val catalog = RegionCatalog(format = 1, regions = listOf(entry("ua-46", "2").copy(addons = listOf(addon))))
+
+        assertEquals(CatalogDownload("ua-46", "2", 1), catalog.download("ua-46"))
+        assertEquals(CatalogDownload("ua-46-elevation-30m", "2026-01", 30), catalog.download("ua-46-elevation-30m"))
+        assertEquals(null, catalog.download("ua-32-elevation-30m"))
+    }
+
     private fun data(
         catalog: List<CatalogRegion> = emptyList(),
         installed: List<InstalledPack> = emptyList(),

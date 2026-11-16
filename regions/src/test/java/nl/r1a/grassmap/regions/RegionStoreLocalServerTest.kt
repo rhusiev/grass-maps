@@ -23,7 +23,9 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.File
 import java.io.IOException
+import java.security.MessageDigest
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -306,6 +308,64 @@ class RegionStoreLocalServerTest {
             }
         }
 
+    @Test
+    fun theElevationAddonInstallsAloneAndRemovesWithItsRegion() =
+        runBlocking {
+            val addon = "${CatalogFixture.LVIV}-elevation-30m"
+            val body = addonPackage(addon, ADDON_VERSION)
+            val server =
+                TestHttpServer { exchange ->
+                    when (exchange.requestURI.path) {
+                        "/${DownloadsDefaults.CATALOG_FILE}" -> send(exchange, 200, CatalogFixture.withElevationAddon())
+                        "/$addon/$ADDON_VERSION/package.zip" -> send(exchange, 200, body)
+                        else -> send(exchange, 404, ByteArray(0))
+                    }
+                }
+            server.use {
+                val store = store(server.baseUrl)
+                try {
+                    assertTrue(store.refresh() is Outcome.Success)
+                    assertTrue(store.startDownload(addon) is Outcome.Success)
+                    val done = withTimeout(60_000) { store.data.first { it.transfers.isEmpty() && it.problems.isEmpty() && File(paths.root, addon).isDirectory } }
+
+                    assertEquals("the add-on alone is not a region pack", emptyList<String>(), done.installed.map { it.region })
+                    assertEquals(ADDON_VERSION, CurrentPointer.read(File(paths.root, addon)))
+                    assertNoWorkDirectory()
+                    assertTrue(RegionMountResolver(paths.root).elevationAddon(CatalogFixture.LVIV) != null)
+
+                    assertEquals(Outcome.Success(Unit), store.remove(CatalogFixture.LVIV))
+                    assertFalse(File(paths.root, addon).exists())
+                } finally {
+                    store.close()
+                }
+            }
+        }
+
+    private fun addonPackage(
+        addon: String,
+        version: String,
+    ): ByteArray {
+        val elevation = FixturePackages.files().getValue("elevation.bin")
+        val manifest =
+            """
+            {"region": "$addon", "version": "$version", "packageFormat": 1,
+             "osmTimestamp": "2026-11-03T21:24:23Z",
+             "pipeline": {"addon": {"id": "elevation-30m", "region": "${CatalogFixture.LVIV}"}},
+             "components": [{"kind": "elevation", "file": "elevation.bin", "format": "elevation-grid",
+               "formatVersion": 1, "version": "$version", "bytes": ${elevation.size},
+               "sha256": "${sha256Hex(elevation)}", "standIn": false}]}
+            """.trimIndent()
+        return FixturePackages.zip(
+            linkedMapOf(
+                RegionIdentifiers.MANIFEST_FILE to manifest.toByteArray(),
+                "elevation.bin" to elevation,
+            ),
+        )
+    }
+
+    private fun sha256Hex(bytes: ByteArray): String =
+        MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+
     private suspend fun store(baseUrl: String): RegionStore {
         val store =
             RegionStore(
@@ -404,6 +464,7 @@ class RegionStoreLocalServerTest {
     private companion object {
         val SWITCH: SwitchId = SwitchId("network.region_updates")
         val PACKAGE_PATH = Regex("""/([a-z0-9][a-z0-9._-]*)/([a-z0-9][a-z0-9._-]*)/package\.zip""")
+        const val ADDON_VERSION = "2026-01"
         const val SLOW_CHUNK_BYTES = 4096
         const val SLOW_CHUNK_DELAY_MS = 40L
     }

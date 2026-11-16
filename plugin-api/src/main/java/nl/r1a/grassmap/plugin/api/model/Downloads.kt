@@ -101,7 +101,20 @@ data class CatalogAddon(
 ) {
     val kind: CatalogPartKind
         get() = CatalogPartKind.fromWire(id)
+
+    /**
+     * The package id of this add-on for [region]: the name its directory and
+     * its server path carry, and the id the downloads API takes (T-0509).
+     */
+    fun packageId(region: String): String = "$region-$id"
 }
+
+/** What a download id stands for in the catalogue: the version and size to fetch. */
+data class CatalogDownload(
+    val id: String,
+    val version: String,
+    val bytes: Long,
+)
 
 /**
  * One catalogue entry (server-protocol.md section 2).
@@ -172,6 +185,19 @@ data class RegionCatalog(
 
     /** The region entries, in catalogue order. */
     fun entries(): List<CatalogRegion> = regions.filterNot { it.isWorld }
+
+    /**
+     * What [id] downloads: a region entry, or the package of one region's
+     * add-on (T-0509). Null when the catalogue offers neither.
+     */
+    fun download(id: String): CatalogDownload? {
+        regions.firstOrNull { it.id == id }?.let { return CatalogDownload(it.id, it.version, it.bytes) }
+        for (region in regions) {
+            val addon = region.addons.firstOrNull { it.packageId(region.id) == id } ?: continue
+            return CatalogDownload(id, addon.version, addon.bytes)
+        }
+        return null
+    }
 }
 
 /** One installed region package as the downloads screen reads it. */
@@ -347,6 +373,13 @@ data class DownloadPartRow(
     val version: String,
     val bytes: Long,
     val installed: Boolean,
+    /**
+     * The id that downloads this part on its own, or null for a part that
+     * travels with its region's package. Only an add-on has one (T-0509).
+     */
+    val downloadId: String? = null,
+    /** The transfer of [downloadId], or null when nothing is in flight for it. */
+    val transfer: DownloadTransfer? = null,
 )
 
 /**
@@ -404,6 +437,8 @@ data class FirstRunOffer(
     val bytes: Long,
     val parts: List<DownloadPartRow> = emptyList(),
     val installed: Boolean = false,
+    /** The id the offer's download button sends, when it differs from [region] (an add-on). */
+    val downloadId: String? = null,
 ) {
     fun name(preferUkrainian: Boolean): String? =
         if (preferUkrainian) {

@@ -28,6 +28,7 @@ import nl.r1a.grassmap.plugin.api.model.DownloadsDefaults
 import nl.r1a.grassmap.plugin.api.model.InstalledPack
 import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
 import nl.r1a.grassmap.plugin.api.model.RegionProblem
+import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -184,11 +185,7 @@ class RegionStore(
         if (!RegionIdentifiers.isSafeSegment(region)) {
             return Outcome.Failure(AppError.InvalidInput)
         }
-        val entry =
-            mutable.value.catalog
-                ?.regions
-                ?.firstOrNull { it.id == region }
-                ?: return Outcome.Failure(AppError.NotFound)
+        val entry = mutable.value.catalog?.download(region) ?: return Outcome.Failure(AppError.NotFound)
         return claimMutex.withLock {
             if (mutable.value.transfer(region) != null) {
                 return@withLock Outcome.Success(Unit)
@@ -268,10 +265,12 @@ class RegionStore(
         if (mutable.value.transfer(region) != null) {
             return Outcome.Failure(AppError.InvalidInput)
         }
-        val directory = paths.regionDirectory(region)
+        // An add-on is useless without its region, so removing the region takes it along.
+        val directories =
+            listOf(region, RegionIdentifiers.elevationAddonPackage(region)).map { paths.regionDirectory(it) }
         val removed =
             try {
-                !directory.exists() || directory.deleteRecursively()
+                directories.all { !it.exists() || it.deleteRecursively() }
             } catch (exception: SecurityException) {
                 false
             }
@@ -350,10 +349,7 @@ class RegionStore(
 
     private suspend fun runDownload(region: String) {
         awaitAllowedNetwork(region)
-        val entry =
-            mutable.value.catalog
-                ?.regions
-                ?.firstOrNull { it.id == region }
+        val entry = mutable.value.catalog?.download(region)
         val flag = AtomicBoolean(false)
         val claimed =
             entry != null &&
@@ -510,24 +506,31 @@ class RegionStore(
     /** The installed packages, read from the pointer, manifest and headers only. */
     private suspend fun readInstalled(): List<InstalledPack> =
         withContext(Dispatchers.IO) {
-            val mounts = RegionMountResolver(paths.root).resolveAll()
-            mounts.installed
+            val resolver = RegionMountResolver(paths.root)
+            resolver
+                .resolveAll()
+                .installed
                 .sortedBy { it.region }
                 .map { mounted ->
+                    val addon = resolver.elevationAddon(mounted.region)
                     InstalledPack(
                         region = mounted.region,
                         version = mounted.version,
-                        bytes = mounted.manifest.totalBytes,
+                        bytes = mounted.manifest.totalBytes + (addon?.let { addonBytes(it) } ?: 0L),
                         parts =
-                            mounted.manifest.components
-                                .map { CatalogPartKind.fromWire(it.kind) }
-                                .filter { it != CatalogPartKind.OTHER }
-                                .distinct(),
+                            (
+                                mounted.manifest.components.map { CatalogPartKind.fromWire(it.kind) } +
+                                    listOfNotNull(CatalogPartKind.ELEVATION_30M.takeIf { addon != null })
+                            ).filter { it != CatalogPartKind.OTHER }.distinct(),
                         dataDate = RegionCatalogParser.dataDateOf(mounted.version),
                         build = (mounted.routing as? RoutingPart.Directory)?.build,
                     )
                 }
         }
+
+    /** The size of the add-on's one component, read from the file the resolver checked. */
+    private fun addonBytes(directory: File): Long =
+        directory.listFiles()?.filter { it.isFile && it.name != RegionIdentifiers.MANIFEST_FILE }?.sumOf { it.length() } ?: 0L
 
     private fun problemOf(
         error: AppError,

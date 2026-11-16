@@ -45,7 +45,8 @@ object RegionManifestParser {
             } else {
                 null
             }
-        val components = parseComponents(root["components"]) ?: return corrupt()
+        val components =
+            parseComponents(root["components"], RegionIdentifiers.isAddonPackage(region)) ?: return corrupt()
         return Outcome.Success(
             RegionManifest(
                 region = region,
@@ -65,7 +66,10 @@ object RegionManifestParser {
             null
         }
 
-    private fun parseComponents(element: JsonElement?): List<RegionComponent>? {
+    private fun parseComponents(
+        element: JsonElement?,
+        isAddon: Boolean,
+    ): List<RegionComponent>? {
         val array = element as? JsonArray ?: return null
         if (array.isEmpty()) {
             return null
@@ -80,6 +84,11 @@ object RegionManifestParser {
         }
         if (present.map { it.file }.toSet().size != present.size) {
             return null
+        }
+        if (isAddon) {
+            // An add-on package carries one extra grid for a region that is
+            // installed on its own, so it has no search section to require.
+            return present.takeIf { it.size == 1 && it.single().kind == ELEVATION_KIND }
         }
         // The reader refuses a search section without its feature component, so
         // a package that omits it must not install and then fail search and
@@ -212,6 +221,7 @@ object RegionManifestParser {
     private const val TYPE_FILE = "file"
     private const val TYPE_DIRECTORY = "directory"
     private const val FEATURES_KIND = "features"
+    private const val ELEVATION_KIND = "elevation"
     private const val FEATURES_FORMAT = "place-features"
     private const val FEATURES_FORMAT_VERSION = 1
 }

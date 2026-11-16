@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 import zipfile
+from unittest import mock
 from contextlib import redirect_stdout
 from datetime import datetime, timezone
 from pathlib import Path
@@ -111,6 +112,36 @@ class UsageTest(unittest.TestCase):
             self.assertEqual(usage.seconds_to_next_month(), 11 * 86400)
             clock[0] = datetime(2026, 12, 1, tzinfo=timezone.utc)
             self.assertEqual(UsageStore(Path(temp), now=lambda: clock[0]).used("k"), 0)
+
+
+class UsageFileTest(unittest.TestCase):
+    def test_a_corrupt_file_is_set_aside_and_counting_restarts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "usage.json"
+            path.write_bytes(b"\xff{broken")
+            usage = UsageStore(Path(temp))
+            self.assertEqual(usage.used("k"), 0)
+            self.assertFalse(path.exists())
+            self.assertEqual(len(list(Path(temp).glob("usage.json.corrupt-*"))), 1)
+
+    def test_non_integer_entries_are_ignored_and_the_rest_kept(self) -> None:
+        month = datetime.now(timezone.utc).strftime("%Y-%m")
+        data = {"good": {month: 5}, "bad": {month: "lots"}, "flag": {month: True}, "odd": 3}
+        with tempfile.TemporaryDirectory() as temp:
+            (Path(temp) / "usage.json").write_text(json.dumps(data))
+            usage = UsageStore(Path(temp))
+            self.assertEqual(
+                [usage.used(key) for key in ("good", "bad", "flag", "odd")], [5, 0, 0, 0]
+            )
+
+    def test_a_flush_syncs_the_file_and_the_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            usage = UsageStore(Path(temp))
+            with mock.patch("os.fsync") as fsync:
+                usage.add("k", 7)
+                usage.flush()
+            self.assertGreaterEqual(fsync.call_count, 2)
+            self.assertEqual(UsageStore(Path(temp)).used("k"), 7)
 
 
 class ReservationTest(unittest.TestCase):

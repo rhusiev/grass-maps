@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import calendar
 import json
+import logging
 import os
 import threading
 import time
@@ -13,6 +14,7 @@ from pathlib import Path
 
 FLUSH_INTERVAL_S = 2.0
 USAGE_FILE = "usage.json"
+LOG = logging.getLogger("gm_server")
 
 
 def _utc_now() -> datetime:
@@ -101,15 +103,42 @@ class UsageStore:
         if self._path is None:
             return
         try:
-            data = json.loads(self._path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+            raw = self._path.read_bytes()
+        except FileNotFoundError:
             return
-        if isinstance(data, dict):
-            self._used = {
-                str(key): {str(m): int(b) for m, b in months.items()}
-                for key, months in data.items()
-                if isinstance(months, dict)
-            }
+        except OSError as exc:
+            LOG.error("cannot read %s, counting from zero: %s", self._path, exc)
+            return
+        try:
+            data = json.loads(raw.decode("utf-8"))
+            if not isinstance(data, dict):
+                raise ValueError("the top level is not an object")
+        except ValueError as exc:
+            self._set_aside(exc)
+            return
+        self._used = self._valid_counters(data)
+
+    def _set_aside(self, reason: Exception) -> None:
+        stamp = self._now().strftime("%Y%m%dT%H%M%SZ")
+        aside = self._path.with_name(f"{USAGE_FILE}.corrupt-{stamp}")
+        try:
+            os.replace(self._path, aside)
+        except OSError:
+            aside = self._path
+        LOG.error("usage file is corrupt (%s), quotas restart from zero, kept as %s", reason, aside)
+
+    def _valid_counters(self, data: dict) -> dict[str, dict[str, int]]:
+        used: dict[str, dict[str, int]] = {}
+        for key, months in data.items():
+            if not isinstance(months, dict):
+                LOG.error("ignoring usage entry %r: not an object", key)
+                continue
+            for month, count in months.items():
+                if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+                    LOG.error("ignoring usage entry %r %r: not a byte count", key, month)
+                    continue
+                used.setdefault(str(key), {})[str(month)] = count
+        return used
 
     def _write_locked(self) -> None:
         self._last_flush = time.monotonic()
@@ -124,8 +153,19 @@ class UsageStore:
         temp = self._path.with_suffix(".tmp")
         try:
             self._path.parent.mkdir(parents=True, exist_ok=True)
-            temp.write_text(json.dumps(self._used), encoding="utf-8")
+            with temp.open("w", encoding="utf-8") as out:
+                out.write(json.dumps(self._used))
+                out.flush()
+                os.fsync(out.fileno())
             os.replace(temp, self._path)
+            self._sync_directory()
             self._dirty = False
         except OSError:
             pass
+
+    def _sync_directory(self) -> None:
+        descriptor = os.open(self._path.parent, os.O_RDONLY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)

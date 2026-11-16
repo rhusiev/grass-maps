@@ -90,5 +90,21 @@ class ColdStartMetricsTest(unittest.TestCase):
         self.assertEqual(metrics["wait_time_ms"]["max"], 24927)
 
 
+class ErrorExcerptTest(unittest.TestCase):
+    def test_short_output_is_kept_whole(self) -> None:
+        self.assertEqual(android_benchmark.error_excerpt("Failure [X]"), "Failure [X]")
+
+    def test_long_output_keeps_the_exception_message_at_the_head(self) -> None:
+        message = "java.lang.IllegalStateException: the reason"
+        frames = "\n".join(f"\tat frame{i}(File.java:{i})" for i in range(200))
+        excerpt = android_benchmark.error_excerpt(f"{message}\n{frames}")
+        self.assertTrue(excerpt.startswith(message))
+        self.assertTrue(excerpt.endswith("frame199(File.java:199)"))
+        self.assertLess(
+            len(excerpt),
+            android_benchmark.ERROR_HEAD_CHARS + android_benchmark.ERROR_TAIL_CHARS + 10,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -58,8 +58,24 @@ DISPLAY_POLL_S = 2.0
 INTERACTION_STEPS = ("lock 1", "lock 0") * 3
 
 
+ERROR_HEAD_CHARS = 600
+ERROR_TAIL_CHARS = 200
+
+
 class BenchmarkError(RuntimeError):
     """A measurement step failed or timed out."""
+
+
+def error_excerpt(detail: str) -> str:
+    """The head and tail of a command's error output.
+
+    A Java exception puts its message on the first line and the frames after
+    it, so a tail-only excerpt kept the frames and lost the reason (run
+    43863749676: `adb install` failed and the log showed only stack frames).
+    """
+    if len(detail) <= ERROR_HEAD_CHARS + ERROR_TAIL_CHARS:
+        return detail
+    return f"{detail[:ERROR_HEAD_CHARS]}\n...\n{detail[-ERROR_TAIL_CHARS:]}"
 
 
 def run(command: list[str], timeout_s: float, check: bool = True) -> str:
@@ -74,9 +90,9 @@ def run(command: list[str], timeout_s: float, check: bool = True) -> str:
     except subprocess.TimeoutExpired as exc:
         raise BenchmarkError(f"timeout after {timeout_s:.0f}s: {' '.join(command)}") from exc
     if check and result.returncode != 0:
-        detail = (result.stderr or result.stdout).strip()
         raise BenchmarkError(
-            f"exit {result.returncode}: {' '.join(command)}\n{detail[-600:]}"
+            f"exit {result.returncode}: {' '.join(command)}\n"
+            f"{error_excerpt((result.stderr or result.stdout).strip())}"
         )
     return result.stdout
 

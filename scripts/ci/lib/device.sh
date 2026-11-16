@@ -41,17 +41,32 @@ wait_for_package_manager() {
 # install services are ready. Calls made in that window fail with
 # "cmd: Failure calling service ...: Broken pipe (32)", which is what made
 # the benchmark and smoke jobs fail right after boot. Probe both services.
+#
+# One answer is not enough: on the hosted API 35 runner the system server
+# answered, then restarted, and the next calls found no `settings` or
+# `overlay` service and `adb install` failed (run 43863749676). The services
+# must answer SYSTEM_SERVICES_STABLE_PROBES times in a row.
+SYSTEM_SERVICES_STABLE_PROBES=3
+
 wait_for_system_services() {
     local seconds="$1"
     shift
     local deadline=$((SECONDS + seconds))
-    until timeout 10 adb "$@" shell pm path android >/dev/null 2>&1 &&
-        timeout 10 adb "$@" shell settings get global window_animation_scale >/dev/null 2>&1; do
-        if ((SECONDS >= deadline)); then
-            echo "FAIL: system services were not ready in ${seconds}s" >&2
-            return 1
+    local answered=0
+    while ((answered < SYSTEM_SERVICES_STABLE_PROBES)); do
+        if timeout 10 adb "$@" shell pm path android >/dev/null 2>&1 &&
+            timeout 10 adb "$@" shell settings get global window_animation_scale >/dev/null 2>&1; then
+            answered=$((answered + 1))
+        else
+            answered=0
         fi
-        sleep 2
+        if ((answered < SYSTEM_SERVICES_STABLE_PROBES)); then
+            if ((SECONDS >= deadline)); then
+                echo "FAIL: system services did not answer ${SYSTEM_SERVICES_STABLE_PROBES} times in a row in ${seconds}s" >&2
+                return 1
+            fi
+            sleep 2
+        fi
     done
 }
 

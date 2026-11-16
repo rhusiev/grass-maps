@@ -557,20 +557,52 @@ class Adb:
 
 def airplane_mode(adb: Adb) -> list[str]:
     """Turn every radio off. The map reads local files only either way."""
-    commands = [
-        ("cmd", "connectivity", "airplane-mode", "enable"),
-        ("settings", "put", "global", "airplane_mode_on", "1"),
-        ("am", "broadcast", "-a", "android.intent.action.AIRPLANE_MODE", "--ez", "state", "true"),
-        ("svc", "wifi", "disable"),
-        ("svc", "data", "disable"),
-    ]
+    return _run_radio_commands(
+        adb,
+        [
+            ("cmd", "connectivity", "airplane-mode", "enable"),
+            ("settings", "put", "global", "airplane_mode_on", "1"),
+            ("am", "broadcast", "-a", "android.intent.action.AIRPLANE_MODE", "--ez", "state", "true"),
+            ("svc", "wifi", "disable"),
+            ("svc", "data", "disable"),
+        ],
+    )
+
+
+def radios_on(adb: Adb) -> list[str]:
+    """Leave the device online, for a profile that fetches tiles over loopback.
+
+    The map library mirrors Android's connectivity into the engine. With no
+    network the engine holds every HTTP tile request and never sends it, so
+    the raster fixture on `127.0.0.1` is never fetched. The app's privacy gate,
+    not airplane mode, keeps the capture off the internet: it rewrites every URL
+    outside the active source to `local://network-gate-blocked`.
+    """
+    return _run_radio_commands(
+        adb,
+        [
+            ("cmd", "connectivity", "airplane-mode", "disable"),
+            ("settings", "put", "global", "airplane_mode_on", "0"),
+            ("am", "broadcast", "-a", "android.intent.action.AIRPLANE_MODE", "--ez", "state", "false"),
+            ("svc", "wifi", "enable"),
+            ("svc", "data", "enable"),
+        ],
+    )
+
+
+def radio_conditions(adb: Adb, raster_tiles: "RasterTileServer | None") -> list[str]:
+    """The radio state a capture runs in: offline, or online for the tile fixture."""
+    return airplane_mode(adb) if raster_tiles is None else radios_on(adb)
+
+
+def _run_radio_commands(adb: Adb, commands: list[tuple[str, ...]]) -> list[str]:
     for command in commands:
         try:
             adb.shell(*command, timeout_s=20, check=False)
         except GoldenError as error:
             # A slow software emulator can miss the 20 s radio command budget.
-            # The fixture reads local files only, so the capture continues and
-            # the condition list names the command that did not answer.
+            # The capture continues and the condition list names the command
+            # that did not answer.
             print(f"warning: radio setup did not finish: {error}", file=sys.stderr)
     return ["adb shell " + " ".join(command) for command in commands]
 
@@ -1249,7 +1281,7 @@ def capture(
     if profile == "oblast" and not (output / "region.json").exists():
         raise GoldenError("oblast capture needs the installed region package")
     conditions = {
-        "airplane_mode": airplane_mode(adb),
+        "airplane_mode": radio_conditions(adb, raster_tiles),
         "system_dialogs": prepare_device(adb),
     }
     if output.exists():

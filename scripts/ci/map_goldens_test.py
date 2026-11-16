@@ -126,6 +126,23 @@ class AirplaneModeTest(unittest.TestCase):
         self.assertTrue(any("svc wifi disable" in command for command in commands))
 
 
+class RadioConditionsTest(unittest.TestCase):
+    def test_the_raster_fixture_capture_keeps_the_device_online(self) -> None:
+        adb = mock.Mock()
+
+        commands = map_goldens.radio_conditions(adb, mock.Mock())
+
+        self.assertIn("adb shell svc wifi enable", commands)
+        self.assertFalse(any("airplane_mode_on 1" in command for command in commands))
+
+    def test_other_profiles_stay_in_airplane_mode(self) -> None:
+        adb = mock.Mock()
+
+        commands = map_goldens.radio_conditions(adb, None)
+
+        self.assertIn("adb shell svc wifi disable", commands)
+
+
 class InvokeStyleTest(unittest.TestCase):
     def test_socket_timeout_is_retried(self) -> None:
         client = FakeClient([TimeoutError("timed out"), "style=standard-dark loaded=true idle=true"])

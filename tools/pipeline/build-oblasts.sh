@@ -205,6 +205,7 @@ fi
 if [[ ! -f "$TABLE" ]]; then
     echo "Exporting the admin_level=4 boundaries"
     admin="$WORK/boundaries/admin-level-4.geojson"
+    mkdir -p "$WORK/boundaries"
     podman run --rm -v "$DATA_DIR":/in:ro,Z -v "$WORK/boundaries":/out:Z "$GDAL_IMAGE" \
         ogr2ogr -f GeoJSON /out/admin-level-4.geojson "/in/$(basename "$PBF")" multipolygons \
         -where "boundary = 'administrative' AND admin_level = '4'"

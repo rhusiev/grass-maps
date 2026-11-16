@@ -35,6 +35,8 @@ include(
     ":app",
     ":plugins:example",
     ":plugins:style-standard",
+    ":plugins:style-touring",
+    ":plugins:layers-panel",
     ":plugins:synthetic-data",
     ":plugins:gpx",
     ":plugins:info-widgets",

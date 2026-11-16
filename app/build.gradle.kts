@@ -227,6 +227,8 @@ dependencies {
     implementation(project(":tracks"))
     implementation(project(":ui-shell"))
     implementation(project(":plugins:style-standard"))
+    implementation(project(":plugins:style-touring"))
+    implementation(project(":plugins:layers-panel"))
     implementation(project(":plugins:gpx"))
     implementation(project(":plugins:info-widgets"))
     implementation(project(":plugins:map-controls"))

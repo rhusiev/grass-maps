@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -41,7 +40,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -130,6 +128,9 @@ import nl.r1a.grassmap.plugins.guidance.ui.GuidancePanelContent
 import nl.r1a.grassmap.plugins.guidance.ui.GuidanceStatus
 import nl.r1a.grassmap.plugins.guidance.ui.guidancePanel
 import nl.r1a.grassmap.plugins.info.widgets.InfoWidgetsContract
+import nl.r1a.grassmap.plugins.layers.panel.LayersButton
+import nl.r1a.grassmap.plugins.layers.panel.MapStyleChoice
+import nl.r1a.grassmap.plugins.layers.panel.MapStylePanel
 import nl.r1a.grassmap.plugins.map.controls.CameraMode
 import nl.r1a.grassmap.plugins.map.controls.ScaleBar
 import nl.r1a.grassmap.plugins.map.controls.ScaleBarReading
@@ -187,7 +188,8 @@ import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.pow
 
-private val STYLE_PLUGIN = PluginId("style.standard")
+private val STANDARD_STYLE_PLUGIN = PluginId("style.standard")
+private val TOURING_STYLE_PLUGIN = PluginId("style.touring")
 private val STANDARD = StyleId("standard")
 private val TOURING = StyleId("touring")
 private const val TAG = "GrassMapsMap"
@@ -209,11 +211,6 @@ private const val BANNER_STACK_GAP_DP = 8
 private const val BANNER_TICK_MILLIS = 1_000L
 private const val CONTOURS_PANEL_TOP_DP = 80
 private const val PANEL_GAP_DP = 8
-private val LAYERS_BUTTON_BACKGROUND = Color(0xCC000000)
-private const val LAYERS_BUTTON_CORNER_DP = 8
-private const val LAYERS_BUTTON_HORIZONTAL_DP = 12
-private const val LAYERS_BUTTON_VERTICAL_DP = 6
-private const val LAYERS_BUTTON_FONT_SP = 13
 private const val METRE_DECIMALS = 1
 private const val KILOMETRE_DECIMALS = 2
 private const val WHOLE_VALUE_MIN = 1.0
@@ -424,6 +421,9 @@ private fun MapContent(
     // only the search markers, which have to follow the map, collect it.
     val cameraNow: () -> Camera = remember(surface) { { surface.host.camera.value } }
     val contoursEnabled by container.contoursSettings.enabled.collectAsState()
+    val styleChoice by container.mapStyleSettings.active.collectAsState()
+    val activeStyle = if (styleChoice == MapStyleChoice.TOURING) bundle.touring else bundle.style
+    val activeLayers = if (styleChoice == MapStyleChoice.TOURING) bundle.touringLayers else bundle.layers
     val switchStates by container.privacyStates.collectAsState(initial = container.privacySwitchStates())
     val onlineTilesEnabled = switchStates.firstOrNull { it.switch == NetworkSwitches.onlineTiles }?.enabled == true
     val rasterLayer by container.rasterSettings.active.collectAsState()
@@ -804,11 +804,23 @@ private fun MapContent(
                         .padding(top = CONTOURS_PANEL_TOP_DP.dp, start = BAR_PADDING_DP.dp),
                 verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
             ) {
-                LayersToggle(
+                LayersButton(
                     open = layersOpen,
                     onToggle = { layersOpen = !layersOpen },
                 )
                 if (layersOpen) {
+                    MapStylePanel(
+                        active = styleChoice,
+                        onSelect = { choice ->
+                            scope.launch {
+                                withContext(Dispatchers.IO) {
+                                    container.mapStyleSettings.select(choice)
+                                }.onFailure { error ->
+                                    Log.w(TAG, "map style not saved: $error")
+                                }
+                            }
+                        },
+                    )
                     ContoursLayerPanel(
                         enabled = contoursEnabled,
                         onEnabledChange = { enabled ->
@@ -1788,18 +1800,21 @@ private fun MapContent(
     }
     LaunchedEffect(surface.host, bundle) {
         launch(start = CoroutineStart.UNDISPATCHED) { harness.run(surface, bundle) }
-        surface.host.setStyle(bundle.style).onFailure { error ->
+    }
+    LaunchedEffect(surface.host, activeStyle) {
+        surface.host.setStyle(activeStyle).onFailure { error ->
             Log.w(TAG, "style rejected: $error")
         }
-        surface.host.applyStyleDiff(StyleDiff(bundle.style.id, bundle.layers)).onFailure { error ->
+        surface.host.applyStyleDiff(StyleDiff(activeStyle.id, activeLayers)).onFailure { error ->
             Log.w(TAG, "style layers rejected: $error")
         }
         Log.i(
             TAG,
-            "map-ready region=${bundle.sources.regionName} contours=${bundle.sources.hasContours}",
+            "map-ready region=${bundle.sources.regionName} contours=${bundle.sources.hasContours} " +
+                "style=${activeStyle.id.value}",
         )
     }
-    LaunchedEffect(surface.host, bundle.style.id, contoursEnabled) {
+    LaunchedEffect(surface.host, activeStyle.id, contoursEnabled) {
         // The synthetic DataSource publishes a contour-index line from the same
         // archive as the overlay, so the "Contours" switch owns it too. Install
         // it first so the overlay's index line stays above the seam.
@@ -1812,17 +1827,17 @@ private fun MapContent(
                 Log.w(TAG, "data source layer not applied: ${installed.error}")
             }
         }
-        when (val contours = container.contours.apply(surface.host, bundle.style.id, contoursEnabled)) {
+        when (val contours = container.contours.apply(surface.host, activeStyle.id, contoursEnabled)) {
             is Outcome.Success -> Log.i(TAG, "contour layers ready enabled=$contoursEnabled")
             is Outcome.Failure -> Log.w(TAG, "contour layers not applied: ${contours.error}")
         }
     }
-    LaunchedEffect(surface.host, bundle.style.id, onlineTilesEnabled, rasterLayer) {
+    LaunchedEffect(surface.host, activeStyle.id, onlineTilesEnabled, rasterLayer) {
         when (
             val installed =
                 container.rasterTiles.apply(
                     host = surface.host,
-                    styleId = bundle.style.id,
+                    styleId = activeStyle.id,
                     enabled = onlineTilesEnabled,
                     layer = rasterLayer,
                 )
@@ -2352,43 +2367,6 @@ private fun formatDistanceValue(
     decimals: Int,
 ): String = String.format(Locale.getDefault(), "%.${decimals}f", value)
 
-/**
- * The one small button the layers controls hide behind.
- *
- * The contours and raster cards are closed until this is pressed. A card that
- * is always open covers the map's centre on a phone, and it sat inside the map
- * goldens' comparison window (T-0514 cadence). The cards themselves are
- * unchanged and their switches are the persisted state; this button only
- * decides whether they are on screen. T-0109's layers sheet replaces it.
- */
-@Suppress("ktlint:standard:function-naming")
-@Composable
-private fun LayersToggle(
-    open: Boolean,
-    onToggle: () -> Unit,
-) {
-    BasicText(
-        text = stringResource(R.string.map_layers_toggle),
-        style =
-            TextStyle(
-                color = Color.White,
-                fontSize = LAYERS_BUTTON_FONT_SP.sp,
-            ),
-        modifier =
-            Modifier
-                .clip(RoundedCornerShape(LAYERS_BUTTON_CORNER_DP.dp))
-                .background(LAYERS_BUTTON_BACKGROUND)
-                .toggleable(
-                    value = open,
-                    role = Role.Button,
-                    onValueChange = { onToggle() },
-                ).padding(
-                    horizontal = LAYERS_BUTTON_HORIZONTAL_DP.dp,
-                    vertical = LAYERS_BUTTON_VERTICAL_DP.dp,
-                ),
-    )
-}
-
 @Suppress("ktlint:standard:function-naming")
 @Composable
 private fun SelectedPointLabel(
@@ -2506,20 +2484,30 @@ private suspend fun loadBundle(
     // screen collects them, so a settings read never lands on Main.
     container.contoursSettings.isEnabled()
     container.rasterSettings.current()
+    container.mapStyleSettings.current()
     val sources = MapSources.resolve(context, container.regionsRoot)
+    val standard = loadStyle(container, STANDARD_STYLE_PLUGIN, STANDARD) ?: return null
+    // A missing Touring plugin leaves Trail drawing the Standard style.
+    val touring = loadStyle(container, TOURING_STYLE_PLUGIN, TOURING) ?: standard
+    return MapBundle(
+        style = standard.first,
+        layers = standard.second,
+        touring = touring.first,
+        touringLayers = touring.second,
+        sources = sources,
+    )
+}
+
+private suspend fun loadStyle(
+    container: AppContainer,
+    plugin: PluginId,
+    styleId: StyleId,
+): Pair<StyleSpec, List<SlottedLayer>>? {
     val result =
-        container.providerRegistry.invoke(STYLE_PLUGIN, MapLayerContract.REFERENCE) { provider ->
+        container.providerRegistry.invoke(plugin, MapLayerContract.REFERENCE) { provider ->
             val mapLayers = provider as? MapLayerProvider ?: return@invoke null
-            val styles = mapLayers.styles()
-            val standard = styles.firstOrNull { it.id == STANDARD } ?: return@invoke null
-            val touring = styles.firstOrNull { it.id == TOURING } ?: standard
-            MapBundle(
-                style = standard,
-                layers = mapLayers.layers(standard.id),
-                touring = touring,
-                touringLayers = mapLayers.layers(touring.id),
-                sources = sources,
-            )
+            val style = mapLayers.styles().firstOrNull { it.id == styleId } ?: return@invoke null
+            style to mapLayers.layers(style.id)
         }
     return (result as? Outcome.Success)?.value
 }

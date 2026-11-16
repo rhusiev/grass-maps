@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.layers_panel.name">Layers panel</string>
+    <string name="plugin.layers_panel.description">The Layers button and the map style switch.</string>
+    <string name="layers_panel_button">Layers</string>
+    <string name="layers_panel_style_title">Map style</string>
+    <string name="layers_panel_style_meadow">Meadow</string>
+    <string name="layers_panel_style_meadow_hint">Everyday and city</string>
+    <string name="layers_panel_style_trail">Trail</string>
+    <string name="layers_panel_style_trail_hint">Cycling and hiking</string>
+</resources>

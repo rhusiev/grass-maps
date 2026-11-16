@@ -1,0 +1,15 @@
+{
+  "id": "map.layers-panel",
+  "name": "plugin.layers_panel.name",
+  "description": "plugin.layers_panel.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.layers.panel.LayersPanelPlugin",
+  "contributes": {},
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": []
+  },
+  "activation": []
+}

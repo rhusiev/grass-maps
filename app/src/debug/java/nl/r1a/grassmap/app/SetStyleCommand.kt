@@ -18,8 +18,10 @@ import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.MapEvent
+import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleId
+import nl.r1a.grassmap.plugin.api.model.StyleSpec
 import nl.r1a.grassmap.plugin.api.provider.MapLayerContract
 import nl.r1a.grassmap.plugin.api.provider.MapLayerProvider
 
@@ -27,7 +29,7 @@ import nl.r1a.grassmap.plugin.api.provider.MapLayerProvider
 internal val SET_STYLE_COMMAND: CommandId = CommandId("core.map.set_style")
 
 /**
- * Loads a style by id from the Standard style plugin and applies its layers in
+ * Loads a style by id from the Standard or Touring style plugin and applies its layers in
  * place. It exists only in the debug source set: the release app has no style
  * command, and theme-driven selection is T-0111.
  */
@@ -52,12 +54,8 @@ internal class SetStyleCommand(
         val styleId = parse(params) ?: return Outcome.Failure(AppError.InvalidInput)
         val host = session.hostOrNull() ?: return Outcome.Failure(AppError.NotReady)
         val requested = StyleId(styleId)
-        val bundle =
-            providers().invoke(STYLE_PLUGIN, MapLayerContract.REFERENCE) { provider ->
-                val mapLayers = provider as? MapLayerProvider ?: return@invoke null
-                val style = mapLayers.styles().firstOrNull { it.id == requested } ?: return@invoke null
-                style to mapLayers.layers(style.id)
-            }
+        val bundle = STYLE_PLUGINS.firstNotNullOfOrNull { plugin -> findStyle(plugin, requested) }
+            ?: Outcome.Success(null)
         return when (bundle) {
             is Outcome.Failure -> {
                 bundle
@@ -90,6 +88,19 @@ internal class SetStyleCommand(
         }
     }
 
+    private suspend fun findStyle(
+        plugin: PluginId,
+        requested: StyleId,
+    ): Outcome<Pair<StyleSpec, List<SlottedLayer>>?>? {
+        val found =
+            providers().invoke(plugin, MapLayerContract.REFERENCE) { provider ->
+                val mapLayers = provider as? MapLayerProvider ?: return@invoke null
+                val style = mapLayers.styles().firstOrNull { it.id == requested } ?: return@invoke null
+                style to mapLayers.layers(style.id)
+            }
+        return found.takeUnless { it is Outcome.Success && it.value == null }
+    }
+
     private fun parse(params: JsonElement): String? {
         val json = params as? JsonObject ?: return null
         val style = (json["style"] as? JsonPrimitive)?.contentOrNull ?: return null
@@ -97,7 +108,7 @@ internal class SetStyleCommand(
     }
 
     private companion object {
-        val STYLE_PLUGIN = PluginId("style.standard")
+        val STYLE_PLUGINS = listOf(PluginId("style.standard"), PluginId("style.touring"))
         const val TAG = "GrassMapsStyle"
         const val DEFAULT_IDLE_TIMEOUT_MS = 10_000L
     }

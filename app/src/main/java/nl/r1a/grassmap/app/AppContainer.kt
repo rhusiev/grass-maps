@@ -159,6 +159,7 @@ class AppContainer(
     private val onlineSearchSettingsFileProvider: () -> File? = { null },
     private val contoursSettingsFileProvider: () -> File? = { null },
     private val rasterSettingsFileProvider: () -> File? = { null },
+    private val mapStyleSettingsFileProvider: () -> File? = { null },
     private val routeHistoryFileProvider: () -> File? = { null },
     private val routingOptionsFileProvider: () -> File? = { null },
     private val alertSettingsFileProvider: () -> File? = { null },
@@ -256,6 +257,14 @@ class AppContainer(
      */
     @Volatile
     var contoursOverride: Boolean? = null
+
+    /**
+     * The map style the layers panel switches (T-0109). Construction reads the
+     * settings file, so the map bundle resolves it off Main.
+     */
+    val mapStyleSettings: MapStyleSettings by lazy {
+        MapStyleSettings(mapStyleSettingsFileProvider())
+    }
 
     /**
      * The contour layer switch (T-0417). Construction reads the settings file,

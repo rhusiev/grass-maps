@@ -30,8 +30,8 @@ private const val PANEL_FONT_SP = 13
 /**
  * The minimal layers panel for the contour overlay.
  *
- * T-0109 owns the full layers panel and the style switch. Until that lands, the
- * contour row is the one layer a user can turn off, and it persists through the
+ * The Layers button and the style switch live in `plugins/layers-panel`
+ * (T-0109). This card is one layer row below them. It persists through the
  * host's `ContoursSettings`. The panel is chrome: the plugin supplies the row
  * and the app supplies the state and the callback.
  */

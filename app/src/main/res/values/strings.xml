@@ -2,7 +2,9 @@
 <resources>
     <string name="app_name">Grass Maps</string>
     <string name="plugin.style_standard.name">Standard map style</string>
-    <string name="plugin.style_standard.description">The Standard and Touring map styles.</string>
+    <string name="plugin.style_standard.description">The Standard map style (Meadow).</string>
+    <string name="plugin.style_touring.name">Touring map style</string>
+    <string name="plugin.style_touring.description">The Touring map style (Trail).</string>
     <string name="plugin.data_synthetic.name">Synthetic data source</string>
     <string name="plugin.data_synthetic.description">Synthetic elevation attributes and a real contour layer for the DataSource seam.</string>
     <string name="plugin.file_gpx.name">GPX files</string>
@@ -15,7 +17,6 @@
     <string name="plugin.point_info.description">Distance and azimuth from your position to a point you press and hold.</string>
     <string name="plugin.point_info.selection">Selected point</string>
 
-    <string name="map_layers_toggle">Layers</string>
 
     <string name="control_zoom_in_label">+</string>
     <string name="control_zoom_in_description">Zoom in</string>

@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.ui.shell
 
+import nl.r1a.grassmap.plugin.api.provider.RouteAttribute
 import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 import nl.r1a.grassmap.plugin.api.provider.RoutePreference
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
@@ -16,6 +17,7 @@ class RoutePreferencesContentTest {
     fun theEntrySaysChangedWhenTheRouteDiffersFromTheProfile() {
         val content =
             routePreferencesEntryContent(
+                profile = RouteProfile.Bike,
                 profilePreferences = PROFILE,
                 overridePreferences = OVERRIDE,
                 expanded = false,
@@ -27,7 +29,7 @@ class RoutePreferencesContentTest {
         assertEquals("Open route preferences", content.description)
 
         val expanded =
-            routePreferencesEntryContent(PROFILE, OVERRIDE, expanded = true, strings = MapStrings(ENGLISH))
+            routePreferencesEntryContent(RouteProfile.Bike, PROFILE, OVERRIDE, expanded = true, strings = MapStrings(ENGLISH))
 
         assertEquals("Close route preferences", expanded.description)
     }
@@ -35,9 +37,21 @@ class RoutePreferencesContentTest {
     @Test
     fun theEntryShowsTheProfileSetCountWithoutARouteOverride() {
         val withSetAttributes =
-            routePreferencesEntryContent(PROFILE, overridePreferences = null, expanded = false, strings = MapStrings(ENGLISH))
+            routePreferencesEntryContent(
+                RouteProfile.Bike,
+                PROFILE,
+                overridePreferences = null,
+                expanded = false,
+                strings = MapStrings(ENGLISH),
+            )
         val allNormal =
-            routePreferencesEntryContent(RouteOptions(), overridePreferences = null, expanded = false, strings = MapStrings(ENGLISH))
+            routePreferencesEntryContent(
+                RouteProfile.Bike,
+                RouteOptions(),
+                overridePreferences = null,
+                expanded = false,
+                strings = MapStrings(ENGLISH),
+            )
 
         assertEquals("2 set", withSetAttributes.summary)
         assertNull("an all-normal profile has nothing to report", allNormal.summary)
@@ -58,7 +72,7 @@ class RoutePreferencesContentTest {
         assertEquals("Reset to profile", content.reset)
         assertEquals("Apply", content.apply)
         assertEquals(
-            listOf(PreferenceAttribute.Hills, PreferenceAttribute.BusyRoads, PreferenceAttribute.RoughSurfaces),
+            listOf(RouteAttribute.Hills, RouteAttribute.BusyRoads, RouteAttribute.RoughSurfaces),
             content.rows.map { row -> row.attribute },
         )
         assertEquals(listOf("Hills", "Busy roads", "Rough surfaces"), content.rows.map { row -> row.title })
@@ -91,6 +105,64 @@ class RoutePreferencesContentTest {
         val rough = content.rows[2]
         assertEquals("Don't mind", rough.steps.single { step -> step.profileDefault }.label)
         assertEquals("Normal", rough.steps.single { step -> step.selected }.label)
+    }
+
+    @Test
+    fun eachProfileSheetShowsItsOwnSetOfRows() {
+        val expected =
+            mapOf(
+                RouteProfile.Walk to listOf(RouteAttribute.Hills, RouteAttribute.Steps),
+                RouteProfile.Hike to listOf(RouteAttribute.Hills, RouteAttribute.Steps, RouteAttribute.TrailDifficulty),
+                RouteProfile.Bike to listOf(RouteAttribute.Hills, RouteAttribute.BusyRoads, RouteAttribute.RoughSurfaces),
+                RouteProfile.Car to emptyList(),
+            )
+
+        for ((profile, attributes) in expected) {
+            val content = routePreferencesSheetContent(profile, RouteOptions(), RouteOptions(), MapStrings(ENGLISH))
+
+            assertEquals("$profile rows", attributes, content.rows.map { row -> row.attribute })
+        }
+    }
+
+    @Test
+    fun theFootSheetsTitleTheirOwnRows() {
+        val walk = routePreferencesSheetContent(RouteProfile.Walk, RouteOptions(), RouteOptions(), MapStrings(ENGLISH))
+        val hike = routePreferencesSheetContent(RouteProfile.Hike, RouteOptions(), RouteOptions(), MapStrings(ENGLISH))
+
+        assertEquals(listOf("Hills", "Steps"), walk.rows.map { row -> row.title })
+        assertEquals(listOf("Hills", "Steps", "Trail difficulty"), hike.rows.map { row -> row.title })
+        assertEquals(
+            "Steps: Don't mind",
+            hike.rows[1]
+                .steps
+                .last()
+                .description,
+        )
+    }
+
+    @Test
+    fun theEntryCountsOnlyTheAttributesTheProfileShows() {
+        val bikeOnly = RouteOptions(busyRoads = RoutePreference.Avoid, roughSurfaces = RoutePreference.Avoid)
+
+        val walk =
+            routePreferencesEntryContent(
+                RouteProfile.Walk,
+                bikeOnly,
+                overridePreferences = null,
+                expanded = false,
+                strings = MapStrings(ENGLISH),
+            )
+        val bike =
+            routePreferencesEntryContent(
+                RouteProfile.Bike,
+                bikeOnly,
+                overridePreferences = null,
+                expanded = false,
+                strings = MapStrings(ENGLISH),
+            )
+
+        assertNull("walk has no busy roads or rough surfaces row", walk.summary)
+        assertEquals("2 set", bike.summary)
     }
 
     @Test
@@ -156,6 +228,10 @@ class RoutePreferencesContentTest {
                 "route_preferences_busy_roads_detail" to "Streets with car traffic",
                 "route_preferences_rough_surfaces" to "Rough surfaces",
                 "route_preferences_rough_surfaces_detail" to "Gravel, cobbles, dirt",
+                "route_preferences_steps" to "Steps",
+                "route_preferences_steps_detail" to "Stairs on the way",
+                "route_preferences_trail_difficulty" to "Trail difficulty",
+                "route_preferences_trail_difficulty_detail" to "Hard trails and rough paths",
                 "route_preferences_avoid" to "Avoid",
                 "route_preferences_normal" to "Normal",
                 "route_preferences_dont_mind" to "Don't mind",

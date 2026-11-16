@@ -249,6 +249,7 @@ fun RoutePlanPanel(
         // override can leave the reroute in Planning or Failed, and the user
         // must be able to reset it there (T-0421).
         RoutePreferencesEntry(
+            profile = state.profile,
             profilePreferences = state.profilePreferences,
             overridePreferences = state.overridePreferences,
             strings = strings,

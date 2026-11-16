@@ -1248,6 +1248,8 @@ private fun MapContent(
                                 put("hills", options.hills.serializedValue)
                                 put("busy_roads", options.busyRoads.serializedValue)
                                 put("rough_surfaces", options.roughSurfaces.serializedValue)
+                                put("steps", options.steps.serializedValue)
+                                put("trail_difficulty", options.trailDifficulty.serializedValue)
                             },
                         )
                     }
@@ -2181,7 +2183,9 @@ private fun logRoutePreferences(
             "source=${if (overridden) "route" else "profile"} " +
             "hills=${options.hills.serializedValue} " +
             "busy_roads=${options.busyRoads.serializedValue} " +
-            "rough_surfaces=${options.roughSurfaces.serializedValue}",
+            "rough_surfaces=${options.roughSurfaces.serializedValue} " +
+            "steps=${options.steps.serializedValue} " +
+            "trail_difficulty=${options.trailDifficulty.serializedValue}",
     )
 }
 

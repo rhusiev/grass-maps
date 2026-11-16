@@ -31,12 +31,16 @@ import nl.r1a.grassmap.plugin.api.provider.RouteProfile
  * {
  *   "version": 1,
  *   "profile": "walk",
- *   "options": { "hills": "normal", "busy_roads": "normal", "rough_surfaces": "normal" },
+ *   "options": { "hills": "normal", "busy_roads": "normal", "rough_surfaces": "normal",
+ *                "steps": "normal", "trail_difficulty": "normal" },
  *   "start": { "lat": 49.84, "lon": 24.03, "label": "Rynok" },
  *   "destination": { "lat": 49.85, "lon": 24.01, "label": "" },
  *   "vias": [ { "lat": 49.845, "lon": 24.02, "label": "Park" } ]
  * }
  * ```
+ *
+ * `steps` and `trail_difficulty` came with the per-profile sets (T-0421). A
+ * file without them reads both as `normal`, so a stored route keeps opening.
  *
  * `profile` and every option value use the shared wire spelling of
  * `RouteProfile` and `RoutePreference`, so this file and the planner's state
@@ -52,6 +56,8 @@ internal object RouteSidecarJson {
     private const val HILLS = "hills"
     private const val BUSY_ROADS = "busy_roads"
     private const val ROUGH_SURFACES = "rough_surfaces"
+    private const val STEPS = "steps"
+    private const val TRAIL_DIFFICULTY = "trail_difficulty"
     private const val START = "start"
     private const val DESTINATION = "destination"
     private const val VIAS = "vias"
@@ -69,6 +75,8 @@ internal object RouteSidecarJson {
                     put(HILLS, recompute.options.hills.serializedValue)
                     put(BUSY_ROADS, recompute.options.busyRoads.serializedValue)
                     put(ROUGH_SURFACES, recompute.options.roughSurfaces.serializedValue)
+                    put(STEPS, recompute.options.steps.serializedValue)
+                    put(TRAIL_DIFFICULTY, recompute.options.trailDifficulty.serializedValue)
                 },
             )
             put(START, encodePoint(recompute.start))
@@ -132,6 +140,8 @@ internal object RouteSidecarJson {
             hills = json.preference(HILLS) ?: return null,
             busyRoads = json.preference(BUSY_ROADS) ?: return null,
             roughSurfaces = json.preference(ROUGH_SURFACES) ?: return null,
+            steps = json.preference(STEPS) ?: RoutePreference.Normal,
+            trailDifficulty = json.preference(TRAIL_DIFFICULTY) ?: RoutePreference.Normal,
         )
 
     private fun JsonObject.preference(key: String): RoutePreference? = RoutePreference.ofSerialized(string(key))

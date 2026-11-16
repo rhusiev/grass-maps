@@ -154,7 +154,7 @@ class PlanRouteCommand(
 }
 
 /**
- * Applies the three one-route preferences and routes again. The profile keeps
+ * Applies the one-route preferences and routes again. The profile keeps
  * its stored values; closing the plan drops the override (T-0421).
  */
 class SetRoutePlanPreferencesCommand(
@@ -163,20 +163,26 @@ class SetRoutePlanPreferencesCommand(
         id = RoutePlannerContract.setPreferences,
         paramsSerializer = JsonElement.serializer(),
         resultSerializer = RoutePlanState.serializer(),
-        doc = "Applies one-route preferences. Parameters: hills, busy_roads and rough_surfaces, each avoid, normal or dont_mind.",
+        doc =
+            "Applies one-route preferences. Parameters: hills, busy_roads and rough_surfaces, each avoid, normal " +
+                "or dont_mind, plus the optional steps and trail_difficulty, normal when absent.",
         policy = PLANNER_POLICY,
     ) {
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<RoutePlanState>> {
         val hills = params.preference(PARAM_HILLS) ?: return Outcome.Failure(AppError.InvalidInput)
         val busyRoads = params.preference(PARAM_BUSY_ROADS) ?: return Outcome.Failure(AppError.InvalidInput)
         val roughSurfaces = params.preference(PARAM_ROUGH_SURFACES) ?: return Outcome.Failure(AppError.InvalidInput)
-        return result(session.setPreferences(RouteOptions(hills, busyRoads, roughSurfaces)))
+        val steps = params.optionalPreference(PARAM_STEPS) ?: return Outcome.Failure(AppError.InvalidInput)
+        val trailDifficulty = params.optionalPreference(PARAM_TRAIL_DIFFICULTY) ?: return Outcome.Failure(AppError.InvalidInput)
+        return result(session.setPreferences(RouteOptions(hills, busyRoads, roughSurfaces, steps, trailDifficulty)))
     }
 
     private companion object {
         const val PARAM_HILLS = "hills"
         const val PARAM_BUSY_ROADS = "busy_roads"
         const val PARAM_ROUGH_SURFACES = "rough_surfaces"
+        const val PARAM_STEPS = "steps"
+        const val PARAM_TRAIL_DIFFICULTY = "trail_difficulty"
     }
 }
 
@@ -351,3 +357,7 @@ private fun JsonElement.integer(key: String): Int? {
 }
 
 private fun JsonElement.preference(key: String): RoutePreference? = RoutePreference.ofSerialized(text(key))
+
+/** The step under [key], [RoutePreference.Normal] when the key is absent, null when it is not a step. */
+private fun JsonElement.optionalPreference(key: String): RoutePreference? =
+    if ((this as? JsonObject)?.containsKey(key) == true) preference(key) else RoutePreference.Normal

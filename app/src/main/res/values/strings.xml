@@ -141,6 +141,10 @@
     <string name="route_preferences_busy_roads_detail">Streets with car traffic</string>
     <string name="route_preferences_rough_surfaces">Rough surfaces</string>
     <string name="route_preferences_rough_surfaces_detail">Gravel, cobbles, dirt</string>
+    <string name="route_preferences_steps">Steps</string>
+    <string name="route_preferences_steps_detail">Stairs on the way</string>
+    <string name="route_preferences_trail_difficulty">Trail difficulty</string>
+    <string name="route_preferences_trail_difficulty_detail">Hard trails and rough paths</string>
     <string name="route_preferences_avoid">Avoid</string>
     <string name="route_preferences_normal">Normal</string>
     <string name="route_preferences_dont_mind">Don\'t mind</string>

@@ -53,6 +53,22 @@ class RoutingOptionsSettingsTest {
     }
 
     @Test
+    fun theFootStepsSurviveAReloadWithTheirStableNames() {
+        val file = temporaryFile()
+        try {
+            val options = RouteOptions(steps = RoutePreference.Avoid, trailDifficulty = RoutePreference.DontMind)
+            RoutingOptionsSettings(file).set(RouteProfile.Hike, options)
+
+            val text = file.readText()
+            assertTrue(text, text.contains("\"steps\":\"avoid\""))
+            assertTrue(text, text.contains("\"trail_difficulty\":\"dont_mind\""))
+            assertEquals(options, RoutingOptionsSettings(file).forProfile(RouteProfile.Hike))
+        } finally {
+            file.parentFile?.deleteRecursively()
+        }
+    }
+
+    @Test
     fun theStepsAreIndependentWithinOneProfile() {
         val file = temporaryFile()
         try {

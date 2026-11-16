@@ -1356,11 +1356,12 @@ grades into its edges. The per-profile options, the preference mapping, the Lviv
 pack build and the 10-route ascent measurement are in `test-data/routing/` and
 `tools/pipeline/`.
 
-`RouteRequest.options` carries the chosen profile's three preferences (hills,
-busy roads and rough surfaces, each Avoid, Normal or Don't mind). The planner
+`RouteRequest.options` carries the chosen profile's preferences, each Avoid,
+Normal or Don't mind: walk has hills and steps, hike adds trail difficulty, bike
+has hills, busy roads and rough surfaces (`RouteAttribute.forProfile`). The planner
 reads the profile defaults from `RoutingOptionsSettings` through
 `RoutingOptionsAccess`, so a bike change cannot leak into walk. A route preview
-can override the three values for that route only; the override lives in
+can override the values for that route only; the override lives in
 `RoutePlanState.overridePreferences` and is dropped by `clear()`, so the stored
 profile is never written. `plugins/valhalla` maps each step to its costing for
 the request's profile only (the table is in `test-data/routing/README.md` and

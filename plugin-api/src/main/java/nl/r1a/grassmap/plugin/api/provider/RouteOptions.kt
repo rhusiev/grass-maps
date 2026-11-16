@@ -37,11 +37,41 @@ enum class RoutePreference(
 }
 
 /**
+ * One routing attribute a profile can offer as a three-step preference
+ * (T-0421). The design shows a different set per profile, see [forProfile].
+ */
+enum class RouteAttribute {
+    Hills,
+    Steps,
+    TrailDifficulty,
+    BusyRoads,
+    RoughSurfaces,
+    ;
+
+    companion object {
+        /**
+         * The attributes [profile] shows, in the order its sheet lists them:
+         * walk has hills and steps, hike adds trail difficulty, bike has hills,
+         * busy roads and rough surfaces. Car is out of v1 and has none.
+         */
+        fun forProfile(profile: RouteProfile): List<RouteAttribute> =
+            when (profile) {
+                RouteProfile.Walk -> listOf(Hills, Steps)
+                RouteProfile.Hike -> listOf(Hills, Steps, TrailDifficulty)
+                RouteProfile.Bike -> listOf(Hills, BusyRoads, RoughSurfaces)
+                RouteProfile.Car -> emptyList()
+            }
+    }
+}
+
+/**
  * One profile's routing options (T-0308, three steps in T-0421).
  *
  * Each attribute is independent: changing hills cannot change busy roads, and a
- * profile with no stored entry reads as all [RoutePreference.Normal]. The
- * profile's values are the defaults for every route; a route preview can
+ * profile with no stored entry reads as all [RoutePreference.Normal]. Every
+ * profile keeps all five fields so the stored form is one shape, but only the
+ * attributes in [RouteAttribute.forProfile] are shown and sent to the engine.
+ * The profile's values are the defaults for every route; a route preview can
  * override them for one route without writing this object back.
  */
 @Serializable
@@ -52,6 +82,10 @@ data class RouteOptions(
     val busyRoads: RoutePreference = RoutePreference.Normal,
     @SerialName("rough_surfaces")
     val roughSurfaces: RoutePreference = RoutePreference.Normal,
+    @SerialName("steps")
+    val steps: RoutePreference = RoutePreference.Normal,
+    @SerialName("trail_difficulty")
+    val trailDifficulty: RoutePreference = RoutePreference.Normal,
 ) {
     /** True when every attribute is [RoutePreference.Normal]. */
     val isDefault: Boolean
@@ -59,12 +93,35 @@ data class RouteOptions(
 
     /** How many attributes differ from [RoutePreference.Normal]. */
     val setCount: Int
-        get() = ROUTE_OPTION_ATTRIBUTES.count { attribute -> attribute(this) != RoutePreference.Normal }
-}
+        get() = RouteAttribute.entries.count { attribute -> this[attribute] != RoutePreference.Normal }
 
-/** The attributes in the order the preferences screen shows them. */
-private val ROUTE_OPTION_ATTRIBUTES: List<(RouteOptions) -> RoutePreference> =
-    listOf({ options -> options.hills }, { options -> options.busyRoads }, { options -> options.roughSurfaces })
+    /** How many of [profile]'s own attributes differ from [RoutePreference.Normal]. */
+    fun setCount(profile: RouteProfile): Int =
+        RouteAttribute.forProfile(profile).count { attribute -> this[attribute] != RoutePreference.Normal }
+
+    /** The step chosen for [attribute]. */
+    operator fun get(attribute: RouteAttribute): RoutePreference =
+        when (attribute) {
+            RouteAttribute.Hills -> hills
+            RouteAttribute.Steps -> steps
+            RouteAttribute.TrailDifficulty -> trailDifficulty
+            RouteAttribute.BusyRoads -> busyRoads
+            RouteAttribute.RoughSurfaces -> roughSurfaces
+        }
+
+    /** A copy with [attribute] set to [preference]. */
+    fun with(
+        attribute: RouteAttribute,
+        preference: RoutePreference,
+    ): RouteOptions =
+        when (attribute) {
+            RouteAttribute.Hills -> copy(hills = preference)
+            RouteAttribute.Steps -> copy(steps = preference)
+            RouteAttribute.TrailDifficulty -> copy(trailDifficulty = preference)
+            RouteAttribute.BusyRoads -> copy(busyRoads = preference)
+            RouteAttribute.RoughSurfaces -> copy(roughSurfaces = preference)
+        }
+}
 
 /**
  * Every profile's options together. A profile with no entry uses the defaults,

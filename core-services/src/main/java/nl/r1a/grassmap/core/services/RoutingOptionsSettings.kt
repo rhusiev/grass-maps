@@ -26,7 +26,9 @@ import java.io.IOException
  * bike cannot change what walk receives.
  *
  * The file holds only non-default profiles:
- * `{"profiles":{"bike":{"hills":"avoid","busy_roads":"normal","rough_surfaces":"dont_mind"}}}`.
+ * `{"profiles":{"bike":{"hills":"avoid","busy_roads":"normal","rough_surfaces":"dont_mind","steps":"normal","trail_difficulty":"normal"}}}`.
+ * A file written before `steps` and `trail_difficulty` existed reads them as
+ * `normal`.
  * The keys and values are stable. A file from T-0308 that still carries the
  * two-state `hilliness` key reads as `hills` (`avoid_hills` becomes `avoid`,
  * `default` becomes `normal`), so an existing choice survives the upgrade.
@@ -66,6 +68,8 @@ class RoutingOptionsSettings(
         const val HILLS_KEY = "hills"
         const val BUSY_ROADS_KEY = "busy_roads"
         const val ROUGH_SURFACES_KEY = "rough_surfaces"
+        const val STEPS_KEY = "steps"
+        const val TRAIL_DIFFICULTY_KEY = "trail_difficulty"
 
         /** The T-0308 key and values, read so an existing choice is not lost. */
         const val LEGACY_HILLINESS_KEY = "hilliness"
@@ -80,6 +84,8 @@ class RoutingOptionsSettings(
                             put(HILLS_KEY, profileOptions.hills.serializedValue)
                             put(BUSY_ROADS_KEY, profileOptions.busyRoads.serializedValue)
                             put(ROUGH_SURFACES_KEY, profileOptions.roughSurfaces.serializedValue)
+                            put(STEPS_KEY, profileOptions.steps.serializedValue)
+                            put(TRAIL_DIFFICULTY_KEY, profileOptions.trailDifficulty.serializedValue)
                         }
                     }
                 }
@@ -103,6 +109,10 @@ class RoutingOptionsSettings(
             }
 
         fun preferenceOf(name: String?): RoutePreference? = RoutePreference.ofSerialized(name)
+
+        /** The step stored under [key], [RoutePreference.Normal] when absent or unknown. */
+        fun JsonObject.preference(key: String): RoutePreference =
+            preferenceOf((this[key] as? JsonPrimitive)?.contentOrNull) ?: RoutePreference.Normal
 
         /** Reads the T-0308 key when the three-step key is absent. */
         fun legacyHillinessOf(name: String?): RoutePreference =
@@ -131,12 +141,10 @@ class RoutingOptionsSettings(
                             profile,
                             RouteOptions(
                                 hills = hills,
-                                busyRoads =
-                                    preferenceOf(
-                                        (entry[BUSY_ROADS_KEY] as? JsonPrimitive)?.contentOrNull,
-                                    ) ?: RoutePreference.Normal,
-                                roughSurfaces =
-                                    preferenceOf((entry[ROUGH_SURFACES_KEY] as? JsonPrimitive)?.contentOrNull) ?: RoutePreference.Normal,
+                                busyRoads = entry.preference(BUSY_ROADS_KEY),
+                                roughSurfaces = entry.preference(ROUGH_SURFACES_KEY),
+                                steps = entry.preference(STEPS_KEY),
+                                trailDifficulty = entry.preference(TRAIL_DIFFICULTY_KEY),
                             ),
                         )
                 }

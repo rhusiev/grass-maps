@@ -55,6 +55,47 @@ class RouteOptionsTest {
     }
 
     @Test
+    fun eachProfileShowsItsOwnAttributes() {
+        assertEquals(
+            listOf(RouteAttribute.Hills, RouteAttribute.Steps),
+            RouteAttribute.forProfile(RouteProfile.Walk),
+        )
+        assertEquals(
+            listOf(RouteAttribute.Hills, RouteAttribute.Steps, RouteAttribute.TrailDifficulty),
+            RouteAttribute.forProfile(RouteProfile.Hike),
+        )
+        assertEquals(
+            listOf(RouteAttribute.Hills, RouteAttribute.BusyRoads, RouteAttribute.RoughSurfaces),
+            RouteAttribute.forProfile(RouteProfile.Bike),
+        )
+        assertTrue(RouteAttribute.forProfile(RouteProfile.Car).isEmpty())
+    }
+
+    @Test
+    fun theFootStepsRoundTripAndAnOlderObjectReadsThemAsNormal() {
+        val options = RouteOptions(steps = RoutePreference.Avoid, trailDifficulty = RoutePreference.DontMind)
+
+        val encoded = Json.encodeToString(RouteOptions.serializer(), options)
+
+        assertEquals("""{"steps":"avoid","trail_difficulty":"dont_mind"}""", encoded)
+        assertEquals(options, Json.decodeFromString(RouteOptions.serializer(), encoded))
+        assertEquals(
+            RouteOptions(hills = RoutePreference.Avoid),
+            Json.decodeFromString(RouteOptions.serializer(), """{"hills":"avoid"}"""),
+        )
+    }
+
+    @Test
+    fun theProfileCountIgnoresAttributesTheProfileDoesNotShow() {
+        val options = RouteOptions(roughSurfaces = RoutePreference.Avoid, trailDifficulty = RoutePreference.Avoid)
+
+        assertEquals(2, options.setCount)
+        assertEquals(1, options.setCount(RouteProfile.Bike))
+        assertEquals(1, options.setCount(RouteProfile.Hike))
+        assertEquals(0, options.setCount(RouteProfile.Walk))
+    }
+
+    @Test
     fun anOlderPlanStateWithoutPreferencesReadsAsAllNormal() {
         val state = Json.decodeFromString(RoutePlanState.serializer(), """{"status":"Ready"}""")
 

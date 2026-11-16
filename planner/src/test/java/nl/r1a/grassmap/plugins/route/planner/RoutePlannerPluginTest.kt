@@ -459,6 +459,8 @@ class RoutePlannerPluginTest {
                     hills = RoutePreference.DontMind,
                     busyRoads = RoutePreference.Avoid,
                     roughSurfaces = RoutePreference.Normal,
+                    steps = RoutePreference.Avoid,
+                    trailDifficulty = RoutePreference.DontMind,
                 )
             val applied =
                 invoke(
@@ -468,6 +470,8 @@ class RoutePlannerPluginTest {
                         put("hills", "dont_mind")
                         put("busy_roads", "avoid")
                         put("rough_surfaces", "normal")
+                        put("steps", "avoid")
+                        put("trail_difficulty", "dont_mind")
                     },
                 )
 

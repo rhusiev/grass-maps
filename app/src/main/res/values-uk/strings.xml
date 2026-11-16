@@ -142,6 +142,10 @@
     <string name="route_preferences_busy_roads_detail">Вулиці з рухом авто</string>
     <string name="route_preferences_rough_surfaces">Нерівні покриття</string>
     <string name="route_preferences_rough_surfaces_detail">Гравій, бруківка, ґрунт</string>
+    <string name="route_preferences_steps">Сходи</string>
+    <string name="route_preferences_steps_detail">Сходи на шляху</string>
+    <string name="route_preferences_trail_difficulty">Складність стежок</string>
+    <string name="route_preferences_trail_difficulty_detail">Важкі стежки та бездоріжжя</string>
     <string name="route_preferences_avoid">Уникати</string>
     <string name="route_preferences_normal">Звичайно</string>
     <string name="route_preferences_dont_mind">Не має значення</string>

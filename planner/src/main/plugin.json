@@ -71,7 +71,7 @@
         "id": "route.planner.set_preferences",
         "params": "kotlinx.serialization.json.JsonElement",
         "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
-        "doc": "Applies one-route preferences. Parameters: hills, busy_roads and rough_surfaces, each avoid, normal or dont_mind.",
+        "doc": "Applies one-route preferences. Parameters: hills, busy_roads and rough_surfaces, each avoid, normal or dont_mind, plus the optional steps and trail_difficulty, normal when absent.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",

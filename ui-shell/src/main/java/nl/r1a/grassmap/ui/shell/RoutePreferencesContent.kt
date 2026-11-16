@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmap.plugin.api.provider.RouteAttribute
 import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 import nl.r1a.grassmap.plugin.api.provider.RoutePreference
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
@@ -52,6 +53,10 @@ private const val PREF_BUSY_ROADS_KEY = "route_preferences_busy_roads"
 private const val PREF_BUSY_ROADS_DETAIL_KEY = "route_preferences_busy_roads_detail"
 private const val PREF_ROUGH_SURFACES_KEY = "route_preferences_rough_surfaces"
 private const val PREF_ROUGH_SURFACES_DETAIL_KEY = "route_preferences_rough_surfaces_detail"
+private const val PREF_STEPS_KEY = "route_preferences_steps"
+private const val PREF_STEPS_DETAIL_KEY = "route_preferences_steps_detail"
+private const val PREF_TRAIL_DIFFICULTY_KEY = "route_preferences_trail_difficulty"
+private const val PREF_TRAIL_DIFFICULTY_DETAIL_KEY = "route_preferences_trail_difficulty_detail"
 private const val PREF_AVOID_KEY = "route_preferences_avoid"
 private const val PREF_NORMAL_KEY = "route_preferences_normal"
 private const val PREF_DONT_MIND_KEY = "route_preferences_dont_mind"
@@ -68,12 +73,20 @@ private const val CHEVRON_OPEN_GLYPH = "\u2304"
 private const val CHEVRON_CLOSED_GLYPH = "\u203A"
 private const val DEFAULT_DOT = " \u2022"
 
-/** Which routing option a row edits. */
-internal enum class PreferenceAttribute {
-    Hills,
-    BusyRoads,
-    RoughSurfaces,
-}
+/** The title and detail string keys of one attribute's row. */
+private data class AttributeTexts(
+    val titleKey: String,
+    val detailKey: String,
+)
+
+private fun RouteAttribute.texts(): AttributeTexts =
+    when (this) {
+        RouteAttribute.Hills -> AttributeTexts(PREF_HILLS_KEY, PREF_HILLS_DETAIL_KEY)
+        RouteAttribute.Steps -> AttributeTexts(PREF_STEPS_KEY, PREF_STEPS_DETAIL_KEY)
+        RouteAttribute.TrailDifficulty -> AttributeTexts(PREF_TRAIL_DIFFICULTY_KEY, PREF_TRAIL_DIFFICULTY_DETAIL_KEY)
+        RouteAttribute.BusyRoads -> AttributeTexts(PREF_BUSY_ROADS_KEY, PREF_BUSY_ROADS_DETAIL_KEY)
+        RouteAttribute.RoughSurfaces -> AttributeTexts(PREF_ROUGH_SURFACES_KEY, PREF_ROUGH_SURFACES_DETAIL_KEY)
+    }
 
 /** The collapsed entry's resolved text and accessibility description. */
 internal data class RoutePreferencesEntryContent(
@@ -93,7 +106,7 @@ internal data class RoutePreferencesSheetContent(
 
 /** One attribute row; a changed row marks the profile default with a dot. */
 internal data class RoutePreferenceRowContent(
-    val attribute: PreferenceAttribute,
+    val attribute: RouteAttribute,
     val title: String,
     val detail: String,
     val changed: Boolean,
@@ -117,13 +130,14 @@ internal data class RoutePreferenceStepContent(
 @Suppress("ktlint:standard:function-naming")
 @Composable
 internal fun RoutePreferencesEntry(
+    profile: RouteProfile,
     profilePreferences: RouteOptions,
     overridePreferences: RouteOptions?,
     strings: Strings,
     expanded: Boolean,
     onClick: () -> Unit,
 ) {
-    val content = routePreferencesEntryContent(profilePreferences, overridePreferences, expanded, strings)
+    val content = routePreferencesEntryContent(profile, profilePreferences, overridePreferences, expanded, strings)
     Row(
         modifier =
             Modifier
@@ -277,6 +291,7 @@ private fun Segment(
 
 /** Resolves the collapsed entry; a route-level change wins over the set count. */
 internal fun routePreferencesEntryContent(
+    profile: RouteProfile,
     profilePreferences: RouteOptions,
     overridePreferences: RouteOptions?,
     expanded: Boolean,
@@ -289,8 +304,8 @@ internal fun routePreferencesEntryContent(
                 strings.resolve(PREF_CHANGED_KEY)
             }
 
-            profilePreferences.setCount > 0 -> {
-                strings.resolve(PREF_SET_COUNT_KEY, listOf(profilePreferences.setCount.toString()))
+            profilePreferences.setCount(profile) > 0 -> {
+                strings.resolve(PREF_SET_COUNT_KEY, listOf(profilePreferences.setCount(profile).toString()))
             }
 
             else -> {
@@ -315,42 +330,25 @@ internal fun routePreferencesSheetContent(
         title = strings.resolve(PREF_TITLE_KEY),
         scope = strings.resolve(PREF_SCOPE_KEY, listOf(profileLabel(profile, strings))),
         rows =
-            listOf(
-                row(PreferenceAttribute.Hills, PREF_HILLS_KEY, PREF_HILLS_DETAIL_KEY, draft.hills, profilePreferences.hills, strings),
-                row(
-                    PreferenceAttribute.BusyRoads,
-                    PREF_BUSY_ROADS_KEY,
-                    PREF_BUSY_ROADS_DETAIL_KEY,
-                    draft.busyRoads,
-                    profilePreferences.busyRoads,
-                    strings,
-                ),
-                row(
-                    PreferenceAttribute.RoughSurfaces,
-                    PREF_ROUGH_SURFACES_KEY,
-                    PREF_ROUGH_SURFACES_DETAIL_KEY,
-                    draft.roughSurfaces,
-                    profilePreferences.roughSurfaces,
-                    strings,
-                ),
-            ),
+            RouteAttribute.forProfile(profile).map { attribute ->
+                row(attribute, draft[attribute], profilePreferences[attribute], strings)
+            },
         reset = strings.resolve(PREF_RESET_KEY),
         apply = strings.resolve(PREF_APPLY_KEY),
     )
 
 private fun row(
-    attribute: PreferenceAttribute,
-    titleKey: String,
-    detailKey: String,
+    attribute: RouteAttribute,
     value: RoutePreference,
     profileValue: RoutePreference,
     strings: Strings,
 ): RoutePreferenceRowContent {
-    val title = strings.resolve(titleKey)
+    val texts = attribute.texts()
+    val title = strings.resolve(texts.titleKey)
     return RoutePreferenceRowContent(
         attribute = attribute,
         title = title,
-        detail = strings.resolve(detailKey),
+        detail = strings.resolve(texts.detailKey),
         changed = value != profileValue,
         steps =
             RoutePreference.entries.map { preference ->
@@ -369,16 +367,6 @@ private fun row(
             },
     )
 }
-
-private fun RouteOptions.with(
-    attribute: PreferenceAttribute,
-    preference: RoutePreference,
-): RouteOptions =
-    when (attribute) {
-        PreferenceAttribute.Hills -> copy(hills = preference)
-        PreferenceAttribute.BusyRoads -> copy(busyRoads = preference)
-        PreferenceAttribute.RoughSurfaces -> copy(roughSurfaces = preference)
-    }
 
 private fun preferenceLabel(
     preference: RoutePreference,

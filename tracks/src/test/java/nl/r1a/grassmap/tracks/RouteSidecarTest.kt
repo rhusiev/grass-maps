@@ -23,7 +23,14 @@ class RouteSidecarTest {
                 val recompute =
                     PlannedRouteRecompute(
                         profile = profile,
-                        options = RouteOptions(hills = step, busyRoads = RoutePreference.Normal, roughSurfaces = RoutePreference.Avoid),
+                        options =
+                            RouteOptions(
+                                hills = step,
+                                busyRoads = RoutePreference.Normal,
+                                roughSurfaces = RoutePreference.Avoid,
+                                steps = step,
+                                trailDifficulty = RoutePreference.DontMind,
+                            ),
                         start = RoutePlanPoint(GeoPoint(49.84, 24.03), "Ринок"),
                         destination = RoutePlanPoint(GeoPoint(49.85, 24.01), "Park"),
                         vias = listOf(RoutePlanPoint(GeoPoint(49.845, 24.02), "")),
@@ -80,6 +87,18 @@ class RouteSidecarTest {
         assertTrue(encoded.contains("\"profile\":\"walk\""))
         assertTrue("the option key matches RouteOptions", encoded.contains("\"busy_roads\":\"normal\""))
         assertTrue("the value matches RoutePreference", encoded.contains("\"hills\":\"avoid\""))
+    }
+
+    @Test
+    fun aSidecarWrittenBeforeTheFootStepsReadsThemAsNormal() {
+        val encoded = RouteSidecarJson.encode(recompute(options = RouteOptions(hills = RoutePreference.Avoid)))
+        val older = encoded.replace(",\"steps\":\"normal\"", "").replace(",\"trail_difficulty\":\"normal\"", "")
+
+        assertTrue("the two keys were removed", !older.contains("steps") && !older.contains("trail_difficulty"))
+
+        val decoded = RouteSidecarJson.decode(older)
+
+        assertEquals(RouteOptions(hills = RoutePreference.Avoid), decoded?.options)
     }
 
     private fun recompute(options: RouteOptions = RouteOptions()): PlannedRouteRecompute =

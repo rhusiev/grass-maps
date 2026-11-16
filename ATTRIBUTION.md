@@ -24,6 +24,7 @@ first product asset lands.
 | Ferrostar core | BSD-3-Clause | Rust route-following core with UniFFI Kotlin bindings, used by `navigation`; the `core` artifact only, no UI or map binding |
 | Valhalla routing engine | MIT | C++ engine packaged inside valhalla-mobile; routing tiles are OSM-derived data (ODbL-1.0) |
 | `plugins/style-standard` Standard style | Apache-2.0 (this repository) | Authored for Grass Maps from the T-0020 Protomaps-derived layer list and the phase-A palette; OsmAnd's standard style is design inspiration only, no GPL content is translated |
+| `plugins/style-touring` Touring style | Apache-2.0 (this repository) | Authored for Grass Maps from the Standard layer list: the same layers with road-atlas colours, grey casings, a dash ladder for paths, steps, tracks and cycleways from z12, and a one-zoom-earlier schedule; it uses the Standard sprite. OsmAnd's touring style is design inspiration only, no GPL content is translated or copied |
 | `test-data/location/mock-walk.gpx` | Apache-2.0 (this repository) | Synthetic 60-point GPX walk authored for T-0022; no OSM data |
 | `test-data/tracks/*.gpx` | Apache-2.0 (this repository) | Synthetic OsmAnd-, Garmin- and Strava-shaped exports authored for T-0401, including two damaged files; no OSM data and no real activity |
 | `test-data/places/opening-hours/lviv-oracle.tsv` | ODbL-1.0 | © OpenStreetMap contributors; `opening_hours` values from the Lviv bench extract and their expected states, computed once with opening_hours.js 3.15.0 (LGPL-3.0, used only as a local generator and not distributed) |

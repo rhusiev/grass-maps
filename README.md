@@ -352,10 +352,10 @@ runner minutes but not wall time to a push run. The native follower replay
 first ran in run `42979708400` at 7 min 04 s (6 min 43 s in the emulator step).
 The goldens job was split on 2026-11-16: one job ran all sets on one emulator
 and took 1 h 55 m to 3 h 05 m, and run `a36dca45` was cancelled at its
-210-minute bound. Now one job builds the APK and six jobs (`standard-light`,
-`standard-dark`, `contours`, `fixture`, `navigation`, `raster`) each boot their
+210-minute bound. Now one job builds the APK and eight jobs (`standard-light`,
+`standard-dark`, `touring-light`, `touring-dark`, `contours`, `fixture`, `navigation`, `raster`) each boot their
 own emulator and run in parallel; `scripts/ci/android-goldens-ci.sh APK SET`
-runs one set, and with no set it runs Standard (both styles), contours,
+runs one set, and with no set it runs Standard and Touring (both styles each), contours,
 fixture, navigation and raster in order on one emulator, as a local run does.
 On run `903d1cc8` Standard light took ~46 min, dark ~42 min and the other four
 sets ~46 min together, so the per-set bound is 100 minutes.
@@ -548,7 +548,9 @@ application ID is `nl.r1a.grassmap`.
 | `devtools` | debug harness: benchmark hooks, GPX replay, screenshot and state probes | `core`, `control`, `plugin-api` |
 | `app` | composition root, Android entry points, foreground service, manifest, resources | every module |
 | `plugins/example` | debug-only example of a first-party plugin module | `plugin-api` |
-| `plugins/style-standard` | the Standard and Touring light and dark palettes and their one-zoom-earlier Touring threshold, as a `MapLayerProvider` | `plugin-api` |
+| `plugins/style-standard` | the Standard (Meadow) light and dark palettes as a `MapLayerProvider` | `plugin-api` |
+| `plugins/style-touring` | the Touring (Trail) light and dark palettes, the one-zoom-earlier threshold and the path dash ladder, as a `MapLayerProvider` | `plugin-api` |
+| `plugins/layers-panel` | the layers button and the map styles card: the Meadow and Trail rows and the active-style state | `plugin-api`, `plugin-ui-api` |
 | `plugins/synthetic-data` | the debug-only synthetic elevation `DataSource` and its real contour overlay | `plugin-api` |
 | `plugins/gpx` | GPX 1.0/1.1 import and export as a `FileFormat` provider | `plugin-api` |
 | `plugins/info-widgets` | the altitude, coordinates, GPS info and current / average / max speed widget data providers | `plugin-api` |
@@ -598,9 +600,12 @@ HTTPS.
 
 The contours and raster cards are closed by default behind a small `Layers`
 button at the top start. A card that is always open covers the map's centre on
-a phone, and it sat inside the map goldens' comparison window; T-0109's layers
-sheet replaces the button. The button is view state, the switches inside the
-cards are the stored state.
+a phone, and it sat inside the map goldens' comparison window. The button
+(`plugins/layers-panel`) is view state. The card it opens starts with the map
+styles card, two radio rows: Meadow (Standard, "Everyday and city") and Trail
+(Touring, "Cycling and hiking"). The choice is stored in `settings/style.json`
+(`{"style":"touring"}`) and a missing or unknown value means Standard. The
+switches inside the other cards are stored state too.
 
 The layer draws at one of two placements (T-0514). `Overlay` is the default:
 `LayerSlot.Terrain`, above every base-style layer - fills, lines and symbols -
@@ -609,7 +614,9 @@ own labels live in `Base`, so at 40 % they show through the tiles instead of
 sitting above them. `Underlay` is `LayerSlot.Underlay`, the one group below
 `Base`: the base map draws over the imagery, and because the Standard and
 Touring styles start with an opaque background, an underlay is only visible in a
-style that leaves it a gap. Both placements are the same layer, the same
+style that leaves it a gap. Touring stays opaque on purpose (T-0109): a
+transparent base would leave the labels and fills over raw imagery, and the
+imagery would show only in gaps anyway. The underlay row stays (Q45). Both placements are the same layer, the same
 provider and the same gate; the placement picks the slot.
 
 Transparency is a whole percent the layers panel shows, and the layer carries it
@@ -823,11 +830,20 @@ variant switch updates layers in place instead of reloading the style. A base
 style carries sources and glyphs but no layers; the consumer applies the
 provider's layers with `applyStyleDiff`, and only `setStyle` may reload.
 `plugins/style-standard/src/main/styles/standard.json` holds one layer list and
-four palettes; the provider resolves the palette tokens and returns
-`standard` (light), `standard-dark`, `touring` and `touring-dark`, all over the
-same base document. `zoomOffsets` starts every Touring layer one zoom earlier,
-which is the threshold half of map-style.md section 1. The full authored
-Touring layer list, its dash ladder and the styles button remain T-0109.
+two palettes; the provider resolves the palette tokens and returns
+`standard` (light) and `standard-dark`. `plugins/style-touring/src/main/styles/touring.json`
+holds the Touring list and returns `touring` and `touring-dark`. Both read their
+document through `PaletteStyleDocument` in `plugin-api`, and both return the
+same base document, so a switch between them updates layers in place and the
+map host keeps the loaded style. `zoomOffsets` starts every Touring layer one
+zoom earlier, which is the threshold half of map-style.md section 1. Touring
+draws five path layers keyed on the tile's `kind_detail` (the schema has no
+`tracktype`), each from z12: `roads_footway` and `roads_path` dotted, `roads_steps`
+short and tight, `roads_track` and `roads_cycleway` long dashed. Widths grow
+from z13 to z18. The code ids stay `standard` and `touring` until T-0617 renames
+them. The Touring style lints as Standard does (75 to 85 layers, at most 15
+symbol layers) and has its own goldens in `test-data/map-goldens/touring/`
+(`--profile touring`, API 29 `swangle` AVD), the same 40 cases as Standard.
 Symbol text and halo colours in the palettes are `rgb()` arrays: the current
 text path drops the green channel from a hex text colour, so the style avoids
 that form until the render path is fixed.
@@ -892,6 +908,11 @@ its size.
 GOLDEN_AVD_NAME=grassmaps-goldens-api29 \
   ./scripts/ci/android-map-goldens.sh --profile standard --style both --update
 ```
+
+The Touring goldens in `test-data/map-goldens/touring/touring-light/` and
+`touring/touring-dark/` are the same 40 cases in the Touring style, captured the
+same way with `--profile touring --update` (T-0109). They differ from the
+Standard set only in the style, so a path or track dash change shows there.
 
 The script's default AVD is `grassmaps-bench`, which is 1080x2400: a different
 geometry that shifts the whole frame against the committed 1080x1920 set, so
@@ -1028,8 +1049,7 @@ Standard light, `#2e343c`/`#3e4650` in Standard dark, `#d6b48e`/`#bf9364` in
 Touring light and `#24403a`/`#30554c` in Touring dark. Label text and halo come
 from the same section's label pair. The Touring contour references also use the
 Touring base palette and its one-zoom-earlier threshold from
-`plugins/style-standard`; T-0109 still owns the full Touring layer list, its
-dash ladder and the styles button. The 50 m band filters `ele % 50 == 0` and
+`plugins/style-touring`. The 50 m band filters `ele % 50 == 0` and
 excludes the 100 m index; the 10 m band filters `ele % 10 == 0` and excludes the
 50 m lines, so the coarser line is never drawn twice. The index and label
 layers filter the archive's Boolean `idx == true`, which the pack sets only on

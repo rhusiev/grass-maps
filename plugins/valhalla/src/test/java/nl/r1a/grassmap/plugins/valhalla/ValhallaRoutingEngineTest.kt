@@ -46,6 +46,29 @@ class ValhallaRoutingEngineTest {
         }
 
     @Test
+    fun theEngineReopensWhenTheMountedPackChanges() =
+        runTest {
+            val opened = mutableListOf<RecordingTransport>()
+            var key: String? = "mount-a"
+            val engine =
+                ValhallaRoutingEngine(
+                    { RecordingTransport(response(shape())).also { opened += it } },
+                    packKey = { key },
+                )
+
+            engine.route(request(), CancellationHandle.None)
+            engine.route(request(), CancellationHandle.None)
+            key = "mount-b"
+            engine.route(request(), CancellationHandle.None)
+            key = null
+            engine.route(request(), CancellationHandle.None)
+
+            assertEquals(2, opened.size)
+            assertEquals(listOf(2, 2), opened.map { it.requests.size })
+            assertEquals(listOf(true, false), opened.map { it.closed })
+        }
+
+    @Test
     fun routeCallsAreSerialisedOnTheSharedNativeEngine() =
         runTest {
             val transport = GatedTransport(response(shape()))
@@ -468,6 +491,11 @@ class ValhallaRoutingEngineTest {
     ) : ValhallaTransport {
         val requests = mutableListOf<String>()
         val traces = mutableListOf<String>()
+        var closed = false
+
+        override fun close() {
+            closed = true
+        }
 
         override fun route(requestJson: String): String {
             requests += requestJson

@@ -38,6 +38,7 @@ class ValhallaRoutingEngine internal constructor(
     private val transportFactory: () -> ValhallaTransport,
     private val log: RoutingLog = RoutingLog.None,
     private val elevation: ElevationAccess = NoElevationAccess,
+    private val packKey: () -> String? = { null },
 ) : RoutingEngine,
     Closeable {
     /** A platform engine over the pack copied to the device. */
@@ -64,10 +65,12 @@ class ValhallaRoutingEngine internal constructor(
         },
         log,
         elevation,
+        { packs.packDirectory() },
     )
 
     private val lock = Any()
     private var transport: ValhallaTransport? = null
+    private var openedKey: String? = null
     private var closed = false
 
     // valhalla-mobile does not document thread safety for route(), and one
@@ -106,19 +109,19 @@ class ValhallaRoutingEngine internal constructor(
             if (cancellation.isCancelled()) {
                 return@withContext Outcome.Failure(AppError.Cancelled)
             }
-            val active =
-                try {
-                    transportOrCreate()
-                } catch (exception: ValhallaPackException) {
-                    return@withContext packFailure(exception)
-                } catch (exception: CancellationException) {
-                    throw exception
-                } catch (exception: Exception) {
-                    return@withContext internalFailure("routing.valhalla.engine", exception)
-                }
 
             val raw =
                 routeMutex.withLock {
+                    val active =
+                        try {
+                            transportOrCreate()
+                        } catch (exception: ValhallaPackException) {
+                            return@withContext packFailure(exception)
+                        } catch (exception: CancellationException) {
+                            throw exception
+                        } catch (exception: Exception) {
+                            return@withContext internalFailure("routing.valhalla.engine", exception)
+                        }
                     try {
                         active.route(ValhallaRequest.build(request))
                     } catch (exception: CancellationException) {
@@ -195,6 +198,16 @@ class ValhallaRoutingEngine internal constructor(
             val profileOptions = ValhallaProfiles.of(profile)
             val edges = mutableListOf<ValhallaTrace.TraceEdge>()
             routeMutex.withLock {
+                val active =
+                    try {
+                        transportOrCreate()
+                    } catch (exception: ValhallaPackException) {
+                        return@withContext packFailure(exception)
+                    } catch (exception: CancellationException) {
+                        throw exception
+                    } catch (exception: Exception) {
+                        return@withContext internalFailure("routing.valhalla.engine", exception)
+                    }
                 for (chunk in chunks) {
                     if (cancellation.isCancelled()) {
                         return@withContext Outcome.Failure(AppError.Cancelled)
@@ -318,6 +331,7 @@ class ValhallaRoutingEngine internal constructor(
                 runCatching { active.close() }
             }
             transport = null
+            openedKey = null
         }
     }
 
@@ -346,10 +360,32 @@ class ValhallaRoutingEngine internal constructor(
         return Outcome.Failure(AppError.Internal(id, exception.message))
     }
 
+    /**
+     * The open transport, or a new one when the host mounted a different pack
+     * since it was opened (T-0511). Valhalla reads its tile directory once, so
+     * a download that changes the installed set only shows after a reopen. The
+     * mount directory's name carries the installed set, so a different name
+     * means different tiles. Callers hold [routeMutex], so the old transport
+     * is idle when it closes. A host with no pack directory keeps the transport
+     * it has.
+     */
     private fun transportOrCreate(): ValhallaTransport =
         synchronized(lock) {
             check(!closed) { "valhalla engine is closed" }
-            transport ?: transportFactory().also { transport = it }
+            val key = packKey()
+            val current = transport
+            if (current != null && (key == null || key == openedKey)) {
+                return@synchronized current
+            }
+            if (current != null) {
+                log.info("routing pack changed; reopening the engine")
+                runCatching { current.close() }
+                transport = null
+            }
+            transportFactory().also {
+                transport = it
+                openedKey = key
+            }
         }
 
     private fun invalidReason(request: RouteRequest): AppError? {

@@ -11,8 +11,16 @@ import kotlinx.coroutines.sync.withLock
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.host.NoRegionDownloadsAccess
 import nl.r1a.grassmap.plugin.api.host.NoRouteHistoryAccess
+import nl.r1a.grassmap.plugin.api.host.NoRoutingPacks
+import nl.r1a.grassmap.plugin.api.host.RegionDownloadsAccess
 import nl.r1a.grassmap.plugin.api.host.RouteHistoryAccess
+import nl.r1a.grassmap.plugin.api.host.RoutingPackAccess
+import nl.r1a.grassmap.plugin.api.model.DownloadProblem
+import nl.r1a.grassmap.plugin.api.model.DownloadProblemKind
+import nl.r1a.grassmap.plugin.api.model.MissingRegions
+import nl.r1a.grassmap.plugin.api.model.MissingRegionsDownload
 import nl.r1a.grassmap.plugin.api.model.RouteHistoryEntry
 import nl.r1a.grassmap.plugin.api.model.RoutePlanFailure
 import nl.r1a.grassmap.plugin.api.model.RoutePlanOption
@@ -81,6 +89,8 @@ class RoutePlanner(
         { route, _, _ -> Outcome.Success(route) },
     private val annotationScope: CoroutineScope? = null,
     private val log: (String) -> Unit = {},
+    private val downloads: RegionDownloadsAccess = NoRegionDownloadsAccess,
+    private val packs: RoutingPackAccess = NoRoutingPacks,
 ) {
     init {
         require(alternatives >= 0) { "alternatives must not be negative" }
@@ -449,11 +459,15 @@ class RoutePlanner(
                 }
                 when (outcome) {
                     is Outcome.Failure -> {
+                        val failure = failureOf(outcome.error)
+                        val missing = missingFor(failure, snapshot)
                         setState(
                             _state.value.copy(
                                 status = RoutePlanStatus.Failed,
                                 options = emptyList(),
-                                failure = failureOf(outcome.error),
+                                failure = if (missing == null) failure else RoutePlanFailure.RegionsMissing,
+                                missing = missing,
+                                missingDownload = null,
                                 profilePreferences = profilePreferences,
                                 overridePreferences = snapshot.overridePreferences,
                             ),
@@ -524,8 +538,11 @@ class RoutePlanner(
      * count.
      */
     private fun setState(value: RoutePlanState) {
+        val prompting = value.failure == RoutePlanFailure.RegionsMissing
         _state.value =
             value.copy(
+                missing = value.missing.takeIf { prompting },
+                missingDownload = value.missingDownload.takeIf { prompting },
                 undoAvailable = undoStack.isNotEmpty(),
                 redoAvailable = redoStack.isNotEmpty(),
             )
@@ -667,6 +684,110 @@ class RoutePlanner(
             _recent.value = stored.value
         }
     }
+
+    /**
+     * The regions the stops need and the phone lacks, when a route failed in a
+     * way a download can fix (T-0511). Only a failure to find a route or the
+     * pack counts: an unusable pack or a broken engine is not cured by more
+     * data. The check runs after the failure, never before the request, so a
+     * development pack that routes without installed regions is not blocked.
+     */
+    private fun missingFor(
+        failure: RoutePlanFailure,
+        snapshot: RoutePlanState,
+    ): MissingRegions? =
+        if (failure == RoutePlanFailure.NoRoute || failure == RoutePlanFailure.PackMissing) {
+            MissingRegionFinder.find(snapshot.stops.map { it.position }, downloads.data.value)
+        } else {
+            null
+        }
+
+    /**
+     * Downloads the missing regions the plan is prompting for, rebuilds the
+     * routing mount and requests the route again (T-0511). The transfers belong
+     * to the region store: clearing or editing the plan stops this wait but
+     * leaves them running. Returns once the download ended and the route was
+     * asked for, or at once on [annotationScope] when the planner has one, so
+     * a command does not outlive its caller's patience.
+     */
+    suspend fun downloadMissing(): Outcome<RoutePlanState> {
+        val started =
+            mutex.withLock {
+                val current = _state.value
+                val prompt = current.missing
+                if (current.failure != RoutePlanFailure.RegionsMissing || prompt == null || current.missingDownload?.isRunning == true) {
+                    return@withLock null
+                }
+                setState(current.copy(missingDownload = MissingRegionsDownload(bytesTotal = prompt.bytes)))
+                prompt to ticket.get()
+            } ?: return Outcome.Failure(AppError.InvalidInput)
+        val scope = annotationScope
+        if (scope == null) {
+            runMissingDownload(started.first, started.second)
+        } else {
+            scope.launch { runMissingDownload(started.first, started.second) }
+        }
+        return Outcome.Success(_state.value)
+    }
+
+    private suspend fun runMissingDownload(
+        prompt: MissingRegions,
+        planTicket: Long,
+    ) {
+        val result =
+            MissingRegionsDownloader(downloads, packs).run(prompt) { progress ->
+                mutex.withLock {
+                    if (ticket.get() == planTicket) setState(_state.value.copy(missingDownload = progress))
+                }
+            }
+        val next =
+            mutex.withLock {
+                if (ticket.get() != planTicket) return@withLock null
+                val current = _state.value
+                if (result == MissingDownloadResult.Ready) {
+                    ticket.incrementAndGet()
+                    setState(
+                        current.copy(
+                            status = RoutePlanStatus.Planning,
+                            failure = null,
+                        ),
+                    )
+                    _state.value
+                } else {
+                    setState(current.copy(missingDownload = problemOf(result, prompt)))
+                    null
+                }
+            }
+        if (next != null) request(next)
+    }
+
+    private fun problemOf(
+        result: MissingDownloadResult,
+        prompt: MissingRegions,
+    ): MissingRegionsDownload =
+        when (result) {
+            is MissingDownloadResult.Failed -> {
+                result.progress
+            }
+
+            MissingDownloadResult.Stopped -> {
+                MissingRegionsDownload(
+                    bytesTotal = prompt.bytes,
+                    problem = DownloadProblem(DownloadProblemKind.OTHER),
+                )
+            }
+
+            MissingDownloadResult.MountUnavailable -> {
+                MissingRegionsDownload(
+                    bytesTotal = prompt.bytes,
+                    problem = DownloadProblem(DownloadProblemKind.STORAGE),
+                )
+            }
+
+            MissingDownloadResult.Ready -> {
+                MissingRegionsDownload(bytesTotal = prompt.bytes)
+            }
+        }
 
     private fun failureOf(error: AppError): RoutePlanFailure =
         when (error) {

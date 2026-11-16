@@ -50,6 +50,61 @@ enum class RoutePlanFailure {
     EngineUnavailable,
     PackMissing,
     PackUnusable,
+
+    /**
+     * The route's ends lie in oblasts that are not on the phone. The state's
+     * [RoutePlanState.missing] says which regions and parts to download.
+     */
+    RegionsMissing,
+}
+
+/** One part of a region the route needs and the phone does not have. */
+@Serializable
+data class MissingRegionPart(
+    val kind: CatalogPartKind,
+    val bytes: Long,
+)
+
+/**
+ * One oblast a route needs. [parts] are the parts of its package that are not
+ * on the phone, with the catalogue's sizes; [bytes] is their sum.
+ */
+@Serializable
+data class MissingRegion(
+    val region: String,
+    val nameEn: String? = null,
+    val nameUk: String? = null,
+    val parts: List<MissingRegionPart> = emptyList(),
+) {
+    val bytes: Long
+        get() = parts.sumOf { it.bytes }
+
+    /** The name in the user's language, falling back to the other one. */
+    fun name(preferUkrainian: Boolean): String? = if (preferUkrainian) nameUk ?: nameEn else nameEn ?: nameUk
+}
+
+/** Everything a route needs that is not on the phone, in the order its stops need it. */
+@Serializable
+data class MissingRegions(
+    val regions: List<MissingRegion>,
+) {
+    val bytes: Long
+        get() = regions.sumOf { it.bytes }
+}
+
+/**
+ * Where "Download and route" is. [bytesDone] and [bytesTotal] add up the
+ * transfers of the missing regions; [problem] is set when one of them failed,
+ * and the prompt then offers the download again.
+ */
+@Serializable
+data class MissingRegionsDownload(
+    val bytesDone: Long = 0,
+    val bytesTotal: Long = 0,
+    val problem: DownloadProblem? = null,
+) {
+    val isRunning: Boolean
+        get() = problem == null
 }
 
 /**
@@ -104,6 +159,10 @@ data class RoutePlanOption(
  * the profile. [preferences] is what the request actually carried. Keeping the
  * two sources apart lets the preview mark each profile default and reset this
  * route without writing the profile (T-0421).
+ *
+ * [missing] is set with [RoutePlanFailure.RegionsMissing] and lists what to
+ * download before the route can work (T-0511). [missingDownload] is set while
+ * that download runs, or after it failed.
  */
 @Serializable
 data class RoutePlanState(
@@ -120,6 +179,8 @@ data class RoutePlanState(
     val profile: RouteProfile = RouteProfile.Walk,
     val profilePreferences: RouteOptions = RouteOptions(),
     val overridePreferences: RouteOptions? = null,
+    val missing: MissingRegions? = null,
+    val missingDownload: MissingRegionsDownload? = null,
 ) {
     /** The preferences the last route request carried. */
     val preferences: RouteOptions

@@ -77,7 +77,11 @@ class RegionUpdateTest {
 
             assertTrue(store.refresh() is Outcome.Success)
 
-            assertEquals(listOf(CatalogFixture.LVIV), store.data.value.updates.map { it.id })
+            assertEquals(
+                listOf(CatalogFixture.LVIV),
+                store.data.value.updates
+                    .map { it.id },
+            )
         }
 
     @Test
@@ -92,8 +96,16 @@ class RegionUpdateTest {
 
             assertEquals(NEW_VERSION, mountedVersion(CatalogFixture.LVIV))
             assertEquals(listOf(NEW_VERSION), versionDirectories(CatalogFixture.LVIV))
-            assertEquals(NEW_VERSION, store.data.value.installed(CatalogFixture.LVIV)?.version)
-            assertTrue(store.data.value.updates.isEmpty())
+            assertEquals(
+                NEW_VERSION,
+                store.data.value
+                    .installed(CatalogFixture.LVIV)
+                    ?.version,
+            )
+            assertTrue(
+                store.data.value.updates
+                    .isEmpty(),
+            )
             assertNoWorkDirectory()
         }
 
@@ -133,10 +145,20 @@ class RegionUpdateTest {
             awaitIdle(store)
 
             assertEquals(2, packageRequests.size)
-            assertEquals(DownloadProblemKind.UPDATE_FAILED, store.data.value.problem(CatalogFixture.LVIV)?.kind)
+            assertEquals(
+                DownloadProblemKind.UPDATE_FAILED,
+                store.data.value
+                    .problem(CatalogFixture.LVIV)
+                    ?.kind,
+            )
             assertEquals(OLD_VERSION, mountedVersion(CatalogFixture.LVIV))
             assertEquals(listOf(OLD_VERSION), versionDirectories(CatalogFixture.LVIV))
-            assertEquals(OLD_VERSION, store.data.value.installed(CatalogFixture.LVIV)?.version)
+            assertEquals(
+                OLD_VERSION,
+                store.data.value
+                    .installed(CatalogFixture.LVIV)
+                    ?.version,
+            )
             assertNoWorkDirectory()
         }
 
@@ -165,7 +187,12 @@ class RegionUpdateTest {
             store.startDownload(CatalogFixture.LVIV)
             awaitIdle(store)
 
-            assertEquals(DownloadProblemKind.CORRUPT_DATA, store.data.value.problem(CatalogFixture.LVIV)?.kind)
+            assertEquals(
+                DownloadProblemKind.CORRUPT_DATA,
+                store.data.value
+                    .problem(CatalogFixture.LVIV)
+                    ?.kind,
+            )
         }
 
     @Test
@@ -236,7 +263,12 @@ class RegionUpdateTest {
             .orEmpty()
 
     private fun assertNoWorkDirectory() {
-        val entries = paths.incomingDirectory().listFiles()?.map { it.name }.orEmpty()
+        val entries =
+            paths
+                .incomingDirectory()
+                .listFiles()
+                ?.map { it.name }
+                .orEmpty()
         assertEquals(emptyList<String>(), entries)
     }
 
@@ -261,8 +293,14 @@ class RegionUpdateTest {
             val path = exchange.requestURI.path
             val match = PACKAGE_PATH.matchEntire(path)
             when {
-                path == "/${DownloadsDefaults.CATALOG_FILE}" -> send(exchange, 200, catalog)
-                match == null -> send(exchange, 404, ByteArray(0))
+                path == "/${DownloadsDefaults.CATALOG_FILE}" -> {
+                    send(exchange, 200, catalog)
+                }
+
+                match == null -> {
+                    send(exchange, 404, ByteArray(0))
+                }
+
                 else -> {
                     packageRequests += path
                     val body = packageBody(match.groupValues[1], match.groupValues[2])

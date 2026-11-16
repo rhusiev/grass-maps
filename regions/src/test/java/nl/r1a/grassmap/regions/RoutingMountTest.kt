@@ -243,6 +243,14 @@ class RoutingMountTest {
             File(routing, "valhalla.json").writeText("{\"r\":\"$id\"}")
         }
         val manifest = RegionManifest(id, version, 1, "2026-01-01T00:00:00Z", null, emptyList())
-        return MountedRegion(id, version, directory, File(directory, "map.pmtiles"), null, manifest, RoutingPart.Directory(routing, sha256, build))
+        return MountedRegion(
+            id,
+            version,
+            directory,
+            File(directory, "map.pmtiles"),
+            null,
+            manifest,
+            RoutingPart.Directory(routing, sha256, build),
+        )
     }
 }

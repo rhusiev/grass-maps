@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -18,7 +19,7 @@ from gm_server import token_cli  # noqa: E402
 from gm_server.config import Config, ConfigError  # noqa: E402
 from gm_server.limits import MAX_TRACKED_KEYS, Limiter, ip_key  # noqa: E402
 from gm_server.ranges import RangeKind, parse_range  # noqa: E402
-from gm_server.tokens import TokenStore, hash_token, read_entries  # noqa: E402
+from gm_server.tokens import TokenFileError, TokenStore, hash_token, new_entry, read_entries, write_entries  # noqa: E402
 from gm_server.usage import UsageStore  # noqa: E402
 from support import load_publisher  # noqa: E402
 
@@ -167,6 +168,35 @@ class TokenCliTest(unittest.TestCase):
             token_cli.main(["--file", str(path), "delete", entry.token_id])
             self.assertEqual(json.loads(path.read_text()), {"tokens": []})
             self.assertEqual(token_cli.main(["--file", str(path), "delete", "deadbeef"]), 1)
+
+
+class TokenStoreTest(unittest.TestCase):
+    def test_a_same_size_rewrite_with_the_same_mtime_is_seen(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "tokens.json"
+            first, second = "a" * 40, "b" * 40
+            write_entries(path, [new_entry(first, "x", None)])
+            stat = path.stat()
+            store = TokenStore(path)
+            self.assertIsNotNone(store.lookup(first))
+            write_entries(path, [new_entry(second, "x", None)])
+            os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+            self.assertEqual(path.stat().st_size, stat.st_size)
+            self.assertIsNone(store.lookup(first))
+            self.assertIsNotNone(store.lookup(second))
+
+    def test_bad_files_are_errors_not_exceptions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "tokens.json"
+            path.write_bytes(b"\xff\xfe")
+            store = TokenStore(path)
+            self.assertIsNotNone(store.error())
+            self.assertIsNone(store.lookup("anything"))
+            with self.assertRaises(TokenFileError):
+                read_entries(path)
+            entry = {"sha256": "a" * 64, "quota_bytes": True}
+            path.write_text(json.dumps({"tokens": [entry]}))
+            self.assertIsNotNone(store.error())
 
 
 class PublishTest(unittest.TestCase):

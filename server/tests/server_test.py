@@ -89,6 +89,17 @@ class TokenTest(unittest.TestCase):
         self.server.request(PACKAGE_PATH, token="wrong-token-0123456789")
         self.assertEqual(self.server.request(PACKAGE_PATH, token=self.server.token).status, 200)
 
+    def test_a_broken_token_file_answers_503_and_never_bans_clients(self) -> None:
+        server = RunningServer(require_tokens=True, ban_failures=2)
+        self.addCleanup(server.close)
+        good = server.tokens_file.read_bytes()
+        for broken in (b"{not json", b"\xff\xfe\x00", b'{"tokens": [{"sha256": "' + b"a" * 64 + b'", "quota_bytes": true}]}'):
+            server.tokens_file.write_bytes(broken)
+            for _ in range(4):
+                self.assertEqual(server.request(PACKAGE_PATH, token=server.token).status, 503)
+        server.tokens_file.write_bytes(good)
+        self.assertEqual(server.request(PACKAGE_PATH, token=server.token).status, 200)
+
     def test_a_disabled_token_stops_on_the_next_request(self) -> None:
         from dataclasses import replace
 

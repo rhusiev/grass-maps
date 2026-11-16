@@ -18,6 +18,7 @@ CHUNK_BYTES = 256 * 1024
 BEARER_PREFIX = "bearer "
 HEALTH_PATH = "/healthz"
 ANONYMOUS_KEY = "anonymous"
+TOKEN_FILE_RETRY_S = 30
 
 
 class Service:
@@ -83,6 +84,9 @@ class Handler(BaseHTTPRequestHandler):
         banned = service.limiter.ban_remaining(ip)
         if banned:
             self._reply(429, headers={"Retry-After": str(banned)})
+            return
+        if service.config.require_tokens and service.tokens.error() is not None:
+            self._reply(503, headers={"Retry-After": str(TOKEN_FILE_RETRY_S)})
             return
         identity = self._identify(ip)
         if identity is None:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import secrets
 import tempfile
@@ -15,6 +16,7 @@ from pathlib import Path
 TOKEN_BYTES = 32
 ID_LENGTH = 8
 FILE_MODE = 0o600
+LOG = logging.getLogger("gm_server")
 
 
 class TokenFileError(ValueError):
@@ -45,7 +47,7 @@ def _entry_from_json(raw: object) -> TokenEntry:
     if not isinstance(digest, str) or len(digest) != 64:
         raise TokenFileError("a token entry needs a 64 character sha256")
     quota = raw.get("quota_bytes")
-    if quota is not None and (not isinstance(quota, int) or quota < 0):
+    if quota is not None and (isinstance(quota, bool) or not isinstance(quota, int) or quota < 0):
         raise TokenFileError("quota_bytes must be a non-negative integer")
     return TokenEntry(
         token_id=digest[:ID_LENGTH],
@@ -68,23 +70,31 @@ def _entry_to_json(entry: TokenEntry) -> dict[str, object]:
 
 
 class TokenStore:
-    """Reads the token file, reloading it whenever its modification time moves.
+    """Reads the token file again on every lookup, keyed on its content hash.
 
     A disabled token therefore stops working on the next request, with no
-    restart.
+    restart. The file is tiny, so reading it each time is cheap and cannot miss
+    a rewrite that keeps the same size and modification time. A file that cannot
+    be read or parsed leaves [error] set until it is fixed.
     """
 
     def __init__(self, path: Path) -> None:
         self._path = path
         self._lock = threading.Lock()
-        self._stamp: tuple[int, int] | None = None
+        self._digest: str | None = None
         self._by_hash: dict[str, TokenEntry] = {}
+        self._error: str | None = None
 
     def lookup(self, token: str) -> TokenEntry | None:
         """Returns the enabled entry for [token], or None."""
         self._refresh()
         entry = self._by_hash.get(hash_token(token))
         return entry if entry is not None and entry.enabled else None
+
+    def error(self) -> str | None:
+        """Returns why the token file is unusable, or None when it is fine."""
+        self._refresh()
+        return self._error
 
     def count_enabled(self) -> int:
         """Returns how many enabled tokens the file holds."""
@@ -93,40 +103,60 @@ class TokenStore:
 
     def _refresh(self) -> None:
         try:
-            stat = self._path.stat()
-        except OSError:
-            with self._lock:
-                self._stamp = None
-                self._by_hash = {}
+            raw = self._path.read_bytes()
+        except FileNotFoundError:
+            raw = b""
+            digest = None
+        except OSError as exc:
+            self._fail(f"cannot read {self._path}: {exc}", f"unreadable:{exc}")
             return
-        stamp = (stat.st_mtime_ns, stat.st_size)
+        else:
+            digest = hashlib.sha256(raw).hexdigest()
         with self._lock:
-            if stamp == self._stamp:
+            if digest == self._digest:
                 return
-            try:
-                entries = read_entries(self._path)
-            except TokenFileError:
-                entries = []
+        try:
+            entries = parse_entries(raw, self._path) if digest is not None else []
+        except TokenFileError as exc:
+            self._fail(str(exc), digest)
+            return
+        with self._lock:
             self._by_hash = {entry.sha256: entry for entry in entries}
-            self._stamp = stamp
+            self._digest = digest
+            self._error = None
+
+    def _fail(self, message: str, version: str | None) -> None:
+        with self._lock:
+            if version != self._digest:
+                LOG.error("token file unusable, answering 503 until fixed: %s", message)
+            self._digest = version
+            self._error = message
+            self._by_hash = {}
 
 
-def read_entries(path: Path) -> list[TokenEntry]:
-    """Parses the token file at [path]. A missing file is an empty list."""
+def parse_entries(raw: bytes, path: Path) -> list[TokenEntry]:
+    """Parses the bytes of a token file read from [path]."""
     try:
-        text = path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        return []
-    except OSError as exc:
-        raise TokenFileError(f"cannot read {path}: {exc}") from exc
-    try:
-        document = json.loads(text)
+        document = json.loads(raw.decode("utf-8"))
+    except UnicodeDecodeError as exc:
+        raise TokenFileError(f"{path} is not valid UTF-8: {exc}") from exc
     except json.JSONDecodeError as exc:
         raise TokenFileError(f"{path} is not valid JSON: {exc}") from exc
     items = document.get("tokens") if isinstance(document, dict) else None
     if not isinstance(items, list):
         raise TokenFileError(f"{path} needs a top-level \"tokens\" list")
     return [_entry_from_json(item) for item in items]
+
+
+def read_entries(path: Path) -> list[TokenEntry]:
+    """Parses the token file at [path]. A missing file is an empty list."""
+    try:
+        raw = path.read_bytes()
+    except FileNotFoundError:
+        return []
+    except OSError as exc:
+        raise TokenFileError(f"cannot read {path}: {exc}") from exc
+    return parse_entries(raw, path)
 
 
 def write_entries(path: Path, entries: list[TokenEntry]) -> None:

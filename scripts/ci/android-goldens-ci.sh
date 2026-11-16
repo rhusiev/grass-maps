@@ -1,40 +1,70 @@
 #!/usr/bin/env bash
 #
-# The CI golden run: Standard light and dark first, then the contour set with
-# the fixture's contour archive on, then the T-0102 fixture set with contours
-# off on the same booted emulator, the navigation set, and last the raster
-# overlay and underlay set over the loopback tile fixture. A compare failure does not stop the next set,
-# because a capture-only run is how the references are promoted; the exit code
-# still reports any failure.
+# The CI golden run, as named sets: `standard` (Standard light and dark),
+# `contours` (the fixture's contour archive on), `fixture` (the T-0102 set,
+# contours off), `navigation`, and `raster` (overlay and underlay over the
+# loopback tile fixture; the one set that turns the radios on, so it runs last).
 #
-# Usage: android-goldens-ci.sh [APK]
+# With no set named, every set runs in that order on the one booted emulator,
+# which is the local use. CI runs one set per job, each on its own emulator, so
+# the sets run in parallel (one job took 2-3.5 h and hit its 210 min bound).
+# A compare failure does not stop the next set, because a capture-only run is
+# how the references are promoted; the exit code still reports any failure.
+#
+# Usage: android-goldens-ci.sh [APK] [SET...]
 
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 APK="${1:-$ROOT/app/build/outputs/apk/debug/app-debug.apk}"
+shift || true
+readonly ALL_SETS=(standard contours fixture navigation raster)
+if (($# > 0)); then
+    SETS=("$@")
+else
+    SETS=("${ALL_SETS[@]}")
+fi
 status=0
 
 cd "$ROOT"
 
-if ! ./scripts/ci/android-map-goldens.sh --profile standard --style both "$APK"; then
-    status=1
-fi
-if ! GOLDEN_SKIP_REBOOT=1 ./scripts/ci/android-map-goldens.sh --profile contours \
-    --style all --contours on "$APK"; then
-    status=1
-fi
-if ! GOLDEN_SKIP_REBOOT=1 ./scripts/ci/android-map-goldens.sh --profile fixture \
-    --output "$ROOT/build/map-goldens/fixture" "$APK"; then
-    status=1
-fi
-if ! GOLDEN_SKIP_REBOOT=1 ./scripts/ci/android-navigation-goldens.sh "$APK"; then
-    status=1
-fi
-# Last, because it is the one set that turns the radios on.
-if ! GOLDEN_SKIP_REBOOT=1 ./scripts/ci/android-map-goldens.sh --profile raster \
-    --output "$ROOT/build/map-goldens/raster" "$APK"; then
-    status=1
-fi
+# The first set on a freshly booted emulator does the dialog-suppression
+# reboot; later sets on the same emulator skip it.
+skip_reboot=0
+
+run_set() {
+    case "$1" in
+        standard)
+            GOLDEN_SKIP_REBOOT="$skip_reboot" ./scripts/ci/android-map-goldens.sh --profile standard \
+                --style both "$APK"
+            ;;
+        contours)
+            GOLDEN_SKIP_REBOOT="$skip_reboot" ./scripts/ci/android-map-goldens.sh --profile contours \
+                --style all --contours on "$APK"
+            ;;
+        fixture)
+            GOLDEN_SKIP_REBOOT="$skip_reboot" ./scripts/ci/android-map-goldens.sh --profile fixture \
+                --output "$ROOT/build/map-goldens/fixture" "$APK"
+            ;;
+        navigation)
+            GOLDEN_SKIP_REBOOT="$skip_reboot" ./scripts/ci/android-navigation-goldens.sh "$APK"
+            ;;
+        raster)
+            GOLDEN_SKIP_REBOOT="$skip_reboot" ./scripts/ci/android-map-goldens.sh --profile raster \
+                --output "$ROOT/build/map-goldens/raster" "$APK"
+            ;;
+        *)
+            echo "android-goldens-ci.sh: unknown set '$1' (known: ${ALL_SETS[*]})" >&2
+            return 2
+            ;;
+    esac
+}
+
+for set in "${SETS[@]}"; do
+    if ! run_set "$set"; then
+        status=1
+    fi
+    skip_reboot=1
+done
 exit "$status"

@@ -349,9 +349,14 @@ finished within the first 24. On the push path it was the run's wall time, and
 the next merge cancelled it. It now runs in the scheduled workflow, so it adds
 runner minutes but not wall time to a push run. The native follower replay
 first ran in run `42979708400` at 7 min 04 s (6 min 43 s in the emulator step).
-The goldens job's 210-minute bound is there because successful runs took
-1 h 56 m to 2 h 01 m at the previous 150-minute bound. It is the first job to
-split when its duration is next addressed.
+The goldens job was split on 2026-11-16: one job ran all sets on one emulator
+and took 1 h 55 m to 3 h 05 m, and run `a36dca45` was cancelled at its
+210-minute bound. Now one job builds the APK and five jobs (`standard`,
+`contours`, `fixture`, `navigation`, `raster`) each boot their own emulator and
+run in parallel; `scripts/ci/android-goldens-ci.sh APK SET` runs one set, and
+with no set it runs all five in order on one emulator, as a local run does. The
+per-set bound is 120 minutes, chosen rather than derived until per-set times
+are measured.
 
 A job that regularly uses most of its timeout is the same risk as one that
 fails. Both produce a red run that says nothing about the code. Set a timeout
@@ -378,8 +383,9 @@ A rendering change is expected to bring its own capture and comparison.
 Recapture the affected references on the same API 29 `swangle` AVD, commit them
 with the change, and dispatch the workflow on that branch. The `ref` input
 takes a branch, tag or commit. An empty value uses the branch the dispatch runs
-from. The artifact name carries the commit that was captured, so a dispatch
-from one branch against another ref still names its evidence.
+from. Each set's artifact (`map-goldens-<set>-<sha>`) carries the commit that
+was captured, so a dispatch from one branch against another ref still names
+its evidence.
 
 A cancelled run is not evidence. The push workflow still cancels a superseded
 run on the same branch, which is right for the fast jobs. For a two-hour

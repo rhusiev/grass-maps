@@ -47,16 +47,12 @@ permissions:
   contents: read
 
 jobs:
-  emulator-map-goldens:
-    name: Style and fixture map goldens (API 29, swangle)
+  build-apk:
+    name: Build the debug APK for the goldens
     runs-on: ubuntu-latest
-    # Measured, not assumed. Run 42456896336 needed ~123 minutes: the old
-    # 120-minute bound cancelled it during the last fixture. At 150 minutes the
-    # margin did not hold either - the job was cancelled at the bound on 4 of
-    # the 6 runs before 2026-11-10, and successful runs took 1 h 56 m to
-    # 2 h 01 m. A job that regularly uses 96 % of its limit is the same risk as
-    # one that fails, so the bound is 210 minutes until the capture is split.
-    timeout-minutes: 210
+    timeout-minutes: 60
+    outputs:
+      sha: ${{ steps.tested.outputs.sha }}
     steps:
       - name: Check out
         uses: actions/checkout@v7
@@ -83,7 +79,37 @@ jobs:
           targets: aarch64-linux-android,x86_64-linux-android
       - name: Build the debug APK
         run: ./gradlew --console=plain :app:assembleDebug
-      - name: Boot API 29 and compare the style goldens
+      - name: Keep the APK for the golden sets
+        uses: actions/upload-artifact@v7
+        with:
+          name: goldens-apk-${{ steps.tested.outputs.sha }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 1
+
+  emulator-map-goldens:
+    name: Map goldens - ${{ matrix.set }} (API 29, swangle)
+    needs: build-apk
+    runs-on: ubuntu-latest
+    # One job ran all five sets on one emulator and took 1 h 55 m to 3 h 05 m;
+    # run a36dca45 was cancelled at its 210-minute bound. Each set now boots
+    # its own emulator in parallel, so the bound is per set. 120 minutes is
+    # chosen, not derived: re-measure from the per-set run times and tighten.
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        set: [standard, contours, fixture, navigation, raster]
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.build-apk.outputs.sha }}
+      - name: Fetch the APK
+        uses: actions/download-artifact@v7
+        with:
+          name: goldens-apk-${{ needs.build-apk.outputs.sha }}
+          path: app/build/outputs/apk/debug
+      - name: Boot API 29 and compare the ${{ matrix.set }} goldens
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 29
@@ -95,12 +121,12 @@ jobs:
           # the green channel of every text colour, which turns light labels on
           # the dark style magenta (T-0108). The comparator is unchanged.
           emulator-options: -no-snapshot -no-window -gpu swangle -noaudio -no-boot-anim -camera-back none
-          script: ./scripts/ci/android-goldens-ci.sh app/build/outputs/apk/debug/app-debug.apk
+          script: ./scripts/ci/android-goldens-ci.sh app/build/outputs/apk/debug/app-debug.apk ${{ matrix.set }}
       - name: Keep the goldens and diff images
         if: always()
         uses: actions/upload-artifact@v7
         with:
           # Name the commit that was actually captured, not the dispatch ref.
-          name: map-goldens-${{ steps.tested.outputs.sha }}
+          name: map-goldens-${{ matrix.set }}-${{ needs.build-apk.outputs.sha }}
           path: build/map-goldens/**
           if-no-files-found: warn

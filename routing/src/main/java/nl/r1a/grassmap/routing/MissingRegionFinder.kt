@@ -8,6 +8,9 @@ import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.MissingRegion
 import nl.r1a.grassmap.plugin.api.model.MissingRegionPart
 import nl.r1a.grassmap.plugin.api.model.MissingRegions
+import kotlin.math.ceil
+import kotlin.math.cos
+import kotlin.math.hypot
 
 /**
  * Picks the oblasts a route needs and the phone does not have (T-0511).
@@ -24,10 +27,18 @@ import nl.r1a.grassmap.plugin.api.model.MissingRegions
  *    is nearest. A stop outside every box needs nothing, because no package
  *    can serve it.
  *
- * A route that crosses an oblast between its ends is not detected. The stops
- * decide, and the prompt offers what they need.
+ * The straight segment between consecutive stops is sampled every
+ * [SEGMENT_SAMPLE_METERS] and each sample follows the same rule, so an oblast
+ * the route must cross between covered stops is listed too. The line is not
+ * the road, so a detour through an oblast the segment misses is not detected.
+ * Callers ask only after a route failed, so the samples cost nothing on a
+ * route that works.
  */
 object MissingRegionFinder {
+    /** The gap between samples on a straight segment: chosen, not derived. A smaller gap only matters for an oblast narrower than 5 km. */
+    const val SEGMENT_SAMPLE_METERS = 5_000.0
+    private const val METERS_PER_DEGREE = 111_320.0
+
     /** The order the prompt lists parts in: what a route reads first. */
     private val PART_ORDER =
         listOf(
@@ -49,7 +60,7 @@ object MissingRegionFinder {
                 .orEmpty()
                 .filter { it.kind == CatalogRegionKind.REGION && it.bounds != null }
         val needed = LinkedHashMap<String, CatalogRegion>()
-        for (stop in stops) {
+        for (stop in routePoints(stops)) {
             val candidates = entries.filter { it.bounds?.contains(stop) == true }
             if (candidates.isEmpty() || candidates.any { isRoutable(data, it) }) {
                 continue
@@ -59,6 +70,27 @@ object MissingRegionFinder {
         }
         val regions = needed.values.map { entry -> missingOf(data, entry) }
         return if (regions.isEmpty()) null else MissingRegions(regions)
+    }
+
+    /** The stops with the samples of each straight segment between them, in route order. */
+    private fun routePoints(stops: List<GeoPoint>): List<GeoPoint> =
+        stops.take(1) + stops.zipWithNext().flatMap { (from, to) -> samplesBetween(from, to) + to }
+
+    private fun samplesBetween(
+        from: GeoPoint,
+        to: GeoPoint,
+    ): List<GeoPoint> {
+        val latitude = to.latitude - from.latitude
+        val longitude = (to.longitude - from.longitude) * cos(Math.toRadians((from.latitude + to.latitude) / 2.0))
+        val meters = hypot(latitude, longitude) * METERS_PER_DEGREE
+        val steps = ceil(meters / SEGMENT_SAMPLE_METERS).toInt()
+        return (1 until steps).map { index ->
+            val fraction = index.toDouble() / steps
+            GeoPoint(
+                from.latitude + (to.latitude - from.latitude) * fraction,
+                from.longitude + (to.longitude - from.longitude) * fraction,
+            )
+        }
     }
 
     private fun isRoutable(

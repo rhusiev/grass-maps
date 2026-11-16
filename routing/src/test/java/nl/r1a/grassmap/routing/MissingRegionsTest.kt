@@ -92,6 +92,34 @@ class MissingRegionsTest {
     }
 
     @Test
+    fun aCoveredStopPairListsTheOblastsTheStraightSegmentCrosses() {
+        val data = data(installed = listOf(pack(LVIV), pack(EAST)))
+
+        val missing = MissingRegionFinder.find(listOf(LVIV_POINT, EAST_POINT), data)
+
+        assertEquals(listOf(TERNOPIL, MIDDLE), missing?.regions?.map { it.region })
+    }
+
+    @Test
+    fun aCoveredStraightSegmentListsNothing() {
+        val data = data(installed = listOf(pack(LVIV), pack(TERNOPIL), pack(MIDDLE), pack(EAST)))
+
+        assertNull(MissingRegionFinder.find(listOf(LVIV_POINT, EAST_POINT), data))
+        assertNull(MissingRegionFinder.find(listOf(LVIV_POINT, LVIV_POINT), data))
+    }
+
+    @Test
+    fun segmentSamplesAreListedOnceInRouteOrderWhicheverWayTheRouteRuns() {
+        val data = data(installed = listOf(pack(LVIV), pack(EAST)))
+
+        val forward = MissingRegionFinder.find(listOf(LVIV_POINT, EAST_POINT), data)
+        val back = MissingRegionFinder.find(listOf(EAST_POINT, LVIV_POINT, EAST_POINT), data)
+
+        assertEquals(listOf(TERNOPIL, MIDDLE), forward?.regions?.map { it.region })
+        assertEquals(listOf(MIDDLE, TERNOPIL), back?.regions?.map { it.region })
+    }
+
+    @Test
     fun theDownloadQueuesBothRegionsThenWaitsThenRebuildsTheMount() =
         runTest {
             val store = FakeStore(data(installed = listOf(pack(LVIV))))
@@ -325,6 +353,9 @@ class MissingRegionsTest {
         const val CATALOG_BYTES = 117_026_198L
         val LVIV_POINT = GeoPoint(49.84, 24.03)
         val TERNOPIL_POINT = GeoPoint(49.55, 25.59)
+        const val MIDDLE = "ua-18"
+        const val EAST = "ua-32"
+        val EAST_POINT = GeoPoint(49.84, 32.0)
         val ROUTE = Route(listOf(LVIV_POINT, TERNOPIL_POINT), 128_000.0, 17_400.0)
         val ALL_KINDS =
             listOf(
@@ -359,6 +390,8 @@ class MissingRegionsTest {
                             listOf(
                                 region(LVIV, "Lviv", listOf(22.64, 48.72, 25.43, 50.65)),
                                 region(TERNOPIL, "Ternopil", listOf(24.72, 48.51, 26.44, 50.27)),
+                                region(MIDDLE, "Middle", listOf(27.0, 49.0, 30.0, 51.0)),
+                                region(EAST, "East", listOf(30.0, 49.0, 33.0, 51.0)),
                             ),
                     ),
                 installed = installed,

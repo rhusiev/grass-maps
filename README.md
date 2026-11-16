@@ -1314,8 +1314,11 @@ When a route fails with `NoRoute` or `PackMissing`, the planner checks the
 stops against the catalogue (`MissingRegionFinder`). A stop that lies in an
 oblast without its routing part installed turns the failure into
 `RoutePlanFailure.RegionsMissing`, and `RoutePlanState.missing` lists those
-regions with the missing parts and their catalogue sizes. The stops decide, not
-the line, because region bounding boxes overlap and the client has no outline.
+regions with the missing parts and their catalogue sizes. The stops and samples of
+the straight segments between them (every 5 km, `SEGMENT_SAMPLE_METERS`, chosen
+and not derived) decide, not the road, because region bounding boxes overlap
+and the client has no outline. A covered stop pair whose straight segment
+crosses an uninstalled oblast lists that oblast too.
 A stop outside every bounding box needs nothing. `route.planner.download_missing`
 (`MissingRegionsDownloader`) starts the downloads, waits for them to install,
 calls `packDirectory()` and routes again. `RoutePlanState.missingDownload`

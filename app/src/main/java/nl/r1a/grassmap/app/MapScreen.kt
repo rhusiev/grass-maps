@@ -1671,22 +1671,23 @@ private fun MapContent(
                 }
             val downloadsState by downloadsFlow.collectAsState(initial = DownloadsState())
             var serverFormVisible by remember { mutableStateOf(false) }
-            val closeDownloads = {
+            val closeSheet: () -> Unit = {
                 scope.launch {
                     invokeDownloadsCommand(container, DownloadsUiContract.selectRegion, listParams("region" to ""))
                 }
+            }
+            val closeDownloads = {
+                closeSheet()
                 DownloadsScreenSession.hide()
             }
-            // System back leaves the sheet first, then the screen. Without this
-            // the screen is a dead end: it covers the map and the only other
-            // control that closes it is the header's chevron.
+            // System back leaves the server form, then the sheet, then the
+            // screen. Without this the screen is a dead end: it covers the map
+            // and the only other control that closes it is the header's chevron.
             BackHandler {
-                if (downloadsState.selected != null) {
-                    scope.launch {
-                        invokeDownloadsCommand(container, DownloadsUiContract.selectRegion, listParams("region" to ""))
-                    }
-                } else {
-                    closeDownloads()
+                when {
+                    serverFormVisible -> serverFormVisible = false
+                    downloadsState.selected != null -> closeSheet()
+                    else -> closeDownloads()
                 }
             }
             DownloadsScreenContent(
@@ -1699,11 +1700,7 @@ private fun MapContent(
                         invokeDownloadsCommand(container, DownloadsUiContract.selectRegion, listParams("region" to region))
                     }
                 },
-                onCloseSheet = {
-                    scope.launch {
-                        invokeDownloadsCommand(container, DownloadsUiContract.selectRegion, listParams("region" to ""))
-                    }
-                },
+                onCloseSheet = closeSheet,
                 onDownload = { region ->
                     scope.launch {
                         invokeDownloadsCommand(container, DownloadsUiContract.downloadRegion, listParams("region" to region))

@@ -83,6 +83,34 @@ class RasterLayerTest {
     }
 
     @Test
+    fun theLayerStaysVisibleAboveTheSourcesTopTileZoom() {
+        // A source that serves only 12 and 13 must still draw at 13.0: MapLibre
+        // hides a layer at or above its maxzoom, so a layer that copied the
+        // source's range would vanish at the fixture's own capture zoom.
+        val narrow =
+            when (
+                val outcome =
+                    RasterSources.custom(
+                        "https://t.example/{z}/{x}/{y}.png",
+                        minZoom = 12,
+                        maxZoom = 13,
+                    )
+            ) {
+                is Outcome.Success -> outcome.value
+                is Outcome.Failure -> throw AssertionError()
+            }
+
+        val layer = RasterLayers.layer(narrow)
+
+        assertEquals(13, layer.spec.raster?.maxZoom)
+        assertTrue(
+            "layer maxzoom ${layer.spec.maxZoom} must stay above the source's 13",
+            layer.spec.maxZoom > 13f,
+        )
+        assertTrue("layer minzoom ${layer.spec.minZoom}", layer.spec.minZoom <= 12f)
+    }
+
+    @Test
     fun theProviderDrawsOnlyTheShownSource() {
         val provider = RasterLayerProvider()
         val style = StyleId("standard")

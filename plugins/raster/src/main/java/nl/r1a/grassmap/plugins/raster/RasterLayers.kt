@@ -56,6 +56,17 @@ object RasterTransparency {
 object RasterLayers {
     val LAYER_ID: LayerId = LayerId("map.raster.online")
 
+    /**
+     * The layer that draws [source] at [placement] and [opacity].
+     *
+     * The source keeps its own zoom range: that range says which tile zooms
+     * exist, and MapLibre overzooms the top ones. The layer keeps the map's
+     * whole zoom range instead, because MapLibre hides a layer at or above the
+     * layer's `maxzoom` - inheriting the source's top tile zoom would blank the
+     * tiles above it rather than scale them up (found on the 13.0 capture of a
+     * source that serves 12 and 13: the layer was hidden at exactly its own
+     * `maxzoom` and no tile was ever requested).
+     */
     fun layer(
         source: RasterSource,
         placement: RasterPlacement = RasterPlacement.Overlay,
@@ -75,8 +86,6 @@ object RasterLayers {
                             maxZoom = source.maxZoom,
                             attributionHtml = source.attributionHtml.ifBlank { null },
                         ),
-                    minZoom = source.minZoom.toFloat(),
-                    maxZoom = source.maxZoom.toFloat(),
                     paint = paintOf(opacity),
                 ),
         )

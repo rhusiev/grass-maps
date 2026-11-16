@@ -18,6 +18,16 @@
         "implementation": "nl.r1a.grassmap.plugins.downloads.ui.DownloadsRefreshCommand"
       },
       {
+        "id": "downloads.ui.update_all",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "doc": "Fetches the map catalogue again and queues every installed region that has a newer version.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.UpdateAllRegionsCommand"
+      },
+      {
         "id": "downloads.ui.download_region",
         "params": "kotlinx.serialization.json.JsonElement",
         "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",

@@ -20,6 +20,7 @@ internal object DownloadsProblemText {
             DownloadProblemKind.SERVER -> R.string.downloads_failed_server
             DownloadProblemKind.CORRUPT_DATA -> R.string.downloads_failed_corrupt
             DownloadProblemKind.UNSUPPORTED -> R.string.downloads_failed_unsupported
+            DownloadProblemKind.UPDATE_FAILED -> R.string.downloads_update_failed
             DownloadProblemKind.STORAGE, DownloadProblemKind.OTHER -> R.string.downloads_failed_other
         }
 }

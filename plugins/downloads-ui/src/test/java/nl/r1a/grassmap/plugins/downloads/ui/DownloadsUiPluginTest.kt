@@ -22,9 +22,11 @@ import nl.r1a.grassmap.plugin.api.model.DownloadProblemKind
 import nl.r1a.grassmap.plugin.api.model.DownloadRowStatus
 import nl.r1a.grassmap.plugin.api.model.DownloadTransfer
 import nl.r1a.grassmap.plugin.api.model.DownloadTransferState
+import nl.r1a.grassmap.plugin.api.model.DownloadsData
 import nl.r1a.grassmap.plugin.api.model.DownloadsState
 import nl.r1a.grassmap.plugin.api.model.FirstRunOfferKind
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.InstalledPack
 import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
 import nl.r1a.grassmap.plugin.api.testing.fixture.CatalogFixture
@@ -103,6 +105,21 @@ class DownloadsUiPluginTest {
             assertEquals(CatalogFixture.LVIV, state.detectedRegion)
             assertTrue(state.firstRun.any { it.kind == FirstRunOfferKind.REGION })
             assertTrue(state.firstRun.any { it.kind == FirstRunOfferKind.WORLD })
+        }
+
+    @Test
+    fun updateAllChecksTheCatalogueThenQueuesTheOutdatedRegions() =
+        runBlocking {
+            val catalog = CatalogTestData.real()
+            val installed = InstalledPack(region = CatalogFixture.LVIV, version = OLD_VERSION)
+            val access = FakeDownloadsAccess(DownloadsData(serverUrl = FakeDownloadsAccess.SERVER, installed = listOf(installed)))
+            val context = context(access)
+            DownloadsUiPlugin().activate(context)
+            access.useCatalog(catalog)
+
+            stateOf(context.command(DownloadsUiContract.updateAll).invokeRaw(JsonObject(emptyMap())))
+
+            assertEquals(listOf("refresh", "refresh", "update-all:${CatalogFixture.LVIV}"), access.calls)
         }
 
     @Test
@@ -319,11 +336,13 @@ class DownloadsUiPluginTest {
 
     private companion object {
         const val TIMEOUT_MS = 5_000L
+        const val OLD_VERSION = "2000-01-01-1"
         const val TOKEN = "test-token-0123456789abcdef"
 
         val CONTROL_ALLOWED =
             setOf(
                 DownloadsUiContract.refresh,
+                DownloadsUiContract.updateAll,
                 DownloadsUiContract.downloadRegion,
                 DownloadsUiContract.cancelRegion,
                 DownloadsUiContract.removeRegion,

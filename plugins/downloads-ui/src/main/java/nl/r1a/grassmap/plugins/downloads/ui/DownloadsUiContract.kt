@@ -16,6 +16,7 @@ object DownloadsUiContract {
     const val STATE_SERIALIZER: String = "nl.r1a.grassmap.plugin.api.model.DownloadsState.serializer"
 
     const val REFRESH: String = "downloads.ui.refresh"
+    const val UPDATE_ALL: String = "downloads.ui.update_all"
     const val DOWNLOAD_REGION: String = "downloads.ui.download_region"
     const val CANCEL_REGION: String = "downloads.ui.cancel_region"
     const val REMOVE_REGION: String = "downloads.ui.remove_region"
@@ -27,6 +28,7 @@ object DownloadsUiContract {
     val stateStream: StreamId = StreamId(STATE_STREAM_ID)
 
     val refresh: CommandId = CommandId(REFRESH)
+    val updateAll: CommandId = CommandId(UPDATE_ALL)
     val downloadRegion: CommandId = CommandId(DOWNLOAD_REGION)
     val cancelRegion: CommandId = CommandId(CANCEL_REGION)
     val removeRegion: CommandId = CommandId(REMOVE_REGION)
@@ -36,5 +38,15 @@ object DownloadsUiContract {
     val useMobileDataNow: CommandId = CommandId(USE_MOBILE_DATA_NOW)
 
     val commands: List<CommandId> =
-        listOf(refresh, downloadRegion, cancelRegion, removeRegion, selectRegion, setServer, setMobileData, useMobileDataNow)
+        listOf(
+            refresh,
+            updateAll,
+            downloadRegion,
+            cancelRegion,
+            removeRegion,
+            selectRegion,
+            setServer,
+            setMobileData,
+            useMobileDataNow,
+        )
 }

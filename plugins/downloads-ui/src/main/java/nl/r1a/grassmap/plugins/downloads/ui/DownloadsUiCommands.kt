@@ -49,6 +49,19 @@ class DownloadsRefreshCommand(
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<DownloadsState>> = session.result(session.refresh())
 }
 
+/** Fetches the catalogue, then queues every installed region that has a newer version. */
+class UpdateAllRegionsCommand(
+    private val session: DownloadsUiSession,
+) : Command<JsonElement, DownloadsState>(
+        id = DownloadsUiContract.updateAll,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = DownloadsState.serializer(),
+        doc = "Fetches the map catalogue again and queues every installed region that has a newer version.",
+        policy = TRANSFER_POLICY,
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<DownloadsState>> = session.result(session.updateAll())
+}
+
 /** Queues one region's package. Parameter: region. */
 class DownloadRegionCommand(
     private val session: DownloadsUiSession,

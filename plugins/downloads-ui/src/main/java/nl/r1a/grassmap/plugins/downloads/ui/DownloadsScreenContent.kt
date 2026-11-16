@@ -97,7 +97,7 @@ fun DownloadsScreenContent(
     onDownload: (String) -> Unit,
     onCancel: (String) -> Unit,
     onRemove: (String) -> Unit,
-    onRefresh: () -> Unit,
+    onUpdateAll: () -> Unit,
     onSaveServer: (String, String) -> Unit,
     onTokenSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -143,8 +143,8 @@ fun DownloadsScreenContent(
             }
             Column(verticalArrangement = Arrangement.spacedBy(SPACED_DP.dp)) {
                 ActionButton(
-                    text = stringResource(R.string.downloads_refresh),
-                    onClick = onRefresh,
+                    text = stringResource(R.string.downloads_update_all),
+                    onClick = onUpdateAll,
                     quiet = true,
                 )
                 ActionButton(

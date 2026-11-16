@@ -23,6 +23,14 @@ class DownloadsProblemTextTest {
     }
 
     @Test
+    fun aFailedUpdateSaysTheInstalledMapStillWorks() {
+        assertEquals(
+            R.string.downloads_update_failed,
+            DownloadsProblemText.key(DownloadProblemKind.UPDATE_FAILED),
+        )
+    }
+
+    @Test
     fun everyProblemHasASentence() {
         for (kind in DownloadProblemKind.entries) {
             assertTrue("$kind has no sentence", DownloadsProblemText.key(kind) != 0)

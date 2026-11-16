@@ -62,6 +62,13 @@ class DownloadsUiSession(
 
     suspend fun refresh(): Outcome<DownloadsState> = result(access.refresh())
 
+    /** Checks the catalogue first, so "update all" acts on the newest versions. */
+    suspend fun updateAll(): Outcome<DownloadsState> =
+        when (val refreshed = access.refresh()) {
+            is Outcome.Failure -> refreshed
+            is Outcome.Success -> result(access.updateAll())
+        }
+
     suspend fun download(region: String): Outcome<DownloadsState> = result(access.startDownload(region))
 
     suspend fun cancel(region: String): Outcome<DownloadsState> = result(access.cancel(region))

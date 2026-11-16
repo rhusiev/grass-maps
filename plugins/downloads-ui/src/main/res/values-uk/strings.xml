@@ -8,7 +8,7 @@
     <string name="downloads_on_this_phone">На цьому телефоні</string>
     <string name="downloads_available">Доступні</string>
     <string name="downloads_empty">Ще немає карт</string>
-    <string name="downloads_refresh">Перевірити нові карти</string>
+    <string name="downloads_update_all">Оновити все</string>
 
     <string name="downloads_world_overview">Огляд світу</string>
     <string name="downloads_world_detail">Країни, головні дороги й міста всюди. Використовується при віддаленні та там, де область не завантажена</string>
@@ -35,6 +35,7 @@
     <string name="downloads_failed_network">Немає з\'єднання - завантаження зупинилося</string>
     <string name="downloads_failed_server">Сервер відповів %1$s</string>
     <string name="downloads_failed_corrupt">Завантаження пошкоджене - спробуйте ще раз</string>
+    <string name="downloads_update_failed">Не вдалося оновити, та встановлена мапа досі працює</string>
     <string name="downloads_failed_unsupported">Карти цього сервера потребують новішої програми</string>
     <string name="downloads_failed_switch_off">Завантаження вимкнене</string>
     <string name="downloads_failed_other">Завантаження не вдалося</string>

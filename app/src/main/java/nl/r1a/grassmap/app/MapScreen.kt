@@ -1722,9 +1722,9 @@ private fun MapContent(
                         invokeDownloadsCommand(container, DownloadsUiContract.removeRegion, listParams("region" to region))
                     }
                 },
-                onRefresh = {
+                onUpdateAll = {
                     scope.launch {
-                        invokeDownloadsCommand(container, DownloadsUiContract.refresh, JsonObject(emptyMap()))
+                        invokeDownloadsCommand(container, DownloadsUiContract.updateAll, JsonObject(emptyMap()))
                     }
                 },
                 onSaveServer = { url, token ->

@@ -120,6 +120,7 @@ class DownloadsUiManifestTest {
         val CONTROL_ALLOWED =
             setOf(
                 DownloadsUiContract.REFRESH,
+                DownloadsUiContract.UPDATE_ALL,
                 DownloadsUiContract.DOWNLOAD_REGION,
                 DownloadsUiContract.CANCEL_REGION,
                 DownloadsUiContract.REMOVE_REGION,

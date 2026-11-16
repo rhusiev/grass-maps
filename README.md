@@ -3466,7 +3466,11 @@ version directory is then renamed into place and `current` is replaced by an
 fsynced temporary file plus an atomic rename. The pointer is the commit point:
 a crash before it leaves the previous version current and usable; a crash after
 the version-directory rename but before the pointer rename leaves an unused new
-directory, which a retry verifies and reuses. A current version that fails
+directory, which a retry verifies and reuses. After the pointer names the new
+version, the installer deletes every other version directory of the region, so
+an update never keeps two archives. A crash between the pointer rename and that
+delete leaves an unused old directory, which the next install of the region
+removes. A current version that fails
 verification is quarantined under `.incoming` until its verified replacement is
 in place, and put back if the rename fails; a rename that cannot put it back
 reports `Internal("region.install.rollback")` and keeps the quarantine. Every
@@ -3475,6 +3479,34 @@ whose directory is missing, and deletes the stale ones, so a kill in that window
 cannot leave `current` naming a directory that only exists in quarantine. A
 failed verification or a crash during extraction leaves only a `.incoming`
 directory that the next attempt ignores.
+
+Monthly updates (T-0507). The catalogue carries one version per region, and
+`DownloadsData.updates` lists the installed regions whose catalogue version
+differs from the installed one. "Update all" (`RegionDownloadsAccess.updateAll`,
+command `downloads.ui.update_all`) fetches the catalogue, then queues each of
+them through `startDownload`, one claim at a time, so the `claimMutex` rule for
+WAITING and DOWNLOADING moves holds. An update downloads, verifies and stages
+the whole new archive, routing part included, beside the old version. The old
+version stays current and mounted until the pointer flips, and a failed
+download, a failed check or a cancel before the flip leaves it untouched. The
+installer checks for a cancel just before the move, and the flip is the commit
+point: a cancel that arrives after it finds the new version installed whole.
+A package that fails its checks is fetched once more from byte 0, unless the
+attempt resumed a partial: that failure is final and drops the partial, so the
+next attempt starts clean. A second failure stops the retries and the region's problem is `UPDATE_FAILED`, shown as
+"Update failed - the map you have still works". The same failure on a region
+that is not installed stays `CORRUPT_DATA`.
+
+The routing view `.routing/mount-<hash>` is keyed on region, version and routing
+hash, so an update gets a new view. The old view stays on disk until the next
+process start sweeps it, and it keeps working after the old pack is deleted,
+because its tile files are hard links. Packs of one monthly update share one
+tile build, which `RoutingPart.Directory.build` reads from the routing
+component's `version` and `InstalledPack.build` publishes. A mixed set (an
+update of every region that is half done) is flagged, not refused:
+`DownloadsData.hasMixedBuilds` is true and the routing mount logs the split.
+Refusing would switch routing off while each old version must keep working, and
+"Update all" converges every region on the catalogue's single build.
 
 A killed or failed archive resumes (T-0505). The zip lives in a fixed directory,
 `.incoming/partial~<region>~<version>/package.zip`, which a Network, Server or
@@ -3577,8 +3609,9 @@ the world overview when the catalogue has one, then the detected oblast's map
 with its search, elevation and contours, its routing and its 30 m elevation
 add-on as separate parts with sizes; the oblast comes from the bbox that
 contains the first fix. The plugin publishes `downloads.ui.state`; its commands
-are `downloads.ui.refresh`, `download_region`, `cancel_region`, `remove_region`,
-`select_region` and `set_server`. The token is a command parameter and never a
+are `downloads.ui.refresh`, `update_all`, `download_region`, `cancel_region`,
+`remove_region`, `select_region` and `set_server`. The screen's top button reads
+"Update all" and invokes `update_all`, which fetches the catalogue first. The token is a command parameter and never a
 state field.
 
 Background and metered (T-0505). A transfer outlives the screen: `app` starts

@@ -48,6 +48,7 @@ class DownloadsUiPlugin(
         session.load()
 
         context.addCommand(DownloadsRefreshCommand(session))
+        context.addCommand(UpdateAllRegionsCommand(session))
         context.addCommand(DownloadRegionCommand(session))
         context.addCommand(CancelRegionDownloadCommand(session))
         context.addCommand(RemoveRegionCommand(session))

@@ -8,7 +8,7 @@
     <string name="downloads_on_this_phone">On this phone</string>
     <string name="downloads_available">Available</string>
     <string name="downloads_empty">No maps yet</string>
-    <string name="downloads_refresh">Check for new maps</string>
+    <string name="downloads_update_all">Update all</string>
 
     <string name="downloads_world_overview">World overview</string>
     <string name="downloads_world_detail">Countries, main roads and cities everywhere. Used when zoomed out and where no oblast is loaded</string>
@@ -35,6 +35,7 @@
     <string name="downloads_failed_network">No connection - the download stopped</string>
     <string name="downloads_failed_server">The server answered %1$s</string>
     <string name="downloads_failed_corrupt">The download was damaged - try again</string>
+    <string name="downloads_update_failed">Update failed - the map you have still works</string>
     <string name="downloads_failed_unsupported">This server\'s maps need a newer app</string>
     <string name="downloads_failed_switch_off">Downloads are switched off</string>
     <string name="downloads_failed_other">The download failed</string>

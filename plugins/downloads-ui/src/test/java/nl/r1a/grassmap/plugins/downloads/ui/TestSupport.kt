@@ -163,6 +163,11 @@ internal class FakeDownloadsAccess(
         return Outcome.Success(Unit)
     }
 
+    override suspend fun updateAll(): Outcome<Unit> {
+        calls += "update-all:${mutable.value.updates.joinToString(",") { it.id }}"
+        return Outcome.Success(Unit)
+    }
+
     override suspend fun useMobileDataNow(): Outcome<Unit> {
         calls += "mobile-now"
         return Outcome.Success(Unit)

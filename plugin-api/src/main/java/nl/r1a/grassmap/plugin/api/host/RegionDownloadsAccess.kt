@@ -45,6 +45,14 @@ interface RegionDownloadsAccess {
     suspend fun startDownload(region: String): Outcome<Unit>
 
     /**
+     * Queues every installed region whose catalogue version is newer, except
+     * those already queued or downloading. Each region installs beside its old
+     * version and replaces it only after verification. The call returns once
+     * the regions are queued.
+     */
+    suspend fun updateAll(): Outcome<Unit> = Outcome.Failure(AppError.NotReady)
+
+    /**
      * Stops [region]'s transfer or removes it from the queue. The call returns
      * after the transfer has stopped, so the region's work directory is already
      * gone.

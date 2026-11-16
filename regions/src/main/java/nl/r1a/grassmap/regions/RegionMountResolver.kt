@@ -184,7 +184,7 @@ class RegionMountResolver(
                 component.formatVersion == RoutingLayout.FORMAT_VERSION &&
                 routing.isDirectory &&
                 !Files.isSymbolicLink(routing.toPath())
-        return if (supported) RoutingPart.Directory(routing, component.sha256) else RoutingPart.Unusable
+        return if (supported) RoutingPart.Directory(routing, component.sha256, component.version) else RoutingPart.Unusable
     }
 
     private fun readManifest(

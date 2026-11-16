@@ -42,8 +42,11 @@ import java.util.concurrent.atomic.AtomicBoolean
  *
  * Cancellation is cooperative through [CancellationHandle] and the call does not
  * return until the worker has stopped, so a caller that gets [Outcome.Success]
- * from [cancel] knows the region's work directory is gone and nothing was
- * mounted.
+ * from [cancel] knows the region's work directory is gone and nothing new was
+ * mounted. An update that is cancelled before its pointer flip leaves the
+ * installed version current and untouched. The flip is the commit point: a
+ * cancel that arrives after it finds the new version installed whole, never a
+ * half-installed one.
  *
  * The bearer token lives only in this object. It never reaches [data], a log
  * line or a file name; the state says whether one is present and nothing else.
@@ -214,6 +217,18 @@ class RegionStore(
             }
             Outcome.Success(Unit)
         }
+    }
+
+    override suspend fun updateAll(): Outcome<Unit> {
+        // Each startDownload takes the claim lock itself, so the invariant on
+        // WAITING and DOWNLOADING moves holds and no lock spans the loop.
+        for (entry in mutable.value.updates) {
+            val queued = startDownload(entry.id)
+            if (queued is Outcome.Failure) {
+                return queued
+            }
+        }
+        return Outcome.Success(Unit)
     }
 
     override suspend fun cancel(region: String): Outcome<Unit> {
@@ -393,7 +408,8 @@ class RegionStore(
                             )
                         }
                     } else {
-                        recordProblem(region, problemOf(outcome.error, tokenSent))
+                        val isUpdate = mutable.value.installed(region) != null
+                        recordProblem(region, problemOf(outcome.error, tokenSent, isUpdate))
                     }
                 }
             }
@@ -499,6 +515,7 @@ class RegionStore(
                                 .filter { it != CatalogPartKind.OTHER }
                                 .distinct(),
                         dataDate = RegionCatalogParser.dataDateOf(mounted.version),
+                        build = (mounted.routing as? RoutingPart.Directory)?.build,
                     )
                 }
         }
@@ -506,6 +523,7 @@ class RegionStore(
     private fun problemOf(
         error: AppError,
         tokenSent: Boolean,
+        isUpdate: Boolean = false,
     ): DownloadProblem =
         when (error) {
             is AppError.Server -> {
@@ -524,7 +542,9 @@ class RegionStore(
             }
 
             AppError.CorruptData -> {
-                DownloadProblem(DownloadProblemKind.CORRUPT_DATA)
+                // The downloader already fetched the package twice, and the
+                // installed version is untouched.
+                DownloadProblem(if (isUpdate) DownloadProblemKind.UPDATE_FAILED else DownloadProblemKind.CORRUPT_DATA)
             }
 
             AppError.Unsupported -> {

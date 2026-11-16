@@ -15,6 +15,8 @@ sealed interface RoutingPart {
     data class Directory(
         val directory: File,
         val sha256: String,
+        /** The monthly tile build, from the routing component's `version`. */
+        val build: String? = null,
     ) : RoutingPart
 
     /**

@@ -112,8 +112,22 @@ class RoutingMount internal constructor(
                 }
             }
             sweepOnce(target)
+            warnOnMixedBuilds(usable)
             RoutingMountResult.Ready(target, usable.map { it.region }, skipped, rebuilt)
         }
+
+    /**
+     * Packs from different monthly builds still mount. Refusing would switch
+     * routing off in the middle of an update of every region, when each old
+     * version must keep working. The log names the split, and the update
+     * converges on the catalogue's single build.
+     */
+    private fun warnOnMixedBuilds(usable: List<MountedRegion>) {
+        val builds = usable.mapNotNull { (it.routing as? RoutingPart.Directory)?.build }.distinct()
+        if (builds.size > 1) {
+            log("routing packs mix ${builds.size} builds builds=${builds.joinToString(",")}")
+        }
+    }
 
     private fun skipOf(region: MountedRegion): SkippedRouting? =
         when (region.routing) {

@@ -3,6 +3,7 @@ package nl.r1a.grassmap.regions
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -62,6 +63,42 @@ class RoutingMountTest {
         assertTrue(withB.rebuilt && newVersion.rebuilt)
         assertEquals(3, setOf(first.directory, withB.directory, newVersion.directory).size)
         assertEquals("a2", File(newVersion.directory, "tiles/0/a.gph").readText())
+    }
+
+    @Test
+    fun anUpdatedPackMountsANewViewAndTheOldViewSurvivesTheOldPackBeingDeleted() {
+        val old = region("a", "1", "tiles/0/a.gph" to "old")
+        val mount = RoutingMount(mountRoot, logs::add)
+        val before = ready(mount.ensure(listOf(old)))
+        val updated = region("a", "2", "tiles/0/a.gph" to "new")
+
+        val after = ready(mount.ensure(listOf(updated)))
+        old.directory.deleteRecursively()
+
+        assertTrue(after.rebuilt)
+        assertNotEquals(before.directory, after.directory)
+        assertEquals("new", File(after.directory, "tiles/0/a.gph").readText())
+        assertEquals("old", File(before.directory, "tiles/0/a.gph").readText())
+    }
+
+    @Test
+    fun packsFromTwoBuildsStillMountAndTheLogNamesTheSplit() {
+        val a = region("a", "1", "tiles/0/a.gph" to "a", build = "build-1")
+        val b = region("b", "1", "tiles/0/b.gph" to "b", build = "build-2")
+
+        ready(RoutingMount(mountRoot, logs::add).ensure(listOf(a, b)))
+
+        assertTrue(logs.any { it.contains("mix 2 builds") && it.contains("build-1") && it.contains("build-2") })
+    }
+
+    @Test
+    fun packsFromOneBuildLogNoSplit() {
+        val a = region("a", "1", "tiles/0/a.gph" to "a", build = "build-1")
+        val b = region("b", "1", "tiles/0/b.gph" to "b", build = "build-1")
+
+        ready(RoutingMount(mountRoot, logs::add).ensure(listOf(a, b)))
+
+        assertTrue(logs.none { it.contains("mix") })
     }
 
     @Test
@@ -197,6 +234,7 @@ class RoutingMountTest {
         vararg tiles: Pair<String, String>,
         withConfig: Boolean = true,
         sha256: String = "hash-$id-$version",
+        build: String? = null,
     ): MountedRegion {
         val directory = base.resolve("packs/$id/$version").toFile()
         val routing = File(directory, "routing")
@@ -205,6 +243,6 @@ class RoutingMountTest {
             File(routing, "valhalla.json").writeText("{\"r\":\"$id\"}")
         }
         val manifest = RegionManifest(id, version, 1, "2026-01-01T00:00:00Z", null, emptyList())
-        return MountedRegion(id, version, directory, File(directory, "map.pmtiles"), null, manifest, RoutingPart.Directory(routing, sha256))
+        return MountedRegion(id, version, directory, File(directory, "map.pmtiles"), null, manifest, RoutingPart.Directory(routing, sha256, build))
     }
 }

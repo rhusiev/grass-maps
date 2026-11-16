@@ -104,7 +104,7 @@ class RegionDownloader(
         PartialArchives(paths).discardOtherVersions(request.region, request.version)
         var outcome: Outcome<InstalledRegion>? = null
         try {
-            return downloadInto(request, policy, cancellation, work, partial, nonce, onProgress)
+            return downloadWithRetry(request, policy, cancellation, work, partial, nonce, onProgress)
                 .also { outcome = it }
         } finally {
             work.deleteRecursively()
@@ -132,6 +132,37 @@ class RegionDownloader(
             else -> false
         }
     }
+
+    /**
+     * Fetches and verifies the package. A package that fails verification is
+     * fetched once more from byte 0, because a bad byte in flight and a bad
+     * file on the server look the same on the first failure. A second failure
+     * is final, so a broken build does not loop. A failure after a resume is
+     * final at once: the stale partial is the likely cause, it is discarded, and
+     * the next attempt starts from zero with its own retry. Nothing is installed
+     * before verification passes, so the previous version stays current throughout.
+     */
+    private suspend fun downloadWithRetry(
+        request: RegionRequest,
+        policy: DownloadPolicy,
+        cancellation: CancellationHandle,
+        work: File,
+        partial: File,
+        nonce: String,
+        onProgress: (DownloadProgress) -> Unit,
+    ): Outcome<InstalledRegion> {
+        val resumed = File(partial, PACKAGE_FILE).length() > 0
+        val first = downloadInto(request, policy, cancellation, work, partial, nonce, onProgress)
+        if (resumed || !first.isCorruptData() || cancellation.isCancelled()) {
+            return first
+        }
+        log("package rejected, fetching again region=${request.region} version=${request.version}")
+        partial.deleteRecursively()
+        File(work, STAGING_DIRECTORY).deleteRecursively()
+        return downloadInto(request, policy, cancellation, work, partial, nonce, onProgress)
+    }
+
+    private fun Outcome<InstalledRegion>.isCorruptData(): Boolean = this is Outcome.Failure && error == AppError.CorruptData
 
     private suspend fun downloadInto(
         request: RegionRequest,

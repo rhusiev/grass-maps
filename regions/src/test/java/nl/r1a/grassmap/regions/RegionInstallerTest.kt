@@ -151,12 +151,68 @@ class RegionInstallerTest {
         assertFalse(staleCurrent.exists())
     }
 
+    @Test
+    fun anUpdateRemovesTheOldVersionAfterThePointerFlips() {
+        install().value()
+        assertEquals(setOf(VERSION), versionNames())
+
+        install(filesAt(NEXT_VERSION), version = NEXT_VERSION).value()
+
+        assertEquals(NEXT_VERSION, CurrentPointer.read(paths.regionDirectory(REGION)))
+        assertEquals(setOf(NEXT_VERSION), versionNames())
+    }
+
+    @Test
+    fun aCancelBeforeTheFlipKeepsTheOldVersionCurrent() {
+        install().value()
+
+        val outcome =
+            install(
+                filesAt(NEXT_VERSION),
+                version = NEXT_VERSION,
+                cancellation = CancellationHandle { true },
+            )
+
+        assertEquals(Outcome.Failure(AppError.Cancelled), outcome)
+        assertEquals(VERSION, CurrentPointer.read(paths.regionDirectory(REGION)))
+        assertEquals(setOf(VERSION), versionNames())
+    }
+
+    @Test
+    fun aFailedMoveKeepsTheOldVersionCurrent() {
+        install().value()
+
+        val outcome = install(filesAt(NEXT_VERSION), version = NEXT_VERSION, mover = mover(failRollback = false))
+
+        assertTrue(outcome is Outcome.Failure)
+        assertEquals(VERSION, CurrentPointer.read(paths.regionDirectory(REGION)))
+        assertEquals(setOf(VERSION), versionNames())
+    }
+
+    private fun filesAt(version: String): Map<String, ByteArray> =
+        FixturePackages.files().also { files ->
+            val manifest = String(files.getValue(RegionIdentifiers.MANIFEST_FILE), Charsets.UTF_8)
+            files[RegionIdentifiers.MANIFEST_FILE] =
+                manifest.replace(VERSION, version).toByteArray(Charsets.UTF_8)
+        }
+
+    private fun versionNames(): Set<String> =
+        paths
+            .regionDirectory(REGION)
+            .listFiles()
+            ?.filter { it.isDirectory }
+            ?.map { it.name }
+            ?.toSet()
+            .orEmpty()
+
     private fun install(
         files: Map<String, ByteArray> = FixturePackages.files(),
         nonce: String = UUID.randomUUID().toString(),
         mover: ((File, File) -> Boolean)? = null,
+        version: String = VERSION,
+        cancellation: CancellationHandle = CancellationHandle.None,
     ): Outcome<InstalledRegion> {
-        val manifest = manifestOf(files)
+        val manifest = manifestOf(files, version)
         val stagingDirectory = staging(files)
         val installer =
             if (mover == null) {
@@ -169,13 +225,13 @@ class RegionInstallerTest {
                 RegionRequest(
                     url = "https://example.test/package.zip",
                     region = REGION,
-                    version = VERSION,
+                    version = version,
                     token = null,
                 ),
             staging = stagingDirectory,
             manifest = manifest,
             nonce = nonce,
-            cancellation = CancellationHandle.None,
+            cancellation = cancellation,
         )
     }
 
@@ -188,13 +244,16 @@ class RegionInstallerTest {
         return directory
     }
 
-    private fun manifestOf(files: Map<String, ByteArray>): RegionManifest =
+    private fun manifestOf(
+        files: Map<String, ByteArray>,
+        version: String = VERSION,
+    ): RegionManifest =
         when (
             val parsed =
                 RegionManifestParser.parse(
                     files.getValue(RegionIdentifiers.MANIFEST_FILE),
                     REGION,
-                    VERSION,
+                    version,
                 )
         ) {
             is Outcome.Success -> parsed.value
@@ -268,6 +327,7 @@ class RegionInstallerTest {
     private companion object {
         const val REGION = "fixture-mini"
         const val VERSION = FixturePackages.FIXTURE_VERSION
+        const val NEXT_VERSION = "2026-12-01-1"
         const val INSTALL_ID = "region.install"
         const val ROLLBACK_ID = "region.install.rollback"
         const val STAGING_PREFIX = "staging-"

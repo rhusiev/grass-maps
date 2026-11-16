@@ -182,6 +182,12 @@ data class InstalledPack(
     val bytes: Long = 0,
     val parts: List<CatalogPartKind> = emptyList(),
     val dataDate: String? = null,
+    /**
+     * The monthly tile build of the pack's routing part, or null when the pack
+     * has none. Packs of one monthly update share it; two values among the
+     * installed packs mean a half-finished update.
+     */
+    val build: String? = null,
 )
 
 /** Why a catalogue or a download did not finish. It carries data, never user text. */
@@ -210,6 +216,9 @@ enum class DownloadProblemKind {
 
     /** The store could not write or read the region directory. */
     STORAGE,
+
+    /** An update failed its checks twice. The installed version still works. */
+    UPDATE_FAILED,
 
     /** Anything else, including a defect the app caught at the boundary. */
     OTHER,
@@ -297,6 +306,17 @@ data class DownloadsData(
 
     /** The installed package of [region], or null when it is not on the phone. */
     fun installed(region: String): InstalledPack? = installed.firstOrNull { it.region == region }
+
+    /**
+     * The installed regions whose catalogue version differs from the installed
+     * one, in catalogue order. A region that is not installed is not an update.
+     */
+    val updates: List<CatalogRegion>
+        get() = catalog?.regions.orEmpty().filter { entry -> installed(entry.id)?.let { it.version != entry.version } == true }
+
+    /** True when the installed packs come from more than one monthly tile build. */
+    val hasMixedBuilds: Boolean
+        get() = installed.mapNotNull { it.build }.distinct().size > 1
 }
 
 /** What one row of the downloads list is doing. */

@@ -55,6 +55,7 @@ class DownloadsUiPlugin(
         context.addCommand(SelectRegionCommand(session))
         context.addCommand(SetMapServerCommand(session))
         context.addCommand(SetMobileDataPolicyCommand(session))
+        context.addCommand(SetAutoUpdateCommand(session))
         context.addCommand(UseMobileDataNowCommand(session))
         context.addStream(
             StreamDescriptor(

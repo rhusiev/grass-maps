@@ -62,4 +62,6 @@
     <string name="downloads_mobile_data_title">Mobile data</string>
     <string name="downloads_mobile_data_wifi_only">Wi-Fi only</string>
     <string name="downloads_mobile_data_any">Wi-Fi and mobile data</string>
+    <string name="downloads_auto_update_start">Update maps automatically, monthly</string>
+    <string name="downloads_auto_update_stop">Stop updating maps automatically</string>
 </resources>

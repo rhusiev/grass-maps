@@ -217,6 +217,22 @@ class DownloadsUiPluginTest {
         }
 
     @Test
+    fun theAutoUpdateChoiceIsSetAndANonBooleanIsRefused() =
+        runBlocking {
+            val access = FakeDownloadsAccess()
+            val context = context(access)
+            DownloadsUiPlugin().activate(context)
+            val command = context.command(DownloadsUiContract.setAutoUpdate)
+
+            val off = stateOf(command.invokeRaw(json("enabled" to "false")))
+            val refused = command.invokeRaw(json("enabled" to "maybe"))
+
+            assertFalse(off.autoUpdate)
+            assertEquals(Outcome.Failure(AppError.InvalidInput), refused)
+            assertEquals(listOf("auto:false"), access.calls.filter { it.startsWith("auto") })
+        }
+
+    @Test
     fun aTransferWaitingForWifiIsReportedAndTheMobileDataChoiceReachesTheStore() =
         runBlocking {
             val access = FakeDownloadsAccess()
@@ -348,6 +364,7 @@ class DownloadsUiPluginTest {
                 DownloadsUiContract.removeRegion,
                 DownloadsUiContract.setServer,
                 DownloadsUiContract.setMobileData,
+                DownloadsUiContract.setAutoUpdate,
                 DownloadsUiContract.useMobileDataNow,
             )
     }

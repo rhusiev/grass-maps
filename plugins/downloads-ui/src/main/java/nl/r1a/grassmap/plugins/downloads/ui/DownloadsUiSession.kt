@@ -77,6 +77,8 @@ class DownloadsUiSession(
 
     suspend fun setMobileData(policy: MobileDataPolicy): Outcome<DownloadsState> = result(access.setMobileDataPolicy(policy))
 
+    suspend fun setAutoUpdate(enabled: Boolean): Outcome<DownloadsState> = result(access.setAutoUpdate(enabled))
+
     suspend fun useMobileDataNow(): Outcome<DownloadsState> = result(access.useMobileDataNow())
 
     suspend fun setServer(

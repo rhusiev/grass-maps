@@ -62,4 +62,6 @@
     <string name="downloads_mobile_data_title">Мобільний інтернет</string>
     <string name="downloads_mobile_data_wifi_only">Лише Wi-Fi</string>
     <string name="downloads_mobile_data_any">Wi-Fi і мобільний інтернет</string>
+    <string name="downloads_auto_update_start">Оновлювати мапи автоматично щомісяця</string>
+    <string name="downloads_auto_update_stop">Не оновлювати мапи автоматично</string>
 </resources>

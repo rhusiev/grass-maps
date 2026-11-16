@@ -61,6 +61,8 @@ class RegionStore(
     private val metered: MeteredNetworkMonitor = NeverMetered,
     initialMobileDataPolicy: MobileDataPolicy = MobileDataPolicy.WIFI_ONLY,
     private val onMobileDataPolicyChanged: (MobileDataPolicy) -> Unit = {},
+    initialAutoUpdate: Boolean = true,
+    private val onAutoUpdateChanged: (Boolean) -> Unit = {},
     /** A test seam: runs after a transfer decided to pause and before it takes the claim lock. */
     private val beforePause: suspend (String) -> Unit = {},
 ) : RegionDownloadsAccess {
@@ -70,6 +72,7 @@ class RegionStore(
                 serverUrl = DownloadsDefaults.SERVER_URL,
                 mobileDataPolicy = initialMobileDataPolicy,
                 networkMetered = metered.isMetered.value,
+                autoUpdate = initialAutoUpdate,
             ),
         )
     override val data: StateFlow<DownloadsData> = mutable.asStateFlow()
@@ -288,6 +291,12 @@ class RegionStore(
     override suspend fun setMobileDataPolicy(policy: MobileDataPolicy): Outcome<Unit> {
         mutable.update { it.copy(mobileDataPolicy = policy) }
         onMobileDataPolicyChanged(policy)
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun setAutoUpdate(enabled: Boolean): Outcome<Unit> {
+        mutable.update { it.copy(autoUpdate = enabled) }
+        onAutoUpdateChanged(enabled)
         return Outcome.Success(Unit)
     }
 

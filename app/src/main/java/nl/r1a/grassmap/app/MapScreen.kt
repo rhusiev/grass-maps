@@ -1758,6 +1758,15 @@ private fun MapContent(
                         invokeDownloadsCommand(container, DownloadsUiContract.useMobileDataNow, JsonObject(emptyMap()))
                     }
                 },
+                onSetAutoUpdate = { enabled ->
+                    scope.launch {
+                        invokeDownloadsCommand(
+                            container,
+                            DownloadsUiContract.setAutoUpdate,
+                            listParams("enabled" to enabled.toString()),
+                        )
+                    }
+                },
             )
         }
         val shareConfirmation = trackShareConfirmation

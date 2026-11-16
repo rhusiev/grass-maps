@@ -103,6 +103,7 @@ fun DownloadsScreenContent(
     modifier: Modifier = Modifier,
     onSetMobileData: (Boolean) -> Unit = {},
     onUseMobileDataNow: () -> Unit = {},
+    onSetAutoUpdate: (Boolean) -> Unit = {},
 ) {
     val close = stringResource(R.string.downloads_close)
     Column(
@@ -163,6 +164,7 @@ fun DownloadsScreenContent(
             state = state,
             onSetMobileData = onSetMobileData,
             onUseMobileDataNow = onUseMobileDataNow,
+            onSetAutoUpdate = onSetAutoUpdate,
         )
 
         state.catalogProblem?.let { problem -> ProblemLine(problem) }
@@ -561,7 +563,8 @@ private fun ActionButton(
 
 /**
  * The mobile-data policy and, while a download waits for Wi-Fi, the one-off
- * way past it. The policy button names the policy it switches to.
+ * way past it, and the monthly automatic update choice. Each button names the
+ * choice it switches to.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -569,6 +572,7 @@ private fun MobileDataCard(
     state: DownloadsState,
     onSetMobileData: (Boolean) -> Unit,
     onUseMobileDataNow: () -> Unit,
+    onSetAutoUpdate: (Boolean) -> Unit,
 ) {
     val wifiOnly = state.mobileDataPolicy == MobileDataPolicy.WIFI_ONLY
     Card {
@@ -579,6 +583,14 @@ private fun MobileDataCard(
                     if (wifiOnly) R.string.downloads_mobile_data_wifi_only else R.string.downloads_mobile_data_any,
                 ),
             onClick = { onSetMobileData(wifiOnly) },
+            quiet = true,
+        )
+        ActionButton(
+            text =
+                stringResource(
+                    if (state.autoUpdate) R.string.downloads_auto_update_stop else R.string.downloads_auto_update_start,
+                ),
+            onClick = { onSetAutoUpdate(!state.autoUpdate) },
             quiet = true,
         )
         if (state.waitingForWifi) {

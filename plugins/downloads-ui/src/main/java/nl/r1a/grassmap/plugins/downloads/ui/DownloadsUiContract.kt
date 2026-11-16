@@ -23,6 +23,7 @@ object DownloadsUiContract {
     const val SELECT_REGION: String = "downloads.ui.select_region"
     const val SET_SERVER: String = "downloads.ui.set_server"
     const val SET_MOBILE_DATA: String = "downloads.ui.set_mobile_data"
+    const val SET_AUTO_UPDATE: String = "downloads.ui.set_auto_update"
     const val USE_MOBILE_DATA_NOW: String = "downloads.ui.use_mobile_data_now"
 
     val stateStream: StreamId = StreamId(STATE_STREAM_ID)
@@ -35,6 +36,7 @@ object DownloadsUiContract {
     val selectRegion: CommandId = CommandId(SELECT_REGION)
     val setServer: CommandId = CommandId(SET_SERVER)
     val setMobileData: CommandId = CommandId(SET_MOBILE_DATA)
+    val setAutoUpdate: CommandId = CommandId(SET_AUTO_UPDATE)
     val useMobileDataNow: CommandId = CommandId(USE_MOBILE_DATA_NOW)
 
     val commands: List<CommandId> =
@@ -47,6 +49,7 @@ object DownloadsUiContract {
             selectRegion,
             setServer,
             setMobileData,
+            setAutoUpdate,
             useMobileDataNow,
         )
 }

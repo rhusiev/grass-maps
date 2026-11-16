@@ -88,6 +88,16 @@
         "implementation": "nl.r1a.grassmap.plugins.downloads.ui.SetMobileDataPolicyCommand"
       },
       {
+        "id": "downloads.ui.set_auto_update",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "doc": "Turns the monthly automatic map update on or off. Parameter: enabled, true or false.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.SetAutoUpdateCommand"
+      },
+      {
         "id": "downloads.ui.use_mobile_data_now",
         "params": "kotlinx.serialization.json.JsonElement",
         "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",

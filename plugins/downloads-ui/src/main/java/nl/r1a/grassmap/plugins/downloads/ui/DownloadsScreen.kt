@@ -74,6 +74,7 @@ object DownloadsScreen {
             firstRun = firstRun,
             mobileDataPolicy = data.mobileDataPolicy,
             waitingForWifi = data.transfers.any { it.state == DownloadTransferState.WAITING_FOR_WIFI },
+            autoUpdate = data.autoUpdate,
         )
     }
 

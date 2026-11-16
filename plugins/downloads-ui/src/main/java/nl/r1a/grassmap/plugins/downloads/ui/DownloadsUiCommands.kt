@@ -3,6 +3,7 @@ package nl.r1a.grassmap.plugins.downloads.ui
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
@@ -175,6 +176,24 @@ class SetMobileDataPolicyCommand(
     }
 }
 
+/** Turns the monthly automatic update on or off. Parameter: enabled, a boolean. */
+class SetAutoUpdateCommand(
+    private val session: DownloadsUiSession,
+) : Command<JsonElement, DownloadsState>(
+        id = DownloadsUiContract.setAutoUpdate,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = DownloadsState.serializer(),
+        doc = "Turns the monthly automatic map update on or off. Parameter: enabled, true or false.",
+        policy = TRANSFER_POLICY,
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<DownloadsState>> {
+        val enabled =
+            ((params as? JsonObject)?.get(PARAM_ENABLED) as? JsonPrimitive)?.booleanOrNull
+                ?: return Outcome.Failure(AppError.InvalidInput)
+        return session.result(session.setAutoUpdate(enabled))
+    }
+}
+
 /** Lets the downloads that wait for Wi-Fi run on mobile data now. */
 class UseMobileDataNowCommand(
     private val session: DownloadsUiSession,
@@ -215,5 +234,6 @@ private const val PARAM_REGION = "region"
 private const val PARAM_URL = "url"
 private const val PARAM_TOKEN = "token"
 private const val PARAM_POLICY = "policy"
+private const val PARAM_ENABLED = "enabled"
 private const val POLICY_WIFI_ONLY = "wifi_only"
 private const val POLICY_ANY = "any"

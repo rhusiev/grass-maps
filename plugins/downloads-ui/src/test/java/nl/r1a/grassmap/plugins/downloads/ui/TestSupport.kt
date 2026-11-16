@@ -163,6 +163,12 @@ internal class FakeDownloadsAccess(
         return Outcome.Success(Unit)
     }
 
+    override suspend fun setAutoUpdate(enabled: Boolean): Outcome<Unit> {
+        calls += "auto:$enabled"
+        mutable.update { it.copy(autoUpdate = enabled) }
+        return Outcome.Success(Unit)
+    }
+
     override suspend fun updateAll(): Outcome<Unit> {
         calls += "update-all:${mutable.value.updates.joinToString(",") { it.id }}"
         return Outcome.Success(Unit)

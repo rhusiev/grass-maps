@@ -297,6 +297,8 @@ data class DownloadsData(
     val mobileDataPolicy: MobileDataPolicy = MobileDataPolicy.WIFI_ONLY,
     /** True while the current network is metered. */
     val networkMetered: Boolean = false,
+    /** Whether the monthly background check and update runs (T-0508). On by default. */
+    val autoUpdate: Boolean = true,
 ) {
     /** The transfer for [region], or null when nothing is in flight for it. */
     fun transfer(region: String): DownloadTransfer? = transfers.firstOrNull { it.region == region }
@@ -432,4 +434,6 @@ data class DownloadsState(
     val mobileDataPolicy: MobileDataPolicy = MobileDataPolicy.WIFI_ONLY,
     /** True while at least one transfer waits for an unmetered network. */
     val waitingForWifi: Boolean = false,
+    /** Whether the monthly automatic update is on. */
+    val autoUpdate: Boolean = true,
 )

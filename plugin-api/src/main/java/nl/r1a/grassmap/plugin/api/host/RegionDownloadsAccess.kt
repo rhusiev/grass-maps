@@ -69,6 +69,12 @@ interface RegionDownloadsAccess {
     suspend fun setMobileDataPolicy(policy: MobileDataPolicy): Outcome<Unit> = Outcome.Failure(AppError.NotReady)
 
     /**
+     * Turns the monthly automatic update on or off. A host that cannot keep
+     * the choice answers [AppError.NotReady].
+     */
+    suspend fun setAutoUpdate(enabled: Boolean): Outcome<Unit> = Outcome.Failure(AppError.NotReady)
+
+    /**
      * Lets the transfers that wait for an unmetered network run on a metered one
      * now. The choice ends when no transfer is left, so the policy itself does
      * not change.

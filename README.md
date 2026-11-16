@@ -1306,6 +1306,23 @@ and needs one to patch.
 registers an engine that answers that typed failure. It does not fail at
 startup.
 
+The engine asks `RoutingPackAccess.packDirectory()` before each route and
+reopens its native actor when the path differs from the one it opened, so a
+pack installed while the app runs is used by the next route (T-0511).
+
+When a route fails with `NoRoute` or `PackMissing`, the planner checks the
+stops against the catalogue (`MissingRegionFinder`). A stop that lies in an
+oblast without its routing part installed turns the failure into
+`RoutePlanFailure.RegionsMissing`, and `RoutePlanState.missing` lists those
+regions with the missing parts and their catalogue sizes. The stops decide, not
+the line, because region bounding boxes overlap and the client has no outline.
+A stop outside every bounding box needs nothing. `route.planner.download_missing`
+(`MissingRegionsDownloader`) starts the downloads, waits for them to install,
+calls `packDirectory()` and routes again. `RoutePlanState.missingDownload`
+carries the progress, or the problem when a download failed, and the prompt
+then offers the download again. The command is invalid input without a prompt
+or while a download runs.
+
 `annotate` fills the per-edge attributes after the route is already returned:
 the routed line goes back to Valhalla's `trace_attributes` with `map_snap`, is
 cut into one run per graph edge, and carries `surface`, `highway`, `sac_scale`

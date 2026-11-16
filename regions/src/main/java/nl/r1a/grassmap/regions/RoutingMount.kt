@@ -75,9 +75,10 @@ sealed interface RoutingMountResult {
  * An unchanged list is not rebuilt.
  *
  * Valhalla reads tile files lazily from the directory it was started with, and
- * the engine starts once per process. The first [ensure] of a process therefore
+ * the engine opens a view once, then reopens when the path changes. The first [ensure] of a process therefore
  * removes every view but the current one, and later calls leave the view the
- * engine may be using in place until the next start.
+ * engine may be using in place until the next start. The engine moves to a new
+ * view on its next route and leaves the old one on disk.
  */
 class RoutingMount internal constructor(
     private val root: File,

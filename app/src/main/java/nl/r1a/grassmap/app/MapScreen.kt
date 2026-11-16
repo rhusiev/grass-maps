@@ -1257,6 +1257,12 @@ private fun MapContent(
                         invokePlannerCommand(container, RoutePlannerContract.resetPreferences, JsonObject(emptyMap()))
                     }
                 },
+                onDownloadMissing = {
+                    scope.launch {
+                        invokePlannerCommand(container, RoutePlannerContract.downloadMissing, JsonObject(emptyMap()))
+                    }
+                },
+                preferUkrainian = LocalConfiguration.current.locales[0].language == "uk",
                 warnings = warningRows,
                 chart = routeChart,
                 onChartAxis = { axis -> chartAxis = axis },

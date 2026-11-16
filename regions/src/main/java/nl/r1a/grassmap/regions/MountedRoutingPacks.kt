@@ -7,7 +7,7 @@ import java.io.File
  * The routing pack directory for the installed regions: the merged view of
  * every mounted pack's routing part. It reads the store on each call, so a
  * pack installed since the last call is picked up. The Valhalla engine asks
- * once per process, so the new view is used from the next start.
+ * before every route and reopens when the returned path differs (T-0511).
  */
 class MountedRoutingPacks(
     regionsRoot: File,

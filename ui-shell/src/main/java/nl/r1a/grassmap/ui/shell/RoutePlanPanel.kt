@@ -103,6 +103,8 @@ fun RoutePlanPanel(
     onClose: () -> Unit,
     onApplyPreferences: (RouteOptions) -> Unit,
     onResetPreferences: () -> Unit,
+    onDownloadMissing: () -> Unit = {},
+    preferUkrainian: Boolean = false,
     warnings: List<RouteWarningRow> = emptyList(),
     chart: ElevationChartState = ElevationChartState(),
     onChartAxis: (ElevationChartAxis) -> Unit = {},
@@ -159,12 +161,17 @@ fun RoutePlanPanel(
             }
 
             RoutePlanStatus.Failed -> {
+                val missing = state.missing
+                if (state.failure == RoutePlanFailure.RegionsMissing && missing != null) {
+                    MissingRegionsCard(missing, state.missingDownload, strings, preferUkrainian, onDownloadMissing)
+                    return@Column
+                }
                 val key =
                     when (state.failure) {
                         RoutePlanFailure.PackMissing -> PACK_MISSING_KEY
                         RoutePlanFailure.PackUnusable -> PACK_UNUSABLE_KEY
                         RoutePlanFailure.EngineUnavailable -> ENGINE_UNAVAILABLE_KEY
-                        RoutePlanFailure.NoRoute, null -> FAILED_KEY
+                        RoutePlanFailure.NoRoute, RoutePlanFailure.RegionsMissing, null -> FAILED_KEY
                     }
                 StatusLine(strings.resolve(key), strings.resolve(key))
             }

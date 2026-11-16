@@ -62,6 +62,9 @@ class HttpDownloadTransport : DownloadTransport {
                 connection.readTimeout = policy.boundedReadTimeoutMs
                 connection.setRequestProperty(ACCEPT_HEADER, ACCEPT_VALUE)
                 connection.setRequestProperty(CONNECTION_HEADER, CONNECTION_CLOSE)
+                if (request.rangeStart > 0) {
+                    connection.setRequestProperty(RANGE_HEADER, "bytes=${request.rangeStart}-")
+                }
                 if (sameAuthority(current, initial)) {
                     request.token?.let { connection.setRequestProperty(AUTHORIZATION_HEADER, it.authorizationHeader) }
                 }
@@ -77,10 +80,14 @@ class HttpDownloadTransport : DownloadTransport {
                 }
                 if (status !in SUCCESS_RANGE) {
                     return Outcome.Success(
-                        TransportResult(status = status, retryAfterSeconds = retryAfterSeconds(connection)),
+                        TransportResult(
+                            status = status,
+                            retryAfterSeconds = retryAfterSeconds(connection),
+                            totalBytes = ContentRange.parse(connection.getHeaderField(CONTENT_RANGE_HEADER))?.total,
+                        ),
                     )
                 }
-                return readBody(connection, status, sink, policy)
+                return readBody(connection, status, request.rangeStart, sink, policy)
             } finally {
                 connection.disconnect()
             }
@@ -90,16 +97,26 @@ class HttpDownloadTransport : DownloadTransport {
     private suspend fun readBody(
         connection: HttpURLConnection,
         status: Int,
+        rangeStart: Long,
         sink: BodySink,
         policy: DownloadPolicy,
     ): Outcome<TransportResult> {
         val declared = connection.contentLengthLong
+        val offset =
+            when (val accepted = acceptedOffset(connection, status, rangeStart, declared, policy)) {
+                is Outcome.Success -> accepted.value
+                is Outcome.Failure -> return accepted
+            }
         if (declared > policy.boundedMaxPackageBytes) {
             return Outcome.Failure(AppError.CorruptData)
         }
+        when (val begun = sink.begin(offset)) {
+            is Outcome.Failure -> return begun
+            is Outcome.Success -> Unit
+        }
         val input = connection.inputStream
         return try {
-            copyBody(input, declared, sink, policy.boundedMaxPackageBytes)
+            copyBody(input, offset, declared, sink, policy.boundedMaxPackageBytes)
         } finally {
             input.close()
         }.let { copied ->
@@ -110,14 +127,45 @@ class HttpDownloadTransport : DownloadTransport {
         }
     }
 
+    /**
+     * The archive byte a successful response starts at. A `206` must answer the
+     * range that was asked for and run to the end of the file, otherwise the
+     * bytes cannot be appended to what is on disk and the response is
+     * [AppError.CorruptData]. Any other success restarts at 0, which for a
+     * range request is the `200` of a server that ignores `Range`.
+     */
+    private fun acceptedOffset(
+        connection: HttpURLConnection,
+        status: Int,
+        rangeStart: Long,
+        declared: Long,
+        policy: DownloadPolicy,
+    ): Outcome<Long> {
+        if (status != HTTP_PARTIAL_CONTENT) {
+            return Outcome.Success(0L)
+        }
+        val range = ContentRange.parse(connection.getHeaderField(CONTENT_RANGE_HEADER))
+        val total = range?.total
+        val matches =
+            rangeStart > 0 &&
+                range != null &&
+                total != null &&
+                range.first == rangeStart &&
+                range.last == total - 1 &&
+                total <= policy.boundedMaxPackageBytes &&
+                (declared < 0 || declared == range.last - range.first + 1)
+        return if (matches) Outcome.Success(rangeStart) else Outcome.Failure(AppError.CorruptData)
+    }
+
     private suspend fun copyBody(
         input: InputStream,
+        offset: Long,
         declared: Long,
         sink: BodySink,
         maxBytes: Long,
     ): Outcome<Unit> {
         val buffer = ByteArray(TRANSFER_BUFFER_BYTES)
-        var total = 0L
+        var received = 0L
         while (true) {
             coroutineContext.ensureActive()
             val read = input.read(buffer)
@@ -127,8 +175,8 @@ class HttpDownloadTransport : DownloadTransport {
             if (read == 0) {
                 continue
             }
-            total += read
-            if (total > maxBytes) {
+            received += read
+            if (offset + received > maxBytes) {
                 return Outcome.Failure(AppError.CorruptData)
             }
             when (val written = sink.write(buffer, read)) {
@@ -136,7 +184,7 @@ class HttpDownloadTransport : DownloadTransport {
                 is Outcome.Success -> Unit
             }
         }
-        if (declared >= 0 && total != declared) {
+        if (declared >= 0 && received != declared) {
             return Outcome.Failure(AppError.Network)
         }
         return Outcome.Success(Unit)
@@ -233,6 +281,9 @@ class HttpDownloadTransport : DownloadTransport {
         const val CONNECTION_CLOSE = "close"
         const val LOCATION_HEADER = "Location"
         const val RETRY_AFTER_HEADER = "Retry-After"
+        const val RANGE_HEADER = "Range"
+        const val CONTENT_RANGE_HEADER = "Content-Range"
+        const val HTTP_PARTIAL_CONTENT = 206
         val SUCCESS_RANGE: IntRange = 200..299
         val REDIRECT_STATUSES: Set<Int> = setOf(301, 302, 303, 307, 308)
     }

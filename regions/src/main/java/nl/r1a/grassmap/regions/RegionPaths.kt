@@ -10,6 +10,7 @@ import java.util.UUID
  * <root>/<region>/<version>/        one installed package
  * <root>/<region>/current           the active version, atomically replaced
  * <root>/.incoming/                 downloads, staging and quarantine
+ * <root>/.incoming/partial~<region>~<version>/package.zip   an unfinished archive
  * <root>/.routing/                  the merged routing tiles ([RoutingMount])
  * ```
  *
@@ -47,6 +48,19 @@ class RegionPaths(
             "$QUARANTINE_PREFIX$QUARANTINE_SEPARATOR$region$QUARANTINE_SEPARATOR$version$QUARANTINE_SEPARATOR$nonce",
         )
 
+    /**
+     * Where the archive of one region version is kept until it is verified and
+     * installed. The name is fixed, so the next attempt after a kill finds the
+     * bytes already received. It uses the same separator as a quarantine.
+     */
+    fun partialDirectory(
+        region: String,
+        version: String,
+    ): File = File(incomingDirectory(), "$PARTIAL_PREFIX$QUARANTINE_SEPARATOR$region$QUARANTINE_SEPARATOR$version")
+
+    /** The prefix every [partialDirectory] of [region] starts with, whatever its version. */
+    fun partialPrefix(region: String): String = "$PARTIAL_PREFIX$QUARANTINE_SEPARATOR$region$QUARANTINE_SEPARATOR"
+
     /** A unique work directory under `.incoming`, on the same filesystem as the target. */
     fun newWorkDirectory(
         region: String,
@@ -62,6 +76,9 @@ class RegionPaths(
 
         /** The first word of every quarantine directory name under `.incoming`. */
         const val QUARANTINE_PREFIX: String = "invalid"
+
+        /** The first word of every unfinished-archive directory name under `.incoming`. */
+        const val PARTIAL_PREFIX: String = "partial"
 
         /** A character no region or version may contain, so the name splits cleanly. */
         const val QUARANTINE_SEPARATOR: Char = '~'

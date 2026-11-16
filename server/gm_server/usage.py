@@ -35,6 +35,7 @@ class UsageStore:
         self._now = now
         self._lock = threading.Lock()
         self._used: dict[str, dict[str, int]] = {}
+        self._reserved: dict[str, int] = {}
         self._dirty = False
         self._last_flush = 0.0
         self._load()
@@ -43,6 +44,31 @@ class UsageStore:
         """Returns the bytes [key] has downloaded this month."""
         with self._lock:
             return self._used.get(key, {}).get(self._month(), 0)
+
+    def reserve(self, key: str, count: int, limit: int) -> bool:
+        """Sets [count] bytes aside for a response about to start.
+
+        Returns False, reserving nothing, when the month's bytes plus the bytes
+        other responses hold plus [count] would pass [limit]. A [limit] of 0
+        means no quota.
+        """
+        with self._lock:
+            held = self._reserved.get(key, 0)
+            used = self._used.get(key, {}).get(self._month(), 0)
+            if limit and used + held + count > limit:
+                return False
+            self._reserved[key] = held + count
+            return True
+
+    def settle(self, key: str, reserved: int, sent: int) -> None:
+        """Ends a reservation: frees [reserved] bytes and counts the [sent] ones."""
+        with self._lock:
+            left = self._reserved.get(key, 0) - reserved
+            if left > 0:
+                self._reserved[key] = left
+            else:
+                self._reserved.pop(key, None)
+        self.add(key, sent)
 
     def add(self, key: str, count: int) -> None:
         """Adds [count] bytes to [key]'s total for this month."""

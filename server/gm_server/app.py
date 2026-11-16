@@ -92,10 +92,6 @@ class Handler(BaseHTTPRequestHandler):
         if wait:
             self._reply(429, headers={"Retry-After": str(wait)}, who=identity.name)
             return
-        if self._over_quota(identity):
-            retry = str(service.usage.seconds_to_next_month())
-            self._reply(429, headers={"Retry-After": retry}, who=identity.name)
-            return
         self._serve(path, identity, send_body)
 
     def _serve(self, path: str, identity: Identity, send_body: bool) -> None:
@@ -128,11 +124,6 @@ class Handler(BaseHTTPRequestHandler):
         self.service.limiter.record_failure(ip)
         return None
 
-    def _over_quota(self, identity: Identity) -> bool:
-        if identity.quota_bytes == 0:
-            return False
-        return self.service.usage.used(identity.key) >= identity.quota_bytes
-
     def _client_ip(self) -> str:
         if self.service.config.trust_forwarded:
             forwarded = self.headers.get("X-Forwarded-For", "")
@@ -164,9 +155,18 @@ class Handler(BaseHTTPRequestHandler):
                 headers["Content-Range"] = f"bytes {selected.first}-{selected.last}/{size}"
             length = selected.length
             headers["Content-Length"] = str(length)
-            self._start(status, headers)
-            sent = self._stream(handle, selected.first, length) if send_body else 0
-            self.service.usage.add(identity.key, sent)
+            reserved = length if send_body else 0
+            usage = self.service.usage
+            if not usage.reserve(identity.key, reserved, identity.quota_bytes):
+                retry = str(usage.seconds_to_next_month())
+                self._reply(429, headers={"Retry-After": retry}, who=identity.name)
+                return
+            sent = 0
+            try:
+                self._start(status, headers)
+                sent = self._stream(handle, selected.first, length) if send_body else 0
+            finally:
+                usage.settle(identity.key, reserved, sent)
             LOG.info("%s %s %s %s %d", identity.name, self.command, self.path, status, sent)
 
     def _stream(self, handle, first: int, length: int) -> int:  # noqa: ANN001

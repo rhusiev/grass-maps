@@ -147,7 +147,7 @@ class LimitTest(unittest.TestCase):
         self.assertEqual(server.request("/catalog.json", token=other).status, 200)
 
     def test_quota_blocks_after_the_bytes_are_used(self) -> None:
-        server = RunningServer(quota_bytes=len(PACKAGE) + 10)
+        server = RunningServer(quota_bytes=len(PACKAGE) + 100)
         self.addCleanup(server.close)
         self.assertEqual(server.request(PACKAGE_PATH, token=server.token).status, 200)
         self.assertEqual(server.request("/catalog.json", token=server.token).status, 200)
@@ -163,7 +163,10 @@ class LimitTest(unittest.TestCase):
             server.request(PACKAGE_PATH, headers={"Range": f"bytes={half}-"}, token=server.token).status,
             206,
         )
-        self.assertEqual(server.request(PACKAGE_PATH, token=server.token).status, 200)
+        self.assertEqual(
+            server.request(PACKAGE_PATH, headers={"Range": f"bytes={half}-"}, token=server.token).status,
+            206,
+        )
         self.assertEqual(server.request(PACKAGE_PATH, token=server.token).status, 429)
 
     def test_tokens_off_quota_and_rate_apply_per_ip(self) -> None:

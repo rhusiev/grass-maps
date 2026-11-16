@@ -112,6 +112,26 @@ class UsageTest(unittest.TestCase):
             self.assertEqual(UsageStore(Path(temp), now=lambda: clock[0]).used("k"), 0)
 
 
+class ReservationTest(unittest.TestCase):
+    def test_parallel_responses_cannot_all_start_near_the_quota(self) -> None:
+        usage = UsageStore(None)
+        self.assertTrue(usage.reserve("k", 60, 100))
+        self.assertFalse(usage.reserve("k", 60, 100))
+        self.assertTrue(usage.reserve("k", 40, 100))
+        self.assertFalse(usage.reserve("k", 1, 100))
+
+    def test_the_unsent_part_is_refunded_when_the_response_ends(self) -> None:
+        usage = UsageStore(None)
+        self.assertTrue(usage.reserve("k", 60, 100))
+        usage.settle("k", 60, 10)
+        self.assertEqual(usage.used("k"), 10)
+        self.assertTrue(usage.reserve("k", 90, 100))
+        self.assertFalse(usage.reserve("k", 1, 100))
+
+    def test_a_limit_of_zero_means_no_quota(self) -> None:
+        self.assertTrue(UsageStore(None).reserve("k", 10**12, 0))
+
+
 class ConfigTest(unittest.TestCase):
     def test_defaults_require_tokens(self) -> None:
         config = Config.from_env({})

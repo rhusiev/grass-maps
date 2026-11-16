@@ -19,6 +19,7 @@ import nl.r1a.grassmap.plugin.api.testing.fixture.CatalogFixture
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -204,6 +205,44 @@ class RegionStoreLocalServerTest {
                     assertEquals(null, cancelled.problem(CatalogFixture.LVIV))
                     assertNoWorkDirectory()
                     assertFalse(paths.regionDirectory(CatalogFixture.LVIV).exists())
+                } finally {
+                    store.close()
+                }
+            }
+        }
+
+    @Test
+    fun aQueuedTransferCancelledBeforeItsTurnNeverDownloads() =
+        runBlocking {
+            slowPackageServer(CatalogFixture.bytes(), fixturePackage(CatalogFixture.LVIV)).use { server ->
+                val store = store(server.baseUrl)
+                try {
+                    assertTrue(store.refresh() is Outcome.Success)
+                    assertTrue(store.startDownload(CatalogFixture.LVIV) is Outcome.Success)
+                    withTimeout(60_000) {
+                        store.data.first { data ->
+                            data.transfer(CatalogFixture.LVIV)?.state == DownloadTransferState.DOWNLOADING
+                        }
+                    }
+                    // Vinnytsia waits behind Lviv, so this cancel lands in the
+                    // queue branch - the branch a worker claim can race.
+                    assertTrue(store.startDownload(CatalogFixture.VINNYTSIA) is Outcome.Success)
+                    assertEquals(
+                        DownloadTransferState.WAITING,
+                        store.data.value
+                            .transfer(CatalogFixture.VINNYTSIA)
+                            ?.state,
+                    )
+
+                    assertEquals(Outcome.Success(Unit), store.cancel(CatalogFixture.VINNYTSIA))
+                    assertNull(store.data.value.transfer(CatalogFixture.VINNYTSIA))
+                    assertEquals(Outcome.Success(Unit), store.cancel(CatalogFixture.LVIV))
+
+                    val settled = store.data.value
+                    assertNull(settled.problem(CatalogFixture.VINNYTSIA))
+                    assertTrue(settled.installed.isEmpty())
+                    assertFalse(paths.regionDirectory(CatalogFixture.VINNYTSIA).exists())
+                    assertNoWorkDirectory()
                 } finally {
                     store.close()
                 }

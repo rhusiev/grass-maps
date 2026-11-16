@@ -62,6 +62,16 @@ class RegionStore(
     /** One refresh at a time, so two screens do not fetch the catalogue twice. */
     private val refreshMutex = Mutex()
 
+    /**
+     * Serialises every move of a transfer between WAITING and DOWNLOADING:
+     * [startDownload] enqueues one, [cancel] removes a WAITING one, and the
+     * worker claims it. Without this the worker can sit between its "is there a
+     * transfer for this region" check and publishing the stop flag while
+     * [cancel] removes the WAITING transfer and answers success - and the
+     * cancelled download then runs to completion and installs.
+     */
+    private val claimMutex = Mutex()
+
     private val queue = Channel<String>(Channel.UNLIMITED)
     private val worker = scope.launch(Dispatchers.IO) { drain() }
 
@@ -149,54 +159,58 @@ class RegionStore(
                 ?.regions
                 ?.firstOrNull { it.id == region }
                 ?: return Outcome.Failure(AppError.NotFound)
-        if (mutable.value.transfer(region) != null) {
-            return Outcome.Success(Unit)
+        return claimMutex.withLock {
+            if (mutable.value.transfer(region) != null) {
+                return@withLock Outcome.Success(Unit)
+            }
+            val queued =
+                DownloadTransfer(
+                    region = region,
+                    state = DownloadTransferState.WAITING,
+                    bytesTotal = entry.bytes,
+                )
+            // The deferred exists before the worker can see the region, so a fast
+            // transfer cannot finish before its cancellation handle is registered.
+            finishing[region] = CompletableDeferred()
+            mutable.update { state ->
+                state.copy(
+                    transfers = state.transfers + queued,
+                    problems = state.problems.filterNot { it.region == region },
+                )
+            }
+            val enqueued = queue.trySend(region)
+            if (enqueued.isFailure) {
+                mutable.update { state -> state.copy(transfers = state.transfers.filterNot { it.region == region }) }
+                finishing.remove(region)
+                return@withLock Outcome.Failure(AppError.Internal(QUEUE_ID))
+            }
+            Outcome.Success(Unit)
         }
-        val queued =
-            DownloadTransfer(
-                region = region,
-                state = DownloadTransferState.WAITING,
-                bytesTotal = entry.bytes,
-            )
-        // The deferred exists before the worker can see the region, so a fast
-        // transfer cannot finish before its cancellation handle is registered.
-        finishing[region] = CompletableDeferred()
-        mutable.update { state ->
-            state.copy(
-                transfers = state.transfers + queued,
-                problems = state.problems.filterNot { it.region == region },
-            )
-        }
-        val enqueued = queue.trySend(region)
-        if (enqueued.isFailure) {
-            mutable.update { state -> state.copy(transfers = state.transfers.filterNot { it.region == region }) }
-            finishing.remove(region)
-            return Outcome.Failure(AppError.Internal(QUEUE_ID))
-        }
-        return Outcome.Success(Unit)
     }
 
     override suspend fun cancel(region: String): Outcome<Unit> {
         if (!RegionIdentifiers.isSafeSegment(region)) {
             return Outcome.Failure(AppError.InvalidInput)
         }
-        val transfer = mutable.value.transfer(region) ?: return Outcome.Success(Unit)
-        // The worker reads the flag before each chunk, and the downloader deletes
-        // its work directory in a finally block, so the await below is the whole
-        // guarantee the caller needs.
-        activeFlags[region]?.set(true)
-        if (transfer.state == DownloadTransferState.WAITING) {
-            // Still in the queue: removing the transfer is enough, and the worker
-            // skips a region it has no transfer for.
-            mutable.update { state -> state.copy(transfers = state.transfers.filterNot { it.region == region }) }
-            finishing.remove(region)?.complete(Unit)
-            return Outcome.Success(Unit)
+        var stopped: CompletableDeferred<Unit>? = null
+        claimMutex.withLock {
+            val transfer = mutable.value.transfer(region) ?: return Outcome.Success(Unit)
+            if (transfer.state == DownloadTransferState.WAITING) {
+                // Still in the queue: removing the transfer is enough, and the
+                // worker claims nothing for a region without one.
+                mutable.update { state -> state.copy(transfers = state.transfers.filterNot { it.region == region }) }
+                finishing.remove(region)?.complete(Unit)
+                return Outcome.Success(Unit)
+            }
+            // Already claimed by the worker, so the flag exists; the worker reads
+            // it before each chunk and deletes its work directory in a finally
+            // block, so the await below is the whole guarantee the caller needs.
+            activeFlags[region]?.set(true)
+            stopped = finishing[region]
         }
-        val finished = finishing[region]
-        if (finished != null) {
-            finished.await()
-            finishing.remove(region)
-        }
+        // The worker removes its own `finishing` entry, so a new transfer for the
+        // same region is never cleared here.
+        stopped?.await()
         return Outcome.Success(Unit)
     }
 
@@ -248,15 +262,27 @@ class RegionStore(
             mutable.value.catalog
                 ?.regions
                 ?.firstOrNull { it.id == region }
-        if (entry == null || mutable.value.transfer(region) == null) {
+        val flag = AtomicBoolean(false)
+        val claimed =
+            entry != null &&
+                claimMutex.withLock {
+                    if (mutable.value.transfer(region) == null) {
+                        false
+                    } else {
+                        // Published under the same lock [cancel] takes, so a
+                        // cancellation cannot slip in between this transfer
+                        // existing and its stop flag being visible.
+                        activeFlags[region] = flag
+                        updateTransfer(region) { it.copy(state = DownloadTransferState.DOWNLOADING) }
+                        true
+                    }
+                }
+        if (!claimed) {
             // Cancelled while it waited, or the catalogue changed under it.
             mutable.update { state -> state.copy(transfers = state.transfers.filterNot { it.region == region }) }
             finish(region)
             return
         }
-        val flag = AtomicBoolean(false)
-        activeFlags[region] = flag
-        updateTransfer(region) { it.copy(state = DownloadTransferState.DOWNLOADING) }
         try {
             val url = RegionServerUrls.packageArchive(serverUrl, region, entry.version)
             if (url == null) {

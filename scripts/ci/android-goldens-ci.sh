@@ -2,7 +2,8 @@
 #
 # The CI golden run: Standard light and dark first, then the contour set with
 # the fixture's contour archive on, then the T-0102 fixture set with contours
-# off on the same booted emulator. A compare failure does not stop the next set,
+# off on the same booted emulator, the navigation set, and last the raster
+# overlay and underlay set over the loopback tile fixture. A compare failure does not stop the next set,
 # because a capture-only run is how the references are promoted; the exit code
 # still reports any failure.
 #
@@ -29,6 +30,11 @@ if ! GOLDEN_SKIP_REBOOT=1 ./scripts/ci/android-map-goldens.sh --profile fixture 
     status=1
 fi
 if ! GOLDEN_SKIP_REBOOT=1 ./scripts/ci/android-navigation-goldens.sh "$APK"; then
+    status=1
+fi
+# Last, because it is the one set that turns the radios on.
+if ! GOLDEN_SKIP_REBOOT=1 ./scripts/ci/android-map-goldens.sh --profile raster \
+    --output "$ROOT/build/map-goldens/raster" "$APK"; then
     status=1
 fi
 exit "$status"

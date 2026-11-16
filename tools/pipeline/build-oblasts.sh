@@ -38,6 +38,20 @@
 #   --land-polygons KIND what the --map archive was built with: `stub` (the
 #                        empty sea/land archives, the current state) or `real`
 #   --keep-work          keep the per-oblast OSM extract and search TSV
+#   --elevation-30m      also build each oblast's 30 m elevation add-on, a
+#                        package of its own: <out>/<region>-elevation-30m/
+#                        <version>/ with one 1 arcsec elevation.bin, listed in
+#                        the catalog as an add-on of the region (T-0509)
+#   --elevation-30m-only build only the add-on of the --oblast ids. It needs
+#                        --version, --boundaries and --dem, and no PBF, map,
+#                        contours or routing input. It writes no catalog: the
+#                        catalog is written by a build that has the oblast
+#                        packages beside the add-ons
+#   --boundaries PATH    the boundary table (boundaries.json) for
+#                        --elevation-30m-only (default <out>/boundaries/
+#                        boundaries.json)
+#   --osm-timestamp VALUE  with --elevation-30m-only, the snapshot recorded in
+#                        the add-on manifest (default <version>T00:00:00Z)
 #
 # The build is not incremental: a package directory is replaced only after its
 # manifest is written. Existing packages are rebuilt when the command runs.
@@ -81,6 +95,10 @@ ROUTING_ELEVATION=0
 ROUTING_GRADES=0
 KEEP_WORK=0
 LAND_POLYGONS="stub"
+ELEVATION_30M=0
+ELEVATION_30M_ONLY=0
+BOUNDARIES=""
+OSM_TIMESTAMP=""
 
 if [[ -z "${GRASS_MAPS_IN_DATA_SLOT:-}" && -z "${CI:-}" ]] && command -v agent-lock >/dev/null 2>&1; then
     export GRASS_MAPS_IN_DATA_SLOT=1
@@ -107,12 +125,80 @@ while [[ $# -gt 0 ]]; do
         --routing-grades) ROUTING_GRADES=1; shift ;;
         --land-polygons) LAND_POLYGONS="$2"; shift 2 ;;
         --keep-work) KEEP_WORK=1; shift ;;
+        --elevation-30m) ELEVATION_30M=1; shift ;;
+        --elevation-30m-only) ELEVATION_30M=1; ELEVATION_30M_ONLY=1; shift ;;
+        --boundaries) BOUNDARIES="$2"; shift 2 ;;
+        --osm-timestamp) OSM_TIMESTAMP="$2"; shift 2 ;;
         -h | --help) sed -n '2,/^$/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "build-oblasts.sh: unknown argument: $1" >&2; exit 2 ;;
     esac
 done
 
 WORK="${WORK:-$OUT.work}"
+
+run_host() {
+    local stage="$1" report="$2"
+    shift 2
+    local options=()
+    if [[ "$1" == --cwd ]]; then
+        options+=(--cwd "$2")
+        shift 2
+    fi
+    python3 "$PY" run --stage "$stage" --report "$report" "${options[@]}" -- "$@"
+}
+
+# One oblast's 30 m elevation add-on: GLO-30 at its own 1 arcsec resolution in
+# the elevation container, with a manifest of its own. The cells are not
+# averaged, so the grid is as fine as the source (T-0509).
+build_elevation_30m() {
+    local region="${1,,}"
+    local NAME BBOX INCLUDES
+    eval "$(python3 "$PY" info --boundaries "$TABLE" --region "$region")"
+    local pack="$WORK/packs/$region-elevation-30m"
+    local stages="$WORK/stages/$region-elevation-30m"
+    local started=$SECONDS
+    rm -rf "$pack" "$stages"
+    mkdir -p "$pack" "$stages"
+
+    echo
+    echo "== $region $NAME, 30 m elevation add-on"
+    run_host elevation-30m "$stages/elevation-30m.json" \
+        python3 "$ROOT/tools/pipeline/build-elevation.py" grid \
+        --source "$DEM" --bbox "$BBOX" --out "$pack/elevation.bin" --skip-missing --snap-bbox --arcsec 1
+
+    cat >"$WORK/spec-$region-elevation-30m.json" <<JSON
+{
+  "region": "$region",
+  "version": "$VERSION",
+  "pack": "$pack",
+  "osmTimestamp": "$osm_timestamp",
+  "tool": "build-oblasts.sh",
+  "demSource": "$DEM"
+}
+JSON
+    python3 "$PY" addon-manifest --spec "$WORK/spec-$region-elevation-30m.json" --boundaries "$TABLE"
+
+    rm -rf "$OUT/$region-elevation-30m"
+    mkdir -p "$OUT/$region-elevation-30m"
+    mv "$pack" "$OUT/$region-elevation-30m/$VERSION"
+    echo "== $region 30 m add-on done in $((SECONDS - started)) s," \
+        "$(stat -c %s "$OUT/$region-elevation-30m/$VERSION/elevation.bin") bytes"
+}
+
+if [[ "$ELEVATION_30M_ONLY" -eq 1 ]]; then
+    [[ -n "$VERSION" ]] || { echo "build-oblasts.sh: --elevation-30m-only needs --version" >&2; exit 2; }
+    [[ "$OBLASTS" != "all" ]] || { echo "build-oblasts.sh: --elevation-30m-only needs --oblast" >&2; exit 2; }
+    [[ -d "$DEM" ]] || { echo "build-oblasts.sh: missing DEM directory: $DEM" >&2; exit 1; }
+    TABLE="${BOUNDARIES:-$OUT/boundaries/boundaries.json}"
+    [[ -f "$TABLE" ]] || { echo "build-oblasts.sh: missing boundary table: $TABLE" >&2; exit 1; }
+    osm_timestamp="${OSM_TIMESTAMP:-${VERSION}T00:00:00Z}"
+    mkdir -p "$WORK" "$OUT"
+    IFS=',' read -r -a selected <<<"$OBLASTS"
+    for region in "${selected[@]}"; do
+        build_elevation_30m "$region"
+    done
+    exit 0
+fi
 
 for tool in python3 podman sha256sum tar; do
     command -v "$tool" >/dev/null 2>&1 || {
@@ -165,17 +251,6 @@ osm_timestamp="$(
 )"
 [[ -n "$osm_timestamp" ]] || { echo "build-oblasts.sh: the PBF carries no replication timestamp" >&2; exit 1; }
 VERSION="${VERSION:-${osm_timestamp%%T*}}"
-
-run_host() {
-    local stage="$1" report="$2"
-    shift 2
-    local options=()
-    if [[ "$1" == --cwd ]]; then
-        options+=(--cwd "$2")
-        shift 2
-    fi
-    python3 "$PY" run --stage "$stage" --report "$report" "${options[@]}" -- "$@"
-}
 
 run_container() {
     local stage="$1" report="$2" image="$3"
@@ -489,6 +564,9 @@ fi
 
 for region in "${selected[@]}"; do
     build_oblast "$region"
+    if [[ "$ELEVATION_30M" -eq 1 ]]; then
+        build_elevation_30m "$region"
+    fi
 done
 
 echo

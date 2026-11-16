@@ -5,7 +5,11 @@ Two outputs come from the same source tiles:
 
 * ``grid`` writes the region package's ``elevation.bin``: int16 metres,
   3 arcsec cells in 1-degree tiles. Each cell is the mean of the 3x3 GLO-30
-  samples it covers. The container is documented in ``tools/pipeline/README.md``.
+  samples it covers. With ``--arcsec 1`` it writes the 30 m add-on grid
+  instead: one GLO-30 sample per cell, in the same container. Where GLO-30
+  samples are wider than 1 arcsec (north of 50 degrees N, 1.5 arcsec), each
+  cell takes the sample that covers its centre. The container is documented
+  in ``tools/pipeline/README.md``.
 * ``hgt`` writes the 1 arcsec ``.hgt`` tiles Valhalla's Skadi sampler reads:
   3601x3601 int16 big-endian nodes per 1-degree cell. GLO-30 is already a
   1 arcsec grid, so each output node is the bilinear sample at that node,
@@ -18,7 +22,7 @@ downloads them). GLO-30 measures the surface, including tree canopy and
 buildings; ascent figures inherit that bias.
 
 Usage:
-  build-elevation.py grid --source DIR --bbox W,S,E,N --out elevation.bin
+  build-elevation.py grid --source DIR --bbox W,S,E,N --out elevation.bin [--arcsec 1|3]
   build-elevation.py hgt --source DIR --bbox W,S,E,N --out DIR
 """
 
@@ -34,6 +38,7 @@ from PIL import Image
 ARCSEC_PER_DEGREE = 3600
 GRID_ARCSEC = 3
 GRID_CELLS_PER_DEGREE = ARCSEC_PER_DEGREE // GRID_ARCSEC
+GRID_ARCSEC_CHOICES = (1, GRID_ARCSEC)
 SOURCE_TILE_SAMPLES = 3600
 HGT_NODES = 3601
 NO_DATA = -32768
@@ -94,8 +99,8 @@ def load_tile(source, latitude, longitude):
     return values, west, north, float(scale[0]), float(scale[1])
 
 
-def degrees_to_cell_index(degrees):
-    return degrees * GRID_CELLS_PER_DEGREE
+def degrees_to_cell_index(degrees, cells_per_degree=GRID_CELLS_PER_DEGREE):
+    return degrees * cells_per_degree
 
 
 def round_cell_index(value):
@@ -151,14 +156,27 @@ def block_mean(values, west, north, pixel_width, pixel_height, cell_west, cell_s
     return int(round(float(np.where(valid, block, 0.0).sum()) / count))
 
 
-def cells_for_tile(values, west, north, pixel_width, pixel_height, west_out, south_out, east_out, north_out):
-    """One grid tile's 3 arcsec cells, as a rows x columns int16 array."""
-    rows = round_cell_index(degrees_to_cell_index(north_out - south_out))
-    columns = round_cell_index(degrees_to_cell_index(east_out - west_out))
+def cells_for_tile(
+    values,
+    west,
+    north,
+    pixel_width,
+    pixel_height,
+    west_out,
+    south_out,
+    east_out,
+    north_out,
+    cells_per_degree=GRID_CELLS_PER_DEGREE,
+):
+    """One grid tile's cells, as a rows x columns int16 array."""
+    rows = round_cell_index(degrees_to_cell_index(north_out - south_out, cells_per_degree))
+    columns = round_cell_index(degrees_to_cell_index(east_out - west_out, cells_per_degree))
     pixels_y = int(round((north_out - south_out) / rows / pixel_height))
     pixels_x = int(round((east_out - west_out) / columns / pixel_width))
     first_row = int(round((north - north_out) / pixel_height))
     first_column = int(round((west_out - west) / pixel_width))
+    if pixels_y == 1 and pixels_x < 1:
+        return nearest_columns(values, west, north, pixel_width, first_row, rows, west_out, columns, cells_per_degree)
     block = values[
         first_row : first_row + rows * pixels_y,
         first_column : first_column + columns * pixels_x,
@@ -181,11 +199,26 @@ def cells_for_tile(values, west, north, pixel_width, pixel_height, west_out, sou
                 north,
                 pixel_width,
                 pixel_height,
-                west_out + column / GRID_CELLS_PER_DEGREE,
-                north_out - (row + 1) / GRID_CELLS_PER_DEGREE,
-                west_out + (column + 1) / GRID_CELLS_PER_DEGREE,
-                north_out - row / GRID_CELLS_PER_DEGREE,
+                west_out + column / cells_per_degree,
+                north_out - (row + 1) / cells_per_degree,
+                west_out + (column + 1) / cells_per_degree,
+                north_out - row / cells_per_degree,
             )
+    return result
+
+
+def nearest_columns(values, west, north, pixel_width, first_row, rows, west_out, columns, cells_per_degree):
+    """Cells narrower than a source pixel: each takes the pixel under its centre.
+
+    GLO-30 widens its pixels to 1.5 arcsec north of 50 degrees N, so a 1 arcsec
+    cell there is a copy of a source sample, not a mean of several.
+    """
+    centres = west_out + (np.arange(columns) + 0.5) / cells_per_degree
+    indexes = np.clip(np.floor((centres - west) / pixel_width).astype(np.int64), 0, values.shape[1] - 1)
+    block = values[first_row : first_row + rows][:, indexes]
+    result = np.full(block.shape, NO_DATA, dtype=np.int16)
+    valid = ~np.isnan(block)
+    result[valid] = np.rint(block[valid]).astype(np.int16)
     return result
 
 
@@ -201,13 +234,14 @@ def encode_grid_tile(values):
     return zlib.compress(raw, 9)
 
 
-def build_grid(source, bbox, output, skip_missing=False):
+def build_grid(source, bbox, output, skip_missing=False, arcsec=GRID_ARCSEC):
     entries = []
     payload = bytearray()
     tiles = list(grid_tiles(source, bbox, skip_missing))
     tile_count = len(tiles)
     data_offset = GRID_HEADER_BYTES + tile_count * GRID_INDEX_ENTRY_BYTES
-    print(f"grid: {tile_count} tile(s), 3 arcsec cells")
+    cells_per_degree = ARCSEC_PER_DEGREE // arcsec
+    print(f"grid: {tile_count} tile(s), {arcsec} arcsec cells")
     if tile_count == 0:
         # Every cell was skipped as missing: the DEM folder does not cover this
         # bbox at all. An empty grid used to be written silently (2026-11-16).
@@ -224,6 +258,7 @@ def build_grid(source, bbox, output, skip_missing=False):
             south,
             east,
             north,
+            cells_per_degree,
         )
         compressed = encode_grid_tile(cells)
         rows, columns = cells.shape
@@ -311,7 +346,7 @@ def build_hgt(source, bbox, output_directory, skip_missing=False):
         print(f"  {path}: {path.stat().st_size} B, height {height_range}")
 
 
-def parse_bbox(text, snap=False):
+def parse_bbox(text, snap=False, cells_per_degree=GRID_CELLS_PER_DEGREE):
     try:
         west, south, east, north = (float(value) for value in text.split(","))
     except ValueError:
@@ -319,12 +354,13 @@ def parse_bbox(text, snap=False):
     if not (west < east and south < north):
         raise SystemExit(f"bbox has no area: {text}")
     if snap:
-        # A grid cell is 1/1200 degree; an oblast outline gives an arbitrary
-        # bbox, so grow it outward to the cell edges the format stores.
-        west = np.floor(west * GRID_CELLS_PER_DEGREE) / GRID_CELLS_PER_DEGREE
-        south = np.floor(south * GRID_CELLS_PER_DEGREE) / GRID_CELLS_PER_DEGREE
-        east = np.ceil(east * GRID_CELLS_PER_DEGREE) / GRID_CELLS_PER_DEGREE
-        north = np.ceil(north * GRID_CELLS_PER_DEGREE) / GRID_CELLS_PER_DEGREE
+        # A 3 arcsec grid cell is 1/1200 degree (1/3600 for the 1 arcsec grid);
+        # an oblast outline gives an arbitrary bbox, so grow it outward to the
+        # cell edges the format stores.
+        west = np.floor(west * cells_per_degree) / cells_per_degree
+        south = np.floor(south * cells_per_degree) / cells_per_degree
+        east = np.ceil(east * cells_per_degree) / cells_per_degree
+        north = np.ceil(north * cells_per_degree) / cells_per_degree
     return float(west), float(south), float(east), float(north)
 
 
@@ -346,10 +382,19 @@ def main():
             action="store_true",
             help="omit a 1-degree cell whose GLO-30 tile does not exist (sea-only cells)",
         )
+        if name == "grid":
+            command.add_argument(
+                "--arcsec",
+                type=int,
+                choices=GRID_ARCSEC_CHOICES,
+                default=GRID_ARCSEC,
+                help="cell size: 3 for the oblast pack (default), 1 for the 30 m add-on",
+            )
     args = parser.parse_args()
-    bbox = parse_bbox(args.bbox, args.snap_bbox)
+    arcsec = getattr(args, "arcsec", GRID_ARCSEC)
+    bbox = parse_bbox(args.bbox, args.snap_bbox, ARCSEC_PER_DEGREE // arcsec)
     if args.command == "grid":
-        build_grid(args.source, bbox, args.out, args.skip_missing)
+        build_grid(args.source, bbox, args.out, args.skip_missing, arcsec)
     else:
         build_hgt(args.source, bbox, args.out, args.skip_missing)
 

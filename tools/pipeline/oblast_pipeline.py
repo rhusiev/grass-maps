@@ -10,6 +10,7 @@ Subcommands:
 
     boundaries  admin_level=4 polygons -> one GeoJSON per oblast package
     manifest    one finished pack directory -> manifest.json
+    addon-manifest  one finished 30 m elevation add-on directory -> manifest.json
     catalog     every region manifest under a root -> catalog.json
     metrics     one record per built oblast -> metrics.json
     run         run one build stage, measuring wall time and peak RSS
@@ -55,6 +56,9 @@ SEARCH_FILES = (
     "strings.bin",
 )
 
+ELEVATION_ADDON_ID = "elevation-30m"
+ADDON_SUFFIX = f"-{ELEVATION_ADDON_ID}"
+ADDON_ELEVATION_RESAMPLE = "1 arcsec cells, one GLO-30 sample per cell"
 ROUTING_KIND = "routing"
 ROUTING_DIRECTORY = "routing"
 ROUTING_FORMAT = "valhalla-tile-directory"
@@ -372,6 +376,45 @@ def _bbox(value) -> list[float]:
     return [float(part) for part in value]
 
 
+def addon_package_id(region: str) -> str:
+    """The package id of a region's 30 m elevation add-on: `<region>-elevation-30m`."""
+    return region.lower() + ADDON_SUFFIX
+
+
+def write_addon_manifest(spec: dict, boundaries: dict) -> dict:
+    """manifest.json of one 30 m elevation add-on.
+
+    The add-on is its own package: a directory `<region>-elevation-30m/<version>/`
+    with one `elevation.bin` of 1 arcsec cells. Its `region` is the package id
+    and `pipeline.addon` names the region it belongs to. It holds no OSM data,
+    so `osmTimestamp` is the snapshot of the oblast build it was made beside.
+    """
+    pack = pathlib.Path(spec["pack"])
+    package = boundary_info(boundaries, spec["region"])
+    bbox = [float(value) for value in package["bbox"]]
+    tiles, missing = dem_tiles(spec["demSource"], bbox)
+    manifest = {
+        "region": addon_package_id(spec["region"]),
+        "version": spec["version"],
+        "packageFormat": PACKAGE_FORMAT,
+        "osmTimestamp": spec["osmTimestamp"],
+        "pipeline": {
+            "tool": spec["tool"],
+            "addon": {"id": ELEVATION_ADDON_ID, "region": spec["region"].lower()},
+            "bbox": bbox,
+            "elevationSource": {
+                "dataset": "Copernicus DEM GLO-30",
+                "resample": ADDON_ELEVATION_RESAMPLE,
+                "tiles": tiles,
+                "missingTiles": missing,
+            },
+        },
+        "components": [component("elevation", "elevation.bin", "elevation-grid", 1, spec["version"], pack)],
+    }
+    (pack / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    return manifest
+
+
 def _feature_counts(path: pathlib.Path, keys) -> dict:
     document = json.loads(path.read_text())
     counts = {key: 0 for key in keys}
@@ -539,13 +582,27 @@ CATALOG_PARTS = {
 }
 
 
+def addon_entry(manifest: dict, addon: dict) -> dict:
+    """One catalog `addons` entry: the id, the version and the package's size."""
+    return {
+        "id": addon["id"],
+        "version": manifest["version"],
+        "size_bytes": sum(entry["bytes"] for entry in manifest["components"]),
+    }
+
+
 def write_catalog(root: pathlib.Path, spec: dict) -> dict:
     boundaries = json.loads((pathlib.Path(spec["boundaries"])).read_text())
     names = {package["id"].upper(): package for package in boundaries["packages"]}
     regions = []
+    addons = {}
     for manifest_path in sorted(root.glob("ua-*/*/manifest.json")):
         manifest = json.loads(manifest_path.read_text())
         region = manifest["region"]
+        addon = manifest["pipeline"].get("addon")
+        if addon is not None:
+            addons.setdefault(addon["region"], []).append(addon_entry(manifest, addon))
+            continue
         if region.upper() not in names:
             raise SystemExit(f"catalog: {region} is not in the boundary table")
         parts = {}
@@ -568,6 +625,11 @@ def write_catalog(root: pathlib.Path, spec: dict) -> dict:
         if names[region.upper()].get("includes"):
             region_entry["includes"] = names[region.upper()]["includes"]
         regions.append(region_entry)
+    for region_entry in regions:
+        if region_entry["id"] in addons:
+            region_entry["addons"] = addons.pop(region_entry["id"])
+    if addons:
+        raise SystemExit(f"catalog: add-on without its region package: {sorted(addons)}")
     catalog = {
         "format": CATALOG_FORMAT,
         "generated": spec["generated"],
@@ -750,6 +812,10 @@ def main(argv: list[str] | None = None) -> int:
     manifest.add_argument("--spec", required=True, type=pathlib.Path)
     manifest.add_argument("--boundaries", type=pathlib.Path)
 
+    addon_manifest = subparsers.add_parser("addon-manifest", help="write manifest.json for one 30 m elevation add-on")
+    addon_manifest.add_argument("--spec", required=True, type=pathlib.Path)
+    addon_manifest.add_argument("--boundaries", required=True, type=pathlib.Path)
+
     inform = subparsers.add_parser("info", help="print one package's shell variables")
     inform.add_argument("--boundaries", required=True, type=pathlib.Path)
     inform.add_argument("--region", required=True)
@@ -785,6 +851,12 @@ def main(argv: list[str] | None = None) -> int:
         boundaries = json.loads(args.boundaries.read_text()) if args.boundaries else None
         manifest = write_manifest(spec, boundaries)
         print(f"manifest: {spec['region']} {spec['version']}, {len(manifest['components'])} components")
+        return 0
+    if args.command == "addon-manifest":
+        spec = json.loads(args.spec.read_text())
+        manifest = write_addon_manifest(spec, json.loads(args.boundaries.read_text()))
+        size = manifest["components"][0]["bytes"]
+        print(f"addon-manifest: {manifest['region']} {spec['version']}, {size} bytes")
         return 0
     if args.command == "info":
         table = json.loads(args.boundaries.read_text())

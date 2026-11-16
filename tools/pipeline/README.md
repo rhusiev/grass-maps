@@ -589,6 +589,35 @@ What the numbers say, against `data-formats.md`:
   Crimea's elevation lists the two sea-only cells the DEM does not carry,
   Odesa's and Kherson's one each.
 
+### 30 m elevation add-on (T-0509)
+
+The oblast pack carries the 3 arcsec (about 90 m) grid. The 30 m grid is a
+package of its own, `<region>-elevation-30m`, so a user downloads it only for
+the oblasts where track analysis and the altitude widget should use it. The app
+reads it first and the 90 m grid where the add-on has no cell.
+
+`build-elevation.py grid --arcsec 1` writes the same `elevation.bin` container
+with 1 arcsec cells. Below 50 degrees N a cell is one GLO-30 sample. At N50 and
+above the source pixels are 1.5 arcsec wide, so each cell copies the pixel under
+its centre. `build-oblasts.sh --elevation-30m` builds the add-on after each
+oblast. `--elevation-30m-only --oblast UA-46 --version V` builds only the add-on
+beside an existing oblast build. It needs `--dem` and takes `--boundaries PATH`
+(default `<out>/boundaries/boundaries.json`) and `--osm-timestamp` (default
+`V` at midnight UTC). Use the timestamp of the oblast build, because the add-on
+holds no OSM data. The output is `<out>/<region>-elevation-30m/<version>/` with
+`elevation.bin` and a `manifest.json` whose one component is `elevation`
+and whose `pipeline.addon` is `{"id": "elevation-30m", "region": "ua-46"}`.
+`oblast_pipeline.py catalog` attaches it as `addons` on the region entry and
+refuses an add-on whose region package is missing.
+
+Measured for Lviv (`UA-46`, 2026-11-03, `nice -n 15 ionice -c3`, GLO-30 tiles
+on `/hdd`): 227 s for the stage, 3 m 47 s for the script, 31,573,392 bytes.
+The 90 m grid of the same oblast is 4,528,060 bytes, so the 30 m grid is 7.0
+times larger. The 25 oblasts' 90 m grids total 89,321,417 bytes. The older
+estimates (2.2 MB and 13 MB per oblast) were wrong. A 30 m total for Ukraine is
+not measured. Scaling the 90 m total by Lviv's ratio gives about 620 MB, and
+that figure is an extrapolation.
+
 ### Routing part verification (T-0515)
 
 `tools/pipeline/verify_routing_packs.py` checks the routing claims that the

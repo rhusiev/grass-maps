@@ -235,63 +235,73 @@ class ManifestTest(unittest.TestCase):
             pipeline.write_manifest(self.spec())
 
 
+def write_region_pack(root: Path) -> Path:
+    pack = root / "ua-46" / "2026-11-04"
+    pack.mkdir(parents=True)
+    components = [
+        {"kind": "map", "file": "map.pmtiles", "format": "pmtiles", "formatVersion": 3,
+         "version": "2026-11-04", "bytes": 10, "sha256": "a" * 64, "standIn": False, "zoomLevels": [8, 14]},
+        {"kind": "search-terms", "file": "terms.fst", "format": "search-section", "formatVersion": 2,
+         "version": "2026-11-04", "bytes": 5, "sha256": "b" * 64, "standIn": False},
+        {"kind": "search-places", "file": "places.bin", "format": "search-section", "formatVersion": 2,
+         "version": "2026-11-04", "bytes": 7, "sha256": "c" * 64, "standIn": False},
+        {"kind": "features", "file": "features.bin", "format": "place-features", "formatVersion": 1,
+         "version": "2026-11-04", "bytes": 3, "sha256": "e" * 64, "standIn": False},
+        {"kind": "routing", "file": "routing", "type": "directory", "format": "valhalla-tile-directory",
+         "formatVersion": 1, "version": "2026-11-04", "bytes": 70, "sha256": "d" * 64, "standIn": False},
+    ]
+    manifest = {
+        "region": "ua-46",
+        "version": "2026-11-04",
+        "packageFormat": 1,
+        "osmTimestamp": "2026-11-04T21:20:00Z",
+        "pipeline": {"bbox": [22.6, 48.7, 25.4, 50.6]},
+        "components": components,
+    }
+    (pack / "manifest.json").write_text(json.dumps(manifest))
+    return pack
+
+
+def write_catalog_spec(root: Path) -> dict:
+    boundaries = root / "boundaries" / "boundaries.json"
+    boundaries.parent.mkdir()
+    boundaries.write_text(
+        json.dumps(
+            {
+                "packages": [
+                    {
+                        "id": "UA-46",
+                        "name": {"uk": "Львівська область", "en": "Lviv Oblast"},
+                        "includes": [],
+                    }
+                ]
+            }
+        )
+    )
+    return {
+        "generated": "2026-11-15T00:00:00Z",
+        "version": "2026-11-04",
+        "osmTimestamp": "2026-11-04T21:20:00Z",
+        "pbfArchive": "ukraine-latest.osm.pbf",
+        "pbfSha256": "a" * 64,
+        "mapArchive": "ukraine-final.pmtiles",
+        "mapSha256": "b" * 64,
+        "contoursArchive": "ua-contours.pmtiles",
+        "contoursSha256": "c" * 64,
+        "routingBuildSha256": "d" * 64,
+        "landPolygons": "stub",
+        "boundaries": str(boundaries),
+    }
+
+
 class CatalogTest(unittest.TestCase):
     def setUp(self) -> None:
         self._temp = tempfile.TemporaryDirectory()
         self.addCleanup(self._temp.cleanup)
         self.root = Path(self._temp.name)
-        pack = self.root / "ua-46" / "2026-11-04"
-        pack.mkdir(parents=True)
-        components = [
-            {"kind": "map", "file": "map.pmtiles", "format": "pmtiles", "formatVersion": 3,
-             "version": "2026-11-04", "bytes": 10, "sha256": "a" * 64, "standIn": False, "zoomLevels": [8, 14]},
-            {"kind": "search-terms", "file": "terms.fst", "format": "search-section", "formatVersion": 2,
-             "version": "2026-11-04", "bytes": 5, "sha256": "b" * 64, "standIn": False},
-            {"kind": "search-places", "file": "places.bin", "format": "search-section", "formatVersion": 2,
-             "version": "2026-11-04", "bytes": 7, "sha256": "c" * 64, "standIn": False},
-            {"kind": "features", "file": "features.bin", "format": "place-features", "formatVersion": 1,
-             "version": "2026-11-04", "bytes": 3, "sha256": "e" * 64, "standIn": False},
-            {"kind": "routing", "file": "routing", "type": "directory", "format": "valhalla-tile-directory",
-             "formatVersion": 1, "version": "2026-11-04", "bytes": 70, "sha256": "d" * 64, "standIn": False},
-        ]
-        manifest = {
-            "region": "ua-46",
-            "version": "2026-11-04",
-            "packageFormat": 1,
-            "osmTimestamp": "2026-11-04T21:20:00Z",
-            "pipeline": {"bbox": [22.6, 48.7, 25.4, 50.6]},
-            "components": components,
-        }
-        (pack / "manifest.json").write_text(json.dumps(manifest))
-        self.boundaries = self.root / "boundaries" / "boundaries.json"
-        self.boundaries.parent.mkdir()
-        self.boundaries.write_text(
-            json.dumps(
-                {
-                    "packages": [
-                        {
-                            "id": "UA-46",
-                            "name": {"uk": "Львівська область", "en": "Lviv Oblast"},
-                            "includes": [],
-                        }
-                    ]
-                }
-            )
-        )
-        self.spec = {
-            "generated": "2026-11-15T00:00:00Z",
-            "version": "2026-11-04",
-            "osmTimestamp": "2026-11-04T21:20:00Z",
-            "pbfArchive": "ukraine-latest.osm.pbf",
-            "pbfSha256": "a" * 64,
-            "mapArchive": "ukraine-final.pmtiles",
-            "mapSha256": "b" * 64,
-            "contoursArchive": "ua-contours.pmtiles",
-            "contoursSha256": "c" * 64,
-            "routingBuildSha256": "d" * 64,
-            "landPolygons": "stub",
-            "boundaries": str(self.boundaries),
-        }
+        write_region_pack(self.root)
+        self.spec = write_catalog_spec(self.root)
+        self.boundaries = Path(self.spec["boundaries"])
 
     def test_catalog_groups_the_search_section_and_sums_the_size(self) -> None:
         catalog = pipeline.write_catalog(self.root, self.spec)
@@ -309,6 +319,47 @@ class CatalogTest(unittest.TestCase):
         self.boundaries.write_text(json.dumps({"packages": []}))
         with self.assertRaises(SystemExit):
             pipeline.write_catalog(self.root, self.spec)
+
+
+class AddonTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self._temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._temp.cleanup)
+        self.root = Path(self._temp.name)
+        self.pack = self.root / "ua-46-elevation-30m" / "2026-11-04"
+        self.pack.mkdir(parents=True)
+        (self.pack / "elevation.bin").write_bytes(b"GRME" + b"x" * 96)
+        self.boundaries = {"packages": [{"id": "UA-46", "bbox": [22.6, 48.7, 25.4, 50.6], "includes": []}]}
+        self.spec = {
+            "region": "ua-46",
+            "version": "2026-11-04",
+            "pack": str(self.pack),
+            "osmTimestamp": "2026-11-04T21:20:00Z",
+            "tool": "build-oblasts.sh",
+            "demSource": str(self.root / "dem"),
+        }
+
+    def test_the_addon_is_its_own_package_with_one_elevation_component(self) -> None:
+        manifest = pipeline.write_addon_manifest(self.spec, self.boundaries)
+        self.assertEqual(manifest["region"], "ua-46-elevation-30m")
+        self.assertEqual(manifest["pipeline"]["addon"], {"id": "elevation-30m", "region": "ua-46"})
+        self.assertEqual([entry["kind"] for entry in manifest["components"]], ["elevation"])
+        self.assertEqual(manifest["components"][0]["bytes"], 100)
+        self.assertEqual(json.loads((self.pack / "manifest.json").read_text()), manifest)
+
+    def test_the_catalog_attaches_the_addon_to_its_region_only(self) -> None:
+        pipeline.write_addon_manifest(self.spec, self.boundaries)
+        write_region_pack(self.root)
+        catalog = pipeline.write_catalog(self.root, write_catalog_spec(self.root))
+        self.assertEqual([entry["id"] for entry in catalog["regions"]], ["ua-46"])
+        entry = catalog["regions"][0]
+        self.assertEqual(entry["addons"], [{"id": "elevation-30m", "version": "2026-11-04", "size_bytes": 100}])
+        self.assertEqual(entry["size_bytes"], 95)
+
+    def test_an_addon_without_its_region_package_fails_the_catalog(self) -> None:
+        pipeline.write_addon_manifest(self.spec, self.boundaries)
+        with self.assertRaises(SystemExit):
+            pipeline.write_catalog(self.root, write_catalog_spec(self.root))
 
 
 class MetricsTest(unittest.TestCase):
@@ -352,6 +403,29 @@ class ElevationGuardTest(unittest.TestCase):
                 elevation.build_grid(empty, (24.0, 49.0, 25.0, 50.0), output, skip_missing=True)
             self.assertIn("no GLO-30 tile covers", str(raised.exception))
             self.assertFalse(output.exists())
+
+
+    def test_one_arcsec_cells_copy_the_wide_pixels_north_of_fifty(self) -> None:
+        try:
+            elevation = load_elevation()
+        except ImportError as error:
+            self.skipTest(f"build-elevation.py needs {error.name}")
+        import numpy
+
+        values = numpy.array([[10.0, 20.0, 30.0]])
+        pixel_width = 1.5 / 3600
+        cells = elevation.nearest_columns(values, 24.0, 51.0, pixel_width, 0, 1, 24.0, 6, 3600)
+        self.assertEqual(cells[0, 0], 10)
+        self.assertEqual(cells[0, 2], 20)
+        self.assertEqual(cells[0, 3], 30)
+        self.assertEqual(cells[0, 5], 30)
+
+    def test_the_grid_accepts_one_and_three_arcsec_only(self) -> None:
+        try:
+            elevation = load_elevation()
+        except ImportError as error:
+            self.skipTest(f"build-elevation.py needs {error.name}")
+        self.assertEqual(elevation.GRID_ARCSEC_CHOICES, (1, 3))
 
 
 if __name__ == "__main__":

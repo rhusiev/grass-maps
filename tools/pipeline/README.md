@@ -467,12 +467,25 @@ a report with its wall time and peak RSS.
 
 The package is `<region>/<version>/` with `map.pmtiles`, `contours.pmtiles`,
 `elevation.bin`, the eight search files, `features.bin`,
-`way-alerts.geojson`, `relations.json` and `routing.tar`. `routing.tar` is a
-Valhalla tile extract holding the tiles of every level whose grid cell
-intersects the oblast polygon; its `pipeline.routingSource.sha256` is the digest
+`way-alerts.geojson`, `relations.json` and the directory `routing/`. `routing/`
+holds `valhalla.json` and `tiles/<level>/<...>.gph`, the Valhalla tiles of every
+level whose grid cell intersects the oblast polygon. The script extracts them
+from the `valhalla_build_extract` tar and drops `index.bin`, which Valhalla reads
+only in `tile_extract` mode. The manifest component is `{kind: routing, file:
+routing, type: directory, format: valhalla-tile-directory, formatVersion: 1}`.
+Its `bytes` is the sum of the file sizes. Its `sha256` is the hash of the
+canonical listing: one line `<path>\t<size>\t<sha256>\n` per regular file, path
+relative to `routing/` with `/`, sorted by the UTF-8 bytes of the path, every
+line ending in LF. `directory_listing` in `oblast_pipeline.py` and
+`ComponentListing` in `regions` implement it, and both tests check the vector
+`tiles/0/003/110.gph` = `tile-a`, `valhalla.json` = `{}`, listing hash
+`3ce123a8...e7d5`. The app mounts every installed `routing/` directory as one
+tile directory (see the README section on the region store). A package built
+before T-0518 ships `routing.tar`; the app skips its routing and the user
+downloads it again. `pipeline.routingSource.sha256` is the digest
 of the one country `tiles.tar`, so every installed routing part can be traced to
 that build. The footprint is the exact oblast polygon, not a buffered one; a
-border pan shows only the installed oblast until T-0503's resolver lands.
+border pan routes across installed neighbours through the app's merged mount.
 
 `manifest.json` follows `data-formats.md` section 2. `pipeline` carries the
 bounding box, the source archives and digests for map, contours, elevation,
@@ -600,7 +613,7 @@ polygon, not its bounding box. A bounding-box rule would have added 14 to 55
 tiles per package, and the polygons match exactly.
 `pipeline.routingSource.selection` states the polygon rule and
 `valhalla_build_extract --geojson-dir` implements it. The manifest records the
-tile count only, not the list, so `routing.tar` is the only per-package tile
+tile count only, not the list, so `routing/tiles` is the only per-package tile
 list.
 
 A border pair: `2/000/807/271.gph` is in ua-63 and `2/000/807/272.gph` is in
@@ -622,7 +635,7 @@ so 14 level-0 tiles are carried 59 times and 109 level-1 tiles 232 times:
 | all | 2,080 | 1,476 | 509,421,544 |
 
 The packages carry 1,574,961,728 B of tile payload against 1,065,583,360 B of
-unique tiles, and their `routing.tar` files total 1,578,895,360 B. Forty-seven
+unique tiles, and their `routing.tar` files totalled 1,578,895,360 B before T-0518. Forty-seven
 country tiles are in no package (43,176 B, 33 of them empty zero-node tiles).
 They are the sea and border cells outside every oblast polygon.
 
@@ -652,39 +665,28 @@ They are the sea and border cells outside every oblast polygon.
 - The two databases exist only in the country build, where `admins.sqlite` is
   12,537,856 B and `timezones.sqlite` is 123,133,952 B. A pack that copied them
   would pay 135,671,808 B for the pair.
-- A border tile is stored twice. `data-formats.md` section 2 asks the app to
-  mount each grid tile once across the installed parts, and nothing mounts
-  routing tiles yet: `TileKind` has `MAP` and `CONTOURS`, and the app reads one
-  pack directory (`AppContainer.ROUTING_PACK_DIRECTORY`).
+- A border tile is stored twice, once in each neighbouring package. The app
+  mounts one copy per tile path (T-0518), but the installed packages keep their
+  copies on disk, so the merge saves no storage today: its hard links share
+  bytes with the packs, not between them.
 - `manifest.json` records `pipeline.routingSource.tiles` as a count. A package
-  cannot show which tiles it holds without opening `routing.tar`.
-- `data-formats.md` section 2 lists the part as `routing/`, a directory. The
-  packages ship `routing.tar`, so that text is stale.
-- The package ships a tar, so a build cannot route from loose tiles until the
-  package format changes.
+  cannot show which tiles it holds without opening `routing/`.
+- `DownloadPolicy` allows 1,024 files per package by default (4,096 at most).
+  Lviv has 78 tiles, but one entry per tile counts, so a large oblast may need a
+  higher limit.
 
-#### Loose tiles and shared tiles: design, not yet built
+#### Shared tiles: measured, not built
 
-Two changes are designed and measured, and neither is a small edit.
+Loose tiles shipped with T-0518 as the `routing/` directory component. The
+directory form of the country build measured 1,523 files and 1,065,583,360 B of
+payload, 1,068,990,464 B on disk against 1,068,339,200 B for the tar.
 
-Loose tiles need a package-format change. A component is one file with `bytes`
-and `sha256`, and a directory of 42 to 116 tile files has no single digest.
-Shipping `tiles/` therefore needs a new `packageFormat`, a manifest component
-that names a directory, and an installer that writes many files. The directory
-form of the country build measures 1,523 files and 1,065,583,360 B of payload,
-1,068,990,464 B on disk against 1,068,339,200 B for the tar. It waits for the
-first phone proof above, because the format change is only worth it if the
-engine routes from `tile_dir`.
-
-Shared tiles need the per-oblast routing mount. `valhalla_build_extract` slices
-per polygon, so a border tile lands in every neighbouring package. A mount that
-keeps one copy per tile path removes the extra copies from the phone:
-509,421,544 B today, of which 280,007,152 B is level 0 and 1 and 229,414,392 B
-is level 2. A country-wide hierarchy part would also remove the level-0 and
-level-1 copies from the download: 124,705,872 B shipped once instead of
-404,713,024 B carried now, a saving of 280,007,152 B over the 25 packages. Both
-wait for a task that mounts routing tiles across the installed parts. T-0504
-installs the parts and no task names the mount.
+Shared tiles remain. `valhalla_build_extract` slices per polygon, so a border
+tile lands in every neighbouring package. Shipping it once would remove the extra
+copies: 509,421,544 B, of which 280,007,152 B is level 0 and 1 and 229,414,392 B
+is level 2. A country-wide hierarchy part would remove the level-0 and level-1
+copies from the download: 124,705,872 B shipped once instead of 404,713,024 B
+carried now, a saving of 280,007,152 B over the 25 packages. No task names it.
 
 After both changes the country would ship 1,476 unique level-2 tiles,
 940,877,488 B, and one hierarchy part of 124,705,872 B, against 1,574,961,728 B

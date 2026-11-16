@@ -1297,6 +1297,11 @@ The app does not trust the pack's own `valhalla.json` for paths. It replaces
 device. It clears the optional `landmarks`, `traffic_extract`, `transit_dir`,
 `transit_feeds_dir` and `additional_data.elevation` entries unless the pack
 ships them. The tiles may be a `tiles.tar` extract or a `tiles/` directory.
+The host passes the merged mount of the installed packs (`MountedRoutingPacks`),
+or the dev pack in `externalFilesDir/valhalla` when no installed pack has a
+routing directory. Each pack ships its own `valhalla.json` in `routing/`, built
+from the pipeline's routing config, because the app patches paths in a config
+and needs one to patch.
 `app` resolves the provider through `ProviderRegistry`, so a build with no pack
 registers an engine that answers that typed failure. It does not fail at
 startup.
@@ -3399,11 +3404,18 @@ The store layout is:
 <root>/<region>/<version>/     one verified package
 <root>/<region>/current        the active version, replaced atomically
 <root>/.incoming/              downloads, staging and quarantine
+<root>/.routing/               the merged routing tile directory (T-0518)
 ```
 
 A download writes a zip under `.incoming`, extracts it to a staging directory
 with a zip-slip guard, parses the manifest, verifies every declared file's size
-and sha256, and rejects any undeclared regular file or symbolic link. The
+and sha256, and rejects any undeclared regular file or symbolic link. A
+component with `"type": "directory"` (the `routing/` part) is verified file by
+file: `ComponentListing` hashes every regular file, and the manifest `bytes` is
+the sum of the sizes and `sha256` the hash of the canonical listing text. The
+format is in the `ComponentListing` KDoc and in `tools/pipeline/README.md`. A
+directory component counts one file per entry against `DownloadPolicy`'s file
+limit (1,024 by default, 4,096 at most), so a large oblast needs a raised limit. The
 version directory is then renamed into place and `current` is replaced by an
 fsynced temporary file plus an atomic rename. The pointer is the commit point:
 a crash before it leaves the previous version current and usable; a crash after
@@ -3428,6 +3440,23 @@ v3 header. Its result is `None`, `Mounted` or `Invalid` with a typed
 `RegionMounts`: the packs that mount, in region-id order, and the ones that do
 not with their problem. It never hashes a whole file, so it is safe to call
 while the map is starting.
+
+`RegionMountResolver` also reports each pack's routing part as `RoutingPart`:
+`Directory` for a verified `routing/` directory, `LegacyArchive` for a
+pre-T-0518 `routing.tar` and `Unusable` for any other declaration. A routing
+problem never hides the map. `RoutingMount` merges the `Directory` parts of all
+installed packs into `<root>/.routing/mount-<hash>/`, which holds `valhalla.json`
+and one copy of each `tiles/<level>/...gph` path. The first pack in region-id
+order wins a duplicate path, and the copies are byte-identical. Files are hard
+links (`Files.createLink`) with a copy fallback when the file system refuses a
+link. The directory is built under `build-<uuid>` and renamed into place, and its
+name hashes the list of region id, version and routing hash, so an unchanged set
+is not rebuilt. A pack with a legacy `routing.tar` is skipped and logged until
+the user downloads it again. `MountedRoutingPacks` hands the mount path to the
+engine as `RoutingPackAccess`, ahead of the dev pack in `externalFilesDir/valhalla`.
+Valhalla reads tile files lazily and the engine opens its path once per process,
+so the first `ensure` of a process removes older `mount-*` and `build-*`
+directories, and a pack installed later routes after the next app start.
 
 `RegionCatalogParser` reads the server's `catalog.json`
 (server-protocol.md section 2): format, generated, attribution and every region

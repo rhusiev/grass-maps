@@ -17,7 +17,7 @@
     <string name="downloads_routing_for">Маршрутизація для %1$s</string>
     <string name="downloads_routing_detail">Пішохідні та велосипедні напрямки</string>
     <string name="downloads_elevation_30m_for">Висоти 30 м для %1$s</string>
-    <string name="downloads_elevation_30m_detail">Детальніші схили та ізолінії</string>
+    <string name="downloads_elevation_30m_detail">Точніші висоти для аналізу треків і віджета висоти. Діє з наступного запуску</string>
 
     <string name="downloads_size_and_date">%1$s · дані від %2$s</string>
     <string name="downloads_size_only">%1$s</string>

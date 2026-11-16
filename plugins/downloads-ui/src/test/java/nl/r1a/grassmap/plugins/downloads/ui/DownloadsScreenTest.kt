@@ -101,6 +101,23 @@ class DownloadsScreenTest {
         assertEquals(13_000_000L, addon.bytes)
         assertEquals(CatalogPartKind.ELEVATION_30M, addon.parts.single().kind)
         assertTrue(addon.parts.all { it.bytes > 0 })
+        assertEquals("${CatalogFixture.LVIV}-elevation-30m", addon.downloadId)
+        assertFalse(addon.installed)
+    }
+
+    @Test
+    fun theAddonIsInstalledWhenTheRegionPackReportsIt() {
+        val catalog = CatalogTestData.withWorldAndAddon()
+        val installed = InstalledPack(CatalogFixture.LVIV, "old", parts = listOf(CatalogPartKind.ELEVATION_30M))
+        val state =
+            DownloadsScreen.state(
+                data = DownloadsData(catalog = catalog, installed = listOf(installed), serverUrl = SERVER),
+                detectedRegion = CatalogFixture.LVIV,
+            )
+
+        val addon = state.firstRun.single { it.kind == FirstRunOfferKind.ELEVATION_30M }
+        assertTrue(addon.installed)
+        assertTrue(addon.parts.single().installed)
     }
 
     @Test

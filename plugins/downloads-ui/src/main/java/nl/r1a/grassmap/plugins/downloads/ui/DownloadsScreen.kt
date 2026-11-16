@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.plugins.downloads.ui
 
+import nl.r1a.grassmap.plugin.api.model.CatalogAddon
 import nl.r1a.grassmap.plugin.api.model.CatalogPart
 import nl.r1a.grassmap.plugin.api.model.CatalogPartKind
 import nl.r1a.grassmap.plugin.api.model.CatalogRegion
@@ -114,7 +115,7 @@ object DownloadsScreen {
                     nameEn = world.nameEn,
                     nameUk = world.nameUk,
                     bytes = world.bytes,
-                    parts = partRows(world, installed),
+                    parts = partRows(data, world, installed),
                     installed = installed?.version == world.version,
                 )
         }
@@ -156,16 +157,9 @@ object DownloadsScreen {
                     nameEn = detected.nameEn,
                     nameUk = detected.nameUk,
                     bytes = addon.bytes,
-                    parts =
-                        listOf(
-                            DownloadPartRow(
-                                kind = addon.kind,
-                                version = addon.version,
-                                bytes = addon.bytes,
-                                installed = installedParts.contains(addon.kind),
-                            ),
-                        ),
-                    installed = atVersion && installedParts.contains(CatalogPartKind.ELEVATION_30M),
+                    parts = listOf(addonRow(data, detected, addon, installedParts)),
+                    installed = installedParts.contains(CatalogPartKind.ELEVATION_30M),
+                    downloadId = addon.packageId(detected.id),
                 )
         }
         return offers
@@ -197,7 +191,7 @@ object DownloadsScreen {
             // offered row shows the date the download would bring.
             dataDate = installed?.dataDate ?: entry.dataDate,
             bytes = entry.bytes,
-            parts = partRows(entry, installed),
+            parts = partRows(data, entry, installed),
             installedVersion = installed?.version,
             installedBytes = installed?.bytes,
             status = status,
@@ -207,19 +201,31 @@ object DownloadsScreen {
     }
 
     private fun partRows(
+        data: DownloadsData,
         entry: CatalogRegion,
         installed: InstalledPack?,
     ): List<DownloadPartRow> {
         val installedParts = installed?.parts.orEmpty()
         return entry.parts.map { part -> partRow(part, installedParts) } +
-            entry.addons.map { addon ->
-                DownloadPartRow(
-                    kind = addon.kind,
-                    version = addon.version,
-                    bytes = addon.bytes,
-                    installed = installedParts.contains(addon.kind),
-                )
-            }
+            entry.addons.map { addon -> addonRow(data, entry, addon, installedParts) }
+    }
+
+    /** An add-on is a package of its own, so its row carries the id and transfer of that package. */
+    private fun addonRow(
+        data: DownloadsData,
+        entry: CatalogRegion,
+        addon: CatalogAddon,
+        installedParts: List<CatalogPartKind>,
+    ): DownloadPartRow {
+        val id = addon.packageId(entry.id)
+        return DownloadPartRow(
+            kind = addon.kind,
+            version = addon.version,
+            bytes = addon.bytes,
+            installed = installedParts.contains(addon.kind),
+            downloadId = id,
+            transfer = data.transfer(id),
+        )
     }
 
     private fun partRow(

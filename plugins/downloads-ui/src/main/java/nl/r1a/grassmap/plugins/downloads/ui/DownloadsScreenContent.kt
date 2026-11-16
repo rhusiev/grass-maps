@@ -245,7 +245,7 @@ private fun FirstRunRow(
             FirstRunOfferKind.ROUTING -> stringResource(R.string.downloads_routing_detail)
             FirstRunOfferKind.ELEVATION_30M -> stringResource(R.string.downloads_elevation_30m_detail)
         }
-    val action = offer.kind == FirstRunOfferKind.WORLD || offer.kind == FirstRunOfferKind.REGION
+    val action = offer.kind != FirstRunOfferKind.ROUTING
     Card {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -269,7 +269,7 @@ private fun FirstRunRow(
                 )
                 if (offer.parts.size > 1) {
                     for (part in offer.parts) {
-                        PartRow(part)
+                        PartRow(part, installable = false, onDownload = onDownload, onCancel = {})
                     }
                 }
                 if (offer.installed) {
@@ -282,7 +282,7 @@ private fun FirstRunRow(
             if (action && !offer.installed) {
                 ActionButton(
                     text = stringResource(R.string.downloads_download_short),
-                    onClick = { onDownload(offer.region) },
+                    onClick = { onDownload(offer.downloadId ?: offer.region) },
                 )
             }
         }
@@ -371,7 +371,7 @@ private fun RegionSheet(
         Spacer(modifier = Modifier.height(GAP_DP.dp))
         SectionLabel(stringResource(R.string.downloads_parts_title))
         for (part in row.parts) {
-            PartRow(part)
+            PartRow(part, installable = row.isInstalled, onDownload = onDownload, onCancel = onCancel)
         }
         Spacer(modifier = Modifier.height(GAP_DP.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(GAP_DP.dp)) {
@@ -400,7 +400,12 @@ private fun RegionSheet(
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
-private fun PartRow(part: DownloadPartRow) {
+private fun PartRow(
+    part: DownloadPartRow,
+    installable: Boolean,
+    onDownload: (String) -> Unit,
+    onCancel: (String) -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -420,6 +425,22 @@ private fun PartRow(part: DownloadPartRow) {
                 text = stringResource(R.string.downloads_on_this_phone),
                 style = TextStyle(color = ACCENT, fontSize = BODY_FONT_SP.sp),
             )
+        }
+        val downloadId = part.downloadId
+        if (downloadId != null && !part.installed) {
+            val transfer = part.transfer
+            if (transfer != null) {
+                ActionButton(
+                    text = stringResource(R.string.downloads_cancel),
+                    onClick = { onCancel(downloadId) },
+                    quiet = true,
+                )
+            } else if (installable) {
+                ActionButton(
+                    text = stringResource(R.string.downloads_download_short),
+                    onClick = { onDownload(downloadId) },
+                )
+            }
         }
     }
 }

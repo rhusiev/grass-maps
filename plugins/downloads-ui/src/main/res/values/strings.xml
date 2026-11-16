@@ -17,7 +17,7 @@
     <string name="downloads_routing_for">Routing for %1$s</string>
     <string name="downloads_routing_detail">Walking and cycling directions</string>
     <string name="downloads_elevation_30m_for">30 m elevation for %1$s</string>
-    <string name="downloads_elevation_30m_detail">Finer slopes and contour lines</string>
+    <string name="downloads_elevation_30m_detail">Finer heights for track analysis and the altitude widget. Applies from the next start</string>
 
     <string name="downloads_size_and_date">%1$s · data of %2$s</string>
     <string name="downloads_size_only">%1$s</string>

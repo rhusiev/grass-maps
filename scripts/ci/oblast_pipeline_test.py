@@ -330,5 +330,29 @@ class MetricsTest(unittest.TestCase):
             self.assertEqual(document["build"], {"version": "v"})
 
 
+ELEVATION_MODULE = Path(__file__).resolve().parents[2] / "tools" / "pipeline" / "build-elevation.py"
+
+
+def load_elevation():
+    spec = importlib.util.spec_from_file_location("build_elevation", ELEVATION_MODULE)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class ElevationGuardTest(unittest.TestCase):
+    def test_a_dem_folder_without_any_tile_for_the_bbox_aborts(self) -> None:
+        try:
+            elevation = load_elevation()
+        except ImportError as error:
+            self.skipTest(f"build-elevation.py needs {error.name}")
+        with tempfile.TemporaryDirectory() as empty:
+            output = Path(empty) / "elevation.bin"
+            with self.assertRaises(SystemExit) as raised:
+                elevation.build_grid(empty, (24.0, 49.0, 25.0, 50.0), output, skip_missing=True)
+            self.assertIn("no GLO-30 tile covers", str(raised.exception))
+            self.assertFalse(output.exists())
+
+
 if __name__ == "__main__":
     unittest.main()

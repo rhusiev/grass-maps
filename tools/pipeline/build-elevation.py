@@ -125,6 +125,7 @@ def grid_tiles(source, bbox, skip_missing=False):
             if west >= east or south >= north:
                 continue
             if skip_missing and not (pathlib.Path(source) / source_tile_name(latitude, longitude)).is_file():
+                print(f"skipped cell {source_tile_name(latitude, longitude)}: no GLO-30 tile (sea, or a DEM folder without it)")
                 continue
             yield latitude, longitude, west, south, east, north
 
@@ -207,6 +208,10 @@ def build_grid(source, bbox, output, skip_missing=False):
     tile_count = len(tiles)
     data_offset = GRID_HEADER_BYTES + tile_count * GRID_INDEX_ENTRY_BYTES
     print(f"grid: {tile_count} tile(s), 3 arcsec cells")
+    if tile_count == 0:
+        # Every cell was skipped as missing: the DEM folder does not cover this
+        # bbox at all. An empty grid used to be written silently (2026-11-16).
+        raise SystemExit(f"no GLO-30 tile covers {bbox} in {source}; check --source")
     for latitude, longitude, west, south, east, north in tiles:
         values, source_west, source_north, pixel_width, pixel_height = load_tile(source, latitude, longitude)
         cells = cells_for_tile(

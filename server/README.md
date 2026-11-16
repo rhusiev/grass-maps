@@ -121,6 +121,8 @@ as routing tiles keep their folders) into `package.zip`, copies `manifest.json`,
 the outlines and, last, `catalog.json`. A version that already has a
 `package.zip` is skipped, so a re-run adds only what is new, and a client never
 reads a catalog entry whose archive is missing. The server needs no restart.
+A 30 m elevation add-on (`<region>-elevation-30m/<version>/`, T-0509) is
+published and served like any other package, so the server has no add-on logic.
 
 `size_bytes` in the catalog is the unpacked size the pipeline measured, not the
 size of `package.zip`.

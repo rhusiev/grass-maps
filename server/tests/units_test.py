@@ -265,6 +265,19 @@ class PublishTest(unittest.TestCase):
         (source / "catalog.json").write_text("{}")
         return source, dest, version
 
+    def test_an_elevation_addon_directory_is_published_as_a_package_of_its_own(self) -> None:
+        publisher = load_publisher()
+        with tempfile.TemporaryDirectory() as temp:
+            source, dest, _ = self._pipeline_output(temp)
+            addon = source / "ua-46-elevation-30m" / "2026-11-03"
+            addon.mkdir(parents=True)
+            (addon / "manifest.json").write_text("{}")
+            (addon / "elevation.bin").write_bytes(b"GRME")
+
+            self.assertEqual(publisher.publish(source, dest), 2)
+            with zipfile.ZipFile(dest / "ua-46-elevation-30m" / "2026-11-03" / "package.zip") as archive:
+                self.assertEqual(sorted(archive.namelist()), ["elevation.bin", "manifest.json"])
+
     def test_symlinks_are_refused_not_followed(self) -> None:
         publisher = load_publisher()
         secret = Path(tempfile.mkdtemp()) / "secret.txt"

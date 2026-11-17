@@ -12,6 +12,7 @@ import nl.r1a.grassmap.plugin.api.model.StyleId
 import nl.r1a.grassmap.plugin.api.provider.MapLayerContract
 import nl.r1a.grassmap.plugin.api.service.NetworkGate
 import nl.r1a.grassmap.plugin.api.service.NetworkSwitches
+import nl.r1a.grassmap.plugins.raster.RasterAreaLayer
 import nl.r1a.grassmap.plugins.raster.RasterLayerProvider
 import nl.r1a.grassmap.plugins.raster.RasterSource
 import nl.r1a.grassmap.plugins.raster.RasterTileClient
@@ -42,6 +43,9 @@ class RasterTilesAccess(
     @Volatile
     private var provider: RasterLayerProvider? = null
 
+    @Volatile
+    private var installedAreaIds: List<String> = emptyList()
+
     val policy: TileNetworkPolicy =
         TileNetworkPolicy(
             gate = gate,
@@ -68,17 +72,24 @@ class RasterTilesAccess(
      * An enabled call adds the layer without removing the previous one first:
      * the layer keeps its id, so the host replaces it in place. A slider drag
      * therefore changes one style property and keeps the engine's tiles, while
-     * a placement change moves the same layer to another slot.
+     * a placement change moves the same layer to another slot. The offline
+     * [areas] draw whether or not [enabled] is set: they read files, so the
+     * online-tiles switch does not apply to them. The layers are replaced as a
+     * set only when an area appears or goes away.
      */
     suspend fun apply(
         host: MapHost,
         styleId: StyleId,
         enabled: Boolean,
         layer: RasterLayerState,
+        areas: List<RasterAreaLayer> = emptyList(),
     ): Outcome<Unit> {
-        if (!enabled) {
+        val shownAreas = if (layer.areasShown) areas else emptyList()
+        if (!enabled && shownAreas.isEmpty()) {
             provider?.show(null)
+            provider?.showAreas(emptyList())
             provider = null
+            installedAreaIds = emptyList()
             return host.removeLayers(pluginId)
         }
         return when (val resolved = resolveProvider()) {
@@ -88,13 +99,18 @@ class RasterTilesAccess(
 
             is Outcome.Success -> {
                 val raster = resolved.value
+                val opacity = RasterTransparency.opacityOf(layer.transparencyPercent)
                 raster.show(
-                    source = layer.source,
+                    source = layer.source.takeIf { enabled },
                     placement = layer.placement,
-                    opacity = RasterTransparency.opacityOf(layer.transparencyPercent),
+                    opacity = opacity,
                 )
+                raster.showAreas(shownAreas, layer.placement, opacity)
                 provider = raster
-                install(host, raster, styleId)
+                val areaIds = shownAreas.map { it.id }
+                val stale = !enabled || areaIds != installedAreaIds
+                installedAreaIds = areaIds
+                install(host, raster, styleId, replaceAll = stale)
             }
         }
     }
@@ -119,7 +135,14 @@ class RasterTilesAccess(
         host: MapHost,
         raster: RasterLayerProvider,
         styleId: StyleId,
+        replaceAll: Boolean,
     ): Outcome<Unit> {
+        if (replaceAll) {
+            val removed = host.removeLayers(pluginId)
+            if (removed is Outcome.Failure) {
+                return removed
+            }
+        }
         for (layer in raster.layers(styleId)) {
             val added = host.addLayer(layer.slot, layer.spec, pluginId)
             if (added is Outcome.Failure) {

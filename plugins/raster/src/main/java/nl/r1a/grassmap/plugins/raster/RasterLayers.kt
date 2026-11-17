@@ -52,6 +52,20 @@ object RasterTransparency {
     private const val PERCENT_SCALE = 100f
 }
 
+/** One installed offline area as the layer needs it: the pack file and its zoom range. */
+data class RasterAreaLayer(
+    val id: String,
+    val packFile: String,
+    val minZoom: Int,
+    val maxZoom: Int,
+    val attributionHtml: String,
+    val tileSize: Int = DEFAULT_TILE_SIZE,
+) {
+    private companion object {
+        const val DEFAULT_TILE_SIZE = 256
+    }
+}
+
 /** The style layer an online tile source draws at its placement. */
 object RasterLayers {
     val LAYER_ID: LayerId = LayerId("map.raster.online")
@@ -89,6 +103,36 @@ object RasterLayers {
                     paint = paintOf(opacity),
                 ),
         )
+
+    /**
+     * The layer that draws one installed offline area from its pack file
+     * (T-0513). It opens no socket: the engine reads the file, so the online
+     * tiles switch does not apply and the layer works with the network off.
+     */
+    fun areaLayer(
+        area: RasterAreaLayer,
+        placement: RasterPlacement = RasterPlacement.Overlay,
+        opacity: Float = RasterTransparency.FULL_OPACITY,
+    ): SlottedLayer =
+        SlottedLayer(
+            slot = slotOf(placement),
+            spec =
+                LayerSpec(
+                    id = LayerId("$AREA_LAYER_PREFIX${area.id}"),
+                    type = LayerType.Raster,
+                    raster =
+                        RasterSourceSpec(
+                            tileSize = area.tileSize,
+                            minZoom = area.minZoom,
+                            maxZoom = area.maxZoom,
+                            attributionHtml = area.attributionHtml.ifBlank { null },
+                            packFile = area.packFile,
+                        ),
+                    paint = paintOf(opacity),
+                ),
+        )
+
+    private const val AREA_LAYER_PREFIX = "map.raster.area."
 
     fun slotOf(placement: RasterPlacement): LayerSlot =
         when (placement) {

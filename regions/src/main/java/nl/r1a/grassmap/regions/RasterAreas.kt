@@ -8,6 +8,7 @@ import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.BoundingBox
+import nl.r1a.grassmap.plugin.api.pmtiles.RasterPackInfo
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -27,12 +28,12 @@ data class RasterAreaMetadata(
     val isNonCommercial: Boolean,
 ) {
     companion object {
-        const val KEY_SOURCE = "grassmaps:source"
-        const val KEY_NAME = "name"
-        const val KEY_ATTRIBUTION = "attribution"
-        const val KEY_LICENCE = "grassmaps:licence"
-        const val KEY_LICENCE_URL = "grassmaps:licenceUrl"
-        const val KEY_NON_COMMERCIAL = "grassmaps:nonCommercial"
+        const val KEY_SOURCE = RasterPackInfo.KEY_SOURCE
+        const val KEY_NAME = RasterPackInfo.KEY_NAME
+        const val KEY_ATTRIBUTION = RasterPackInfo.KEY_ATTRIBUTION
+        const val KEY_LICENCE = RasterPackInfo.KEY_LICENCE
+        const val KEY_LICENCE_URL = RasterPackInfo.KEY_LICENCE_URL
+        const val KEY_NON_COMMERCIAL = RasterPackInfo.KEY_NON_COMMERCIAL
 
         /** The metadata in [json], or null when a required key is missing. Untrusted input. */
         fun parse(json: String?): RasterAreaMetadata? {

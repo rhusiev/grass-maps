@@ -16,6 +16,8 @@ data class RasterSource(
     val maxZoom: Int,
     val tileSize: Int,
     val offlineDownload: OfflineTileDownload,
+    val licence: RasterLicence? = null,
+    val estimatedTileBytes: Long = RasterAreaPlan.DEFAULT_TILE_BYTES,
 ) {
     /** The URL of one tile, or null when the tile is outside this source. */
     fun tileUrl(
@@ -38,6 +40,18 @@ data class RasterSource(
 
     fun isOpenStreetMap(): Boolean = id == RasterPresets.OPEN_STREET_MAP_ID
 }
+
+/**
+ * The licence a source's imagery comes under (T-0513). The layer shows it
+ * wherever it is drawn: [name] and [url] come from the source online and from
+ * the pack's own metadata offline. A non-commercial licence is flagged, so the
+ * user sees the restriction before a download.
+ */
+data class RasterLicence(
+    val name: String,
+    val url: String,
+    val isNonCommercial: Boolean,
+)
 
 /** Whether a source's terms allow downloading an area for offline use. */
 enum class OfflineTileDownload {

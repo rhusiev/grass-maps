@@ -26,6 +26,58 @@ object RasterPresets {
             offlineDownload = OfflineTileDownload.REFUSED_BY_POLICY,
         )
 
+    const val EOX_2016_ID = "eox-s2-2016"
+    const val EOX_2018_ID = "eox-s2-2018"
+    const val EOX_MAX_ZOOM = 14
+    private const val EOX_TILE_BYTES = 25L * 1024
+    private const val EOX_URL = "https://tiles.maps.eox.at/wmts/1.0.0"
+    private const val EOX_CREDIT_URL = "https://cloudless.eox.at"
+
+    private fun eoxAttribution(year: Int): String =
+        "<a href=\"$EOX_CREDIT_URL\">EOxCloudless</a> by EOX IT Services GmbH " +
+            "(Contains modified Copernicus Sentinel data $year)"
+
+    /** Sentinel-2 cloudless 2016, CC BY 4.0: free to cache on the device (research-data.md 1.7). */
+    val eox2016: RasterSource =
+        RasterSource(
+            id = EOX_2016_ID,
+            displayName = "Sentinel-2 cloudless 2016",
+            tileUrlTemplate = "$EOX_URL/s2cloudless-2016_3857/default/g/{z}/{y}/{x}.jpg",
+            attributionHtml = eoxAttribution(2016),
+            minZoom = 0,
+            maxZoom = EOX_MAX_ZOOM,
+            tileSize = 256,
+            offlineDownload = OfflineTileDownload.ALLOWED,
+            licence = RasterLicence("CC BY 4.0", "https://creativecommons.org/licenses/by/4.0/", false),
+            estimatedTileBytes = EOX_TILE_BYTES,
+        )
+
+    /** Sentinel-2 cloudless 2018, CC BY-NC-SA 4.0: personal, non-commercial use only. */
+    val eox2018: RasterSource =
+        RasterSource(
+            id = EOX_2018_ID,
+            displayName = "Sentinel-2 cloudless 2018",
+            tileUrlTemplate = "$EOX_URL/s2cloudless-2018_3857/default/g/{z}/{y}/{x}.jpg",
+            attributionHtml = eoxAttribution(2018),
+            minZoom = 0,
+            maxZoom = EOX_MAX_ZOOM,
+            tileSize = 256,
+            offlineDownload = OfflineTileDownload.ALLOWED,
+            licence =
+                RasterLicence(
+                    "CC BY-NC-SA 4.0",
+                    "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+                    true,
+                ),
+            estimatedTileBytes = EOX_TILE_BYTES,
+        )
+
+    /** The presets an area can be downloaded from. OSM is not among them. */
+    val areaSources: List<RasterSource> = listOf(eox2016, eox2018)
+
+    /** The preset with [id], or null. */
+    fun byId(id: String): RasterSource? = (areaSources + openStreetMap).firstOrNull { it.id == id }
+
     /** The largest zoom the app asks any source for. */
     const val MAX_SUPPORTED_ZOOM = 24
 }

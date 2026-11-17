@@ -7,6 +7,7 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
@@ -45,6 +46,15 @@ class RasterLayerSettings(
 
     /** Switches back to the OSM preset and stores it. */
     fun useOpenStreetMap(): Outcome<Unit> = update { it.copy(source = RasterPresets.openStreetMap) }
+
+    /** Makes the shipped preset [id] the active online source, or refuses an unknown id. */
+    fun usePreset(id: String): Outcome<Unit> {
+        val preset = RasterPresets.byId(id) ?: return Outcome.Failure(AppError.InvalidInput)
+        return update { it.copy(source = preset) }
+    }
+
+    /** Shows or hides the installed offline areas. The choice is stored. */
+    fun setAreasShown(shown: Boolean): Outcome<Unit> = update { it.copy(areasShown = shown) }
 
     /**
      * Validates [template], asks [probe] to fetch one tile through the network
@@ -136,6 +146,7 @@ class RasterLayerSettings(
             }
             put(PLACEMENT_KEY, layer.placement.name.lowercase())
             put(TRANSPARENCY_KEY, layer.transparencyPercent)
+            put(AREAS_SHOWN_KEY, layer.areasShown)
         }.toString()
 
     private companion object {
@@ -145,6 +156,7 @@ class RasterLayerSettings(
         const val ATTRIBUTION_KEY = "attribution"
         const val PLACEMENT_KEY = "placement"
         const val TRANSPARENCY_KEY = "transparency"
+        const val AREAS_SHOWN_KEY = "areasShown"
         const val DEFAULT_TRANSPARENCY_PERCENT = RasterTransparency.MAX_PERCENT
 
         fun initial(source: RasterSource): RasterLayerState =
@@ -152,6 +164,7 @@ class RasterLayerSettings(
                 source = source,
                 placement = RasterPlacement.Overlay,
                 transparencyPercent = DEFAULT_TRANSPARENCY_PERCENT,
+                areasShown = true,
             )
 
         fun load(file: File?): RasterLayerState? {
@@ -176,14 +189,13 @@ class RasterLayerSettings(
                         ?.intOrNull
                         ?.coerceIn(RasterTransparency.MIN_PERCENT, RasterTransparency.MAX_PERCENT)
                         ?: DEFAULT_TRANSPARENCY_PERCENT,
+                areasShown = (root[AREAS_SHOWN_KEY] as? JsonPrimitive)?.booleanOrNull ?: true,
             )
         }
 
         fun loadSource(root: JsonObject): RasterSource? {
             val id = (root[SOURCE_KEY] as? JsonPrimitive)?.contentOrNull
-            if (id == RasterPresets.OPEN_STREET_MAP_ID) {
-                return RasterPresets.openStreetMap
-            }
+            id?.let(RasterPresets::byId)?.let { return it }
             if (id != RasterSources.CUSTOM_ID) {
                 return null
             }
@@ -207,4 +219,6 @@ data class RasterLayerState(
     val placement: RasterPlacement,
     /** The transparency the control shows, as whole percent of `raster-opacity`. */
     val transparencyPercent: Int,
+    /** Whether the installed offline areas draw. They need no network. */
+    val areasShown: Boolean = true,
 )

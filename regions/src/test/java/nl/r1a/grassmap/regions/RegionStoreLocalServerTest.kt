@@ -25,9 +25,9 @@ import org.junit.Before
 import org.junit.Test
 import java.io.File
 import java.io.IOException
-import java.security.MessageDigest
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.MessageDigest
 
 /**
  * The region store against a loopback server serving the real catalogue (T-0504).
@@ -326,7 +326,13 @@ class RegionStoreLocalServerTest {
                 try {
                     assertTrue(store.refresh() is Outcome.Success)
                     assertTrue(store.startDownload(addon) is Outcome.Success)
-                    val done = withTimeout(60_000) { store.data.first { it.transfers.isEmpty() && it.problems.isEmpty() && File(paths.root, addon).isDirectory } }
+                    val done =
+                        withTimeout(60_000) {
+                            store.data.first {
+                                it.transfers.isEmpty() && it.problems.isEmpty() &&
+                                    File(paths.root, addon).isDirectory
+                            }
+                        }
 
                     assertEquals("the add-on alone is not a region pack", emptyList<String>(), done.installed.map { it.region })
                     assertEquals(ADDON_VERSION, CurrentPointer.read(File(paths.root, addon)))

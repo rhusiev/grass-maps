@@ -169,11 +169,24 @@ class ElevationAddonTest {
         }
         val packed = deflate(raw.array())
         val out = ByteBuffer.allocate(HEADER_BYTES + ENTRY_BYTES + packed.size).order(ByteOrder.LITTLE_ENDIAN)
-        out.put("GRME".toByteArray()).putShort(1).putShort(HEADER_BYTES.toShort()).putInt(1)
-        out.putInt(HEADER_BYTES).putInt(ENTRY_BYTES).putInt(0).putInt(0).putInt(0)
+        out
+            .put("GRME".toByteArray())
+            .putShort(1)
+            .putShort(HEADER_BYTES.toShort())
+            .putInt(1)
+        out
+            .putInt(HEADER_BYTES)
+            .putInt(ENTRY_BYTES)
+            .putInt(0)
+            .putInt(0)
+            .putInt(0)
         listOf(WEST, SOUTH, EAST, NORTH).forEach { out.putInt(Math.round(it * MICRODEGREES).toInt()) }
         out.putShort(cells.toShort()).putShort(cells.toShort())
-        out.putInt(HEADER_BYTES + ENTRY_BYTES).putInt(packed.size).putShort(1).putShort(Short.MIN_VALUE)
+        out
+            .putInt(HEADER_BYTES + ENTRY_BYTES)
+            .putInt(packed.size)
+            .putShort(1)
+            .putShort(Short.MIN_VALUE)
         out.put(packed)
         return out.array()
     }

@@ -54,8 +54,9 @@ internal class SetStyleCommand(
         val styleId = parse(params) ?: return Outcome.Failure(AppError.InvalidInput)
         val host = session.hostOrNull() ?: return Outcome.Failure(AppError.NotReady)
         val requested = StyleId(styleId)
-        val bundle = STYLE_PLUGINS.firstNotNullOfOrNull { plugin -> findStyle(plugin, requested) }
-            ?: Outcome.Success(null)
+        val bundle =
+            STYLE_PLUGINS.firstNotNullOfOrNull { plugin -> findStyle(plugin, requested) }
+                ?: Outcome.Success(null)
         return when (bundle) {
             is Outcome.Failure -> {
                 bundle

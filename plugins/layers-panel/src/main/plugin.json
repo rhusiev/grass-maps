@@ -1,5 +1,5 @@
 {
-  "id": "map.layers-panel",
+  "id": "layers.panel",
   "name": "plugin.layers_panel.name",
   "description": "plugin.layers_panel.description",
   "version": "0.1.0",

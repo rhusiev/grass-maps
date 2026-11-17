@@ -27,6 +27,7 @@ plugins/osm-places	50
 plugins/point-info	25
 plugins/proximity-alerts	22
 plugins/raster	19
+plugins/region-outlines	3
 plugins/route-layer	20
 plugins/route-relations	10
 plugins/route-warnings	12

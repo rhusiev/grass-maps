@@ -39,6 +39,21 @@ object MapSourceIds {
     val CONTOURS: SourceId = SourceId("contours")
 }
 
+/**
+ * The credits the vector sources carry, as the HTML the map's attribution
+ * overlay parses. The ODbL asks for the OpenStreetMap credit to be visible
+ * with the map and to link to the copyright page. The online OSM raster
+ * preset uses the same string, so the overlay shows the credit once. The contours derive from
+ * Copernicus DEM GLO-30, whose terms ask for the credit below
+ * (`ATTRIBUTION.md`). Natural Earth is public domain and needs none.
+ */
+object MapCredits {
+    const val OPENSTREETMAP: String =
+        "© <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors"
+    const val COPERNICUS_DEM: String =
+        "© DLR e.V. and © Airbus Defence and Space GmbH, provided under Copernicus by the EU and ESA"
+}
+
 enum class SourceKind {
     Vector,
     RasterDem,

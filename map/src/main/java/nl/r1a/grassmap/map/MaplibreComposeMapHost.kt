@@ -350,7 +350,7 @@ fun MapSurfaceView(
             interactions = interactions,
             uiOptions = uiOptions,
         )
-        MapAttributionOverlay(style = surface.state.style)
+        MapAttributionOverlay(style = surface.state.style, sourceCredits = surface.host.sourceCredits)
     }
 }
 
@@ -462,6 +462,9 @@ class MaplibreComposeMapHost internal constructor(
     private val session: MapHostState,
 ) : MapHost {
     private val eventSink = MutableSharedFlow<MapEvent>(extraBufferCapacity = 128)
+
+    /** The credits of the style's loaded sources, read by the attribution overlay. */
+    internal val sourceCredits: List<String> get() = session.style.value.plan.credits
 
     override val camera: StateFlow<Camera> = session.camera.asStateFlow()
 
@@ -655,7 +658,7 @@ class MaplibreComposeMapHost internal constructor(
     }
 }
 
-private fun buildBaseStyle(
+internal fun buildBaseStyle(
     style: StyleSpec,
     resolver: (SourceId) -> String?,
     appTiles: Map<SourceId, MapTileSource>,

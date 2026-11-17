@@ -33,12 +33,17 @@ internal data class AppSource(
  * How every source the style declares is satisfied: by a URI the engine loads,
  * or by tiles the app supplies (T-0503).
  *
+ * [credits] are the attributions of the sources this build has data for. An
+ * app-supplied source cannot carry its credit into the engine, so the overlay
+ * reads it from here.
+ *
  * A source the app supplies never also gets a URI. That is the one rule that
  * keeps a shared tile from being loaded twice under two source ids.
  */
 internal data class SourcePlan(
     val uris: Map<SourceId, String>,
     val app: List<AppSource>,
+    val credits: List<String> = emptyList(),
 )
 
 /**
@@ -53,13 +58,16 @@ internal fun planSources(
 ): SourcePlan {
     val uris = LinkedHashMap<SourceId, String>()
     val app = mutableListOf<AppSource>()
+    val credits = mutableListOf<String>()
     for (source in spec.sources) {
         val tiles = appTiles[source.id]
         if (tiles != null) {
             app += AppSource(source.id, source.minZoom, source.maxZoom, tiles)
-            continue
+        } else {
+            val uri = resolver(source.id) ?: continue
+            uris[source.id] = uri
         }
-        resolver(source.id)?.let { uris[source.id] = it }
+        source.attribution?.let { credits += it }
     }
-    return SourcePlan(uris, app)
+    return SourcePlan(uris, app, credits)
 }

@@ -7,6 +7,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerType
+import nl.r1a.grassmap.plugin.api.model.MapCredits
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
 import nl.r1a.grassmap.plugin.api.model.PaletteStyleDocument
 import nl.r1a.grassmap.plugin.api.model.StyleId
@@ -20,6 +21,17 @@ class StandardMapLayerProviderTest {
     private val provider = StandardMapLayerProvider()
     private val light = StyleId("standard")
     private val dark = StyleId("standard-dark")
+
+    @Test
+    fun vectorSourcesDeclareTheirCredits() {
+        for (style in provider.styles()) {
+            val credits = style.sources.associate { it.id to it.attribution }
+
+            assertEquals(MapCredits.OPENSTREETMAP, credits[MapSourceIds.WORLD])
+            assertEquals(MapCredits.OPENSTREETMAP, credits[MapSourceIds.REGION])
+            assertEquals(MapCredits.COPERNICUS_DEM, credits[MapSourceIds.CONTOURS])
+        }
+    }
 
     @Test
     fun lightAndDarkShareOneBaseDocument() {

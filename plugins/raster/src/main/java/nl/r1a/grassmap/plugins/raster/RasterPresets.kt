@@ -1,5 +1,7 @@
 package nl.r1a.grassmap.plugins.raster
 
+import nl.r1a.grassmap.plugin.api.model.MapCredits
+
 /**
  * The tile sources the app ships (data-formats.md section 8).
  *
@@ -10,8 +12,7 @@ package nl.r1a.grassmap.plugins.raster
 object RasterPresets {
     const val OPEN_STREET_MAP_ID = "osm"
 
-    const val OPEN_STREET_MAP_ATTRIBUTION_HTML =
-        "© <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors"
+    const val OPEN_STREET_MAP_ATTRIBUTION_HTML = MapCredits.OPENSTREETMAP
 
     val openStreetMap: RasterSource =
         RasterSource(

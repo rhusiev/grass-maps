@@ -1,5 +1,8 @@
 package nl.r1a.grassmap.map
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import nl.r1a.grassmap.plugin.api.model.MapSource
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
 import nl.r1a.grassmap.plugin.api.model.SourceId
@@ -89,6 +92,67 @@ class SourcePlanTest {
         assertTrue(plan.uris.isEmpty())
     }
 
+    @Test
+    fun creditsCoverOnlySourcesThisBuildHasDataFor() {
+        val plan =
+            planSources(
+                style(sources = credited()),
+                resolver = { id -> "pmtiles://$id".takeIf { id == MapSourceIds.WORLD } },
+                appTiles = emptyMap(),
+            )
+
+        assertEquals(listOf(WORLD_CREDIT), plan.credits)
+    }
+
+    @Test
+    fun anAppSuppliedSourceStillContributesItsCredit() {
+        val plan =
+            planSources(
+                style(sources = credited()),
+                resolver = { null },
+                appTiles = mapOf(MapSourceIds.REGION to tiles),
+            )
+
+        assertEquals(listOf(REGION_CREDIT), plan.credits)
+    }
+
+    @Test
+    fun aBuiltStyleWritesTheCreditIntoEachUriSource() {
+        val built =
+            requireNotNull(
+                buildBaseStyle(style(sources = credited()), { "pmtiles://$it" }, emptyMap()),
+            )
+
+        val sources =
+            Json
+                .parseToJsonElement(built.json.json)
+                .jsonObject
+                .getValue("sources")
+                .jsonObject
+        assertEquals(
+            WORLD_CREDIT,
+            sources
+                .getValue("world")
+                .jsonObject
+                .getValue("attribution")
+                .jsonPrimitive.content,
+        )
+        assertEquals(
+            REGION_CREDIT,
+            sources
+                .getValue("region")
+                .jsonObject
+                .getValue("attribution")
+                .jsonPrimitive.content,
+        )
+    }
+
+    private fun credited(): List<MapSource> =
+        listOf(
+            MapSource(MapSourceIds.WORLD, minZoom = 0, maxZoom = 7, attribution = WORLD_CREDIT),
+            MapSource(MapSourceIds.REGION, minZoom = 8, maxZoom = 14, attribution = REGION_CREDIT),
+        )
+
     private fun style(
         sources: List<MapSource> =
             listOf(
@@ -105,6 +169,8 @@ class SourcePlanTest {
     private val tiles = MapTileSource { _, _, _ -> EMPTY_TILE }
 
     private companion object {
+        const val WORLD_CREDIT = "world credit"
+        const val REGION_CREDIT = "region credit"
         const val BASE_STYLE = """{"version":8,"glyphs":"","layers":[]}"""
         val EMPTY_TILE = ByteArray(0)
     }

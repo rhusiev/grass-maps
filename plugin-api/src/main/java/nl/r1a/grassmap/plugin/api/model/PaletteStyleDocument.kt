@@ -189,9 +189,9 @@ class PaletteStyleDocument private constructor(
         /** The logical sources every authored style draws from. */
         val sources: List<MapSource> =
             listOf(
-                MapSource(MapSourceIds.WORLD, minZoom = 0, maxZoom = 7),
-                MapSource(MapSourceIds.REGION, minZoom = 8, maxZoom = 14),
-                MapSource(MapSourceIds.CONTOURS, minZoom = 9, maxZoom = 14),
+                MapSource(MapSourceIds.WORLD, minZoom = 0, maxZoom = 7, attribution = MapCredits.OPENSTREETMAP),
+                MapSource(MapSourceIds.REGION, minZoom = 8, maxZoom = 14, attribution = MapCredits.OPENSTREETMAP),
+                MapSource(MapSourceIds.CONTOURS, minZoom = 9, maxZoom = 14, attribution = MapCredits.COPERNICUS_DEM),
             )
     }
 }

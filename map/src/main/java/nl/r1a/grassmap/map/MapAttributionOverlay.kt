@@ -17,8 +17,19 @@ import org.maplibre.compose.overlay.AttributionLinks
 import org.maplibre.compose.overlay.attributions
 
 /**
- * The map's visible credit: one line per source that declares an attribution,
- * including a raster tile source a plugin adds (T-0512). The OSM policy asks
+ * The credits to draw: those of the style's sources, which an app-supplied
+ * vector source cannot hand to the engine, then the engine's own (raster
+ * sources). A credit several sources share is drawn once.
+ */
+internal fun mergeCredits(
+    sourceCredits: List<String>,
+    engineCredits: List<String>,
+): List<String> = (sourceCredits + engineCredits).map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+
+/**
+ * The map's visible credit: one entry per distinct attribution of the style's
+ * vector sources (OpenStreetMap, and the Copernicus DEM for contours) and of
+ * any raster tile source a plugin adds (T-0512). The OSM policy asks
  * for a visible credit, so this is text on the map and not a hidden info
  * button. A style with no attributed source draws nothing.
  *
@@ -35,9 +46,10 @@ import org.maplibre.compose.overlay.attributions
 @Composable
 internal fun MapAttributionOverlay(
     style: MapStyleState,
+    sourceCredits: List<String>,
     modifier: Modifier = Modifier,
 ) {
-    val attributions = style.attributions()
+    val attributions = mergeCredits(sourceCredits, style.attributions())
     if (attributions.isEmpty()) return
     Box(modifier = modifier.fillMaxSize()) {
         AttributionLinks(

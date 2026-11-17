@@ -573,7 +573,7 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/track-library` | the track library state, its folder definitions, the rename, describe, move and delete actions with one-step undo, and the four fixed orders and name search | `plugin-api` |
 | `plugins/contours` | the contour overlay for the Standard and Touring variants and the one-row card the layers button opens | `plugin-api`, `plugin-ui-api` |
 | `plugins/route-relations` | the hiking and cycling relation geometry assembler, the shared-way lane assignment, the OSMC waymark mapping, the cycling node-network numbers and the `MapHost` layers over an inline GeoJSON source | `plugin-api` |
-| `plugins/raster` | the online raster tile source: the OSM preset, the user URL template, the tile client behind the online-tiles switch, the underlay/overlay placement and the transparency, with the card the layers button opens | `plugin-api` |
+| `plugins/raster` | the online raster tile source: the OSM preset, the user URL template, the tile client behind the online-tiles switch, the underlay/overlay placement and the transparency, the EOX Sentinel-2 presets with their licence, the area plan, the area downloader and the card the layers button opens | `plugin-api` |
 | `plugins/route-warnings` | the warning list for fords, steps, barriers, railway crossings and private ways, with its profile filter and distance order | `plugin-api` |
 | `plugins/proximity-alerts` | the proximity schedule for favourites, track waypoints and chosen place kinds: the three chosen radii, the one-per-approach latch and its lookup refresh | `plugin-api` |
 | `plugins/downloads-ui` | the downloads screen: catalogue rows with their parts and data date, the first-run offer, the region sheet, the refresh, download, cancel, remove and server commands, and their state stream | `plugin-api` |
@@ -600,6 +600,41 @@ validates the template and fetches one tile through the gate before it makes
 the source active, so a broken template never replaces a working source. Plain
 HTTP is accepted only for a loopback test server; a remote source must use
 HTTPS.
+
+### Offline raster areas (T-0513)
+
+The two EOX Sentinel-2 cloudless presets (2016 under CC BY 4.0, 2018 under
+CC BY-NC-SA 4.0) allow an offline download. OSM does not, and a custom URL
+template gets no area download. The layers card shows the licence name, its link
+and, for the 2018 layer, a notice that the imagery is non-commercial. The same
+text shows on each installed area, read from the pack's own metadata, so it is
+there with no network.
+
+The card plans before it downloads. `RasterAreaPlan` counts the tiles the
+current view needs at each zoom of the chosen range and multiplies them by the
+preset's typical tile size (25 KB for EOX, a chosen figure, not a measurement).
+The card shows the tile count, the estimate and the free space before the
+Download button appears. Three limits refuse a plan, each with its own message:
+`MAX_TILES` 20,000, `MAX_BYTES` 600 MiB, and free space below twice the
+estimate (the staged tiles and the finished pack exist together for a moment).
+All three are chosen, not derived. The downloader fetches one tile every 100 ms,
+as EOX asks for spread-out requests, retries a tile once, skips a 404 and ends
+on any other failure.
+
+Every tile goes through `RasterTileClient`, so the online-tiles switch guards
+the download as it guards the viewer: with it off, no socket opens. The
+downloader writes `raster.pmtiles` and a `manifest.json` into a staging
+directory (`RasterPackBuilder`, in `plugin-api`, so the plugin imports no region
+code). `RasterPackInstaller` in `regions` verifies the package and flips the
+`current` pointer like any region. The package id is
+`raster-<source>-<hash of bounds and zooms>`, and the `raster-` prefix keeps an
+area out of the map-region and routing mounts. Downloading the same view again
+replaces its area.
+
+An installed area is a raster layer whose source is `pmtiles://file://<path>`.
+It reads a file, so the online-tiles switch does not apply to it: turning the
+switch off removes the online layer and leaves the areas. One switch in the card,
+stored as `areasShown` in `settings/raster.json`, hides all areas.
 
 The contours and raster cards are closed by default behind a small `Layers`
 button at the top start. A card that is always open covers the map's centre on

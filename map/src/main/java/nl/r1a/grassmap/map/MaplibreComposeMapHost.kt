@@ -2,6 +2,7 @@ package nl.r1a.grassmap.map
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -11,6 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -66,6 +68,8 @@ import org.maplibre.compose.map.MapState
 import org.maplibre.compose.map.MaplibreMap
 import org.maplibre.compose.map.RenderStats
 import org.maplibre.compose.map.rememberMapState
+import org.maplibre.compose.overlay.MapOverlay
+import org.maplibre.compose.overlay.MaplibreLogo
 import org.maplibre.compose.style.BaseStyle
 import org.maplibre.compose.util.DpPadding
 import org.maplibre.nativeffi.MaplibreAndroid
@@ -349,6 +353,7 @@ fun MapSurfaceView(
             state = surface.state,
             interactions = interactions,
             uiOptions = uiOptions,
+            overlay = { MaplibreLogo(Modifier.align(Alignment.BottomStart).padding(MapOverlay.Spacing)) },
         )
         MapAttributionOverlay(style = surface.state.style, sourceCredits = surface.host.sourceCredits)
     }

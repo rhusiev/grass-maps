@@ -586,10 +586,12 @@ names `network.online_tiles`, and the layers card shows the row with the
 sentence the switch sends: the tile server sees which area is on screen.
 
 The preset is OpenStreetMap's own tile server, z0-z19, with the credit its
-licence requires shown in the map's credit pill. The pill sits above the
-engine's own logo in the bottom-left corner, so the engine's mark and the
-source credits are both visible; MapLibre's logo is optional under its BSD
-licence, while the source credits are not. OSM's tile policy forbids offline
+licence requires shown in the map's credit line, the one credit surface: the
+engine's own attribution button is off. The line reads "© OpenStreetMap
+contributors", plus "Copernicus" when contours are on, and a tap on it opens
+the full texts with their links. It sits above the engine's logo in the
+bottom-left corner. MapLibre's logo is optional under its BSD licence, while
+the source credits are not. OSM's tile policy forbids offline
 bulk download, so `RasterOfflineDownload.prepare` refuses it. The same
 refusal applies to a custom template on the same host.
 

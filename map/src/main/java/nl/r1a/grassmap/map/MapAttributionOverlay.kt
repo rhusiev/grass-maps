@@ -1,17 +1,27 @@
 package nl.r1a.grassmap.map
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmap.plugin.api.model.MapCredits
 import org.maplibre.compose.map.MapStyleState
 import org.maplibre.compose.overlay.AttributionLinks
 import org.maplibre.compose.overlay.attributions
@@ -19,24 +29,55 @@ import org.maplibre.compose.overlay.attributions
 /**
  * The credits to draw: those of the style's sources, which an app-supplied
  * vector source cannot hand to the engine, then the engine's own (raster
- * sources). A credit several sources share is drawn once.
+ * sources). An engine credit that names OpenStreetMap becomes the one
+ * [MapCredits.OPENSTREETMAP] entry, and one that names Copernicus or GLO-30
+ * becomes [MapCredits.COPERNICUS_DEM]. A credit several sources share is drawn
+ * once.
  */
 internal fun mergeCredits(
     sourceCredits: List<String>,
     engineCredits: List<String>,
-): List<String> = (sourceCredits + engineCredits).map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+): List<String> =
+    (sourceCredits + engineCredits)
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .map(::normaliseCredit)
+        .distinct()
+
+internal fun normaliseCredit(credit: String): String =
+    when {
+        credit.contains(OPENSTREETMAP_NAME, ignoreCase = true) -> MapCredits.OPENSTREETMAP
+        COPERNICUS_NAMES.any { credit.contains(it, ignoreCase = true) } -> MapCredits.COPERNICUS_DEM
+        else -> credit
+    }
 
 /**
- * The map's visible credit: one entry per distinct attribution of the style's
- * vector sources (OpenStreetMap, and the Copernicus DEM for contours) and of
- * any raster tile source a plugin adds (T-0512). The OSM policy asks
- * for a visible credit, so this is text on the map and not a hidden info
- * button. A style with no attributed source draws nothing.
+ * The one short line shown on the map: the plain text of each credit, with the
+ * two known credits cut to their short forms. The full texts and links sit
+ * behind a tap on the line.
+ */
+internal fun collapsedLabel(credits: List<String>): String =
+    credits.joinToString(COLLAPSED_SEPARATOR) { credit ->
+        when (credit) {
+            MapCredits.OPENSTREETMAP -> OPENSTREETMAP_SHORT
+            MapCredits.COPERNICUS_DEM -> COPERNICUS_SHORT
+            else -> credit.replace(HTML_TAG, "").trim()
+        }
+    }
+
+/**
+ * The map's visible credit: one short line, "(c) OpenStreetMap contributors"
+ * plus "Copernicus" when contours are on. The OSM policy asks for a visible
+ * credit, so this is text on the map and not a hidden info button. A tap on the
+ * line opens a card with every full credit and its links, and a second tap
+ * closes it. A style with no attributed source draws nothing.
  *
- * The engine draws its own mark in the bottom-left corner and its native
- * attribution at the bottom end, so the credit sits above the engine's mark
- * rather than on top of it: the T-0514 golden run showed the pill covering
- * both.
+ * This is the only credit surface. The engine's own attribution button is off
+ * (`MaplibreMap` draws only its logo, see `MapSurfaceView`), so the credits
+ * never appear twice. The line sits at the bottom start, above the engine's
+ * logo and clear of the app's scale bar at the bottom end. The top row is not
+ * free: the search field, the selected-point label and the navigation turn card
+ * all use it.
  *
  * This is ordinary Compose content drawn over the map, never a node inside it.
  * The map's content lambda accepts map nodes only, so a layout emitted there
@@ -49,32 +90,62 @@ internal fun MapAttributionOverlay(
     sourceCredits: List<String>,
     modifier: Modifier = Modifier,
 ) {
-    val attributions = mergeCredits(sourceCredits, style.attributions())
-    if (attributions.isEmpty()) return
+    val credits = mergeCredits(sourceCredits, style.attributions())
+    if (credits.isEmpty()) return
+    var expanded by rememberSaveable { mutableStateOf(false) }
     Box(modifier = modifier.fillMaxSize()) {
-        AttributionLinks(
-            attributions = attributions,
+        Column(
             modifier =
                 Modifier
                     .align(Alignment.BottomStart)
                     .padding(
                         start = ATTRIBUTION_MARGIN_DP.dp,
-                        end = ATTRIBUTION_MARGIN_DP.dp,
+                        end = ATTRIBUTION_END_CLEARANCE_DP.dp,
                         bottom = ATTRIBUTION_BOTTOM_INSET_DP.dp,
-                    ).background(ATTRIBUTION_BACKGROUND, RoundedCornerShape(ATTRIBUTION_CORNER_DP.dp))
-                    .padding(
-                        horizontal = ATTRIBUTION_HORIZONTAL_PADDING_DP.dp,
-                        vertical = ATTRIBUTION_VERTICAL_PADDING_DP.dp,
                     ),
-            textStyle = TextStyle(color = Color.White, fontSize = ATTRIBUTION_FONT_SP.sp),
-        )
+        ) {
+            if (expanded) {
+                AttributionLinks(
+                    attributions = credits,
+                    modifier = creditSurface(),
+                    textStyle = creditTextStyle(),
+                )
+            }
+            BasicText(
+                text = collapsedLabel(credits),
+                style = creditTextStyle(),
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+                modifier =
+                    creditSurface().clickable(role = Role.Button) { expanded = !expanded },
+            )
+        }
     }
 }
 
+private fun creditTextStyle() = TextStyle(color = Color.White, fontSize = ATTRIBUTION_FONT_SP.sp)
+
+private fun creditSurface(): Modifier =
+    Modifier
+        .background(ATTRIBUTION_BACKGROUND, RoundedCornerShape(ATTRIBUTION_CORNER_DP.dp))
+        .padding(horizontal = ATTRIBUTION_HORIZONTAL_PADDING_DP.dp, vertical = ATTRIBUTION_VERTICAL_PADDING_DP.dp)
+
+private const val OPENSTREETMAP_NAME = "OpenStreetMap"
+private val COPERNICUS_NAMES = listOf("Copernicus", "GLO-30")
+private const val OPENSTREETMAP_SHORT = "\u00A9 OpenStreetMap contributors"
+private const val COPERNICUS_SHORT = "Copernicus"
+private const val COLLAPSED_SEPARATOR = " \u00B7 "
+private val HTML_TAG = Regex("<[^>]*>")
+
 // The engine draws its logo in the bottom-left corner: about 24 dp tall with a
-// 4 dp margin on a 420 dpi device. This inset clears the mark and its margin, so
-// the two credits stack instead of one covering the other.
+// 4 dp margin on a 420 dp-per-inch device. This inset clears the mark and its
+// margin, so the credit sits above it instead of covering it.
 private const val ATTRIBUTION_BOTTOM_INSET_DP = 40
+
+// The app's scale bar sits at the bottom end, about 90 dp wide with its margin.
+// The credit line stops before it, so a long line never runs under the bar.
+private const val ATTRIBUTION_END_CLEARANCE_DP = 100
 
 private val ATTRIBUTION_BACKGROUND = Color(0x99000000)
 private const val ATTRIBUTION_FONT_SP = 10

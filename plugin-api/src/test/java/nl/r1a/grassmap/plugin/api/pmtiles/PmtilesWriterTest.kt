@@ -31,6 +31,29 @@ class PmtilesWriterTest {
     }
 
     @Test
+    fun tileIdsMatchReferenceIdsAtZoomsThreeToFive() {
+        // Ids from an independent Python port of the PMTiles v3 zxy_to_tileid, checked
+        // against a recursive construction of the curve (every tile of z0-z5 adjacent to the next).
+        val reference =
+            listOf(
+                Triple(3, 0L, 0L) to 21L,
+                Triple(3, 7L, 0L) to 84L,
+                Triple(3, 3L, 4L) to 52L,
+                Triple(3, 7L, 7L) to 63L,
+                Triple(4, 0L, 15L) to 170L,
+                Triple(4, 9L, 6L) to 300L,
+                Triple(4, 15L, 15L) to 255L,
+                Triple(5, 0L, 0L) to 341L,
+                Triple(5, 31L, 0L) to 1364L,
+                Triple(5, 10L, 21L) to 818L,
+                Triple(5, 31L, 31L) to 1023L,
+            )
+        for ((tile, id) in reference) {
+            assertEquals("tile $tile", id, PmtilesTileId.of(tile.first, tile.second, tile.third))
+        }
+    }
+
+    @Test
     fun theHeaderCarriesTheTileCountZoomsTypeAndBounds() {
         val target = folder.newFile("raster.pmtiles")
         val summary =

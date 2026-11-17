@@ -21,10 +21,12 @@ import nl.r1a.grassmap.plugins.raster.RasterAreaPlan
 import nl.r1a.grassmap.plugins.raster.RasterAreaProgress
 import nl.r1a.grassmap.plugins.raster.RasterLicence
 import nl.r1a.grassmap.plugins.raster.RasterTileClient
+import nl.r1a.grassmap.regions.InstallLock
 import nl.r1a.grassmap.regions.MountedRaster
 import nl.r1a.grassmap.regions.RasterPackInstaller
 import nl.r1a.grassmap.regions.RegionMountResolver
 import java.io.File
+import java.security.MessageDigest
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -44,17 +46,33 @@ class RasterAreaService(
     private val spacingMillis: Long = RasterAreaDownloader.REQUEST_SPACING_MS,
     private val freeBytes: () -> Long? = { root?.usableSpace },
     private val now: () -> Instant = Instant::now,
+    private val installLock: InstallLock = InstallLock(),
 ) {
     private val mutableAreas = MutableStateFlow<List<MountedRaster>>(emptyList())
     private val mutableState = MutableStateFlow<RasterAreaDownloadState>(RasterAreaDownloadState.Idle)
     private val cancelled = AtomicBoolean(false)
+    private val isPrepared = AtomicBoolean(false)
     private var job: Job? = null
 
     /** The installed areas, newest first by id. */
     val areas: StateFlow<List<MountedRaster>> = mutableAreas.asStateFlow()
     val state: StateFlow<RasterAreaDownloadState> = mutableState.asStateFlow()
 
-    /** Re-reads the store. Call it at start and after every change. */
+    /**
+     * The first call of the process deletes what an earlier process left
+     * behind (raster staging, versions no pointer names), then reads the
+     * store. Later calls only read it. No download runs before the first
+     * call, so nothing live is deleted.
+     */
+    suspend fun prepare() {
+        val store = root ?: return
+        if (job?.isActive != true && isPrepared.compareAndSet(false, true)) {
+            withContext(io) { RasterPackInstaller(store, installLock).sweepLeftovers() }
+        }
+        refresh()
+    }
+
+    /** Re-reads the store. Call it after every change. */
     suspend fun refresh() {
         val store = root ?: return
         mutableAreas.value = withContext(io) { RegionMountResolver(store).rasterAreas() }
@@ -92,7 +110,7 @@ class RasterAreaService(
 
     suspend fun remove(id: String): Outcome<Unit> {
         val store = root ?: return Outcome.Failure(AppError.NotFound)
-        val removed = withContext(io) { RasterPackInstaller(store).remove(id) }
+        val removed = withContext(io) { RasterPackInstaller(store, installLock).remove(id) }
         refresh()
         return removed
     }
@@ -106,11 +124,15 @@ class RasterAreaService(
         if (refusalOf(plan) != null) {
             return RasterAreaDownloadState.Failed(RasterAreaFailure.Refused)
         }
-        val installer = RasterPackInstaller(store)
+        val installer = RasterPackInstaller(store, installLock)
         val id = areaId(plan)
         val version = versionOf(now())
-        val staging = installer.newStagingDirectory(id, version)
-        val downloader = RasterAreaDownloader(client, spacingMillis) { now().toString() }
+        val staging =
+            when (val made = installer.newStagingDirectory(id, version)) {
+                is Outcome.Success -> made.value
+                is Outcome.Failure -> return RasterAreaDownloadState.Failed(failureOf(made.error))
+            }
+        val downloader = RasterAreaDownloader(client, spacingMillis, freeBytes = freeBytes) { now().toString() }
         val cancellation = CancellationHandle { cancelled.get() }
         val outcome =
             withContext(io) {
@@ -140,6 +162,14 @@ class RasterAreaService(
             is AppError.SwitchOff -> RasterAreaFailure.SwitchOff
             AppError.Network, is AppError.Server -> RasterAreaFailure.Network
             AppError.InvalidInput -> RasterAreaFailure.Refused
+            is AppError.Internal -> internalFailureOf(error)
+            else -> RasterAreaFailure.Other
+        }
+
+    private fun internalFailureOf(error: AppError.Internal): RasterAreaFailure =
+        when (error.id) {
+            RasterAreaDownloader.TOO_LARGE_ID -> RasterAreaFailure.TooLarge
+            RasterAreaDownloader.NO_SPACE_ID -> RasterAreaFailure.NotEnoughSpace
             else -> RasterAreaFailure.Other
         }
 
@@ -176,18 +206,16 @@ class RasterAreaService(
         }
 
     companion object {
-        private const val HEX_RADIX = 16
-        private const val HASH_DIGITS = 8
+        private const val HASH_HEX_DIGITS = 16
 
-        /** `raster-<source>-<8 hex of the bounds and zooms>`. The same area replaces itself. */
+        /**
+         * `raster-<source>-<16 hex of the SHA-256 of the bounds and zooms>`.
+         * The same area replaces itself.
+         */
         fun areaId(plan: RasterAreaPlan): String {
             val key = "${plan.bounds}|${plan.minZoom}|${plan.maxZoom}"
-            val hash =
-                key
-                    .hashCode()
-                    .toUInt()
-                    .toString(HEX_RADIX)
-                    .padStart(HASH_DIGITS, '0')
+            val digest = MessageDigest.getInstance("SHA-256").digest(key.toByteArray())
+            val hash = digest.joinToString("") { "%02x".format(it) }.take(HASH_HEX_DIGITS)
             return "raster-${plan.source.id}-$hash"
         }
 

@@ -148,25 +148,41 @@ internal class RasterAreaMounts(
  */
 class RasterPackInstaller(
     private val root: File,
+    private val installLock: InstallLock = InstallLock(),
 ) {
     private val paths = RegionPaths(root)
     private val verifier = PackageVerifier()
     private val installer = RegionInstaller(paths, verifier)
 
-    /** An empty work directory for one area download, on the store's filesystem. */
+    /**
+     * An empty work directory for one area download, on the store's
+     * filesystem. [id] and [version] are checked first: nothing is created for
+     * a name that is not a raster package id or not a safe path segment.
+     */
     fun newStagingDirectory(
         id: String,
         version: String,
-    ): File = paths.newWorkDirectory(id, version).also { it.mkdirs() }
+    ): Outcome<File> {
+        if (!isRasterId(id) || !RegionIdentifiers.isSafeSegment(version)) {
+            return Outcome.Failure(AppError.InvalidInput)
+        }
+        val directory = paths.newWorkDirectory(id, version)
+        return if (directory.mkdirs()) Outcome.Success(directory) else Outcome.Failure(AppError.Internal(STAGING_FAILED_ID))
+    }
 
-    /** Verifies the package in [staging] and installs it as [id] at [version]. */
-    fun install(
+    /**
+     * Verifies the package in [staging] and installs it as [id] at [version].
+     * The pack must also mount: its PMTiles header and metadata are read
+     * before the pointer flips, so a pack that cannot show never replaces a
+     * good one.
+     */
+    suspend fun install(
         id: String,
         version: String,
         staging: File,
         cancellation: CancellationHandle = CancellationHandle.None,
     ): Outcome<MountedRaster> {
-        if (!RegionIdentifiers.isRasterPackage(id) || !RegionIdentifiers.isSafeSegment(id)) {
+        if (!isRasterId(id) || !RegionIdentifiers.isSafeSegment(version)) {
             return Outcome.Failure(AppError.InvalidInput)
         }
         val manifest =
@@ -178,8 +194,14 @@ class RasterPackInstaller(
         if (verified is Outcome.Failure) {
             return verified
         }
+        if (!canMount(staging, manifest)) {
+            return Outcome.Failure(AppError.CorruptData)
+        }
         val request = RegionRequest(url = "", region = id, version = version, token = null)
-        val installed = installer.install(request, staging, manifest, UUID.randomUUID().toString(), cancellation)
+        val installed =
+            installLock.withLock {
+                installer.install(request, staging, manifest, UUID.randomUUID().toString(), cancellation)
+            }
         if (installed is Outcome.Failure) {
             return installed
         }
@@ -191,16 +213,59 @@ class RasterPackInstaller(
     }
 
     /** Deletes the area [id] with every version. A missing area is not an error. */
-    fun remove(id: String): Outcome<Unit> {
-        if (!RegionIdentifiers.isRasterPackage(id) || !RegionIdentifiers.isSafeSegment(id)) {
+    suspend fun remove(id: String): Outcome<Unit> {
+        if (!isRasterId(id)) {
             return Outcome.Failure(AppError.InvalidInput)
         }
         val directory = paths.regionDirectory(id)
-        return if (!directory.exists() || directory.deleteRecursively()) {
-            Outcome.Success(Unit)
-        } else {
-            Outcome.Failure(AppError.Internal(REMOVE_FAILED_ID))
+        return installLock.withLock {
+            if (!directory.exists() || directory.deleteRecursively()) {
+                Outcome.Success(Unit)
+            } else {
+                Outcome.Failure(AppError.Internal(REMOVE_FAILED_ID))
+            }
         }
+    }
+
+    /**
+     * Start-up housekeeping, when no download can be running. It deletes the
+     * raster staging a killed process left under `.incoming`, and every
+     * raster version directory the area's `current` pointer does not name.
+     * An area with no pointer is deleted whole. Other packages, region
+     * partial archives and quarantines are not touched.
+     */
+    suspend fun sweepLeftovers() {
+        installLock.withLock {
+            deleteDirectories(paths.incomingDirectory().listFiles()) { it.name.startsWith(RegionIdentifiers.RASTER_PREFIX) }
+            val areas = root.listFiles()?.filter { RegionIdentifiers.isRasterPackage(it.name) } ?: return@withLock
+            for (area in areas) {
+                val pointer = CurrentPointer.read(area)
+                deleteDirectories(area.listFiles()) { pointer == null || it.name != pointer }
+                if (pointer == null) {
+                    deleteDirectories(arrayOf(area)) { true }
+                }
+            }
+        }
+    }
+
+    private fun deleteDirectories(
+        entries: Array<File>?,
+        selects: (File) -> Boolean,
+    ) {
+        entries
+            ?.filter { it.isDirectory && !Files.isSymbolicLink(it.toPath()) && selects(it) }
+            ?.forEach { it.deleteRecursively() }
+    }
+
+    private fun isRasterId(id: String): Boolean = RegionIdentifiers.isRasterPackage(id) && RegionIdentifiers.isSafeSegment(id)
+
+    private fun canMount(
+        staging: File,
+        manifest: RegionManifest,
+    ): Boolean {
+        val component = manifest.components.singleOrNull() ?: return false
+        val archive = PmtilesArchive.open(File(staging, component.file)) ?: return false
+        return RasterAreaMetadata.parse(archive.metadata()) != null
     }
 
     private fun readStagedManifest(
@@ -223,5 +288,6 @@ class RasterPackInstaller(
 
     private companion object {
         const val REMOVE_FAILED_ID = "raster-area-remove-failed"
+        const val STAGING_FAILED_ID = "raster-area-staging-failed"
     }
 }

@@ -111,6 +111,7 @@ import nl.r1a.grassmap.regions.DownloadPolicy
 import nl.r1a.grassmap.regions.FileAutoUpdateLedger
 import nl.r1a.grassmap.regions.GateNetworkAccess
 import nl.r1a.grassmap.regions.HttpDownloadTransport
+import nl.r1a.grassmap.regions.InstallLock
 import nl.r1a.grassmap.regions.InstalledPacks
 import nl.r1a.grassmap.regions.MeteredNetworkMonitor
 import nl.r1a.grassmap.regions.MountedRegion
@@ -902,8 +903,15 @@ class AppContainer(
      * The offline raster areas (T-0513). They download through the same
      * network gate as the online layer and install into the region store.
      */
+    private val installLock = InstallLock()
+
     val rasterAreas: RasterAreaService by lazy {
-        RasterAreaService(regionsRoot, RasterTileClient(gate = networkGate), processScope)
+        RasterAreaService(
+            regionsRoot,
+            RasterTileClient(gate = networkGate),
+            processScope,
+            installLock = installLock,
+        )
     }
 
     /**
@@ -1026,6 +1034,7 @@ class AppContainer(
                 transport = HttpDownloadTransport(),
                 paths = RegionPaths(root),
                 log = { message -> Log.i(REGIONS_TAG, message) },
+                installLock = installLock,
             )
         }
     }

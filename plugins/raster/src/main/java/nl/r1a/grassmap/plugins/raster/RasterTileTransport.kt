@@ -34,6 +34,7 @@ fun interface RasterTileTransport {
  * The OSM tile policy asks for an identifying User-Agent, so every request
  * carries one. There is no retry, no prefetch and no cache here: the engine
  * asks for the tiles the viewport needs, and its own cache keeps them.
+ * A redirect is followed only within the request's own host.
  */
 class HttpRasterTileTransport(
     private val connectTimeoutMillis: Int = CONNECT_TIMEOUT_MILLIS,
@@ -44,33 +45,71 @@ class HttpRasterTileTransport(
         userAgent: String,
     ): Outcome<TileImage> =
         withContext(Dispatchers.IO) {
-            val connection =
+            var target = url
+            repeat(MAX_REDIRECTS + 1) {
+                val connection =
+                    try {
+                        URL(target).openConnection() as? HttpURLConnection
+                    } catch (exception: IOException) {
+                        null
+                    } ?: return@withContext Outcome.Failure(AppError.Network)
                 try {
-                    URL(url).openConnection() as? HttpURLConnection
+                    configure(connection, userAgent)
+                    val status = connection.responseCode
+                    if (status in REDIRECT_STATUSES) {
+                        target = sameHostRedirect(target, connection.getHeaderField(LOCATION_HEADER))
+                            ?: return@withContext Outcome.Failure(AppError.Server(status = status))
+                    } else if (status !in SUCCESS_RANGE) {
+                        val retryAfter = connection.getHeaderField(RETRY_AFTER_HEADER)?.trim()?.toLongOrNull()
+                        return@withContext Outcome.Failure(AppError.Server(status = status, retryAfter = retryAfter))
+                    } else {
+                        return@withContext readTile(connection)
+                    }
+                } catch (exception: CancellationException) {
+                    throw exception
                 } catch (exception: IOException) {
-                    null
-                } ?: return@withContext Outcome.Failure(AppError.Network)
-            try {
-                connection.requestMethod = METHOD_GET
-                connection.connectTimeout = connectTimeoutMillis
-                connection.readTimeout = readTimeoutMillis
-                connection.setRequestProperty(ACCEPT_HEADER, ACCEPT_VALUE)
-                connection.setRequestProperty(USER_AGENT_HEADER, userAgent)
-                val status = connection.responseCode
-                if (status !in SUCCESS_RANGE) {
-                    return@withContext Outcome.Failure(AppError.Server(status = status))
+                    return@withContext Outcome.Failure(AppError.Network)
+                } catch (exception: SecurityException) {
+                    return@withContext Outcome.Failure(AppError.Network)
+                } finally {
+                    connection.disconnect()
                 }
-                readTile(connection)
-            } catch (exception: CancellationException) {
-                throw exception
-            } catch (exception: IOException) {
-                Outcome.Failure(AppError.Network)
-            } catch (exception: SecurityException) {
-                Outcome.Failure(AppError.Network)
-            } finally {
-                connection.disconnect()
             }
+            Outcome.Failure(AppError.Network)
         }
+
+    private fun configure(
+        connection: HttpURLConnection,
+        userAgent: String,
+    ) {
+        connection.requestMethod = METHOD_GET
+        connection.instanceFollowRedirects = false
+        connection.connectTimeout = connectTimeoutMillis
+        connection.readTimeout = readTimeoutMillis
+        connection.setRequestProperty(ACCEPT_HEADER, ACCEPT_VALUE)
+        connection.setRequestProperty(USER_AGENT_HEADER, userAgent)
+    }
+
+    /**
+     * The redirect target when it stays on the request's own host, else null.
+     * A tile source may move a path. It may not send the client, and its
+     * User-Agent, to another host.
+     */
+    private fun sameHostRedirect(
+        current: String,
+        location: String?,
+    ): String? {
+        if (location == null) {
+            return null
+        }
+        return try {
+            val from = URL(current)
+            val to = URL(from, location)
+            to.toString().takeIf { to.host.equals(from.host, ignoreCase = true) && to.protocol in SAFE_PROTOCOLS }
+        } catch (exception: IOException) {
+            null
+        }
+    }
 
     private fun readTile(connection: HttpURLConnection): Outcome<TileImage> {
         val contentType = connection.contentType.orEmpty()
@@ -107,6 +146,11 @@ class HttpRasterTileTransport(
         const val ACCEPT_VALUE = "image/*"
         const val USER_AGENT_HEADER = "User-Agent"
         const val CONTENT_LENGTH_HEADER = "Content-Length"
+        const val LOCATION_HEADER = "Location"
+        const val RETRY_AFTER_HEADER = "Retry-After"
+        const val MAX_REDIRECTS = 3
+        val REDIRECT_STATUSES = setOf(301, 302, 303, 307, 308)
+        val SAFE_PROTOCOLS = setOf("http", "https")
         const val IMAGE_PREFIX = "image/"
         const val CONNECT_TIMEOUT_MILLIS = 5_000
         const val READ_TIMEOUT_MILLIS = 5_000

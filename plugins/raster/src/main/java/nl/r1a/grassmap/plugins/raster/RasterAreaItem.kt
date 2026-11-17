@@ -36,6 +36,7 @@ enum class RasterAreaFailure {
     Network,
     Refused,
     NotEnoughSpace,
+    TooLarge,
     Cancelled,
     Other,
 }

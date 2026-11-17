@@ -1,8 +1,6 @@
 package nl.r1a.grassmap.regions
 
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -53,8 +51,8 @@ class RegionDownloader(
     private val transport: DownloadTransport,
     private val paths: RegionPaths,
     private val log: (String) -> Unit = {},
+    private val installLock: InstallLock = InstallLock(),
 ) {
-    private val installMutex = Mutex()
     private val verifier = PackageVerifier()
     private val installer = RegionInstaller(paths, verifier)
     private val extractor = ZipPackageExtractor(log)
@@ -68,7 +66,7 @@ class RegionDownloader(
         keepPartialOnCancel: () -> Boolean = { false },
     ): Outcome<InstalledRegion> {
         validate(request)?.let { return it }
-        return installMutex.withLock {
+        return installLock.withLock {
             access.request(policy.switch) {
                 try {
                     perform(request, policy, cancellation, onProgress, keepPartialOnCancel)

@@ -145,7 +145,7 @@ fi
 
 export ANDROID_SERIAL="$SERIAL"
 wait_for_device 180 -s "$SERIAL"
-wait_for_package_manager 120 -s "$SERIAL"
+wait_for_device_ready 240 "${EXPECTED_API_LEVEL:-}" -s "$SERIAL"
 
 if [[ "${GOLDEN_SKIP_REBOOT:-0}" != "1" ]]; then
     echo "== suppressing system dialogs and rebooting once ==" >&2
@@ -160,7 +160,7 @@ if [[ "${GOLDEN_SKIP_REBOOT:-0}" != "1" ]]; then
         ((SECONDS >= boot_deadline)) && fail "sys.boot_completed was not 1 after the dialog-suppression reboot"
         sleep 3
     done
-    wait_for_package_manager 180 -s "$SERIAL" || fail "the package manager did not return after the dialog-suppression reboot"
+    wait_for_device_ready 240 "${EXPECTED_API_LEVEL:-}" -s "$SERIAL" || fail "the device was not ready after the dialog-suppression reboot"
     adb -s "$SERIAL" shell input keyevent 82 >/dev/null 2>&1 || true
     adb -s "$SERIAL" shell settings put system screen_off_timeout 2147483647 >/dev/null 2>&1 || true
     adb -s "$SERIAL" shell svc power stayon true >/dev/null 2>&1 || true

@@ -136,7 +136,7 @@ wait_for_package_manager 240 -s "$SERIAL"
 # 42739619598, 42959054167). The job now leaves animations to this script, so
 # they are set only after both system services answer.
 if [[ -n "${CI:-}" ]]; then
-    wait_for_system_services 180 -s "$SERIAL"
+    wait_for_device_ready 240 "${EXPECTED_API_LEVEL:-}" -s "$SERIAL"
     set_animation_scales_zero 120 -s "$SERIAL"
 fi
 

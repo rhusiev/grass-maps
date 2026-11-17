@@ -200,8 +200,9 @@ fi
 # a broken attach from blocking the job.
 wait_for_device "$DEVICE_DEADLINE_SECONDS"
 
-# Package manager readiness, also bounded.
-wait_for_package_manager 120
+# Full readiness gate before the install, also bounded. EXPECTED_API_LEVEL is
+# set by the workflow; empty accepts any API level.
+wait_for_device_ready 240 "${EXPECTED_API_LEVEL:-}"
 
 echo "== Installing $APK =="
 timeout 300 adb install -r "$APK"

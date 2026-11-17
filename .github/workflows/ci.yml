@@ -110,7 +110,7 @@ jobs:
           # services answer "Broken pipe (32)"; the smoke does not need them.
           disable-animations: false
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: ./scripts/ci/android-smoke.sh app/build/outputs/apk/debug/app-debug.apk
+          script: EXPECTED_API_LEVEL=29 ./scripts/ci/android-smoke.sh app/build/outputs/apk/debug/app-debug.apk
 
   # The Ferrostar core is an Android-only AAR, so every JVM test uses the
   # GeometryRouteFollower stand-in. This job is the only one that runs the
@@ -226,7 +226,7 @@ jobs:
           # the 600 s default is too short; 900 s is the measured bound.
           emulator-boot-timeout: 900
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: BENCH_DEVICE_SOURCE=ci-runner BENCH_GPU_MODE=swiftshader_indirect ./scripts/ci/android-benchmark.sh app/build/outputs/apk/debug/app-debug.apk
+          script: EXPECTED_API_LEVEL=35 BENCH_DEVICE_SOURCE=ci-runner BENCH_GPU_MODE=swiftshader_indirect ./scripts/ci/android-benchmark.sh app/build/outputs/apk/debug/app-debug.apk
       - name: Upload the benchmark JSON
         if: always()
         uses: actions/upload-artifact@v7

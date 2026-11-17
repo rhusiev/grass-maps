@@ -65,6 +65,12 @@ if command == "logcat":
     print(scenario.get("full_log", ""), end="")
     sys.exit(0)
 if command == "shell":
+    if args[1:3] == ["getprop", "sys.boot_completed"]:
+        print("1")
+        sys.exit(0)
+    if args[1:3] == ["getprop", "ro.build.version.sdk"]:
+        print("29")
+        sys.exit(0)
     if args[1:3] == ["pm", "path"]:
         print("package:/system/framework/framework-res.apk")
         sys.exit(0)

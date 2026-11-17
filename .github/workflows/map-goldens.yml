@@ -125,7 +125,7 @@ jobs:
           # the green channel of every text colour, which turns light labels on
           # the dark style magenta (T-0108). The comparator is unchanged.
           emulator-options: -no-snapshot -no-window -gpu swangle -noaudio -no-boot-anim -camera-back none
-          script: ./scripts/ci/android-goldens-ci.sh app/build/outputs/apk/debug/app-debug.apk ${{ matrix.set }}
+          script: EXPECTED_API_LEVEL=29 ./scripts/ci/android-goldens-ci.sh app/build/outputs/apk/debug/app-debug.apk ${{ matrix.set }}
       - name: Keep the goldens and diff images
         if: always()
         uses: actions/upload-artifact@v7

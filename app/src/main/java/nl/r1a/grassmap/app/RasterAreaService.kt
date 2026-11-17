@@ -44,7 +44,7 @@ class RasterAreaService(
     private val scope: CoroutineScope,
     private val io: CoroutineDispatcher = Dispatchers.IO,
     private val spacingMillis: Long = RasterAreaDownloader.REQUEST_SPACING_MS,
-    private val freeBytes: () -> Long? = { root?.usableSpace },
+    private val freeBytes: () -> Long? = { root?.let(::usableSpaceOf) },
     private val now: () -> Instant = Instant::now,
     private val installLock: InstallLock = InstallLock(),
 ) {
@@ -222,4 +222,17 @@ class RasterAreaService(
         /** Digits only: the version is a path segment and sorts by time. */
         fun versionOf(instant: Instant): String = instant.toEpochMilli().toString()
     }
+}
+
+/**
+ * Free bytes on the volume that holds [directory]. A directory that does not
+ * exist yet reports 0 from `File.usableSpace`, so a first download would be
+ * refused for lack of space. The nearest existing parent names the same volume.
+ */
+internal fun usableSpaceOf(directory: File): Long {
+    var existing: File? = directory
+    while (existing != null && !existing.exists()) {
+        existing = existing.parentFile
+    }
+    return existing?.usableSpace ?: 0L
 }

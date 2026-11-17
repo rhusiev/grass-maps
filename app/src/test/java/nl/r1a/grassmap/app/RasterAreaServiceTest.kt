@@ -239,4 +239,11 @@ class RasterAreaServiceTest {
         val LVIV = BoundingBox(GeoPoint(49.83, 24.00), GeoPoint(49.85, 24.05))
         val WORLD = BoundingBox(GeoPoint(-80.0, -179.0), GeoPoint(80.0, 179.0))
     }
+
+    @Test
+    fun `free space of a directory that does not exist yet is the volume's, not zero`() {
+        val missing = File(root, "regions/not-created-yet")
+
+        assertTrue(usableSpaceOf(missing) > 0L)
+    }
 }

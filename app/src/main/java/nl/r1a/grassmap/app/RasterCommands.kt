@@ -218,7 +218,9 @@ internal class RasterDownloadAreaCommand(
             is Outcome.Failure -> return enabled
             is Outcome.Success -> Unit
         }
-        return Outcome.Success(CommandResult("area=${download(plan, AREA_NAME)}"))
+        val state = download(plan, AREA_NAME)
+        val blocked = plan.refusalFor(freeBytes = null)
+        return Outcome.Success(CommandResult("area=$state tiles=${plan.tileCount} static_refusal=$blocked"))
     }
 
     private companion object {

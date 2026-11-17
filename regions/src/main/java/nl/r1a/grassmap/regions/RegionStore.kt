@@ -491,7 +491,9 @@ class RegionStore(
                 DownloadStage.ARCHIVE -> DownloadTransferState.DOWNLOADING
                 DownloadStage.VERIFY -> DownloadTransferState.VERIFYING
             }
-        updateTransfer(region) { it.copy(state = stage, bytesDone = progress.bytesDone) }
+        updateTransfer(region) {
+            it.copy(state = stage, bytesDone = progress.bytesDone, bytesTotal = progress.bytesTotal ?: it.bytesTotal)
+        }
     }
 
     private fun updateTransfer(
@@ -508,30 +510,41 @@ class RegionStore(
         }
     }
 
-    /** The installed packages, read from the pointer, manifest and headers only. */
+    /**
+     * The installed packages, read from the pointer, manifest and headers only.
+     * The first read of the process also fixes [DownloadsData.mountedPacks]: an
+     * install needs a catalogue, and the catalogue needs a read, so no install
+     * of this process comes before it.
+     */
     private suspend fun readInstalled(): List<InstalledPack> =
         withContext(Dispatchers.IO) {
-            val resolver = RegionMountResolver(paths.root)
-            resolver
-                .resolveAll()
-                .installed
-                .sortedBy { it.region }
-                .map { mounted ->
-                    val addon = resolver.elevationAddon(mounted.region)
-                    InstalledPack(
-                        region = mounted.region,
-                        version = mounted.version,
-                        bytes = mounted.manifest.totalBytes + (addon?.let { addonBytes(it) } ?: 0L),
-                        parts =
-                            (
-                                mounted.manifest.components.map { CatalogPartKind.fromWire(it.kind) } +
-                                    listOfNotNull(CatalogPartKind.ELEVATION_30M.takeIf { addon != null })
-                            ).filter { it != CatalogPartKind.OTHER }.distinct(),
-                        dataDate = RegionCatalogParser.dataDateOf(mounted.version),
-                        build = (mounted.routing as? RoutingPart.Directory)?.build,
-                    )
-                }
+            readInstalledPacks().also { packs ->
+                mutable.update { state -> if (state.mountedPacks == null) state.copy(mountedPacks = packs) else state }
+            }
         }
+
+    private fun readInstalledPacks(): List<InstalledPack> {
+        val resolver = RegionMountResolver(paths.root)
+        return resolver
+            .resolveAll()
+            .installed
+            .sortedBy { it.region }
+            .map { mounted ->
+                val addon = resolver.elevationAddon(mounted.region)
+                InstalledPack(
+                    region = mounted.region,
+                    version = mounted.version,
+                    bytes = mounted.manifest.totalBytes + (addon?.let { addonBytes(it) } ?: 0L),
+                    parts =
+                        (
+                            mounted.manifest.components.map { CatalogPartKind.fromWire(it.kind) } +
+                                listOfNotNull(CatalogPartKind.ELEVATION_30M.takeIf { addon != null })
+                        ).filter { it != CatalogPartKind.OTHER }.distinct(),
+                    dataDate = RegionCatalogParser.dataDateOf(mounted.version),
+                    build = (mounted.routing as? RoutingPart.Directory)?.build,
+                )
+            }
+    }
 
     /** The size of the add-on's one component, read from the file the resolver checked. */
     private fun addonBytes(directory: File): Long =

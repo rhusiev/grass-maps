@@ -49,9 +49,14 @@ fun interface BodySink {
      * Called once before the first [write] of an accepted response. [offset] is
      * the archive byte the body starts at: [DownloadRequest.rangeStart] for a
      * verified `206`, and 0 for every other success, including a `200` that
-     * answered a range request.
+     * answered a range request. [totalBytes] is the size of the whole archive:
+     * the `Content-Range` total of a `206`, the `Content-Length` of any other
+     * success, or null when the server sent neither.
      */
-    suspend fun begin(offset: Long): Outcome<Unit> = Outcome.Success(Unit)
+    suspend fun begin(
+        offset: Long,
+        totalBytes: Long?,
+    ): Outcome<Unit> = Outcome.Success(Unit)
 }
 
 /**

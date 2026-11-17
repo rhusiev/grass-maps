@@ -301,8 +301,10 @@ enum class MobileDataPolicy {
 }
 
 /**
- * One region's transfer. [bytesTotal] is the catalogue's declared size, or 0
- * when the catalogue has none, so the screen cannot divide by it.
+ * One region's transfer. [bytesTotal] is the catalogue's declared size until
+ * the response arrives, then the size of the archive being transferred. It is 0
+ * when neither is known, so the screen cannot divide by it. [bytesDone] counts
+ * archive bytes, so compare it only with [bytesTotal].
  */
 @Serializable
 data class DownloadTransfer(
@@ -310,7 +312,15 @@ data class DownloadTransfer(
     val state: DownloadTransferState,
     val bytesDone: Long = 0,
     val bytesTotal: Long = 0,
-)
+) {
+    /** The share of [whole] this transfer has done, by the archive bytes received. */
+    fun fractionOf(whole: Long): Long =
+        if (bytesTotal > 0) {
+            whole * bytesDone.coerceIn(0, bytesTotal) / bytesTotal
+        } else {
+            0L
+        }
+}
 
 /**
  * The data behind the downloads screen: the catalogue, what is on the phone,
@@ -331,6 +341,13 @@ data class DownloadsData(
     val networkMetered: Boolean = false,
     /** Whether the monthly background check and update runs (T-0508). On by default. */
     val autoUpdate: Boolean = true,
+    /**
+     * The packs as they were on the phone when the store first looked in this
+     * process, which is before any install it makes. The map, search and
+     * elevation readers open once per process, so these are the packs the app
+     * reads until it restarts. Null while that is not known.
+     */
+    val mountedPacks: List<InstalledPack>? = null,
 ) {
     /** The transfer for [region], or null when nothing is in flight for it. */
     fun transfer(region: String): DownloadTransfer? = transfers.firstOrNull { it.region == region }
@@ -347,6 +364,20 @@ data class DownloadsData(
      */
     val updates: List<CatalogRegion>
         get() = catalog?.regions.orEmpty().filter { entry -> installed(entry.id)?.let { it.version != entry.version } == true }
+
+    /**
+     * True when an installed pack is newer than the one the running process
+     * reads: another version, a part the mounted pack lacks (the 30 m add-on),
+     * or a region that was not mounted. The readers pick it up at the next start.
+     */
+    val appliesAtNextStart: Boolean
+        get() {
+            val mounted = mountedPacks ?: return false
+            return installed.any { pack ->
+                val read = mounted.firstOrNull { it.region == pack.region }
+                read == null || read.version != pack.version || !read.parts.containsAll(pack.parts)
+            }
+        }
 
     /** True when the installed packs come from more than one monthly tile build. */
     val hasMixedBuilds: Boolean
@@ -477,4 +508,6 @@ data class DownloadsState(
     val waitingForWifi: Boolean = false,
     /** Whether the monthly automatic update is on. */
     val autoUpdate: Boolean = true,
+    /** True while an installed map waits for the next app start to be read. */
+    val appliesAtNextStart: Boolean = false,
 )

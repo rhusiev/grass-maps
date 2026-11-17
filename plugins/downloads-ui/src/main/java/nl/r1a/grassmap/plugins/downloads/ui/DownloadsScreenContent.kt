@@ -156,6 +156,13 @@ fun DownloadsScreenContent(
             }
         }
 
+        if (state.appliesAtNextStart) {
+            BasicText(
+                text = stringResource(R.string.downloads_applies_at_next_start),
+                style = TextStyle(color = MUTED, fontSize = BODY_FONT_SP.sp),
+            )
+        }
+
         if (showServerForm) {
             ServerForm(serverUrl = state.serverUrl, onSave = onSaveServer)
         }

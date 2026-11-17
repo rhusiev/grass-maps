@@ -55,6 +55,36 @@ class DownloadsDataTest {
         assertEquals(null, catalog.download("ua-46-mystery-pack"))
     }
 
+    @Test
+    fun anInstalledPackNewerThanTheMountedOneAppliesAtTheNextStart() {
+        val mounted = listOf(InstalledPack("a", "1", parts = listOf(CatalogPartKind.MAP)))
+
+        assertFalse(DownloadsData(installed = mounted).appliesAtNextStart)
+        assertFalse(DownloadsData(installed = mounted, mountedPacks = mounted).appliesAtNextStart)
+        assertTrue(
+            DownloadsData(installed = listOf(InstalledPack("a", "2")), mountedPacks = mounted).appliesAtNextStart,
+        )
+        assertTrue(
+            DownloadsData(
+                installed = listOf(InstalledPack("a", "1", parts = listOf(CatalogPartKind.MAP, CatalogPartKind.ELEVATION_30M))),
+                mountedPacks = mounted,
+            ).appliesAtNextStart,
+        )
+        assertTrue(DownloadsData(installed = mounted + InstalledPack("b", "1"), mountedPacks = mounted).appliesAtNextStart)
+        assertFalse(DownloadsData(installed = emptyList(), mountedPacks = mounted).appliesAtNextStart)
+    }
+
+    @Test
+    fun aTransferShareScalesArchiveBytesToTheWholeAndNeverPassesIt() {
+        val half = DownloadTransfer("a", DownloadTransferState.DOWNLOADING, bytesDone = 34, bytesTotal = 68)
+        val over = half.copy(bytesDone = 90)
+        val unknown = half.copy(bytesTotal = 0)
+
+        assertEquals(50L, half.fractionOf(100))
+        assertEquals(100L, over.fractionOf(100))
+        assertEquals(0L, unknown.fractionOf(100))
+    }
+
     private fun data(
         catalog: List<CatalogRegion> = emptyList(),
         installed: List<InstalledPack> = emptyList(),

@@ -151,6 +151,69 @@ class HttpDownloadTransportTest {
             }
         }
 
+    @Test
+    fun aPlain200ReportsItsContentLengthAsTheArchiveTotal() =
+        runTest {
+            TestHttpServer { exchange -> send(exchange, 200, body) }.use { server ->
+                val begun = beginsOf("${server.baseUrl}/package.zip", rangeStart = 0)
+
+                assertEquals(listOf(0L to body.size.toLong()), begun)
+            }
+        }
+
+    @Test
+    fun aResumed206ReportsTheContentRangeTotalNotTheRemainingLength() =
+        runTest {
+            val start = 5L
+            TestHttpServer { exchange ->
+                val rest = body.copyOfRange(start.toInt(), body.size)
+                exchange.responseHeaders.set("Content-Range", "bytes $start-${body.size - 1}/${body.size}")
+                send(exchange, 206, rest)
+            }.use { server ->
+                val begun = beginsOf("${server.baseUrl}/package.zip", rangeStart = start)
+
+                assertEquals(listOf(start to body.size.toLong()), begun)
+            }
+        }
+
+    @Test
+    fun aResponseWithNoLengthHeaderReportsNoTotal() =
+        runTest {
+            TestHttpServer { exchange ->
+                exchange.sendResponseHeaders(200, 0)
+                exchange.responseBody.use { it.write(body) }
+            }.use { server ->
+                val begun = beginsOf("${server.baseUrl}/package.zip", rangeStart = 0)
+
+                assertEquals(listOf<Pair<Long, Long?>>(0L to null), begun)
+            }
+        }
+
+    private suspend fun beginsOf(
+        url: String,
+        rangeStart: Long,
+    ): List<Pair<Long, Long?>> {
+        val begun = mutableListOf<Pair<Long, Long?>>()
+        val sink =
+            object : BodySink {
+                override suspend fun begin(
+                    offset: Long,
+                    totalBytes: Long?,
+                ): Outcome<Unit> {
+                    begun += offset to totalBytes
+                    return Outcome.Success(Unit)
+                }
+
+                override suspend fun write(
+                    buffer: ByteArray,
+                    length: Int,
+                ): Outcome<Unit> = Outcome.Success(Unit)
+            }
+        val result = transport.get(request(url, policy()).copy(rangeStart = rangeStart), sink)
+        assertTrue(result is Outcome.Success)
+        return begun
+    }
+
     private suspend fun fetch(
         url: String,
         policy: DownloadPolicy,

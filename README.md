@@ -3538,7 +3538,12 @@ WAITING and DOWNLOADING moves holds. An update downloads, verifies and stages
 the whole new archive, routing part included, beside the old version. It takes
 effect at the next app start: the routing engine reopens on a mount change, but
 the map, search and elevation readers open once per process and keep reading
-the old directory until then. The old
+the old directory until then. The downloads screen says so: `DownloadsData.mountedPacks`
+holds the packs the store found when it first looked in this process, and while an
+installed pack differs from them (another version, a part they lack such as the
+30 m add-on, or a region they lack) `DownloadsData.appliesAtNextStart` is true and the
+screen shows "The maps apply the next time you start the app", the same text as the
+T-0508 notification. There is no restart button. The old
 version stays current and mounted until the pointer flips, and a failed
 download, a failed check or a cancel before the flip leaves it untouched. The
 installer checks for a cancel just before the move, and the flip is the commit
@@ -3617,7 +3622,11 @@ a non-2xx status is `Server(status, retryAfter)` and its body is never parsed.
 catalogue, the installed packs and one queue of transfers; a single worker takes
 regions in the order they were queued, and the queue has no length limit, so
 every region a catalogue offers can be queued. Progress is reported per chunk
-while the archive arrives and once more when the files are checked. A transfer
+while the archive arrives and once more when the files are checked. Its total is
+the size of the archive on the wire: the `Content-Range` total of a 206, else the
+`Content-Length` of a 200. The catalogue's `size_bytes` is the unpacked size, which for a pack is about
+1.5 times the archive, so it only stands in until the response arrives and when the server
+sends neither header. A transfer
 that fails records a typed `DownloadProblem` on the region and drops the
 transfer; a 401 becomes `TOKEN_REQUIRED` when no token was sent and
 `TOKEN_REJECTED` when one was. Cancel sets a cooperative flag and returns only

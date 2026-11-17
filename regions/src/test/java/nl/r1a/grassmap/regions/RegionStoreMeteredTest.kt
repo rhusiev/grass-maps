@@ -202,6 +202,26 @@ class RegionStoreMeteredTest {
         }
 
     @Test
+    fun theTransferTotalIsTheArchiveSizeTheServerSentNotTheCataloguesUnpackedSize() =
+        runBlocking<Unit> {
+            val body = fixturePackageBytes()
+            server(slowBody = body).use { server ->
+                val store = store(server.baseUrl)
+                try {
+                    store.startDownload(CatalogFixture.LVIV)
+                    val running =
+                        withTimeout(WAIT_MS) {
+                            store.data.first { it.transfer(CatalogFixture.LVIV)?.bytesDone.let { done -> done != null && done > 0 } }
+                        }
+
+                    assertEquals(body.size.toLong(), running.transfer(CatalogFixture.LVIV)?.bytesTotal)
+                } finally {
+                    store.close()
+                }
+            }
+        }
+
+    @Test
     fun aCancelDuringThePauseWindowStopsTheTransferAndKeepsNothing() =
         runBlocking<Unit> {
             val body = fixturePackageBytes()

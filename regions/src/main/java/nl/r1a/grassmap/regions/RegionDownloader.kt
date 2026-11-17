@@ -30,10 +30,16 @@ enum class DownloadStage {
     VERIFY,
 }
 
-/** How far one download has got. [bytesDone] counts archive bytes only. */
+/**
+ * How far one download has got. [bytesDone] counts archive bytes only.
+ * [bytesTotal] is the archive size the server reported, or null while it
+ * reported none. The catalogue's size is the unpacked size, so it is not a
+ * total for these bytes.
+ */
 data class DownloadProgress(
     val bytesDone: Long,
     val stage: DownloadStage,
+    val bytesTotal: Long? = null,
 )
 
 /**
@@ -179,7 +185,13 @@ class RegionDownloader(
             is Outcome.Failure -> return downloaded
             is Outcome.Success -> Unit
         }
-        onProgress(DownloadProgress(bytesDone = archive.length(), stage = DownloadStage.VERIFY))
+        onProgress(
+            DownloadProgress(
+                bytesDone = archive.length(),
+                stage = DownloadStage.VERIFY,
+                bytesTotal = archive.length(),
+            ),
+        )
         val staging = File(work, STAGING_DIRECTORY)
         when (val extracted = extractor.extract(archive, staging, policy, cancellation)) {
             is Outcome.Failure -> return extracted
@@ -273,12 +285,17 @@ class RegionDownloader(
         return try {
             FileOutputStream(target, resumeFrom > 0).use { out ->
                 var written = resumeFrom
+                var archiveTotal: Long? = null
                 val result =
                     transport.get(
                         transfer,
                         object : BodySink {
-                            override suspend fun begin(offset: Long): Outcome<Unit> =
+                            override suspend fun begin(
+                                offset: Long,
+                                totalBytes: Long?,
+                            ): Outcome<Unit> =
                                 try {
+                                    archiveTotal = totalBytes
                                     if (offset != resumeFrom) {
                                         out.channel.truncate(offset)
                                         written = offset
@@ -301,7 +318,7 @@ class RegionDownloader(
                                     return Outcome.Failure(AppError.Internal(INTERNAL_ID))
                                 }
                                 written += length
-                                onProgress(DownloadProgress(bytesDone = written, stage = DownloadStage.ARCHIVE))
+                                onProgress(DownloadProgress(bytesDone = written, stage = DownloadStage.ARCHIVE, bytesTotal = archiveTotal))
                                 return Outcome.Success(Unit)
                             }
                         },

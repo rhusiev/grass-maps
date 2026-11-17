@@ -56,6 +56,24 @@ class RegionResumeTest {
         }
 
     @Test
+    fun progressTotalsAreTheArchiveSizeForAFreshAndAResumedDownload() =
+        runTest {
+            rangeServer(Mode.HONOUR).use { server ->
+                val fresh = mutableListOf<DownloadProgress>()
+                download(server.baseUrl, fresh::add)
+                assertEquals(setOf<Long?>(archive.size.toLong()), fresh.map { it.bytesTotal }.toSet())
+                assertEquals(archive.size.toLong(), fresh.last().bytesDone)
+            }
+            seedPartial(archive.copyOf(HALF))
+            rangeServer(Mode.HONOUR).use { server ->
+                val resumed = mutableListOf<DownloadProgress>()
+                download(server.baseUrl, resumed::add)
+                assertEquals(setOf<Long?>(archive.size.toLong()), resumed.map { it.bytesTotal }.toSet())
+                assertTrue(resumed.first().bytesDone > HALF)
+            }
+        }
+
+    @Test
     fun aServerThatAnswers200ToARangeRequestRestartsCleanly() =
         runTest {
             seedPartial(ByteArray(HALF) { 7 })
@@ -155,7 +173,10 @@ class RegionResumeTest {
             }
         }
 
-    private suspend fun download(baseUrl: String): Outcome<InstalledRegion> =
+    private suspend fun download(
+        baseUrl: String,
+        onProgress: (DownloadProgress) -> Unit = {},
+    ): Outcome<InstalledRegion> =
         RegionDownloader(HttpDownloadTransport(), paths, logs::add).download(
             request =
                 RegionRequest(
@@ -172,6 +193,7 @@ class RegionResumeTest {
                     allowCleartextHttp = true,
                 ),
             access = permissive(),
+            onProgress = onProgress,
         )
 
     private fun seedPartial(bytes: ByteArray): ByteArray {

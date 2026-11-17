@@ -116,6 +116,34 @@ class RegionUpdateTest {
         }
 
     @Test
+    fun aMapInstalledByThisProcessAppliesAtTheNextStartButOneItStartedWithDoesNot() =
+        runBlocking {
+            server().use { server ->
+                val firstProcess = store(server.baseUrl)
+                try {
+                    firstProcess.refresh()
+                    assertFalse(firstProcess.data.value.appliesAtNextStart)
+                    install(firstProcess, CatalogFixture.LVIV)
+                    assertTrue(firstProcess.data.value.appliesAtNextStart)
+                } finally {
+                    firstProcess.close()
+                }
+
+                setCatalog(mapOf(CatalogFixture.LVIV to NEW_VERSION))
+                val secondProcess = store(server.baseUrl)
+                try {
+                    secondProcess.refresh()
+                    assertFalse(secondProcess.data.value.appliesAtNextStart)
+                    assertEquals(Outcome.Success(Unit), secondProcess.updateAll())
+                    awaitIdle(secondProcess)
+                    assertTrue(secondProcess.data.value.appliesAtNextStart)
+                } finally {
+                    secondProcess.close()
+                }
+            }
+        }
+
+    @Test
     fun updateAllQueuesEveryOutdatedRegionAndNothingElse() =
         withStore { store ->
             install(store, CatalogFixture.LVIV)

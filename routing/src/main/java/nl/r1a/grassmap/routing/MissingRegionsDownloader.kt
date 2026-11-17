@@ -102,7 +102,7 @@ class MissingRegionsDownloader(
             val isInstalled = transfer == null && region.parts.all { it.kind in have }
             when {
                 isInstalled -> done += region.bytes
-                transfer != null -> done += transfer.bytesDone.coerceAtMost(region.bytes)
+                transfer != null -> done += transfer.fractionOf(region.bytes)
                 else -> vanished = true
             }
             allInstalled = allInstalled && isInstalled

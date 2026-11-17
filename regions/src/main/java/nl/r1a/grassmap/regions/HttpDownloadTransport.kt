@@ -108,7 +108,7 @@ class HttpDownloadTransport : DownloadTransport {
         if (declared > policy.boundedMaxPackageBytes) {
             return Outcome.Failure(AppError.CorruptData)
         }
-        when (val begun = sink.begin(offset)) {
+        when (val begun = sink.begin(offset, archiveTotal(connection, status, declared))) {
             is Outcome.Failure -> return begun
             is Outcome.Success -> Unit
         }
@@ -154,6 +154,17 @@ class HttpDownloadTransport : DownloadTransport {
                 (declared < 0 || declared == range.last - range.first + 1)
         return if (matches) rangeStart else null
     }
+
+    private fun archiveTotal(
+        connection: HttpURLConnection,
+        status: Int,
+        declared: Long,
+    ): Long? =
+        if (status == HTTP_PARTIAL_CONTENT) {
+            ContentRange.parse(connection.getHeaderField(CONTENT_RANGE_HEADER))?.total
+        } else {
+            declared.takeIf { it >= 0 }
+        }
 
     private suspend fun copyBody(
         input: InputStream,

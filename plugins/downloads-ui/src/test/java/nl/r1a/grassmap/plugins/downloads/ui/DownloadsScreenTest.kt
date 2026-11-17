@@ -186,6 +186,19 @@ class DownloadsScreenTest {
     }
 
     @Test
+    fun theNextStartHintShowsOnlyWhenAnInstalledPackIsNewerThanTheMountedOne() {
+        val mounted = listOf(InstalledPack(CatalogFixture.LVIV, "2026-10-01-0"))
+        val updated = listOf(InstalledPack(CatalogFixture.LVIV, CatalogFixture.VERSION))
+
+        val unchanged = DownloadsData(installed = mounted, mountedPacks = mounted)
+        val newer = DownloadsData(installed = updated, mountedPacks = mounted)
+
+        assertFalse(DownloadsScreen.state(unchanged).appliesAtNextStart)
+        assertFalse(DownloadsScreen.state(DownloadsData(installed = updated)).appliesAtNextStart)
+        assertTrue(DownloadsScreen.state(newer).appliesAtNextStart)
+    }
+
+    @Test
     fun anOlderInstalledVersionStaysInThePhoneGroupAndShowsItsOwnDate() {
         val installed =
             InstalledPack(

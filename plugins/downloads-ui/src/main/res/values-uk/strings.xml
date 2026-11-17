@@ -64,4 +64,5 @@
     <string name="downloads_mobile_data_any">Wi-Fi і мобільний інтернет</string>
     <string name="downloads_auto_update_start">Оновлювати мапи автоматично щомісяця</string>
     <string name="downloads_auto_update_stop">Не оновлювати мапи автоматично</string>
+    <string name="downloads_applies_at_next_start">Мапи застосуються під час наступного запуску застосунку</string>
 </resources>

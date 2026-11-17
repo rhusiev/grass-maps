@@ -815,7 +815,8 @@ tile serves it. Both packs come from one country build, so a tile on a border is
 present in both neighbours byte for byte. The second copy is therefore never
 requested, and a border label draws once.
 The `world` pack (T-0502) is the one pack from another build: z0-z7 whole-world
-tiles, about 190 MB, a map-only package with no `features` component. It holds
+tiles, about 190 MB, a map-only package with no `features` component. Only region `world` may
+omit it. It holds
 no z8+ tile and an oblast pack holds no z0-z7 tile, so the two never serve the
 same tile, and the style draws `world` layers up to z7 and `region` layers from
 z8. With an oblast installed the oblast draws at its zooms. With the world pack

@@ -519,7 +519,7 @@ region `world`, in the same layout as an oblast: `<out>/world/<version>/` with
 `map.pmtiles` and `manifest.json`, `<out>/outlines/world.geojson`, and a
 `world` entry in `<out>/catalog.json` (kind `world`, no parent, one `map`
 part). The package is map-only. Its manifest has no `features` component, which
-`RegionManifestParser` accepts when no `search-*` component exists.
+`RegionManifestParser` accepts only for region `world`. A map-only oblast manifest is corrupt.
 
 ```
 agent-lock run gm-data --timeout 20m -- nice -n 15 ionice -c3 \

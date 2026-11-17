@@ -68,6 +68,16 @@
         "implementation": "nl.r1a.grassmap.plugins.downloads.ui.SelectRegionCommand"
       },
       {
+        "id": "downloads.ui.search",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "doc": "Filters the regions by Ukrainian or English name, or clears the filter with an empty query. Parameter: query.",
+        "undoable": false,
+        "allowlistedForControl": false,
+        "dispatcher": "default",
+        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.SearchRegionsCommand"
+      },
+      {
         "id": "downloads.ui.set_server",
         "params": "kotlinx.serialization.json.JsonElement",
         "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",

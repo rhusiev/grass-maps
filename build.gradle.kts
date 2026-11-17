@@ -158,7 +158,7 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         // The downloads screen draws the catalogue the host stores; the store
         // itself is :regions, which the plugin reaches only through the
         // plugin-api host access.
-        ":plugins:downloads-ui" to setOf(":plugin-api"),
+        ":plugins:downloads-ui" to setOf(":plugin-api", ":plugin-ui-api"),
     )
 // Edges that ship in the debug APK and must never reach a release build
 // (architecture section 22). They are judged separately from the release

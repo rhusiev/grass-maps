@@ -39,6 +39,7 @@ class DownloadsUiSession(
     val state: StateFlow<DownloadsState> = current.asStateFlow()
 
     private var selectedRegion: String? = null
+    private var query: String = ""
     private var lastFix: GeoPoint? = null
     private var following: Boolean = false
     private val publishLock = Any()
@@ -97,6 +98,15 @@ class DownloadsUiSession(
         }
     }
 
+    /** Sets the search text; a blank text clears the search. */
+    suspend fun search(text: String): Outcome<DownloadsState> {
+        synchronized(publishLock) {
+            query = text
+            publishLocked()
+            return Outcome.Success(current.value)
+        }
+    }
+
     private fun result(outcome: Outcome<Unit>): Outcome<DownloadsState> =
         when (outcome) {
             is Outcome.Success -> {
@@ -121,7 +131,7 @@ class DownloadsUiSession(
     private fun publishLocked() {
         val data = access.data.value
         val detected = DownloadsScreen.detectRegion(data.catalog, lastFix)
-        val state = DownloadsScreen.state(data, selectedRegion, detected)
+        val state = DownloadsScreen.state(data, selectedRegion, detected, query)
         if (state.selectedRegion == null) {
             selectedRegion = null
         }

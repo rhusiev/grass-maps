@@ -50,7 +50,7 @@ class DownloadsUiManifestTest {
             )
             assertEquals(
                 "$id dispatcher",
-                if (id == DownloadsUiContract.SELECT_REGION) "default" else "io",
+                if (id in VIEW_ONLY) "default" else "io",
                 command.getValue("dispatcher").jsonPrimitive.content,
             )
             assertTrue(
@@ -115,6 +115,9 @@ class DownloadsUiManifestTest {
 
     private companion object {
         const val MANIFEST = "src/main/plugin.json"
+
+        /** The commands that only change what the screen shows run on the default dispatcher. */
+        val VIEW_ONLY = setOf(DownloadsUiContract.SELECT_REGION, DownloadsUiContract.SEARCH)
 
         /** Every transfer command is control-allowlisted; opening a sheet is not. */
         val CONTROL_ALLOWED =

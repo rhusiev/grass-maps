@@ -1779,6 +1779,11 @@ private fun MapContent(
                         invokeDownloadsCommand(container, DownloadsUiContract.removeRegion, listParams("region" to region))
                     }
                 },
+                onSearch = { query ->
+                    scope.launch {
+                        invokeDownloadsCommand(container, DownloadsUiContract.search, listParams("query" to query))
+                    }
+                },
                 onUpdateAll = {
                     scope.launch {
                         invokeDownloadsCommand(container, DownloadsUiContract.updateAll, JsonObject(emptyMap()))

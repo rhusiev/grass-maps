@@ -21,6 +21,7 @@ object DownloadsUiContract {
     const val CANCEL_REGION: String = "downloads.ui.cancel_region"
     const val REMOVE_REGION: String = "downloads.ui.remove_region"
     const val SELECT_REGION: String = "downloads.ui.select_region"
+    const val SEARCH: String = "downloads.ui.search"
     const val SET_SERVER: String = "downloads.ui.set_server"
     const val SET_MOBILE_DATA: String = "downloads.ui.set_mobile_data"
     const val SET_AUTO_UPDATE: String = "downloads.ui.set_auto_update"
@@ -34,6 +35,7 @@ object DownloadsUiContract {
     val cancelRegion: CommandId = CommandId(CANCEL_REGION)
     val removeRegion: CommandId = CommandId(REMOVE_REGION)
     val selectRegion: CommandId = CommandId(SELECT_REGION)
+    val search: CommandId = CommandId(SEARCH)
     val setServer: CommandId = CommandId(SET_SERVER)
     val setMobileData: CommandId = CommandId(SET_MOBILE_DATA)
     val setAutoUpdate: CommandId = CommandId(SET_AUTO_UPDATE)
@@ -47,6 +49,7 @@ object DownloadsUiContract {
             cancelRegion,
             removeRegion,
             selectRegion,
+            search,
             setServer,
             setMobileData,
             setAutoUpdate,

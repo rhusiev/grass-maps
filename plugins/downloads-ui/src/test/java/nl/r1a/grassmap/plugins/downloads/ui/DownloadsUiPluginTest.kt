@@ -286,6 +286,26 @@ class DownloadsUiPluginTest {
         }
 
     @Test
+    fun searchFiltersTheRegionsByEitherNameAndAnEmptyQueryClearsIt() =
+        runBlocking {
+            val access = FakeDownloadsAccess()
+            val context = context(access)
+            DownloadsUiPlugin().activate(context)
+            access.useCatalog(CatalogTestData.real())
+
+            val found = stateOf(context.command(DownloadsUiContract.search).invokeRaw(json("query" to "Тернопіль")))
+            assertEquals("Тернопіль", found.query)
+            assertEquals(listOf("ua-61"), found.searchResults.map { it.region })
+
+            val cleared = stateOf(context.command(DownloadsUiContract.search).invokeRaw(json("query" to "")))
+            assertTrue(cleared.searchResults.isEmpty())
+            assertEquals(
+                Outcome.Failure(AppError.InvalidInput),
+                context.command(DownloadsUiContract.search).invokeRaw(JsonObject(emptyMap())),
+            )
+        }
+
+    @Test
     fun aTokenProblemFromTheStoreReachesTheScreen() =
         runBlocking {
             val access = FakeDownloadsAccess()

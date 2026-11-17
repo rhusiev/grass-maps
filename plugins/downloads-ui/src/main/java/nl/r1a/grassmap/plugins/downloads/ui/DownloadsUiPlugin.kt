@@ -53,6 +53,7 @@ class DownloadsUiPlugin(
         context.addCommand(CancelRegionDownloadCommand(session))
         context.addCommand(RemoveRegionCommand(session))
         context.addCommand(SelectRegionCommand(session))
+        context.addCommand(SearchRegionsCommand(session))
         context.addCommand(SetMapServerCommand(session))
         context.addCommand(SetMobileDataPolicyCommand(session))
         context.addCommand(SetAutoUpdateCommand(session))

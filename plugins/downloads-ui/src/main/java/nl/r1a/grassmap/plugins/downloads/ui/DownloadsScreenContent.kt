@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
@@ -58,6 +60,7 @@ private val BORDER = Color(0xFFE3E1DC)
 private const val CARD_CORNER_DP = 16
 private const val CARD_PADDING_DP = 14
 private const val SCREEN_PADDING_DP = 16
+private const val SHEET_MAX_HEIGHT_DP = 360
 private const val BACK_TOUCH_DP = 8
 private const val BACK_GLYPH_SP = 28
 private const val BACK_GLYPH = "\u2039"
@@ -104,130 +107,288 @@ fun DownloadsScreenContent(
     onSetMobileData: (Boolean) -> Unit = {},
     onUseMobileDataNow: () -> Unit = {},
     onSetAutoUpdate: (Boolean) -> Unit = {},
+    onSearch: (String) -> Unit = {},
 ) {
     val close = stringResource(R.string.downloads_close)
+    // The top scrolls and only reads, apart from a tap on the map. Everything
+    // else you press sits in the bar below it, within reach of the thumb.
     Column(
         modifier =
             modifier
                 .background(SURFACE)
-                // Twenty-five oblast rows do not fit one screen, and the first-run
-                // offer sits above them, so the screen scrolls as one column.
-                .verticalScroll(rememberScrollState())
                 .statusBarsPadding()
-                .padding(SCREEN_PADDING_DP.dp)
+                .imePadding()
                 .widthIn(max = MAX_WIDTH_DP.dp),
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    // Twenty-five oblast rows do not fit one screen, and the first-run
+                    // offer sits above them, so the list scrolls as one column.
+                    .verticalScroll(rememberScrollState())
+                    .padding(SCREEN_PADDING_DP.dp),
+            verticalArrangement = Arrangement.spacedBy(GAP_DP.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(GAP_DP.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BasicText(
+                    text = BACK_GLYPH,
+                    style = TextStyle(color = INK, fontSize = BACK_GLYPH_SP.sp),
+                    modifier =
+                        Modifier
+                            .clickable(onClick = onClose)
+                            .semantics { contentDescription = close }
+                            .padding(BACK_TOUCH_DP.dp),
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    BasicText(
+                        text = stringResource(R.string.downloads_title),
+                        style = TextStyle(color = INK, fontSize = TITLE_FONT_SP.sp, fontWeight = FontWeight.Bold),
+                    )
+                    BasicText(
+                        text = state.serverUrl,
+                        style = TextStyle(color = MUTED, fontSize = BODY_FONT_SP.sp),
+                    )
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(SPACED_DP.dp)) {
+                    ActionButton(
+                        text = stringResource(R.string.downloads_update_all),
+                        onClick = onUpdateAll,
+                        quiet = true,
+                    )
+                    ActionButton(
+                        text = stringResource(R.string.downloads_token_settings),
+                        onClick = onTokenSettings,
+                        quiet = true,
+                    )
+                }
+            }
+
+            if (state.outlines.isNotEmpty()) {
+                RegionsMiniMap(
+                    outlines = state.outlines,
+                    statuses = state.outlineStatuses,
+                    selectedRegion = state.selectedRegion,
+                    description = stringResource(R.string.downloads_map_description),
+                    onTapRegion = onOpenRegion,
+                )
+            }
+
+            if (state.appliesAtNextStart) {
+                BasicText(
+                    text = stringResource(R.string.downloads_applies_at_next_start),
+                    style = TextStyle(color = MUTED, fontSize = BODY_FONT_SP.sp),
+                )
+            }
+
+            if (showServerForm) {
+                ServerForm(serverUrl = state.serverUrl, onSave = onSaveServer)
+            }
+
+            MobileDataCard(
+                state = state,
+                onSetMobileData = onSetMobileData,
+                onUseMobileDataNow = onUseMobileDataNow,
+                onSetAutoUpdate = onSetAutoUpdate,
+            )
+
+            state.catalogProblem?.let { problem -> ProblemLine(problem) }
+
+            if (!state.catalogLoaded && state.catalogProblem == null && state.firstRun.isEmpty()) {
+                SectionLabel(stringResource(R.string.downloads_empty))
+            }
+
+            if (state.firstRun.isNotEmpty() && state.installedRows.isEmpty()) {
+                SectionLabel(stringResource(R.string.downloads_first_run_title))
+                for (offer in state.firstRun) {
+                    FirstRunRow(
+                        offer = offer,
+                        preferUkrainian = preferUkrainian,
+                        onDownload = onDownload,
+                    )
+                }
+            }
+
+            if (state.query.isNotBlank()) {
+                SectionLabel(stringResource(R.string.downloads_search_results))
+                if (state.searchResults.isEmpty()) {
+                    BasicText(
+                        text = stringResource(R.string.downloads_search_empty),
+                        style = TextStyle(color = MUTED, fontSize = BODY_FONT_SP.sp),
+                    )
+                }
+                for (row in state.searchResults) {
+                    RegionRow(
+                        row = row,
+                        preferUkrainian = preferUkrainian,
+                        onOpen = onOpenRegion,
+                        onDownload = onDownload,
+                        onCancel = onCancel,
+                    )
+                }
+            } else {
+                if (state.installedRows.isNotEmpty()) {
+                    SectionLabel(stringResource(R.string.downloads_on_this_phone))
+                    for (row in state.installedRows) {
+                        RegionRow(
+                            row = row,
+                            preferUkrainian = preferUkrainian,
+                            onOpen = onOpenRegion,
+                            onDownload = onDownload,
+                            onCancel = onCancel,
+                        )
+                    }
+                }
+
+                if (state.availableRows.isNotEmpty()) {
+                    SectionLabel(stringResource(R.string.downloads_available))
+                    for (row in state.availableRows) {
+                        RegionRow(
+                            row = row,
+                            preferUkrainian = preferUkrainian,
+                            onOpen = onOpenRegion,
+                            onDownload = onDownload,
+                            onCancel = onCancel,
+                        )
+                    }
+                }
+            }
+        }
+        DownloadsActionBar(
+            state = state,
+            preferUkrainian = preferUkrainian,
+            onCloseSheet = onCloseSheet,
+            onDownload = onDownload,
+            onCancel = onCancel,
+            onRemove = onRemove,
+            onSearch = onSearch,
+        )
+    }
+}
+
+/**
+ * The bar at the bottom: the open region's sheet, the "near you" suggestion and
+ * the search field. It stays in place while the list above it scrolls.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun DownloadsActionBar(
+    state: DownloadsState,
+    preferUkrainian: Boolean,
+    onCloseSheet: () -> Unit,
+    onDownload: (String) -> Unit,
+    onCancel: (String) -> Unit,
+    onRemove: (String) -> Unit,
+    onSearch: (String) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = SCREEN_PADDING_DP.dp, vertical = GAP_DP.dp),
         verticalArrangement = Arrangement.spacedBy(GAP_DP.dp),
     ) {
+        val selected = state.selected
+        if (selected != null) {
+            // The sheet lists every part, so it scrolls inside its own height
+            // and leaves the search field in view.
+            Column(modifier = Modifier.heightIn(max = SHEET_MAX_HEIGHT_DP.dp).verticalScroll(rememberScrollState())) {
+                RegionSheet(
+                    row = selected,
+                    preferUkrainian = preferUkrainian,
+                    onClose = onCloseSheet,
+                    onDownload = onDownload,
+                    onCancel = onCancel,
+                    onRemove = onRemove,
+                )
+            }
+        }
+        val nearMe = state.nearMe
+        if (nearMe != null && selected == null) {
+            NearMeCard(row = nearMe, preferUkrainian = preferUkrainian, onDownload = onDownload, onCancel = onCancel)
+        }
+        SearchField(query = state.query, onSearch = onSearch)
+    }
+}
+
+/** The oblast the phone is in, offered while it is not on the phone. */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun NearMeCard(
+    row: DownloadRow,
+    preferUkrainian: Boolean,
+    onDownload: (String) -> Unit,
+    onCancel: (String) -> Unit,
+) {
+    Card {
+        SectionLabel(stringResource(R.string.downloads_near_you))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(GAP_DP.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            BasicText(
-                text = BACK_GLYPH,
-                style = TextStyle(color = INK, fontSize = BACK_GLYPH_SP.sp),
-                modifier =
-                    Modifier
-                        .clickable(onClick = onClose)
-                        .semantics { contentDescription = close }
-                        .padding(BACK_TOUCH_DP.dp),
-            )
-            Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(SPACED_DP.dp)) {
                 BasicText(
-                    text = stringResource(R.string.downloads_title),
-                    style = TextStyle(color = INK, fontSize = TITLE_FONT_SP.sp, fontWeight = FontWeight.Bold),
+                    text = row.name(preferUkrainian) ?: row.region,
+                    style = TextStyle(color = INK, fontSize = ROW_TITLE_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
                 )
                 BasicText(
-                    text = state.serverUrl,
+                    text = sizeAndDate(row.bytes, row.dataDate),
                     style = TextStyle(color = MUTED, fontSize = BODY_FONT_SP.sp),
                 )
+                row.transfer?.let { transfer -> TransferLine(transfer) }
+                row.problem?.let { problem -> ProblemLine(problem) }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(SPACED_DP.dp)) {
+            if (row.transfer != null) {
                 ActionButton(
-                    text = stringResource(R.string.downloads_update_all),
-                    onClick = onUpdateAll,
+                    text = stringResource(R.string.downloads_cancel),
+                    onClick = { onCancel(row.region) },
                     quiet = true,
                 )
+            } else {
                 ActionButton(
-                    text = stringResource(R.string.downloads_token_settings),
-                    onClick = onTokenSettings,
-                    quiet = true,
+                    text = stringResource(R.string.downloads_download_short),
+                    onClick = { onDownload(row.region) },
                 )
             }
-        }
-
-        if (state.appliesAtNextStart) {
-            BasicText(
-                text = stringResource(R.string.downloads_applies_at_next_start),
-                style = TextStyle(color = MUTED, fontSize = BODY_FONT_SP.sp),
-            )
-        }
-
-        if (showServerForm) {
-            ServerForm(serverUrl = state.serverUrl, onSave = onSaveServer)
-        }
-
-        MobileDataCard(
-            state = state,
-            onSetMobileData = onSetMobileData,
-            onUseMobileDataNow = onUseMobileDataNow,
-            onSetAutoUpdate = onSetAutoUpdate,
-        )
-
-        state.catalogProblem?.let { problem -> ProblemLine(problem) }
-
-        if (!state.catalogLoaded && state.catalogProblem == null && state.firstRun.isEmpty()) {
-            SectionLabel(stringResource(R.string.downloads_empty))
-        }
-
-        if (state.firstRun.isNotEmpty() && state.installedRows.isEmpty()) {
-            SectionLabel(stringResource(R.string.downloads_first_run_title))
-            for (offer in state.firstRun) {
-                FirstRunRow(
-                    offer = offer,
-                    preferUkrainian = preferUkrainian,
-                    onDownload = onDownload,
-                )
-            }
-        }
-
-        if (state.installedRows.isNotEmpty()) {
-            SectionLabel(stringResource(R.string.downloads_on_this_phone))
-            for (row in state.installedRows) {
-                RegionRow(
-                    row = row,
-                    preferUkrainian = preferUkrainian,
-                    onOpen = onOpenRegion,
-                    onDownload = onDownload,
-                    onCancel = onCancel,
-                )
-            }
-        }
-
-        if (state.availableRows.isNotEmpty()) {
-            SectionLabel(stringResource(R.string.downloads_available))
-            for (row in state.availableRows) {
-                RegionRow(
-                    row = row,
-                    preferUkrainian = preferUkrainian,
-                    onOpen = onOpenRegion,
-                    onDownload = onDownload,
-                    onCancel = onCancel,
-                )
-            }
-        }
-
-        state.selected?.let { row ->
-            RegionSheet(
-                row = row,
-                preferUkrainian = preferUkrainian,
-                onClose = onCloseSheet,
-                onDownload = onDownload,
-                onCancel = onCancel,
-                onRemove = onRemove,
-            )
         }
     }
+}
+
+/** The search field. The text is the user's own, so it lives here and goes out on every change. */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun SearchField(
+    query: String,
+    onSearch: (String) -> Unit,
+) {
+    var text by remember { mutableStateOf(query) }
+    val hint = stringResource(R.string.downloads_search_hint)
+    BasicTextField(
+        value = text,
+        onValueChange = {
+            text = it
+            onSearch(it)
+        },
+        singleLine = true,
+        textStyle = TextStyle(color = INK, fontSize = BODY_FONT_SP.sp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(CARD_CORNER_DP.dp))
+                .background(CARD)
+                .padding(CARD_PADDING_DP.dp)
+                .semantics { contentDescription = hint },
+        decorationBox = { innerTextField ->
+            Box {
+                if (text.isEmpty()) {
+                    BasicText(text = hint, style = TextStyle(color = MUTED, fontSize = BODY_FONT_SP.sp))
+                }
+                innerTextField()
+            }
+        },
+    )
 }
 
 @Suppress("ktlint:standard:function-naming")

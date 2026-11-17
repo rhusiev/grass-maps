@@ -7,6 +7,11 @@
     <string name="downloads_first_run_title">Download to start</string>
     <string name="downloads_on_this_phone">On this phone</string>
     <string name="downloads_available">Available</string>
+    <string name="downloads_map_description">Map of the regions. Tap a region to open it</string>
+    <string name="downloads_search_hint">Search regions</string>
+    <string name="downloads_search_results">Search results</string>
+    <string name="downloads_search_empty">No region matches</string>
+    <string name="downloads_near_you">Near you</string>
     <string name="downloads_empty">No maps yet</string>
     <string name="downloads_update_all">Update all</string>
 

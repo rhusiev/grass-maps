@@ -7,7 +7,8 @@ import java.io.File
 
 /**
  * The downloads plugin keeps the store, the socket and the filesystem behind
- * the host access (T-0504). Its runtime dependency is `:plugin-api` and Compose;
+ * the host access (T-0504). Its runtime dependencies are `:plugin-api`,
+ * `:plugin-ui-api` (the status green) and Compose;
  * the `:regions` edge exists only in the test source set, where the screen tests
  * read the real catalogue through the real parser.
  */
@@ -21,7 +22,7 @@ class DownloadsUiBoundaryTest {
                 .map { it.groupValues[1] }
                 .toSet()
 
-        assertEquals(setOf(":plugin-api"), runtime)
+        assertEquals(setOf(":plugin-api", ":plugin-ui-api"), runtime)
     }
 
     @Test

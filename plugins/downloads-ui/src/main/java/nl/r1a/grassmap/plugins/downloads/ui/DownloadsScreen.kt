@@ -16,6 +16,7 @@ import nl.r1a.grassmap.plugin.api.model.FirstRunOfferKind
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.InstalledPack
 import nl.r1a.grassmap.plugin.api.model.RegionCatalog
+import java.util.Locale
 
 /**
  * The downloads screen as a pure derivation of the store's data (T-0504).
@@ -39,6 +40,9 @@ object DownloadsScreen {
             CatalogPartKind.CONTOURS,
         )
 
+    private val APOSTROPHES = Regex("[\u0027\u2019\u02BC\u2018`]")
+    private val WHITESPACE = Regex("\\s+")
+
     /**
      * The whole screen for [data]. [selectedRegion] is the sheet the user opened
      * and [detectedRegion] the oblast the last fix fell in; both are matched
@@ -48,6 +52,7 @@ object DownloadsScreen {
         data: DownloadsData,
         selectedRegion: String? = null,
         detectedRegion: String? = null,
+        query: String = "",
     ): DownloadsState {
         val catalog = data.catalog
         val rows = catalog?.regions.orEmpty().map { entry -> row(data, entry) }
@@ -77,8 +82,52 @@ object DownloadsScreen {
             waitingForWifi = data.transfers.any { it.state == DownloadTransferState.WAITING_FOR_WIFI },
             autoUpdate = data.autoUpdate,
             appliesAtNextStart = data.appliesAtNextStart,
+            outlines = data.outlines,
+            outlineStatuses = rows.filter { row -> data.outlines.any { it.region == row.region } }.associate { it.region to it.status },
+            query = query,
+            searchResults = search(rows, query),
+            nearMe = nearMe(rows, detected, offered),
         )
     }
+
+    /**
+     * The detected oblast as a row, while it is not installed. Without a
+     * detected oblast, or while the first-run offer already names it, there is
+     * nothing to suggest.
+     */
+    private fun nearMe(
+        rows: List<DownloadRow>,
+        detected: String?,
+        offered: Set<String>,
+    ): DownloadRow? =
+        rows.firstOrNull { it.region == detected && it.region !in offered }?.takeIf { it.status != DownloadRowStatus.INSTALLED }
+
+    /**
+     * The rows whose Ukrainian name, English name or id contains [query], in
+     * catalogue order. The names are the catalogue's own, so "Ternopil" and
+     * "Тернопіль" both find "Ternopil Oblast" and "Тернопільська область".
+     * Case, surrounding space and the apostrophe variants are ignored. A blank
+     * query matches nothing, because the screen then draws its plain lists.
+     */
+    fun search(
+        rows: List<DownloadRow>,
+        query: String,
+    ): List<DownloadRow> {
+        val wanted = fold(query)
+        if (wanted.isEmpty()) {
+            return emptyList()
+        }
+        return rows.filter { row ->
+            listOfNotNull(row.nameEn, row.nameUk, row.region).any { name -> fold(name).contains(wanted) }
+        }
+    }
+
+    private fun fold(text: String): String =
+        text
+            .lowercase(Locale.ROOT)
+            .replace(APOSTROPHES, "")
+            .trim()
+            .replace(WHITESPACE, " ")
 
     /**
      * The region whose declared bbox contains [fix], or null when no region does.

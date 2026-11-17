@@ -131,6 +131,25 @@ class SelectRegionCommand(
 }
 
 /**
+ * Filters the regions by name. Parameter: query; an empty query clears the
+ * search and a missing parameter is invalid input.
+ */
+class SearchRegionsCommand(
+    private val session: DownloadsUiSession,
+) : Command<JsonElement, DownloadsState>(
+        id = DownloadsUiContract.search,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = DownloadsState.serializer(),
+        doc = "Filters the regions by Ukrainian or English name, or clears the filter with an empty query. Parameter: query.",
+        policy = VIEW_POLICY,
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<DownloadsState>> {
+        val query = params.rawText(PARAM_QUERY) ?: return Outcome.Failure(AppError.InvalidInput)
+        return session.result(session.search(query))
+    }
+}
+
+/**
  * Sets the server and its optional token. Parameters: url, and optionally token.
  *
  * `token` may be absent or empty, which clears the stored token: a tokenless
@@ -231,6 +250,7 @@ private fun JsonElement.rawText(key: String): String? {
 }
 
 private const val PARAM_REGION = "region"
+private const val PARAM_QUERY = "query"
 private const val PARAM_URL = "url"
 private const val PARAM_TOKEN = "token"
 private const val PARAM_POLICY = "policy"

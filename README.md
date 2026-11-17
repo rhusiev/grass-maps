@@ -3539,7 +3539,9 @@ the whole new archive, routing part included, beside the old version. It takes
 effect at the next app start: the routing engine reopens on a mount change, but
 the map, search and elevation readers open once per process and keep reading
 the old directory until then. The downloads screen says so: `DownloadsData.mountedPacks`
-holds the packs the store found when it first looked in this process, and while an
+holds the packs the app's readers mounted when they first resolved (`AppContainer`
+hands them to the store), or, while no reader has resolved, the packs the store found at
+its first operation of any kind, and while an
 installed pack differs from them (another version, a part they lack such as the
 30 m add-on, or a region they lack) `DownloadsData.appliesAtNextStart` is true and the
 screen shows "The maps apply the next time you start the app", the same text as the

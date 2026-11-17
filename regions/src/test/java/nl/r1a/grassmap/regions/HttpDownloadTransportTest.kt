@@ -189,10 +189,75 @@ class HttpDownloadTransportTest {
             }
         }
 
+    @Test
+    fun aRangeWithAnUnknownTotalIsRejectedBeforeTheSinkBegins() = assertRangeRejected("bytes 5-${body.size - 1}/*")
+
+    @Test
+    fun aMalformedContentRangeIsRejectedBeforeTheSinkBegins() = assertRangeRejected("items 5-9/10")
+
+    @Test
+    fun aRangeThatStartsElsewhereThanAskedIsRejectedBeforeTheSinkBegins() = assertRangeRejected("bytes 3-${body.size - 1}/${body.size}")
+
+    @Test
+    fun aRangeThatStopsBeforeTheEndOfTheFileIsRejectedBeforeTheSinkBegins() =
+        assertRangeRejected("bytes 5-${body.size - 2}/${body.size}", rest = body.copyOfRange(5, body.size - 1))
+
+    @Test
+    fun aContentLengthThatDisagreesWithTheRangeIsRejectedBeforeTheSinkBegins() =
+        runTest {
+            TestHttpServer { exchange ->
+                exchange.responseHeaders.set("Content-Range", "bytes 5-${body.size - 1}/${body.size}")
+                exchange.sendResponseHeaders(206, (body.size - 6).toLong())
+                exchange.responseBody.use { it.write(body, 5, body.size - 6) }
+            }.use { server ->
+                val (outcome, begun) = attempt("${server.baseUrl}/package.zip", rangeStart = 5)
+
+                assertEquals(Outcome.Success(TransportResult(206, rangeRejected = true)), outcome)
+                assertTrue(begun.isEmpty())
+            }
+        }
+
+    @Test
+    fun aBodyShorterThanItsContentLengthFailsAsANetworkError() =
+        runTest {
+            TestHttpServer { exchange ->
+                exchange.sendResponseHeaders(200, (body.size + 10).toLong())
+                exchange.responseBody.use { it.write(body) }
+            }.use { server ->
+                val (outcome, _) = attempt("${server.baseUrl}/package.zip", rangeStart = 0)
+
+                assertEquals(Outcome.Failure(AppError.Network), outcome)
+            }
+        }
+
+    private fun assertRangeRejected(
+        contentRange: String,
+        rest: ByteArray = body.copyOfRange(5, body.size),
+    ) = runTest {
+        TestHttpServer { exchange ->
+            exchange.responseHeaders.set("Content-Range", contentRange)
+            send(exchange, 206, rest)
+        }.use { server ->
+            val (outcome, begun) = attempt("${server.baseUrl}/package.zip", rangeStart = 5)
+
+            assertEquals(Outcome.Success(TransportResult(206, rangeRejected = true)), outcome)
+            assertTrue(begun.isEmpty())
+        }
+    }
+
     private suspend fun beginsOf(
         url: String,
         rangeStart: Long,
     ): List<Pair<Long, Long?>> {
+        val (outcome, begun) = attempt(url, rangeStart)
+        assertTrue(outcome is Outcome.Success)
+        return begun
+    }
+
+    private suspend fun attempt(
+        url: String,
+        rangeStart: Long,
+    ): Pair<Outcome<TransportResult>, List<Pair<Long, Long?>>> {
         val begun = mutableListOf<Pair<Long, Long?>>()
         val sink =
             object : BodySink {
@@ -209,9 +274,7 @@ class HttpDownloadTransportTest {
                     length: Int,
                 ): Outcome<Unit> = Outcome.Success(Unit)
             }
-        val result = transport.get(request(url, policy()).copy(rangeStart = rangeStart), sink)
-        assertTrue(result is Outcome.Success)
-        return begun
+        return transport.get(request(url, policy()).copy(rangeStart = rangeStart), sink) to begun
     }
 
     private suspend fun fetch(

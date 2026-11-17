@@ -66,6 +66,12 @@ class RegionStore(
     private val onAutoUpdateChanged: suspend (Boolean) -> Unit = {},
     /** A test seam: runs after a transfer decided to pause and before it takes the claim lock. */
     private val beforePause: suspend (String) -> Unit = {},
+    /**
+     * The packs the app's readers mounted, or null while none has resolved yet. The
+     * baseline of [DownloadsData.mountedPacks] is this set, because it is what the
+     * running process serves. Without it the first disk read stands in.
+     */
+    private val mountedByReaders: () -> List<InstalledPack>? = { null },
 ) : RegionDownloadsAccess {
     private val mutable =
         MutableStateFlow(
@@ -150,6 +156,7 @@ class RegionStore(
 
     override suspend fun refresh(): Outcome<Unit> =
         refreshMutex.withLock {
+            ensureBaseline()
             val currentToken = token
             val fetchedCatalog =
                 // The catalogue is network contact like a package, so it names the
@@ -185,6 +192,7 @@ class RegionStore(
         if (!RegionIdentifiers.isSafeSegment(region)) {
             return Outcome.Failure(AppError.InvalidInput)
         }
+        ensureBaseline()
         val entry = mutable.value.catalog?.download(region) ?: return Outcome.Failure(AppError.NotFound)
         // An add-on is read through its region, so it installs only beside one.
         if (entry.addonOf != null && mutable.value.installed.none { it.region == entry.addonOf }) {
@@ -266,6 +274,7 @@ class RegionStore(
         if (!RegionIdentifiers.isSafeSegment(region)) {
             return Outcome.Failure(AppError.InvalidInput)
         }
+        ensureBaseline()
         val addonPackage = RegionIdentifiers.elevationAddonPackage(region)
         if (mutable.value.transfer(region) != null || mutable.value.transfer(addonPackage) != null) {
             return Outcome.Failure(AppError.InvalidInput)
@@ -512,43 +521,24 @@ class RegionStore(
 
     /**
      * The installed packages, read from the pointer, manifest and headers only.
-     * The first read of the process also fixes [DownloadsData.mountedPacks]: an
-     * install needs a catalogue, and the catalogue needs a read, so no install
-     * of this process comes before it.
      */
-    private suspend fun readInstalled(): List<InstalledPack> =
-        withContext(Dispatchers.IO) {
-            readInstalledPacks().also { packs ->
-                mutable.update { state -> if (state.mountedPacks == null) state.copy(mountedPacks = packs) else state }
-            }
-        }
+    private suspend fun readInstalled(): List<InstalledPack> = withContext(Dispatchers.IO) { readInstalledPacks() }
 
-    private fun readInstalledPacks(): List<InstalledPack> {
-        val resolver = RegionMountResolver(paths.root)
-        return resolver
-            .resolveAll()
-            .installed
-            .sortedBy { it.region }
-            .map { mounted ->
-                val addon = resolver.elevationAddon(mounted.region)
-                InstalledPack(
-                    region = mounted.region,
-                    version = mounted.version,
-                    bytes = mounted.manifest.totalBytes + (addon?.let { addonBytes(it) } ?: 0L),
-                    parts =
-                        (
-                            mounted.manifest.components.map { CatalogPartKind.fromWire(it.kind) } +
-                                listOfNotNull(CatalogPartKind.ELEVATION_30M.takeIf { addon != null })
-                        ).filter { it != CatalogPartKind.OTHER }.distinct(),
-                    dataDate = RegionCatalogParser.dataDateOf(mounted.version),
-                    build = (mounted.routing as? RoutingPart.Directory)?.build,
-                )
-            }
+    /**
+     * Fixes [DownloadsData.mountedPacks] on the first operation of any kind, before
+     * it can change the disk. The readers' own mount wins when they have resolved,
+     * because an install of this process may precede the first disk read.
+     */
+    private suspend fun ensureBaseline() {
+        if (mutable.value.mountedPacks != null) {
+            return
+        }
+        val packs = mountedByReaders() ?: readInstalled()
+        mutable.update { state -> if (state.mountedPacks == null) state.copy(mountedPacks = packs) else state }
     }
 
-    /** The size of the add-on's one component, read from the file the resolver checked. */
-    private fun addonBytes(directory: File): Long =
-        directory.listFiles()?.filter { it.isFile && it.name != RegionIdentifiers.MANIFEST_FILE }?.sumOf { it.length() } ?: 0L
+    private fun readInstalledPacks(): List<InstalledPack> =
+        InstalledPacks.of(paths.root, RegionMountResolver(paths.root).resolveAll().installed)
 
     private fun problemOf(
         error: AppError,

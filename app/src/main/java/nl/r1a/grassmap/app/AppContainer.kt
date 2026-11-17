@@ -69,6 +69,7 @@ import nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess
 import nl.r1a.grassmap.plugin.api.host.RoutingOptionsAccess
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
+import nl.r1a.grassmap.plugin.api.model.InstalledPack
 import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
 import nl.r1a.grassmap.plugin.api.provider.CoordinateParser
 import nl.r1a.grassmap.plugin.api.provider.PlaceProvider
@@ -109,6 +110,7 @@ import nl.r1a.grassmap.regions.DownloadPolicy
 import nl.r1a.grassmap.regions.FileAutoUpdateLedger
 import nl.r1a.grassmap.regions.GateNetworkAccess
 import nl.r1a.grassmap.regions.HttpDownloadTransport
+import nl.r1a.grassmap.regions.InstalledPacks
 import nl.r1a.grassmap.regions.MeteredNetworkMonitor
 import nl.r1a.grassmap.regions.MountedRegion
 import nl.r1a.grassmap.regions.MountedRoutingPacks
@@ -500,8 +502,17 @@ class AppContainer(
         mounts.broken.firstOrNull()?.let { broken ->
             Log.w(REGIONS_TAG, "region mount invalid: ${broken.region} ${broken.problem}")
         }
-        mounts.installed
+        mounts.installed.also { installed ->
+            mountedBaseline = InstalledPacks.of(root, installed)
+        }
     }
+
+    /**
+     * The packs [mountedRegions] opened, set once when the readers first resolve.
+     * The region store takes it as what the running process serves (T-0507).
+     */
+    @Volatile
+    private var mountedBaseline: List<InstalledPack>? = null
 
     /**
      * The installed packs' way-alert features and route relations (T-0319,
@@ -925,6 +936,7 @@ class AppContainer(
                 scope = processScope,
                 transport = HttpDownloadTransport(),
                 log = { message -> Log.i(REGIONS_TAG, message) },
+                mountedByReaders = { mountedBaseline },
                 metered = meteredNetwork,
                 initialMobileDataPolicy = downloadsSettings.load(),
                 onMobileDataPolicyChanged = { policy ->

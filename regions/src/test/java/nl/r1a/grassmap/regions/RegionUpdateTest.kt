@@ -19,6 +19,7 @@ import nl.r1a.grassmap.plugin.api.model.DownloadProblemKind
 import nl.r1a.grassmap.plugin.api.model.DownloadTransferState
 import nl.r1a.grassmap.plugin.api.model.DownloadsData
 import nl.r1a.grassmap.plugin.api.model.DownloadsDefaults
+import nl.r1a.grassmap.plugin.api.model.InstalledPack
 import nl.r1a.grassmap.plugin.api.testing.fixture.CatalogFixture
 import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
 import org.junit.After
@@ -139,6 +140,71 @@ class RegionUpdateTest {
                     assertTrue(secondProcess.data.value.appliesAtNextStart)
                 } finally {
                     secondProcess.close()
+                }
+            }
+        }
+
+    @Test
+    fun removingBeforeAnyRefreshStillMeasuresTheBaselineBeforeTheDeletion() =
+        runBlocking {
+            server().use { server ->
+                val firstProcess = store(server.baseUrl)
+                try {
+                    firstProcess.refresh()
+                    install(firstProcess, CatalogFixture.LVIV)
+                } finally {
+                    firstProcess.close()
+                }
+
+                val secondProcess = store(server.baseUrl)
+                try {
+                    assertEquals(Outcome.Success(Unit), secondProcess.remove(CatalogFixture.LVIV))
+                    secondProcess.refresh()
+                    install(secondProcess, CatalogFixture.LVIV)
+                    assertFalse(secondProcess.data.value.appliesAtNextStart)
+                } finally {
+                    secondProcess.close()
+                }
+            }
+        }
+
+    @Test
+    fun anInstallAfterTheReadersMountedButBeforeTheStoresFirstReadStillShowsTheHint() =
+        runBlocking {
+            server().use { server ->
+                val seeding = store(server.baseUrl)
+                try {
+                    seeding.refresh()
+                    install(seeding, CatalogFixture.LVIV)
+                } finally {
+                    seeding.close()
+                }
+                val mountedByReaders =
+                    InstalledPacks.of(paths.root, RegionMountResolver(paths.root).resolveAll().installed)
+
+                setCatalog(mapOf(CatalogFixture.LVIV to NEW_VERSION))
+                val autoUpdate = store(server.baseUrl)
+                try {
+                    autoUpdate.refresh()
+                    assertEquals(Outcome.Success(Unit), autoUpdate.updateAll())
+                    awaitIdle(autoUpdate)
+                } finally {
+                    autoUpdate.close()
+                }
+
+                val screenStore = store(server.baseUrl) { mountedByReaders }
+                try {
+                    screenStore.refresh()
+                    assertTrue(screenStore.data.value.appliesAtNextStart)
+                } finally {
+                    screenStore.close()
+                }
+                val withoutReaders = store(server.baseUrl)
+                try {
+                    withoutReaders.refresh()
+                    assertFalse(withoutReaders.data.value.appliesAtNextStart)
+                } finally {
+                    withoutReaders.close()
                 }
             }
         }
@@ -390,7 +456,10 @@ class RegionUpdateTest {
         }
     }
 
-    private suspend fun store(baseUrl: String): RegionStore {
+    private suspend fun store(
+        baseUrl: String,
+        mountedByReaders: () -> List<InstalledPack>? = { null },
+    ): RegionStore {
         val store =
             RegionStore(
                 paths = paths,
@@ -404,6 +473,7 @@ class RegionUpdateTest {
                     },
                 scope = scope,
                 transport = HttpDownloadTransport(),
+                mountedByReaders = mountedByReaders,
             )
         store.setServer(baseUrl, null)
         return store

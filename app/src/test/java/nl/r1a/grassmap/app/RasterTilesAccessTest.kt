@@ -15,6 +15,7 @@ import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerType
 import nl.r1a.grassmap.plugin.api.model.StyleId
 import nl.r1a.grassmap.plugin.api.service.NoNetworkGate
+import nl.r1a.grassmap.plugins.raster.RasterAreaLayer
 import nl.r1a.grassmap.plugins.raster.RasterLayers
 import nl.r1a.grassmap.plugins.raster.RasterPlacement
 import nl.r1a.grassmap.plugins.raster.RasterPresets
@@ -100,6 +101,34 @@ class RasterTilesAccessTest {
         }
 
     @Test
+    fun offlineAreasDrawWhileOnlineTilesAreOff() =
+        runTest {
+            val host = FakeMapHost(CAMERA)
+            val tiles = RasterTilesAccess(registry(GeneratedPlugins.plugins), NoNetworkGate)
+
+            val outcome = tiles.apply(host, StyleId("standard"), enabled = false, layer = underlay(), areas = listOf(AREA))
+
+            assertEquals(Outcome.Success(Unit), outcome)
+            val added = host.layers.single()
+            assertEquals(LayerType.Raster, added.spec.type)
+            assertEquals(AREA.packFile, added.spec.raster?.packFile)
+            assertTrue(added.spec.raster?.tiles.orEmpty().isEmpty())
+            assertFalse(tiles.allows("https://tile.openstreetmap.org/5/10/20.png"))
+        }
+
+    @Test
+    fun hidingTheAreasRemovesTheirLayers() =
+        runTest {
+            val host = FakeMapHost(CAMERA)
+            val tiles = RasterTilesAccess(registry(GeneratedPlugins.plugins), NoNetworkGate)
+            tiles.apply(host, StyleId("standard"), enabled = false, layer = underlay(), areas = listOf(AREA))
+
+            tiles.apply(host, StyleId("standard"), enabled = false, layer = underlay().copy(areasShown = false), areas = listOf(AREA))
+
+            assertTrue(host.layers.isEmpty())
+        }
+
+    @Test
     fun anAbsentProviderIsATypedFailure() =
         runTest {
             val tiles = RasterTilesAccess(registry(emptyList()), NoNetworkGate)
@@ -130,5 +159,6 @@ class RasterTilesAccessTest {
 
     private companion object {
         val CAMERA = Camera(center = GeoPoint(49.95, 23.945), zoom = 13.0)
+        val AREA = RasterAreaLayer(id = "raster-eox-s2-2018-0", packFile = "/data/raster-eox-s2-2018-0/1/raster.pmtiles", minZoom = 6, maxZoom = 8, attributionHtml = "EOX")
     }
 }

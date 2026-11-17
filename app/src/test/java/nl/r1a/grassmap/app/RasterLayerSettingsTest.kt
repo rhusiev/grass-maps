@@ -30,6 +30,27 @@ class RasterLayerSettingsTest {
     }
 
     @Test
+    fun aPresetAndTheAreasSwitchPersist() {
+        val file = Files.createTempFile("raster", ".json").toFile()
+        val settings = RasterLayerSettings(file)
+
+        assertEquals(Outcome.Success(Unit), settings.usePreset(RasterPresets.EOX_2018_ID))
+        assertEquals(Outcome.Success(Unit), settings.setAreasShown(false))
+
+        val reloaded = RasterLayerSettings(file).current()
+        assertEquals(RasterPresets.eox2018, reloaded.source)
+        assertFalse(reloaded.areasShown)
+        file.delete()
+    }
+
+    @Test
+    fun anUnknownPresetIsRefused() {
+        val settings = RasterLayerSettings(file = null)
+
+        assertEquals(Outcome.Failure(AppError.InvalidInput), settings.usePreset("nope"))
+    }
+
+    @Test
     fun anInvalidTemplateNeverReachesTheProbe() =
         runTest {
             var probes = 0

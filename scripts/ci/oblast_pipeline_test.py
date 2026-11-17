@@ -474,6 +474,35 @@ class WorldPackageTest(unittest.TestCase):
             ["© OpenStreetMap contributors", "Natural Earth (public domain)", "Basemap schema © Protomaps"],
         )
 
+    def test_the_newest_world_version_wins_by_date_then_build_number(self) -> None:
+        for version in ("2026-11-09", "2026-11-16", "2026-11-16-2", "2026-11-16-10"):
+            self.spec["version"] = version
+            pipeline.write_world_package(self.spec)
+        self.assertEqual(pipeline.world_catalog_entry(self.out)["version"], "2026-11-16-10")
+
+    def test_a_world_manifest_of_another_region_is_refused(self) -> None:
+        pipeline.write_world_package(self.spec)
+        path = self.out / "world" / "2026-11-16" / "manifest.json"
+        manifest = json.loads(path.read_text())
+        manifest["region"] = "ua-46"
+        path.write_text(json.dumps(manifest))
+        with self.assertRaises(SystemExit):
+            pipeline.world_catalog_entry(self.out)
+
+    def test_a_world_map_of_the_wrong_size_is_refused(self) -> None:
+        pipeline.write_world_package(self.spec)
+        (self.out / "world" / "2026-11-16" / "map.pmtiles").write_bytes(b"short")
+        with self.assertRaises(SystemExit):
+            pipeline.world_catalog_entry(self.out)
+
+    def test_a_catalog_rebuild_without_the_world_pack_does_not_drop_its_entry(self) -> None:
+        catalog_test = CatalogTest("test_catalog_groups_the_search_section_and_sums_the_size")
+        catalog_test.setUp()
+        self.addCleanup(catalog_test.doCleanups)
+        (catalog_test.root / "catalog.json").write_text(json.dumps({"regions": [{"id": "world"}]}))
+        with self.assertRaises(SystemExit):
+            pipeline.write_catalog(catalog_test.root, catalog_test.spec)
+
     def test_an_oblast_catalog_rebuild_keeps_the_world_entry(self) -> None:
         catalog_test = CatalogTest("test_catalog_groups_the_search_section_and_sums_the_size")
         catalog_test.setUp()

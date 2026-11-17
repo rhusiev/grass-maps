@@ -618,6 +618,12 @@ def addon_entry(manifest: dict, addon: dict) -> dict:
     }
 
 
+def _catalog_lists_world(path: pathlib.Path) -> bool:
+    if not path.is_file():
+        return False
+    return any(region.get("id") == WORLD_REGION for region in json.loads(path.read_text()).get("regions", []))
+
+
 def write_catalog(root: pathlib.Path, spec: dict) -> dict:
     boundaries = json.loads((pathlib.Path(spec["boundaries"])).read_text())
     names = {package["id"].upper(): package for package in boundaries["packages"]}
@@ -665,6 +671,8 @@ def write_catalog(root: pathlib.Path, spec: dict) -> dict:
     world = world_catalog_entry(root)
     if world is not None:
         regions.append(world)
+    elif _catalog_lists_world(root / "catalog.json"):
+        raise SystemExit(f"catalog: {root / 'catalog.json'} lists {WORLD_REGION} but {root} has no world package")
     catalog = {
         "format": CATALOG_FORMAT,
         "generated": spec["generated"],
@@ -776,12 +784,43 @@ def write_world_package(spec: dict) -> dict:
     return manifest
 
 
+VERSION_PATTERN = re.compile(r"^(\d{4})-(\d{2})-(\d{2})(?:-(\d+))?$")
+
+
+def version_order(version: str) -> tuple[int, int, int, int]:
+    """Sort key for `YYYY-MM-DD` and `YYYY-MM-DD-N` package versions."""
+    match = VERSION_PATTERN.match(version)
+    if match is None:
+        raise SystemExit(f"world: version {version!r} is not YYYY-MM-DD or YYYY-MM-DD-N")
+    year, month, day, build = match.groups()
+    return int(year), int(month), int(day), int(build or 0)
+
+
+def newest_world_manifest(root: pathlib.Path) -> tuple[pathlib.Path, dict] | None:
+    """The manifest of the newest world version, checked against its map file."""
+    versions = [path.parent for path in root.glob(f"{WORLD_REGION}/*/manifest.json")]
+    if not versions:
+        return None
+    pack = max(versions, key=lambda path: version_order(path.name))
+    manifest = json.loads((pack / "manifest.json").read_text())
+    if manifest.get("region") != WORLD_REGION:
+        raise SystemExit(f"world: {pack}/manifest.json names region {manifest.get('region')!r}")
+    maps = [entry for entry in manifest["components"] if entry["kind"] == "map"]
+    if len(maps) != 1:
+        raise SystemExit(f"world: {pack}/manifest.json needs exactly one map component")
+    archive = pack / maps[0]["file"]
+    if not archive.is_file() or archive.stat().st_size != maps[0]["bytes"]:
+        raise SystemExit(f"world: {archive} is missing or is not {maps[0]['bytes']} bytes")
+    return pack, manifest
+
+
 def world_catalog_entry(root: pathlib.Path) -> dict | None:
     """The catalog entry for the newest world package under root, if any."""
-    manifests = sorted(root.glob(f"{WORLD_REGION}/*/manifest.json"))
-    if not manifests:
+    found = newest_world_manifest(root)
+    if found is None:
         return None
-    manifest = json.loads(manifests[-1].read_text())
+    _, manifest = found
+    size = sum(entry["bytes"] for entry in manifest["components"])
     return {
         "id": WORLD_REGION,
         "name": WORLD_NAME,
@@ -789,10 +828,8 @@ def world_catalog_entry(root: pathlib.Path) -> dict | None:
         "bbox": manifest["pipeline"]["bbox"],
         "outline": f"outlines/{WORLD_REGION}.geojson",
         "version": manifest["version"],
-        "size_bytes": sum(entry["bytes"] for entry in manifest["components"]),
-        "parts": [
-            {"kind": "map", "version": manifest["version"], "size_bytes": sum(entry["bytes"] for entry in manifest["components"])}
-        ],
+        "size_bytes": size,
+        "parts": [{"kind": "map", "version": manifest["version"], "size_bytes": size}],
     }
 
 

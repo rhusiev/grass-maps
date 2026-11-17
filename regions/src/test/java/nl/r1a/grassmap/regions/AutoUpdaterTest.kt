@@ -35,6 +35,7 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.thread
 
 /**
  * The monthly background update (T-0508) with a fake clock, a local server and
@@ -226,6 +227,88 @@ class AutoUpdaterTest {
         }
 
     @Test
+    fun exactlyThirtyDaysAfterTheLastCheckTheCheckIsDueAndOneSecondEarlierItIsNot() =
+        withUpdater { _, updater ->
+            clock.advance(DAYS_30.minusSeconds(1))
+            assertEquals(AutoUpdateRun.NotDue, updater.runIfDue())
+
+            clock.advance(Duration.ofSeconds(1))
+
+            assertTrue(updater.runIfDue() is AutoUpdateRun.Queued)
+        }
+
+    @Test
+    fun anAnnouncementThatStartsDuringARunWaitsForTheRunBeforeItWritesTheLedger() =
+        withUpdater(newVersionAvailable = false) { _, updater ->
+            clock.advance(DAYS_31)
+            val announced = AutoUpdateRun.Queued(mapOf(CatalogFixture.LVIV to OLD_VERSION), START.toEpochMilli() + 1)
+            var announcer: Thread? = null
+            var savesDuringRun = -1
+            ledger.onLoad = {
+                ledger.onLoad = null
+                val baseline = ledger.saves.get()
+                announcer = thread { runBlocking { updater.announce(announced) } }
+                // Gives an unguarded announcement time to write. The guarded one cannot.
+                Thread.sleep(ANNOUNCE_GRACE_MS)
+                savesDuringRun = ledger.saves.get() - baseline
+            }
+
+            assertEquals(AutoUpdateRun.UpToDate, updater.runIfDue())
+            announcer?.join()
+
+            assertEquals(0, savesDuringRun)
+            assertEquals(announced.checkedAtMs, ledger.load().lastCheckMs)
+            assertEquals(clock.millis(), ledger.load().lastAttemptMs)
+        }
+
+    @Test
+    fun turningAutomaticUpdatesOffCancelsTheTransferTheUpdaterStartedAndWithdrawsTheNotice() =
+        withUpdater { store, updater ->
+            clock.advance(DAYS_31)
+            isSlow = true
+            val run = updater.runIfDue() as AutoUpdateRun.Queued
+            withTimeout(TIMEOUT_MS) { store.data.first { data -> data.transfers.any { it.bytesDone > 0 } } }
+            val announcing = scope.launch { updater.announce(run) }
+
+            updater.cancelStarted()
+            announcing.join()
+
+            assertTrue(
+                store.data.value.transfers
+                    .isEmpty(),
+            )
+            assertEquals(
+                OLD_VERSION,
+                store.data.value
+                    .installed(CatalogFixture.LVIV)
+                    ?.version,
+            )
+            assertEquals(listOf<AutoUpdateNotice>(AutoUpdateNotice.Withdrawn), notices)
+        }
+
+    @Test
+    fun turningAutomaticUpdatesOffLeavesATransferTheUserStartedAlone() =
+        withUpdater { store, updater ->
+            clock.advance(DAYS_31)
+            isSlow = true
+            assertTrue(store.refresh() is Outcome.Success)
+            assertEquals(Outcome.Success(Unit), store.startDownload(CatalogFixture.LVIV))
+            withTimeout(TIMEOUT_MS) { store.data.first { data -> data.transfers.any { it.bytesDone > 0 } } }
+            assertTrue(updater.runIfDue() is AutoUpdateRun.Queued)
+
+            updater.cancelStarted()
+
+            assertEquals(1, store.data.value.transfers.size)
+            withTimeout(TIMEOUT_MS) { store.data.first { it.transfers.isEmpty() } }
+            assertEquals(
+                NEW_VERSION,
+                store.data.value
+                    .installed(CatalogFixture.LVIV)
+                    ?.version,
+            )
+        }
+
+    @Test
     fun theFileLedgerKeepsBothTimesAndReadsAMalformedFileAsNeverChecked() {
         val file = root.resolve("settings/auto-update.json").toFile()
         FileAutoUpdateLedger(file).save(AutoUpdateLedgerState(lastCheckMs = 5L, lastAttemptMs = 7L))
@@ -371,11 +454,21 @@ class AutoUpdaterTest {
     }
 
     private class InMemoryLedger : AutoUpdateLedger {
+        @Volatile
         private var state = AutoUpdateLedgerState()
 
-        override fun load(): AutoUpdateLedgerState = state
+        /** Runs once at the next [load], so a test can act while a caller holds the ledger. */
+        @Volatile
+        var onLoad: (() -> Unit)? = null
+        val saves = AtomicInteger()
+
+        override fun load(): AutoUpdateLedgerState {
+            onLoad?.invoke()
+            return state
+        }
 
         override fun save(state: AutoUpdateLedgerState) {
+            saves.incrementAndGet()
             this.state = state
         }
     }
@@ -385,6 +478,7 @@ class AutoUpdaterTest {
         val PACKAGE_PATH = Regex("""/([a-z0-9][a-z0-9._-]*)/([a-z0-9][a-z0-9._-]*)/package\.zip""")
         val START: Instant = Instant.parse("2026-11-01T08:00:00Z")
         val DAYS_29: Duration = Duration.ofDays(29)
+        val DAYS_30: Duration = Duration.ofDays(30)
         val DAYS_31: Duration = Duration.ofDays(31)
         const val RETRY_HOURS = 24L
         const val OLD_VERSION = "2026-10-01"
@@ -395,6 +489,7 @@ class AutoUpdaterTest {
         const val HTTP_UNAVAILABLE = 503
         const val TIMEOUT_MS = 60_000L
         const val POLL_MS = 20L
+        const val ANNOUNCE_GRACE_MS = 300L
         const val SLOW_CHUNK_BYTES = 4096
         const val SLOW_CHUNK_DELAY_MS = 40L
     }

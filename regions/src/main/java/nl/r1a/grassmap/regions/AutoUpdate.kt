@@ -53,9 +53,14 @@ sealed interface AutoUpdateNotice {
     data class WaitingForWifi(
         override val maps: Int,
     ) : AutoUpdateNotice
+
+    /** The user turned automatic updates off, so an earlier notice no longer holds. */
+    data object Withdrawn : AutoUpdateNotice {
+        override val maps: Int = 0
+    }
 }
 
-/** Posts an [AutoUpdateNotice]. The Android implementation is a notification. */
+/** Posts or withdraws an [AutoUpdateNotice]. The Android implementation is a notification. */
 fun interface AutoUpdateNotifier {
     fun notify(notice: AutoUpdateNotice)
 }
@@ -81,7 +86,14 @@ class AutoUpdater(
     private val notifier: AutoUpdateNotifier,
     private val log: (String) -> Unit = {},
 ) {
+    // Every read-modify-write of the ledger runs under this lock, so the run and
+    // the announcement of an earlier run never overwrite each other's field.
     private val runMutex = Mutex()
+
+    // The regions this updater queued itself. A region the user had already
+    // started is not in it, so turning updates off leaves that transfer alone.
+    @Volatile
+    private var startedRegions: Set<String> = emptySet()
 
     /** Checks and queues when a check is due. Call off Main. */
     suspend fun runIfDue(): AutoUpdateRun =
@@ -129,6 +141,9 @@ class AutoUpdater(
             return AutoUpdateRun.Failed
         }
         val updates = access.data.value.updates
+        val alreadyRunning =
+            access.data.value.transfers
+                .mapTo(mutableSetOf()) { it.region }
         if (updates.isEmpty()) {
             ledger.save(state.copy(lastCheckMs = now, lastAttemptMs = now))
             return AutoUpdateRun.UpToDate
@@ -136,6 +151,7 @@ class AutoUpdater(
         if (access.updateAll() is Outcome.Failure) {
             return AutoUpdateRun.Failed
         }
+        startedRegions = updates.mapNotNullTo(mutableSetOf()) { it.id.takeIf { id -> id !in alreadyRunning } }
         log("auto-update queued regions=${updates.size}")
         return AutoUpdateRun.Queued(updates.associate { it.id to it.version }, checkedAtMs = now)
     }
@@ -150,7 +166,7 @@ class AutoUpdater(
         var data = access.data.first { isSettled(it, run) }
         var waiting = waitingCount(data, run)
         if (installedCount(data, run) + waiting > 0) {
-            ledger.save(ledger.load().copy(lastCheckMs = run.checkedAtMs))
+            runMutex.withLock { ledger.save(ledger.load().copy(lastCheckMs = run.checkedAtMs)) }
         }
         if (waiting > 0) {
             notifier.notify(AutoUpdateNotice.WaitingForWifi(waiting))
@@ -161,6 +177,17 @@ class AutoUpdater(
         if (installed > 0 && waiting == 0) {
             notifier.notify(AutoUpdateNotice.Installed(installed))
         }
+    }
+
+    /**
+     * Cancels the transfers this updater queued and withdraws its notice. The
+     * user's own transfers stay. Call it when automatic updates are turned off.
+     */
+    suspend fun cancelStarted() {
+        val regions = startedRegions
+        startedRegions = emptySet()
+        regions.forEach { region -> access.cancel(region) }
+        notifier.notify(AutoUpdateNotice.Withdrawn)
     }
 
     private fun isSettled(

@@ -21,12 +21,17 @@ class AndroidAutoUpdateNotifier(
 ) : AutoUpdateNotifier {
     override fun notify(notice: AutoUpdateNotice) {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        if (notice is AutoUpdateNotice.Withdrawn) {
+            manager.cancel(NOTIFICATION_ID)
+            return
+        }
         createChannel(manager)
         val maps = notice.maps
         val title =
             when (notice) {
                 is AutoUpdateNotice.Installed -> context.resources.getQuantityString(R.plurals.map_update_installed, maps, maps)
                 is AutoUpdateNotice.WaitingForWifi -> context.resources.getQuantityString(R.plurals.map_update_waiting, maps, maps)
+                AutoUpdateNotice.Withdrawn -> return
             }
         val notification =
             Notification

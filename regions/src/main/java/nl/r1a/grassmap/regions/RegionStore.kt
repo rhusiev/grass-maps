@@ -62,7 +62,7 @@ class RegionStore(
     initialMobileDataPolicy: MobileDataPolicy = MobileDataPolicy.WIFI_ONLY,
     private val onMobileDataPolicyChanged: (MobileDataPolicy) -> Unit = {},
     initialAutoUpdate: Boolean = true,
-    private val onAutoUpdateChanged: (Boolean) -> Unit = {},
+    private val onAutoUpdateChanged: suspend (Boolean) -> Unit = {},
     /** A test seam: runs after a transfer decided to pause and before it takes the claim lock. */
     private val beforePause: suspend (String) -> Unit = {},
 ) : RegionDownloadsAccess {

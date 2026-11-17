@@ -1358,6 +1358,16 @@ The control channel answers `-32005` with a `routing_pack_*` kind. The engine
 writes a local `valhalla.local.json` and creates the native actor on the first
 route.
 
+A route longer than the profile's limit becomes `AppError.TooFar` with that
+limit, and the planner publishes `RoutePlanFailure.TooFar` with
+`RoutePlanState.maxDistanceMeters`. The limits are Valhalla's `service_limits`
+`max_distance` defaults: 250 km for walk and hike (pedestrian costing) and
+500 km for bike (bicycle costing). `RoutingCapabilities.maxDistanceFor` returns
+the limit of one profile. The engine refuses a request whose straight line is
+over the limit before it calls Valhalla, and maps Valhalla's own error code 154
+(`Path distance exceeds the max distance limit`) to the same failure. The
+control channel answers `-32602` with kind `too_far`.
+
 The app does not trust the pack's own `valhalla.json` for paths. It replaces
 `tile_extract`, `tile_dir`, `admin` and `timezone` with the paths on this
 device. It clears the optional `landmarks`, `traffic_extract`, `transit_dir`,

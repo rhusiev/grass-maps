@@ -81,6 +81,16 @@ object RegionIdentifiers {
     /** True for the package id of an add-on, `<region>-<add-on id>` (T-0509). */
     fun isAddonPackage(id: String): Boolean = ADDON_SUFFIXES.any { id.endsWith(it) && id.length > it.length }
 
+    /** The first part of the package id of a downloaded raster area (T-0513). */
+    const val RASTER_PREFIX: String = "raster-"
+
+    /** The kind and the file name of the one component of a raster area package. */
+    const val RASTER_KIND: String = "raster"
+    const val RASTER_FILE: String = "raster.pmtiles"
+
+    /** True for the package id of a raster area. Such a package is not a map region. */
+    fun isRasterPackage(id: String): Boolean = id.startsWith(RASTER_PREFIX) && id.length > RASTER_PREFIX.length
+
     /** The package id of the 30 m elevation add-on of [region]. */
     fun elevationAddonPackage(region: String): String = region + ELEVATION_30M_SUFFIX
 

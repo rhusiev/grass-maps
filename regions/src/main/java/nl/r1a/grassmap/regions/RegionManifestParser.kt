@@ -46,7 +46,7 @@ object RegionManifestParser {
                 null
             }
         val components =
-            parseComponents(region, root["components"], RegionIdentifiers.isAddonPackage(region)) ?: return corrupt()
+            parseComponents(region, root["components"], packageKind(region)) ?: return corrupt()
         return Outcome.Success(
             RegionManifest(
                 region = region,
@@ -69,7 +69,7 @@ object RegionManifestParser {
     private fun parseComponents(
         region: String,
         element: JsonElement?,
-        isAddon: Boolean,
+        packageKind: PackageKind,
     ): List<RegionComponent>? {
         val array = element as? JsonArray ?: return null
         if (array.isEmpty()) {
@@ -86,7 +86,12 @@ object RegionManifestParser {
         if (present.map { it.file }.toSet().size != present.size) {
             return null
         }
-        if (isAddon) {
+        if (packageKind == PackageKind.RASTER) {
+            // A raster area is one image archive and nothing else: no search
+            // section, no map, no routing.
+            return present.takeIf { it.size == 1 && it.single().isRasterArchive() }
+        }
+        if (packageKind == PackageKind.ADDON) {
             // An add-on package carries one extra grid for a region that is
             // installed on its own, so it has no search section to require.
             return present.takeIf { it.size == 1 && it.single().kind == ELEVATION_KIND }
@@ -111,6 +116,22 @@ object RegionManifestParser {
         }
         return present
     }
+
+    private fun RegionComponent.isRasterArchive(): Boolean =
+        kind == RegionIdentifiers.RASTER_KIND &&
+            file == RegionIdentifiers.RASTER_FILE &&
+            !isDirectory &&
+            format == PMTILES_FORMAT &&
+            formatVersion == PMTILES_FORMAT_VERSION
+
+    private fun packageKind(region: String): PackageKind =
+        when {
+            RegionIdentifiers.isRasterPackage(region) -> PackageKind.RASTER
+            RegionIdentifiers.isAddonPackage(region) -> PackageKind.ADDON
+            else -> PackageKind.REGION
+        }
+
+    private enum class PackageKind { REGION, ADDON, RASTER }
 
     private fun parseComponent(element: JsonElement): RegionComponent? {
         val json = element as? JsonObject ?: return null
@@ -231,6 +252,8 @@ object RegionManifestParser {
     private const val FEATURES_KIND = "features"
     private const val ELEVATION_KIND = "elevation"
     private const val SEARCH_KIND_PREFIX = "search-"
+    private const val PMTILES_FORMAT = "pmtiles"
+    private const val PMTILES_FORMAT_VERSION = 3
     private const val FEATURES_FORMAT = "place-features"
     private const val FEATURES_FORMAT_VERSION = 1
 }

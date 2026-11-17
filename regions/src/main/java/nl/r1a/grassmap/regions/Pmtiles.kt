@@ -1,5 +1,8 @@
 package nl.r1a.grassmap.regions
 
+import nl.r1a.grassmap.plugin.api.model.BoundingBox
+import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.pmtiles.PmtilesTileId
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileInputStream
@@ -25,6 +28,11 @@ internal class PmtilesHeader private constructor(
     val tileCompression: Int,
     val minZoom: Int,
     val maxZoom: Int,
+    val metadataOffset: Long,
+    val metadataLength: Long,
+    val addressedTiles: Long,
+    val tileType: Int,
+    val bounds: BoundingBox,
 ) {
     companion object {
         const val MAGIC = "PMTiles"
@@ -43,6 +51,12 @@ internal class PmtilesHeader private constructor(
         private const val DATA_OFFSET = 56
         private const val DATA_LENGTH_OFFSET = 64
         private const val ADDRESSED_TILES_OFFSET = 72
+        private const val TILE_TYPE_OFFSET = 99
+        private const val MIN_LON_OFFSET = 102
+        private const val MIN_LAT_OFFSET = 106
+        private const val MAX_LON_OFFSET = 110
+        private const val MAX_LAT_OFFSET = 114
+        private const val DEGREES_PER_E7 = 1e-7
         private const val INTERNAL_COMPRESSION_OFFSET = 97
         private const val TILE_COMPRESSION_OFFSET = 98
         private const val MIN_ZOOM_OFFSET = 100
@@ -110,8 +124,30 @@ internal class PmtilesHeader private constructor(
                 tileCompression = bytes[TILE_COMPRESSION_OFFSET].toInt() and 0xFF,
                 minZoom = bytes[MIN_ZOOM_OFFSET].toInt() and 0xFF,
                 maxZoom = bytes[MAX_ZOOM_OFFSET].toInt() and 0xFF,
+                metadataOffset = unsignedLong(bytes, METADATA_OFFSET),
+                metadataLength = unsignedLong(bytes, METADATA_LENGTH_OFFSET),
+                addressedTiles = unsignedLong(bytes, ADDRESSED_TILES_OFFSET),
+                tileType = bytes[TILE_TYPE_OFFSET].toInt() and 0xFF,
+                bounds =
+                    BoundingBox(
+                        southWest =
+                            GeoPoint(
+                                latitude = signedInt(bytes, MIN_LAT_OFFSET) * DEGREES_PER_E7,
+                                longitude = signedInt(bytes, MIN_LON_OFFSET) * DEGREES_PER_E7,
+                            ),
+                        northEast =
+                            GeoPoint(
+                                latitude = signedInt(bytes, MAX_LAT_OFFSET) * DEGREES_PER_E7,
+                                longitude = signedInt(bytes, MAX_LON_OFFSET) * DEGREES_PER_E7,
+                            ),
+                    ),
             )
         }
+
+        private fun signedInt(
+            header: ByteArray,
+            offset: Int,
+        ): Int = ByteBuffer.wrap(header, offset, Int.SIZE_BYTES).order(java.nio.ByteOrder.LITTLE_ENDIAN).int
 
         /** A little-endian u64 that does not fit a non-negative Long is rejected by [fits]. */
         private fun unsignedLong(
@@ -151,6 +187,18 @@ internal class PmtilesArchive private constructor(
 ) {
     val minZoom: Int = header.minZoom
     val maxZoom: Int = header.maxZoom
+    val bounds: BoundingBox = header.bounds
+    val addressedTiles: Long = header.addressedTiles
+    val tileType: Int = header.tileType
+
+    /** The metadata JSON text, or null when it is absent, too large or unreadable. */
+    fun metadata(): String? {
+        if (header.metadataLength == 0L || header.metadataLength > MAX_METADATA_BYTES) {
+            return null
+        }
+        val stored = readSection(file, header.metadataOffset, header.metadataLength) ?: return null
+        return decode(stored, header.internalCompression)?.toString(Charsets.UTF_8)
+    }
 
     /** The decompressed MVT bytes of one tile, or null when this archive holds no such tile. */
     fun tile(
@@ -207,6 +255,7 @@ internal class PmtilesArchive private constructor(
 
     companion object {
         private const val MAX_ZOOM = 31
+        private const val MAX_METADATA_BYTES = 65_536L
 
         /** The archive at [file], or null when its header, compression or root directory is unusable. */
         fun open(file: File): PmtilesArchive? {
@@ -232,33 +281,7 @@ internal class PmtilesArchive private constructor(
             x: Long,
             y: Long,
         ): Long {
-            var below = 0L
-            for (level in 0 until zoom) {
-                below += (1L shl level) * (1L shl level)
-            }
-            if (zoom == 0) {
-                return below
-            }
-            var position = 0L
-            var remainingX = x
-            var remainingY = y
-            var step = 1L shl (zoom - 1)
-            while (step > 0L) {
-                val rx = if (remainingX and step > 0L) 1L else 0L
-                val ry = if (remainingY and step > 0L) 1L else 0L
-                position += step * step * ((3L * rx) xor ry)
-                if (ry == 0L) {
-                    if (rx == 1L) {
-                        remainingX = step - 1L - remainingX
-                        remainingY = step - 1L - remainingY
-                    }
-                    val swap = remainingX
-                    remainingX = remainingY
-                    remainingY = swap
-                }
-                step = step shr 1
-            }
-            return below + position
+            return PmtilesTileId.of(zoom, x, y)
         }
 
         private fun isSupported(compression: Int): Boolean =

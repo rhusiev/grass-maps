@@ -98,6 +98,9 @@ class RegionMountResolver(
         return RegionMounts(installed, broken)
     }
 
+    /** Every raster area in the store that mounts (T-0513). A broken one is simply absent. */
+    fun rasterAreas(): List<MountedRaster> = RasterAreaMounts(root).resolveAll()
+
     /**
      * The version directory of [region]'s 30 m elevation add-on, or null when
      * none is installed or its pointer, manifest or file does not check out
@@ -125,7 +128,8 @@ class RegionMountResolver(
             .mapNotNull { id -> CurrentPointer.read(File(root, id))?.let { id to it } }
             .toMap()
 
-    private fun installedRegions(): List<String> = storeDirectories().filterNot { RegionIdentifiers.isAddonPackage(it) }
+    private fun installedRegions(): List<String> =
+        storeDirectories().filterNot { RegionIdentifiers.isAddonPackage(it) || RegionIdentifiers.isRasterPackage(it) }
 
     private fun storeDirectories(): List<String> {
         val directories =

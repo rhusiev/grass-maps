@@ -1071,6 +1071,7 @@ class AppContainer(
                 settings = { rasterSettings },
                 enableOnlineTiles = ::setOnlineTilesEnabled,
                 probe = { source -> rasterTiles.probe(source) },
+                download = rasterAreas::download,
                 debuggable = debuggable,
             ) +
             UnitsCommand({ unitSettings }) +

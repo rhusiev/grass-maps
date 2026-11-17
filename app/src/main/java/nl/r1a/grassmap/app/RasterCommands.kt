@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
@@ -15,6 +16,10 @@ import nl.r1a.grassmap.plugin.api.command.CommandResult
 import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.model.BoundingBox
+import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugins.raster.RasterAreaDownloadState
+import nl.r1a.grassmap.plugins.raster.RasterAreaPlan
 import nl.r1a.grassmap.plugins.raster.RasterPlacement
 import nl.r1a.grassmap.plugins.raster.RasterPresets
 import nl.r1a.grassmap.plugins.raster.RasterSource
@@ -163,10 +168,75 @@ internal class RasterShowCommand(
     }
 }
 
+/** The debug trigger the T-0513 capture uses to download an area from a local tile server. */
+internal val RASTER_DOWNLOAD_COMMAND: CommandId = CommandId("core.map.download_raster_area")
+
+/**
+ * Downloads one offline area of the EOX 2016 preset from a tile template the
+ * capture serves on loopback, and answers with the final state.
+ *
+ * It exists for the T-0513 emulator capture and is not product UI. The preset
+ * keeps its licence and its offline flag, so the same refusals apply as in the
+ * panel. A build that is not debuggable refuses before anything changes.
+ */
+internal class RasterDownloadAreaCommand(
+    private val enableOnlineTiles: suspend (Boolean) -> Outcome<Unit>,
+    private val download: suspend (RasterAreaPlan, String) -> RasterAreaDownloadState,
+    private val debuggable: () -> Boolean = { false },
+) : Command<JsonElement, String>(
+        id = RASTER_DOWNLOAD_COMMAND,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = String.serializer(),
+        doc = "Downloads an offline area of the EOX 2016 preset from a given tile template.",
+        policy =
+            CommandPolicy(
+                allowlistedForControl = true,
+                dispatcher = CommandDispatcher.IO,
+            ),
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
+        if (!debuggable()) {
+            return Outcome.Failure(AppError.PermissionDenied)
+        }
+        val json = params as? JsonObject ?: return Outcome.Failure(AppError.InvalidInput)
+        val template = (json["tiles"] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
+        val numbers = BOX_KEYS.map { (json[it] as? JsonPrimitive)?.doubleOrNull }
+        val zooms = ZOOM_KEYS.map { (json[it] as? JsonPrimitive)?.intOrNull }
+        if (template == null || numbers.any { it == null } || zooms.any { it == null }) {
+            return Outcome.Failure(AppError.InvalidInput)
+        }
+        val (south, west, north, east) = numbers.map { checkNotNull(it) }
+        val source = RasterPresets.eox2016.copy(tileUrlTemplate = template)
+        val plan =
+            RasterAreaPlan.of(
+                source,
+                BoundingBox(GeoPoint(south, west), GeoPoint(north, east)),
+                checkNotNull(zooms[0]),
+                checkNotNull(zooms[1]),
+            )
+        when (val enabled = enableOnlineTiles(true)) {
+            is Outcome.Failure -> return enabled
+            is Outcome.Success -> Unit
+        }
+        return Outcome.Success(CommandResult("area=${download(plan, AREA_NAME)}"))
+    }
+
+    private companion object {
+        val BOX_KEYS = listOf("south", "west", "north", "east")
+        val ZOOM_KEYS = listOf("minZoom", "maxZoom")
+        const val AREA_NAME = "Capture"
+    }
+}
+
 /** The command set the control channel lists for the raster layer. */
 internal fun rasterCommands(
     settings: () -> RasterLayerSettings,
     enableOnlineTiles: suspend (Boolean) -> Outcome<Unit>,
     probe: suspend (RasterSource) -> Outcome<Unit>,
+    download: suspend (RasterAreaPlan, String) -> RasterAreaDownloadState,
     debuggable: () -> Boolean = { false },
-): List<Command<*, *>> = listOf(RasterShowCommand(settings, enableOnlineTiles, probe, debuggable))
+): List<Command<*, *>> =
+    listOf(
+        RasterShowCommand(settings, enableOnlineTiles, probe, debuggable),
+        RasterDownloadAreaCommand(enableOnlineTiles, download, debuggable),
+    )

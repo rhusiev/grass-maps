@@ -568,6 +568,7 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/direct-engine` | the second `routing.engine` provider: one geodesic per leg with the haversine length, its leg segments and its honest empty capabilities | `plugin-api` |
 | `plugins/guidance-ui` | the guidance panel's four facts and its Compose turn card, drawn from the navigation state the app holds | `plugin-api`, `plugin-ui-api` |
 | `plugins/nav-simulator` | the debug-only simulated run at 5 km/h through the production navigation session, its start and stop commands and its status stream | `plugin-api`, `navigation`, `routing` |
+| `plugins/region-outlines` | the layer that highlights the installed regions on the map, from the downloads data | `plugin-api` |
 | `plugins/track-layer` | the imported-track line layer and the controller that keeps it on the map | `plugin-api` |
 | `plugins/route-layer` | the route line's colour and pattern decision: slope and surface palettes, the unpaved dash and the steps stripe, drawn through `MapHost` | `plugin-api` |
 | `plugins/track-library` | the track library state, its folder definitions, the rename, describe, move and delete actions with one-step undo, and the four fixed orders and name search | `plugin-api` |
@@ -3762,9 +3763,29 @@ with its search, elevation and contours, its routing and its 30 m elevation
 add-on as separate parts with sizes; the oblast comes from the bbox that
 contains the first fix. The plugin publishes `downloads.ui.state`; its commands
 are `downloads.ui.refresh`, `update_all`, `download_region`, `cancel_region`,
-`remove_region`, `select_region` and `set_server`. The screen's top button reads
+`remove_region`, `select_region`, `search` and `set_server`. The screen's top button reads
 "Update all" and invokes `update_all`, which fetches the catalogue first. The token is a command parameter and never a
 state field.
+
+Downloads from the map (T-0506). The catalogue's `outline` path for each region
+is fetched from `<base>/outlines/<id>.geojson`, a bare MultiPolygon of outer
+rings (about 13 KB), by `RegionStore` after a catalogue refresh. The store caches
+each file under `<root>/.outlines` and reads that cache when it starts, so the
+borders show offline. The first fetch that fails other than as corrupt data ends
+the pass, so a server without outlines costs one request. The screen draws the
+borders in a mini-map at the top, and a tap on a border selects that oblast,
+which opens the region sheet and downloads through the same commands as a row
+(`MiniMapProjection` turns the tap into a position, `RegionOutline.contains`
+finds the region). The search field at the bottom matches the catalogue's own
+Ukrainian and English names and the id ("Ternopil" and "Тернопіль" both find
+`ua-61`); case and apostrophe variants are ignored. A "near me" row offers the
+oblast that `DownloadsScreen.detectRegion` finds for the last fix, unless it is
+installed or the first-run offer already names it. `plugins/region-outlines`
+draws the outlines of installed regions on the main map through
+`MapHost.setRegionHighlights` (`region.highlight.fill` and
+`region.highlight.line`). The debug command `core.map.set_region_highlights`
+and the `region-highlights-z6` case of the `world` golden profile exercise that
+layer from `test-data/map-goldens/region-highlights.json`.
 
 Background and metered (T-0505). A transfer outlives the screen: `app` starts
 `DownloadService`, a `dataSync` foreground service, while the transfer list is

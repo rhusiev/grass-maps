@@ -58,7 +58,6 @@ class MapHostStateTest {
         val session = session()
 
         assertEquals(Outcome.Success(Unit), session.applyStyle(style(StyleId("touring"))))
-        assertEquals(StyleId("touring"), session.loadedStyleId)
         assertEquals(
             Outcome.Failure(AppError.InvalidInput),
             session.applyStyleDiff(StyleDiff(LOADED_STYLE, listOf(background("stale")))),
@@ -67,6 +66,7 @@ class MapHostStateTest {
             Outcome.Success(Unit),
             session.applyStyleDiff(StyleDiff(StyleId("touring"), listOf(background("new")))),
         )
+        assertEquals(StyleId("touring"), session.loadedStyleId)
     }
 
     @Test
@@ -196,9 +196,34 @@ class MapHostStateTest {
 
         assertEquals(Outcome.Success(Unit), session.applyStyle(style(StyleId("touring"))))
 
-        assertEquals(StyleId("touring"), session.loadedStyleId)
+        assertEquals(LOADED_STYLE, session.loadedStyleId)
         assertTrue("a layers-only switch must not clear styleReady", session.styleReady.value)
         assertEquals(generation, session.styleGeneration.value)
+    }
+
+    @Test
+    fun aFailedDiffAfterASameBaseSwitchKeepsTheLoadedStyleId() {
+        val session = session()
+        session.applyStyleDiff(StyleDiff(LOADED_STYLE, listOf(background("kept"))))
+        val before = session.layers.value
+        session.applyStyle(style(StyleId("touring")))
+
+        val result =
+            session.applyStyleDiff(
+                StyleDiff(
+                    StyleId("touring"),
+                    listOf(
+                        SlottedLayer(
+                            LayerSlot.Base,
+                            lineSpec("bad-line", JsonObject(mapOf("line-unknown" to JsonPrimitive(1)))),
+                        ),
+                    ),
+                ),
+            )
+
+        assertEquals(Outcome.Failure(AppError.Unsupported), result)
+        assertEquals(LOADED_STYLE, session.loadedStyleId)
+        assertEquals(before, session.layers.value)
     }
 
     @Test

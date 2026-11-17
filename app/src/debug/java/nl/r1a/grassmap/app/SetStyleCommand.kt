@@ -1,6 +1,9 @@
 package nl.r1a.grassmap.app
 
 import android.util.Log
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.builtins.serializer
@@ -18,6 +21,7 @@ import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.MapEvent
+import nl.r1a.grassmap.plugin.api.host.MapHost
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleId
@@ -50,6 +54,8 @@ internal class SetStyleCommand(
                 dispatcher = CommandDispatcher.IO,
             ),
     ) {
+    private var lastBaseJson: String? = null
+
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
         val styleId = parse(params) ?: return Outcome.Failure(AppError.InvalidInput)
         val host = session.hostOrNull() ?: return Outcome.Failure(AppError.NotReady)
@@ -64,29 +70,59 @@ internal class SetStyleCommand(
 
             is Outcome.Success -> {
                 val (style, layers) = bundle.value ?: return Outcome.Failure(AppError.InvalidInput)
-                val appliedStyle = host.setStyle(style)
-                if (appliedStyle is Outcome.Failure) {
-                    return appliedStyle
-                }
-                val appliedLayers = host.applyStyleDiff(StyleDiff(style.id, layers))
-                if (appliedLayers is Outcome.Failure) {
-                    return appliedLayers
-                }
-                when (val overlay = contours().apply(host, style.id, contoursEnabled())) {
-                    is Outcome.Success -> Unit
-                    is Outcome.Failure -> Log.w(TAG, "contour layers not applied: ${overlay.error}")
-                }
-                val loaded =
-                    withTimeoutOrNull(idleTimeoutMillis) {
-                        host.events.first { event -> event is MapEvent.StyleLoaded }
-                    } != null
-                val idle =
-                    withTimeoutOrNull(idleTimeoutMillis) {
-                        host.events.first { event -> event is MapEvent.Idle }
-                    } != null
-                Outcome.Success(CommandResult("style=${style.id.value} loaded=$loaded idle=$idle"))
+                applyAndAwait(host, style, layers)
             }
         }
+    }
+
+    /**
+     * Subscribes before the apply calls, because the event flow has no replay and
+     * an event that fires first would be lost. A style that shares the previous
+     * base document emits no `StyleLoaded`, so only `Idle` is awaited then.
+     */
+    private suspend fun applyAndAwait(
+        host: MapHost,
+        style: StyleSpec,
+        layers: List<SlottedLayer>,
+    ): Outcome<CommandResult<String>> =
+        coroutineScope {
+            val reloads = lastBaseJson != null && lastBaseJson != style.baseStyleJson
+            val loaded = async(start = CoroutineStart.UNDISPATCHED) { awaitEvent(host) { it is MapEvent.StyleLoaded } }
+            val idle = async(start = CoroutineStart.UNDISPATCHED) { awaitEvent(host) { it is MapEvent.Idle } }
+            val failure = applyStyle(host, style, layers)
+            if (failure != null) {
+                loaded.cancel()
+                idle.cancel()
+                return@coroutineScope failure
+            }
+            lastBaseJson = style.baseStyleJson
+            val isLoaded = if (reloads) loaded.await() else true.also { loaded.cancel() }
+            Outcome.Success(CommandResult("style=${style.id.value} loaded=$isLoaded idle=${idle.await()}"))
+        }
+
+    private suspend fun awaitEvent(
+        host: MapHost,
+        match: (MapEvent) -> Boolean,
+    ): Boolean = withTimeoutOrNull(idleTimeoutMillis) { host.events.first(match) } != null
+
+    private suspend fun applyStyle(
+        host: MapHost,
+        style: StyleSpec,
+        layers: List<SlottedLayer>,
+    ): Outcome.Failure? {
+        val appliedStyle = host.setStyle(style)
+        if (appliedStyle is Outcome.Failure) {
+            return appliedStyle
+        }
+        val appliedLayers = host.applyStyleDiff(StyleDiff(style.id, layers))
+        if (appliedLayers is Outcome.Failure) {
+            return appliedLayers
+        }
+        when (val overlay = contours().apply(host, style.id, contoursEnabled())) {
+            is Outcome.Success -> Unit
+            is Outcome.Failure -> Log.w(TAG, "contour layers not applied: ${overlay.error}")
+        }
+        return null
     }
 
     private suspend fun findStyle(

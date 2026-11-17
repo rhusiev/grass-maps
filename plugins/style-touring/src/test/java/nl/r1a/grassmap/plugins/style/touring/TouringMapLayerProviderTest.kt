@@ -9,6 +9,7 @@ import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerType
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
 import nl.r1a.grassmap.plugin.api.model.PaletteStyleDocument
+import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.StyleId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -62,16 +63,20 @@ class TouringMapLayerProviderTest {
     }
 
     @Test
-    fun touringStartsEachLayerOneZoomEarlierThanStandard() {
-        val standardLayer =
-            standard.layersFor(StyleId("standard")).first {
-                it.spec.id.value
-                    .endsWith("__region") && it.spec.minZoom == 13f
-            }
-        val touringLayer = provider.layers(light).first { it.spec.id == standardLayer.spec.id }
+    fun touringStartsEachSharedLayerOneZoomEarlierThanStandard() {
+        val standardRanges = rangesById(standard.layersFor(StyleId("standard")))
+        val touringRanges = rangesById(provider.layers(light))
+        // The dash ladder redraws the path layers with its own ranges.
+        val shared = standardRanges.keys.intersect(touringRanges.keys) - PATH_LADDER.toSet()
 
-        assertEquals(12f, touringLayer.spec.minZoom)
-        assertEquals(standardLayer.spec.maxZoom, touringLayer.spec.maxZoom)
+        assertTrue(shared.size > MIN_SHARED_LAYERS)
+        assertTrue(shared.any { standardRanges.getValue(it).second < MAX_AUTHORED_ZOOM })
+        for (id in shared) {
+            val (standardMin, standardMax) = standardRanges.getValue(id)
+            val expectedMax = if (standardMax >= MAX_AUTHORED_ZOOM) standardMax else (standardMax - 1f).coerceAtLeast(0f)
+            assertEquals("$id min", (standardMin - 1f).coerceAtLeast(0f), touringRanges.getValue(id).first)
+            assertEquals("$id max", expectedMax, touringRanges.getValue(id).second)
+        }
     }
 
     @Test
@@ -95,9 +100,8 @@ class TouringMapLayerProviderTest {
 
     @Test
     fun pathKindsFormADashLadderFromTwelve() {
-        val ladder = listOf("roads_footway", "roads_path", "roads_steps", "roads_track", "roads_cycleway")
         val specs =
-            ladder.map { id ->
+            PATH_LADDER.map { id ->
                 provider.layers(light).single { it.spec.id.value == id + "__region" }.spec
             }
 
@@ -114,6 +118,14 @@ class TouringMapLayerProviderTest {
         assertEquals(standardSymbols, touringSymbols)
     }
 
+    private fun rangesById(layers: List<SlottedLayer>): Map<String, Pair<Float, Float>> =
+        layers
+            .groupBy {
+                it.spec.id.value
+                    .removeSuffix("__world")
+                    .removeSuffix("__region")
+            }.mapValues { (_, pieces) -> pieces.minOf { it.spec.minZoom } to pieces.maxOf { it.spec.maxZoom } }
+
     private fun authoredSymbols(file: File): List<JsonObject> =
         Json
             .parseToJsonElement(file.readText())
@@ -122,4 +134,10 @@ class TouringMapLayerProviderTest {
             .jsonArray
             .map { it.jsonObject }
             .filter { it.getValue("type").jsonPrimitive.content == "symbol" }
+
+    private companion object {
+        const val MAX_AUTHORED_ZOOM = 24f
+        const val MIN_SHARED_LAYERS = 50
+        val PATH_LADDER = listOf("roads_footway", "roads_path", "roads_steps", "roads_track", "roads_cycleway")
+    }
 }

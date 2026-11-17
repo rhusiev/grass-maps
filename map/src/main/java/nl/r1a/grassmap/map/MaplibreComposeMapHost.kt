@@ -115,8 +115,11 @@ internal class MapHostState(
     val tracks = mutableStateOf<List<MapTrack>>(emptyList())
     val camera = MutableStateFlow(initialCamera)
     private val motion = PuckMotion()
+
+    /** The style whose layers the map currently draws. */
     var loadedStyleId: StyleId = initialStyle.id
         private set
+    private var pendingStyleId: StyleId? = null
     var trackingMode: TrackingMode = TrackingMode.Free
         private set
     var positionOffset: ScreenOffset = ScreenOffset(0f, 0f)
@@ -129,13 +132,14 @@ internal class MapHostState(
         // built from. Reloading it would clear styleReady and re-run the engine
         // for nothing, so an unchanged style is a successful no-op. Styles that
         // share one base document (Standard and Touring) differ only in their
-        // layers, so a switch between them records the new id and keeps the
-        // loaded style.
+        // layers, so a switch between them keeps the loaded style and waits for
+        // the diff, which names the new id, before the id changes.
         if (built == this.style.value) {
-            loadedStyleId = style.id
+            pendingStyleId = style.id.takeIf { it != loadedStyleId }
             return Outcome.Success(Unit)
         }
         styleReady.value = false
+        pendingStyleId = null
         loadedStyleId = style.id
         this.style.value = built
         return Outcome.Success(Unit)
@@ -143,10 +147,11 @@ internal class MapHostState(
 
     /**
      * Replaces the unowned layers with [diff]'s layers. A diff for any style but
-     * the loaded one, or one whose layers do not compile, changes nothing.
+     * the loaded one (or the one a same-base `setStyle` just named), or one whose
+     * layers do not compile, changes nothing.
      */
     fun applyStyleDiff(diff: StyleDiff): Outcome<Unit> {
-        if (diff.styleId != loadedStyleId) {
+        if (diff.styleId != (pendingStyleId ?: loadedStyleId)) {
             return Outcome.Failure(AppError.InvalidInput)
         }
         val report = StyleLayerCompiler.compileAll(diff.layers)
@@ -156,6 +161,8 @@ internal class MapHostState(
         layers.value =
             layers.value.filterNot { it.owner == null } +
             diff.layers.map { OwnedLayer(owner = null, slot = it.slot, spec = it.spec) }
+        loadedStyleId = diff.styleId
+        pendingStyleId = null
         return Outcome.Success(Unit)
     }
 

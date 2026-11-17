@@ -53,7 +53,7 @@ tasks.named("check") {
     dependsOn(lintTouringStyle)
 }
 
-// TouringStyleTest compares against the Standard style by path.
+// The provider test compares the layers against the Standard style by path.
 tasks.withType<Test>().configureEach {
     inputs
         .files(rootProject.file("plugins/style-standard/src/main/styles/standard.json"))

@@ -1,5 +1,10 @@
 package nl.r1a.grassmap.plugins.style.standard
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.float
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerType
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
@@ -9,6 +14,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class StandardMapLayerProviderTest {
     private val provider = StandardMapLayerProvider()
@@ -56,13 +62,22 @@ class StandardMapLayerProviderTest {
 
     @Test
     fun standardKeepsTheAuthoredZoomRange() {
-        val layer =
-            provider.layers(light).first {
-                it.spec.id.value
-                    .endsWith("__region") && it.spec.minZoom == 13f
-            }
+        val authored = authoredRanges()
 
-        assertEquals(13f, layer.spec.minZoom)
+        assertTrue(authored.isNotEmpty())
+        for (styleId in listOf(light, dark)) {
+            val layers = provider.layers(styleId)
+            for ((id, range) in authored) {
+                val pieces =
+                    layers.filter {
+                        it.spec.id.value
+                            .removeSuffix(WORLD)
+                            .removeSuffix(REGION) == id
+                    }
+                assertEquals("$styleId $id min", range.first, pieces.minOf { it.spec.minZoom })
+                assertEquals("$styleId $id max", range.second, pieces.maxOf { it.spec.maxZoom })
+            }
+        }
     }
 
     @Test
@@ -85,5 +100,25 @@ class StandardMapLayerProviderTest {
             }
 
         assertTrue(paints.none { it.contains("\"@") })
+    }
+
+    private fun authoredRanges(): Map<String, Pair<Float, Float>> =
+        Json
+            .parseToJsonElement(File("src/main/styles/standard.json").readText())
+            .jsonObject
+            .getValue("layers")
+            .jsonArray
+            .map { it.jsonObject }
+            .associate { layer ->
+                layer.getValue("id").jsonPrimitive.content to
+                    (
+                        layer.getValue("minzoom").jsonPrimitive.float to
+                            layer.getValue("maxzoom").jsonPrimitive.float
+                    )
+            }
+
+    private companion object {
+        const val WORLD = "__world"
+        const val REGION = "__region"
     }
 }

@@ -20,6 +20,10 @@ import nl.r1a.grassmap.plugin.api.provider.RouteProfile
  * Valhalla 3.9 option with the meaning `test-data/routing/README.md` records.
  */
 internal object ValhallaProfiles {
+    private const val PEDESTRIAN_MAX_DISTANCE_METERS = 250_000.0
+    private const val BICYCLE_MAX_DISTANCE_METERS = 500_000.0
+    private const val AUTO_MAX_DISTANCE_METERS = 5_000_000.0
+
     private const val WALKING_SPEED_KMH = 5.0
     private const val HIKING_SPEED_KMH = 4.5
     private const val CYCLING_SPEED_KMH = 18.0
@@ -80,6 +84,20 @@ internal object ValhallaProfiles {
 
     /** Car is out of v1, so it carries no tuned options. */
     private val CAR = ValhallaProfile(costing = AUTO, costingOptions = JsonObject(emptyMap()))
+
+    /**
+     * The longest route Valhalla plans for [profile]: the `max_distance` of the
+     * profile's costing in `service_limits`. The numbers are the defaults of
+     * `valhalla_build_config`, which writes every pack's `valhalla.json`
+     * (`tools/pipeline/build-valhalla-pack.sh`), and match the pack the
+     * T-0518 build produced. The pack's own value is not read at run time.
+     */
+    fun maxDistanceMeters(profile: RouteProfile): Double =
+        when (profile) {
+            RouteProfile.Walk, RouteProfile.Hike -> PEDESTRIAN_MAX_DISTANCE_METERS
+            RouteProfile.Bike -> BICYCLE_MAX_DISTANCE_METERS
+            RouteProfile.Car -> AUTO_MAX_DISTANCE_METERS
+        }
 
     fun of(profile: RouteProfile): ValhallaProfile =
         when (profile) {

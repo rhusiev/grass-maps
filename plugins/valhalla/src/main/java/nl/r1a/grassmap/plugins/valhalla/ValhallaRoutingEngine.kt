@@ -82,7 +82,7 @@ class ValhallaRoutingEngine internal constructor(
 
     override fun capabilities(): RoutingCapabilities =
         RoutingCapabilities(
-            profiles = setOf(RouteProfile.Walk, RouteProfile.Bike, RouteProfile.Hike),
+            profiles = SUPPORTED_PROFILES,
             modifierKinds =
                 setOf(
                     RouteModifierKind.Multiplier,
@@ -90,7 +90,8 @@ class ValhallaRoutingEngine internal constructor(
                     RouteModifierKind.Forbidden,
                 ),
             maxAlternatives = 2,
-            maxDistanceMeters = 250_000.0,
+            maxDistanceMeters = SUPPORTED_PROFILES.maxOf(ValhallaProfiles::maxDistanceMeters),
+            maxDistanceMetersByProfile = SUPPORTED_PROFILES.associateWith(ValhallaProfiles::maxDistanceMeters),
             // Access is in the shared vocabulary but has no Valhalla source:
             // the trace does not carry an OSM access tag, so declaring it
             // would promise a key the engine never fills.
@@ -130,6 +131,9 @@ class ValhallaRoutingEngine internal constructor(
                         return@withContext packFailure(exception)
                     } catch (exception: Exception) {
                         log.info("route failed: ${exception.message}")
+                        if (isDistanceLimit(exception)) {
+                            return@withContext tooFar(request)
+                        }
                         if (!hasCostOverlay(request) || !isOffGraphOverlay(exception)) {
                             return@withContext internalFailure("routing.valhalla.route", exception)
                         }
@@ -144,6 +148,9 @@ class ValhallaRoutingEngine internal constructor(
                             return@withContext packFailure(retry)
                         } catch (retry: Exception) {
                             log.info("exclusion fallback failed: ${retry.message}")
+                            if (isDistanceLimit(retry)) {
+                                return@withContext tooFar(request)
+                            }
                             return@withContext internalFailure("routing.valhalla.route", retry)
                         }
                     }
@@ -405,11 +412,22 @@ class ValhallaRoutingEngine internal constructor(
                 return AppError.Unsupported
             }
         }
-        if (straightLineMetres(request) > capabilities.maxDistanceMeters) {
-            return AppError.InvalidInput
+        val limit = capabilities.maxDistanceFor(request.profile)
+        if (straightLineMetres(request) > limit) {
+            return AppError.TooFar(limit)
         }
         return null
     }
+
+    private fun isDistanceLimit(exception: Exception): Boolean =
+        ERROR_CODE_PATTERN
+            .find(exception.message.orEmpty())
+            ?.groupValues
+            ?.get(1)
+            ?.toIntOrNull() == DISTANCE_LIMIT_CODE
+
+    private fun tooFar(request: RouteRequest): Outcome.Failure =
+        Outcome.Failure(AppError.TooFar(capabilities().maxDistanceFor(request.profile)))
 
     private fun hasCostOverlay(request: RouteRequest): Boolean = request.modifiers.any { it.multiplier != null || it.addedSeconds != null }
 
@@ -433,6 +451,15 @@ class ValhallaRoutingEngine internal constructor(
             }
 
     private companion object {
+        val SUPPORTED_PROFILES = setOf(RouteProfile.Walk, RouteProfile.Bike, RouteProfile.Hike)
+
+        /**
+         * Valhalla's error code for a path over the costing's `max_distance`
+         * (loki, "Path distance exceeds the max distance limit"). The native
+         * wrapper reports it in the exception text as `ValhallaError(code=154, ...)`.
+         */
+        const val DISTANCE_LIMIT_CODE = 154
+        val ERROR_CODE_PATTERN = Regex("code=(\\d+)")
         const val MIN_WAYPOINTS = 2
         const val EARTH_RADIUS_METRES = 6_371_000.0
 

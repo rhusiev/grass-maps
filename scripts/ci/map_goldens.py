@@ -268,6 +268,19 @@ TRACK_CASES = {
         ("track-looks-hidden-z15", 49.9520, 23.9502, 15.0, 0.0, 0.0),
     ),
 }
+# T-0506: the installed oblasts highlighted on the world overview. The
+# fixture marks three Galician oblasts installed, so the frame shows a
+# highlighted block with its neighbours plain. It is the world profile's, which
+# draws from the 190 MB world package, so it is local acceptance like the rest.
+REGION_HIGHLIGHT_CASES = {
+    "world": (("region-highlights-z6", 49.2, 24.4, 6.0, 0.0, 0.0),),
+}
+REGION_HIGHLIGHT_POSITION_NAMES = frozenset(
+    case[0] for cases in REGION_HIGHLIGHT_CASES.values() for case in cases
+)
+REGION_HIGHLIGHTS_FIXTURE_PATH = ROOT / "test-data" / "map-goldens" / "region-highlights.json"
+REGION_HIGHLIGHTS_FIXTURE = REGION_HIGHLIGHTS_FIXTURE_PATH.read_text(encoding="utf-8")
+
 # T-0109: Touring draws the Standard profile's cases, so the two reference sets
 # show the same places and differ only in the style.
 POSITIONS["touring"] = POSITIONS["standard"]
@@ -400,6 +413,7 @@ def cases(profile: str) -> tuple[tuple[str, float, float, float, float, float], 
         + ROUTE_CASES.get(profile, ())
         + ROUTE_RELATION_CASES.get(profile, ())
         + TRACK_CASES.get(profile, ())
+        + REGION_HIGHLIGHT_CASES.get(profile, ())
     )
 
 
@@ -422,6 +436,11 @@ def track_fixture_for(name: str) -> str | None:
     if name == "track-looks-hidden-z15":
         return TRACK_LOOKS_HIDDEN_FIXTURE
     return None
+
+
+def region_highlights_fixture_for(name: str) -> str | None:
+    """The committed region outlines for the highlight golden, else None."""
+    return REGION_HIGHLIGHTS_FIXTURE if name in REGION_HIGHLIGHT_POSITION_NAMES else None
 
 
 class GoldenError(RuntimeError):
@@ -829,6 +848,34 @@ def invoke_route_relations(
             if time.monotonic() >= deadline:
                 raise GoldenError(
                     f"route-relation command did not answer within {CAMERA_READY_TIMEOUT_S:.0f}s"
+                ) from error
+        time.sleep(RETRY_PAUSE_S)
+
+
+def invoke_region_highlights(
+    client: control_client.ControlClient,
+    highlights_json: str | None,
+) -> str:
+    """Highlight the fixed regions, or clear them, before a golden position.
+
+    The command draws through the production region-outlines layer and
+    `MapHost.setRegionHighlights`. It retries `not_ready` and a socket timeout,
+    as the track command does.
+    """
+    params: dict[str, object] = {
+        "regions": json.loads(highlights_json)["regions"] if highlights_json else None,
+    }
+    deadline = time.monotonic() + CAMERA_READY_TIMEOUT_S
+    while True:
+        try:
+            return str(client.invoke("core.map.set_region_highlights", params))
+        except control_client.ControlError as error:
+            if error.kind != "not_ready" or time.monotonic() >= deadline:
+                raise
+        except TimeoutError as error:
+            if time.monotonic() >= deadline:
+                raise GoldenError(
+                    f"region highlight command did not answer within {CAMERA_READY_TIMEOUT_S:.0f}s"
                 ) from error
         time.sleep(RETRY_PAUSE_S)
 
@@ -1337,6 +1384,7 @@ def capture(
         current_route: str | None = None
         current_relations: str | None = None
         current_tracks: str | None = None
+        current_highlights: str | None = None
         current_raster: str | None = None
         route_dark = style is not None and style.endswith("dark")
         selected = positions if positions is not None else cases(profile)
@@ -1354,6 +1402,10 @@ def capture(
             if tracks != current_tracks:
                 invoke_tracks(client, tracks)
                 current_tracks = tracks
+            highlights = region_highlights_fixture_for(name)
+            if highlights != current_highlights:
+                invoke_region_highlights(client, highlights)
+                current_highlights = highlights
             raster = raster_fixture_for(name)
             if raster != current_raster:
                 invoke_raster(client, raster, raster_tiles.url if raster_tiles else None)
@@ -1391,6 +1443,7 @@ def capture(
                 "route_command": "core.map.set_route",
                 "route_relations_command": "core.map.set_route_relations",
                 "track_command": "core.map.set_tracks",
+                "region_highlights_command": "core.map.set_region_highlights",
                 "raster_command": "core.map.show_raster",
                 "raster_fixture": (
                     str(RASTER_TILES_DIR.relative_to(ROOT)) if raster_tiles is not None else None

@@ -92,6 +92,7 @@ class DebugApplication : GrassMapsApplication() {
                 SetRouteCommand(session),
                 SetRouteRelationsCommand(session),
                 SetTracksCommand(session),
+                SetRegionHighlightsCommand(session),
                 SetStyleCommand(
                     session,
                     providers = { container.providerRegistry },

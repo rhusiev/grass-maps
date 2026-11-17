@@ -1551,5 +1551,30 @@ class InstallRegionCommandTest(unittest.TestCase):
         printed.assert_called_once_with("region:ua-46/2026-11-05")
 
 
+class RegionHighlightCasesTest(unittest.TestCase):
+    """The T-0506 highlight golden stays in the world profile with its fixture."""
+
+    def test_the_world_profile_appends_the_highlight_case(self) -> None:
+        names = [case[0] for case in map_goldens.cases("world")]
+
+        self.assertEqual("region-highlights-z6", names[-1])
+        self.assertEqual(2, len(map_goldens.POSITIONS["world"]))
+
+    def test_no_other_profile_draws_the_highlights(self) -> None:
+        for profile in ("standard", "touring", "oblast"):
+            names = {case[0] for case in map_goldens.cases(profile)}
+            self.assertNotIn("region-highlights-z6", names)
+
+    def test_only_the_highlight_case_carries_the_fixture(self) -> None:
+        fixture = map_goldens.region_highlights_fixture_for("region-highlights-z6")
+
+        self.assertIsNotNone(fixture)
+        self.assertIsNone(map_goldens.region_highlights_fixture_for("antimeridian-east-z4"))
+        regions = json.loads(str(fixture))["regions"]
+        self.assertEqual(["ua-46", "ua-61", "ua-26"], [region["region"] for region in regions])
+        for region in regions:
+            self.assertTrue(region["polygons"])
+
+
 if __name__ == "__main__":
     unittest.main()

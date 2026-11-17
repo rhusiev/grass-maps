@@ -12,6 +12,7 @@ import java.util.UUID
  * <root>/.incoming/                 downloads, staging and quarantine
  * <root>/.incoming/partial~<region>~<version>/package.zip   an unfinished archive
  * <root>/.routing/                  the merged routing tiles ([RoutingMount])
+ * <root>/.outlines/<region>.geojson  a region's border, kept for the map and the downloads map
  * ```
  *
  * Region and version are validated path segments before they reach here.
@@ -31,6 +32,10 @@ class RegionPaths(
     fun incomingDirectory(): File = File(root, INCOMING_DIRECTORY)
 
     fun routingMountDirectory(): File = File(root, ROUTING_MOUNT_DIRECTORY)
+
+    fun outlinesDirectory(): File = File(root, OUTLINES_DIRECTORY)
+
+    fun outlineFile(region: String): File = File(outlinesDirectory(), "$region$OUTLINE_EXTENSION")
 
     /**
      * The place a current version is kept while its verified replacement is
@@ -73,6 +78,11 @@ class RegionPaths(
 
         /** Dot-prefixed, so the mount resolver never reads it as a region. */
         const val ROUTING_MOUNT_DIRECTORY: String = ".routing"
+
+        /** Dot-prefixed like [ROUTING_MOUNT_DIRECTORY], so it is never read as a region. */
+        const val OUTLINES_DIRECTORY: String = ".outlines"
+
+        const val OUTLINE_EXTENSION: String = ".geojson"
 
         /** The first word of every quarantine directory name under `.incoming`. */
         const val QUARANTINE_PREFIX: String = "invalid"

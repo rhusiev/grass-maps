@@ -20,6 +20,9 @@ object DownloadsDefaults {
 
     /** A catalogue is small; anything larger is not one. */
     const val MAX_CATALOG_BYTES: Long = 4L * 1024L * 1024L
+
+    /** An outline is a simplified border of about 13 KB; anything larger than this is not one. */
+    const val MAX_OUTLINE_BYTES: Long = 1024L * 1024L
 }
 
 /** What a catalogue entry is, as the server declares it. */
@@ -206,6 +209,54 @@ data class RegionCatalog(
     }
 }
 
+/**
+ * One region's border as the catalogue's `outline` file draws it: a simplified
+ * multipolygon, one ring of [GeoPoint]s per polygon. The file has no holes, so
+ * a point is inside when it is inside any ring.
+ */
+@Serializable
+data class RegionOutline(
+    val region: String,
+    val polygons: List<List<GeoPoint>> = emptyList(),
+) {
+    /** True when [point] lies inside one of the rings (even-odd rule). */
+    fun contains(point: GeoPoint): Boolean = polygons.any { ring -> ringContains(ring, point) }
+
+    /** The box around every ring, or null when the outline has no point. */
+    val bounds: BoundingBox?
+        get() {
+            val points = polygons.flatten()
+            if (points.isEmpty()) {
+                return null
+            }
+            return BoundingBox(
+                GeoPoint(points.minOf { it.latitude }, points.minOf { it.longitude }),
+                GeoPoint(points.maxOf { it.latitude }, points.maxOf { it.longitude }),
+            )
+        }
+
+    private fun ringContains(
+        ring: List<GeoPoint>,
+        point: GeoPoint,
+    ): Boolean {
+        var inside = false
+        var previous = ring.lastOrNull() ?: return false
+        for (current in ring) {
+            val crosses = (current.latitude > point.latitude) != (previous.latitude > point.latitude)
+            if (crosses) {
+                val crossingLongitude =
+                    (previous.longitude - current.longitude) * (point.latitude - current.latitude) /
+                        (previous.latitude - current.latitude) + current.longitude
+                if (point.longitude < crossingLongitude) {
+                    inside = !inside
+                }
+            }
+            previous = current
+        }
+        return inside
+    }
+}
+
 /** One installed region package as the downloads screen reads it. */
 @Serializable
 data class InstalledPack(
@@ -348,6 +399,8 @@ data class DownloadsData(
      * reads until it restarts. Null while that is not known.
      */
     val mountedPacks: List<InstalledPack>? = null,
+    /** The borders of the catalogue's regions the store has, from the server or its cache. */
+    val outlines: List<RegionOutline> = emptyList(),
 ) {
     /** The transfer for [region], or null when nothing is in flight for it. */
     fun transfer(region: String): DownloadTransfer? = transfers.firstOrNull { it.region == region }
@@ -510,4 +563,14 @@ data class DownloadsState(
     val autoUpdate: Boolean = true,
     /** True while an installed map waits for the next app start to be read. */
     val appliesAtNextStart: Boolean = false,
+    /** The borders the downloads map draws; a region with none is listed but not drawn. */
+    val outlines: List<RegionOutline> = emptyList(),
+    /** What each region on the map is doing, by region id, so the map colours its border. */
+    val outlineStatuses: Map<String, DownloadRowStatus> = emptyMap(),
+    /** The text in the search field; blank means the plain lists are drawn. */
+    val query: String = "",
+    /** The rows whose name or id matches [query], in catalogue order. */
+    val searchResults: List<DownloadRow> = emptyList(),
+    /** The detected oblast as a row while it is not on the phone, for the "near me" suggestion. */
+    val nearMe: DownloadRow? = null,
 )

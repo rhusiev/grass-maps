@@ -399,6 +399,10 @@ class RegionStoreMeteredTest {
                 send(exchange, 200, CatalogFixture.bytes())
                 return@TestHttpServer
             }
+            if (path.startsWith("/outlines/")) {
+                send(exchange, 404, ByteArray(0))
+                return@TestHttpServer
+            }
             val range = exchange.requestHeaders.getFirst("Range")
             packageRanges += range
             val full = slowBody ?: FixturePackages.at(CatalogFixture.LVIV, CatalogFixture.VERSION)

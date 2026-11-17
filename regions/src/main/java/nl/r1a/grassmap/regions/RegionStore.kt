@@ -27,6 +27,8 @@ import nl.r1a.grassmap.plugin.api.model.DownloadsData
 import nl.r1a.grassmap.plugin.api.model.DownloadsDefaults
 import nl.r1a.grassmap.plugin.api.model.InstalledPack
 import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
+import nl.r1a.grassmap.plugin.api.model.RegionCatalog
+import nl.r1a.grassmap.plugin.api.model.RegionOutline
 import nl.r1a.grassmap.plugin.api.model.RegionProblem
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
@@ -86,6 +88,8 @@ class RegionStore(
 
     private val catalogClient = RegionCatalogClient(transport)
     private val downloader = RegionDownloader(transport, paths, log)
+    private val outlineClient = RegionOutlineClient(transport)
+    private val outlineCache = RegionOutlineCache(paths)
 
     /** One refresh at a time, so two screens do not fetch the catalogue twice. */
     private val refreshMutex = Mutex()
@@ -107,6 +111,23 @@ class RegionStore(
 
     private val queue = Channel<String>(Channel.UNLIMITED)
     private val worker = scope.launch(Dispatchers.IO) { drain() }
+
+    /**
+     * Publishes what is already on the phone, so the map can highlight an
+     * installed region before the first refresh and while offline. It never
+     * replaces what a refresh published first.
+     */
+    private val diskReader =
+        scope.launch(Dispatchers.IO) {
+            val outlines = outlineCache.readAll()
+            val installed = readInstalledPacks()
+            mutable.update { state ->
+                state.copy(
+                    outlines = mergeOutlines(state.outlines, outlines),
+                    installed = state.installed.ifEmpty { installed },
+                )
+            }
+        }
     private val meteredWatcher =
         scope.launch {
             metered.isMetered.collect { isMetered -> mutable.update { it.copy(networkMetered = isMetered) } }
@@ -185,8 +206,72 @@ class RegionStore(
                     tokenPresent = currentToken != null,
                 )
             }
+            refreshOutlines(catalog, currentToken)
             Outcome.Success(Unit)
         }
+
+    /**
+     * Keeps a border for every catalogue entry that names one: the cached file
+     * when it reads, else one fetch. Borders are decoration, so a failure
+     * leaves the region without a drawn border and never fails the refresh.
+     * The first failed fetch ends the pass, so an offline phone makes one
+     * attempt and not one per region.
+     */
+    private suspend fun refreshOutlines(
+        catalog: RegionCatalog,
+        currentToken: BearerToken?,
+    ) {
+        val found = mutableListOf<RegionOutline>()
+        var fetching = true
+        for (entry in catalog.regions) {
+            val path = entry.outline ?: continue
+            val cached = withContext(Dispatchers.IO) { outlineCache.read(entry.id) }
+            if (cached != null) {
+                found += cached
+                continue
+            }
+            if (!fetching) {
+                continue
+            }
+            when (val fetched = fetchOutline(entry.id, path, currentToken)) {
+                is Outcome.Success -> {
+                    found += fetched.value
+                }
+
+                is Outcome.Failure -> {
+                    log("outline failed region=${entry.id} error=${fetched.error}")
+                    fetching = fetched.error == AppError.CorruptData
+                }
+            }
+        }
+        mutable.update { it.copy(outlines = mergeOutlines(found, it.outlines)) }
+    }
+
+    private suspend fun fetchOutline(
+        region: String,
+        path: String,
+        currentToken: BearerToken?,
+    ): Outcome<RegionOutline> {
+        val body =
+            when (val fetched = network.request(policy.switch) { outlineClient.fetch(serverUrl, path, currentToken, policy) }) {
+                is Outcome.Failure -> return fetched
+                is Outcome.Success -> fetched.value
+            }
+        val parsed = RegionOutlineParser.parse(region, body)
+        if (parsed is Outcome.Success) {
+            withContext(Dispatchers.IO) { outlineCache.write(region, body) }
+        }
+        return parsed
+    }
+
+    /** [preferred] first, then every outline of [other] whose region [preferred] lacks. */
+    private fun mergeOutlines(
+        preferred: List<RegionOutline>,
+        other: List<RegionOutline>,
+    ): List<RegionOutline> {
+        val known = preferred.map { it.region }.toSet()
+        return preferred + other.filterNot { it.region in known }
+    }
 
     override suspend fun startDownload(region: String): Outcome<Unit> {
         if (!RegionIdentifiers.isSafeSegment(region)) {
@@ -328,6 +413,7 @@ class RegionStore(
         queue.close()
         worker.cancel()
         meteredWatcher.cancel()
+        diskReader.cancel()
         for (pending in finishing.values) {
             pending.complete(Unit)
         }

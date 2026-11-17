@@ -3,6 +3,7 @@ package nl.r1a.grassmap.plugin.api.host
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import nl.r1a.grassmap.plugin.api.contract.PluginId
+import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.BoundingBox
 import nl.r1a.grassmap.plugin.api.model.Camera
@@ -12,6 +13,7 @@ import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerSpec
 import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.MapTrack
+import nl.r1a.grassmap.plugin.api.model.RegionOutline
 import nl.r1a.grassmap.plugin.api.model.RouteLineStyle
 import nl.r1a.grassmap.plugin.api.model.ScreenOffset
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
@@ -99,6 +101,15 @@ interface MapHost {
      * and leaves the map unchanged.
      */
     suspend fun setTracks(tracks: List<MapTrack>): Outcome<Unit>
+
+    /**
+     * Draws the borders of [regions] in the overlays slot, replacing every
+     * border the map drew before, or clears them when the list is empty. The
+     * caller passes only the regions to highlight, which is the installed ones
+     * (T-0506). A host that cannot draw them reports
+     * [nl.r1a.grassmap.plugin.api.error.AppError.Unsupported].
+     */
+    suspend fun setRegionHighlights(regions: List<RegionOutline>): Outcome<Unit> = Outcome.Failure(AppError.Unsupported)
 
     suspend fun setPositionOffset(offset: ScreenOffset): Outcome<Unit>
 }

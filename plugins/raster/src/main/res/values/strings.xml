@@ -16,6 +16,7 @@
     <string name="map_raster_custom_terms">A custom source is your responsibility and must allow its use.</string>
     <string name="map_raster_licence">Licence: %1$s</string>
     <string name="map_raster_licence_nc">Non-commercial licence: do not use this imagery commercially.</string>
+    <string name="map_raster_online_only">This layer is online-only: it cannot be saved for offline use.</string>
     <string name="map_raster_areas_title">Offline areas</string>
     <string name="map_raster_areas_none">No offline areas yet.</string>
     <string name="map_raster_areas_show">Show offline areas</string>
@@ -35,9 +36,11 @@
     <string name="map_raster_area_cancelled">Download cancelled. Nothing was saved.</string>
     <string name="map_raster_area_needs_online">Turn on online tiles to download an area.</string>
     <string name="map_raster_area_refused_source">This source does not allow offline download.</string>
+    <string name="map_raster_area_refused_licence">This source states no licence, so it cannot be saved as an area.</string>
     <string name="map_raster_area_refused_tiles">Too many tiles. The limit is %1$d. Zoom in or lower the top zoom.</string>
     <string name="map_raster_area_refused_bytes">Too large. The limit is %1$d MB. Zoom in or lower the top zoom.</string>
     <string name="map_raster_area_refused_space">Not enough free space for this area.</string>
+    <string name="map_raster_area_failed_too_large">The download passed the size cap and was stopped.</string>
     <string name="map_raster_area_failed_network">The server did not answer. Nothing was saved.</string>
     <string name="map_raster_area_failed_refused">This area cannot be downloaded.</string>
     <string name="map_raster_area_failed_other">The download failed. Nothing was saved.</string>

@@ -128,6 +128,9 @@ fun RasterLayerPanel(
                 PanelText(attribution, PANEL_MUTED)
             }
             source.licence?.let { LicenceLines(it) }
+            if (source.offlineDownload != OfflineTileDownload.ALLOWED) {
+                PanelText(stringResource(R.string.map_raster_online_only), PANEL_FOREGROUND)
+            }
             onPresetChange?.let { PresetRow(source.id, it) }
             PanelText(stringResource(R.string.map_raster_custom_hint), PANEL_MUTED)
             BasicTextField(

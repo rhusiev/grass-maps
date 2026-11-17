@@ -32,10 +32,13 @@ object RasterPresets {
     private const val EOX_TILE_BYTES = 25L * 1024
     private const val EOX_URL = "https://tiles.maps.eox.at/wmts/1.0.0"
     private const val EOX_CREDIT_URL = "https://cloudless.eox.at"
+    private const val EOX_2016_YEARS = "2016 & 2017"
+    private const val EOX_2018_YEARS = "2017 & 2018"
 
-    private fun eoxAttribution(year: Int): String =
-        "<a href=\"$EOX_CREDIT_URL\">EOxCloudless</a> by EOX IT Services GmbH " +
-            "(Contains modified Copernicus Sentinel data $year)"
+    /** EOX's required credit, word for word. [years] is "2016 & 2017" or "2017 & 2018". */
+    private fun eoxAttribution(years: String): String =
+        "EOxCloudless <a href=\"$EOX_CREDIT_URL\">$EOX_CREDIT_URL</a> by EOX IT Services GmbH " +
+            "(Contains modified Copernicus Sentinel data ${years.replace("&", "&amp;")})"
 
     /** Sentinel-2 cloudless 2016, CC BY 4.0: free to cache on the device (research-data.md 1.7). */
     val eox2016: RasterSource =
@@ -43,7 +46,7 @@ object RasterPresets {
             id = EOX_2016_ID,
             displayName = "Sentinel-2 cloudless 2016",
             tileUrlTemplate = "$EOX_URL/s2cloudless-2016_3857/default/g/{z}/{y}/{x}.jpg",
-            attributionHtml = eoxAttribution(2016),
+            attributionHtml = eoxAttribution(EOX_2016_YEARS),
             minZoom = 0,
             maxZoom = EOX_MAX_ZOOM,
             tileSize = 256,
@@ -52,17 +55,21 @@ object RasterPresets {
             estimatedTileBytes = EOX_TILE_BYTES,
         )
 
-    /** Sentinel-2 cloudless 2018, CC BY-NC-SA 4.0: personal, non-commercial use only. */
+    /**
+     * Sentinel-2 cloudless 2018, CC BY-NC-SA 4.0: personal, non-commercial use
+     * only. The user decided it stays online-only, so offline download is
+     * refused here. Setting [OfflineTileDownload.ALLOWED] turns it back on.
+     */
     val eox2018: RasterSource =
         RasterSource(
             id = EOX_2018_ID,
             displayName = "Sentinel-2 cloudless 2018",
             tileUrlTemplate = "$EOX_URL/s2cloudless-2018_3857/default/g/{z}/{y}/{x}.jpg",
-            attributionHtml = eoxAttribution(2018),
+            attributionHtml = eoxAttribution(EOX_2018_YEARS),
             minZoom = 0,
             maxZoom = EOX_MAX_ZOOM,
             tileSize = 256,
-            offlineDownload = OfflineTileDownload.ALLOWED,
+            offlineDownload = OfflineTileDownload.REFUSED_BY_POLICY,
             licence =
                 RasterLicence(
                     "CC BY-NC-SA 4.0",
@@ -72,14 +79,14 @@ object RasterPresets {
             estimatedTileBytes = EOX_TILE_BYTES,
         )
 
-    /** The presets an area can be downloaded from. OSM is not among them. */
-    val areaSources: List<RasterSource> = listOf(eox2016, eox2018)
-
     /** Every built-in source, the OSM preset first. */
-    val all: List<RasterSource> get() = listOf(openStreetMap) + areaSources
+    val all: List<RasterSource> = listOf(openStreetMap, eox2016, eox2018)
+
+    /** The presets an area can be downloaded from: those whose terms allow it. */
+    val areaSources: List<RasterSource> = all.filter { it.offlineDownload == OfflineTileDownload.ALLOWED }
 
     /** The preset with [id], or null. */
-    fun byId(id: String): RasterSource? = (areaSources + openStreetMap).firstOrNull { it.id == id }
+    fun byId(id: String): RasterSource? = all.firstOrNull { it.id == id }
 
     /** The largest zoom the app asks any source for. */
     const val MAX_SUPPORTED_ZOOM = 24

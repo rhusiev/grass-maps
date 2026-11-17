@@ -16,6 +16,7 @@
     <string name="map_raster_custom_terms">За власне джерело відповідаєте ви, і воно має дозволяти таке використання.</string>
     <string name="map_raster_licence">Ліцензія: %1$s</string>
     <string name="map_raster_licence_nc">Некомерційна ліцензія: не використовуйте ці знімки комерційно.</string>
+    <string name="map_raster_online_only">Цей шар лише онлайн: його не можна зберегти для офлайну.</string>
     <string name="map_raster_areas_title">Офлайн-ділянки</string>
     <string name="map_raster_areas_none">Офлайн-ділянок ще немає.</string>
     <string name="map_raster_areas_show">Показувати офлайн-ділянки</string>
@@ -35,9 +36,11 @@
     <string name="map_raster_area_cancelled">Завантаження скасовано. Нічого не збережено.</string>
     <string name="map_raster_area_needs_online">Увімкніть онлайн-тайли, щоб завантажити ділянку.</string>
     <string name="map_raster_area_refused_source">Це джерело не дозволяє завантаження для офлайну.</string>
+    <string name="map_raster_area_refused_licence">Це джерело не вказує ліцензію, тому його не можна зберегти як ділянку.</string>
     <string name="map_raster_area_refused_tiles">Забагато тайлів. Ліміт: %1$d. Наблизьте карту або зменште верхній масштаб.</string>
     <string name="map_raster_area_refused_bytes">Завелика ділянка. Ліміт: %1$d МБ. Наблизьте карту або зменште верхній масштаб.</string>
     <string name="map_raster_area_refused_space">Недостатньо вільного місця для цієї ділянки.</string>
+    <string name="map_raster_area_failed_too_large">Завантаження перевищило ліміт розміру й було зупинене.</string>
     <string name="map_raster_area_failed_network">Сервер не відповів. Нічого не збережено.</string>
     <string name="map_raster_area_failed_refused">Цю ділянку не можна завантажити.</string>
     <string name="map_raster_area_failed_other">Завантаження не вдалося. Нічого не збережено.</string>

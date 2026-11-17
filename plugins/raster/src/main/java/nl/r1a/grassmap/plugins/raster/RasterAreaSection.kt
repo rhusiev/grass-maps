@@ -121,6 +121,10 @@ private fun PlanInfo(
     model: RasterAreaSectionModel,
 ) {
     val context = LocalContext.current
+    if (plan.source.offlineDownload != OfflineTileDownload.ALLOWED) {
+        model.refusalOf(plan)?.let { PanelText(refusalText(it), PANEL_FOREGROUND) }
+        return
+    }
     PanelText(
         stringResource(
             R.string.map_raster_area_estimate,
@@ -142,6 +146,10 @@ private fun refusalText(refusal: RasterAreaPlan.Refusal): String =
     when (refusal) {
         RasterAreaPlan.Refusal.SourceForbidsOffline -> {
             stringResource(R.string.map_raster_area_refused_source)
+        }
+
+        RasterAreaPlan.Refusal.NoLicence -> {
+            stringResource(R.string.map_raster_area_refused_licence)
         }
 
         RasterAreaPlan.Refusal.TooManyTiles -> {
@@ -287,6 +295,7 @@ private fun failureText(reason: RasterAreaFailure): String =
             RasterAreaFailure.Network -> R.string.map_raster_area_failed_network
             RasterAreaFailure.Refused -> R.string.map_raster_area_failed_refused
             RasterAreaFailure.NotEnoughSpace -> R.string.map_raster_area_refused_space
+            RasterAreaFailure.TooLarge -> R.string.map_raster_area_failed_too_large
             RasterAreaFailure.Cancelled -> R.string.map_raster_area_cancelled
             RasterAreaFailure.Other -> R.string.map_raster_area_failed_other
         },

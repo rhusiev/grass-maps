@@ -431,7 +431,7 @@ private fun MapContent(
     val rasterLayer by container.rasterSettings.active.collectAsState()
     val rasterAreaState by container.rasterAreas.state.collectAsState()
     val rasterAreaPacks by container.rasterAreas.areas.collectAsState()
-    LaunchedEffect(container) { container.rasterAreas.refresh() }
+    LaunchedEffect(container) { container.rasterAreas.prepare() }
     // The layers cards are closed until the user opens them: a permanently open
     // card covers the map's centre on a phone, and the T-0109 layers sheet is
     // where they belong. This is view state, not a setting; the switches inside
@@ -848,7 +848,7 @@ private fun MapContent(
                                 onlineEnabled = onlineTilesEnabled,
                                 source = rasterLayer.source,
                                 viewBounds =
-                                    remember {
+                                    remember(layersOpen, configuration.screenWidthDp, configuration.screenHeightDp) {
                                         viewportBounds(
                                             cameraNow(),
                                             configuration.screenWidthDp,

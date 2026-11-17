@@ -31,23 +31,23 @@ class RasterAreaPlanTest {
 
     @Test
     fun theEstimateIsTheTileCountTimesThePresetTileSize() {
-        val plan = RasterAreaPlan.of(RasterPresets.eox2018, LVIV, minZoom = 6, maxZoom = 9)
+        val plan = RasterAreaPlan.of(RasterPresets.eox2016, LVIV, minZoom = 6, maxZoom = 9)
 
-        assertEquals(plan.tileCount * RasterPresets.eox2018.estimatedTileBytes, plan.estimatedBytes)
+        assertEquals(plan.tileCount * RasterPresets.eox2016.estimatedTileBytes, plan.estimatedBytes)
         assertNull(plan.refusal)
     }
 
     @Test
     fun theZoomRangeIsClampedToTheSource() {
-        val plan = RasterAreaPlan.of(RasterPresets.eox2018, LVIV, minZoom = -3, maxZoom = 40)
+        val plan = RasterAreaPlan.of(RasterPresets.eox2016, LVIV, minZoom = -3, maxZoom = 40)
 
-        assertEquals(RasterPresets.eox2018.minZoom, plan.minZoom)
-        assertEquals(RasterPresets.eox2018.maxZoom, plan.maxZoom)
+        assertEquals(RasterPresets.eox2016.minZoom, plan.minZoom)
+        assertEquals(RasterPresets.eox2016.maxZoom, plan.maxZoom)
     }
 
     @Test
     fun anAreaPastTheTileCapIsRefused() {
-        val plan = RasterAreaPlan.of(RasterPresets.eox2018, WORLD, minZoom = 0, maxZoom = 9)
+        val plan = RasterAreaPlan.of(RasterPresets.eox2016, WORLD, minZoom = 0, maxZoom = 9)
 
         assertTrue(plan.tileCount > RasterAreaPlan.MAX_TILES)
         assertEquals(RasterAreaPlan.Refusal.TooManyTiles, plan.refusal)
@@ -55,7 +55,7 @@ class RasterAreaPlanTest {
 
     @Test
     fun anAreaPastTheByteCapIsRefusedWhenTilesAreLarge() {
-        val heavy = RasterPresets.eox2018.copy(estimatedTileBytes = RasterAreaPlan.MAX_BYTES)
+        val heavy = RasterPresets.eox2016.copy(estimatedTileBytes = RasterAreaPlan.MAX_BYTES)
         val plan = RasterAreaPlan.of(heavy, LVIV, minZoom = 6, maxZoom = 8)
 
         assertEquals(RasterAreaPlan.Refusal.TooManyBytes, plan.refusal)
@@ -70,8 +70,24 @@ class RasterAreaPlanTest {
     }
 
     @Test
+    fun theTwentyEighteenLayerIsOnlineOnlyLikeOpenStreetMap() {
+        val plan = RasterAreaPlan.of(RasterPresets.eox2018, LVIV, minZoom = 6, maxZoom = 7)
+
+        assertEquals(RasterAreaPlan.Refusal.SourceForbidsOffline, plan.refusal)
+        assertEquals(listOf(RasterPresets.eox2016), RasterPresets.areaSources)
+        assertEquals(RasterPresets.eox2018, RasterPresets.byId(RasterPresets.eox2018.id))
+    }
+
+    @Test
+    fun aSourceWithoutALicenceIsRefused() {
+        val plan = RasterAreaPlan.of(RasterPresets.eox2016.copy(licence = null), LVIV, minZoom = 6, maxZoom = 7)
+
+        assertEquals(RasterAreaPlan.Refusal.NoLicence, plan.refusal)
+    }
+
+    @Test
     fun freeSpaceBelowTwiceTheEstimateRefusesTheArea() {
-        val plan = RasterAreaPlan.of(RasterPresets.eox2018, LVIV, minZoom = 6, maxZoom = 8)
+        val plan = RasterAreaPlan.of(RasterPresets.eox2016, LVIV, minZoom = 6, maxZoom = 8)
 
         assertEquals(RasterAreaPlan.Refusal.NotEnoughSpace, plan.refusalFor(plan.estimatedBytes))
         assertNull(plan.refusalFor(plan.estimatedBytes * RasterAreaPlan.SPACE_FACTOR + 1))

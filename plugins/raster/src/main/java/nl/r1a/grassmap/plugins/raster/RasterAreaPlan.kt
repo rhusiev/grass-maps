@@ -86,6 +86,7 @@ data class RasterAreaPlan(
         get() =
             when {
                 source.offlineDownload != OfflineTileDownload.ALLOWED -> Refusal.SourceForbidsOffline
+                source.licence == null -> Refusal.NoLicence
                 tileCount > MAX_TILES -> Refusal.TooManyTiles
                 estimatedBytes > MAX_BYTES -> Refusal.TooManyBytes
                 else -> null
@@ -93,6 +94,9 @@ data class RasterAreaPlan(
 
     enum class Refusal {
         SourceForbidsOffline,
+
+        /** The pack must carry the licence, so a source that states none cannot be saved. */
+        NoLicence,
         TooManyTiles,
         TooManyBytes,
         NotEnoughSpace,

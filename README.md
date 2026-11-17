@@ -603,12 +603,18 @@ HTTPS.
 
 ### Offline raster areas (T-0513)
 
-The two EOX Sentinel-2 cloudless presets (2016 under CC BY 4.0, 2018 under
-CC BY-NC-SA 4.0) allow an offline download. OSM does not, and a custom URL
-template gets no area download. The layers card shows the licence name, its link
-and, for the 2018 layer, a notice that the imagery is non-commercial. The same
-text shows on each installed area, read from the pack's own metadata, so it is
-there with no network.
+Only the EOX Sentinel-2 cloudless 2016 preset (CC BY 4.0) allows an offline
+download. The 2018 layer (CC BY-NC-SA 4.0) is online-only until EOX confirms
+its terms, OSM does not allow it, and a custom URL template has no licence to
+carry, so none of them gets a Download button. Each preset has one flag,
+`RasterSource.offlineDownload`, and `RasterAreaPlan` and the downloader both
+read it, so a preset turns offline download on or off in one place. The layers
+card shows the licence name, its link and, for a layer that cannot be saved, a
+line saying it is online-only. The same licence text shows on each installed
+area, read from the pack's own metadata, so it is there with no network. The
+credit line for both EOX layers reads "EOxCloudless https://cloudless.eox.at by
+EOX IT Services GmbH (Contains modified Copernicus Sentinel data YEAR)", with
+the link to cloudless.eox.at, online and offline.
 
 The card plans before it downloads. `RasterAreaPlan` counts the tiles the
 current view needs at each zoom of the chosen range and multiplies them by the
@@ -617,9 +623,14 @@ The card shows the tile count, the estimate and the free space before the
 Download button appears. Three limits refuse a plan, each with its own message:
 `MAX_TILES` 20,000, `MAX_BYTES` 600 MiB, and free space below twice the
 estimate (the staged tiles and the finished pack exist together for a moment).
-All three are chosen, not derived. The downloader fetches one tile every 100 ms,
-as EOX asks for spread-out requests, retries a tile once, skips a 404 and ends
-on any other failure.
+All three are chosen, not derived. The estimate only decides whether a download
+may start. During the download the real bytes count: it stops with a clear
+message when they pass `MAX_BYTES`, or when free space drops below what the
+rest of the download and the final assembly still need (about the written size
+again). The downloader fetches one tile every 100 ms, a skipped 404 included,
+waits one second before it retries a failed tile once, waits `Retry-After`
+(10 s when absent, at most 120 s) after a 429 and ends on any other failure.
+A redirect is followed only within the request's own host.
 
 Every tile goes through `RasterTileClient`, so the online-tiles switch guards
 the download as it guards the viewer: with it off, no socket opens. The
@@ -627,9 +638,14 @@ downloader writes `raster.pmtiles` and a `manifest.json` into a staging
 directory (`RasterPackBuilder`, in `plugin-api`, so the plugin imports no region
 code). `RasterPackInstaller` in `regions` verifies the package and flips the
 `current` pointer like any region. The package id is
-`raster-<source>-<hash of bounds and zooms>`, and the `raster-` prefix keeps an
-area out of the map-region and routing mounts. Downloading the same view again
-replaces its area.
+`raster-<source>-<first 16 hex digits of the SHA-256 of bounds and zooms>`, and
+the `raster-` prefix keeps an
+area out of the map-region and routing mounts. The installer opens the staged
+`raster.pmtiles` and parses its metadata before the pointer flips, so a pack
+that cannot mount never replaces a good one. Region and raster installs share
+one app-level `InstallLock`. At app start, before any download can run, the
+service deletes raster staging in `.incoming` and raster versions that no
+pointer names. Downloading the same view again replaces its area.
 
 An installed area is a raster layer whose source is `pmtiles://file://<path>`.
 It reads a file, so the online-tiles switch does not apply to it: turning the

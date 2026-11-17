@@ -20,6 +20,7 @@ import nl.r1a.grassmap.plugins.raster.RasterTileRange
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -72,7 +73,7 @@ class RasterAreaServiceTest {
         }
 
     @Test
-    fun theInstalledAreaReadsWithTheGateOffAndShowsItsNonCommercialLicence() =
+    fun theInstalledAreaReadsWithTheGateOffAndShowsItsLicence() =
         runTest {
             val online = service(OpenGate)
             online.download(RasterAreaPlan.of(mockSource(), LVIV, minZoom = 6, maxZoom = 7), "Lviv")
@@ -86,8 +87,8 @@ class RasterAreaServiceTest {
             assertTrue(area.tile(7, range.minX, range.minY) != null)
             assertEquals(requestsBefore, mock.requestCount)
             val item = offline.items().single()
-            assertTrue(item.licence.isNonCommercial)
-            assertTrue(item.licence.name.contains("CC BY-NC-SA 4.0"))
+            assertFalse(item.licence.isNonCommercial)
+            assertTrue(item.licence.name.contains("CC BY 4.0"))
             assertEquals(area.file.absolutePath, offline.layers().single().packFile)
         }
 
@@ -104,16 +105,63 @@ class RasterAreaServiceTest {
         }
 
     @Test
-    fun theOpenStreetMapPresetIsRefusedWithoutARequest() =
+    fun presetsThatForbidOfflineAreRefusedWithoutARequest() =
         runTest {
             val service = service(OpenGate)
-            val plan = RasterAreaPlan.of(RasterPresets.openStreetMap, LVIV, minZoom = 6, maxZoom = 7)
+            listOf(RasterPresets.openStreetMap, RasterPresets.eox2018).forEach { preset ->
+                val plan = RasterAreaPlan.of(preset.copy(tileUrlTemplate = mock.template), LVIV, minZoom = 6, maxZoom = 7)
 
-            val state = service.download(plan, "Lviv")
+                val state = service.download(plan, "Lviv")
 
-            assertEquals(RasterAreaPlan.Refusal.SourceForbidsOffline, service.refusalOf(plan))
-            assertEquals(RasterAreaDownloadState.Failed(RasterAreaFailure.Refused), state)
+                assertEquals(RasterAreaPlan.Refusal.SourceForbidsOffline, service.refusalOf(plan))
+                assertEquals(RasterAreaDownloadState.Failed(RasterAreaFailure.Refused), state)
+            }
             assertEquals(0, mock.requestCount)
+        }
+
+    @Test
+    fun aSourceWithoutALicenceIsRefusedWithoutARequest() =
+        runTest {
+            val service = service(OpenGate)
+            val plan = RasterAreaPlan.of(mockSource().copy(licence = null), LVIV, minZoom = 6, maxZoom = 7)
+
+            assertEquals(RasterAreaPlan.Refusal.NoLicence, service.refusalOf(plan))
+            assertEquals(RasterAreaDownloadState.Failed(RasterAreaFailure.Refused), service.download(plan, "Lviv"))
+            assertEquals(0, mock.requestCount)
+        }
+
+    @Test
+    fun theAreaIdIsSixteenHexDigitsOfAStableHash() =
+        runTest {
+            val service = service(OpenGate)
+            val plan = RasterAreaPlan.of(mockSource(), LVIV, minZoom = 6, maxZoom = 7)
+            service.download(plan, "Lviv")
+            val id =
+                service.areas.value
+                    .single()
+                    .id
+            service.remove(id)
+            service.download(plan, "Lviv")
+
+            assertTrue(Regex("raster-[a-z0-9-]+-[0-9a-f]{16}").matches(id))
+            assertEquals(
+                id,
+                service.areas.value
+                    .single()
+                    .id,
+            )
+        }
+
+    @Test
+    fun prepareDeletesRasterLeftoversOnceAndThenReadsTheStore() =
+        runTest {
+            val staging = File(root, ".incoming/raster-old-1-abc").apply { mkdirs() }
+            val orphan = File(root, "raster-lost-aa/1").apply { mkdirs() }
+
+            service(OpenGate).prepare()
+
+            assertFalse(staging.exists())
+            assertFalse(orphan.exists())
         }
 
     @Test
@@ -134,6 +182,7 @@ class RasterAreaServiceTest {
             val plan = RasterAreaPlan.of(mockSource(), LVIV, minZoom = 6, maxZoom = 7)
 
             assertEquals(RasterAreaPlan.Refusal.NotEnoughSpace, service.refusalOf(plan))
+            assertEquals(RasterAreaDownloadState.Failed(RasterAreaFailure.Refused), service.download(plan, "Lviv"))
             assertEquals(0, mock.requestCount)
         }
 
@@ -153,7 +202,7 @@ class RasterAreaServiceTest {
             assertTrue(!File(root, id).exists())
         }
 
-    private fun mockSource(): RasterSource = RasterPresets.eox2018.copy(tileUrlTemplate = mock.template)
+    private fun mockSource(): RasterSource = RasterPresets.eox2016.copy(tileUrlTemplate = mock.template)
 
     private fun service(
         gate: NetworkGate,

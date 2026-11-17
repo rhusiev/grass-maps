@@ -166,14 +166,8 @@ fun RoutePlanPanel(
                     MissingRegionsCard(missing, state.missingDownload, strings, preferUkrainian, onDownloadMissing)
                     return@Column
                 }
-                val key =
-                    when (state.failure) {
-                        RoutePlanFailure.PackMissing -> PACK_MISSING_KEY
-                        RoutePlanFailure.PackUnusable -> PACK_UNUSABLE_KEY
-                        RoutePlanFailure.EngineUnavailable -> ENGINE_UNAVAILABLE_KEY
-                        RoutePlanFailure.NoRoute, RoutePlanFailure.RegionsMissing, null -> FAILED_KEY
-                    }
-                StatusLine(strings.resolve(key), strings.resolve(key))
+                val text = routePlanFailureText(state, strings)
+                StatusLine(text, text)
             }
 
             RoutePlanStatus.Ready -> {
@@ -734,6 +728,7 @@ private const val PICK_START_KEY = "route_planner_pick_start"
 private const val PICK_DESTINATION_KEY = "route_planner_pick_destination"
 private const val PLANNING_KEY = "route_planner_planning"
 private const val FAILED_KEY = "route_planner_failed"
+private const val TOO_FAR_KEY = "route_planner_too_far"
 private const val PACK_MISSING_KEY = "route_planner_pack_missing"
 private const val PACK_UNUSABLE_KEY = "route_planner_pack_unusable"
 private const val ENGINE_UNAVAILABLE_KEY = "route_planner_engine_unavailable"
@@ -757,3 +752,41 @@ private const val NEXT_TURN_KEY = "route_planner_next_turn"
 private const val TURN_COUNTER_KEY = "route_planner_turn_counter"
 private const val RECENT_KEY = "route_planner_recent"
 private const val REUSE_KEY = "route_planner_reuse"
+
+/**
+ * The status line for a failed plan. A [RoutePlanFailure.TooFar] failure names
+ * the profile's limit. It falls back to the generic text when the state has no
+ * limit, so the line never shows a blank value.
+ */
+internal fun routePlanFailureText(
+    state: RoutePlanState,
+    strings: Strings,
+    locale: Locale = Locale.getDefault(),
+): String {
+    val limit = state.maxDistanceMeters
+    return when (state.failure) {
+        RoutePlanFailure.TooFar -> {
+            if (limit == null) {
+                strings.resolve(FAILED_KEY)
+            } else {
+                strings.resolve(TOO_FAR_KEY, listOf(distanceText(limit, strings, locale)))
+            }
+        }
+
+        RoutePlanFailure.PackMissing -> {
+            strings.resolve(PACK_MISSING_KEY)
+        }
+
+        RoutePlanFailure.PackUnusable -> {
+            strings.resolve(PACK_UNUSABLE_KEY)
+        }
+
+        RoutePlanFailure.EngineUnavailable -> {
+            strings.resolve(ENGINE_UNAVAILABLE_KEY)
+        }
+
+        RoutePlanFailure.NoRoute, RoutePlanFailure.RegionsMissing, null -> {
+            strings.resolve(FAILED_KEY)
+        }
+    }
+}

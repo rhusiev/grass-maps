@@ -468,6 +468,7 @@ class RoutePlanner(
                                 failure = if (missing == null) failure else RoutePlanFailure.RegionsMissing,
                                 missing = missing,
                                 missingDownload = null,
+                                maxDistanceMeters = (outcome.error as? AppError.TooFar)?.limitMeters,
                                 profilePreferences = profilePreferences,
                                 overridePreferences = snapshot.overridePreferences,
                             ),
@@ -804,6 +805,10 @@ class RoutePlanner(
             is AppError.PluginFailed,
             -> {
                 RoutePlanFailure.EngineUnavailable
+            }
+
+            is AppError.TooFar -> {
+                RoutePlanFailure.TooFar
             }
 
             else -> {

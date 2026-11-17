@@ -179,6 +179,25 @@ class RoutePlannerTest {
         }
 
     @Test
+    fun aTooFarRouteKeepsItsLimitAndAsksForNoDownload() =
+        runTest {
+            val planner =
+                RoutePlanner(
+                    { _, _ -> Outcome.Failure(AppError.TooFar(TOO_FAR_LIMIT_METERS)) },
+                    clock = clock(),
+                    profile = RouteProfile.Walk,
+                )
+
+            planner.setPoint(RoutePlanRole.Start, START)
+            planner.setPoint(RoutePlanRole.Destination, DESTINATION)
+
+            assertEquals(RoutePlanStatus.Failed, planner.state.value.status)
+            assertEquals(RoutePlanFailure.TooFar, planner.state.value.failure)
+            assertEquals(TOO_FAR_LIMIT_METERS, planner.state.value.maxDistanceMeters)
+            assertEquals(null, planner.state.value.missing)
+        }
+
+    @Test
     fun aRetryClearsTheFailureReason() =
         runTest {
             var fail = true
@@ -296,6 +315,7 @@ class RoutePlannerTest {
         const val PRIMARY_DISTANCE = 7_052.0
         const val ALTERNATIVE_DISTANCE = 8_131.0
         const val PRIMARY_DURATION = 1_482.0
+        const val TOO_FAR_LIMIT_METERS = 250_000.0
 
         val START = RoutePlanPoint(GeoPoint(49.8290, 23.9520), "Start")
         val DESTINATION = RoutePlanPoint(GeoPoint(49.8420, 24.0320), "Destination")

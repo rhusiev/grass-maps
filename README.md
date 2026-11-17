@@ -455,8 +455,9 @@ concurrency and cancellation. See `tools/pipeline/README.md`.
 `test-data/catalog/catalog.json` is the catalogue the T-0501 all-oblast build
 wrote, copied unchanged. `regions` reads it with the real catalogue parser and
 serves it from a loopback server to download all 25 oblasts; `plugins/downloads-ui`
-reads it through the same parser to check the screen's rows. The world entry and
-the 30 m elevation add-on that the catalogue does not carry yet are added by
+reads it through the same parser to check the screen's rows. The world entry,
+which `oblast_pipeline.py world` now produces (T-0502), and the 30 m elevation
+add-on that the catalogue does not carry yet are added by
 `CatalogFixture` in the plugin-api test fixtures, in the shape
 `design/server-protocol.md` section 2 declares.
 
@@ -812,7 +813,31 @@ reads their `contours` component. The map asks the app for one tile at a time
 (`MapTileSource` in `map`), and the first pack in region-id order that holds the
 tile serves it. Both packs come from one country build, so a tile on a border is
 present in both neighbours byte for byte. The second copy is therefore never
-requested, and a border label draws once. A source the app supplies tiles for is
+requested, and a border label draws once.
+The `world` pack (T-0502) is the one pack from another build: z0-z7 whole-world
+tiles, about 190 MB, a map-only package with no `features` component. It holds
+no z8+ tile and an oblast pack holds no z0-z7 tile, so the two never serve the
+same tile, and the style draws `world` layers up to z7 and `region` layers from
+z8. With an oblast installed the oblast draws at its zooms. With the world pack
+alone the map opens on a world camera (`MapSources.WORLD_CAMERA`, 49 N 31 E at
+z4), draws up to z7 and stays blank above that: there is no overzoom. The
+overview is 1.9x the 100 MB top of the planned 50-100 MB budget, on purpose.
+Its credit lines (OpenStreetMap contributors, Natural Earth, Protomaps schema)
+are in the manifest and the catalogue. The map's credit pill shows only a
+source's own `attribution`, and no vector source sets one, so these lines are
+not on screen yet. The `world` golden profile
+(`scripts/ci/android-map-goldens.sh --profile world --region-package DIR`) is
+local acceptance, like `oblast`, because the package is too large for CI. It
+captures latitude 65 at longitude 179.9 and -179.9, z4, to compare the
+antimeridian seam.
+The world's labels need glyph ranges the Latin, Cyrillic and Greek set in
+`app/src/main/assets/fonts` lacks. A range the app cannot read leaves the map
+without a full frame, so the debug harness never reports one and a golden
+capture stalls. T-0502 added the four ranges the Chukotka frames asked for
+(1536-1791, 11520-11775, 64256-64511 and 65024-65279) to the three stacks. The
+rest of the Protomaps range set is not vendored, so a label in another script
+draws without those characters.
+ A source the app supplies tiles for is
 never also written into the base style with a URI, so one tile is never loaded
 twice. `SourcePlan` in `map` holds that rule. The app path uses
 maplibre-compose's `CustomVectorTileSource`, so the device runs no tile server

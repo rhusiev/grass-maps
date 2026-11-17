@@ -9,6 +9,7 @@ first product asset lands.
 |---|---|---|
 | MapLibre Native | BSD-2-Clause | map renderer, reached through maplibre-compose; its copyright notice is in `NOTICE`. The engine draws its own logo in the bottom-left corner and the sources' attribution at the bottom end; the app keeps both visible and draws its own credit pill above the logo. The logo is optional under the licence, the source credits are not |
 | Protomaps basemaps | BSD-3-Clause | vector basemap schema and build tooling |
+| World overview pack (`world`, T-0502) | ODbL-1.0 (OpenStreetMap data); public domain (Natural Earth); BSD-3-Clause (Protomaps schema) | z0-z7 whole-world vector tiles, a `pmtiles extract --maxzoom=7` of the Protomaps daily build 20261116 (schema 4.15.2, planetiler 0.10.2). Not committed: `tools/pipeline/oblast_pipeline.py world` packages it, and its manifest and `catalog.json` carry the credit lines "© OpenStreetMap contributors (ODbL)", "Natural Earth (public domain)" and "Basemap schema © Protomaps". The app's credit pill shows only a source's own `attribution`, and the Standard vector sources set none, so the vector credit is not drawn on the map yet |
 | OpenStreetMap data | ODbL-1.0 | © OpenStreetMap contributors; region packs are derived data |
 | OpenStreetMap tile server (`tile.openstreetmap.org`) | ODbL-1.0 | Online raster tiles (T-0512), © OpenStreetMap contributors; view-only under the OSMF tile policy, and the preset refuses an offline bulk download |
 | Photon public geocoder (`photon.komoot.io`) | Apache-2.0 (service software); ODbL-1.0 (results) | Online place search (T-0212); used under the public instance's fair-use terms, results are © OpenStreetMap contributors, and the search screen names both |
@@ -18,6 +19,7 @@ first product asset lands.
 | `test-data/regions/fixture-mini` contours | Copernicus DEM GLO-30 terms | © DLR e.V. and © Airbus Defence and Space GmbH, provided under Copernicus by the EU and ESA |
 | `test-data/regions/fixture-mini` elevation grid | Copernicus DEM GLO-30 terms | © DLR e.V. and © Airbus Defence and Space GmbH, provided under Copernicus by the EU and ESA |
 | `test-data/map-goldens` screenshots | ODbL-1.0 / Copernicus DEM GLO-30 terms | Rendered captures of the `fixture-mini` map tiles and contours for the T-0102 fixture and T-0108 Standard style golden tests |
+| `test-data/map-goldens/world` screenshots | ODbL-1.0 / public domain (Natural Earth) | Rendered captures of the world overview pack at longitude 179.9 and -179.9 (T-0502) |
 | Noto fonts | SIL OFL 1.1 | map labels and UI text; `app/src/main/assets/fonts` uses the Protomaps basemaps-assets Noto Sans glyph PBFs |
 | `app/src/main/assets/sprites` Standard sprite | Apache-2.0 | one single-colour SDF sheet shared by the light and dark Standard variants; of its 57 glyphs, 37 are Google Material Symbols Rounded, 2 are Osmic, and 18 are route-relation OSMC plates and shapes authored here; the vendored glyphs are unmodified, and the 15 shield frames are authored here. The per-icon source, licence, commit and sha256 are listed below |
 | valhalla-mobile | MIT | Android/iOS wrapper around the Valhalla engine, used by `plugins/valhalla` |

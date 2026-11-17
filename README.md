@@ -3657,9 +3657,14 @@ enforces the unmetered-network constraint itself. The job is `persisted`
 (`RECEIVE_BOOT_COMPLETED`) and requires an unmetered network under `WIFI_ONLY`.
 `AutoUpdateJobService` runs the window. The notification in channel
 `map_updates` reads "N maps updated" or "N map updates wait for Wi-Fi", and says
-that the maps apply the next time the app starts. A queued update outlives the
-job: `DownloadService` keeps the process alive while the transfer runs. The
-check does not run while the process is dead and no wake-up arrives, for example
+that the maps apply the next time the app starts. The job ends only when the
+queued update installs or waits for Wi-Fi, because a background start of
+`DownloadService` is refused on Android 12 and later and nothing else keeps the
+process alive. When the system stops the job first, `onStopJob` asks for a
+reschedule, and the partial download resumes with a Range request at the next
+window. Turning automatic updates off cancels the transfers `AutoUpdater`
+queued and withdraws its notice. A transfer the user started stays. The check
+does not run while the process is dead and no wake-up arrives, for example
 after a force stop.
 
 `app` constructs `RegionStore` over its private region root, passes it to

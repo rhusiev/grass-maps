@@ -10,6 +10,7 @@ record.
 import importlib.util
 import json
 import re
+import struct
 import tempfile
 import unittest
 from pathlib import Path
@@ -383,6 +384,105 @@ class AddonTest(unittest.TestCase):
         pipeline.write_addon_manifest(self.spec, self.boundaries)
         with self.assertRaises(SystemExit):
             pipeline.write_catalog(self.root, write_catalog_spec(self.root))
+
+
+def pmtiles_header(min_zoom=0, max_zoom=7, tile_type=1, bounds=(-180.0, -85.0511287798, 180.0, 85.0511287798)) -> bytes:
+    """A PMTiles v3 header with the fields the world packager reads."""
+    raw = bytearray(pipeline.PMTILES_HEADER_BYTES)
+    raw[:7] = b"PMTiles"
+    raw[7] = 3
+    raw[99] = tile_type
+    raw[100] = min_zoom
+    raw[101] = max_zoom
+    raw[102:118] = struct.pack("<4i", *(round(value * 10_000_000) for value in bounds))
+    return bytes(raw)
+
+
+
+class WorldPackageTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self._temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._temp.cleanup)
+        self.root = Path(self._temp.name)
+        self.source = self.root / "world-z7.pmtiles"
+        self.source.write_bytes(pmtiles_header() + b"tiles")
+        self.out = self.root / "out"
+        self.spec = {
+            "pmtiles": self.source,
+            "out": self.out,
+            "version": "2026-11-16",
+            "osmTimestamp": "2026-11-16T04:00:00Z",
+            "mapArchive": "protomaps 20261116",
+            "mapSha256": "f" * 64,
+            "schema": "protomaps basemap 4.15.2",
+            "tool": "oblast_pipeline.py world",
+        }
+
+    def test_package_has_one_map_component_and_a_world_outline(self) -> None:
+        manifest = pipeline.write_world_package(self.spec)
+        (entry,) = manifest["components"]
+        self.assertEqual(entry["kind"], "map")
+        self.assertEqual(entry["zoomLevels"], [0, 7])
+        self.assertEqual(entry["bytes"], self.source.stat().st_size)
+        written = json.loads((self.out / "world" / "2026-11-16" / "manifest.json").read_text())
+        self.assertEqual(written["region"], "world")
+        self.assertEqual(written["pipeline"]["bbox"], pipeline.WORLD_BBOX)
+        self.assertIn("Natural Earth (public domain)", written["pipeline"]["mapSource"]["attribution"])
+        outline = json.loads((self.out / "outlines" / "world.geojson").read_text())
+        self.assertEqual(outline["features"][0]["geometry"]["type"], "Polygon")
+
+    def test_an_archive_of_another_zoom_range_is_refused(self) -> None:
+        self.source.write_bytes(pmtiles_header(min_zoom=8, max_zoom=14))
+        with self.assertRaises(SystemExit):
+            pipeline.write_world_package(self.spec)
+
+    def test_a_raster_archive_is_refused(self) -> None:
+        self.source.write_bytes(pmtiles_header(tile_type=2))
+        with self.assertRaises(SystemExit):
+            pipeline.write_world_package(self.spec)
+
+    def test_a_file_that_is_not_pmtiles_is_refused(self) -> None:
+        self.source.write_bytes(b"x" * pipeline.PMTILES_HEADER_BYTES)
+        with self.assertRaises(SystemExit):
+            pipeline.write_world_package(self.spec)
+
+    def test_catalog_entry_is_a_world_region_without_a_parent(self) -> None:
+        pipeline.write_world_package(self.spec)
+        entry = pipeline.world_catalog_entry(self.out)
+        self.assertEqual(entry["kind"], "world")
+        self.assertNotIn("parent", entry)
+        self.assertEqual(entry["outline"], "outlines/world.geojson")
+        self.assertEqual(entry["parts"], [{"kind": "map", "version": "2026-11-16", "size_bytes": entry["size_bytes"]}])
+        self.assertEqual(entry["name"]["en"], "World overview")
+
+    def test_world_catalog_replaces_its_own_entry_and_keeps_the_oblasts(self) -> None:
+        pipeline.write_world_package(self.spec)
+        (self.out / "catalog.json").write_text(
+            json.dumps(
+                {
+                    "format": 1,
+                    "attribution": ["© OpenStreetMap contributors"],
+                    "regions": [{"id": "ua-46", "kind": "region"}, {"id": "world", "version": "old"}],
+                }
+            )
+        )
+        catalog = pipeline.write_world_catalog(self.out)
+        self.assertEqual([region["id"] for region in catalog["regions"]], ["ua-46", "world"])
+        self.assertEqual(catalog["regions"][1]["version"], "2026-11-16")
+        self.assertEqual(
+            catalog["attribution"],
+            ["© OpenStreetMap contributors", "Natural Earth (public domain)", "Basemap schema © Protomaps"],
+        )
+
+    def test_an_oblast_catalog_rebuild_keeps_the_world_entry(self) -> None:
+        catalog_test = CatalogTest("test_catalog_groups_the_search_section_and_sums_the_size")
+        catalog_test.setUp()
+        self.addCleanup(catalog_test.doCleanups)
+        self.spec["out"] = catalog_test.root
+        pipeline.write_world_package(self.spec)
+        catalog = pipeline.write_catalog(catalog_test.root, catalog_test.spec)
+        self.assertEqual([region["id"] for region in catalog["regions"]], ["ua-46", "world"])
+        self.assertIn("Natural Earth (public domain)", catalog["attribution"])
 
 
 class MetricsTest(unittest.TestCase):

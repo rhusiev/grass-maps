@@ -12,6 +12,7 @@ Subcommands:
     manifest    one finished pack directory -> manifest.json
     addon-manifest  one finished 30 m elevation add-on directory -> manifest.json
     catalog     every region manifest under a root -> catalog.json
+    world       the z0-z7 world overview archive -> package, outline, catalog
     metrics     one record per built oblast -> metrics.json
     run         run one build stage, measuring wall time and peak RSS
 
@@ -28,6 +29,7 @@ import os
 import pathlib
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -76,6 +78,31 @@ ATTRIBUTION = [
     "© OpenStreetMap contributors",
     "Copernicus DEM GLO-30 © European Union, ESA",
 ]
+WORLD_ATTRIBUTION = [
+    "Natural Earth (public domain)",
+    "Basemap schema © Protomaps",
+]
+
+WORLD_REGION = "world"
+WORLD_KIND = "world"
+WORLD_NAME = {"en": "World overview", "uk": "Огляд світу"}
+WORLD_MAP_FILE = "map.pmtiles"
+WORLD_MIN_ZOOM = 0
+WORLD_MAX_ZOOM = 7
+# Web Mercator stops at this latitude, the edge of the Protomaps world tiles.
+WORLD_MAX_LATITUDE = 85.0511287798
+WORLD_BBOX = [-180.0, -WORLD_MAX_LATITUDE, 180.0, WORLD_MAX_LATITUDE]
+WORLD_EXTRACTION = "pmtiles extract --maxzoom=7 <protomaps daily build>"
+
+PMTILES_MAGIC = b"PMTiles"
+PMTILES_VERSION = 3
+PMTILES_HEADER_BYTES = 127
+PMTILES_TILE_TYPE_MVT = 1
+PMTILES_COORDINATE_SCALE = 10_000_000
+PMTILES_TILE_TYPE_OFFSET = 99
+PMTILES_MIN_ZOOM_OFFSET = 100
+PMTILES_MAX_ZOOM_OFFSET = 101
+PMTILES_BOUNDS_OFFSET = 102
 
 OTHER_TAGS_PAIR = re.compile(r'"((?:[^"\\]|\\.)*)"=>"((?:[^"\\]|\\.)*)"')
 OSM_ID_KEY = "osm_id"
@@ -635,10 +662,13 @@ def write_catalog(root: pathlib.Path, spec: dict) -> dict:
             region_entry["addons"] = matching
     if addons:
         raise SystemExit(f"catalog: add-on without its region package: {sorted(addons)}")
+    world = world_catalog_entry(root)
+    if world is not None:
+        regions.append(world)
     catalog = {
         "format": CATALOG_FORMAT,
         "generated": spec["generated"],
-        "attribution": ATTRIBUTION,
+        "attribution": ATTRIBUTION + (WORLD_ATTRIBUTION if world is not None else []),
         "build": {
             "version": spec["version"],
             "osmTimestamp": spec["osmTimestamp"],
@@ -654,6 +684,128 @@ def write_catalog(root: pathlib.Path, spec: dict) -> dict:
         "regions": regions,
     }
     (root / "catalog.json").write_text(json.dumps(catalog, indent=2, ensure_ascii=False) + "\n")
+    return catalog
+
+
+def read_pmtiles_header(path: pathlib.Path) -> dict:
+    """Zoom range, bounds and tile type from a PMTiles v3 header."""
+    with open(path, "rb") as handle:
+        raw = handle.read(PMTILES_HEADER_BYTES)
+    if len(raw) < PMTILES_HEADER_BYTES or raw[: len(PMTILES_MAGIC)] != PMTILES_MAGIC:
+        raise SystemExit(f"world: {path} is not a PMTiles archive")
+    if raw[len(PMTILES_MAGIC)] != PMTILES_VERSION:
+        raise SystemExit(f"world: {path} is not PMTiles version {PMTILES_VERSION}")
+    west, south, east, north = (
+        int.from_bytes(raw[PMTILES_BOUNDS_OFFSET + 4 * index : PMTILES_BOUNDS_OFFSET + 4 * index + 4], "little", signed=True)
+        / PMTILES_COORDINATE_SCALE
+        for index in range(4)
+    )
+    return {
+        "tileType": raw[PMTILES_TILE_TYPE_OFFSET],
+        "minZoom": raw[PMTILES_MIN_ZOOM_OFFSET],
+        "maxZoom": raw[PMTILES_MAX_ZOOM_OFFSET],
+        "bbox": [west, south, east, north],
+    }
+
+
+def world_outline() -> dict:
+    """The whole-world footprint as one GeoJSON polygon, counter-clockwise."""
+    west, south, east, north = WORLD_BBOX
+    ring = [[west, south], [east, south], [east, north], [west, north], [west, south]]
+    return {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {"id": WORLD_REGION},
+                "geometry": {"type": "Polygon", "coordinates": [ring]},
+            }
+        ],
+    }
+
+
+def write_world_package(spec: dict) -> dict:
+    """Package the z0-z7 world archive as region `world`, like an oblast pack.
+
+    Writes `<root>/world/<version>/{map.pmtiles,manifest.json}` and
+    `<root>/outlines/world.geojson`. The archive is hard-linked when the
+    filesystem allows it and copied otherwise.
+    """
+    source = pathlib.Path(spec["pmtiles"])
+    header = read_pmtiles_header(source)
+    if header["tileType"] != PMTILES_TILE_TYPE_MVT:
+        raise SystemExit("world: the archive does not hold vector tiles")
+    if (header["minZoom"], header["maxZoom"]) != (WORLD_MIN_ZOOM, WORLD_MAX_ZOOM):
+        raise SystemExit(
+            f"world: the archive covers z{header['minZoom']}-{header['maxZoom']}, "
+            f"not z{WORLD_MIN_ZOOM}-{WORLD_MAX_ZOOM}"
+        )
+    root = pathlib.Path(spec["out"])
+    pack = root / WORLD_REGION / spec["version"]
+    pack.mkdir(parents=True, exist_ok=True)
+    target = pack / WORLD_MAP_FILE
+    target.unlink(missing_ok=True)
+    try:
+        os.link(source, target)
+    except OSError:
+        shutil.copyfile(source, target)
+    entry = component("map", WORLD_MAP_FILE, "pmtiles", 3, spec["version"], pack, [WORLD_MIN_ZOOM, WORLD_MAX_ZOOM])
+    manifest = {
+        "region": WORLD_REGION,
+        "version": spec["version"],
+        "packageFormat": PACKAGE_FORMAT,
+        "osmTimestamp": spec["osmTimestamp"],
+        "pipeline": {
+            "tool": spec["tool"],
+            "footprint": "world overview, z0-z7",
+            "bbox": WORLD_BBOX,
+            "mapSource": {
+                "archive": spec["mapArchive"],
+                "sha256": spec["mapSha256"],
+                "extraction": WORLD_EXTRACTION,
+                "schema": spec["schema"],
+                "attribution": ATTRIBUTION[:1] + WORLD_ATTRIBUTION,
+            },
+        },
+        "components": [entry],
+    }
+    (pack / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
+    outlines = root / "outlines"
+    outlines.mkdir(exist_ok=True)
+    (outlines / f"{WORLD_REGION}.geojson").write_text(json.dumps(world_outline()) + "\n")
+    return manifest
+
+
+def world_catalog_entry(root: pathlib.Path) -> dict | None:
+    """The catalog entry for the newest world package under root, if any."""
+    manifests = sorted(root.glob(f"{WORLD_REGION}/*/manifest.json"))
+    if not manifests:
+        return None
+    manifest = json.loads(manifests[-1].read_text())
+    return {
+        "id": WORLD_REGION,
+        "name": WORLD_NAME,
+        "kind": WORLD_KIND,
+        "bbox": manifest["pipeline"]["bbox"],
+        "outline": f"outlines/{WORLD_REGION}.geojson",
+        "version": manifest["version"],
+        "size_bytes": sum(entry["bytes"] for entry in manifest["components"]),
+        "parts": [
+            {"kind": "map", "version": manifest["version"], "size_bytes": sum(entry["bytes"] for entry in manifest["components"])}
+        ],
+    }
+
+
+def write_world_catalog(root: pathlib.Path) -> dict:
+    """Add or replace the world entry in an existing catalog.json."""
+    path = root / "catalog.json"
+    catalog = json.loads(path.read_text())
+    entry = world_catalog_entry(root)
+    if entry is None:
+        raise SystemExit(f"world: no world package under {root}")
+    catalog["regions"] = [region for region in catalog["regions"] if region["id"] != WORLD_REGION] + [entry]
+    catalog["attribution"] = list(dict.fromkeys(catalog["attribution"] + WORLD_ATTRIBUTION))
+    path.write_text(json.dumps(catalog, indent=2, ensure_ascii=False) + "\n")
     return catalog
 
 
@@ -829,6 +981,15 @@ def main(argv: list[str] | None = None) -> int:
     catalog.add_argument("--root", required=True, type=pathlib.Path)
     catalog.add_argument("--spec", required=True, type=pathlib.Path)
 
+    world = subparsers.add_parser("world", help="package the z0-z7 world archive as region `world`")
+    world.add_argument("--pmtiles", required=True, type=pathlib.Path)
+    world.add_argument("--out", required=True, type=pathlib.Path)
+    world.add_argument("--version", required=True)
+    world.add_argument("--osm-timestamp", required=True)
+    world.add_argument("--map-archive", required=True, help="name of the source build, for the manifest")
+    world.add_argument("--schema", required=True, help="basemap schema and version of the source build")
+    world.add_argument("--tool", default="oblast_pipeline.py world")
+
     metrics = subparsers.add_parser("metrics", help="record one built oblast in metrics.json")
     metrics.add_argument("--file", required=True, type=pathlib.Path)
     metrics.add_argument("--manifest", required=True, type=pathlib.Path)
@@ -875,6 +1036,24 @@ def main(argv: list[str] | None = None) -> int:
         spec = json.loads(args.spec.read_text())
         catalog = write_catalog(args.root, spec)
         print(f"catalog: {len(catalog['regions'])} regions in {args.root / 'catalog.json'}")
+        return 0
+    if args.command == "world":
+        spec = {
+            "pmtiles": args.pmtiles,
+            "out": args.out,
+            "version": args.version,
+            "osmTimestamp": args.osm_timestamp,
+            "mapArchive": args.map_archive,
+            "mapSha256": _sha256(args.pmtiles),
+            "schema": args.schema,
+            "tool": args.tool,
+        }
+        manifest = write_world_package(spec)
+        size = manifest["components"][0]["bytes"]
+        print(f"world: {args.version}, {size} bytes in {args.out / WORLD_REGION / args.version}")
+        if (args.out / "catalog.json").is_file():
+            write_world_catalog(args.out)
+            print(f"world: catalog entry written to {args.out / 'catalog.json'}")
         return 0
     if args.command == "metrics":
         manifest = json.loads(args.manifest.read_text())

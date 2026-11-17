@@ -512,6 +512,38 @@ inherit that, so a coastline has no sea polygon behind it. Every manifest and
 the catalog record the stub state; replacing it means rebuilding the country
 map archive, not the oblast packages.
 
+### World overview (T-0502)
+
+`oblast_pipeline.py world` packages a z0-z7 whole-world PMTiles archive as
+region `world`, in the same layout as an oblast: `<out>/world/<version>/` with
+`map.pmtiles` and `manifest.json`, `<out>/outlines/world.geojson`, and a
+`world` entry in `<out>/catalog.json` (kind `world`, no parent, one `map`
+part). The package is map-only. Its manifest has no `features` component, which
+`RegionManifestParser` accepts when no `search-*` component exists.
+
+```
+agent-lock run gm-data --timeout 20m -- nice -n 15 ionice -c3 \
+  python3 -I tools/pipeline/oblast_pipeline.py world \
+    --pmtiles /hdd/t-0502-world/world-z7.pmtiles --out /hdd/t-0502-world/out \
+    --version 2026-11-16 --osm-timestamp 2026-11-16T04:00:00Z \
+    --map-archive "protomaps-basemap-20261116 (pmtiles extract --maxzoom=7)" \
+    --schema "protomaps basemap 4.15.2, planetiler 0.10.2"
+```
+
+The command reads the PMTiles header and refuses an archive that is not vector
+tiles or does not span exactly z0-z7. It hard-links the archive into the
+package (a copy on another file system), so the 190 MB file is not duplicated.
+`write_catalog` keeps an existing world entry, so an oblast rebuild into the
+same output directory does not drop it.
+
+Measured: `world-z7.pmtiles` is 189,868,812 B, sha256 `539a1623...`. The input
+is a Protomaps daily build 20261116 extract (schema 4.15.2, planetiler 0.10.2,
+replication time 2026-11-16T04:00:00Z). The package is the same bytes under the
+`map` component. The size is over the 50-100 MB design budget on purpose (user
+decision for T-0502). Attribution: OpenStreetMap contributors (ODbL), Natural
+Earth (public domain) and the Protomaps basemap schema. The pipeline does not
+upload anything: `server/publish-packs.py` zips the directory.
+
 ### Measured all-oblast build (T-0501)
 
 Conditions: 8 cores, 31 GB RAM, outputs under `/hdd`, `gm-data`, the

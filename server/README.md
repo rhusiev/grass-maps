@@ -34,6 +34,11 @@ after it is published.
 and checks against the manifest. The pipeline writes a directory per version,
 so `publish-packs.py` builds the archive from it.
 
+The `world` region (T-0502, `oblast_pipeline.py world`) is published the same
+way: it is one more region directory with a `map` part and kind `world` in the
+catalogue, about 190 MB, so a `Range` resume matters more for it than for an
+oblast.
+
 ## Configuration
 
 All settings are environment variables. Put them in `.env` (see `.env.example`).

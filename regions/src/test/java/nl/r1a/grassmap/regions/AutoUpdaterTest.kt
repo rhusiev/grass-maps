@@ -89,7 +89,12 @@ class AutoUpdaterTest {
             updater.announce(run as AutoUpdateRun.Queued)
             assertEquals(before + 1, catalogRequests.get())
             assertEquals(listOf<AutoUpdateNotice>(AutoUpdateNotice.Installed(1)), notices)
-            assertEquals(NEW_VERSION, store.data.value.installed(CatalogFixture.LVIV)?.version)
+            assertEquals(
+                NEW_VERSION,
+                store.data.value
+                    .installed(CatalogFixture.LVIV)
+                    ?.version,
+            )
             assertEquals(clock.millis(), ledger.load().lastCheckMs)
         }
 

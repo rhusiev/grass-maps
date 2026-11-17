@@ -647,14 +647,22 @@ private fun StyleLayerNode(
 
         LayerType.Raster -> {
             val raster = layer.raster ?: return
+            val packFile = raster.packFile
             val tileSource =
-                rememberRasterTileSource(
-                    tiles = raster.tiles,
-                    tileSize = raster.tileSize,
-                ) {
-                    minZoom = raster.minZoom
-                    maxZoom = raster.maxZoom
-                    attributionHtml = raster.attributionHtml
+                if (packFile != null) {
+                    rememberRasterTileSource(
+                        uri = "pmtiles://file://$packFile",
+                        tileSize = raster.tileSize,
+                    )
+                } else {
+                    rememberRasterTileSource(
+                        tiles = raster.tiles,
+                        tileSize = raster.tileSize,
+                    ) {
+                        minZoom = raster.minZoom
+                        maxZoom = raster.maxZoom
+                        attributionHtml = raster.attributionHtml
+                    }
                 }
             RasterLayer(
                 id = layer.id,

@@ -158,8 +158,11 @@ internal object StyleLayerCompiler {
         if (spec.filter != null) {
             throw StyleCompileException("Raster layer ${spec.id} cannot have a filter")
         }
-        if (raster.tiles.isEmpty()) {
-            throw StyleCompileException("Raster layer ${spec.id} has no tile URL")
+        if ((raster.tiles.isEmpty()) == (raster.packFile == null)) {
+            throw StyleCompileException("Raster layer ${spec.id} needs tile URLs or a pack file, not both or neither")
+        }
+        if (raster.packFile?.startsWith("/") == false) {
+            throw StyleCompileException("Raster layer ${spec.id} has a pack file that is not an absolute path")
         }
         if (raster.tileSize !in MIN_TILE_SIZE..MAX_TILE_SIZE) {
             throw StyleCompileException("Raster layer ${spec.id} has tile size ${raster.tileSize}")

@@ -122,15 +122,20 @@ enum class LayerSlot {
  * whose licence asks for one. The engine fetches these URLs only through the
  * host's network gate (map module), not around it.
  *
+ * An offline area (T-0513) sets [packFile] instead of [tiles]: the absolute
+ * path of an installed `raster.pmtiles`. Exactly one of the two is set. The
+ * engine reads the file and opens no socket for it.
+ *
  * The source carries no transparency: a layer sets the `raster-opacity` paint
  * property instead, which is the style property the renderer applies (T-0514).
  */
 data class RasterSourceSpec(
-    val tiles: List<String>,
+    val tiles: List<String> = emptyList(),
     val tileSize: Int = 256,
     val minZoom: Int = 0,
     val maxZoom: Int = 24,
     val attributionHtml: String? = null,
+    val packFile: String? = null,
 )
 
 /**

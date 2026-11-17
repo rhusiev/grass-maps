@@ -25,6 +25,26 @@ class StyleLayerCompilerRasterTest {
     }
 
     @Test
+    fun anOfflineAreaCompilesFromItsPackFile() {
+        val compiled = StyleLayerCompiler.compile(layer(raster = pack("/data/raster.pmtiles")))
+
+        assertEquals("/data/raster.pmtiles", compiled.raster?.packFile)
+    }
+
+    @Test
+    fun aPackFileMustBeAnAbsolutePathAndExcludeTileUrls() {
+        assertThrows(StyleCompileException::class.java) {
+            compileRaster(pack("raster.pmtiles"))
+        }
+        assertThrows(StyleCompileException::class.java) {
+            compileRaster(pack("/data/raster.pmtiles").copy(tiles = listOf(template)))
+        }
+        assertThrows(StyleCompileException::class.java) {
+            compileRaster(pack(null))
+        }
+    }
+
+    @Test
     fun aRasterLayerWithoutASourceIsRejected() {
         assertThrows(StyleCompileException::class.java) {
             StyleLayerCompiler.compile(layer(raster = null))
@@ -103,6 +123,10 @@ class StyleLayerCompilerRasterTest {
             raster = raster,
             paint = paint,
         )
+
+    private fun compileRaster(raster: RasterSourceSpec) = StyleLayerCompiler.compile(layer(raster = raster))
+
+    private fun pack(file: String?): RasterSourceSpec = RasterSourceSpec(packFile = file, maxZoom = 14)
 
     private fun source(
         tiles: List<String> = listOf(template),

@@ -322,6 +322,15 @@ class WorldPositionsTest(unittest.TestCase):
 
     def test_the_profile_installs_a_region_package(self) -> None:
         self.assertIn("world", map_goldens.REGION_PACKAGE_PROFILES)
+
+    def test_the_profile_refuses_an_oblast_package(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            (Path(temp) / "manifest.json").write_text(json.dumps({"region": "ua-46"}))
+            with self.assertRaises(map_goldens.GoldenError):
+                map_goldens.require_profile_region("world", Path(temp))
+            map_goldens.require_profile_region("oblast", Path(temp))
+            (Path(temp) / "manifest.json").write_text(json.dumps({"region": "world"}))
+            map_goldens.require_profile_region("world", Path(temp))
         self.assertIn("oblast", map_goldens.REGION_PACKAGE_PROFILES)
         self.assertNotIn("standard", map_goldens.REGION_PACKAGE_PROFILES)
 

@@ -213,7 +213,8 @@ POSITIONS = {
 
 # The profiles that draw from an installed region package rather than the
 # bundled fixture. Their capture needs --region-package and writes region.json.
-REGION_PACKAGE_PROFILES = frozenset({"oblast", "world"})
+WORLD_PROFILE = "world"
+REGION_PACKAGE_PROFILES = frozenset({"oblast", WORLD_PROFILE})
 
 # T-0311: the same fixed route on the Standard fixture, at a driving overview
 # zoom and at a walking zoom. The route and its turn maneuvers are committed so
@@ -643,6 +644,18 @@ def resolve_package_path(source: Path) -> Path:
     raise GoldenError(
         f"{source} is neither a package with manifest.json nor a region root with one version"
     )
+
+
+def require_profile_region(profile: str, package: Path) -> None:
+    """Refuse a package whose region is not the one the profile photographs."""
+    if profile != WORLD_PROFILE:
+        return
+    manifest = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("region") != WORLD_PROFILE:
+        raise GoldenError(
+            f"the {profile} profile needs the {WORLD_PROFILE} package, not "
+            f"{manifest.get('region')!r} ({package})"
+        )
 
 
 def install_region_package(
@@ -1882,6 +1895,7 @@ def main() -> int:
                 if not args.region_package:
                     raise GoldenError(f"{args.profile} capture requires --region-package")
                 package = resolve_package_path(Path(args.region_package))
+                require_profile_region(args.profile, package)
                 metadata = install_region_package(adb, package)
                 (output / "region.json").parent.mkdir(parents=True, exist_ok=True)
                 (output / "region.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")

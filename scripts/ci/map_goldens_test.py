@@ -306,6 +306,26 @@ class RasterPositionsTest(unittest.TestCase):
         self.assertNotIn("raster-overlay-40", names)
 
 
+class WorldPositionsTest(unittest.TestCase):
+    """The two T-0502 positions that face each other across the antimeridian."""
+
+    def test_the_profile_is_one_latitude_and_zoom_on_both_sides(self) -> None:
+        east, west = map_goldens.POSITIONS["world"]
+
+        self.assertEqual(179.9, east[2])
+        self.assertEqual(-179.9, west[2])
+        self.assertEqual((east[1], east[3:]), (west[1], west[3:]))
+
+    def test_the_zoom_is_inside_the_overview(self) -> None:
+        for _, _, _, zoom, _, _ in map_goldens.POSITIONS["world"]:
+            self.assertLessEqual(zoom, 7.0)
+
+    def test_the_profile_installs_a_region_package(self) -> None:
+        self.assertIn("world", map_goldens.REGION_PACKAGE_PROFILES)
+        self.assertIn("oblast", map_goldens.REGION_PACKAGE_PROFILES)
+        self.assertNotIn("standard", map_goldens.REGION_PACKAGE_PROFILES)
+
+
 class RasterTileFixtureTest(unittest.TestCase):
     """The committed tiles the loopback server answers from."""
 

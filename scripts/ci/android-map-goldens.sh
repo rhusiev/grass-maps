@@ -6,6 +6,8 @@
 # T-0015 fixture asset, no region package and no archive. The oblast profile is
 # local acceptance: pass --region-package with an installed T-0015-shaped
 # package built from the bench archives. The 59 MB archive never enters CI.
+# The world profile (T-0502) is the same kind of run with only the 190 MB world
+# overview installed: it captures both sides of the antimeridian at one zoom.
 #
 # On this machine the script re-executes under the `gm-emulator` slot and boots
 # the AVD when no device is attached. CI boots its own emulator.
@@ -19,6 +21,8 @@
 #   ./scripts/ci/android-map-goldens.sh --profile oblast \
 #       --region-package /hdd/t-0102-evidence/region/ua-46/2026-11-05-bench \
 #       --output /hdd/t-0102-evidence/oblast [APK]
+#   ./scripts/ci/android-map-goldens.sh --profile world \
+#       --region-package /hdd/t-0502-world/out/world/2026-11-16 [--update] [APK]
 #
 # The fixture, standard, touring and raster profiles run with contours off, which keeps
 # their existing references valid; the contours profile runs with the fixture's
@@ -86,7 +90,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -n "$PROFILE" ]] || {
-    echo "android-map-goldens.sh: --profile standard|touring|contours|fixture|raster|oblast is required" >&2
+    echo "android-map-goldens.sh: --profile standard|touring|contours|fixture|raster|oblast|world is required" >&2
     exit 2
 }
 if [[ "$PROFILE" == "standard" || "$PROFILE" == "contours" ]]; then
@@ -114,8 +118,8 @@ case "$STYLE" in
         exit 2
         ;;
 esac
-if [[ "$PROFILE" == "oblast" && -z "$REGION_PACKAGE" ]]; then
-    echo "android-map-goldens.sh: oblast capture needs --region-package DIR" >&2
+if [[ ( "$PROFILE" == "oblast" || "$PROFILE" == "world" ) && -z "$REGION_PACKAGE" ]]; then
+    echo "android-map-goldens.sh: $PROFILE capture needs --region-package DIR" >&2
     exit 2
 fi
 if [[ "$PROFILE" == "oblast" ]]; then

@@ -202,7 +202,18 @@ POSITIONS = {
         ("zhovkva-z13", 50.0560, 23.9710, 13.0, 0.0, 0.0),
         ("skole-z12", 49.0380, 23.5130, 12.0, 0.0, 0.0),
     ),
+    # T-0502: the world overview alone, on both sides of the antimeridian at
+    # one latitude and zoom. Chukotka and Alaska sit at 65 N, so the two
+    # frames show the same coast and their shared edge is the seam to compare.
+    "world": (
+        ("antimeridian-east-z4", 65.0, 179.9, 4.0, 0.0, 0.0),
+        ("antimeridian-west-z4", 65.0, -179.9, 4.0, 0.0, 0.0),
+    ),
 }
+
+# The profiles that draw from an installed region package rather than the
+# bundled fixture. Their capture needs --region-package and writes region.json.
+REGION_PACKAGE_PROFILES = frozenset({"oblast", "world"})
 
 # T-0311: the same fixed route on the Standard fixture, at a driving overview
 # zoom and at a walking zoom. The route and its turn maneuvers are committed so
@@ -1285,8 +1296,8 @@ def capture(
     positions: tuple[tuple[str, float, float, float, float, float], ...] | None = None,
     raster_tiles: RasterTileServer | None = None,
 ) -> dict[str, object]:
-    if profile == "oblast" and not (output / "region.json").exists():
-        raise GoldenError("oblast capture needs the installed region package")
+    if profile in REGION_PACKAGE_PROFILES and not (output / "region.json").exists():
+        raise GoldenError(f"{profile} capture needs the installed region package")
     conditions = {
         "radios": radio_conditions(adb, raster_tiles),
         "system_dialogs": prepare_device(adb),
@@ -1867,9 +1878,9 @@ def main() -> int:
                     raise
             if not args.keep_data:
                 clear_app_data(adb)
-            if args.profile == "oblast":
+            if args.profile in REGION_PACKAGE_PROFILES:
                 if not args.region_package:
-                    raise GoldenError("oblast capture requires --region-package")
+                    raise GoldenError(f"{args.profile} capture requires --region-package")
                 package = resolve_package_path(Path(args.region_package))
                 metadata = install_region_package(adb, package)
                 (output / "region.json").parent.mkdir(parents=True, exist_ok=True)

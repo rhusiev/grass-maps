@@ -52,6 +52,19 @@ object MapCredits {
         "© <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors"
     const val COPERNICUS_DEM: String =
         "© DLR e.V. and © Airbus Defence and Space GmbH, provided under Copernicus by the EU and ESA"
+
+    /** The prefix every EOX credit starts with. The overlay keys its short form on it. */
+    const val EOX_NAME: String = "EOxCloudless"
+
+    /** EOX's required credit for the Sentinel-2 cloudless 2016 layer, word for word. */
+    const val EOX_2016: String =
+        "EOxCloudless <a href=\"https://cloudless.eox.at\">https://cloudless.eox.at</a> by EOX IT Services GmbH " +
+            "(Contains modified Copernicus Sentinel data 2016 &amp; 2017)"
+
+    /** EOX's required credit for the Sentinel-2 cloudless 2018 layer, word for word. */
+    const val EOX_2018: String =
+        "EOxCloudless <a href=\"https://cloudless.eox.at\">https://cloudless.eox.at</a> by EOX IT Services GmbH " +
+            "(Contains modified Copernicus Sentinel data 2017 &amp; 2018)"
 }
 
 enum class SourceKind {

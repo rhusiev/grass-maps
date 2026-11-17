@@ -30,8 +30,9 @@ import org.maplibre.compose.overlay.attributions
  * The credits to draw: those of the style's sources, which an app-supplied
  * vector source cannot hand to the engine, then the engine's own (raster
  * sources). An engine credit that names OpenStreetMap becomes the one
- * [MapCredits.OPENSTREETMAP] entry, and one that names Copernicus or GLO-30
- * becomes [MapCredits.COPERNICUS_DEM]. A credit several sources share is drawn
+ * [MapCredits.OPENSTREETMAP] entry, and one that names the Copernicus DEM or GLO-30
+ * becomes [MapCredits.COPERNICUS_DEM]. An EOX credit stays whole: it names
+ * "Copernicus Sentinel data", which is not the DEM. A credit several sources share is drawn
  * once.
  */
 internal fun mergeCredits(
@@ -46,6 +47,7 @@ internal fun mergeCredits(
 
 internal fun normaliseCredit(credit: String): String =
     when {
+        credit.contains(MapCredits.EOX_NAME) -> credit
         credit.contains(OPENSTREETMAP_NAME, ignoreCase = true) -> MapCredits.OPENSTREETMAP
         COPERNICUS_NAMES.any { credit.contains(it, ignoreCase = true) } -> MapCredits.COPERNICUS_DEM
         else -> credit
@@ -61,6 +63,7 @@ internal fun collapsedLabel(credits: List<String>): String =
         when (credit) {
             MapCredits.OPENSTREETMAP -> OPENSTREETMAP_SHORT
             MapCredits.COPERNICUS_DEM -> COPERNICUS_SHORT
+            MapCredits.EOX_2016, MapCredits.EOX_2018 -> MapCredits.EOX_NAME
             else -> credit.replace(HTML_TAG, "").trim()
         }
     }
@@ -132,7 +135,7 @@ private fun creditSurface(): Modifier =
         .padding(horizontal = ATTRIBUTION_HORIZONTAL_PADDING_DP.dp, vertical = ATTRIBUTION_VERTICAL_PADDING_DP.dp)
 
 private const val OPENSTREETMAP_NAME = "OpenStreetMap"
-private val COPERNICUS_NAMES = listOf("Copernicus", "GLO-30")
+private val COPERNICUS_NAMES = listOf("Copernicus DEM", "GLO-30")
 private const val OPENSTREETMAP_SHORT = "\u00A9 OpenStreetMap contributors"
 private const val COPERNICUS_SHORT = "Copernicus"
 private const val COLLAPSED_SEPARATOR = " \u00B7 "

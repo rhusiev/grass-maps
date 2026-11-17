@@ -51,11 +51,11 @@ class MapAttributionOverlayTest {
     }
 
     @Test
-    fun anEngineCreditNamingCopernicusOrGlo30CollapsesIntoTheCopernicusEntry() {
+    fun anEngineCreditNamingTheCopernicusDemOrGlo30CollapsesIntoTheCopernicusEntry() {
         val credits =
             mergeCredits(
                 sourceCredits = listOf(MapCredits.COPERNICUS_DEM),
-                engineCredits = listOf("Contains Copernicus data", "Copernicus DEM GLO-30", "GLO-30 DEM"),
+                engineCredits = listOf("Copernicus DEM GLO-30", "GLO-30 DEM"),
             )
 
         assertEquals(listOf(MapCredits.COPERNICUS_DEM), credits)
@@ -78,5 +78,30 @@ class MapAttributionOverlayTest {
     @Test
     fun theCollapsedLineStripsMarkupFromOtherCredits() {
         assertEquals("Tiles by Acme", collapsedLabel(listOf("Tiles by <a href=\"https://x.test\">Acme</a>")))
+    }
+
+    @Test
+    fun aCreditThatOnlyNamesCopernicusDataIsNotTheDemCredit() {
+        assertEquals(listOf("Contains Copernicus data"), mergeCredits(emptyList(), listOf("Contains Copernicus data")))
+    }
+
+    @Test
+    fun anEoxCreditStaysWholeBesideTheOsmAndDemCredits() {
+        val credits =
+            mergeCredits(
+                sourceCredits = listOf(MapCredits.OPENSTREETMAP, MapCredits.COPERNICUS_DEM),
+                engineCredits = listOf(MapCredits.EOX_2016, "Copernicus DEM GLO-30"),
+            )
+
+        assertEquals(listOf(MapCredits.OPENSTREETMAP, MapCredits.COPERNICUS_DEM, MapCredits.EOX_2016), credits)
+        assertEquals(
+            "EOxCloudless <a href=\"https://cloudless.eox.at\">https://cloudless.eox.at</a> by EOX IT Services " +
+                "GmbH (Contains modified Copernicus Sentinel data 2016 &amp; 2017)",
+            credits.last(),
+        )
+        assertEquals(
+            "\u00A9 OpenStreetMap contributors \u00B7 Copernicus \u00B7 EOxCloudless",
+            collapsedLabel(credits),
+        )
     }
 }

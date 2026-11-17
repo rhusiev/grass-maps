@@ -31,14 +31,6 @@ object RasterPresets {
     const val EOX_MAX_ZOOM = 14
     private const val EOX_TILE_BYTES = 25L * 1024
     private const val EOX_URL = "https://tiles.maps.eox.at/wmts/1.0.0"
-    private const val EOX_CREDIT_URL = "https://cloudless.eox.at"
-    private const val EOX_2016_YEARS = "2016 & 2017"
-    private const val EOX_2018_YEARS = "2017 & 2018"
-
-    /** EOX's required credit, word for word. [years] is "2016 & 2017" or "2017 & 2018". */
-    private fun eoxAttribution(years: String): String =
-        "EOxCloudless <a href=\"$EOX_CREDIT_URL\">$EOX_CREDIT_URL</a> by EOX IT Services GmbH " +
-            "(Contains modified Copernicus Sentinel data ${years.replace("&", "&amp;")})"
 
     /** Sentinel-2 cloudless 2016, CC BY 4.0: free to cache on the device (research-data.md 1.7). */
     val eox2016: RasterSource =
@@ -46,7 +38,7 @@ object RasterPresets {
             id = EOX_2016_ID,
             displayName = "Sentinel-2 cloudless 2016",
             tileUrlTemplate = "$EOX_URL/s2cloudless-2016_3857/default/g/{z}/{y}/{x}.jpg",
-            attributionHtml = eoxAttribution(EOX_2016_YEARS),
+            attributionHtml = MapCredits.EOX_2016,
             minZoom = 0,
             maxZoom = EOX_MAX_ZOOM,
             tileSize = 256,
@@ -65,7 +57,7 @@ object RasterPresets {
             id = EOX_2018_ID,
             displayName = "Sentinel-2 cloudless 2018",
             tileUrlTemplate = "$EOX_URL/s2cloudless-2018_3857/default/g/{z}/{y}/{x}.jpg",
-            attributionHtml = eoxAttribution(EOX_2018_YEARS),
+            attributionHtml = MapCredits.EOX_2018,
             minZoom = 0,
             maxZoom = EOX_MAX_ZOOM,
             tileSize = 256,

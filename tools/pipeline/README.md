@@ -598,8 +598,13 @@ reads it first and the 90 m grid where the add-on has no cell.
 
 `build-elevation.py grid --arcsec 1` writes the same `elevation.bin` container
 with 1 arcsec cells. Below 50 degrees N a cell is one GLO-30 sample. At N50 and
-above the source pixels are 1.5 arcsec wide, so each cell copies the pixel under
-its centre. `build-oblasts.sh --elevation-30m` builds the add-on after each
+above the source pixels are 1.5 arcsec wide, so a cell is narrower than a pixel.
+Each cell then copies the pixel under its centre (`nearest_columns`). One cell in
+three has its centre exactly on a pixel edge, and that cell takes the pixel east
+of the edge. `cells_for_tile` chooses the path from the real cell-to-pixel ratio,
+not from a rounded integer. The build fails when the grid exceeds 64 MiB,
+the size the app reads (`GRID_MAX_BYTES`, equal to `MAX_COMPONENT_BYTES` in
+`RegionElevation.kt`; a test keeps them equal). `build-oblasts.sh --elevation-30m` builds the add-on after each
 oblast. `--elevation-30m-only --oblast UA-46 --version V` builds only the add-on
 beside an existing oblast build. It needs `--dem` and takes `--boundaries PATH`
 (default `<out>/boundaries/boundaries.json`) and `--osm-timestamp` (default
@@ -608,15 +613,24 @@ holds no OSM data. The output is `<out>/<region>-elevation-30m/<version>/` with
 `elevation.bin` and a `manifest.json` whose one component is `elevation`
 and whose `pipeline.addon` is `{"id": "elevation-30m", "region": "ua-46"}`.
 `oblast_pipeline.py catalog` attaches it as `addons` on the region entry and
-refuses an add-on whose region package is missing.
+refuses an add-on whose region package is missing. It lists only the add-on
+version that equals the region's version, so an older `<region>-elevation-30m/<old>/`
+left in `--out` is not listed.
 
 Measured for Lviv (`UA-46`, 2026-11-03, `nice -n 15 ionice -c3`, GLO-30 tiles
-on `/hdd`): 227 s for the stage, 3 m 47 s for the script, 31,573,392 bytes.
-The 90 m grid of the same oblast is 4,528,060 bytes, so the 30 m grid is 7.0
-times larger. The 25 oblasts' 90 m grids total 89,321,417 bytes. The older
+on `/hdd`, 12 tiles): 46.5 s for the stage, 49 s for the script, 27,558,702
+bytes. The 90 m grid of the same oblast is 4,528,060 bytes, so the 30 m grid is
+6.1 times larger. The 25 oblasts' 90 m grids total 89,321,417 bytes. The older
 estimates (2.2 MB and 13 MB per oblast) were wrong. A 30 m total for Ukraine is
-not measured. Scaling the 90 m total by Lviv's ratio gives about 620 MB, and
+not measured. Scaling the 90 m total by Lviv's ratio gives about 544 MB, and
 that figure is an extrapolation.
+
+The first Lviv build (31,573,392 bytes, 227 s) was wrong. It took the
+`block_mean` fallback for the N50 tiles, so every third column was no data.
+On a real tile (`N50E024`, `N50E023`) the fixed code gives 3600x3600 cells,
+no no-data cell, and exactly the source pixel under each cell centre. Block means
+of the 1 arcsec cells differ from the 3 arcsec grid by at most 4.1 m (99th
+percentile 1.2 m, mean 0.3 m).
 
 ### Routing part verification (T-0515)
 

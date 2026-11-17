@@ -468,6 +468,11 @@ oblast pack: `<region>-elevation-30m` (for example `ua-46-elevation-30m`), at
 `/<region>-elevation-30m/<version>/package.zip` with no change. The catalogue
 lists it as `addons: [{id, version, size_bytes}]` on the region entry, and
 `RegionCatalog.download(id)` resolves a region id or an add-on package id. The
+catalogue lists one add-on version per region, the one equal to the region's
+version, and the parser skips an add-on kind it does not know (only
+`elevation-30m` is known). `RegionStore.startDownload` refuses an add-on whose
+region is not installed, and `remove` refuses while a transfer of the region or
+its add-on is in flight. A corrupt add-on tile falls back to the 90 m grid. The
 manifest parser accepts a manifest without `features` only for an add-on id
 with exactly one `elevation` component. The mount resolver skips add-on
 directories, so an add-on never shows as a region or as a broken one. The
@@ -478,7 +483,7 @@ the add-on first and the oblast's 90 m grid where the add-on has no cell, and it
 resolves the add-on once per process: an add-on installed while the app runs
 takes effect at the next start, as updates do. Not done: the add-on is not
 updated with its region (T-0508), and only the first mounted region gets
-elevation at all. Lviv's add-on measured 31,573,392 bytes against 4,528,060 for
+elevation at all. Lviv's add-on measured 27,558,702 bytes against 4,528,060 for
 the 90 m grid of the same oblast.
 
 `server/` is the region package server (T-0510): one standard-library Python

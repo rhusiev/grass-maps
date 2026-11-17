@@ -926,6 +926,9 @@ class AppContainer(
                 onAutoUpdateChanged = { enabled ->
                     downloadsSettings.saveAutoUpdate(enabled)
                     applyAutoUpdateSchedule()
+                    if (!enabled) {
+                        autoUpdater?.cancelStarted()
+                    }
                 },
             ).also { store -> keepServiceInStep(store) }
         }
@@ -950,15 +953,16 @@ class AppContainer(
     }
 
     /**
-     * Runs one update window: the check, and for a queued update the notice
-     * once it settles. The notice waits on [processScope], so the wake-up that
-     * called this can end while the download service keeps the process alive.
+     * Runs one update window: the check, and for a queued update the wait until
+     * it installs or stops for Wi-Fi, then the notice. It returns only then, so
+     * the job that calls it keeps the process alive for the whole transfer. A
+     * cancelled caller stops the wait, and the next window starts again.
      */
     suspend fun runAutoUpdateWindow(): AutoUpdateRun? {
         val updater = autoUpdater ?: return null
         val run = updater.runIfDue()
         if (run is AutoUpdateRun.Queued) {
-            processScope.launch { updater.announce(run) }
+            updater.announce(run)
         }
         return run
     }

@@ -6,10 +6,13 @@ import android.app.job.JobScheduler
 import android.app.job.JobService
 import android.content.ComponentName
 import android.content.Context
+import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import nl.r1a.grassmap.regions.AutoUpdater
 
@@ -54,23 +57,22 @@ class AndroidAutoUpdateScheduler(
         wifiOnly: Boolean,
     ) {
         val scheduler = context.getSystemService(JobScheduler::class.java) ?: return
-        if (!enabled) {
-            scheduler.cancel(JOB_ID)
-            return
+        val pending = scheduler.getPendingJob(JOB_ID)?.networkType?.let { it == JobInfo.NETWORK_TYPE_UNMETERED }
+        when (decideSchedule(enabled, wifiOnly, pendingWifiOnly = pending)) {
+            ScheduleAction.CANCEL -> scheduler.cancel(JOB_ID)
+            ScheduleAction.KEEP -> Unit
+            ScheduleAction.SCHEDULE -> scheduler.schedule(buildJob(wifiOnly))
         }
+    }
+
+    private fun buildJob(wifiOnly: Boolean): JobInfo {
         val networkType = if (wifiOnly) JobInfo.NETWORK_TYPE_UNMETERED else JobInfo.NETWORK_TYPE_ANY
-        if (scheduler.getPendingJob(JOB_ID)?.networkType == networkType) {
-            // Keep the pending job: scheduling again would restart its period.
-            return
-        }
-        val job =
-            JobInfo
-                .Builder(JOB_ID, ComponentName(context, AutoUpdateJobService::class.java))
-                .setRequiredNetworkType(networkType)
-                .setPeriodic(AutoUpdater.RETRY_INTERVAL.toMillis())
-                .setPersisted(true)
-                .build()
-        scheduler.schedule(job)
+        return JobInfo
+            .Builder(JOB_ID, ComponentName(context, AutoUpdateJobService::class.java))
+            .setRequiredNetworkType(networkType)
+            .setPeriodic(AutoUpdater.RETRY_INTERVAL.toMillis())
+            .setPersisted(true)
+            .build()
     }
 
     private companion object {
@@ -78,21 +80,40 @@ class AndroidAutoUpdateScheduler(
     }
 }
 
-/** The system's wake-up for the monthly update. It runs one [AutoUpdater] window. */
+/**
+ * The system's wake-up for the monthly update. It runs one [AutoUpdater] window
+ * and reports the job finished only when the window ends, so the system keeps
+ * the process alive while the queued update downloads. When the system stops
+ * the job first, it is rescheduled, and the partial download resumes at the
+ * next window with a Range request (T-0505).
+ */
 class AutoUpdateJobService : JobService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onStartJob(params: JobParameters): Boolean {
         val container = (application as GrassMapsApplication).container
         scope.launch {
-            container.runAutoUpdateWindow()
-            jobFinished(params, false)
+            try {
+                container.runAutoUpdateWindow()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.w(TAG, "auto-update-window-failed type=${error.javaClass.simpleName}")
+            } finally {
+                if (isActive) {
+                    jobFinished(params, false)
+                }
+            }
         }
         return true
     }
 
     override fun onStopJob(params: JobParameters): Boolean {
-        scope.cancel()
-        return false
+        scope.coroutineContext.cancelChildren()
+        return true
+    }
+
+    private companion object {
+        const val TAG = "AutoUpdate"
     }
 }

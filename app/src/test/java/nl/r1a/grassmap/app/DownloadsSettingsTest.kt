@@ -8,6 +8,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import kotlin.concurrent.thread
 
 class DownloadsSettingsTest {
     @get:Rule
@@ -41,9 +42,28 @@ class DownloadsSettingsTest {
         val settings = DownloadsSettings(file)
         settings.saveAutoUpdate(false)
 
-        settings.save(MobileDataPolicy.WIFI_ONLY)
+        settings.save(MobileDataPolicy.ANY)
 
         assertFalse(DownloadsSettings(file).loadAutoUpdate())
-        assertEquals(MobileDataPolicy.WIFI_ONLY, DownloadsSettings(file).load())
+        assertEquals(MobileDataPolicy.ANY, DownloadsSettings(file).load())
+    }
+
+    @Test
+    fun concurrentSavesOfBothChoicesKeepBoth() {
+        val rounds = 200
+        repeat(rounds) {
+            file.delete()
+            val first = DownloadsSettings(file)
+            val second = DownloadsSettings(file)
+            val workers =
+                listOf(
+                    thread { first.save(MobileDataPolicy.ANY) },
+                    thread { second.saveAutoUpdate(false) },
+                )
+            workers.forEach { it.join() }
+
+            assertEquals(MobileDataPolicy.ANY, DownloadsSettings(file).load())
+            assertFalse(DownloadsSettings(file).loadAutoUpdate())
+        }
     }
 }

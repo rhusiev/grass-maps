@@ -9,8 +9,10 @@ import java.io.IOException
  * `{"mobileData":"ANY","autoUpdate":false}`. A missing, unreadable or unknown
  * mobile-data value reads as Wi-Fi only, the safe default for a metered plan
  * (T-0505). A missing `autoUpdate` reads as on, the product default for
- * monthly updates (T-0508). Each save keeps the other choice. Call every
- * method off Main.
+ * monthly updates (T-0508). Each save keeps the other choice. Every method
+ * reads the file, because the class keeps no copy. A save reads, changes and
+ * writes under one lock, so two saves of one instance never lose each other's
+ * choice. Call every method off Main.
  */
 class DownloadsSettings(
     private val file: File?,
@@ -23,11 +25,11 @@ class DownloadsSettings(
     /** Whether the monthly automatic update is on. */
     fun loadAutoUpdate(): Boolean = readText()?.let { !AUTO_UPDATE_OFF.containsMatchIn(it) } ?: true
 
-    /** Stores [policy]. A write failure keeps the in-memory choice for this run. */
-    fun save(policy: MobileDataPolicy) = write(policy, loadAutoUpdate())
+    /** Stores [policy]. A write failure leaves the stored choice as it was. */
+    fun save(policy: MobileDataPolicy) = synchronized(LOCK) { write(policy, loadAutoUpdate()) }
 
-    /** Stores the automatic-update choice. A write failure keeps it for this run. */
-    fun saveAutoUpdate(enabled: Boolean) = write(load(), enabled)
+    /** Stores the automatic-update choice. A write failure leaves the stored choice as it was. */
+    fun saveAutoUpdate(enabled: Boolean) = synchronized(LOCK) { write(load(), enabled) }
 
     private fun readText(): String? = runCatching { file?.takeIf { it.isFile }?.readText() }.getOrNull()
 
@@ -50,6 +52,8 @@ class DownloadsSettings(
     }
 
     private companion object {
+        // One lock for every instance: the app builds a DownloadsSettings per caller.
+        val LOCK = Any()
         val AUTO_UPDATE_OFF = Regex("\"autoUpdate\"\\s*:\\s*false")
     }
 }

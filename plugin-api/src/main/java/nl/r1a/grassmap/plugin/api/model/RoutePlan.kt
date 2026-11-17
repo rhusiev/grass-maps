@@ -56,6 +56,12 @@ enum class RoutePlanFailure {
      * [RoutePlanState.missing] says which regions and parts to download.
      */
     RegionsMissing,
+
+    /**
+     * The route is longer than the engine plans for the profile. The state's
+     * [RoutePlanState.maxDistanceMeters] is that limit.
+     */
+    TooFar,
 }
 
 /** One part of a region the route needs and the phone does not have. */
@@ -162,7 +168,8 @@ data class RoutePlanOption(
  *
  * [missing] is set with [RoutePlanFailure.RegionsMissing] and lists what to
  * download before the route can work (T-0511). [missingDownload] is set while
- * that download runs, or after it failed.
+ * that download runs, or after it failed. [maxDistanceMeters] is set with
+ * [RoutePlanFailure.TooFar] and is the profile's limit.
  */
 @Serializable
 data class RoutePlanState(
@@ -181,6 +188,7 @@ data class RoutePlanState(
     val overridePreferences: RouteOptions? = null,
     val missing: MissingRegions? = null,
     val missingDownload: MissingRegionsDownload? = null,
+    val maxDistanceMeters: Double? = null,
 ) {
     /** The preferences the last route request carried. */
     val preferences: RouteOptions

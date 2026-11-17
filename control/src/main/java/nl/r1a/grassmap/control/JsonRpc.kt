@@ -217,6 +217,15 @@ object JsonRpcCodec {
                 )
             }
 
+            is AppError.TooFar -> {
+                refusal(
+                    RpcCodes.INVALID_PARAMS,
+                    "too_far",
+                    "route too far",
+                    mapOf("limit_meters" to JsonPrimitive(error.limitMeters)),
+                )
+            }
+
             is AppError.Internal -> {
                 refusal(
                     RpcCodes.INTERNAL,

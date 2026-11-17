@@ -94,7 +94,15 @@ data class RoutingCapabilities(
     val maxDistanceMeters: Double,
     val attributeKeys: Set<String> = emptySet(),
     val hasMatchTrack: Boolean = false,
-)
+    val maxDistanceMetersByProfile: Map<RouteProfile, Double> = emptyMap(),
+) {
+    /**
+     * The longest route the engine plans for [profile]. [maxDistanceMeters] is
+     * the largest limit over all profiles, and it applies to a profile that
+     * [maxDistanceMetersByProfile] does not list.
+     */
+    fun maxDistanceFor(profile: RouteProfile): Double = maxDistanceMetersByProfile[profile] ?: maxDistanceMeters
+}
 
 /**
  * The attribute keys a route segment may carry. The vocabulary is shared so an

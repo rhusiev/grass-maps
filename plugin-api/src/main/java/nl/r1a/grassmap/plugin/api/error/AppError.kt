@@ -56,6 +56,14 @@ sealed interface AppError {
         }
     }
 
+    /**
+     * The route is longer than the engine can plan for the profile.
+     * [limitMeters] is that profile's limit, so the caller can name it.
+     */
+    data class TooFar(
+        val limitMeters: Double,
+    ) : AppError
+
     data class Internal(
         val id: String,
         val detail: String? = null,

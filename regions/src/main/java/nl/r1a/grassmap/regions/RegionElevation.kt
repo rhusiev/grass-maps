@@ -14,6 +14,7 @@ import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.file.Files
+import java.util.zip.DataFormatException
 import java.util.zip.Inflater
 
 private const val ELEVATION_ENCODING_DEFLATE_PREDICTOR = 1
@@ -161,10 +162,23 @@ private class ElevationSource(
         val tile = tiles.firstOrNull { it.contains(position) } ?: return null
         val decoded =
             cached?.takeIf { it.tile === tile }?.values
-                ?: tile.decode(file)?.also { cached = DecodedElevationTile(tile, it) }
+                ?: decodeOrNull(tile)?.also { cached = DecodedElevationTile(tile, it) }
                 ?: return null
         return tile.sample(decoded, position)
     }
+
+    /**
+     * A tile whose bytes do not inflate or are cut short gives no height, so
+     * the next grid in line answers (the 90 m grid behind a 30 m add-on).
+     */
+    private fun decodeOrNull(tile: ElevationTile): ShortArray? =
+        try {
+            tile.decode(file)
+        } catch (exception: DataFormatException) {
+            null
+        } catch (exception: IOException) {
+            null
+        }
 
     companion object {
         private const val HEADER_BYTES = 32

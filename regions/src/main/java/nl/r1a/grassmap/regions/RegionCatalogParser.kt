@@ -151,7 +151,9 @@ object RegionCatalogParser {
         if (addons.any { it == null }) {
             return null
         }
-        val present = addons.filterNotNull()
+        // An add-on kind this app does not know is skipped, not installed: its
+        // package id would otherwise be taken for a region of its own.
+        val present = addons.filterNotNull().filter { it.kind.isKnownAddon }
         if (present.map { it.id }.toSet().size != present.size) {
             return null
         }

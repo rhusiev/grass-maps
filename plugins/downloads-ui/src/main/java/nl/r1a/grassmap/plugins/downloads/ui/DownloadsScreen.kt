@@ -149,7 +149,7 @@ object DownloadsScreen {
                     installed = atVersion && installedParts.contains(CatalogPartKind.ROUTING),
                 )
         }
-        detected.addons.firstOrNull { it.kind == CatalogPartKind.ELEVATION_30M }?.let { addon ->
+        detected.addons.firstOrNull { it.kind == CatalogPartKind.ELEVATION_30M }?.takeIf { installed != null }?.let { addon ->
             offers +=
                 FirstRunOffer(
                     kind = FirstRunOfferKind.ELEVATION_30M,

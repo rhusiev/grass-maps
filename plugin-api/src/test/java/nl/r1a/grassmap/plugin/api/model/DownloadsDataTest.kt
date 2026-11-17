@@ -40,8 +40,19 @@ class DownloadsDataTest {
         val catalog = RegionCatalog(format = 1, regions = listOf(entry("ua-46", "2").copy(addons = listOf(addon))))
 
         assertEquals(CatalogDownload("ua-46", "2", 1), catalog.download("ua-46"))
-        assertEquals(CatalogDownload("ua-46-elevation-30m", "2026-01", 30), catalog.download("ua-46-elevation-30m"))
+        assertEquals(
+            CatalogDownload("ua-46-elevation-30m", "2026-01", 30, addonOf = "ua-46"),
+            catalog.download("ua-46-elevation-30m"),
+        )
         assertEquals(null, catalog.download("ua-32-elevation-30m"))
+    }
+
+    @Test
+    fun anAddonOfAnUnknownKindHasNoDownload() {
+        val mystery = CatalogAddon(id = "mystery-pack", version = "2026-01", bytes = 30)
+        val catalog = RegionCatalog(format = 1, regions = listOf(entry("ua-46", "2").copy(addons = listOf(mystery))))
+
+        assertEquals(null, catalog.download("ua-46-mystery-pack"))
     }
 
     private fun data(

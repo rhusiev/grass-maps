@@ -66,6 +66,10 @@ enum class CatalogPartKind {
     OTHER,
     ;
 
+    /** True for the kinds an add-on may have. Any other add-on id is not offered. */
+    val isKnownAddon: Boolean
+        get() = this == ELEVATION_30M
+
     companion object {
         /** The wire name of the 30 m elevation add-on (server-protocol.md section 2). */
         const val ELEVATION_30M_WIRE: String = "elevation-30m"
@@ -114,6 +118,8 @@ data class CatalogDownload(
     val id: String,
     val version: String,
     val bytes: Long,
+    /** The region an add-on belongs to, or null for a region package. */
+    val addonOf: String? = null,
 )
 
 /**
@@ -193,8 +199,8 @@ data class RegionCatalog(
     fun download(id: String): CatalogDownload? {
         regions.firstOrNull { it.id == id }?.let { return CatalogDownload(it.id, it.version, it.bytes) }
         for (region in regions) {
-            val addon = region.addons.firstOrNull { it.packageId(region.id) == id } ?: continue
-            return CatalogDownload(id, addon.version, addon.bytes)
+            val addon = region.addons.firstOrNull { it.kind.isKnownAddon && it.packageId(region.id) == id } ?: continue
+            return CatalogDownload(id, addon.version, addon.bytes, addonOf = region.id)
         }
         return null
     }

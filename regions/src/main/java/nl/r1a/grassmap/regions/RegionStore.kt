@@ -186,6 +186,10 @@ class RegionStore(
             return Outcome.Failure(AppError.InvalidInput)
         }
         val entry = mutable.value.catalog?.download(region) ?: return Outcome.Failure(AppError.NotFound)
+        // An add-on is read through its region, so it installs only beside one.
+        if (entry.addonOf != null && mutable.value.installed.none { it.region == entry.addonOf }) {
+            return Outcome.Failure(AppError.InvalidInput)
+        }
         return claimMutex.withLock {
             if (mutable.value.transfer(region) != null) {
                 return@withLock Outcome.Success(Unit)
@@ -262,12 +266,13 @@ class RegionStore(
         if (!RegionIdentifiers.isSafeSegment(region)) {
             return Outcome.Failure(AppError.InvalidInput)
         }
-        if (mutable.value.transfer(region) != null) {
+        val addonPackage = RegionIdentifiers.elevationAddonPackage(region)
+        if (mutable.value.transfer(region) != null || mutable.value.transfer(addonPackage) != null) {
             return Outcome.Failure(AppError.InvalidInput)
         }
         // An add-on is useless without its region, so removing the region takes it along.
         val directories =
-            listOf(region, RegionIdentifiers.elevationAddonPackage(region)).map { paths.regionDirectory(it) }
+            listOf(region, addonPackage).map { paths.regionDirectory(it) }
         val removed =
             try {
                 directories.all { !it.exists() || it.deleteRecursively() }

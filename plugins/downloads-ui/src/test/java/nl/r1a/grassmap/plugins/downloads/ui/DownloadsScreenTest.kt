@@ -69,7 +69,6 @@ class DownloadsScreenTest {
                 FirstRunOfferKind.WORLD,
                 FirstRunOfferKind.REGION,
                 FirstRunOfferKind.ROUTING,
-                FirstRunOfferKind.ELEVATION_30M,
             ),
             state.firstRun.map { it.kind },
         )
@@ -96,11 +95,21 @@ class DownloadsScreenTest {
         val routing = state.firstRun.single { it.kind == FirstRunOfferKind.ROUTING }
         assertEquals(97_198_080L, routing.bytes)
         assertEquals(listOf(CatalogPartKind.ROUTING), routing.parts.map { it.kind })
+    }
+
+    @Test
+    fun theAddonIsOfferedOnlyOnceItsRegionIsInstalled() {
+        val catalog = CatalogTestData.withWorldAndAddon()
+        val installed = InstalledPack(CatalogFixture.LVIV, "old", parts = listOf(CatalogPartKind.MAP))
+        val state =
+            DownloadsScreen.state(
+                data = DownloadsData(catalog = catalog, installed = listOf(installed), serverUrl = SERVER),
+                detectedRegion = CatalogFixture.LVIV,
+            )
 
         val addon = state.firstRun.single { it.kind == FirstRunOfferKind.ELEVATION_30M }
         assertEquals(13_000_000L, addon.bytes)
         assertEquals(CatalogPartKind.ELEVATION_30M, addon.parts.single().kind)
-        assertTrue(addon.parts.all { it.bytes > 0 })
         assertEquals("${CatalogFixture.LVIV}-elevation-30m", addon.downloadId)
         assertFalse(addon.installed)
     }

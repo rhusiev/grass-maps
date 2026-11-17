@@ -105,6 +105,26 @@ class ElevationAddonTest {
         }
 
     @Test
+    fun anAddonTileThatDoesNotInflateFallsBackToTheBase() =
+        runTest {
+            val corrupt = grid(FINE_HEIGHT).also { it.fill(GARBAGE_BYTE, HEADER_BYTES + ENTRY_BYTES, it.size) }
+            val reader = RegionElevation(TestRegions.load().root.toFile(), installAddon(corrupt))
+            val base = RegionElevation(TestRegions.load().root.toFile())
+
+            assertEquals(heightAt(base, INSIDE_ADDON), heightAt(reader, INSIDE_ADDON), HEIGHT_DELTA_M)
+        }
+
+    @Test
+    fun anAddonCellWithoutDataFallsBackToTheBase() =
+        runTest {
+            val hole = grid(FINE_HEIGHT, cellValue = Short.MIN_VALUE)
+            val reader = RegionElevation(TestRegions.load().root.toFile(), installAddon(hole))
+            val base = RegionElevation(TestRegions.load().root.toFile())
+
+            assertEquals(heightAt(base, INSIDE_ADDON), heightAt(reader, INSIDE_ADDON), HEIGHT_DELTA_M)
+        }
+
+    @Test
     fun theAddonAnswersWhenTheBasePackHasNoElevation() =
         runTest {
             val empty = Files.createTempDirectory(root.toPath(), "base").toFile()
@@ -161,11 +181,14 @@ class ElevationAddonTest {
           "sha256": "${"0".repeat(RegionIdentifiers.SHA256_HEX_LENGTH)}", "standIn": false}"""
 
     /** A 1 arcsec grid of one constant-height tile over [WEST], [SOUTH] to [EAST], [NORTH]. */
-    private fun grid(height: Double): ByteArray {
+    private fun grid(
+        height: Double,
+        cellValue: Short = height.toInt().toShort(),
+    ): ByteArray {
         val cells = ((EAST - WEST) * CELLS_PER_DEGREE).toInt()
         val raw = ByteBuffer.allocate(cells * cells * 2).order(ByteOrder.LITTLE_ENDIAN)
         repeat(cells) {
-            repeat(cells) { column -> raw.putShort(if (column == 0) height.toInt().toShort() else 0) }
+            repeat(cells) { column -> raw.putShort(if (column == 0) cellValue else 0) }
         }
         val packed = deflate(raw.array())
         val out = ByteBuffer.allocate(HEADER_BYTES + ENTRY_BYTES + packed.size).order(ByteOrder.LITTLE_ENDIAN)
@@ -220,6 +243,7 @@ class ElevationAddonTest {
         const val HEADER_BYTES = 32
         const val ENTRY_BYTES = 32
         const val BUFFER_BYTES = 4096
+        const val GARBAGE_BYTE: Byte = 0x5a
         val INSIDE_ADDON = GeoPoint(49.955, 23.945)
         val OUTSIDE_ADDON = GeoPoint(49.945, 23.955)
     }

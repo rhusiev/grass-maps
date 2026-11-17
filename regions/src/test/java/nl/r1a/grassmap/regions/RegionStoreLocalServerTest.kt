@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.regions
 
+import com.sun.net.httpserver.HttpExchange
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -309,43 +310,149 @@ class RegionStoreLocalServerTest {
         }
 
     @Test
-    fun theElevationAddonInstallsAloneAndRemovesWithItsRegion() =
+    fun theElevationAddonInstallsBesideItsRegionAndRemovesWithIt() =
         runBlocking {
-            val addon = "${CatalogFixture.LVIV}-elevation-30m"
-            val body = addonPackage(addon, ADDON_VERSION)
-            val server =
-                TestHttpServer { exchange ->
-                    when (exchange.requestURI.path) {
-                        "/${DownloadsDefaults.CATALOG_FILE}" -> send(exchange, 200, CatalogFixture.withElevationAddon())
-                        "/$addon/$ADDON_VERSION/package.zip" -> send(exchange, 200, body)
-                        else -> send(exchange, 404, ByteArray(0))
-                    }
-                }
-            server.use {
+            val addon = ADDON_ID
+            addonServer(addonPackage(addon, ADDON_VERSION)).use { server ->
                 val store = store(server.baseUrl)
                 try {
                     assertTrue(store.refresh() is Outcome.Success)
+                    assertEquals(
+                        "the add-on is refused before its region is installed",
+                        Outcome.Failure(AppError.InvalidInput),
+                        store.startDownload(addon),
+                    )
+                    assertFalse(File(paths.root, addon).exists())
+
+                    assertTrue(store.startDownload(CatalogFixture.LVIV) is Outcome.Success)
+                    withTimeout(60_000) { store.data.first { it.installed.size == 1 } }
+                    val baseBefore = fileDigests(paths.regionDirectory(CatalogFixture.LVIV))
+
                     assertTrue(store.startDownload(addon) is Outcome.Success)
                     val done =
                         withTimeout(60_000) {
                             store.data.first {
                                 it.transfers.isEmpty() && it.problems.isEmpty() &&
-                                    File(paths.root, addon).isDirectory
+                                    it.installed
+                                        .singleOrNull()
+                                        ?.parts
+                                        ?.contains(CatalogPartKind.ELEVATION_30M) == true
                             }
                         }
 
-                    assertEquals("the add-on alone is not a region pack", emptyList<String>(), done.installed.map { it.region })
+                    assertEquals("the add-on is not a region pack", listOf(CatalogFixture.LVIV), done.installed.map { it.region })
                     assertEquals(ADDON_VERSION, CurrentPointer.read(File(paths.root, addon)))
+                    assertEquals("the base region files are untouched", baseBefore, fileDigests(paths.regionDirectory(CatalogFixture.LVIV)))
                     assertNoWorkDirectory()
                     assertTrue(RegionMountResolver(paths.root).elevationAddon(CatalogFixture.LVIV) != null)
 
                     assertEquals(Outcome.Success(Unit), store.remove(CatalogFixture.LVIV))
                     assertFalse(File(paths.root, addon).exists())
+                    assertFalse(paths.regionDirectory(CatalogFixture.LVIV).exists())
                 } finally {
                     store.close()
                 }
             }
         }
+
+    @Test
+    fun removingTheRegionWhileItsAddonDownloadsIsRefusedAndKeepsTheBase() =
+        runBlocking {
+            val addon = ADDON_ID
+            addonServer(addonPackage(addon, ADDON_VERSION), slowAddon = true).use { server ->
+                val store = store(server.baseUrl)
+                try {
+                    assertTrue(store.refresh() is Outcome.Success)
+                    assertTrue(store.startDownload(CatalogFixture.LVIV) is Outcome.Success)
+                    withTimeout(60_000) { store.data.first { it.installed.size == 1 } }
+                    val baseBefore = fileDigests(paths.regionDirectory(CatalogFixture.LVIV))
+                    assertTrue(store.startDownload(addon) is Outcome.Success)
+                    withTimeout(60_000) {
+                        store.data.first { it.transfer(addon)?.state == DownloadTransferState.DOWNLOADING }
+                    }
+
+                    assertEquals(Outcome.Failure(AppError.InvalidInput), store.remove(CatalogFixture.LVIV))
+
+                    assertEquals(baseBefore, fileDigests(paths.regionDirectory(CatalogFixture.LVIV)))
+                    assertEquals(
+                        listOf(CatalogFixture.LVIV),
+                        store.data.value.installed
+                            .map { it.region },
+                    )
+                    assertEquals(Outcome.Success(Unit), store.cancel(addon))
+                    assertNoWorkDirectory()
+                    assertFalse(File(paths.root, addon).exists())
+                    assertEquals(Outcome.Success(Unit), store.remove(CatalogFixture.LVIV))
+                } finally {
+                    store.close()
+                }
+            }
+        }
+
+    @Test
+    fun anAddonOfAnUnknownKindIsNotOffered() =
+        runBlocking {
+            val catalog = CatalogFixture.withElevationAddon().decodeToString().replace("\"elevation-30m\"", "\"mystery-pack\"")
+            catalogServer(catalog.toByteArray()).use { server ->
+                val store = store(server.baseUrl)
+                try {
+                    assertTrue(store.refresh() is Outcome.Success)
+
+                    assertEquals(
+                        Outcome.Failure(AppError.NotFound),
+                        store.startDownload("${CatalogFixture.LVIV}-mystery-pack"),
+                    )
+                } finally {
+                    store.close()
+                }
+            }
+        }
+
+    /** A map of each file's relative name to its size and SHA-256, to see a directory is unchanged. */
+    private fun fileDigests(directory: File): Map<String, String> =
+        directory
+            .walkTopDown()
+            .filter { it.isFile }
+            .associate { it.relativeTo(directory).path to "${it.length()}:${sha256Hex(it.readBytes())}" }
+
+    /** The add-on catalogue and packages: the base region fast, the add-on at once or slowly. */
+    private fun addonServer(
+        addonBody: ByteArray,
+        slowAddon: Boolean = false,
+    ): TestHttpServer =
+        TestHttpServer { exchange ->
+            val path = exchange.requestURI.path
+            val match = PACKAGE_PATH.matchEntire(path)
+            when {
+                path == "/${DownloadsDefaults.CATALOG_FILE}" -> send(exchange, 200, CatalogFixture.withElevationAddon())
+                match == null -> send(exchange, 404, ByteArray(0))
+                match.groupValues[1] != ADDON_ID -> send(exchange, 200, fixturePackage(match.groupValues[1], match.groupValues[2]))
+                slowAddon -> sendSlowly(exchange, addonBody)
+                else -> send(exchange, 200, addonBody)
+            }
+        }
+
+    private fun sendSlowly(
+        exchange: HttpExchange,
+        body: ByteArray,
+    ) {
+        exchange.responseHeaders.set(TestHttpServer.CONTENT_TYPE, TestHttpServer.APPLICATION_ZIP)
+        exchange.sendResponseHeaders(200, body.size.toLong())
+        try {
+            exchange.responseBody.use { out ->
+                var offset = 0
+                while (offset < body.size) {
+                    val length = minOf(ADDON_CHUNK_BYTES, body.size - offset)
+                    out.write(body, offset, length)
+                    out.flush()
+                    offset += length
+                    Thread.sleep(ADDON_CHUNK_DELAY_MS)
+                }
+            }
+        } catch (exception: IOException) {
+            // The client cancelled and closed the connection.
+        }
+    }
 
     private fun addonPackage(
         addon: String,
@@ -471,7 +578,10 @@ class RegionStoreLocalServerTest {
         val SWITCH: SwitchId = SwitchId("network.region_updates")
         val PACKAGE_PATH = Regex("""/([a-z0-9][a-z0-9._-]*)/([a-z0-9][a-z0-9._-]*)/package\.zip""")
         const val ADDON_VERSION = "2026-01"
+        val ADDON_ID = "${CatalogFixture.LVIV}-elevation-30m"
         const val SLOW_CHUNK_BYTES = 4096
+        const val ADDON_CHUNK_BYTES = 32
+        const val ADDON_CHUNK_DELAY_MS = 40L
         const val SLOW_CHUNK_DELAY_MS = 40L
     }
 }

@@ -626,8 +626,13 @@ def write_catalog(root: pathlib.Path, spec: dict) -> dict:
             region_entry["includes"] = names[region.upper()]["includes"]
         regions.append(region_entry)
     for region_entry in regions:
-        if region_entry["id"] in addons:
-            region_entry["addons"] = addons.pop(region_entry["id"])
+        matching = [
+            entry
+            for entry in addons.pop(region_entry["id"], [])
+            if entry["version"] == region_entry["version"]
+        ]
+        if matching:
+            region_entry["addons"] = matching
     if addons:
         raise SystemExit(f"catalog: add-on without its region package: {sorted(addons)}")
     catalog = {

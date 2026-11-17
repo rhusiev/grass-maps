@@ -9,6 +9,7 @@ record.
 
 import importlib.util
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -356,6 +357,28 @@ class AddonTest(unittest.TestCase):
         self.assertEqual(entry["addons"], [{"id": "elevation-30m", "version": "2026-11-04", "size_bytes": 100}])
         self.assertEqual(entry["size_bytes"], 95)
 
+    def test_an_older_addon_version_in_the_out_dir_is_not_listed(self) -> None:
+        pipeline.write_addon_manifest(self.spec, self.boundaries)
+        old_pack = self.root / "ua-46-elevation-30m" / "2026-10-01"
+        old_pack.mkdir(parents=True)
+        (old_pack / "elevation.bin").write_bytes(b"GRME" + b"y" * 40)
+        pipeline.write_addon_manifest({**self.spec, "version": "2026-10-01", "pack": str(old_pack)}, self.boundaries)
+        write_region_pack(self.root)
+        catalog = pipeline.write_catalog(self.root, write_catalog_spec(self.root))
+        self.assertEqual(
+            [(addon["id"], addon["version"]) for addon in catalog["regions"][0]["addons"]],
+            [("elevation-30m", "2026-11-04")],
+        )
+
+    def test_an_addon_of_another_version_than_its_region_is_not_listed(self) -> None:
+        old_pack = self.root / "ua-46-elevation-30m" / "2026-10-01"
+        old_pack.mkdir(parents=True)
+        (old_pack / "elevation.bin").write_bytes(b"GRME" + b"y" * 40)
+        pipeline.write_addon_manifest({**self.spec, "version": "2026-10-01", "pack": str(old_pack)}, self.boundaries)
+        write_region_pack(self.root)
+        catalog = pipeline.write_catalog(self.root, write_catalog_spec(self.root))
+        self.assertNotIn("addons", catalog["regions"][0])
+
     def test_an_addon_without_its_region_package_fails_the_catalog(self) -> None:
         pipeline.write_addon_manifest(self.spec, self.boundaries)
         with self.assertRaises(SystemExit):
@@ -381,7 +404,8 @@ class MetricsTest(unittest.TestCase):
             self.assertEqual(document["build"], {"version": "v"})
 
 
-ELEVATION_MODULE = Path(__file__).resolve().parents[2] / "tools" / "pipeline" / "build-elevation.py"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+ELEVATION_MODULE = REPO_ROOT / "tools" / "pipeline" / "build-elevation.py"
 
 
 def load_elevation():
@@ -412,13 +436,66 @@ class ElevationGuardTest(unittest.TestCase):
             self.skipTest(f"build-elevation.py needs {error.name}")
         import numpy
 
-        values = numpy.array([[10.0, 20.0, 30.0]])
         pixel_width = 1.5 / 3600
-        cells = elevation.nearest_columns(values, 24.0, 51.0, pixel_width, 0, 1, 24.0, 6, 3600)
-        self.assertEqual(cells[0, 0], 10)
-        self.assertEqual(cells[0, 2], 20)
-        self.assertEqual(cells[0, 3], 30)
-        self.assertEqual(cells[0, 5], 30)
+        pixel_height = 1.0 / 3600
+        columns = 2400
+        values = numpy.tile(numpy.arange(columns, dtype=numpy.float32), (3600, 1))
+        full = elevation.cells_for_tile(
+            values, 24.0, 51.0, pixel_width, pixel_height, 24.0, 50.0, 25.0, 51.0, 3600
+        )
+        self.assertEqual(full.shape, (3600, 3600))
+        self.assertFalse((full == elevation.NO_DATA).any())
+        centres = 24.0 + (numpy.arange(3600) + 0.5) / 3600
+        expected = numpy.floor((centres - 24.0) / pixel_width + 1e-6).astype(numpy.int16)
+        self.assertTrue((full == expected).all())
+        part = elevation.cells_for_tile(
+            values, 24.0, 51.0, pixel_width, pixel_height, 24.1, 50.2, 24.3, 50.3, 3600
+        )
+        self.assertEqual(part.shape, (360, 720))
+        self.assertFalse((part == elevation.NO_DATA).any())
+        self.assertTrue((part == expected[360:1080]).all())
+
+    def test_three_arcsec_cells_still_average_the_wide_pixels(self) -> None:
+        try:
+            elevation = load_elevation()
+        except ImportError as error:
+            self.skipTest(f"build-elevation.py needs {error.name}")
+        import numpy
+
+        values = numpy.tile(numpy.arange(2400, dtype=numpy.float32), (3600, 1))
+        cells = elevation.cells_for_tile(
+            values, 24.0, 51.0, 1.5 / 3600, 1.0 / 3600, 24.0, 50.0, 25.0, 51.0, 1200
+        )
+        self.assertEqual(cells.shape, (1200, 1200))
+        self.assertEqual(int(cells[0, 600]), 1200)
+        self.assertEqual(int(cells[0, 601] - cells[0, 600]), 2)
+
+    def test_a_grid_above_the_size_the_app_reads_aborts(self) -> None:
+        try:
+            elevation = load_elevation()
+        except ImportError as error:
+            self.skipTest(f"build-elevation.py needs {error.name}")
+        import numpy
+
+        values = numpy.zeros((3600, 3600), dtype=numpy.float32)
+        elevation.load_tile = lambda *_: (values, 24.0, 50.0, 1.0 / 3600, 1.0 / 3600)
+        elevation.GRID_MAX_BYTES = 100
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder) / "elevation.bin"
+            with self.assertRaises(SystemExit) as raised:
+                elevation.build_grid(folder, (24.0, 49.0, 25.0, 50.0), output, arcsec=1)
+            self.assertIn("above the 100 B", str(raised.exception))
+            self.assertFalse(output.exists())
+
+    def test_the_size_cap_matches_the_app_reader(self) -> None:
+        try:
+            elevation = load_elevation()
+        except ImportError as error:
+            self.skipTest(f"build-elevation.py needs {error.name}")
+        reader = (REPO_ROOT / "regions/src/main/java/nl/r1a/grassmap/regions/RegionElevation.kt").read_text()
+        match = re.search(r"MAX_COMPONENT_BYTES = (\d+)L \* 1024L \* 1024L", reader)
+        self.assertIsNotNone(match)
+        self.assertEqual(int(match.group(1)) * 1024 * 1024, elevation.GRID_MAX_BYTES)
 
     def test_the_grid_accepts_one_and_three_arcsec_only(self) -> None:
         try:

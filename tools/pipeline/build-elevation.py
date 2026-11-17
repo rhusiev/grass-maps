@@ -39,6 +39,10 @@ ARCSEC_PER_DEGREE = 3600
 GRID_ARCSEC = 3
 GRID_CELLS_PER_DEGREE = ARCSEC_PER_DEGREE // GRID_ARCSEC
 GRID_ARCSEC_CHOICES = (1, GRID_ARCSEC)
+RATIO_TOLERANCE = 1e-6
+# Keep equal to MAX_COMPONENT_BYTES in regions/.../RegionElevation.kt: the app
+# rejects a larger component, and a pack that exceeds it would install as damaged.
+GRID_MAX_BYTES = 64 * 1024 * 1024
 SOURCE_TILE_SAMPLES = 3600
 HGT_NODES = 3601
 NO_DATA = -32768
@@ -171,17 +175,21 @@ def cells_for_tile(
     """One grid tile's cells, as a rows x columns int16 array."""
     rows = round_cell_index(degrees_to_cell_index(north_out - south_out, cells_per_degree))
     columns = round_cell_index(degrees_to_cell_index(east_out - west_out, cells_per_degree))
-    pixels_y = int(round((north_out - south_out) / rows / pixel_height))
-    pixels_x = int(round((east_out - west_out) / columns / pixel_width))
+    ratio_y = (north_out - south_out) / rows / pixel_height
+    ratio_x = (east_out - west_out) / columns / pixel_width
+    pixels_y = int(round(ratio_y))
+    pixels_x = int(round(ratio_x))
     first_row = int(round((north - north_out) / pixel_height))
     first_column = int(round((west_out - west) / pixel_width))
-    if pixels_y == 1 and pixels_x < 1:
+    if ratio_x < 1 - RATIO_TOLERANCE and pixels_y == 1:
         return nearest_columns(values, west, north, pixel_width, first_row, rows, west_out, columns, cells_per_degree)
+    if abs(ratio_x - pixels_x) > RATIO_TOLERANCE or abs(ratio_y - pixels_y) > RATIO_TOLERANCE:
+        pixels_x = pixels_y = 0
     block = values[
         first_row : first_row + rows * pixels_y,
         first_column : first_column + columns * pixels_x,
     ]
-    if block.shape == (rows * pixels_y, columns * pixels_x):
+    if pixels_x and block.shape == (rows * pixels_y, columns * pixels_x):
         block = block.reshape(rows, pixels_y, columns, pixels_x)
         valid = ~np.isnan(block)
         count = valid.sum(axis=(1, 3))
@@ -211,10 +219,12 @@ def nearest_columns(values, west, north, pixel_width, first_row, rows, west_out,
     """Cells narrower than a source pixel: each takes the pixel under its centre.
 
     GLO-30 widens its pixels to 1.5 arcsec north of 50 degrees N, so a 1 arcsec
-    cell there is a copy of a source sample, not a mean of several.
+    cell there is a copy of a source sample, not a mean of several. Every third
+    cell centre lies exactly on a pixel edge. The tolerance sends that tie to the
+    pixel east of the edge, so float noise cannot pick the side.
     """
     centres = west_out + (np.arange(columns) + 0.5) / cells_per_degree
-    indexes = np.clip(np.floor((centres - west) / pixel_width).astype(np.int64), 0, values.shape[1] - 1)
+    indexes = np.clip(np.floor((centres - west) / pixel_width + RATIO_TOLERANCE).astype(np.int64), 0, values.shape[1] - 1)
     block = values[first_row : first_row + rows][:, indexes]
     result = np.full(block.shape, NO_DATA, dtype=np.int16)
     valid = ~np.isnan(block)
@@ -297,6 +307,12 @@ def build_grid(source, bbox, output, skip_missing=False, arcsec=GRID_ARCSEC):
     index = bytearray()
     for west, south, east, north, rows, columns, offset, length in entries:
         index += struct.pack("<iiiihhIIhh", west, south, east, north, rows, columns, offset, length, GRID_ENCODING_DEFLATE_PREDICTOR, NO_DATA)
+    total_bytes = len(header) + len(index) + len(payload)
+    if total_bytes > GRID_MAX_BYTES:
+        raise SystemExit(
+            f"{output}: the grid is {total_bytes} B, above the {GRID_MAX_BYTES} B "
+            "the app reads; use coarser cells or split the region"
+        )
     pathlib.Path(output).write_bytes(header + index + payload)
     print(f"wrote {pathlib.Path(output).stat().st_size} B to {output}")
 

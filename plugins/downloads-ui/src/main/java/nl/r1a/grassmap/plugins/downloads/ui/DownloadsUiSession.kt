@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.RegionDownloadsAccess
-import nl.r1a.grassmap.plugin.api.model.DownloadsData
 import nl.r1a.grassmap.plugin.api.model.DownloadsState
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.LocationFix
@@ -42,6 +41,7 @@ class DownloadsUiSession(
     private var selectedRegion: String? = null
     private var lastFix: GeoPoint? = null
     private var following: Boolean = false
+    private val publishLock = Any()
 
     /** Starts following the store and, once, the position the screen opens on. */
     fun follow(scope: CoroutineScope) {
@@ -49,11 +49,13 @@ class DownloadsUiSession(
             return
         }
         following = true
-        scope.launch { access.data.collect { data -> publish(data) } }
+        scope.launch { access.data.collect { publish() } }
         scope.launch {
             val fix = fixes.filterNotNull().firstOrNull() ?: return@launch
-            lastFix = fix.position
-            publish(access.data.value)
+            synchronized(publishLock) {
+                lastFix = fix.position
+                publishLocked()
+            }
         }
     }
 
@@ -88,15 +90,17 @@ class DownloadsUiSession(
 
     /** Opens [region]'s sheet, or closes it when [region] is null or blank. */
     suspend fun select(region: String?): Outcome<DownloadsState> {
-        selectedRegion = region?.trim()?.takeIf { it.isNotEmpty() }
-        publish(access.data.value)
-        return Outcome.Success(current.value)
+        synchronized(publishLock) {
+            selectedRegion = region?.trim()?.takeIf { it.isNotEmpty() }
+            publishLocked()
+            return Outcome.Success(current.value)
+        }
     }
 
     private fun result(outcome: Outcome<Unit>): Outcome<DownloadsState> =
         when (outcome) {
             is Outcome.Success -> {
-                publish(access.data.value)
+                publish()
                 Outcome.Success(current.value)
             }
 
@@ -105,7 +109,17 @@ class DownloadsUiSession(
             }
         }
 
-    private fun publish(data: DownloadsData) {
+    /**
+     * Derives the state from the store's newest data. The collector, the fix
+     * reader and the commands call this from different threads, so the read of
+     * the inputs and the write of the state happen under one lock. Using the
+     * emitted value instead of the newest one would let a late collector write
+     * back a state older than the one a command already returned.
+     */
+    private fun publish() = synchronized(publishLock) { publishLocked() }
+
+    private fun publishLocked() {
+        val data = access.data.value
         val detected = DownloadsScreen.detectRegion(data.catalog, lastFix)
         val state = DownloadsScreen.state(data, selectedRegion, detected)
         if (state.selectedRegion == null) {

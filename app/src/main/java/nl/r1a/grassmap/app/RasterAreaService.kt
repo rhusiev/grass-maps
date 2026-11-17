@@ -182,7 +182,12 @@ class RasterAreaService(
         /** `raster-<source>-<8 hex of the bounds and zooms>`. The same area replaces itself. */
         fun areaId(plan: RasterAreaPlan): String {
             val key = "${plan.bounds}|${plan.minZoom}|${plan.maxZoom}"
-            val hash = key.hashCode().toUInt().toString(HEX_RADIX).padStart(HASH_DIGITS, '0')
+            val hash =
+                key
+                    .hashCode()
+                    .toUInt()
+                    .toString(HEX_RADIX)
+                    .padStart(HASH_DIGITS, '0')
             return "raster-${plan.source.id}-$hash"
         }
 

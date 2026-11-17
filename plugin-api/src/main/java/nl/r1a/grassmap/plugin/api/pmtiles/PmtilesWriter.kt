@@ -134,7 +134,11 @@ class PmtilesWriter(
         buffer.putLong(leafOffset).putLong(layout.leaves.size.toLong())
         buffer.putLong(dataOffset).putLong(dataBytes)
         buffer.putLong(count).putLong(count).putLong(count)
-        buffer.put(NOT_CLUSTERED).put(COMPRESSION_GZIP).put(COMPRESSION_NONE).put(spec.tileType.toByte())
+        buffer
+            .put(NOT_CLUSTERED)
+            .put(COMPRESSION_GZIP)
+            .put(COMPRESSION_NONE)
+            .put(spec.tileType.toByte())
         buffer.put(minZoom.toByte()).put(maxZoom.toByte())
         val bounds = spec.bounds
         buffer.putInt(e7(bounds.southWest.longitude)).putInt(e7(bounds.southWest.latitude))

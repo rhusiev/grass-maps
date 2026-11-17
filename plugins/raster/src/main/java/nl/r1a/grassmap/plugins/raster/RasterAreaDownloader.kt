@@ -63,12 +63,16 @@ class RasterAreaDownloader(
         val info = infoOf(plan.source, licence, name)
         return RasterPackBuilder(staging, areaId, version, clock()).use { builder ->
             when (val fetched = fetchAll(plan, builder, cancellation, onProgress)) {
-                is Outcome.Failure -> fetched
-                is Outcome.Success ->
+                is Outcome.Failure -> {
+                    fetched
+                }
+
+                is Outcome.Success -> {
                     when (val done = builder.finish(fetched.value, plan.bounds, info)) {
                         is Outcome.Failure -> done
                         is Outcome.Success -> Outcome.Success(RasterAreaStaged(areaId, version, staging, done.value))
                     }
+                }
             }
         }
     }
@@ -90,7 +94,10 @@ class RasterAreaDownloader(
                         return Outcome.Failure(AppError.Cancelled)
                     }
                     when (val tile = fetchTile(plan.source, range.zoom, x, y)) {
-                        is Outcome.Failure -> return tile
+                        is Outcome.Failure -> {
+                            return tile
+                        }
+
                         is Outcome.Success -> {
                             val image = tile.value ?: continue
                             val type = tileTypeOf(image.contentType) ?: return Outcome.Failure(AppError.CorruptData)
@@ -123,7 +130,10 @@ class RasterAreaDownloader(
         var last: AppError = AppError.Network
         repeat(MAX_ATTEMPTS) {
             when (val result = client.fetch(source, z, x.toInt(), y.toInt())) {
-                is Outcome.Success -> return Outcome.Success(result.value)
+                is Outcome.Success -> {
+                    return Outcome.Success(result.value)
+                }
+
                 is Outcome.Failure -> {
                     last = result.error
                     if (!isWorthRetrying(last)) {
@@ -135,7 +145,8 @@ class RasterAreaDownloader(
         return Outcome.Failure(last)
     }
 
-    private fun isWorthRetrying(error: AppError): Boolean = error == AppError.Network || (error is AppError.Server && error.status >= SERVER_ERROR_FROM)
+    private fun isWorthRetrying(error: AppError): Boolean =
+        error == AppError.Network || (error is AppError.Server && error.status >= SERVER_ERROR_FROM)
 
     private fun AppError.isMissingTile(): Boolean = this is AppError.Server && status == NOT_FOUND
 

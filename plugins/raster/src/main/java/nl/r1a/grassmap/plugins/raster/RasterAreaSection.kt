@@ -140,11 +140,21 @@ private fun PlanInfo(
 @Composable
 private fun refusalText(refusal: RasterAreaPlan.Refusal): String =
     when (refusal) {
-        RasterAreaPlan.Refusal.SourceForbidsOffline -> stringResource(R.string.map_raster_area_refused_source)
-        RasterAreaPlan.Refusal.TooManyTiles -> stringResource(R.string.map_raster_area_refused_tiles, RasterAreaPlan.MAX_TILES)
-        RasterAreaPlan.Refusal.TooManyBytes ->
+        RasterAreaPlan.Refusal.SourceForbidsOffline -> {
+            stringResource(R.string.map_raster_area_refused_source)
+        }
+
+        RasterAreaPlan.Refusal.TooManyTiles -> {
+            stringResource(R.string.map_raster_area_refused_tiles, RasterAreaPlan.MAX_TILES)
+        }
+
+        RasterAreaPlan.Refusal.TooManyBytes -> {
             stringResource(R.string.map_raster_area_refused_bytes, RasterAreaPlan.MAX_BYTES / BYTES_PER_MIB)
-        RasterAreaPlan.Refusal.NotEnoughSpace -> stringResource(R.string.map_raster_area_refused_space)
+        }
+
+        RasterAreaPlan.Refusal.NotEnoughSpace -> {
+            stringResource(R.string.map_raster_area_refused_space)
+        }
     }
 
 /** The licence name, its link text and the non-commercial notice, shown online and offline. */
@@ -244,14 +254,17 @@ private fun DownloadRow(
             PanelText(stringResource(R.string.map_raster_area_progress, state.progress.done, state.progress.total), PANEL_FOREGROUND)
             ActionText(stringResource(R.string.map_raster_area_cancel), actions.onCancel)
         }
+
         is RasterAreaDownloadState.Failed -> {
             PanelText(failureText(state.reason), PANEL_FOREGROUND)
             ActionText(stringResource(R.string.map_raster_area_dismiss), actions.onAcknowledge)
         }
+
         RasterAreaDownloadState.Done -> {
             PanelText(stringResource(R.string.map_raster_area_done), PANEL_FOREGROUND)
             ActionText(stringResource(R.string.map_raster_area_dismiss), actions.onAcknowledge)
         }
+
         RasterAreaDownloadState.Idle -> {
             if (!model.onlineEnabled) {
                 PanelText(stringResource(R.string.map_raster_area_needs_online), PANEL_MUTED)

@@ -847,7 +847,14 @@ private fun MapContent(
                                 state = rasterAreaState,
                                 onlineEnabled = onlineTilesEnabled,
                                 source = rasterLayer.source,
-                                viewBounds = remember { viewportBounds(cameraNow(), configuration.screenWidthDp, configuration.screenHeightDp) },
+                                viewBounds =
+                                    remember {
+                                        viewportBounds(
+                                            cameraNow(),
+                                            configuration.screenWidthDp,
+                                            configuration.screenHeightDp,
+                                        )
+                                    },
                                 refusalOf = container.rasterAreas::refusalOf,
                                 freeBytes = remember(rasterAreaState) { container.rasterAreas.freeBytesNow() },
                             ),

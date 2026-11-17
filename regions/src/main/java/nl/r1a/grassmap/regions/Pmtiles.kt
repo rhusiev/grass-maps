@@ -280,9 +280,7 @@ internal class PmtilesArchive private constructor(
             zoom: Int,
             x: Long,
             y: Long,
-        ): Long {
-            return PmtilesTileId.of(zoom, x, y)
-        }
+        ): Long = PmtilesTileId.of(zoom, x, y)
 
         private fun isSupported(compression: Int): Boolean =
             compression == PmtilesHeader.COMPRESSION_NONE || compression == PmtilesHeader.COMPRESSION_GZIP

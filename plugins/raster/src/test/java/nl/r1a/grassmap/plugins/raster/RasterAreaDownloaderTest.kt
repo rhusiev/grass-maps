@@ -84,7 +84,11 @@ class RasterAreaDownloaderTest {
 
                 val outcome =
                     downloader(OpenGate).download(
-                        plan, AREA_ID, VERSION, "Lviv", staging,
+                        plan,
+                        AREA_ID,
+                        VERSION,
+                        "Lviv",
+                        staging,
                         cancellation = { server.paths().isNotEmpty() },
                     )
 
@@ -107,8 +111,7 @@ class RasterAreaDownloaderTest {
             }
         }
 
-    private fun local(server: TileServer): RasterSource =
-        RasterPresets.eox2018.copy(tileUrlTemplate = "${server.baseUrl}/{z}/{y}/{x}.jpg")
+    private fun local(server: TileServer): RasterSource = RasterPresets.eox2018.copy(tileUrlTemplate = "${server.baseUrl}/{z}/{y}/{x}.jpg")
 
     private fun downloader(gate: NetworkGate): RasterAreaDownloader =
         RasterAreaDownloader(RasterTileClient(gate = gate), spacingMillis = 0) { CREATED_AT }

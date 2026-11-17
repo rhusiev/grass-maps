@@ -31,7 +31,10 @@ internal class EoxMockServer : AutoCloseable {
     private fun handle(exchange: HttpExchange) {
         seen += exchange.requestURI.path
         try {
-            val parts = exchange.requestURI.path.removeSuffix(".jpg").split('/')
+            val parts =
+                exchange.requestURI.path
+                    .removeSuffix(".jpg")
+                    .split('/')
             val body = tileBody(z = parts[parts.size - 3].toInt(), x = parts.last().toInt(), y = parts[parts.size - 2].toInt())
             exchange.responseHeaders.set("Content-Type", "image/jpeg")
             exchange.sendResponseHeaders(HTTP_OK, body.size.toLong())

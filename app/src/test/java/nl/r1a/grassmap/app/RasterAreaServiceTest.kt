@@ -142,7 +142,10 @@ class RasterAreaServiceTest {
         runTest {
             val service = service(OpenGate)
             service.download(RasterAreaPlan.of(mockSource(), LVIV, minZoom = 6, maxZoom = 7), "Lviv")
-            val id = service.areas.value.single().id
+            val id =
+                service.areas.value
+                    .single()
+                    .id
 
             assertEquals(Outcome.Success(Unit), service.remove(id))
 

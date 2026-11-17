@@ -43,6 +43,7 @@ data class RasterAreaMetadata(
                 } catch (exception: IllegalArgumentException) {
                     null
                 } ?: return null
+
             fun text(key: String): String? = (root[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
             return RasterAreaMetadata(
                 sourceId = text(KEY_SOURCE)?.takeIf { RegionIdentifiers.isSafeSegment(it) } ?: return null,
@@ -182,7 +183,9 @@ class RasterPackInstaller(
         if (installed is Outcome.Failure) {
             return installed
         }
-        return RasterAreaMounts(root).resolveAll().firstOrNull { it.id == id }
+        return RasterAreaMounts(root)
+            .resolveAll()
+            .firstOrNull { it.id == id }
             ?.let { Outcome.Success(it) }
             ?: Outcome.Failure(AppError.CorruptData)
     }

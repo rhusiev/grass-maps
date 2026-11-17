@@ -112,7 +112,12 @@ class RasterTilesAccessTest {
             val added = host.layers.single()
             assertEquals(LayerType.Raster, added.spec.type)
             assertEquals(AREA.packFile, added.spec.raster?.packFile)
-            assertTrue(added.spec.raster?.tiles.orEmpty().isEmpty())
+            assertTrue(
+                added.spec.raster
+                    ?.tiles
+                    .orEmpty()
+                    .isEmpty(),
+            )
             assertFalse(tiles.allows("https://tile.openstreetmap.org/5/10/20.png"))
         }
 
@@ -159,6 +164,13 @@ class RasterTilesAccessTest {
 
     private companion object {
         val CAMERA = Camera(center = GeoPoint(49.95, 23.945), zoom = 13.0)
-        val AREA = RasterAreaLayer(id = "raster-eox-s2-2018-0", packFile = "/data/raster-eox-s2-2018-0/1/raster.pmtiles", minZoom = 6, maxZoom = 8, attributionHtml = "EOX")
+        val AREA =
+            RasterAreaLayer(
+                id = "raster-eox-s2-2018-0",
+                packFile = "/data/raster-eox-s2-2018-0/1/raster.pmtiles",
+                minZoom = 6,
+                maxZoom = 8,
+                attributionHtml = "EOX",
+            )
     }
 }

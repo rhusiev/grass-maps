@@ -46,7 +46,7 @@ object RegionManifestParser {
                 null
             }
         val components =
-            parseComponents(root["components"], RegionIdentifiers.isAddonPackage(region)) ?: return corrupt()
+            parseComponents(region, root["components"], RegionIdentifiers.isAddonPackage(region)) ?: return corrupt()
         return Outcome.Success(
             RegionManifest(
                 region = region,
@@ -67,6 +67,7 @@ object RegionManifestParser {
         }
 
     private fun parseComponents(
+        region: String,
         element: JsonElement?,
         isAddon: Boolean,
     ): List<RegionComponent>? {
@@ -93,10 +94,13 @@ object RegionManifestParser {
         // The reader refuses a search section without its feature component, so
         // a package that omits it must not install and then fail search and
         // details for a region the app reports as installed. A package with no
-        // search section, such as the world overview, needs no features.
+        // search section, such as the world overview, needs no features. Only
+        // the world package may omit them: an oblast that lost its search
+        // section must stay corrupt instead of mounting with silent empty search.
         val features = present.filter { it.kind == FEATURES_KIND }
         val hasSearch = present.any { it.kind.startsWith(SEARCH_KIND_PREFIX) }
-        if (features.size > 1 || (hasSearch && features.isEmpty())) {
+        val mayOmitFeatures = region == RegionIdentifiers.WORLD_REGION && !hasSearch
+        if (features.size > 1 || (features.isEmpty() && !mayOmitFeatures)) {
             return null
         }
         val declared = features.singleOrNull()

@@ -1,7 +1,15 @@
 package nl.r1a.grassmap.app
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
 import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
+import nl.r1a.grassmap.regions.RegionIdentifiers
 import nl.r1a.grassmap.regions.RegionMountProblem
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -68,7 +76,7 @@ class MapSourcesTest {
 
     @Test
     fun theWorldPackAloneOpensOnTheWorldCamera() {
-        install("world")
+        installWorld()
 
         val sources = resolve()
 
@@ -79,7 +87,7 @@ class MapSourcesTest {
     @Test
     fun anOblastBesideTheWorldKeepsTheOblastCamera() {
         install("ua-46")
-        install("world")
+        installWorld()
 
         val sources = resolve()
 
@@ -197,6 +205,23 @@ class MapSourcesTest {
             }
         }
         Files.writeString(store.resolve(region).resolve("current"), TestRegions.DEFAULT_VERSION + "\n")
+    }
+
+    /** A real map-only world package: the fixture's map file and a manifest that lists only it. */
+    private fun installWorld() {
+        val source = TestRegions.load().root
+        val target = Files.createDirectories(store.resolve(RegionIdentifiers.WORLD_REGION).resolve(TestRegions.DEFAULT_VERSION))
+        val manifest = Json.parseToJsonElement(Files.readString(source.resolve("manifest.json"))).jsonObject
+        val map =
+            manifest.getValue("components").jsonArray.map { it.jsonObject }.single {
+                it.getValue("kind").jsonPrimitive.content ==
+                    "map"
+            }
+        Files.copy(source.resolve(map.getValue("file").jsonPrimitive.content), target.resolve(map.getValue("file").jsonPrimitive.content))
+        val world =
+            JsonObject(manifest + ("region" to JsonPrimitive(RegionIdentifiers.WORLD_REGION)) + ("components" to JsonArray(listOf(map))))
+        Files.writeString(target.resolve("manifest.json"), world.toString())
+        Files.writeString(store.resolve(RegionIdentifiers.WORLD_REGION).resolve("current"), TestRegions.DEFAULT_VERSION + "\n")
     }
 
     /** An installed region whose `current` pointer names a version that is not there. */

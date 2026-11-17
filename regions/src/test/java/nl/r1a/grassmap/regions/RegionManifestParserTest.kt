@@ -77,12 +77,23 @@ class RegionManifestParserTest {
     }
 
     @Test
-    fun aMapOnlyWorldManifestParsesWithoutFeatures() {
-        val json =
-            rewrittenComponents { components -> components.filter { kindOf(it) == "map" } }
-        val manifest = success(parse(json))
+    fun aMapOnlyManifestOfTheWorldRegionParsesWithoutFeatures() {
+        val json = mapOnlyManifest(region = "world")
 
+        val manifest = success(RegionManifestParser.parse(json, "world", FixturePackages.FIXTURE_VERSION))
+
+        assertEquals("world", manifest.region)
         assertEquals(listOf("map"), manifest.components.map { it.kind })
+    }
+
+    @Test
+    fun aMapOnlyManifestOfAnOblastIsCorrupt() {
+        val json = mapOnlyManifest(region = "ua-46")
+
+        assertEquals(
+            Outcome.Failure(AppError.CorruptData),
+            RegionManifestParser.parse(json, "ua-46", FixturePackages.FIXTURE_VERSION),
+        )
     }
 
     @Test
@@ -216,6 +227,11 @@ class RegionManifestParserTest {
         val components = root.getValue("components").jsonArray.map { it.jsonObject }
         val rewritten = JsonObject(root + ("components" to JsonArray(transform(components))))
         return rewritten.toString().toByteArray(Charsets.UTF_8)
+    }
+
+    private fun mapOnlyManifest(region: String): ByteArray {
+        val root = Json.parseToJsonElement(String(rewrittenComponents { c -> c.filter { kindOf(it) == "map" } }, Charsets.UTF_8)).jsonObject
+        return JsonObject(root + ("region" to JsonPrimitive(region))).toString().toByteArray(Charsets.UTF_8)
     }
 
     private fun kindOf(component: JsonObject): String = component.getValue("kind").jsonPrimitive.content

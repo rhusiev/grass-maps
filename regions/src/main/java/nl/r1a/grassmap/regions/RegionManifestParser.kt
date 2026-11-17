@@ -92,13 +92,17 @@ object RegionManifestParser {
         }
         // The reader refuses a search section without its feature component, so
         // a package that omits it must not install and then fail search and
-        // details for a region the app reports as installed.
+        // details for a region the app reports as installed. A package with no
+        // search section, such as the world overview, needs no features.
         val features = present.filter { it.kind == FEATURES_KIND }
-        if (features.size != 1) {
+        val hasSearch = present.any { it.kind.startsWith(SEARCH_KIND_PREFIX) }
+        if (features.size > 1 || (hasSearch && features.isEmpty())) {
             return null
         }
-        val required = features.single()
-        if (required.format != FEATURES_FORMAT || required.formatVersion != FEATURES_FORMAT_VERSION) {
+        val declared = features.singleOrNull()
+        if (declared != null &&
+            (declared.format != FEATURES_FORMAT || declared.formatVersion != FEATURES_FORMAT_VERSION)
+        ) {
             return null
         }
         return present
@@ -222,6 +226,7 @@ object RegionManifestParser {
     private const val TYPE_DIRECTORY = "directory"
     private const val FEATURES_KIND = "features"
     private const val ELEVATION_KIND = "elevation"
+    private const val SEARCH_KIND_PREFIX = "search-"
     private const val FEATURES_FORMAT = "place-features"
     private const val FEATURES_FORMAT_VERSION = 1
 }

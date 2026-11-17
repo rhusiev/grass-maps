@@ -56,6 +56,9 @@ object RegionIdentifiers {
     const val BBOX_COORDINATES: Int = 4
     const val ZOOM_LEVEL_COUNT: Int = 2
 
+    /** The id of the z0-z7 world overview package. */
+    const val WORLD_REGION: String = "world"
+
     private const val MAX_SEGMENT_LENGTH: Int = 64
     private const val ELEVATION_30M_SUFFIX = "-elevation-30m"
     private val ADDON_SUFFIXES = listOf(ELEVATION_30M_SUFFIX)

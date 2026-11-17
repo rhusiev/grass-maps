@@ -5,6 +5,7 @@ import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
 import nl.r1a.grassmap.regions.RegionMountProblem
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -63,6 +64,27 @@ class MapSourcesTest {
         assertTrue("a served tile carries the places layer", String(map, Charsets.ISO_8859_1).contains("places"))
         val contours = requireNotNull(sources.tileSources.getValue(MapSourceIds.CONTOURS).tile(TILE_ZOOM, TILE_X, TILE_Y))
         assertTrue("a served contour tile carries the contours layer", String(contours, Charsets.ISO_8859_1).contains("contours"))
+    }
+
+    @Test
+    fun theWorldPackAloneOpensOnTheWorldCamera() {
+        install("world")
+
+        val sources = resolve()
+
+        assertEquals(MapSources.WORLD_CAMERA, sources.camera)
+        assertNotNull(sources.tileSources[MapSourceIds.WORLD])
+    }
+
+    @Test
+    fun anOblastBesideTheWorldKeepsTheOblastCamera() {
+        install("ua-46")
+        install("world")
+
+        val sources = resolve()
+
+        assertEquals("regions:ua-46,world", sources.regionName)
+        assertNotEquals(MapSources.WORLD_CAMERA, sources.camera)
     }
 
     @Test

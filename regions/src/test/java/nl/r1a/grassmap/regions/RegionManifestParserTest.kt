@@ -77,6 +77,25 @@ class RegionManifestParserTest {
     }
 
     @Test
+    fun aMapOnlyWorldManifestParsesWithoutFeatures() {
+        val json =
+            rewrittenComponents { components -> components.filter { kindOf(it) == "map" } }
+        val manifest = success(parse(json))
+
+        assertEquals(listOf("map"), manifest.components.map { it.kind })
+    }
+
+    @Test
+    fun aSearchSectionWithoutFeaturesIsCorruptEvenWithAMap() {
+        val json =
+            rewrittenComponents { components ->
+                components.filter { kindOf(it) == "map" || kindOf(it).startsWith("search-") }
+            }
+
+        assertEquals(Outcome.Failure(AppError.CorruptData), parse(json))
+    }
+
+    @Test
     fun aFeaturesComponentWithAnotherFormatVersionIsCorrupt() {
         val json =
             rewrittenComponents { components ->

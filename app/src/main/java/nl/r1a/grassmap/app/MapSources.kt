@@ -6,6 +6,7 @@ import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
 import nl.r1a.grassmap.plugin.api.model.SourceId
+import nl.r1a.grassmap.regions.RegionIdentifiers
 import nl.r1a.grassmap.regions.RegionMountProblem
 import nl.r1a.grassmap.regions.RegionMountResolver
 import nl.r1a.grassmap.regions.RegionMounts
@@ -26,9 +27,10 @@ import java.io.File
  * A shared border tile is present in both neighbouring packs, byte for byte.
  * Reading them as one source per kind means the first pack in region-id order
  * serves it and the second copy is never requested, so its labels draw once.
- * `world` reads the same `map` components as `region`, and an oblast pack
- * carries no z0-z7 tiles, so its low-zoom layers stay empty until a world
- * overview pack is installed.
+ * `world` reads the same `map` components as `region`. An oblast pack carries
+ * no z0-z7 tiles, so its low-zoom layers stay empty until the world overview
+ * pack is installed. The overview carries no z8+ tiles, so with it alone the
+ * map opens on [WORLD_CAMERA] instead of an oblast.
  *
  * An installed region that fails to mount is not silently ignored: the map
  * still opens on the next source, and [regionProblem] carries the typed reason
@@ -55,6 +57,9 @@ internal class MapSources private constructor(
         private const val NO_SOURCE = "none"
 
         private val LVIV_CAMERA = Camera(center = GeoPoint(49.8419, 24.0316), zoom = 12.5)
+
+        /** Chosen, not derived: the overview alone draws only up to z7. */
+        internal val WORLD_CAMERA = Camera(center = GeoPoint(49.0, 31.0), zoom = 4.0)
         private val FIXTURE_CAMERA = Camera(center = GeoPoint(49.9500, 23.9450), zoom = 13.0)
 
         fun resolve(
@@ -86,7 +91,7 @@ internal class MapSources private constructor(
                 return MapSources(
                     uris = emptyMap(),
                     tileSources = tileSourcesOf(tiles),
-                    camera = LVIV_CAMERA,
+                    camera = if (isWorldOnly(tiles)) WORLD_CAMERA else LVIV_CAMERA,
                     regionName = packName(tiles),
                     hasContours = tiles.has(TileKind.CONTOURS),
                     // A broken pack is reported even when the others mounted, so
@@ -140,6 +145,8 @@ internal class MapSources private constructor(
             }
             return sources
         }
+
+        private fun isWorldOnly(tiles: RegionTileSources): Boolean = tiles.regions.all { it == RegionIdentifiers.WORLD_REGION }
 
         /** `region:<id>/<version>` for one pack, `regions:<id>,<id>` for several. */
         private fun packName(tiles: RegionTileSources): String =

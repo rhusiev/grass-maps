@@ -22,6 +22,7 @@ import nl.r1a.grassmap.plugin.api.model.DownloadsDefaults
 import nl.r1a.grassmap.plugin.api.testing.fixture.CatalogFixture
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -34,6 +35,8 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.Collections
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
@@ -243,20 +246,22 @@ class AutoUpdaterTest {
             clock.advance(DAYS_31)
             val announced = AutoUpdateRun.Queued(mapOf(CatalogFixture.LVIV to OLD_VERSION), START.toEpochMilli() + 1)
             var announcer: Thread? = null
-            var savesDuringRun = -1
+            var announcerWroteDuringRun = true
             ledger.onLoad = {
                 ledger.onLoad = null
-                val baseline = ledger.saves.get()
+                val written = CountDownLatch(1)
+                ledger.onSave = { written.countDown() }
                 announcer = thread { runBlocking { updater.announce(announced) } }
-                // Gives an unguarded announcement time to write. The guarded one cannot.
-                Thread.sleep(ANNOUNCE_GRACE_MS)
-                savesDuringRun = ledger.saves.get() - baseline
+                // An unguarded announcement writes at once and releases the latch.
+                // A guarded one waits for this run, so the latch only times out.
+                announcerWroteDuringRun = written.await(ANNOUNCE_WRITE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                ledger.onSave = null
             }
 
             assertEquals(AutoUpdateRun.UpToDate, updater.runIfDue())
             announcer?.join()
 
-            assertEquals(0, savesDuringRun)
+            assertFalse(announcerWroteDuringRun)
             assertEquals(announced.checkedAtMs, ledger.load().lastCheckMs)
             assertEquals(clock.millis(), ledger.load().lastAttemptMs)
         }
@@ -460,7 +465,10 @@ class AutoUpdaterTest {
         /** Runs once at the next [load], so a test can act while a caller holds the ledger. */
         @Volatile
         var onLoad: (() -> Unit)? = null
-        val saves = AtomicInteger()
+
+        /** Called on each [save], so a test can see a write the moment it happens. */
+        @Volatile
+        var onSave: (() -> Unit)? = null
 
         override fun load(): AutoUpdateLedgerState {
             onLoad?.invoke()
@@ -468,8 +476,8 @@ class AutoUpdaterTest {
         }
 
         override fun save(state: AutoUpdateLedgerState) {
-            saves.incrementAndGet()
             this.state = state
+            onSave?.invoke()
         }
     }
 
@@ -489,7 +497,7 @@ class AutoUpdaterTest {
         const val HTTP_UNAVAILABLE = 503
         const val TIMEOUT_MS = 60_000L
         const val POLL_MS = 20L
-        const val ANNOUNCE_GRACE_MS = 300L
+        const val ANNOUNCE_WRITE_TIMEOUT_MS = 1_000L
         const val SLOW_CHUNK_BYTES = 4096
         const val SLOW_CHUNK_DELAY_MS = 40L
     }

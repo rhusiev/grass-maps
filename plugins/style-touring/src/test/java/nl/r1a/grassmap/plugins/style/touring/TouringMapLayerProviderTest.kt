@@ -34,6 +34,16 @@ class TouringMapLayerProviderTest {
     }
 
     @Test
+    fun bothVariantsDeclareTheWorldAndTheRegionSource() {
+        for (style in provider.styles()) {
+            assertEquals(
+                listOf(MapSourceIds.WORLD, MapSourceIds.REGION),
+                style.sources.map { it.id }.filter { it == MapSourceIds.WORLD || it == MapSourceIds.REGION },
+            )
+        }
+    }
+
+    @Test
     fun baseDocumentEqualsStandardSoSwitchingNeedsNoReload() {
         assertEquals(standard.baseStyle(), provider.styles().first().baseStyleJson)
     }

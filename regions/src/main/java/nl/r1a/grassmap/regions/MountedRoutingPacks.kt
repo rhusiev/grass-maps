@@ -20,7 +20,11 @@ class MountedRoutingPacks(
         val mounts = resolver.resolveAll()
         return when (val result = mount.ensure(mounts.installed)) {
             is RoutingMountResult.Ready -> {
-                result.skipped.forEach { log("routing skips ${it.region}: ${it.reason}") }
+                // A pack with no routing component by design, such as the world
+                // overview, is skipped on every call and is not worth a log line.
+                result.skipped
+                    .filter { it.reason != RoutingSkipReason.NoRouting }
+                    .forEach { log("routing skips ${it.region}: ${it.reason}") }
                 result.directory.absolutePath
             }
 

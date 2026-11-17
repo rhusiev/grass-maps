@@ -138,6 +138,8 @@ import nl.r1a.grassmap.plugins.map.controls.ScaleBarUnit
 import nl.r1a.grassmap.plugins.point.info.PointInfoContract
 import nl.r1a.grassmap.plugins.point.info.PointInfoLabel
 import nl.r1a.grassmap.plugins.point.info.SelectedPointValue
+import nl.r1a.grassmap.plugins.raster.RasterAreaSectionActions
+import nl.r1a.grassmap.plugins.raster.RasterAreaSectionModel
 import nl.r1a.grassmap.plugins.raster.RasterLayerPanel
 import nl.r1a.grassmap.plugins.route.layer.RouteColourMode
 import nl.r1a.grassmap.plugins.route.layer.RouteLineDrawing
@@ -427,6 +429,9 @@ private fun MapContent(
     val switchStates by container.privacyStates.collectAsState(initial = container.privacySwitchStates())
     val onlineTilesEnabled = switchStates.firstOrNull { it.switch == NetworkSwitches.onlineTiles }?.enabled == true
     val rasterLayer by container.rasterSettings.active.collectAsState()
+    val rasterAreaState by container.rasterAreas.state.collectAsState()
+    val rasterAreaPacks by container.rasterAreas.areas.collectAsState()
+    LaunchedEffect(container) { container.rasterAreas.refresh() }
     // The layers cards are closed until the user opens them: a permanently open
     // card covers the map's centre on a phone, and the T-0109 layers sheet is
     // where they belong. This is view state, not a setting; the switches inside
@@ -833,7 +838,38 @@ private fun MapContent(
                             }
                         },
                     )
+                    val configuration = LocalConfiguration.current
                     RasterLayerPanel(
+                        areaModel =
+                            RasterAreaSectionModel(
+                                items = remember(rasterAreaPacks) { container.rasterAreas.items() },
+                                areasShown = rasterLayer.areasShown,
+                                state = rasterAreaState,
+                                onlineEnabled = onlineTilesEnabled,
+                                source = rasterLayer.source,
+                                viewBounds = remember { viewportBounds(cameraNow(), configuration.screenWidthDp, configuration.screenHeightDp) },
+                                refusalOf = container.rasterAreas::refusalOf,
+                                freeBytes = remember(rasterAreaState) { container.rasterAreas.freeBytesNow() },
+                            ),
+                        areaActions =
+                            RasterAreaSectionActions(
+                                onAreasShownChange = { shown ->
+                                    scope.launch {
+                                        withContext(Dispatchers.IO) { container.rasterSettings.setAreasShown(shown) }
+                                            .onFailure { error -> Log.w(TAG, "offline areas switch not saved: $error") }
+                                    }
+                                },
+                                onDownload = container.rasterAreas::start,
+                                onCancel = container.rasterAreas::cancel,
+                                onDelete = { id -> scope.launch { container.rasterAreas.remove(id) } },
+                                onAcknowledge = container.rasterAreas::acknowledge,
+                            ),
+                        onPresetChange = { id ->
+                            scope.launch {
+                                withContext(Dispatchers.IO) { container.rasterSettings.usePreset(id) }
+                                    .onFailure { error -> Log.w(TAG, "online tiles source not saved: $error") }
+                            }
+                        },
                         enabled = onlineTilesEnabled,
                         source = rasterLayer.source,
                         placement = rasterLayer.placement,
@@ -1832,7 +1868,7 @@ private fun MapContent(
             is Outcome.Failure -> Log.w(TAG, "contour layers not applied: ${contours.error}")
         }
     }
-    LaunchedEffect(surface.host, activeStyle.id, onlineTilesEnabled, rasterLayer) {
+    LaunchedEffect(surface.host, activeStyle.id, onlineTilesEnabled, rasterLayer, rasterAreaPacks) {
         when (
             val installed =
                 container.rasterTiles.apply(
@@ -1840,6 +1876,7 @@ private fun MapContent(
                     styleId = activeStyle.id,
                     enabled = onlineTilesEnabled,
                     layer = rasterLayer,
+                    areas = container.rasterAreas.layers(),
                 )
         ) {
             is Outcome.Success -> {

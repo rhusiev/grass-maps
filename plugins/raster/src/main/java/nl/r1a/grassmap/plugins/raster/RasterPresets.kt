@@ -75,6 +75,9 @@ object RasterPresets {
     /** The presets an area can be downloaded from. OSM is not among them. */
     val areaSources: List<RasterSource> = listOf(eox2016, eox2018)
 
+    /** Every built-in source, the OSM preset first. */
+    val all: List<RasterSource> get() = listOf(openStreetMap) + areaSources
+
     /** The preset with [id], or null. */
     fun byId(id: String): RasterSource? = (areaSources + openStreetMap).firstOrNull { it.id == id }
 

@@ -97,6 +97,7 @@ import nl.r1a.grassmap.plugins.proximity.alerts.ProximityAlertHost
 import nl.r1a.grassmap.plugins.proximity.alerts.ProximityAlertSink
 import nl.r1a.grassmap.plugins.raster.RasterPlacement
 import nl.r1a.grassmap.plugins.raster.RasterSource
+import nl.r1a.grassmap.plugins.raster.RasterTileClient
 import nl.r1a.grassmap.plugins.route.layer.RouteLayer
 import nl.r1a.grassmap.plugins.route.warnings.RouteWarningScanner
 import nl.r1a.grassmap.plugins.track.layer.TrackLayer
@@ -896,6 +897,14 @@ class AppContainer(
 
     @Volatile
     private var cachedFavourites: FavouritesAccess? = null
+
+    /**
+     * The offline raster areas (T-0513). They download through the same
+     * network gate as the online layer and install into the region store.
+     */
+    val rasterAreas: RasterAreaService by lazy {
+        RasterAreaService(regionsRoot, RasterTileClient(gate = networkGate), processScope)
+    }
 
     /**
      * The v1 privacy switches. Region downloads name

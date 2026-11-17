@@ -40,15 +40,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 
-private val PANEL_BACKGROUND = Color(0xCC000000)
-private val PANEL_FOREGROUND = Color.White
-private val PANEL_MUTED = Color(0xCCFFFFFF)
-private val FIELD_BACKGROUND = Color(0x33FFFFFF)
-private const val PANEL_CORNER_DP = 8
-private const val PANEL_HORIZONTAL_DP = 12
-private const val PANEL_VERTICAL_DP = 8
-private const val PANEL_GAP_DP = 6
-private const val PANEL_FONT_SP = 13
+internal val PANEL_BACKGROUND = Color(0xCC000000)
+internal val PANEL_FOREGROUND = Color.White
+internal val PANEL_MUTED = Color(0xCCFFFFFF)
+internal val FIELD_BACKGROUND = Color(0x33FFFFFF)
+internal const val PANEL_CORNER_DP = 8
+internal const val PANEL_HORIZONTAL_DP = 12
+internal const val PANEL_VERTICAL_DP = 8
+internal const val PANEL_GAP_DP = 6
+internal const val PANEL_FONT_SP = 13
 private const val SLIDER_HEIGHT_DP = 24
 private val TRACK_STROKE: Dp = 2.dp
 private val KNOB_RADIUS: Dp = 7.dp
@@ -75,6 +75,9 @@ fun RasterLayerPanel(
     onTransparencyChange: (percent: Int, store: Boolean) -> Unit,
     onCustomSource: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onPresetChange: ((String) -> Unit)? = null,
+    areaModel: RasterAreaSectionModel? = null,
+    areaActions: RasterAreaSectionActions? = null,
 ) {
     var template by remember(source) {
         mutableStateOf(if (source.isOpenStreetMap()) "" else source.tileUrlTemplate)
@@ -105,7 +108,7 @@ fun RasterLayerPanel(
                     ).padding(vertical = PANEL_GAP_DP.dp),
             horizontalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
         ) {
-            PanelText(stringResource(R.string.map_raster_toggle), PANEL_FOREGROUND)
+            PanelText(source.displayName, PANEL_FOREGROUND)
             PanelText(
                 stringResource(if (enabled) R.string.map_raster_on else R.string.map_raster_off),
                 PANEL_MUTED,
@@ -124,6 +127,8 @@ fun RasterLayerPanel(
             if (attribution.isNotBlank()) {
                 PanelText(attribution, PANEL_MUTED)
             }
+            source.licence?.let { LicenceLines(it) }
+            onPresetChange?.let { PresetRow(source.id, it) }
             PanelText(stringResource(R.string.map_raster_custom_hint), PANEL_MUTED)
             BasicTextField(
                 value = template,
@@ -148,6 +153,27 @@ fun RasterLayerPanel(
                 PanelText(stringResource(R.string.map_raster_custom_use), PANEL_FOREGROUND)
             }
             PanelText(stringResource(R.string.map_raster_custom_terms), PANEL_MUTED)
+        }
+        if (areaModel != null && areaActions != null) {
+            RasterAreaSection(areaModel, areaActions)
+        }
+    }
+}
+
+/** One choice per built-in source: the exclusive presets, nothing else. */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun PresetRow(
+    selectedId: String,
+    onPresetChange: (String) -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp)) {
+        RasterPresets.all.forEach { preset ->
+            PlacementChoice(
+                label = preset.displayName,
+                selected = preset.id == selectedId,
+                onClick = { onPresetChange(preset.id) },
+            )
         }
     }
 }
@@ -261,7 +287,7 @@ private fun percentAt(
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
-private fun PanelText(
+internal fun PanelText(
     text: String,
     color: Color,
 ) {

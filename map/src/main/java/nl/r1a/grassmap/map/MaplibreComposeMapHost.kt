@@ -51,6 +51,7 @@ import nl.r1a.grassmap.plugin.api.model.LayerSpec
 import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.MapSource
 import nl.r1a.grassmap.plugin.api.model.MapTrack
+import nl.r1a.grassmap.plugin.api.model.RegionOutline
 import nl.r1a.grassmap.plugin.api.model.RouteLineStyle
 import nl.r1a.grassmap.plugin.api.model.ScreenOffset
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
@@ -117,6 +118,9 @@ internal class MapHostState(
      * replaced as a whole, so a library change never leaves a stale line.
      */
     val tracks = mutableStateOf<List<MapTrack>>(emptyList())
+
+    /** The regions whose borders the map highlights (T-0506), replaced as a whole. */
+    val regionHighlights = mutableStateOf<List<RegionOutline>>(emptyList())
     val camera = MutableStateFlow(initialCamera)
     private val motion = PuckMotion()
 
@@ -251,6 +255,13 @@ internal class MapHostState(
     fun updateTracks(next: List<MapTrack>) {
         if (tracks.value != next) {
             tracks.value = next
+        }
+    }
+
+    /** Replaces the highlighted regions; an unchanged list is not a new map write. */
+    fun updateRegionHighlights(next: List<RegionOutline>) {
+        if (regionHighlights.value != next) {
+            regionHighlights.value = next
         }
     }
 
@@ -582,6 +593,12 @@ class MaplibreComposeMapHost internal constructor(
     override suspend fun setTracks(tracks: List<MapTrack>): Outcome<Unit> =
         withContext(Dispatchers.Main.immediate) {
             session.updateTracks(tracks)
+            Outcome.Success(Unit)
+        }
+
+    override suspend fun setRegionHighlights(regions: List<RegionOutline>): Outcome<Unit> =
+        withContext(Dispatchers.Main.immediate) {
+            session.updateRegionHighlights(regions)
             Outcome.Success(Unit)
         }
 

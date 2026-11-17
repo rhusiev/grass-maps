@@ -246,6 +246,7 @@ dependencies {
     implementation(project(":plugins:proximity-alerts"))
     implementation(project(":plugins:route-warnings"))
     implementation(project(":plugins:track-layer"))
+    implementation(project(":plugins:region-outlines"))
     implementation(project(":plugins:route-layer"))
     implementation(project(":plugins:track-library"))
     implementation(project(":plugins:contours"))

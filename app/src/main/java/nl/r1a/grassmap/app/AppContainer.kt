@@ -98,6 +98,7 @@ import nl.r1a.grassmap.plugins.proximity.alerts.ProximityAlertSink
 import nl.r1a.grassmap.plugins.raster.RasterPlacement
 import nl.r1a.grassmap.plugins.raster.RasterSource
 import nl.r1a.grassmap.plugins.raster.RasterTileClient
+import nl.r1a.grassmap.plugins.region.outlines.RegionOutlinesLayer
 import nl.r1a.grassmap.plugins.route.layer.RouteLayer
 import nl.r1a.grassmap.plugins.route.warnings.RouteWarningScanner
 import nl.r1a.grassmap.plugins.track.layer.TrackLayer
@@ -811,6 +812,18 @@ class AppContainer(
     }
 
     /**
+     * The highlight of the installed regions (T-0506): the downloads data, the
+     * bound map, and nothing when the store is off.
+     */
+    val regionOutlinesLayer: RegionOutlinesLayer by lazy {
+        RegionOutlinesLayer(
+            data = (regionStore ?: NoRegionDownloadsAccess).data,
+            host = { mapSession.hostOrNull() },
+            log = { message -> Log.w(REGION_OUTLINES_TAG, message) },
+        )
+    }
+
+    /**
      * The map layer over the track library (T-0401). The plugin module owns the
      * controller; the app gives it the store's drawable list and the bound map.
      */
@@ -1179,6 +1192,7 @@ class AppContainer(
         const val PROXIMITY_ALERTS_TAG = "GrassMapsProximityAlerts"
         const val ALERTS_TAG = "GrassMapsAlerts"
         const val TRACK_LAYER_TAG = "GrassMapsTracks"
+        const val REGION_OUTLINES_TAG = "GrassMapsRegionOutlines"
         const val ROUTE_LAYER_TAG = "GrassMapsRoute"
         const val TRACK_LIBRARY_INDEX = ".library.json"
         const val ROUTING_PACK_DIRECTORY = "valhalla"

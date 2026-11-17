@@ -57,6 +57,7 @@ include(
     ":plugins:proximity-alerts",
     ":plugins:route-warnings",
     ":plugins:track-layer",
+    ":plugins:region-outlines",
     ":plugins:route-layer",
     ":plugins:track-library",
     ":plugins:contours",

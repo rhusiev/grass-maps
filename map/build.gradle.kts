@@ -25,6 +25,7 @@ android {
 
 dependencies {
     api(project(":plugin-api"))
+    implementation(project(":plugin-ui-api"))
 
     // Pinned. maplibre-compose changes its API in every release; the wrapper in
     // this module is the only place that may import it.

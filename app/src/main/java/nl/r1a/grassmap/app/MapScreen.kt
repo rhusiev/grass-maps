@@ -342,6 +342,9 @@ private fun MapContent(
             Log.w(TAG, "track library not loaded: $error")
         }
     }
+    LaunchedEffect(surface.host, container.regionOutlinesLayer) {
+        container.regionOutlinesLayer.run()
+    }
     LaunchedEffect(surface.host, container.trackLayer) {
         container.trackLayer.run()
     }

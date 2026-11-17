@@ -33,6 +33,7 @@ import nl.r1a.grassmap.plugin.api.model.LayerType
 import nl.r1a.grassmap.plugin.api.model.LocationFix
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
 import nl.r1a.grassmap.plugin.api.model.MapTrack
+import nl.r1a.grassmap.plugin.api.model.RegionOutline
 import nl.r1a.grassmap.plugin.api.model.RouteLineStyle
 import nl.r1a.grassmap.plugin.api.model.SourceId
 import nl.r1a.grassmap.plugin.api.provider.Route
@@ -118,12 +119,49 @@ internal fun ComposedMapLayers(session: MapHostState) {
             }
         }
         when (slot) {
-            LayerSlot.Overlays -> TrackLineSlot(session.tracks.value)
-            LayerSlot.Routes -> RouteLayerSlot(session)
-            LayerSlot.Markers -> MarkerLayerSlot(session, styleReady)
-            else -> Unit
+            LayerSlot.Overlays -> {
+                RegionHighlightSlot(session.regionHighlights.value)
+                TrackLineSlot(session.tracks.value)
+            }
+
+            LayerSlot.Routes -> {
+                RouteLayerSlot(session)
+            }
+
+            LayerSlot.Markers -> {
+                MarkerLayerSlot(session, styleReady)
+            }
+
+            else -> {
+                Unit
+            }
         }
     }
+}
+
+/**
+ * The installed regions' borders in the overlays slot, under the tracks: a soft
+ * fill and a line. No regions draws nothing.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+@MaplibreComposable
+private fun RegionHighlightSlot(regions: List<RegionOutline>) {
+    if (regions.none { it.polygons.isNotEmpty() }) return
+    val source = rememberGeoJsonSource(GeoJsonData.JsonString(RegionHighlightGeoJson.featureCollection(regions)))
+    FillLayer(
+        id = RegionHighlightStyle.FILL_LAYER_ID,
+        source = source,
+        color = const(RegionHighlightStyle.fillColour),
+        opacity = const(RegionHighlightStyle.FILL_OPACITY),
+    )
+    LineLayer(
+        id = RegionHighlightStyle.LINE_LAYER_ID,
+        source = source,
+        color = const(RegionHighlightStyle.lineColour),
+        opacity = const(1f),
+        width = const(RegionHighlightStyle.lineWidth),
+    )
 }
 
 /**

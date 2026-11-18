@@ -288,6 +288,7 @@ internal fun MapScreen(
             sourceResolver = { loaded.sources.uri(it) },
             ageLabel = ageLabel,
             appTiles = loaded.sources.tileSources,
+            labels = container.mapLabelSettings.options,
         )
     BindMapSession(container, container.mapSession, surface)
     CompositionLocalProvider(LocalBottomChrome provides remember { BottomChrome() }) {
@@ -2580,6 +2581,7 @@ private suspend fun loadBundle(
     container.contoursSettings.isEnabled()
     container.rasterSettings.current()
     container.mapStyleSettings.current()
+    container.mapLabelSettings.options
     val sources = MapSources.resolve(context, container.regionsRoot)
     val standard = loadStyle(container, STANDARD_STYLE_PLUGIN, STANDARD) ?: return null
     // A missing Touring plugin leaves Trail drawing the Standard style.

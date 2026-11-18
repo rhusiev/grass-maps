@@ -25,7 +25,6 @@ import nl.r1a.grassmap.core.services.FileLocationPermissionStore
 import nl.r1a.grassmap.core.services.MockGpxLocationSource
 import nl.r1a.grassmap.core.services.installCrashGuard
 import nl.r1a.grassmap.map.DistanceByTapSetting
-import nl.r1a.grassmap.map.MapLabelHub
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
@@ -111,7 +110,6 @@ open class GrassMapsApplication : Application() {
         // from waiting on it.
         maintenanceScope.launch { container.applyAutoUpdateSchedule() }
         maintenanceScope.launch { container.profileCatalog.load() }
-        maintenanceScope.launch { container.mapLabelSettings.options.collect(MapLabelHub::publish) }
         maintenanceScope.launch {
             TrackTrash.purge(
                 File(filesDir, UserDataLayout.TRACKS_DIRECTORY),

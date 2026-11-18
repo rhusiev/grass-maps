@@ -436,7 +436,7 @@ fun rememberMapSurface(
     sourceResolver: (SourceId) -> String?,
     ageLabel: PuckAgeFormatter = PuckAgeFormatter.None,
     appTiles: Map<SourceId, MapTileSource> = emptyMap(),
-    labels: StateFlow<LabelOptions> = MapLabelHub.options,
+    labels: StateFlow<LabelOptions>,
 ): MapSurface {
     val session =
         remember(initialStyle.id) {

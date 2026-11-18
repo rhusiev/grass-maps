@@ -1,9 +1,5 @@
 package nl.r1a.grassmap.map
 
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-
 /**
  * The language a map label shows (T-0110). [Default] keeps each style's own
  * naming rule, so the committed goldens stay valid. [English] and [Ukrainian]
@@ -39,22 +35,5 @@ data class LabelOptions(
         const val DEFAULT_SIZE_PERCENT: Int = 100
         const val MIN_SIZE_PERCENT: Int = 50
         const val MAX_SIZE_PERCENT: Int = 200
-    }
-}
-
-/**
- * The label options the map draws with. The app publishes the stored setting
- * here, and a new map surface reads the current value, so a change applies to
- * the open map without a restart.
- */
-object MapLabelHub {
-    private val state = MutableStateFlow(LabelOptions())
-
-    /** The options the map currently draws with. */
-    val options: StateFlow<LabelOptions> = state.asStateFlow()
-
-    /** Makes [options] the current choice. */
-    fun publish(options: LabelOptions) {
-        state.value = options
     }
 }

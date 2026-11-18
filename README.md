@@ -683,10 +683,9 @@ zoom curve (`interpolate`, `step`) takes the factor on its outputs, because
 MapLibre accepts the zoom input only at the top of those expressions. At 150 %
 a size of 12 is 18. `LabelStyle` in `map` does both changes when the layers are
 compiled, so the layer lists the plugins return are not modified.
-`MapLabelHub` carries the current options from the app to the map: the
-application publishes the stored setting at start, and the map surface
-collects it, so a change applies to the open map without a restart. There is
-no settings screen yet. The control-channel command `core.settings.map_labels`
+`MapScreen` passes the settings flow to `rememberMapSurface`, and the map
+surface collects it, so a change applies to the open map without a restart.
+There is no settings screen yet. The control-channel command `core.settings.map_labels`
 sets it: `{"language":"en"}` or `{"sizePercent":150}` or both, and a key left
 out keeps its value.
 

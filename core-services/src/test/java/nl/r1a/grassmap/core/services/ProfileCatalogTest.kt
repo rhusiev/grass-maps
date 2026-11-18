@@ -72,6 +72,60 @@ class ProfileCatalogTest {
         }
     }
 
+    @Test
+    fun creatingAProfileKeepsWhatTheCatalogCannotParse() {
+        withStore { store ->
+            val catalog = ProfileCatalog(store)
+            catalog.load()
+            store.write((store.read() as Outcome.Success).value + (ProfileId("mystery") to mapOf("route_profile" to "unicycle")))
+
+            val created = (catalog.create("Gravel", BuiltInProfiles.BIKE) as Outcome.Success).value
+            val stored = (store.read() as Outcome.Success).value
+
+            assertEquals(ProfileId("gravel"), created.id)
+            assertEquals(RouteProfile.Bike, created.routeProfile)
+            assertEquals(BuiltInProfiles.BIKE, created.copiedFrom)
+            assertEquals(mapOf("route_profile" to "unicycle"), stored[ProfileId("mystery")])
+            assertEquals(listOf("walk", "bike", "hike", "gravel"), catalog.load().map { it.id.value })
+        }
+    }
+
+    @Test
+    fun namesBecomeUniqueIdsAndAreKeptInCreationOrder() {
+        val catalog = ProfileCatalog()
+
+        val first = (catalog.create("Gravel", BuiltInProfiles.BIKE) as Outcome.Success).value
+        val second = (catalog.create("Gravel", BuiltInProfiles.BIKE) as Outcome.Success).value
+        val third = (catalog.create("  !! ", BuiltInProfiles.WALK) as Outcome.Success).value
+
+        assertEquals(listOf("gravel", "gravel-2", "profile"), listOf(first, second, third).map { it.id.value })
+        assertEquals("Gravel", second.name)
+        assertEquals(listOf("walk", "bike", "hike", "gravel", "gravel-2", "profile"), catalog.load().map { it.id.value })
+    }
+
+    @Test
+    fun aBlankOrOverlongNameOrAnUnknownSourceIsRefused() {
+        val catalog = ProfileCatalog()
+
+        assertEquals(Outcome.Failure(AppError.InvalidInput), catalog.create("   ", BuiltInProfiles.BIKE))
+        assertEquals(
+            Outcome.Failure(AppError.InvalidInput),
+            catalog.create("x".repeat(ProfileCatalog.NAME_MAX_LENGTH + 1), BuiltInProfiles.BIKE),
+        )
+        assertEquals(Outcome.Failure(AppError.NotFound), catalog.create("Gravel", ProfileId("nope")))
+    }
+
+    @Test
+    fun removeDeletesAUserProfileAndRefusesABuiltInOne() {
+        val catalog = ProfileCatalog()
+        val gravel = (catalog.create("Gravel", BuiltInProfiles.BIKE) as Outcome.Success).value
+
+        assertEquals(Outcome.Failure(AppError.InvalidInput), catalog.remove(BuiltInProfiles.BIKE))
+        assertEquals(Outcome.Success(Unit), catalog.remove(gravel.id))
+        assertEquals(BuiltInProfiles.ALL, catalog.load().map { it.id })
+        assertEquals(Outcome.Failure(AppError.NotFound), catalog.remove(gravel.id))
+    }
+
     private fun withStore(block: (ProfileValueStore) -> Unit) {
         val directory = Files.createTempDirectory("profile-catalog-").toFile()
         try {

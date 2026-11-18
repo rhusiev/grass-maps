@@ -1,17 +1,26 @@
 package nl.r1a.grassmap.core.services
 
+import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.error.map
 import nl.r1a.grassmap.plugin.api.model.BuiltInProfiles
 import nl.r1a.grassmap.plugin.api.model.ProfileId
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.service.ProfileValueStore
 import nl.r1a.grassmap.plugin.api.service.ProfileValues
 
-/** One profile of the catalog. [routeProfile] is the route profile it carries (architecture section 20). */
+/**
+ * One profile of the catalog. [routeProfile] is the route profile it carries
+ * (architecture section 20). A built-in profile has no [name], because its
+ * name is a translated string. [copiedFrom] is the profile a user profile was
+ * created from.
+ */
 data class ProfileEntry(
     val id: ProfileId,
     val routeProfile: RouteProfile,
     val isBuiltIn: Boolean,
+    val name: String? = null,
+    val copiedFrom: ProfileId? = null,
 )
 
 /**
@@ -27,16 +36,58 @@ data class ProfileEntry(
 class ProfileCatalog(
     private val store: ProfileValueStore? = null,
 ) {
-    /** The profiles, built-ins first. A store that cannot be read yields the built-ins alone. */
+    private var memory: ProfileValues = emptyMap()
+
+    /** The profiles, built-ins first, then user profiles in creation order. A store that cannot be read yields the built-ins alone. */
     @Synchronized
     fun load(): List<ProfileEntry> {
-        val stored = (store?.read() as? Outcome.Success)?.value.orEmpty()
-        val entries = (BuiltInProfiles.ALL.map(::builtIn) + userEntries(stored)).distinctBy { it.id }
-        if (store != null && BuiltInProfiles.ALL.any { it !in stored }) {
-            store.write(withBuiltIns(stored))
+        val read = readStored()
+        val stored = (read as? Outcome.Success)?.value.orEmpty()
+        if (read is Outcome.Success && BuiltInProfiles.ALL.any { it !in stored }) {
+            writeStored(withBuiltIns(stored))
         }
-        return entries
+        return entries(stored)
     }
+
+    /** Adds a user profile named [name] that carries the route profile of [from], and returns it. */
+    @Synchronized
+    fun create(
+        name: String,
+        from: ProfileId,
+    ): Outcome<ProfileEntry> {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty() || trimmed.length > NAME_MAX_LENGTH) return Outcome.Failure(AppError.InvalidInput)
+        val stored =
+            when (val read = readStored()) {
+                is Outcome.Failure -> return read
+                is Outcome.Success -> read.value
+            }
+        val source = entries(stored).firstOrNull { it.id == from } ?: return Outcome.Failure(AppError.NotFound)
+        val all = withBuiltIns(stored)
+        val entry = ProfileEntry(uniqueId(trimmed, all.keys), source.routeProfile, isBuiltIn = false, name = trimmed, copiedFrom = from)
+        return writeStored(all + (entry.id to encode(entry))).map { entry }
+    }
+
+    /** Removes the user profile [id]. A built-in profile or an entry this build cannot parse stays. */
+    @Synchronized
+    fun remove(id: ProfileId): Outcome<Unit> {
+        val stored =
+            when (val read = readStored()) {
+                is Outcome.Failure -> return read
+                is Outcome.Success -> read.value
+            }
+        val entry = entries(stored).firstOrNull { it.id == id } ?: return Outcome.Failure(AppError.NotFound)
+        if (entry.isBuiltIn) return Outcome.Failure(AppError.InvalidInput)
+        return writeStored(stored - id)
+    }
+
+    private fun readStored(): Outcome<ProfileValues> = store?.read() ?: Outcome.Success(memory)
+
+    private fun writeStored(values: ProfileValues): Outcome<Unit> =
+        store?.write(values) ?: Outcome.Success(Unit).also { memory = values }
+
+    private fun entries(stored: ProfileValues): List<ProfileEntry> =
+        (BuiltInProfiles.ALL.map(::builtIn) + userEntries(stored)).distinctBy { it.id }
 
     private fun builtIn(id: ProfileId): ProfileEntry =
         ProfileEntry(id, requireNotNull(BuiltInProfiles.routeProfileOf(id)), isBuiltIn = true)
@@ -44,7 +95,15 @@ class ProfileCatalog(
     private fun userEntries(stored: ProfileValues): List<ProfileEntry> =
         stored.mapNotNull { (id, values) ->
             val routeProfile = values[ROUTE_PROFILE_KEY]?.let { BuiltInProfiles.routeProfileOf(ProfileId(it)) }
-            routeProfile?.let { ProfileEntry(id, it, isBuiltIn = values[BUILT_IN_KEY] == TRUE) }
+            routeProfile?.let {
+                ProfileEntry(
+                    id = id,
+                    routeProfile = it,
+                    isBuiltIn = values[BUILT_IN_KEY] == TRUE,
+                    name = values[NAME_KEY],
+                    copiedFrom = values[COPIED_FROM_KEY]?.let(::ProfileId),
+                )
+            }
         }
 
     /** Every stored entry as it is, extra keys and entries this build cannot parse included, plus the missing built-ins. */
@@ -54,11 +113,37 @@ class ProfileCatalog(
     private fun encodeBuiltIn(id: ProfileId): Map<String, String> =
         mapOf(ROUTE_PROFILE_KEY to id.value, BUILT_IN_KEY to TRUE)
 
+    private fun encode(entry: ProfileEntry): Map<String, String> =
+        listOfNotNull(
+            ROUTE_PROFILE_KEY to BuiltInProfiles.idOf(entry.routeProfile).value,
+            BUILT_IN_KEY to entry.isBuiltIn.toString(),
+            entry.name?.let { NAME_KEY to it },
+            entry.copiedFrom?.let { COPIED_FROM_KEY to it.value },
+        ).toMap()
+
+    private fun uniqueId(
+        name: String,
+        taken: Set<ProfileId>,
+    ): ProfileId {
+        val base = name.lowercase().replace(NON_ID_CHARACTERS, "-").trim('-').ifEmpty { FALLBACK_ID }
+        return generateSequence(1) { it + 1 }
+            .map { if (it == 1) base else "$base-$it" }
+            .map(::ProfileId)
+            .first { it !in taken }
+    }
+
     companion object {
         const val SCHEMA_VERSION = 1
         const val ERROR_ID = "core.services.profile_catalog"
         const val ROUTE_PROFILE_KEY = "route_profile"
         const val BUILT_IN_KEY = "built_in"
+        const val NAME_KEY = "name"
+        const val COPIED_FROM_KEY = "copied_from"
+
+        /** The longest name a user profile may have. */
+        const val NAME_MAX_LENGTH = 40
+        private const val FALLBACK_ID = "profile"
         private const val TRUE = "true"
+        private val NON_ID_CHARACTERS = Regex("[^\\p{L}\\p{N}]+")
     }
 }

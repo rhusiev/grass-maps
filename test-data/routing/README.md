@@ -104,11 +104,11 @@ time, because the pack holds almost no edge above `sac_scale` 1 (one 0.609 km
 pedestrian costing and the app sends it, but the hike Avoid value 2 has no
 measured route. A pack with mountain trails is the next check.
 
-The settings model is `RoutingOptionsSettings`, one entry per profile,
+The settings model is `RoutingOptionsSettings`, one entry per `ProfileId`,
 defaulting every unset profile to `RouteOptions()`. The planner reads it through
 `RoutingOptionsAccess`; the profile is still the one the planner was built with,
 so this task does not add a profile picker. The route preview override travels in
-`RoutePlanState.overridePreferences`, never in the settings file, and `clear()`
+`RoutePlanState.overridePreferences`, never in the profile store, and `clear()`
 drops it with the plan. `ValhallaPreferencesTest` checks every step on every
 profile, and `RoutePlannerOptionsTest` checks a disagreeing override and the
 profile default after a reset.

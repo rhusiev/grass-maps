@@ -10,14 +10,17 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import nl.r1a.grassmap.plugin.api.error.AppError
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.model.BuiltInProfiles
+import nl.r1a.grassmap.plugin.api.model.ProfileId
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmap.plugin.api.service.ProfileValueStore
+import nl.r1a.grassmap.plugin.api.service.ProfileValues
 import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** The alert switches, the output channels and the chosen place kinds of one profile. */
@@ -40,30 +43,42 @@ data class ProfileAlertSettings(
  * The per-profile alert settings (T-0413). A profile stores the ten switches,
  * the three output channels and the place kinds chosen on the alerts page.
  *
- * The file holds only profiles that differ from the defaults:
- * `{"profiles":{"bike":{"signal":true,...}}}`. A missing, unreadable or corrupt
- * file reads as every profile at its defaults, because an alert setting must
- * never stop navigation. The keys are stable; a file written by any earlier
- * build of this feature is read back as a subset of the same fields.
+ * The store is keyed by [ProfileId] under the per-profile contract of
+ * architecture section 20, version [SCHEMA_VERSION] in `profiles/alerts.json`.
+ * Each profile holds the stable keys `signal`, `reroute`, `off_route`,
+ * `arrival`, `tunnel`, `railway_crossing`, `hazard`, `favourite`,
+ * `track_waypoint`, `poi`, `banner`, `sound` and `vibration` with the values
+ * `true` or `false`, and `poi_kinds` with a JSON array of the chosen kinds.
+ * Only profiles that differ from the defaults are stored. The [RouteProfile]
+ * overloads read and write the built-in profile that carries that route
+ * profile, until the UI chooses a profile itself.
+ *
+ * [readLegacy] reads the unversioned `settings/alerts.json` of T-0413 forward
+ * into the profile store. A missing, unreadable or corrupt store reads as every
+ * profile at its defaults, because an alert setting must never stop
+ * navigation. A store written by a newer build makes [load] fail with
+ * [nl.r1a.grassmap.plugin.api.error.AppError.NewerSchema], every profile reads
+ * as its defaults, and every write fails, so the newer data is never
+ * overwritten.
  *
  * The active profile is the profile a trip currently uses. The app activates
  * the trip's profile when guidance starts, so a trip reads that profile's
  * values and never a process-wide reset. A profile change applies to the next
  * alert decision; the latches in [AlertHost] are not reset by it.
  *
- * Construction does not read the file. [load] does, so the app runs it off the
- * Main thread. A write is atomic and, when [writeScope] is present, coalesced
- * on the IO dispatcher: a second change while a write is in flight causes one
- * more write of the latest value instead of a write per change.
+ * Construction does not read the store. [load] does, so the app runs it off the
+ * Main thread. When [writeScope] is present, writes are coalesced on the IO
+ * dispatcher: a second change while a write is in flight causes one more write
+ * of the latest value instead of a write per change.
  */
 class AlertSettingsStore(
-    private val file: File? = null,
+    private val store: ProfileValueStore? = null,
     initialProfile: RouteProfile = RouteProfile.Walk,
     private val writeScope: CoroutineScope? = null,
     private val log: (String) -> Unit = {},
 ) {
-    private val states = mutableMapOf<RouteProfile, ProfileAlertSettings>()
-    private var activeProfile: RouteProfile = initialProfile
+    private val states = mutableMapOf<ProfileId, ProfileAlertSettings>()
+    private var activeProfile: ProfileId = BuiltInProfiles.idOf(initialProfile)
     private val activeState = MutableStateFlow(ProfileAlertSettings())
     private val writeRequested = AtomicBoolean(false)
 
@@ -71,24 +86,33 @@ class AlertSettingsStore(
     val active: StateFlow<ProfileAlertSettings> = activeState.asStateFlow()
 
     /** The profile whose values a running trip uses. */
-    fun activeProfile(): RouteProfile = synchronized(this) { activeProfile }
+    fun activeProfileId(): ProfileId = synchronized(this) { activeProfile }
+
+    /** The route profile the active profile carries; walk when it carries none of the built-ins. */
+    fun activeProfile(): RouteProfile = BuiltInProfiles.routeProfileOf(activeProfileId()) ?: RouteProfile.Walk
 
     /** The current value of [active]. */
     fun current(): ProfileAlertSettings = active.value
 
     /** The values of [profile]; the defaults when the user never changed them. */
-    fun forProfile(profile: RouteProfile): ProfileAlertSettings = synchronized(this) { states[profile] ?: ProfileAlertSettings() }
+    fun forProfile(profile: ProfileId): ProfileAlertSettings = synchronized(this) { states[profile] ?: ProfileAlertSettings() }
+
+    /** The values of the built-in profile that carries [profile]. */
+    fun forProfile(profile: RouteProfile): ProfileAlertSettings = forProfile(BuiltInProfiles.idOf(profile))
 
     /**
-     * Reads the file. A missing or unreadable file leaves every profile at its
-     * defaults; the return value only says whether the read produced a file.
+     * Reads the store. A missing or unreadable store leaves every profile at its
+     * defaults and succeeds. A newer schema leaves them at the defaults and fails.
      */
     @Synchronized
     fun load(): Outcome<Unit> {
+        val read = store?.read() ?: Outcome.Success(emptyMap())
         states.clear()
-        states.putAll(read(file))
+        if (read is Outcome.Success) {
+            states.putAll(read.value.mapValues { (_, values) -> decode(values) }.filterValues { !it.isDefault })
+        }
         activeState.value = states[activeProfile] ?: ProfileAlertSettings()
-        return Outcome.Success(Unit)
+        return if (read is Outcome.Failure) read else Outcome.Success(Unit)
     }
 
     /**
@@ -97,14 +121,17 @@ class AlertSettingsStore(
      * latched, so a new switch waits for the next episode.
      */
     @Synchronized
-    fun activate(profile: RouteProfile) {
+    fun activate(profile: ProfileId) {
         activeProfile = profile
         activeState.value = states[profile] ?: ProfileAlertSettings()
     }
 
+    /** Makes the built-in profile that carries [profile] the profile a trip reads. */
+    fun activate(profile: RouteProfile) = activate(BuiltInProfiles.idOf(profile))
+
     /** Stores [value] for [profile]; every other profile keeps its values. */
     fun set(
-        profile: RouteProfile,
+        profile: ProfileId,
         value: ProfileAlertSettings,
     ): Outcome<Unit> =
         synchronized(this) {
@@ -119,6 +146,12 @@ class AlertSettingsStore(
             persist()
         }
 
+    /** Stores [value] for the built-in profile that carries [profile]. */
+    fun set(
+        profile: RouteProfile,
+        value: ProfileAlertSettings,
+    ): Outcome<Unit> = set(BuiltInProfiles.idOf(profile), value)
+
     /** Stores [value] for the active profile. */
     fun setActive(value: ProfileAlertSettings): Outcome<Unit> =
         synchronized(this) {
@@ -126,7 +159,7 @@ class AlertSettingsStore(
         }
 
     private fun persist(): Outcome<Unit> {
-        val target = file ?: return Outcome.Success(Unit)
+        val target = store ?: return Outcome.Success(Unit)
         val scope = writeScope ?: return write(target, synchronized(this) { states.toMap() })
         if (writeRequested.compareAndSet(false, true)) {
             scope.launch(Dispatchers.IO) {
@@ -143,96 +176,110 @@ class AlertSettingsStore(
         return Outcome.Success(Unit)
     }
 
-    /** Writes [snapshot]; a failure leaves the previous file untouched. */
     private fun write(
-        target: File,
-        snapshot: Map<RouteProfile, ProfileAlertSettings>,
-    ): Outcome<Unit> {
-        val parent = target.parentFile ?: return failure("no parent directory")
-        val temporary = File(parent, target.name + TEMPORARY_SUFFIX)
-        return try {
-            if (!parent.isDirectory && !parent.mkdirs()) {
-                return failure("cannot create $parent")
-            }
-            val json = JSON.encodeToString(StoredFile.serializer(), stored(snapshot))
-            FileOutputStream(temporary).use { stream ->
-                stream.write(json.toByteArray())
-                stream.fd.sync()
-            }
-            Files.move(
-                temporary.toPath(),
-                target.toPath(),
-                StandardCopyOption.ATOMIC_MOVE,
-                StandardCopyOption.REPLACE_EXISTING,
-            )
-            Outcome.Success(Unit)
-        } catch (exception: IOException) {
-            temporary.delete()
-            failure(exception.message)
-        } catch (exception: SecurityException) {
-            temporary.delete()
-            failure(exception.message)
-        } catch (exception: RuntimeException) {
-            temporary.delete()
-            failure(exception.message)
-        }
-    }
+        target: ProfileValueStore,
+        snapshot: Map<ProfileId, ProfileAlertSettings>,
+    ): Outcome<Unit> = target.write(snapshot.filterValues { !it.isDefault }.mapValues { (_, value) -> encode(value) })
 
-    private fun failure(detail: String?): Outcome.Failure = Outcome.Failure(AppError.Internal(ERROR_ID, detail))
-
-    private companion object {
+    companion object {
+        const val SCHEMA_VERSION = 1
         const val ERROR_ID = "alerts.settings_store"
-        const val TEMPORARY_SUFFIX = ".tmp"
+        private const val TRUE = "true"
+        private const val SIGNAL_KEY = "signal"
+        private const val REROUTE_KEY = "reroute"
+        private const val OFF_ROUTE_KEY = "off_route"
+        private const val ARRIVAL_KEY = "arrival"
+        private const val TUNNEL_KEY = "tunnel"
+        private const val RAILWAY_CROSSING_KEY = "railway_crossing"
+        private const val HAZARD_KEY = "hazard"
+        private const val FAVOURITE_KEY = "favourite"
+        private const val TRACK_WAYPOINT_KEY = "track_waypoint"
+        private const val POI_KEY = "poi"
+        private const val BANNER_KEY = "banner"
+        private const val SOUND_KEY = "sound"
+        private const val VIBRATION_KEY = "vibration"
+        private const val POI_KINDS_KEY = "poi_kinds"
 
-        val JSON =
+        private val JSON =
             Json {
                 encodeDefaults = true
                 ignoreUnknownKeys = true
             }
 
-        fun stored(states: Map<RouteProfile, ProfileAlertSettings>): StoredFile =
-            StoredFile(
-                states.entries
-                    .filterNot { (_, value) -> value.isDefault }
-                    .associate { (profile, value) -> profileName(profile) to StoredProfile.of(value) },
+        private fun encode(value: ProfileAlertSettings): Map<String, String> =
+            mapOf(
+                SIGNAL_KEY to value.settings.signal.toString(),
+                REROUTE_KEY to value.settings.reroute.toString(),
+                OFF_ROUTE_KEY to value.settings.offRoute.toString(),
+                ARRIVAL_KEY to value.settings.arrival.toString(),
+                TUNNEL_KEY to value.settings.tunnel.toString(),
+                RAILWAY_CROSSING_KEY to value.settings.railwayCrossing.toString(),
+                HAZARD_KEY to value.settings.hazard.toString(),
+                FAVOURITE_KEY to value.settings.favourite.toString(),
+                TRACK_WAYPOINT_KEY to value.settings.trackWaypoint.toString(),
+                POI_KEY to value.settings.poi.toString(),
+                BANNER_KEY to value.channels.banner.toString(),
+                SOUND_KEY to value.channels.sound.toString(),
+                VIBRATION_KEY to value.channels.vibration.toString(),
+                POI_KINDS_KEY to buildJsonArray { value.poiKinds.sorted().forEach { add(JsonPrimitive(it)) } }.toString(),
             )
 
-        fun read(file: File?): Map<RouteProfile, ProfileAlertSettings> {
-            if (file == null || !file.isFile) {
-                return emptyMap()
+        private fun decode(values: Map<String, String>): ProfileAlertSettings {
+            fun flag(key: String): Boolean = values[key] == TRUE
+            return ProfileAlertSettings(
+                settings =
+                    AlertSettings(
+                        signal = flag(SIGNAL_KEY),
+                        reroute = flag(REROUTE_KEY),
+                        offRoute = flag(OFF_ROUTE_KEY),
+                        arrival = flag(ARRIVAL_KEY),
+                        tunnel = flag(TUNNEL_KEY),
+                        railwayCrossing = flag(RAILWAY_CROSSING_KEY),
+                        hazard = flag(HAZARD_KEY),
+                        favourite = flag(FAVOURITE_KEY),
+                        trackWaypoint = flag(TRACK_WAYPOINT_KEY),
+                        poi = flag(POI_KEY),
+                    ),
+                channels = AlertChannels(banner = flag(BANNER_KEY), sound = flag(SOUND_KEY), vibration = flag(VIBRATION_KEY)),
+                poiKinds = decodeKinds(values[POI_KINDS_KEY]),
+            )
+        }
+
+        private fun decodeKinds(text: String?): Set<String> =
+            try {
+                (text?.let(Json::parseToJsonElement) as? JsonArray)
+                    ?.mapNotNull { (it as? JsonPrimitive)?.takeIf { primitive -> primitive.isString }?.content }
+                    .orEmpty()
+                    .toSet()
+            } catch (exception: SerializationException) {
+                emptySet()
+            }
+
+        /**
+         * Reads the unversioned file of T-0413 as profile values, or null for a
+         * file that is missing or unreadable. Entries under an unknown profile
+         * name are dropped, as they always were.
+         */
+        fun readLegacy(file: File): ProfileValues? {
+            if (!file.isFile) {
+                return null
             }
             return try {
                 val document = JSON.decodeFromString(StoredFile.serializer(), file.readText())
                 document.profiles
                     .mapNotNull { (name, stored) ->
-                        val profile = profileOf(name) ?: return@mapNotNull null
-                        profile to stored.toValue()
-                    }.toMap()
+                        val id = ProfileId(name)
+                        if (BuiltInProfiles.routeProfileOf(id) == null) null else id to stored.toValue()
+                    }.filterNot { (_, value) -> value.isDefault }
+                    .associate { (id, value) -> id to encode(value) }
             } catch (exception: IOException) {
-                emptyMap()
+                null
             } catch (exception: SerializationException) {
-                emptyMap()
+                null
             } catch (exception: SecurityException) {
-                emptyMap()
+                null
             }
         }
-
-        fun profileName(profile: RouteProfile): String =
-            when (profile) {
-                RouteProfile.Walk -> "walk"
-                RouteProfile.Bike -> "bike"
-                RouteProfile.Hike -> "hike"
-                RouteProfile.Car -> "car"
-            }
-
-        fun profileOf(name: String): RouteProfile? =
-            when (name) {
-                "walk" -> RouteProfile.Walk
-                "bike" -> RouteProfile.Bike
-                "hike" -> RouteProfile.Hike
-                "car" -> RouteProfile.Car
-                else -> null
-            }
     }
 }
 
@@ -276,24 +323,4 @@ private data class StoredProfile(
             channels = AlertChannels(banner = banner, sound = sound, vibration = vibration),
             poiKinds = poiKinds.toSet(),
         )
-
-    companion object {
-        fun of(value: ProfileAlertSettings): StoredProfile =
-            StoredProfile(
-                signal = value.settings.signal,
-                reroute = value.settings.reroute,
-                offRoute = value.settings.offRoute,
-                arrival = value.settings.arrival,
-                tunnel = value.settings.tunnel,
-                railwayCrossing = value.settings.railwayCrossing,
-                hazard = value.settings.hazard,
-                favourite = value.settings.favourite,
-                trackWaypoint = value.settings.trackWaypoint,
-                poi = value.settings.poi,
-                banner = value.channels.banner,
-                sound = value.channels.sound,
-                vibration = value.channels.vibration,
-                poiKinds = value.poiKinds.sorted(),
-            )
-    }
 }

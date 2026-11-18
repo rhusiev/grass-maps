@@ -32,6 +32,7 @@ import nl.r1a.grassmap.core.services.DeviceInfo
 import nl.r1a.grassmap.core.services.Diagnostics
 import nl.r1a.grassmap.core.services.FavouritesBackupRecorder
 import nl.r1a.grassmap.core.services.InMemoryLocationPermissionStore
+import nl.r1a.grassmap.core.services.LegacyProfileFile
 import nl.r1a.grassmap.core.services.LocationPermissionStore
 import nl.r1a.grassmap.core.services.LocationSource
 import nl.r1a.grassmap.core.services.NoHeadingSource
@@ -39,6 +40,7 @@ import nl.r1a.grassmap.core.services.NoLocationSource
 import nl.r1a.grassmap.core.services.OnlineSearchSettings
 import nl.r1a.grassmap.core.services.PrivacyNetworkGate
 import nl.r1a.grassmap.core.services.PrivacySwitchSettings
+import nl.r1a.grassmap.core.services.ProfileValueFile
 import nl.r1a.grassmap.core.services.RoutingOptionsSettings
 import nl.r1a.grassmap.core.services.SearchHistorySettings
 import nl.r1a.grassmap.core.services.SharedLocationSource
@@ -167,7 +169,6 @@ class AppContainer(
     private val mapStyleSettingsFileProvider: () -> File? = { null },
     private val routeHistoryFileProvider: () -> File? = { null },
     private val userDataRootProvider: () -> File? = { null },
-    private val alertSettingsFileProvider: () -> File? = { null },
     private val favouritesRootProvider: () -> File? = { null },
     private val favouritesBackupClock: Clock = SystemClock,
     private val favouritesBackupScope: CoroutineScope? = null,
@@ -452,11 +453,19 @@ class AppContainer(
      */
     val alertSettings: AlertSettingsStore by lazy {
         AlertSettingsStore(
-            file = alertSettingsFileProvider(),
+            store = userDataRootProvider()?.let { root -> alertProfileFile(root) },
             writeScope = processScope,
             log = { message -> Log.w(ALERTS_TAG, message) },
         )
     }
+
+    private fun alertProfileFile(root: File): ProfileValueFile =
+        ProfileValueFile(
+            file = File(root, UserDataLayout.ALERT_SETTINGS_PATH),
+            schemaVersion = AlertSettingsStore.SCHEMA_VERSION,
+            errorId = AlertSettingsStore.ERROR_ID,
+            legacy = LegacyProfileFile(File(root, UserDataLayout.LEGACY_ALERT_SETTINGS_PATH), AlertSettingsStore::readLegacy),
+        )
 
     /**
      * The alert host (T-0317). Its switches and channels start from the active

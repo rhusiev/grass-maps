@@ -1204,7 +1204,7 @@ The position-marker offset is a `PositionOffsetFraction` resolved against the
 viewport the map currently occupies, then passed to `MapHost.setPositionOffset`.
 The host turns it into camera padding, so the map centre and the puck sit at
 that screen point. The offset is supplied per profile through
-`PositionOffsetProvider`; until T-0601 the app uses the centred provider and the
+`PositionOffsetProvider`; until a profile picker exists the app uses the centred provider and the
 `map-controls` plugin declares the profile-scoped
 `map.controls.position_offset_y` setting with a default of 0.
 
@@ -1220,7 +1220,7 @@ target atomically, so a failed write leaves the old order. A stored order must
 be a permutation of the four known command IDs, and a missing, corrupt,
 partial, repeated or old three-button order reads as
 `zoom_in, zoom_out, north_up, follow`. The active profile is the fixed
-`default` profile until T-0601. The bar itself lives in `ui-shell` and only
+`default` profile, not yet one of the profile store's built-in profiles. The bar itself lives in `ui-shell` and only
 receives control IDs, labels and callbacks, so it never touches the command bus
 or the map host.
 
@@ -1502,7 +1502,8 @@ pack build and the 10-route ascent measurement are in `test-data/routing/` and
 `RouteRequest.options` carries the chosen profile's preferences, each Avoid,
 Normal or Don't mind: walk has hills and steps, hike adds trail difficulty, bike
 has hills, busy roads and rough surfaces (`RouteAttribute.forProfile`). The planner
-reads the profile defaults from `RoutingOptionsSettings` through
+reads the profile defaults from `RoutingOptionsSettings` (stored in the
+profile store, see Profile store) through
 `RoutingOptionsAccess`, so a bike change cannot leak into walk. A route preview
 can override the values for that route only; the override lives in
 `RoutePlanState.overridePreferences` and is dropped by `clear()`, so the stored
@@ -2348,15 +2349,52 @@ session past one place of each category raises one alert of each, the same
 replay with a switch off raises none of that kind, and a replay whose three
 switches are off asks the source nothing at all.
 
+## Profile store
+
+The profile is a `ProfileId` in `plugin-api`. `BuiltInProfiles` holds `walk`,
+`bike` and `hike`, and maps them to the legacy `RouteProfile`; `car` is not a
+built-in profile. `ProfileCatalog` in `core-services` writes the three built-in
+profiles on the first start and puts a missing one back.
+
+Every per-profile store is keyed by `ProfileId` through `ProfileValueStore`
+(`plugin-api`): the outer key is the profile, the inner keys and values are
+stable strings. `ProfileValueFile` (`core-services`) implements it as
+`{"schema_version":1,"profiles":{"<id>":{"<key>":"<value>"}}}`, written through
+the atomic temporary-file write. One store has one schema version. A file with a
+newer `schema_version` is refused with `AppError.NewerSchema` on read and on
+write, and never overwritten. A missing or corrupt file reads as empty.
+
+A store that replaces an older file passes a `LegacyProfileFile`. With no new
+file, the first read follows these steps:
+
+1. Read the old file into values.
+2. Write the new file, then read it back and compare.
+3. Remove the old file only when the two are equal.
+
+A crash at any step leaves the old file, so the next start migrates again. If the
+new file already exists it wins, and the old file is removed only when equal. An
+unreadable old file stays and reads as empty.
+
+| Store | Path under `filesDir` | Old path | Schema |
+|---|---|---|---|
+| `ProfileCatalog` | `profiles/catalog.json` | none | 1 |
+| `RoutingOptionsSettings` | `profiles/routing-options.json` | `settings/routing-options.json` | 1 |
+| `AlertSettingsStore` | `profiles/alerts.json` | `settings/alerts.json` | 1 |
+
 ## Profile alert settings
 
 `AlertSettingsStore` in `alerts` keeps one `ProfileAlertSettings` per
-`RouteProfile`: the ten `AlertSettings` switches, the three `AlertChannels`,
-and the chosen place kinds. It writes `settings/alerts.json` and stores only a
-profile that differs from the defaults. The file uses stable snake-case keys
-(`off_route`, `railway_crossing`, `track_waypoint`, `poi_kinds`); a missing,
-unreadable or corrupt file reads as every profile at the defaults, and an
-older file is read as the subset of the same fields it carries. Construction
+`ProfileId`: the ten `AlertSettings` switches, the three `AlertChannels`,
+and the chosen place kinds. It sits on the profile store (see Profile store)
+and writes `profiles/alerts.json`, schema version 1, and stores only a
+profile that differs from the defaults. A profile holds stable snake-case
+string keys (`off_route`, `railway_crossing`, `track_waypoint`, `poi_kinds`),
+switches as `true` or `false` and `poi_kinds` as a JSON array in a string. The
+`RouteProfile` overloads read and write the built-in profile that carries it. A
+missing, unreadable or corrupt file reads as every profile at the defaults, and
+a newer schema makes `load` fail with `AppError.NewerSchema` and every write
+fail. The old `settings/alerts.json` is read forward and removed after the
+migration, as the profile store describes. Construction
 does not touch the disk: `AppContainer.alerts` loads it on the IO dispatcher,
 and a change is written atomically on that dispatcher, coalescing a burst into
 a write of the latest value.

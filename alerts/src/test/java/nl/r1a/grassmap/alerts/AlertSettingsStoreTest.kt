@@ -1,71 +1,59 @@
 package nl.r1a.grassmap.alerts
 
+import nl.r1a.grassmap.plugin.api.error.AppError
+import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.model.BuiltInProfiles
+import nl.r1a.grassmap.plugin.api.model.ProfileId
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmap.plugin.api.service.ProfileValueStore
+import nl.r1a.grassmap.plugin.api.service.ProfileValues
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
 
-/** The per-profile alert settings (T-0413). */
+/** The per-profile alert settings (T-0413) on the profile store (T-0601). */
 class AlertSettingsStoreTest {
     @Test
     fun aSwitchOnBikeLeavesWalkOffAndSurvivesAReload() {
-        val directory = temporaryDirectory()
-        try {
-            val file = File(directory, "settings/alerts.json")
-            val store = AlertSettingsStore(file).also { it.load() }
+        val backing = MemoryStore()
+        val store = AlertSettingsStore(backing).also { it.load() }
 
-            store.set(RouteProfile.Bike, ProfileAlertSettings(settings = AlertSettings(signal = true)))
+        store.set(RouteProfile.Bike, ProfileAlertSettings(settings = AlertSettings(signal = true)))
 
-            assertEquals(AlertSettings.ALL_OFF, store.forProfile(RouteProfile.Walk).settings)
-            assertEquals(AlertSettings(signal = true), store.forProfile(RouteProfile.Bike).settings)
+        assertEquals(AlertSettings.ALL_OFF, store.forProfile(RouteProfile.Walk).settings)
+        assertEquals(AlertSettings(signal = true), store.forProfile(RouteProfile.Bike).settings)
 
-            val reloaded = AlertSettingsStore(file).also { it.load() }
+        val reloaded = AlertSettingsStore(backing).also { it.load() }
 
-            assertEquals(AlertSettings(signal = true), reloaded.forProfile(RouteProfile.Bike).settings)
-            assertEquals(AlertSettings.ALL_OFF, reloaded.forProfile(RouteProfile.Walk).settings)
-            assertEquals(AlertSettings.ALL_OFF, reloaded.forProfile(RouteProfile.Hike).settings)
-        } finally {
-            directory.deleteRecursively()
-        }
+        assertEquals(AlertSettings(signal = true), reloaded.forProfile(RouteProfile.Bike).settings)
+        assertEquals(AlertSettings.ALL_OFF, reloaded.forProfile(RouteProfile.Walk).settings)
+        assertEquals(AlertSettings.ALL_OFF, reloaded.forProfile(RouteProfile.Hike).settings)
     }
 
     @Test
     fun everySwitchRoundTripsWithoutLeakingToAnotherProfile() {
-        val directory = temporaryDirectory()
-        try {
-            val file = File(directory, "settings/alerts.json")
-            val allOn =
-                AlertSettings(
-                    signal = true,
-                    reroute = true,
-                    offRoute = true,
-                    arrival = true,
-                    tunnel = true,
-                    railwayCrossing = true,
-                    hazard = true,
-                    favourite = true,
-                    trackWaypoint = true,
-                    poi = true,
-                )
-            AlertSettingsStore(file).also { it.load() }.set(
-                RouteProfile.Hike,
-                ProfileAlertSettings(settings = allOn),
+        val backing = MemoryStore()
+        val allOn =
+            AlertSettings(
+                signal = true,
+                reroute = true,
+                offRoute = true,
+                arrival = true,
+                tunnel = true,
+                railwayCrossing = true,
+                hazard = true,
+                favourite = true,
+                trackWaypoint = true,
+                poi = true,
             )
+        AlertSettingsStore(backing).also { it.load() }.set(RouteProfile.Hike, ProfileAlertSettings(settings = allOn))
 
-            val reloaded = AlertSettingsStore(file).also { it.load() }
+        val reloaded = AlertSettingsStore(backing).also { it.load() }
 
-            assertEquals(allOn, reloaded.forProfile(RouteProfile.Hike).settings)
-            AlertKind.entries.forEach { kind ->
-                assertFalse(
-                    "$kind leaked to walk",
-                    reloaded.forProfile(RouteProfile.Walk).settings.isEnabled(kind),
-                )
-            }
-        } finally {
-            directory.deleteRecursively()
+        assertEquals(allOn, reloaded.forProfile(RouteProfile.Hike).settings)
+        AlertKind.entries.forEach { kind ->
+            assertFalse("$kind leaked to walk", reloaded.forProfile(RouteProfile.Walk).settings.isEnabled(kind))
         }
     }
 
@@ -101,6 +89,7 @@ class AlertSettingsStoreTest {
         store.activate(RouteProfile.Bike)
 
         assertEquals(RouteProfile.Bike, store.activeProfile())
+        assertEquals(BuiltInProfiles.BIKE, store.activeProfileId())
         assertTrue(store.current().settings.arrival)
         assertFalse("bike must not read walk's switch", store.current().settings.hazard)
 
@@ -110,50 +99,65 @@ class AlertSettingsStoreTest {
     }
 
     @Test
-    fun theChosenKindsSurviveAReloadWithTheirIndexSpelling() {
-        val directory = temporaryDirectory()
-        try {
-            val file = File(directory, "settings/alerts.json")
-            val store = AlertSettingsStore(file).also { it.load() }
-            store.set(
-                RouteProfile.Hike,
-                ProfileAlertSettings(
-                    settings = AlertSettings(poi = true, railwayCrossing = true),
-                    channels = AlertChannels(banner = true, vibration = true),
-                    poiKinds = setOf("natural=spring", "amenity=shelter"),
-                ),
-            )
+    fun theStoredValuesAreStableStringsKeyedByProfileId() {
+        val backing = MemoryStore()
+        val store = AlertSettingsStore(backing).also { it.load() }
 
-            val text = file.readText()
+        store.set(
+            RouteProfile.Hike,
+            ProfileAlertSettings(
+                settings = AlertSettings(poi = true, railwayCrossing = true),
+                channels = AlertChannels(banner = true, vibration = true),
+                poiKinds = setOf("natural=spring", "amenity=shelter"),
+            ),
+        )
 
-            assertTrue(text, text.contains("\"railway_crossing\":true"))
-            assertTrue(text, text.contains("\"banner\":true"))
-            assertTrue(text, text.contains("\"amenity=shelter\""))
-            val reloaded = AlertSettingsStore(file).also { it.load() }
-            assertEquals(
-                setOf("natural=spring", "amenity=shelter"),
-                reloaded.forProfile(RouteProfile.Hike).poiKinds,
-            )
-        } finally {
-            directory.deleteRecursively()
-        }
+        val hike = backing.stored.getValue(BuiltInProfiles.HIKE)
+        assertEquals("true", hike["railway_crossing"])
+        assertEquals("true", hike["banner"])
+        assertEquals("false", hike["signal"])
+        assertEquals("""["amenity=shelter","natural=spring"]""", hike["poi_kinds"])
+        assertEquals(setOf(BuiltInProfiles.HIKE), backing.stored.keys)
+        val reloaded = AlertSettingsStore(backing).also { it.load() }
+        assertEquals(setOf("natural=spring", "amenity=shelter"), reloaded.forProfile(RouteProfile.Hike).poiKinds)
     }
 
     @Test
-    fun aCorruptFileReadsAsAllOff() {
-        val directory = temporaryDirectory()
-        try {
-            val file = File(directory, "alerts.json")
-            file.writeText("{not json")
+    fun aProfileBackAtItsDefaultsIsNoLongerStored() {
+        val backing = MemoryStore()
+        val store = AlertSettingsStore(backing).also { it.load() }
+        store.set(RouteProfile.Bike, ProfileAlertSettings(settings = AlertSettings(signal = true)))
 
-            val store = AlertSettingsStore(file).also { it.load() }
+        store.set(RouteProfile.Bike, ProfileAlertSettings.DEFAULT)
 
-            assertEquals(ProfileAlertSettings.DEFAULT, store.forProfile(RouteProfile.Bike))
-            assertEquals(ProfileAlertSettings.DEFAULT, store.current())
-        } finally {
-            directory.deleteRecursively()
-        }
+        assertEquals(emptyMap<ProfileId, Map<String, String>>(), backing.stored)
     }
 
-    private fun temporaryDirectory(): File = Files.createTempDirectory("alerts-settings").toFile()
+    @Test
+    fun aNewerSchemaIsRefusedOnLoadAndNeverOverwritten() {
+        val newer = AppError.NewerSchema(found = 2, supported = AlertSettingsStore.SCHEMA_VERSION)
+        val backing = MemoryStore(failure = newer)
+        val store = AlertSettingsStore(backing)
+
+        assertEquals(Outcome.Failure(newer), store.load())
+        assertEquals(ProfileAlertSettings.DEFAULT, store.forProfile(RouteProfile.Bike))
+        assertEquals(
+            Outcome.Failure(newer),
+            store.set(RouteProfile.Bike, ProfileAlertSettings(settings = AlertSettings(signal = true))),
+        )
+        assertEquals(emptyMap<ProfileId, Map<String, String>>(), backing.stored)
+    }
+
+    private class MemoryStore(
+        var stored: ProfileValues = emptyMap(),
+        private val failure: AppError? = null,
+    ) : ProfileValueStore {
+        override fun read(): Outcome<ProfileValues> = failure?.let { Outcome.Failure(it) } ?: Outcome.Success(stored)
+
+        override fun write(values: ProfileValues): Outcome<Unit> {
+            failure?.let { return Outcome.Failure(it) }
+            stored = values
+            return Outcome.Success(Unit)
+        }
+    }
 }

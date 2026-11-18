@@ -1,12 +1,12 @@
 package nl.r1a.grassmap.app.devcheck
 
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -98,10 +98,11 @@ internal class ScreenshotsStep(
     }
 
     private suspend fun searchAndPlaceScenes() {
-        val request = buildJsonObject {
-            put("query", SEARCH_QUERY)
-            put("sequence", 1)
-        }
+        val request =
+            buildJsonObject {
+                put("query", SEARCH_QUERY)
+                put("sequence", 1)
+            }
         context.command("core.search.screen", request)
         val hits = withTimeoutOrNull(SEARCH_WAIT_MS) { awaitHits() }.orEmpty()
         if (hits.isEmpty()) {
@@ -163,7 +164,10 @@ internal class ScreenshotsStep(
         }
 
     private suspend fun navigationScenes() {
-        val route = context.app.assets.open(ROUTE_ASSET).use { Json.parseToJsonElement(it.reader().readText()) }
+        val route =
+            context.app.assets
+                .open(ROUTE_ASSET)
+                .use { Json.parseToJsonElement(it.reader().readText()) }
         navScene("nav_following", route, "collapsed", dark = false)
         navScene("nav_expanded", route, "trip", dark = false)
         navScene("nav_alert", route, "collapsed", dark = false, alerts = listOf("crossing"))
@@ -196,8 +200,7 @@ internal class ScreenshotsStep(
         shoot(name, if (dark) THEME_MAP_DARK else THEME_LIGHT, mapOf("route_layer_points" to JsonPrimitive(points)))
     }
 
-    private suspend fun routeLayerPoints(): Int? =
-        (context.container.mapSession.hostOrNull() as? MaplibreComposeMapHost)?.routePointCount()
+    private suspend fun routeLayerPoints(): Int? = (context.container.mapSession.hostOrNull() as? MaplibreComposeMapHost)?.routePointCount()
 
     private suspend fun downloadsScenes() {
         context.command("core.downloads.show")
@@ -242,7 +245,18 @@ internal class ScreenshotsStep(
         val file = "screenshots/%02d-%s-%s.png".format(context.screenshots.size + 1, screen, theme)
         context.pngs += ZipFileEntry(file, capture.png)
         context.screenshots +=
-            ScreenshotRecord(file, screen, theme, facts.uiNightMode, size.first, size.second, facts.density, facts.fontScale, capture.source, extra)
+            ScreenshotRecord(
+                file,
+                screen,
+                theme,
+                facts.uiNightMode,
+                size.first,
+                size.second,
+                facts.density,
+                facts.fontScale,
+                capture.source,
+                extra,
+            )
     }
 
     private fun styleParams(style: String): JsonObject = buildJsonObject { put("style", style) }

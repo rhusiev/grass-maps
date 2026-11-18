@@ -52,7 +52,10 @@ internal class DownloadStep(
         if (refreshed is Outcome.Failure) {
             return StepOutcome.fail("catalogue refresh failed: ${refreshed.error}")
         }
-        val entries = store.data.value.catalog?.entries().orEmpty()
+        val entries =
+            store.data.value.catalog
+                ?.entries()
+                .orEmpty()
         val smallest =
             entries.filter { it.kind == CatalogRegionKind.REGION }.minByOrNull { it.bytes }
                 ?: return StepOutcome.fail("the catalogue has no region", mapOf("catalog_entries" to JsonPrimitive(entries.size)))
@@ -89,11 +92,28 @@ internal class DownloadStep(
                 "download_ms" to JsonPrimitive(elapsed),
             )
         return when {
-            finished == null -> StepOutcome.fail("timed out after $DOWNLOAD_TIMEOUT_MS ms", numbers)
-            installed == null -> StepOutcome.fail("download ended without an installed pack: ${finished.orEmpty()}", numbers)
-            installed.version != region.version -> StepOutcome.fail("installed version ${installed.version} differs from the catalogue", numbers)
-            installed.bytes <= 0L -> StepOutcome.fail("installed pack is empty", numbers)
-            else -> StepOutcome.pass(numbers)
+            finished == null -> {
+                StepOutcome.fail("timed out after $DOWNLOAD_TIMEOUT_MS ms", numbers)
+            }
+
+            installed == null -> {
+                StepOutcome.fail("download ended without an installed pack: ${finished.orEmpty()}", numbers)
+            }
+
+            installed.version != region.version -> {
+                StepOutcome.fail(
+                    "installed version ${installed.version} differs from the catalogue",
+                    numbers,
+                )
+            }
+
+            installed.bytes <= 0L -> {
+                StepOutcome.fail("installed pack is empty", numbers)
+            }
+
+            else -> {
+                StepOutcome.pass(numbers)
+            }
         }
     }
 

@@ -1,8 +1,8 @@
 package nl.r1a.grassmap.app.devcheck
 
-import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.io.File
 
 class RouteAssetTest {
     @Test

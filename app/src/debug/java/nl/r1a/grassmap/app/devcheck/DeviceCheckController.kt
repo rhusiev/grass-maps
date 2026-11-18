@@ -4,8 +4,6 @@ import android.app.Application
 import android.content.Intent
 import android.os.SystemClock
 import androidx.core.content.FileProvider
-import java.io.File
-import java.time.Instant
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -18,6 +16,8 @@ import kotlinx.coroutines.launch
 import nl.r1a.grassmap.app.AppContainer
 import nl.r1a.grassmap.app.BuildConfig
 import nl.r1a.grassmap.devtools.AndroidWindowCapture
+import java.io.File
+import java.time.Instant
 
 private const val ARCHIVE_DIRECTORY = "device-check"
 private const val ARCHIVE_PREFIX = "device-check-"
@@ -77,7 +77,12 @@ internal class DeviceCheckController(
         val runner =
             DeviceCheckRunner(
                 clockMs = SystemClock::elapsedRealtime,
-                onStepStart = { index, step -> mutableUi.update { it.copy(stepNumber = index + 1, stepCount = steps.size, stepId = step.id) } },
+                onStepStart = {
+                    index,
+                    step,
+                    ->
+                    mutableUi.update { it.copy(stepNumber = index + 1, stepCount = steps.size, stepId = step.id) }
+                },
                 log = context::log,
             )
         val results = runner.run(steps)

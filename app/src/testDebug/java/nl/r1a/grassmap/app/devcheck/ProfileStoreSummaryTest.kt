@@ -1,6 +1,5 @@
 package nl.r1a.grassmap.app.devcheck
 
-import java.io.File
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
@@ -9,6 +8,7 @@ import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.File
 
 class ProfileStoreSummaryTest {
     @get:Rule
@@ -41,9 +41,31 @@ class ProfileStoreSummaryTest {
         val outcome = ProfileStoreSummary.run(folder.root)
 
         assertFalse(outcome.numbers.toString().contains(secretValue))
-        assertEquals("present", outcome.numbers.getValue("legacy_alerts").jsonPrimitive.content)
-        assertEquals("retired", outcome.numbers.getValue("legacy_routing_options").jsonPrimitive.content)
-        assertEquals("absent", outcome.numbers.getValue("catalog").jsonPrimitive.content)
-        assertEquals("2", outcome.numbers.getValue("alerts").jsonObject.getValue("profiles").jsonPrimitive.content)
+        assertEquals(
+            "present",
+            outcome.numbers
+                .getValue("legacy_alerts")
+                .jsonPrimitive.content,
+        )
+        assertEquals(
+            "retired",
+            outcome.numbers
+                .getValue("legacy_routing_options")
+                .jsonPrimitive.content,
+        )
+        assertEquals(
+            "absent",
+            outcome.numbers
+                .getValue("catalog")
+                .jsonPrimitive.content,
+        )
+        assertEquals(
+            "2",
+            outcome.numbers
+                .getValue("alerts")
+                .jsonObject
+                .getValue("profiles")
+                .jsonPrimitive.content,
+        )
     }
 }

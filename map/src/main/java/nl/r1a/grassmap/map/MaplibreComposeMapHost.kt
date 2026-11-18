@@ -616,7 +616,11 @@ class MaplibreComposeMapHost internal constructor(
      * route is set. The debug device check reads it to show the layer is not empty.
      */
     suspend fun routePointCount(): Int? =
-        withContext(Dispatchers.Main.immediate) { session.route.value?.geometry?.size }
+        withContext(Dispatchers.Main.immediate) {
+            session.route.value
+                ?.geometry
+                ?.size
+        }
 
     override suspend fun moveCamera(update: CameraUpdate): Outcome<Unit> =
         withContext(Dispatchers.Main.immediate) {

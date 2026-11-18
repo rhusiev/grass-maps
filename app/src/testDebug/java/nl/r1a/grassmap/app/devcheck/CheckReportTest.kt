@@ -43,7 +43,14 @@ class CheckReportTest {
     fun aSkippedStepIsNotAFailure() {
         val r = report(step("a", StepStatus.PASSED), step("b", StepStatus.SKIPPED))
         assertTrue(r.isPass)
-        assertEquals("pass", parse(r).getValue("summary").jsonObject.getValue("result").jsonPrimitive.content)
+        assertEquals(
+            "pass",
+            parse(r)
+                .getValue("summary")
+                .jsonObject
+                .getValue("result")
+                .jsonPrimitive.content,
+        )
     }
 
     @Test
@@ -58,8 +65,22 @@ class CheckReportTest {
     @Test
     fun screenshotCarriesWindowMetricsInPixelsAndDp() {
         val entry = parse(report(step("a", StepStatus.PASSED))).getValue("screenshots").jsonArray[0].jsonObject
-        assertEquals(1080, entry.getValue("window_px").jsonObject.getValue("width").jsonPrimitive.int)
-        assertEquals("411.4", entry.getValue("window_dp").jsonObject.getValue("width").jsonPrimitive.content)
+        assertEquals(
+            1080,
+            entry
+                .getValue("window_px")
+                .jsonObject
+                .getValue("width")
+                .jsonPrimitive.int,
+        )
+        assertEquals(
+            "411.4",
+            entry
+                .getValue("window_dp")
+                .jsonObject
+                .getValue("width")
+                .jsonPrimitive.content,
+        )
         assertEquals("2.625", entry.getValue("density").jsonPrimitive.content)
         assertEquals("1.0", entry.getValue("font_scale").jsonPrimitive.content)
         assertEquals("light", entry.getValue("theme").jsonPrimitive.content)
@@ -68,8 +89,22 @@ class CheckReportTest {
     @Test
     fun unavailableAndAbsentScreensAreListedWithReasons() {
         val json = parse(report(step("a", StepStatus.PASSED)))
-        assertEquals("no search index installed", json.getValue("screens_unavailable").jsonArray[0].jsonObject.getValue("reason").jsonPrimitive.content)
-        assertEquals("profiles", json.getValue("screens_not_in_this_build").jsonArray[0].jsonPrimitive.content)
+        assertEquals(
+            "no search index installed",
+            json
+                .getValue("screens_unavailable")
+                .jsonArray[0]
+                .jsonObject
+                .getValue("reason")
+                .jsonPrimitive.content,
+        )
+        assertEquals(
+            "profiles",
+            json
+                .getValue("screens_not_in_this_build")
+                .jsonArray[0]
+                .jsonPrimitive.content,
+        )
     }
 
     private fun parse(report: CheckReport) = Json.parseToJsonElement(report.toJson()).jsonObject

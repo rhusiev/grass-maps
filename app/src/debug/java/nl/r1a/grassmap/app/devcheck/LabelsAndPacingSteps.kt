@@ -124,7 +124,10 @@ internal class PacingStep(
             }.orEmpty()
         val numbers =
             mapOf(
-                "cold_start" to JsonPrimitive("not run: the benchmark build is a separate APK and a cold start cannot be timed from inside the process"),
+                "cold_start" to
+                    JsonPrimitive(
+                        "not run: the benchmark build is a separate APK and a cold start cannot be timed from inside the process",
+                    ),
             )
         if (samples.isEmpty()) {
             return StepOutcome.skip("the frame-rate stream gave no sample", numbers)

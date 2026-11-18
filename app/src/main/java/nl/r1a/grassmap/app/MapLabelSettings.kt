@@ -29,7 +29,7 @@ class MapLabelSettings(
 ) {
     private val state = MutableStateFlow(load(file) ?: LabelOptions())
 
-    /** The active options. The map collects this flow through `MapLabelHub`. */
+    /** The active options. The map screen passes this flow to the map surface. */
     val options: StateFlow<LabelOptions> = state.asStateFlow()
 
     /** Stores [next] and returns when the file holds it. */

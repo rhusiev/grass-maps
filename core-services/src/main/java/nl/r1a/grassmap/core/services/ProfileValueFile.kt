@@ -41,8 +41,10 @@ enum class MigrationStep {
  *
  * The store declares one schema version. A file with a higher version is
  * refused with [AppError.NewerSchema] on read and on write, so an older build
- * never overwrites data it cannot understand. A missing, unreadable or
- * unversioned file reads as empty. A write is atomic.
+ * never overwrites data it cannot understand. Only a missing file reads as
+ * empty. A file that exists but cannot be read or decoded fails with
+ * [AppError.CorruptData] or [AppError.Internal] on read and on write, and is
+ * never replaced by a migration. A write is atomic.
  *
  * A store that had a file before this format passes it as [legacy], the one
  * previous version it reads forward. [read] migrates it: it writes the new
@@ -50,7 +52,9 @@ enum class MigrationStep {
  * removes the old file. Until the comparison passes the old file stays, and it
  * stays for good when it cannot be read or the new file already differs from
  * it. A process that dies between two of those steps leaves the old file in
- * place, so the next [read] migrates again.
+ * place, so the next [read] migrates again. A [write] before the first [read]
+ * migrates too: the old values are merged key by key under the written ones
+ * before the new file is created, so no old value is lost.
  */
 class ProfileValueFile(
     private val file: File,
@@ -76,12 +80,33 @@ class ProfileValueFile(
 
     @Synchronized
     override fun write(values: ProfileValues): Outcome<Unit> {
-        val stored = readStored()
-        if (stored is Outcome.Failure) {
-            return stored
+        val current =
+            when (val stored = readStored()) {
+                is Outcome.Failure -> return stored
+                is Outcome.Success -> stored.value
+            }
+        val old = legacy
+        val inherited = if (current == null && old != null) old.read(old.file) else null
+        if (old == null || inherited == null) {
+            return writeFile(values)
         }
-        return AtomicFiles.write(file, errorId) { stream -> stream.write(encode(values).toByteArray()) }
+        val merged = merge(inherited, values)
+        return writeFile(merged).also {
+            if (it is Outcome.Success) {
+                checkpoint(MigrationStep.Written)
+                retireIfVerified(old, merged)
+            }
+        }
     }
+
+    private fun writeFile(values: ProfileValues): Outcome<Unit> =
+        AtomicFiles.write(file, errorId) { stream -> stream.write(encode(values).toByteArray()) }
+
+    private fun merge(
+        base: ProfileValues,
+        overlay: ProfileValues,
+    ): ProfileValues =
+        (base.keys + overlay.keys).associateWith { profile -> base[profile].orEmpty() + overlay[profile].orEmpty() }
 
     private fun migrate(old: LegacyProfileFile): ProfileValues {
         val expected = old.read(old.file) ?: return emptyMap()
@@ -97,9 +122,18 @@ class ProfileValueFile(
         old: LegacyProfileFile,
         current: ProfileValues,
     ) {
-        val expected = old.read(old.file) ?: return
+        if (old.read(old.file) != current) {
+            return
+        }
+        retireIfVerified(old, current)
+    }
+
+    private fun retireIfVerified(
+        old: LegacyProfileFile,
+        current: ProfileValues,
+    ) {
         val readBack = (readStored() as? Outcome.Success)?.value
-        if (expected != current || readBack != current) {
+        if (readBack != current) {
             return
         }
         checkpoint(MigrationStep.Verified)
@@ -114,9 +148,9 @@ class ProfileValueFile(
                 decode(file.readText())
             }
         } catch (exception: IOException) {
-            Outcome.Success(null)
+            Outcome.Failure(AppError.Internal(errorId, exception.javaClass.simpleName))
         } catch (exception: SecurityException) {
-            Outcome.Success(null)
+            Outcome.Failure(AppError.Internal(errorId, exception.javaClass.simpleName))
         }
 
     private fun decode(text: String): Outcome<ProfileValues?> {
@@ -125,12 +159,12 @@ class ProfileValueFile(
                 Json.parseToJsonElement(text) as? JsonObject
             } catch (exception: SerializationException) {
                 null
-            } ?: return Outcome.Success(null)
-        val version = (root[SCHEMA_VERSION_KEY] as? JsonPrimitive)?.intOrNull ?: return Outcome.Success(null)
+            } ?: return Outcome.Failure(AppError.CorruptData)
+        val version = (root[SCHEMA_VERSION_KEY] as? JsonPrimitive)?.intOrNull ?: return Outcome.Failure(AppError.CorruptData)
         if (version > schemaVersion) {
             return Outcome.Failure(AppError.NewerSchema(found = version, supported = schemaVersion))
         }
-        val profiles = root[PROFILES_KEY] as? JsonObject ?: return Outcome.Success(null)
+        val profiles = root[PROFILES_KEY] as? JsonObject ?: return Outcome.Failure(AppError.CorruptData)
         return Outcome.Success(profiles.mapNotNull(::decodeProfile).toMap())
     }
 

@@ -50,11 +50,35 @@ class ProfileValueFileTest {
         }
 
     @Test
-    fun aCorruptFileReadsAsEmpty() =
+    fun anUndecodableNewFileFailsAndNeitherFileIsTouched() =
         withDirectory { directory ->
-            val file = File(directory, NEW_NAME).apply { writeText("{not json") }
+            val legacy = legacyFile(directory)
+            val garbage = listOf("{not json", "[]", """{"profiles":{}}""", """{"schema_version":1,"profiles":[]}""")
 
-            assertEquals(Outcome.Success(emptyMap<ProfileId, Map<String, String>>()), ProfileValueFile(file, VERSION, ERROR_ID).read())
+            garbage.forEach { text ->
+                val file = File(directory, NEW_NAME).apply { writeText(text) }
+                val store = ProfileValueFile(file, VERSION, ERROR_ID, legacy)
+
+                assertEquals(Outcome.Failure(AppError.CorruptData), store.read())
+                assertEquals(Outcome.Failure(AppError.CorruptData), store.write(values))
+                assertEquals(text, file.readText())
+                assertTrue(legacy.file.exists())
+            }
+        }
+
+    @Test
+    fun aWriteBeforeTheFirstReadKeepsEveryOldValueAndRetiresTheOldFile() =
+        withDirectory { directory ->
+            val walk = ProfileId("walk")
+            val old: ProfileValues = mapOf(bike to mapOf("hills" to "avoid", "surface" to "paved"), walk to mapOf("a" to "b"))
+            val legacy = LegacyProfileFile(File(directory, OLD_NAME).apply { writeText("old") }) { if (it.isFile) old else null }
+            val store = ProfileValueFile(File(directory, NEW_NAME), VERSION, ERROR_ID, legacy)
+
+            assertEquals(Outcome.Success(Unit), store.write(mapOf(bike to mapOf("hills" to "normal", "new" to "1"))))
+
+            val expected = mapOf(bike to mapOf("hills" to "normal", "surface" to "paved", "new" to "1"), walk to mapOf("a" to "b"))
+            assertEquals(Outcome.Success(expected), ProfileValueFile(File(directory, NEW_NAME), VERSION, ERROR_ID).read())
+            assertFalse("the old file goes after the check", legacy.file.exists())
         }
 
     @Test

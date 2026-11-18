@@ -1,0 +1,69 @@
+{
+  "id": "profiles.ui",
+  "name": "plugin.profiles_ui.name",
+  "description": "plugin.profiles_ui.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.profiles.ui.ProfilesUiPlugin",
+  "contributes": {
+    "commands": [
+      {
+        "id": "profiles.ui.create",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.ProfilesState",
+        "doc": "Adds a profile that starts as a copy of another one. Parameters: name, from.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.profiles.ui.CreateProfileCommand"
+      },
+      {
+        "id": "profiles.ui.copy_settings",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.ProfilesState",
+        "doc": "Copies the settings of one profile into another. Parameters: from, to, and optionally groups.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.profiles.ui.CopySettingsCommand"
+      },
+      {
+        "id": "profiles.ui.reset",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.ProfilesState",
+        "doc": "Puts the settings of a profile back to its baseline. Parameters: profile, and optionally groups.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.profiles.ui.ResetSettingsCommand"
+      },
+      {
+        "id": "profiles.ui.undo",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmap.plugin.api.model.ProfilesState",
+        "doc": "Reverts the last profile action.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmap.plugins.profiles.ui.UndoProfileActionCommand"
+      }
+    ],
+    "streams": [
+      {
+        "id": "profiles.ui.state",
+        "valueType": "nl.r1a.grassmap.plugin.api.model.ProfilesState",
+        "serializer": "nl.r1a.grassmap.plugin.api.model.ProfilesState.serializer"
+      }
+    ]
+  },
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": []
+  },
+  "activation": [
+    "command",
+    "stream",
+    "ui"
+  ]
+}

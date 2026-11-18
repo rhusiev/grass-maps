@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.profiles_ui.name">Profiles</string>
+    <string name="plugin.profiles_ui.description">Creates profiles, copies settings between them, resets settings and undoes the last change.</string>
+
+    <string name="profiles_title">Profiles</string>
+    <string name="profiles_back">Back</string>
+    <string name="profiles_walk">Walk</string>
+    <string name="profiles_bike">Bike</string>
+    <string name="profiles_hike">Hike</string>
+    <string name="profiles_built_in">Built in</string>
+    <string name="profiles_copied_from">Copied from %1$s</string>
+    <string name="profiles_new">New profile</string>
+    <string name="profiles_name_label">Name</string>
+    <string name="profiles_start_from">Start from</string>
+    <string name="profiles_create">Create</string>
+    <string name="profiles_cancel">Cancel</string>
+    <string name="profiles_edit_title">Edit profile</string>
+    <string name="profiles_section_profile">Profile</string>
+    <string name="profiles_copy_settings">Copy settings from another profile</string>
+    <string name="profiles_copy_sheet_title">Copy settings from</string>
+    <string name="profiles_what_to_copy">What to copy</string>
+    <string name="profiles_copy">Copy</string>
+    <string name="profiles_reset_to_profile">Reset to the settings of %1$s</string>
+    <string name="profiles_reset_to_default">Reset to default settings</string>
+    <string name="profiles_group_routing">Routing</string>
+    <string name="profiles_group_alerts">Alerts</string>
+    <string name="profiles_notice_created">Created %1$s</string>
+    <string name="profiles_notice_copied">Copied from %1$s</string>
+    <string name="profiles_notice_reset">Settings reset</string>
+    <string name="profiles_undo">Undo</string>
+</resources>

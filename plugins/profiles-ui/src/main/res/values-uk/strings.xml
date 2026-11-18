@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.profiles_ui.name">Профілі</string>
+    <string name="plugin.profiles_ui.description">Створює профілі, копіює налаштування між ними, скидає налаштування і скасовує останню зміну.</string>
+
+    <string name="profiles_title">Профілі</string>
+    <string name="profiles_back">Назад</string>
+    <string name="profiles_walk">Пішки</string>
+    <string name="profiles_bike">Велосипед</string>
+    <string name="profiles_hike">Похід</string>
+    <string name="profiles_built_in">Вбудований</string>
+    <string name="profiles_copied_from">Копія профілю %1$s</string>
+    <string name="profiles_new">Новий профіль</string>
+    <string name="profiles_name_label">Назва</string>
+    <string name="profiles_start_from">Взяти за основу</string>
+    <string name="profiles_create">Створити</string>
+    <string name="profiles_cancel">Скасувати</string>
+    <string name="profiles_edit_title">Редагувати профіль</string>
+    <string name="profiles_section_profile">Профіль</string>
+    <string name="profiles_copy_settings">Копіювати налаштування з іншого профілю</string>
+    <string name="profiles_copy_sheet_title">Копіювати налаштування з</string>
+    <string name="profiles_what_to_copy">Що копіювати</string>
+    <string name="profiles_copy">Копіювати</string>
+    <string name="profiles_reset_to_profile">Скинути до налаштувань профілю %1$s</string>
+    <string name="profiles_reset_to_default">Скинути до типових налаштувань</string>
+    <string name="profiles_group_routing">Маршрути</string>
+    <string name="profiles_group_alerts">Сповіщення</string>
+    <string name="profiles_notice_created">Створено %1$s</string>
+    <string name="profiles_notice_copied">Копія профілю %1$s</string>
+    <string name="profiles_notice_reset">Налаштування скинуто</string>
+    <string name="profiles_undo">Скасувати</string>
+</resources>

@@ -64,4 +64,5 @@ include(
     ":plugins:route-relations",
     ":plugins:raster",
     ":plugins:downloads-ui",
+    ":plugins:profiles-ui",
 )

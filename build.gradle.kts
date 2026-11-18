@@ -104,6 +104,7 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
                 ":plugins:route-relations",
                 ":plugins:raster",
                 ":plugins:downloads-ui",
+                ":plugins:profiles-ui",
             ),
         // testFixtures(project(":plugin-api")) is the module's own fixtures.
         ":plugin-api" to setOf(":plugin-api"),
@@ -161,6 +162,7 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         // itself is :regions, which the plugin reaches only through the
         // plugin-api host access.
         ":plugins:downloads-ui" to setOf(":plugin-api", ":plugin-ui-api"),
+        ":plugins:profiles-ui" to setOf(":plugin-api", ":plugin-ui-api"),
     )
 // Edges that ship in the debug APK and must never reach a release build
 // (architecture section 22). They are judged separately from the release
@@ -217,6 +219,8 @@ val moduleTestDependencyAllowlist: Map<String, Set<String>> =
         // the real parser and the screen model. Test only; the plugin's runtime
         // classpath is :plugin-api and Compose.
         ":plugins:downloads-ui" to setOf(":plugin-api", ":regions"),
+        // T-0602: the profiles tests use the plugin-api test fixtures only.
+        ":plugins:profiles-ui" to setOf(":plugin-api"),
     )
 val moduleBoundaryViolations = objects.listProperty(String::class.java)
 val moduleBoundaryEdges = objects.property(Int::class.java).convention(0)

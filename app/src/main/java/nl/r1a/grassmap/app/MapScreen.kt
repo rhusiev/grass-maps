@@ -207,6 +207,10 @@ private const val TAG = "GrassMapsMap"
 private const val LAYOUT_DIRECTORY = "controls"
 private const val LAYOUT_FILE = "button-layout.json"
 private const val BAR_PADDING_DP = 16
+private const val SEARCH_CARD_HEIGHT_DP = 34
+private const val WIDGET_GRID_GAP_DP = 8
+private const val CONTROL_BAR_WIDTH_DP = 59
+private const val CONTROL_BAR_EDIT_WIDTH_DP = 148
 private const val BANNER_CORNER_DP = 8
 private const val BANNER_HORIZONTAL_DP = 16
 private const val BANNER_VERTICAL_DP = 10
@@ -804,7 +808,15 @@ private fun MapContent(
                     Modifier
                         .align(Alignment.TopStart)
                         .statusBarsPadding()
-                        .padding(BAR_PADDING_DP.dp),
+                        .padding(
+                            start = BAR_PADDING_DP.dp,
+                            top = (BAR_PADDING_DP + SEARCH_CARD_HEIGHT_DP + WIDGET_GRID_GAP_DP).dp,
+                            end =
+                                (
+                                    BAR_PADDING_DP + WIDGET_GRID_GAP_DP +
+                                        if (isEditing) CONTROL_BAR_EDIT_WIDTH_DP else CONTROL_BAR_WIDTH_DP
+                                ).dp,
+                        ),
             )
         }
         if (!navigationActive) {

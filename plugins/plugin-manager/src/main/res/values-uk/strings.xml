@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.manager.name">Плагіни</string>
+    <string name="plugin.manager.description">Вмикає й вимикає необов'язкові плагіни.</string>
+
+    <string name="plugin_manager_title">Плагіни</string>
+    <plurals name="plugin_manager_count">
+        <item quantity="one">%d плагін</item>
+        <item quantity="few">%d плагіни</item>
+        <item quantity="many">%d плагінів</item>
+        <item quantity="other">%d плагіна</item>
+    </plurals>
+    <string name="plugin_manager_subtitle_off">%1$s · вимкнено: %2$d</string>
+    <string name="plugin_manager_close">Закрити</string>
+    <string name="plugin_manager_search">Пошук плагінів</string>
+    <string name="plugin_manager_no_match">Жоден плагін не підходить</string>
+
+    <string name="plugin_manager_group_map">Мапа</string>
+    <string name="plugin_manager_group_routing">Маршрути</string>
+    <string name="plugin_manager_group_places">Місця</string>
+    <string name="plugin_manager_group_sharing">Обмін</string>
+    <string name="plugin_manager_group_widgets">Віджети</string>
+
+    <string name="plugin_manager_state_off">Вимкнено</string>
+    <string name="plugin_manager_state_on">Увімкнено</string>
+    <string name="plugin_manager_state_running">Працює</string>
+    <string name="plugin_manager_state_stopped">Зупинено</string>
+    <plurals name="plugin_manager_stopped_after">
+        <item quantity="one">Зупинено після %d збою</item>
+        <item quantity="few">Зупинено після %d збоїв</item>
+        <item quantity="many">Зупинено після %d збоїв</item>
+        <item quantity="other">Зупинено після %d збою</item>
+    </plurals>
+    <string name="plugin_manager_row_stopped">%1$s · торкніться, щоб дізнатися більше</string>
+    <string name="plugin_manager_uses_network">Використовує мережу</string>
+
+    <string name="plugin_manager_version">Версія %1$s</string>
+    <string name="plugin_manager_adds">Додає</string>
+    <string name="plugin_manager_commands">Команди</string>
+    <string name="plugin_manager_uses">Використовує</string>
+    <string name="plugin_manager_network">Мережа</string>
+    <string name="plugin_manager_location">Місцеположення</string>
+    <string name="plugin_manager_map_data">Дані мапи</string>
+    <string name="plugin_manager_none">Нічого</string>
+    <string name="plugin_manager_needed">Потрібна</string>
+    <string name="plugin_manager_location_in_use">Під час використання</string>
+    <string name="plugin_manager_location_navigation">Під час навігації</string>
+    <string name="plugin_manager_goes_away">Поки плагін вимкнений, його команди й вміст мапи зникають. Вони повертаються, коли ви його вмикаєте.</string>
+    <string name="plugin_manager_turn_off">Вимкнути</string>
+    <string name="plugin_manager_turn_on">Увімкнути</string>
+    <string name="plugin_manager_restart">Перезапустити</string>
+    <string name="plugin_manager_done">Готово</string>
+</resources>

@@ -1,0 +1,15 @@
+{
+  "id": "plugin.manager",
+  "name": "plugin.manager.name",
+  "description": "plugin.manager.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmap.plugins.manager.PluginManagerPlugin",
+  "contributes": {},
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": []
+  },
+  "activation": []
+}

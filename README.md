@@ -593,6 +593,7 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/proximity-alerts` | the proximity schedule for favourites, track waypoints and chosen place kinds: the three chosen radii, the one-per-approach latch and its lookup refresh | `plugin-api` |
 | `plugins/downloads-ui` | the downloads screen: catalogue rows with their parts and data date, the first-run offer, the region sheet, the refresh, download, cancel, remove and server commands, and their state stream | `plugin-api` |
 | `plugins/profiles-ui` | the profiles screen: the list, the new-profile and copy-settings sheets, the editor's copy and reset rows, the undo notice, the create, copy settings, reset and undo commands, and their state stream | `plugin-api`, `plugin-ui-api` |
+| `plugins/plugin-manager` | the plugin manager screen (T-0607): the six switchable plugins in four sections with a switch each, a search pill and a sheet per plugin, and the id list the host treats as switchable | `plugin-api` |
 
 ## Online tiles
 

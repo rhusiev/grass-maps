@@ -65,4 +65,5 @@ include(
     ":plugins:raster",
     ":plugins:downloads-ui",
     ":plugins:profiles-ui",
+    ":plugins:plugin-manager",
 )

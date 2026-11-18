@@ -105,6 +105,7 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
                 ":plugins:raster",
                 ":plugins:downloads-ui",
                 ":plugins:profiles-ui",
+                ":plugins:plugin-manager",
             ),
         // testFixtures(project(":plugin-api")) is the module's own fixtures.
         ":plugin-api" to setOf(":plugin-api"),
@@ -163,6 +164,7 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         // plugin-api host access.
         ":plugins:downloads-ui" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:profiles-ui" to setOf(":plugin-api", ":plugin-ui-api"),
+        ":plugins:plugin-manager" to setOf(":plugin-api"),
     )
 // Edges that ship in the debug APK and must never reach a release build
 // (architecture section 22). They are judged separately from the release

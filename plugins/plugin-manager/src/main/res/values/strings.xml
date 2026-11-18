@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.manager.name">Plugins</string>
+    <string name="plugin.manager.description">Turns the optional plugins off and on.</string>
+
+    <string name="plugin_manager_title">Plugins</string>
+    <plurals name="plugin_manager_count">
+        <item quantity="one">%d plugin</item>
+        <item quantity="other">%d plugins</item>
+    </plurals>
+    <string name="plugin_manager_subtitle_off">%1$s · %2$d off</string>
+    <string name="plugin_manager_close">Close</string>
+    <string name="plugin_manager_search">Search plugins</string>
+    <string name="plugin_manager_no_match">No plugin matches</string>
+
+    <string name="plugin_manager_group_map">Map</string>
+    <string name="plugin_manager_group_routing">Routing</string>
+    <string name="plugin_manager_group_places">Places</string>
+    <string name="plugin_manager_group_sharing">Sharing</string>
+    <string name="plugin_manager_group_widgets">Widgets</string>
+
+    <string name="plugin_manager_state_off">Off</string>
+    <string name="plugin_manager_state_on">On</string>
+    <string name="plugin_manager_state_running">Running</string>
+    <string name="plugin_manager_state_stopped">Stopped</string>
+    <plurals name="plugin_manager_stopped_after">
+        <item quantity="one">Stopped after %d failure</item>
+        <item quantity="other">Stopped after %d failures</item>
+    </plurals>
+    <string name="plugin_manager_row_stopped">%1$s · tap for details</string>
+    <string name="plugin_manager_uses_network">Uses the network</string>
+
+    <string name="plugin_manager_version">Version %1$s</string>
+    <string name="plugin_manager_adds">Adds</string>
+    <string name="plugin_manager_commands">Commands</string>
+    <string name="plugin_manager_uses">Uses</string>
+    <string name="plugin_manager_network">Network</string>
+    <string name="plugin_manager_location">Location</string>
+    <string name="plugin_manager_map_data">Map data</string>
+    <string name="plugin_manager_none">None</string>
+    <string name="plugin_manager_needed">Needed</string>
+    <string name="plugin_manager_location_in_use">While in use</string>
+    <string name="plugin_manager_location_navigation">During navigation</string>
+    <string name="plugin_manager_goes_away">While it is off, its commands and map content are gone. They return when you turn it on.</string>
+    <string name="plugin_manager_turn_off">Turn off</string>
+    <string name="plugin_manager_turn_on">Turn on</string>
+    <string name="plugin_manager_restart">Restart</string>
+    <string name="plugin_manager_done">Done</string>
+</resources>

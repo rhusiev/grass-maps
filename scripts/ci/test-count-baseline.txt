@@ -24,6 +24,7 @@ plugins/map-controls	20
 plugins/nav-simulator	12
 plugins/online-search	23
 plugins/osm-places	50
+plugins/plugin-manager	15
 plugins/point-info	25
 plugins/profiles-ui	13
 plugins/proximity-alerts	22

@@ -168,6 +168,8 @@ internal class ScreenshotsStep(
         navScene("nav_expanded", route, "trip", dark = false)
         navScene("nav_alert", route, "collapsed", dark = false, alerts = listOf("crossing"))
         navScene("nav_following", route, "collapsed", dark = true)
+        context.command("core.nav.show_screen", buildJsonObject { put("clear", true) })
+        context.command("core.map.set_style", styleParams(STYLE_LIGHT))
     }
 
     private suspend fun navScene(

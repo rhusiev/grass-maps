@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmap.plugin.api.model.MapCredits
@@ -78,9 +79,11 @@ internal fun collapsedLabel(credits: List<String>): String =
  * This is the only credit surface. The engine's own attribution button is off
  * (`MaplibreMap` draws only its logo, see `MapSurfaceView`), so the credits
  * never appear twice. The line sits at the bottom start, above the engine's
- * logo and clear of the app's scale bar at the bottom end. The top row is not
- * free: the search field, the selected-point label and the navigation turn card
- * all use it.
+ * logo and clear of the app's scale bar at the bottom end. [bottomInset] is
+ * how far the app's bottom bars and sheets reach up from the window edge: the
+ * line rises above them, so a trip bar or a route sheet never hides it. The
+ * top row is not free: the search field, the selected-point label and the
+ * navigation turn card all use it.
  *
  * This is ordinary Compose content drawn over the map, never a node inside it.
  * The map's content lambda accepts map nodes only, so a layout emitted there
@@ -92,6 +95,7 @@ internal fun MapAttributionOverlay(
     style: MapStyleState,
     sourceCredits: List<String>,
     modifier: Modifier = Modifier,
+    bottomInset: Dp = 0.dp,
 ) {
     val credits = mergeCredits(sourceCredits, style.attributions())
     if (credits.isEmpty()) return
@@ -104,7 +108,7 @@ internal fun MapAttributionOverlay(
                     .padding(
                         start = ATTRIBUTION_MARGIN_DP.dp,
                         end = ATTRIBUTION_END_CLEARANCE_DP.dp,
-                        bottom = ATTRIBUTION_BOTTOM_INSET_DP.dp,
+                        bottom = maxOf(ATTRIBUTION_BOTTOM_INSET_DP.dp, bottomInset + ATTRIBUTION_CLEARANCE_DP.dp),
                     ),
         ) {
             if (expanded) {
@@ -149,6 +153,9 @@ private const val ATTRIBUTION_BOTTOM_INSET_DP = 40
 // The app's scale bar sits at the bottom end, about 90 dp wide with its margin.
 // The credit line stops before it, so a long line never runs under the bar.
 private const val ATTRIBUTION_END_CLEARANCE_DP = 100
+
+// The gap between the credit line and the bar or sheet it rises above.
+private const val ATTRIBUTION_CLEARANCE_DP = 4
 
 private val ATTRIBUTION_BACKGROUND = Color(0x99000000)
 private const val ATTRIBUTION_FONT_SP = 10

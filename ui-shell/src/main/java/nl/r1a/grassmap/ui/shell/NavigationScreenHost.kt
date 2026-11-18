@@ -191,7 +191,8 @@ fun NavigationScreenHost(
                     Modifier
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
-                        .padding(horizontal = BAR_EDGE_DP.dp, vertical = BAR_BOTTOM_DP.dp),
+                        .padding(horizontal = BAR_EDGE_DP.dp, vertical = BAR_BOTTOM_DP.dp)
+                        .reportsBottomChrome(),
             )
         } else if (sheet == NavigationSheet.Trip) {
             TripSheet(
@@ -208,7 +209,8 @@ fun NavigationScreenHost(
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
-                        .navigationBarsPadding(),
+                        .navigationBarsPadding()
+                        .reportsBottomChrome(),
             )
         } else {
             SettingsSheet(
@@ -225,7 +227,8 @@ fun NavigationScreenHost(
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
-                        .navigationBarsPadding(),
+                        .navigationBarsPadding()
+                        .reportsBottomChrome(),
             )
         }
     }

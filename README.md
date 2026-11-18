@@ -591,10 +591,13 @@ licence requires shown in the map's credit line, the one credit surface: the
 engine's own attribution button is off. The line reads "© OpenStreetMap
 contributors", plus "Copernicus" when contours are on, and a tap on it opens
 the full texts with their links. It sits above the engine's logo in the
-bottom-left corner. MapLibre's logo is optional under its BSD licence, while
-the source credits are not. OSM's tile policy forbids offline
-bulk download, so `RasterOfflineDownload.prepare` refuses it. The same
-refusal applies to a custom template on the same host.
+bottom-left corner and rises above any bottom bar or sheet that is showing
+(the navigation trip bar, the route, track and follow sheets, the layers
+card): each reports its top edge through `BottomChrome` in `ui-shell`, and
+`MapAttributionOverlay` takes the highest as `bottomInset`. MapLibre's logo is
+optional under its BSD licence, while the source credits are not. OSM's tile
+policy forbids offline bulk download, so `RasterOfflineDownload.prepare`
+refuses it. The same refusal applies to a custom template on the same host.
 
 Any other source is a user URL template with `{z}`, `{x}` and `{y}`. The app
 validates the template and fetches one tile through the gate before it makes

@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
@@ -301,6 +302,7 @@ fun MapSurfaceView(
     onPointSelected: (GeoPoint) -> Unit = {},
     onManualPan: () -> Unit = {},
     onTap: (GeoPoint) -> Unit = {},
+    creditBottomInset: Dp = 0.dp,
 ) {
     val interactions = remember { MapGestures.interactions() }
     val uiOptions = remember { MapGestures.uiOptions() }
@@ -366,7 +368,11 @@ fun MapSurfaceView(
             uiOptions = uiOptions,
             overlay = { MaplibreLogo(Modifier.align(Alignment.BottomStart).padding(MapOverlay.Spacing)) },
         )
-        MapAttributionOverlay(style = surface.state.style, sourceCredits = surface.host.sourceCredits)
+        MapAttributionOverlay(
+            style = surface.state.style,
+            sourceCredits = surface.host.sourceCredits,
+            bottomInset = creditBottomInset,
+        )
     }
 }
 

@@ -142,6 +142,7 @@ def capture(
         "system_dialogs": g.prepare_device(adb),
     }
     adb.install(apk)
+    g.clear_app_data(adb)
     if output.exists():
         shutil.rmtree(output)
     output.mkdir(parents=True, exist_ok=True)

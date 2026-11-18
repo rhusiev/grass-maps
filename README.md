@@ -688,6 +688,9 @@ surface collects it, so a change applies to the open map without a restart.
 There is no settings screen yet. The control-channel command `core.settings.map_labels`
 sets it: `{"language":"en"}` or `{"sizePercent":150}` or both, and a key left
 out keeps its value.
+Debug builds also have `core.map.rendered_labels`. It returns each label layer's
+evaluated text, its name properties and its applied `text-size` expression
+for the features at the map viewport.
 
 The layer draws at one of two placements (T-0514). `Overlay` is the default:
 `LayerSlot.Terrain`, above every base-style layer - fills, lines and symbols -

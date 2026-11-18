@@ -668,6 +668,28 @@ styles card, two radio rows: Meadow (Standard, "Everyday and city") and Trail
 (`{"style":"touring"}`) and a missing or unknown value means Standard. The
 switches inside the other cards are stored state too.
 
+The label language and size (T-0110) are two more host settings, stored in
+`settings/map-labels.json` (`{"language":"en","sizePercent":150}`) by
+`MapLabelSettings`. A missing or corrupt file, an unknown language or a size
+outside 50 to 200 reads as the default: `default` language and 100 %. The
+default leaves every layer exactly as the style file authors it, so the map
+goldens stay valid. `en` and `uk` replace the style's name rule, the outermost
+`case` or `format` that reads `name:uk`, with one name:
+`coalesce(name:xx, pgf:name, name)`. The rule around it stays, such as the
+region layer's reference number below zoom 6. The tile tags `name:en` and
+`name:uk` come from the Protomaps basemap schema, and a place without the tag
+shows its local name. The size multiplies every symbol layer's `text-size`. A
+zoom curve (`interpolate`, `step`) takes the factor on its outputs, because
+MapLibre accepts the zoom input only at the top of those expressions. At 150 %
+a size of 12 is 18. `LabelStyle` in `map` does both changes when the layers are
+compiled, so the layer lists the plugins return are not modified.
+`MapLabelHub` carries the current options from the app to the map: the
+application publishes the stored setting at start, and the map surface
+collects it, so a change applies to the open map without a restart. There is
+no settings screen yet. The control-channel command `core.settings.map_labels`
+sets it: `{"language":"en"}` or `{"sizePercent":150}` or both, and a key left
+out keeps its value.
+
 The layer draws at one of two placements (T-0514). `Overlay` is the default:
 `LayerSlot.Terrain`, above every base-style layer - fills, lines and symbols -
 and below the contour, track, route, marker and label groups. The base style's

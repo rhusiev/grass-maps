@@ -25,6 +25,7 @@ import nl.r1a.grassmap.core.services.FileLocationPermissionStore
 import nl.r1a.grassmap.core.services.MockGpxLocationSource
 import nl.r1a.grassmap.core.services.installCrashGuard
 import nl.r1a.grassmap.map.DistanceByTapSetting
+import nl.r1a.grassmap.map.MapLabelHub
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
@@ -78,6 +79,7 @@ open class GrassMapsApplication : Application() {
             contoursSettingsFileProvider = { File(filesDir, CONTOURS_SETTINGS_PATH) },
             rasterSettingsFileProvider = { File(filesDir, RASTER_SETTINGS_PATH) },
             mapStyleSettingsFileProvider = { File(filesDir, MAP_STYLE_SETTINGS_PATH) },
+            mapLabelSettingsFileProvider = { File(filesDir, MAP_LABEL_SETTINGS_PATH) },
             routeHistoryFileProvider = { File(filesDir, UserDataLayout.ROUTE_HISTORY_PATH) },
             userDataRootProvider = { filesDir },
             favouritesRootProvider = { filesDir },
@@ -109,6 +111,7 @@ open class GrassMapsApplication : Application() {
         // from waiting on it.
         maintenanceScope.launch { container.applyAutoUpdateSchedule() }
         maintenanceScope.launch { container.profileCatalog.load() }
+        maintenanceScope.launch { container.mapLabelSettings.options.collect(MapLabelHub::publish) }
         maintenanceScope.launch {
             TrackTrash.purge(
                 File(filesDir, UserDataLayout.TRACKS_DIRECTORY),
@@ -260,6 +263,7 @@ open class GrassMapsApplication : Application() {
         const val CONTOURS_SETTINGS_PATH = "settings/contours.json"
         const val RASTER_SETTINGS_PATH = "settings/raster.json"
         const val MAP_STYLE_SETTINGS_PATH = "settings/style.json"
+        const val MAP_LABEL_SETTINGS_PATH = "settings/map-labels.json"
         const val DOWNLOADS_SETTINGS_PATH = "settings/downloads.json"
         const val AUTO_UPDATE_LEDGER_PATH = "settings/auto-update.json"
         const val DEV_TOOLS_GPX_ASSET = "mock-walk.gpx"

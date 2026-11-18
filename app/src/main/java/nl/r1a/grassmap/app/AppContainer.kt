@@ -168,6 +168,7 @@ class AppContainer(
     private val contoursSettingsFileProvider: () -> File? = { null },
     private val rasterSettingsFileProvider: () -> File? = { null },
     private val mapStyleSettingsFileProvider: () -> File? = { null },
+    private val mapLabelSettingsFileProvider: () -> File? = { null },
     private val routeHistoryFileProvider: () -> File? = { null },
     private val userDataRootProvider: () -> File? = { null },
     private val favouritesRootProvider: () -> File? = { null },
@@ -272,6 +273,13 @@ class AppContainer(
     val mapStyleSettings: MapStyleSettings by lazy {
         MapStyleSettings(mapStyleSettingsFileProvider())
     }
+
+    /**
+     * The map label language and size (T-0110). Construction reads the settings
+     * file, so the first access is an IO-dispatched command or the application's
+     * start-up publisher, never Main.
+     */
+    val mapLabelSettings: MapLabelSettings by lazy { MapLabelSettings(mapLabelSettingsFileProvider()) }
 
     /**
      * The contour layer switch (T-0417). Construction reads the settings file,
@@ -1115,6 +1123,7 @@ class AppContainer(
                 debuggable = debuggable,
             ) +
             UnitsCommand({ unitSettings }) +
+            MapLabelsCommand({ mapLabelSettings }) +
             SearchHistorySettingCommand({ searchHistorySettings }) +
             extraCommands(mapSession) +
             diagnosticsCommands { diagnostics }

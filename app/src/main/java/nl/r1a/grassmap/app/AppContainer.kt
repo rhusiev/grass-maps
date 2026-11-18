@@ -39,8 +39,8 @@ import nl.r1a.grassmap.core.services.NoHeadingSource
 import nl.r1a.grassmap.core.services.NoLocationSource
 import nl.r1a.grassmap.core.services.OnlineSearchSettings
 import nl.r1a.grassmap.core.services.PrivacyNetworkGate
-import nl.r1a.grassmap.core.services.ProfileCatalog
 import nl.r1a.grassmap.core.services.PrivacySwitchSettings
+import nl.r1a.grassmap.core.services.ProfileCatalog
 import nl.r1a.grassmap.core.services.ProfileValueFile
 import nl.r1a.grassmap.core.services.RoutingOptionsSettings
 import nl.r1a.grassmap.core.services.SearchHistorySettings

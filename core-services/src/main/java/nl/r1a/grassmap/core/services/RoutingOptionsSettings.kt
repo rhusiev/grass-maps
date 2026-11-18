@@ -125,8 +125,7 @@ class RoutingOptionsSettings(
         private fun preference(name: String?): RoutePreference = RoutePreference.ofSerialized(name) ?: RoutePreference.Normal
 
         /** The step stored under [key], [RoutePreference.Normal] when absent or unknown. */
-        private fun JsonObject.preference(key: String): String =
-            preference((this[key] as? JsonPrimitive)?.contentOrNull).serializedValue
+        private fun JsonObject.preference(key: String): String = preference((this[key] as? JsonPrimitive)?.contentOrNull).serializedValue
 
         /** Reads the T-0308 key when the three-step key is absent. */
         private fun legacyHills(entry: JsonObject): String {

@@ -21,61 +21,65 @@ class AlertSettingsMigrationTest {
         """{"profiles":{"bike":{"signal":true,"banner":true,"poi_kinds":["natural=spring"]},"moped":{"signal":true}}}"""
 
     @Test
-    fun theOldFileIsReadForwardAndRemovedOnceTheNewOneVerifies() = withFiles { files ->
-        files.legacy.writeText(legacyText)
+    fun theOldFileIsReadForwardAndRemovedOnceTheNewOneVerifies() =
+        withFiles { files ->
+            files.legacy.writeText(legacyText)
 
-        val store = AlertSettingsStore(profileFile(files)).also { it.load() }
+            val store = AlertSettingsStore(profileFile(files)).also { it.load() }
 
-        assertEquals(AlertSettings(signal = true), store.forProfile(RouteProfile.Bike).settings)
-        assertTrue(store.forProfile(RouteProfile.Bike).channels.banner)
-        assertEquals(setOf("natural=spring"), store.forProfile(RouteProfile.Bike).poiKinds)
-        assertEquals(ProfileAlertSettings.DEFAULT, store.forProfile(RouteProfile.Walk))
-        assertTrue("the new file exists", files.file.isFile)
-        assertTrue(files.file.readText(), files.file.readText().startsWith("""{"schema_version":1,"profiles":{"bike":"""))
-        assertFalse("the old file is gone", files.legacy.exists())
-    }
-
-    @Test
-    fun aCrashBetweenWriteAndVerifyLeavesTheOldFileUsable() = withFiles { files ->
-        files.legacy.writeText(legacyText)
-        val crashing = profileFile(files) { throw IllegalStateException("simulated crash") }
-
-        try {
-            AlertSettingsStore(crashing).load()
-            throw AssertionError("the simulated crash did not happen")
-        } catch (crash: IllegalStateException) {
-            assertTrue("the old file survives the crash", files.legacy.isFile)
+            assertEquals(AlertSettings(signal = true), store.forProfile(RouteProfile.Bike).settings)
+            assertTrue(store.forProfile(RouteProfile.Bike).channels.banner)
+            assertEquals(setOf("natural=spring"), store.forProfile(RouteProfile.Bike).poiKinds)
+            assertEquals(ProfileAlertSettings.DEFAULT, store.forProfile(RouteProfile.Walk))
+            assertTrue("the new file exists", files.file.isFile)
+            assertTrue(files.file.readText(), files.file.readText().startsWith("""{"schema_version":1,"profiles":{"bike":"""))
+            assertFalse("the old file is gone", files.legacy.exists())
         }
 
-        val restarted = AlertSettingsStore(profileFile(files)).also { it.load() }
-        assertEquals(AlertSettings(signal = true), restarted.forProfile(RouteProfile.Bike).settings)
-        assertFalse("the next start finishes the migration", files.legacy.exists())
-    }
+    @Test
+    fun aCrashBetweenWriteAndVerifyLeavesTheOldFileUsable() =
+        withFiles { files ->
+            files.legacy.writeText(legacyText)
+            val crashing = profileFile(files) { throw IllegalStateException("simulated crash") }
+
+            try {
+                AlertSettingsStore(crashing).load()
+                throw AssertionError("the simulated crash did not happen")
+            } catch (crash: IllegalStateException) {
+                assertTrue("the old file survives the crash", files.legacy.isFile)
+            }
+
+            val restarted = AlertSettingsStore(profileFile(files)).also { it.load() }
+            assertEquals(AlertSettings(signal = true), restarted.forProfile(RouteProfile.Bike).settings)
+            assertFalse("the next start finishes the migration", files.legacy.exists())
+        }
 
     @Test
-    fun aNewerSchemaOnDiskIsRefusedAndKeptByteForByte() = withFiles { files ->
-        val newer = """{"schema_version":2,"profiles":{"bike":{"signal":"true"}}}"""
-        files.file.parentFile.mkdirs()
-        files.file.writeText(newer)
-        files.legacy.writeText(legacyText)
-        val store = AlertSettingsStore(profileFile(files))
+    fun aNewerSchemaOnDiskIsRefusedAndKeptByteForByte() =
+        withFiles { files ->
+            val newer = """{"schema_version":2,"profiles":{"bike":{"signal":"true"}}}"""
+            files.file.parentFile.mkdirs()
+            files.file.writeText(newer)
+            files.legacy.writeText(legacyText)
+            val store = AlertSettingsStore(profileFile(files))
 
-        val loaded = store.load()
-        val written = store.set(RouteProfile.Walk, ProfileAlertSettings(settings = AlertSettings(hazard = true)))
+            val loaded = store.load()
+            val written = store.set(RouteProfile.Walk, ProfileAlertSettings(settings = AlertSettings(hazard = true)))
 
-        assertEquals(Outcome.Failure(AppError.NewerSchema(found = 2, supported = 1)), loaded)
-        assertTrue(written is Outcome.Failure)
-        assertEquals(newer, files.file.readText())
-        assertTrue("the old file stays", files.legacy.isFile)
-    }
+            assertEquals(Outcome.Failure(AppError.NewerSchema(found = 2, supported = 1)), loaded)
+            assertTrue(written is Outcome.Failure)
+            assertEquals(newer, files.file.readText())
+            assertTrue("the old file stays", files.legacy.isFile)
+        }
 
     @Test
-    fun aFirstStartWritesNothing() = withFiles { files ->
-        val store = AlertSettingsStore(profileFile(files)).also { it.load() }
+    fun aFirstStartWritesNothing() =
+        withFiles { files ->
+            val store = AlertSettingsStore(profileFile(files)).also { it.load() }
 
-        assertEquals(ProfileAlertSettings.DEFAULT, store.forProfile(RouteProfile.Bike))
-        assertFalse(files.file.exists())
-    }
+            assertEquals(ProfileAlertSettings.DEFAULT, store.forProfile(RouteProfile.Bike))
+            assertFalse(files.file.exists())
+        }
 
     private fun profileFile(
         files: StorePaths,
@@ -99,7 +103,9 @@ class AlertSettingsMigrationTest {
         try {
             File(directory, "settings").mkdirs()
             File(directory, "profiles").mkdirs()
-            block(StorePaths(File(directory, UserDataLayout.ALERT_SETTINGS_PATH), File(directory, UserDataLayout.LEGACY_ALERT_SETTINGS_PATH)))
+            block(
+                StorePaths(File(directory, UserDataLayout.ALERT_SETTINGS_PATH), File(directory, UserDataLayout.LEGACY_ALERT_SETTINGS_PATH)),
+            )
         } finally {
             directory.deleteRecursively()
         }

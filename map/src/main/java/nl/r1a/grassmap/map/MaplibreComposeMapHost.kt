@@ -122,6 +122,9 @@ internal class MapHostState(
 
     /** The regions whose borders the map highlights (T-0506), replaced as a whole. */
     val regionHighlights = mutableStateOf<List<RegionOutline>>(emptyList())
+
+    /** The label language and size the layers draw with (T-0110). */
+    val labels = mutableStateOf(LabelOptions())
     val camera = MutableStateFlow(initialCamera)
     private val motion = PuckMotion()
 
@@ -433,8 +436,15 @@ fun rememberMapSurface(
     sourceResolver: (SourceId) -> String?,
     ageLabel: PuckAgeFormatter = PuckAgeFormatter.None,
     appTiles: Map<SourceId, MapTileSource> = emptyMap(),
+    labels: StateFlow<LabelOptions> = MapLabelHub.options,
 ): MapSurface {
-    val session = remember(initialStyle.id) { MapHostState(initialStyle, initialCamera, ageLabel, appTiles, sourceResolver) }
+    val session =
+        remember(initialStyle.id) {
+            MapHostState(initialStyle, initialCamera, ageLabel, appTiles, sourceResolver).also {
+                it.labels.value = labels.value
+            }
+        }
+    LaunchedEffect(session, labels) { labels.collect { session.labels.value = it } }
     val state =
         rememberMapState(
             baseStyle = session.style.value.json,

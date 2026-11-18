@@ -93,11 +93,12 @@ private const val TAG = "GrassMapsMap"
 internal fun ComposedMapLayers(session: MapHostState) {
     val styleReady = session.styleReady.value
     val owned = session.layers.value
+    val labels = session.labels.value
     val compiled =
-        remember(owned) {
+        remember(owned, labels) {
             owned.mapNotNull { layer ->
                 try {
-                    StyleLayerCompiler.compile(layer.spec) to layer.slot
+                    StyleLayerCompiler.compile(LabelStyle.apply(layer.spec, labels)) to layer.slot
                 } catch (exception: StyleCompileException) {
                     Log.w(TAG, "Skipping ${layer.spec.id}: ${exception.message}")
                     null

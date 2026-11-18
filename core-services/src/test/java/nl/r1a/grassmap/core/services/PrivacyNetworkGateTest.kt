@@ -1,6 +1,11 @@
 package nl.r1a.grassmap.core.services
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.error.AppError
@@ -154,7 +159,8 @@ class PrivacyNetworkGateTest {
                 thrown = exception
             }
 
-            assertEquals(cancellation, thrown)
+            // The coroutine scope may rethrow a stack-trace copy of the exception.
+            assertEquals(cancellation.message, thrown?.message)
         }
 
     @Test
@@ -170,7 +176,63 @@ class PrivacyNetworkGateTest {
                 thrown = caught
             }
 
-            assertEquals(error, thrown)
+            assertEquals(AssertionError::class, thrown?.let { it::class })
+            assertEquals(error.message, thrown?.message)
+        }
+
+    @Test
+    fun turningTheSwitchOffStopsARequestInFlightAtItsNextCheck() =
+        runTest {
+            switches.setEnabled(NetworkSwitches.onlineSearch, true)
+            var reachedAfterSwitchOff = false
+
+            val result =
+                gate.request<String>(NetworkSwitches.onlineSearch) {
+                    switches.setEnabled(NetworkSwitches.onlineSearch, false)
+                    currentCoroutineContext().ensureActive()
+                    reachedAfterSwitchOff = true
+                    Outcome.Success("response")
+                }
+
+            assertEquals(
+                Outcome.Failure(AppError.SwitchOff(NetworkSwitches.onlineSearch)),
+                result,
+            )
+            assertEquals(false, reachedAfterSwitchOff)
+            assertEquals(1L, switches.state(NetworkSwitches.onlineSearch).requests)
+        }
+
+    @Test
+    fun turningAnotherSwitchOffLeavesARequestInFlightRunning() =
+        runTest {
+            switches.setEnabled(NetworkSwitches.onlineSearch, true)
+            switches.setEnabled(NetworkSwitches.onlineTiles, true)
+
+            val result =
+                gate.request(NetworkSwitches.onlineSearch) {
+                    switches.setEnabled(NetworkSwitches.onlineTiles, false)
+                    currentCoroutineContext().ensureActive()
+                    Outcome.Success("response")
+                }
+
+            assertEquals(Outcome.Success("response"), result)
+        }
+
+    @Test
+    fun aCallerCancellationStillPropagatesWhileTheSwitchStaysOn() =
+        runTest {
+            switches.setEnabled(NetworkSwitches.onlineTiles, true)
+            val job =
+                launch {
+                    gate.request<String>(NetworkSwitches.onlineTiles) { awaitCancellation() }
+                }
+            runCurrent()
+
+            job.cancel()
+            job.join()
+
+            assertEquals(true, job.isCancelled)
+            assertEquals(1L, switches.state(NetworkSwitches.onlineTiles).requests)
         }
 
     private class RecordingRequest(

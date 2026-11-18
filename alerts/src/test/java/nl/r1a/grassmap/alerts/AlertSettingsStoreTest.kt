@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.alerts
 
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
@@ -15,8 +16,10 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.coroutines.CoroutineContext
 
 /** The per-profile alert settings (T-0413) on the profile store (T-0601). */
 class AlertSettingsStoreTest {
@@ -158,7 +161,7 @@ class AlertSettingsStoreTest {
     fun twoWritersRacingLeaveTheNewestSnapshotInTheFile() {
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
-        val secondWritten = CountDownLatch(1)
+        val secondWriterParked = CountDownLatch(1)
         val calls = AtomicInteger()
         val backing =
             object : ProfileValueStore {
@@ -170,22 +173,21 @@ class AlertSettingsStoreTest {
                     if (calls.incrementAndGet() == 1) {
                         entered.countDown()
                         release.await()
-                    } else {
-                        secondWritten.countDown()
                     }
                     stored = values
                     return Outcome.Success(Unit)
                 }
             }
         val job = Job()
-        val store = AlertSettingsStore(backing, writeScope = CoroutineScope(job))
+        val dispatcher = CountingDispatcher(secondWriterParked)
+        val store = AlertSettingsStore(backing, writeScope = CoroutineScope(job), writeDispatcher = dispatcher)
         val older = ProfileAlertSettings(settings = AlertSettings(signal = true))
         val newer = ProfileAlertSettings(settings = AlertSettings(signal = true, reroute = true))
 
         store.set(RouteProfile.Walk, older)
         assertTrue(entered.await(WAIT_S, TimeUnit.SECONDS))
         store.set(RouteProfile.Walk, newer)
-        secondWritten.await(SECOND_WRITER_GRACE_MS, TimeUnit.MILLISECONDS)
+        assertTrue(secondWriterParked.await(WAIT_S, TimeUnit.SECONDS))
         release.countDown()
         runBlocking { job.children.toList().forEach { it.join() } }
 
@@ -195,7 +197,36 @@ class AlertSettingsStoreTest {
 
     private companion object {
         const val WAIT_S = 10L
-        const val SECOND_WRITER_GRACE_MS = 300L
+    }
+
+    /**
+     * Runs on two threads. [secondRunDone] opens when the second dispatched
+     * block returns: the second writer has then either written or suspended on
+     * the write lock, so no timing guess is needed.
+     */
+    private class CountingDispatcher(
+        private val secondRunDone: CountDownLatch,
+    ) : CoroutineDispatcher() {
+        private val pool = Executors.newFixedThreadPool(WRITER_THREADS)
+        private val dispatches = AtomicInteger()
+
+        override fun dispatch(
+            context: CoroutineContext,
+            block: Runnable,
+        ) {
+            val index = dispatches.getAndIncrement()
+            pool.execute {
+                block.run()
+                if (index == SECOND_DISPATCH) {
+                    secondRunDone.countDown()
+                }
+            }
+        }
+
+        private companion object {
+            const val WRITER_THREADS = 2
+            const val SECOND_DISPATCH = 1
+        }
     }
 
     private class MemoryStore(

@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.alerts
 
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,8 +70,8 @@ data class ProfileAlertSettings(
  * alert decision; the latches in [AlertHost] are not reset by it.
  *
  * Construction does not read the store. [load] does, so the app runs it off the
- * Main thread. When [writeScope] is present, writes are coalesced on the IO
- * dispatcher: a second change while a write is in flight causes one more write
+ * Main thread. When [writeScope] is present, writes are coalesced on
+ * [writeDispatcher], the IO dispatcher by default: a second change while a write is in flight causes one more write
  * of the latest value instead of a write per change. One write runs at a time
  * and each takes its snapshot when it starts, so the file ends with the newest
  * state.
@@ -80,6 +81,7 @@ class AlertSettingsStore(
     initialProfile: RouteProfile = RouteProfile.Walk,
     private val writeScope: CoroutineScope? = null,
     private val log: (String) -> Unit = {},
+    private val writeDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     private val states = mutableMapOf<ProfileId, ProfileAlertSettings>()
     private var activeProfile: ProfileId = BuiltInProfiles.idOf(initialProfile)
@@ -167,7 +169,7 @@ class AlertSettingsStore(
         val target = store ?: return Outcome.Success(Unit)
         val scope = writeScope ?: return write(target, synchronized(this) { states.toMap() })
         if (writeRequested.compareAndSet(false, true)) {
-            scope.launch(Dispatchers.IO) {
+            scope.launch(writeDispatcher) {
                 do {
                     writeRequested.set(false)
                     writeLatest(target)

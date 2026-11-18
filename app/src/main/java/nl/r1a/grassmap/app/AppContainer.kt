@@ -41,6 +41,7 @@ import nl.r1a.grassmap.core.services.OnlineSearchSettings
 import nl.r1a.grassmap.core.services.PrivacyNetworkGate
 import nl.r1a.grassmap.core.services.PrivacySwitchSettings
 import nl.r1a.grassmap.core.services.ProfileCatalog
+import nl.r1a.grassmap.core.services.ProfileSettingsService
 import nl.r1a.grassmap.core.services.ProfileValueFile
 import nl.r1a.grassmap.core.services.RoutingOptionsSettings
 import nl.r1a.grassmap.core.services.SearchHistorySettings
@@ -322,6 +323,16 @@ class AppContainer(
     }
 
     /**
+     * The profile list and the actions on it (T-0602). It copies and resets the
+     * routing options and the alert settings. Its first use reads the alert
+     * settings, so the plugin calls it from an IO dispatcher.
+     */
+    val profileSettings: ProfileSettingsService by lazy {
+        alertSettings.ensureLoaded()
+        ProfileSettingsService(profileCatalog, listOf(routingOptionsSettings, alertSettings))
+    }
+
+    /**
      * The per-profile routing options (T-0308). Construction reads the settings
      * file, so the planner asks it through the host and never on Main.
      */
@@ -544,7 +555,7 @@ class AppContainer(
             },
         ).also { host ->
             processScope.launch {
-                withContext(Dispatchers.IO) { alertSettings.load() }
+                withContext(Dispatchers.IO) { alertSettings.ensureLoaded() }
                 alertSettings.active.collect { profile -> host.replaceSettings(profile.settings, profile.channels) }
             }
         }
@@ -1221,6 +1232,7 @@ class AppContainer(
             routingEngines = routingEngineAccess,
             routeHistoryAccess = routeHistory,
             routingOptionsAccess = RoutingOptionsAccess { profile -> routingOptionsSettings.forProfile(profile) },
+            profileSettingsAccess = LazyProfileSettings { profileSettings },
             regionDownloadsAccess = regionStore ?: NoRegionDownloadsAccess,
             elevationAccess = elevationAccess,
             logger = pluginLogger,

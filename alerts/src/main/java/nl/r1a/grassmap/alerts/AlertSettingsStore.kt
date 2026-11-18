@@ -91,6 +91,7 @@ class AlertSettingsStore(
     private val activeState = MutableStateFlow(ProfileAlertSettings())
     private val writeRequested = AtomicBoolean(false)
     private val writeLock = Mutex()
+    private var isLoaded = false
 
     /** The switches, channels and chosen place kinds of the active profile. */
     val active: StateFlow<ProfileAlertSettings> = activeState.asStateFlow()
@@ -116,6 +117,7 @@ class AlertSettingsStore(
      */
     @Synchronized
     fun load(): Outcome<Unit> {
+        isLoaded = true
         val read = store?.read() ?: Outcome.Success(emptyMap())
         states.clear()
         if (read is Outcome.Success) {
@@ -124,6 +126,13 @@ class AlertSettingsStore(
         activeState.value = states[activeProfile] ?: ProfileAlertSettings()
         return if (read is Outcome.Failure) read else Outcome.Success(Unit)
     }
+
+    /**
+     * Reads the store unless [load] already did, so a second caller cannot
+     * replace values that were set and are still being written.
+     */
+    @Synchronized
+    fun ensureLoaded(): Outcome<Unit> = if (isLoaded) Outcome.Success(Unit) else load()
 
     /**
      * Makes [profile] the profile a trip reads. The host's active switches and

@@ -38,7 +38,9 @@ import nl.r1a.grassmap.plugin.api.host.NoRegionAccess
 import nl.r1a.grassmap.plugin.api.host.NoRegionDownloadsAccess
 import nl.r1a.grassmap.plugin.api.host.NoRouteHistoryAccess
 import nl.r1a.grassmap.plugin.api.host.NoRoutingEngines
+import nl.r1a.grassmap.plugin.api.host.NoProfileSettingsAccess
 import nl.r1a.grassmap.plugin.api.host.NoRoutingOptionsAccess
+import nl.r1a.grassmap.plugin.api.host.ProfileSettingsAccess
 import nl.r1a.grassmap.plugin.api.host.NoRoutingPacks
 import nl.r1a.grassmap.plugin.api.host.NoTrackLibraryAccess
 import nl.r1a.grassmap.plugin.api.host.PlatformActions
@@ -103,6 +105,7 @@ class PluginHost(
     private val routeHistoryAccess: RouteHistoryAccess = NoRouteHistoryAccess,
     private val routingOptionsAccess: RoutingOptionsAccess = NoRoutingOptionsAccess,
     private val regionDownloadsAccess: RegionDownloadsAccess = NoRegionDownloadsAccess,
+    private val profileSettingsAccess: ProfileSettingsAccess = NoProfileSettingsAccess,
     private val logger: Logger = NoLogger,
 ) {
     private val factories: Map<PluginId, PluginFactory> = plugins.associateBy { it.manifest.id }
@@ -553,6 +556,8 @@ class PluginHost(
         override val routingOptions: RoutingOptionsAccess = this@PluginHost.routingOptionsAccess
 
         override val regionDownloads: RegionDownloadsAccess = this@PluginHost.regionDownloadsAccess
+
+        override val profileSettings: ProfileSettingsAccess = this@PluginHost.profileSettingsAccess
     }
 
     private companion object {

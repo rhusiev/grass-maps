@@ -36,7 +36,12 @@ class ProfilesUiManifestTest {
             assertEquals("$id dispatcher", "io", command.getValue("dispatcher").jsonPrimitive.content)
         }
 
-        val stream = contributes.getValue("streams").jsonArray.single().jsonObject
+        val stream =
+            contributes
+                .getValue("streams")
+                .jsonArray
+                .single()
+                .jsonObject
         assertEquals(ProfilesUiContract.STATE_STREAM_ID, stream.getValue("id").jsonPrimitive.content)
         assertEquals(ProfilesUiContract.STATE_VALUE_TYPE, stream.getValue("valueType").jsonPrimitive.content)
         assertEquals(ProfilesUiContract.STATE_SERIALIZER, stream.getValue("serializer").jsonPrimitive.content)

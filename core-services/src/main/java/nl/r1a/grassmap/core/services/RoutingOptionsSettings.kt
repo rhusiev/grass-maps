@@ -112,8 +112,7 @@ class RoutingOptionsSettings(
                 .mapValues { (_, values) -> decode(values) }
                 .filterValues { !it.isDefault }
 
-        private fun encode(options: Map<ProfileId, RouteOptions>): ProfileValues =
-            options.mapValues { (_, value) -> encodeOptions(value) }
+        private fun encode(options: Map<ProfileId, RouteOptions>): ProfileValues = options.mapValues { (_, value) -> encodeOptions(value) }
 
         private fun encodeOptions(value: RouteOptions): Map<String, String> =
             mapOf(

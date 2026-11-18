@@ -30,6 +30,7 @@ import nl.r1a.grassmap.plugin.api.model.ProfileSummary
 import nl.r1a.grassmap.plugin.api.service.ProfileSettingsGroup
 
 /** The name the screen shows: a user profile's own name, or a built-in's string. */
+@Suppress("ktlint:standard:function-naming")
 @Composable
 internal fun profileName(profile: ProfileSummary): String =
     profile.name
@@ -41,6 +42,7 @@ internal fun profileName(profile: ProfileSummary): String =
         }
 
 /** "Built in", or "Copied from X" when the profile has a source that still exists. */
+@Suppress("ktlint:standard:function-naming")
 @Composable
 internal fun profileSubtitle(
     profile: ProfileSummary,
@@ -54,6 +56,7 @@ internal fun profileSubtitle(
     }
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 internal fun groupLabel(group: String): String =
     when (group) {
@@ -62,6 +65,7 @@ internal fun groupLabel(group: String): String =
         else -> group
     }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 internal fun ActionButton(
     text: String,
@@ -86,6 +90,7 @@ internal fun ActionButton(
     }
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 internal fun RadioRow(
     label: String,
@@ -95,6 +100,7 @@ internal fun RadioRow(
     ChoiceRow(label, selected, onSelect, Role.RadioButton) { RadioMark(selected) }
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 internal fun CheckRow(
     label: String,
@@ -104,6 +110,7 @@ internal fun CheckRow(
     ChoiceRow(label, checked, onToggle, Role.Checkbox) { CheckMark(checked) }
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 private fun ChoiceRow(
     label: String,
@@ -128,6 +135,7 @@ private fun ChoiceRow(
     }
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 private fun RadioMark(selected: Boolean) {
     Box(
@@ -143,6 +151,7 @@ private fun RadioMark(selected: Boolean) {
     }
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 private fun CheckMark(checked: Boolean) {
     Box(
@@ -161,6 +170,7 @@ private fun CheckMark(checked: Boolean) {
 }
 
 /** A tappable list row with a title, an optional second line and a chevron. */
+@Suppress("ktlint:standard:function-naming")
 @Composable
 internal fun NavigationRow(
     title: String,
@@ -190,6 +200,7 @@ internal fun NavigationRow(
     }
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 internal fun Header(
     title: String,

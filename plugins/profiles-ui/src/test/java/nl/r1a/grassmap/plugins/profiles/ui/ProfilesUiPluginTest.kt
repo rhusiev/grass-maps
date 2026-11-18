@@ -5,11 +5,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nl.r1a.grassmap.plugin.api.command.CommandResult
 import nl.r1a.grassmap.plugin.api.contract.CommandId
@@ -131,7 +131,13 @@ class ProfilesUiPluginTest {
             assertEquals(gravel, context.stateFlow().first())
         }
 
-    private fun json(vararg pairs: Pair<String, String>): JsonObject = JsonObject(pairs.associate { (key, value) -> key to JsonPrimitive(value) })
+    private fun json(vararg pairs: Pair<String, String>): JsonObject =
+        JsonObject(
+            pairs.associate { (key, value) ->
+                key to
+                    JsonPrimitive(value)
+            },
+        )
 
     private suspend fun activated(access: FakeProfileAccess): RecordingContext {
         val context = RecordingContext(FakeServices(access))
@@ -143,9 +149,7 @@ class ProfilesUiPluginTest {
         context: RecordingContext,
         id: CommandId,
         params: JsonElement,
-    ): Outcome<CommandResult<JsonElement>> {
-        return context.commands.single { it.id == id }.invokeRaw(params)
-    }
+    ): Outcome<CommandResult<JsonElement>> = context.commands.single { it.id == id }.invokeRaw(params)
 
     private suspend fun run(
         context: RecordingContext,

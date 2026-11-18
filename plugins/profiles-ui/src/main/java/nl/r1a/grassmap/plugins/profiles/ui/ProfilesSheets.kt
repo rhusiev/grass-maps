@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import nl.r1a.grassmap.plugin.api.model.ProfilesState
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 private fun SheetFrame(
     title: String,
@@ -58,6 +59,7 @@ private fun SheetFrame(
     }
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 private fun SheetButtons(
     confirm: String,
@@ -71,6 +73,7 @@ private fun SheetButtons(
     }
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 private fun SourceChoices(
     state: ProfilesState,
@@ -85,6 +88,7 @@ private fun SourceChoices(
 }
 
 /** The sheet that names a new profile and the profile it starts as a copy of. */
+@Suppress("ktlint:standard:function-naming")
 @Composable
 fun NewProfileSheet(
     state: ProfilesState,
@@ -121,6 +125,7 @@ fun NewProfileSheet(
 }
 
 /** The sheet that picks a source profile and the settings groups to copy from it into [target]. */
+@Suppress("ktlint:standard:function-naming")
 @Composable
 fun CopySettingsSheet(
     state: ProfilesState,

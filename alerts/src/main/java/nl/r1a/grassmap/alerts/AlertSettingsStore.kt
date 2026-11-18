@@ -165,8 +165,7 @@ class AlertSettingsStore(
             persist()
         }
 
-    override fun read(profile: ProfileId): Map<String, String> =
-        forProfile(profile).takeUnless { it.isDefault }?.let(::encode).orEmpty()
+    override fun read(profile: ProfileId): Map<String, String> = forProfile(profile).takeUnless { it.isDefault }?.let(::encode).orEmpty()
 
     override fun replace(
         profile: ProfileId,

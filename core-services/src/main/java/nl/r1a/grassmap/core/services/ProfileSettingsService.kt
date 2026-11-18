@@ -48,7 +48,16 @@ class ProfileSettingsService(
             catalog.remove(created.id)
             return copied
         }
-        return record(Undoable(ProfileAction(ProfileActionKind.CREATED, created.id.value, from), created.id, groups.associateWith { emptyMap() }, isNew = true))
+        return record(
+            Undoable(
+                ProfileAction(ProfileActionKind.CREATED, created.id.value, from),
+                created.id,
+                groups.associateWith {
+                    emptyMap()
+                },
+                isNew = true,
+            ),
+        )
     }
 
     @Synchronized

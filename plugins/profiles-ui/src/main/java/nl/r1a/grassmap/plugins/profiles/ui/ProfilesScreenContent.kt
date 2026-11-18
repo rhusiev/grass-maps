@@ -68,23 +68,28 @@ fun ProfilesScreenContent(
         Page(state, page, onNavigate, onReset = { profile -> act { onReset(profile) } })
         Notice(state.undo, state, actions, onUndo = { act(onUndo) })
         when (page) {
-            ProfilesPage.NewProfile ->
+            ProfilesPage.NewProfile -> {
                 NewProfileSheet(state, onCancel = { onNavigate(page.back()) }, onCreate = { name, from ->
                     act { onCreate(name, from) }
                     onNavigate(page.back())
                 })
+            }
 
-            is ProfilesPage.CopySettings ->
+            is ProfilesPage.CopySettings -> {
                 CopySettingsSheet(state, page.profile, onCancel = { onNavigate(page.back()) }, onCopy = { from, groups ->
                     act { onCopySettings(from, page.profile, groups) }
                     onNavigate(page.back())
                 })
+            }
 
-            else -> Unit
+            else -> {
+                Unit
+            }
         }
     }
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 private fun Page(
     state: ProfilesState,
@@ -117,6 +122,7 @@ private fun Page(
     }
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 private fun ColumnScope.ProfileList(
     state: ProfilesState,
@@ -140,6 +146,7 @@ private fun ColumnScope.ProfileList(
     )
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 private fun ColumnScope.ProfileEditor(
     state: ProfilesState,
@@ -168,6 +175,7 @@ private fun ColumnScope.ProfileEditor(
     }
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 private fun resetLabel(
     profile: ProfileSummary,
@@ -181,6 +189,7 @@ private fun resetLabel(
     }
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 private fun Notice(
     undo: ProfileAction?,
@@ -213,21 +222,27 @@ private fun Notice(
             BasicText(
                 text = stringResource(R.string.profiles_undo),
                 style = BUTTON_STYLE.copy(color = SNACKBAR_ACTION),
-                modifier = Modifier.clickable {
-                    visible = false
-                    onUndo()
-                },
+                modifier =
+                    Modifier.clickable {
+                        visible = false
+                        onUndo()
+                    },
             )
         }
     }
 }
 
+@Suppress("ktlint:standard:function-naming")
 @Composable
 private fun noticeText(
     undo: ProfileAction,
     state: ProfilesState,
 ): String {
-    val source = undo.source?.let { ProfilesScreen.find(state, it) }?.let { profileName(it) }.orEmpty()
+    val source =
+        undo.source
+            ?.let { ProfilesScreen.find(state, it) }
+            ?.let { profileName(it) }
+            .orEmpty()
     val created = ProfilesScreen.find(state, undo.profile)?.let { profileName(it) } ?: undo.profile
     return when (undo.kind) {
         ProfileActionKind.CREATED -> stringResource(R.string.profiles_notice_created, created)

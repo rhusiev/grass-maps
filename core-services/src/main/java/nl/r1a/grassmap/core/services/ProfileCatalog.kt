@@ -83,8 +83,7 @@ class ProfileCatalog(
 
     private fun readStored(): Outcome<ProfileValues> = store?.read() ?: Outcome.Success(memory)
 
-    private fun writeStored(values: ProfileValues): Outcome<Unit> =
-        store?.write(values) ?: Outcome.Success(Unit).also { memory = values }
+    private fun writeStored(values: ProfileValues): Outcome<Unit> = store?.write(values) ?: Outcome.Success(Unit).also { memory = values }
 
     private fun entries(stored: ProfileValues): List<ProfileEntry> =
         (BuiltInProfiles.ALL.map(::builtIn) + userEntries(stored)).distinctBy { it.id }
@@ -110,8 +109,7 @@ class ProfileCatalog(
     private fun withBuiltIns(stored: ProfileValues): ProfileValues =
         stored + BuiltInProfiles.ALL.filter { it !in stored }.associateWith(::encodeBuiltIn)
 
-    private fun encodeBuiltIn(id: ProfileId): Map<String, String> =
-        mapOf(ROUTE_PROFILE_KEY to id.value, BUILT_IN_KEY to TRUE)
+    private fun encodeBuiltIn(id: ProfileId): Map<String, String> = mapOf(ROUTE_PROFILE_KEY to id.value, BUILT_IN_KEY to TRUE)
 
     private fun encode(entry: ProfileEntry): Map<String, String> =
         listOfNotNull(
@@ -130,7 +128,12 @@ class ProfileCatalog(
         name: String,
         taken: Set<ProfileId>,
     ): ProfileId {
-        val base = name.lowercase().replace(NON_ID_CHARACTERS, "-").trim('-').ifEmpty { FALLBACK_ID }
+        val base =
+            name
+                .lowercase()
+                .replace(NON_ID_CHARACTERS, "-")
+                .trim('-')
+                .ifEmpty { FALLBACK_ID }
         return generateSequence(1) { it + 1 }
             .map { if (it == 1) base else "$base-$it" }
             .map(::ProfileId)

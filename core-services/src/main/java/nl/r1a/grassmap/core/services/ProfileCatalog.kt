@@ -21,8 +21,8 @@ data class ProfileEntry(
  *
  * Walk, bike and hike exist on first start: [load] writes them when the store
  * has none, and puts back a built-in profile that went missing. Names are not
- * stored, because a built-in name is a translated string. Creating, copying and
- * resetting profiles is T-0602.
+ * stored, because a built-in name is a translated string. A rewrite keeps every stored
+ * entry and key, including ones this build cannot parse.
  */
 class ProfileCatalog(
     private val store: ProfileValueStore? = null,
@@ -33,7 +33,7 @@ class ProfileCatalog(
         val stored = (store?.read() as? Outcome.Success)?.value.orEmpty()
         val entries = (BuiltInProfiles.ALL.map(::builtIn) + userEntries(stored)).distinctBy { it.id }
         if (store != null && BuiltInProfiles.ALL.any { it !in stored }) {
-            store.write(entries.associate { it.id to encode(it) })
+            store.write(withBuiltIns(stored))
         }
         return entries
     }
@@ -47,11 +47,12 @@ class ProfileCatalog(
             routeProfile?.let { ProfileEntry(id, it, isBuiltIn = values[BUILT_IN_KEY] == TRUE) }
         }
 
-    private fun encode(entry: ProfileEntry): Map<String, String> =
-        mapOf(
-            ROUTE_PROFILE_KEY to BuiltInProfiles.idOf(entry.routeProfile).value,
-            BUILT_IN_KEY to entry.isBuiltIn.toString(),
-        )
+    /** Every stored entry as it is, extra keys and entries this build cannot parse included, plus the missing built-ins. */
+    private fun withBuiltIns(stored: ProfileValues): ProfileValues =
+        stored + BuiltInProfiles.ALL.filter { it !in stored }.associateWith(::encodeBuiltIn)
+
+    private fun encodeBuiltIn(id: ProfileId): Map<String, String> =
+        mapOf(ROUTE_PROFILE_KEY to id.value, BUILT_IN_KEY to TRUE)
 
     companion object {
         const val SCHEMA_VERSION = 1

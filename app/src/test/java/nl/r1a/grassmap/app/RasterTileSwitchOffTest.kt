@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.raster
+package nl.r1a.grassmap.app
 
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -8,6 +8,10 @@ import nl.r1a.grassmap.core.services.PrivacySwitchSettings
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.service.NetworkSwitches
+import nl.r1a.grassmap.plugins.raster.RasterPresets
+import nl.r1a.grassmap.plugins.raster.RasterTileClient
+import nl.r1a.grassmap.plugins.raster.RasterTileTransport
+import nl.r1a.grassmap.plugins.raster.TileImage
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.online.search
+package nl.r1a.grassmap.app
 
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -10,6 +10,8 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.provider.SearchContext
 import nl.r1a.grassmap.plugin.api.service.NetworkSwitches
+import nl.r1a.grassmap.plugins.online.search.PhotonPlaceProvider
+import nl.r1a.grassmap.plugins.online.search.PhotonTransport
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmap.app
 
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -8,6 +8,16 @@ import nl.r1a.grassmap.core.services.PrivacySwitchSettings
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.service.NetworkSwitches
+import nl.r1a.grassmap.regions.BodySink
+import nl.r1a.grassmap.regions.DownloadPolicy
+import nl.r1a.grassmap.regions.DownloadRequest
+import nl.r1a.grassmap.regions.DownloadTransport
+import nl.r1a.grassmap.regions.GateNetworkAccess
+import nl.r1a.grassmap.regions.InstalledRegion
+import nl.r1a.grassmap.regions.RegionDownloader
+import nl.r1a.grassmap.regions.RegionPaths
+import nl.r1a.grassmap.regions.RegionRequest
+import nl.r1a.grassmap.regions.TransportResult
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -38,7 +48,7 @@ class RegionDownloadSwitchOffTest {
     fun switchingOffMidDownloadCancelsAtTheNextChunkAndLeavesNothingInstalled() =
         runTest {
             switches.setEnabled(SWITCH, true)
-            val transport = ChunkedTransport(FixturePackages.zip(FixturePackages.files()), switchOffAfterChunk = 2)
+            val transport = ChunkedTransport(ByteArray(PACKAGE_BYTES), switchOffAfterChunk = 2)
 
             val outcome = download(transport)
 
@@ -52,7 +62,7 @@ class RegionDownloadSwitchOffTest {
     @Test
     fun aDownloadWithTheSwitchOffReachesNeitherTheTransportNorTheCounter() =
         runTest {
-            val transport = ChunkedTransport(FixturePackages.zip(FixturePackages.files()), switchOffAfterChunk = 2)
+            val transport = ChunkedTransport(ByteArray(PACKAGE_BYTES), switchOffAfterChunk = 2)
 
             val outcome = download(transport)
 
@@ -69,7 +79,10 @@ class RegionDownloadSwitchOffTest {
         )
 
     private fun workDirectories(): List<String> =
-        paths.incomingDirectory().listFiles().orEmpty()
+        paths
+            .incomingDirectory()
+            .listFiles()
+            .orEmpty()
             .map { it.name }
             .filterNot { it.startsWith(PARTIAL_PREFIX) }
 
@@ -100,8 +113,9 @@ class RegionDownloadSwitchOffTest {
 
     private companion object {
         const val REGION = "fixture-mini"
-        const val VERSION = FixturePackages.FIXTURE_VERSION
+        const val VERSION = "2026-11-03-1"
         const val CHUNK_BYTES = 4_096
+        const val PACKAGE_BYTES = 6 * CHUNK_BYTES
         const val PARTIAL_PREFIX = RegionPaths.PARTIAL_PREFIX
         val SWITCH = NetworkSwitches.regionUpdates
     }

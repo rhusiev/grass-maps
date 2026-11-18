@@ -19,7 +19,6 @@ android {
 dependencies {
     implementation(project(":plugin-api"))
 
-    testImplementation(project(":core-services"))
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
 }

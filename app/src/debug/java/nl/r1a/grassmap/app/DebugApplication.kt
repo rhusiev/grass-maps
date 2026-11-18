@@ -83,6 +83,8 @@ class DebugApplication : GrassMapsApplication() {
         DebugControl.start(this, container, DebugControl.settings)
     }
 
+    override fun defaultRegionToken(): String = BuildConfig.GRASSMAPS_DEBUG_TOKEN
+
     override fun mapHarness(activity: Activity): MapHarness = DebugMapHarness.from(activity.intent)
 
     override fun extraCommands(): (MapSessionHolder) -> List<Command<*, *>> =

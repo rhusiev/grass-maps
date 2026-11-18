@@ -203,6 +203,8 @@ class AppContainer(
     private val beepSink: BeepSink = NoopBeepSink,
     /** The tone and vibration backend for alerts (T-0317); Noop by default. */
     private val alertEffectSink: AlertEffectSink = NoopAlertEffectSink,
+    /** The region-server token a debug build embeds; blank elsewhere. */
+    private val defaultRegionToken: String = "",
 ) {
     private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val backupScope: CoroutineScope = favouritesBackupScope ?: processScope
@@ -1065,6 +1067,7 @@ class AppContainer(
                     applyAutoUpdateSchedule()
                 },
                 initialAutoUpdate = downloadsSettings.loadAutoUpdate(),
+                defaultToken = defaultRegionToken.ifBlank { null },
                 onAutoUpdateChanged = { enabled ->
                     downloadsSettings.saveAutoUpdate(enabled)
                     applyAutoUpdateSchedule()

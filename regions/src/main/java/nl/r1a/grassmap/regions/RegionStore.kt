@@ -74,11 +74,20 @@ class RegionStore(
      * running process serves. Without it the first disk read stands in.
      */
     private val mountedByReaders: () -> List<InstalledPack>? = { null },
+    /**
+     * The token a debug build embeds. It stands in only while the user has set no
+     * token and the server is the default one, so it never reaches another host.
+     */
+    defaultToken: String? = null,
 ) : RegionDownloadsAccess {
+    private val fallbackToken: BearerToken? =
+        defaultToken?.let { (BearerToken.of(it) as? Outcome.Success)?.value }
+
     private val mutable =
         MutableStateFlow(
             DownloadsData(
                 serverUrl = DownloadsDefaults.SERVER_URL,
+                tokenPresent = fallbackToken != null,
                 mobileDataPolicy = initialMobileDataPolicy,
                 networkMetered = metered.isMetered.value,
                 autoUpdate = initialAutoUpdate,
@@ -138,7 +147,11 @@ class RegionStore(
     private var serverUrl: String = DownloadsDefaults.SERVER_URL
 
     @Volatile
-    private var token: BearerToken? = null
+    private var userToken: BearerToken? = null
+
+    /** The token a request carries: the user's, else the embedded one for the default server only. */
+    private val token: BearerToken?
+        get() = userToken ?: fallbackToken?.takeIf { serverUrl.trimEnd('/') == DownloadsDefaults.SERVER_URL }
 
     /** The stop flag of the transfer that is running, if any. */
     private val activeFlags = ConcurrentHashMap<String, AtomicBoolean>()
@@ -169,8 +182,8 @@ class RegionStore(
             }
         refreshMutex.withLock {
             serverUrl = trimmed
-            this.token = parsed
-            mutable.update { it.copy(serverUrl = serverUrl, tokenPresent = parsed != null) }
+            userToken = parsed
+            mutable.update { it.copy(serverUrl = serverUrl, tokenPresent = this.token != null) }
         }
         return refresh()
     }

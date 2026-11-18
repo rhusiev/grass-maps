@@ -94,6 +94,7 @@ open class GrassMapsApplication : Application() {
             autoUpdateNotifier = AndroidAutoUpdateNotifier(this),
             beepSink = AndroidBeepSink(this),
             alertEffectSink = AndroidAlertEffects(this),
+            defaultRegionToken = defaultRegionToken(),
         )
     }
 
@@ -153,6 +154,9 @@ open class GrassMapsApplication : Application() {
         } catch (exception: SecurityException) {
             null
         }
+
+    /** The region-server token this build embeds. Only the debug build has one. */
+    internal open fun defaultRegionToken(): String = ""
 
     /** The measurement harness for this build; the release app observes nothing. */
     internal open fun mapHarness(activity: Activity): MapHarness = NoMapHarness

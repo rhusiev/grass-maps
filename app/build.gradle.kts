@@ -1,9 +1,11 @@
 import buildlogic.CheckApkPluginsTask
 import buildlogic.CheckPrivacyManifestTask
+import buildlogic.DebugToken
 import buildlogic.GeneratePluginRegistryTask
 import buildlogic.RustNative
 import buildlogic.useGrassRegionsInTests
 import com.android.build.api.artifact.SingleArtifact
+import com.android.build.api.variant.BuildConfigField
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.testing.Test
 
@@ -47,6 +49,40 @@ val measurePackAssets: String? = providers.gradleProperty("measurePackDir").orNu
 
 /** The one ABI a measure APK packages; the phone is arm64-v8a. */
 val measureAbi: String = providers.gradleProperty("measureAbi").orElse("arm64-v8a").get()
+
+/**
+ * The debug build embeds the region-server token from a local file outside the
+ * repository, plus the commit it was built from. No other build type gets
+ * either field, so a release APK cannot carry the token. A missing file gives
+ * an empty token and the build still succeeds.
+ */
+val debugTokenFile: Provider<RegularFile> =
+    layout.file(
+        providers
+            .gradleProperty(DebugToken.FILE_PROPERTY)
+            .orElse(DebugToken.defaultFile(System.getProperty("user.home")).path)
+            .map { File(it) },
+    )
+
+val debugTokenValue: Provider<String> =
+    providers
+        .fileContents(debugTokenFile)
+        .asText
+        .map(DebugToken::parse)
+        .orElse("")
+
+fun gitOutput(vararg args: String): Provider<String> =
+    providers
+        .exec {
+            commandLine("git", *args)
+            isIgnoreExitValue = true
+        }.standardOutput.asText
+        .map { it.trim() }
+        .orElse("")
+
+val buildCommit: Provider<String> = gitOutput("rev-parse", "--short=9", "HEAD")
+val buildCommitTime: Provider<String> = gitOutput("show", "-s", "--format=%cI", "HEAD")
+val buildTreeDirty: Provider<String> = gitOutput("status", "--porcelain", "--untracked-files=no")
 
 val releaseApkProperty: String? = providers.gradleProperty("releaseApk").orNull
 
@@ -112,6 +148,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     // The committed GPX fixture ships in every build: the debug build replays
@@ -159,6 +196,19 @@ val checkPrivacyManifest =
     }
 
 androidComponents {
+    onVariants(selector().withBuildType("debug")) { variant ->
+        fun field(
+            name: String,
+            value: Provider<String>,
+        ) = variant.buildConfigFields?.put(
+            name,
+            value.map { BuildConfigField("String", DebugToken.javaLiteral(it), null) },
+        )
+        field(DebugToken.FIELD_NAME, debugTokenValue)
+        field("BUILD_COMMIT", buildCommit.map { it.ifEmpty { "unknown" } })
+        field("BUILD_COMMIT_TIME", buildCommitTime.map { it.ifEmpty { "unknown" } })
+        field("BUILD_TREE_DIRTY", buildTreeDirty.map { if (it.isEmpty()) "false" else "true" })
+    }
     onVariants { variant ->
         val manifestCheck =
             tasks.register<CheckPrivacyManifestTask>(

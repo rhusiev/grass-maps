@@ -28,6 +28,7 @@ dependencies {
     implementation("org.jetbrains.compose.foundation:foundation:1.12.1")
     implementation("org.jetbrains.compose.runtime:runtime:1.12.1")
 
+    testImplementation(project(":core-services"))
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
 }

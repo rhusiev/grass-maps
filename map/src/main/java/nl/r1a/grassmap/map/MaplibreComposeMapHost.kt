@@ -611,6 +611,13 @@ class MaplibreComposeMapHost internal constructor(
             RenderedLabels(state).query(session.layers.value.map { it.spec }, session.labels.value, nameEn)
         }
 
+    /**
+     * The number of points in the route the route layer draws, or null when no
+     * route is set. The debug device check reads it to show the layer is not empty.
+     */
+    suspend fun routePointCount(): Int? =
+        withContext(Dispatchers.Main.immediate) { session.route.value?.geometry?.size }
+
     override suspend fun moveCamera(update: CameraUpdate): Outcome<Unit> =
         withContext(Dispatchers.Main.immediate) {
             state.setCameraPosition(state.cameraPosition.apply(update))

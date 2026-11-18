@@ -486,6 +486,7 @@ private fun MapContent(
     // where they belong. This is view state, not a setting; the switches inside
     // the cards are the persisted state.
     var layersOpen by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) { MapChromeSession.layers.collect { layersOpen = it } }
     val planFlow =
         remember(container) {
             container.streamAccess.subscribe<RoutePlanState>(RoutePlannerContract.stateStream)
@@ -1833,6 +1834,7 @@ private fun MapContent(
                 }
             val downloadsState by downloadsFlow.collectAsState(initial = DownloadsState())
             var serverFormVisible by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) { MapChromeSession.tokenForm.collect { serverFormVisible = it } }
             val closeSheet: () -> Unit = {
                 scope.launch {
                     invokeDownloadsCommand(container, DownloadsUiContract.selectRegion, listParams("region" to ""))

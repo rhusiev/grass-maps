@@ -37,6 +37,53 @@ targetSdk 36 and minSdk 29. The root buildscript puts Kotlin Gradle plugin
 0.20 is compiled with Kotlin 2.4 metadata. Do not apply the standalone Kotlin
 Android plugin.
 
+### Debug APK with the region token, and the device check
+
+A debug build embeds the region-server token so a phone can download without
+typing it. The build reads the token from `~/.local/share/grassmaps/debug-builds.token`
+(one line, kept out of the repository). Another file is chosen with
+`-Pgrassmaps.debugTokenFile=/path/to/file`. A missing file gives an empty token and
+the build still succeeds. The release build has no such field, and a unit test in the
+release variant fails if it appears. A token the user enters in the Maps settings
+wins over the embedded one, and the embedded one goes only to the default server
+`DownloadsDefaults.SERVER_URL`, never to a self-hosted URL.
+
+```sh
+./gradlew :app:assembleDebug   # reads the token file, if it exists
+```
+
+The Development tools panel of a debug build shows the git short sha and the commit
+time of the build (`BuildConfig.BUILD_COMMIT`, `BUILD_COMMIT_TIME`, `BUILD_TREE_DIRTY`;
+debug builds only, so the release build stays reproducible) and a "Device check" button.
+One press runs a fixed script and shows the step and a final pass or fail summary:
+
+1. build identity: sha, commit time, device model, Android version
+2. profile store: legacy settings files present or retired, and the keys per profile
+   file as counts (no values)
+3. one download: the smallest oblast in the live catalogue through the normal store
+   path, on Wi-Fi only. It is skipped with a reason on mobile data or without a token.
+   The pack is verified (version and size), timed, and removed again unless it was
+   installed before
+4. window screenshots (PixelCopy, no screen-capture permission) of the screens
+   reachable by command: map in the light and dark map style, layers, search results,
+   place card, route planner, navigation (following, expanded, alert, dark), downloads,
+   Maps token form, favourites lists and track library. A scene that cannot be reached
+   (for example search without an installed pack) is listed with its reason
+5. labels: `en`, `uk` and 150 % through `core.settings.map_labels`, with the rendered
+   Lviv label read back each time. The owner's setting is restored
+6. frame pacing from the development-tools frame-rate stream while the camera moves.
+   Cold start is recorded as not run: it needs the benchmark build, a separate APK
+
+The check then opens the Android share sheet with one ZIP from the app cache
+(`device-check/`, shared through the debug-only `DeviceCheckFileProvider`). The ZIP holds
+`report.json` (every step with status, duration and key numbers, and per screenshot the
+screen, theme, window size in px and dp, density and font scale), `log.txt` (scrubbed),
+and `screenshots/*.png`. The writer refuses to write an entry that contains the token.
+The ZIP holds no token, no location history and no personal data. The system theme is
+not changed: dark shots use the dark map style and the dark navigation fixture, and each
+record says whether the system was in night mode. Profiles create/copy/reset, the widget
+grid and the plugin manager are listed in the report as not in this build.
+
 ### Rust core
 
 `rust/grass-core` is the offline search reader behind `PlaceProvider`. Gradle

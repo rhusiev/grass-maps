@@ -555,6 +555,16 @@ class MaplibreComposeMapHost internal constructor(
             ).takeIf { it.isValid() }
         }
 
+    /**
+     * The rendered symbol features with the text each draws, for the debug
+     * build's label check (T-0110). [nameEn] limits the answer to features
+     * whose `name:en` equals it.
+     */
+    suspend fun renderedLabels(nameEn: String?): List<RenderedLabel> =
+        withContext(Dispatchers.Main.immediate) {
+            RenderedLabels(state).query(session.layers.value.map { it.spec }, session.labels.value, nameEn)
+        }
+
     override suspend fun moveCamera(update: CameraUpdate): Outcome<Unit> =
         withContext(Dispatchers.Main.immediate) {
             state.setCameraPosition(state.cameraPosition.apply(update))

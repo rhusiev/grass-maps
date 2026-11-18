@@ -89,6 +89,7 @@ class DebugApplication : GrassMapsApplication() {
         { session ->
             listOf(
                 SetCameraCommand(session),
+                RenderedLabelsCommand(session),
                 SetRouteCommand(session),
                 SetRouteRelationsCommand(session),
                 SetTracksCommand(session),

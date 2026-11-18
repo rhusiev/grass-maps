@@ -12,6 +12,7 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.service.NetworkSwitches
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PrivacyNetworkGateTest {
@@ -159,8 +160,7 @@ class PrivacyNetworkGateTest {
                 thrown = exception
             }
 
-            // The coroutine scope may rethrow a stack-trace copy of the exception.
-            assertEquals(cancellation.message, thrown?.message)
+            assertOriginalOrCopyOf(cancellation, thrown)
         }
 
     @Test
@@ -176,8 +176,7 @@ class PrivacyNetworkGateTest {
                 thrown = caught
             }
 
-            assertEquals(AssertionError::class, thrown?.let { it::class })
-            assertEquals(error.message, thrown?.message)
+            assertOriginalOrCopyOf(error, thrown)
         }
 
     @Test
@@ -234,6 +233,17 @@ class PrivacyNetworkGateTest {
             assertEquals(true, job.isCancelled)
             assertEquals(1L, switches.state(NetworkSwitches.onlineTiles).requests)
         }
+
+    /** Coroutine stack-trace recovery may rethrow a copy whose cause is the original. */
+    private fun assertOriginalOrCopyOf(
+        original: Throwable,
+        thrown: Throwable?,
+    ) {
+        assertTrue(
+            "expected the original exception or a copy caused by it, got $thrown",
+            thrown === original || (thrown != null && thrown.cause === original),
+        )
+    }
 
     private class RecordingRequest(
         private val result: Outcome<String> = Outcome.Success("response"),

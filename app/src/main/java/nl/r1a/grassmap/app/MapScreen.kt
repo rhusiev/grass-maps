@@ -11,12 +11,16 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -223,6 +227,9 @@ private const val PANEL_GAP_DP = 8
 
 /** Keeps the layers cards below the control bar at the top end. */
 private const val LAYERS_COLUMN_HEIGHT_FRACTION = 0.5f
+
+/** Widest a layers card may grow, so the bottom-end column never reaches the bottom start. */
+private const val LAYERS_CARD_MAX_WIDTH_DP = 260
 private const val METRE_DECIMALS = 1
 private const val KILOMETRE_DECIMALS = 2
 private const val WHOLE_VALUE_MIN = 1.0
@@ -838,12 +845,15 @@ private fun MapContent(
                         modifier =
                             Modifier
                                 .weight(1f, fill = false)
+                                .widthIn(max = LAYERS_CARD_MAX_WIDTH_DP.dp)
+                                .width(IntrinsicSize.Max)
                                 .verticalScroll(rememberScrollState())
                                 .reportsBottomChrome(),
                         horizontalAlignment = Alignment.End,
                         verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
                     ) {
                         MapStylePanel(
+                            modifier = Modifier.fillMaxWidth(),
                             active = styleChoice,
                             onSelect = { choice ->
                                 scope.launch {
@@ -856,6 +866,7 @@ private fun MapContent(
                             },
                         )
                         ContoursLayerPanel(
+                            modifier = Modifier.fillMaxWidth(),
                             enabled = contoursEnabled,
                             onEnabledChange = { enabled ->
                                 scope.launch {
@@ -869,6 +880,7 @@ private fun MapContent(
                         )
                         val configuration = LocalConfiguration.current
                         RasterLayerPanel(
+                            modifier = Modifier.fillMaxWidth(),
                             areaModel =
                                 RasterAreaSectionModel(
                                     items = remember(rasterAreaPacks) { container.rasterAreas.items() },
@@ -1048,7 +1060,8 @@ private fun MapContent(
                 Modifier
                     .align(Alignment.BottomStart)
                     .navigationBarsPadding()
-                    .padding(BAR_PADDING_DP.dp),
+                    .padding(BAR_PADDING_DP.dp)
+                    .reportsBottomChrome(),
             )
         }
         if (!navigationActive) {

@@ -1,0 +1,21 @@
+package nl.r1a.grassmap.app.devcheck
+
+import android.app.Application
+import nl.r1a.grassmap.app.AppContainer
+import nl.r1a.grassmap.app.DebugControl
+
+/** The one controller of the process, so a recomposed panel does not lose a running check. */
+internal object DeviceCheckSession {
+    private var controller: DeviceCheckController? = null
+
+    @Synchronized
+    fun of(
+        app: Application,
+        container: AppContainer,
+    ): DeviceCheckController =
+        controller ?: DeviceCheckController(
+            app = app,
+            container = container,
+            capture = DebugControl.windowCapture,
+        ).also { controller = it }
+}

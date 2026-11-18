@@ -52,6 +52,13 @@
     <string name="dev_tools_memory">Пам\'ять: %1$d МБ</string>
     <string name="dev_tools_start_replay">Почати відтворення</string>
     <string name="dev_tools_stop_replay">Зупинити відтворення</string>
+    <string name="dev_check_build">Збірка %1$s, %2$s</string>
+    <string name="dev_check_button">Перевірка пристрою</string>
+    <string name="dev_check_running">Перевірка пристрою %1$d з %2$d: %3$s</string>
+    <string name="dev_check_summary">пройдено %1$d, не пройдено %2$d, пропущено %3$d</string>
+    <string name="dev_check_pass">Перевірка пристрою пройдена: %1$s</string>
+    <string name="dev_check_fail">Перевірка пристрою не пройдена: %1$s</string>
+    <string name="dev_check_error">Перевірка пристрою зупинена: %1$s</string>
     <string name="map_distance_metres">%1$s м</string>
     <string name="map_distance_kilometres">%1$s км</string>
     <string name="point_info_distance_row">Відстань %1$s</string>

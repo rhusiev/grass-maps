@@ -51,6 +51,13 @@
     <string name="dev_tools_memory">Memory: %1$d MB</string>
     <string name="dev_tools_start_replay">Start replay</string>
     <string name="dev_tools_stop_replay">Stop replay</string>
+    <string name="dev_check_build">Build %1$s, %2$s</string>
+    <string name="dev_check_button">Device check</string>
+    <string name="dev_check_running">Device check %1$d of %2$d: %3$s</string>
+    <string name="dev_check_summary">%1$d passed, %2$d failed, %3$d skipped</string>
+    <string name="dev_check_pass">Device check passed: %1$s</string>
+    <string name="dev_check_fail">Device check failed: %1$s</string>
+    <string name="dev_check_error">Device check stopped: %1$s</string>
     <string name="map_distance_metres">%1$s m</string>
     <string name="map_distance_kilometres">%1$s km</string>
     <string name="point_info_distance_row">Distance %1$s</string>

@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.app
 
+import android.app.Application
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,15 +12,19 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import nl.r1a.grassmap.app.devcheck.DeviceCheckSession
+import nl.r1a.grassmap.app.devcheck.DeviceCheckUi
 import nl.r1a.grassmap.plugins.dev.tools.DevToolsContract
 import nl.r1a.grassmap.plugins.dev.tools.DevToolsPanelState
 
@@ -48,6 +53,13 @@ internal fun DevToolsPanel(
             .subscribe<DevToolsPanelState>(DevToolsContract.stateStream)
             .collectAsState(initial = DevToolsPanelState())
     val scope = rememberCoroutineScope()
+    val application = LocalContext.current.applicationContext as Application
+    val check = remember(container) { DeviceCheckSession.of(application, container) }
+    val checkUi by check.ui.collectAsState()
+    val capturing by check.capturing.collectAsState()
+    if (capturing) {
+        return
+    }
 
     Column(
         modifier =
@@ -82,6 +94,7 @@ internal fun DevToolsPanel(
                 scope.launch { container.commandBus.invoke(DevToolsContract.stopReplayCommand) }
             }
         }
+        DeviceCheckSection(checkUi, check::start)
     }
 }
 
@@ -109,4 +122,25 @@ private fun PanelAction(
                 .clickable(onClick = onClick)
                 .padding(horizontal = PANEL_GAP_DP.dp, vertical = ACTION_VERTICAL_DP.dp),
     )
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun DeviceCheckSection(
+    ui: DeviceCheckUi,
+    onStart: () -> Unit,
+) {
+    PanelText(
+        stringResource(R.string.dev_check_build, BuildConfig.BUILD_COMMIT, BuildConfig.BUILD_COMMIT_TIME),
+    )
+    if (ui.running) {
+        PanelText(stringResource(R.string.dev_check_running, ui.stepNumber, ui.stepCount, ui.stepId))
+    } else {
+        PanelAction(stringResource(R.string.dev_check_button), onStart)
+    }
+    ui.finished?.let { report ->
+        val summary = stringResource(R.string.dev_check_summary, report.passedCount, report.failedCount, report.skippedCount)
+        PanelText(stringResource(if (report.isPass) R.string.dev_check_pass else R.string.dev_check_fail, summary))
+    }
+    ui.error?.let { PanelText(stringResource(R.string.dev_check_error, it)) }
 }

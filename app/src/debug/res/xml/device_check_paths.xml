@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug only: the device-check archive is written under cache/device-check
+     and shared by one read grant. No other app-private path is reachable. -->
+<paths>
+    <cache-path name="device_check" path="device-check/" />
+</paths>

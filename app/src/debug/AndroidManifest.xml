@@ -17,5 +17,17 @@
             android:name="nl.r1a.grassmap.app.SharedTrackTestProvider"
             android:authorities="nl.r1a.grassmap.share-test"
             android:exported="false" />
+
+        <!-- The device check shares its archive through this provider. Debug
+             only, not exported: the share sheet gets one read grant. -->
+        <provider
+            android:name="nl.r1a.grassmap.app.devcheck.DeviceCheckFileProvider"
+            android:authorities="${applicationId}.devcheck.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/device_check_paths" />
+        </provider>
     </application>
 </manifest>

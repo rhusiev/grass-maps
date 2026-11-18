@@ -36,6 +36,9 @@ internal object DebugControl {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var server: ControlServer? = null
 
+    /** The window capture the control channel and the device check share. */
+    internal val windowCapture = AndroidWindowCapture()
+
     fun start(
         application: Application,
         container: AppContainer,
@@ -44,7 +47,7 @@ internal object DebugControl {
         if (server != null) {
             return
         }
-        val capture = AndroidWindowCapture()
+        val capture = windowCapture
         application.registerActivityLifecycleCallbacks(WindowTracker(capture))
         scope.launch {
             if (!settings.isEnabled()) {

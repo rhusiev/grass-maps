@@ -2,6 +2,8 @@ package nl.r1a.grassmap.plugins.raster
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -111,7 +113,7 @@ class HttpRasterTileTransport(
         }
     }
 
-    private fun readTile(connection: HttpURLConnection): Outcome<TileImage> {
+    private suspend fun readTile(connection: HttpURLConnection): Outcome<TileImage> {
         val contentType = connection.contentType.orEmpty()
         if (!contentType.startsWith(IMAGE_PREFIX)) {
             return Outcome.Failure(AppError.CorruptData)
@@ -124,6 +126,7 @@ class HttpRasterTileTransport(
         val buffer = ByteArray(READ_BUFFER_BYTES)
         connection.inputStream.use { stream ->
             while (true) {
+                currentCoroutineContext().ensureActive()
                 val read = stream.read(buffer)
                 if (read < 0) {
                     break

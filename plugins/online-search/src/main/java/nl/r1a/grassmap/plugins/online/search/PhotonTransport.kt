@@ -2,6 +2,8 @@ package nl.r1a.grassmap.plugins.online.search
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -65,8 +67,9 @@ class HttpPhotonTransport(
     /**
      * Reads a response with a bound. Photon is untrusted input: a body far
      * larger than a result page is a corrupt response, not a result set.
+     * Cancellation, such as a privacy switch turned off, is checked per chunk.
      */
-    private fun readBody(connection: HttpURLConnection): Outcome<String> {
+    private suspend fun readBody(connection: HttpURLConnection): Outcome<String> {
         val declaredLength = connection.getHeaderField(CONTENT_LENGTH_HEADER)?.trim()?.toLongOrNull()
         if (declaredLength != null && declaredLength > MAX_BODY_CHARS) {
             return Outcome.Failure(AppError.CorruptData)
@@ -75,6 +78,7 @@ class HttpPhotonTransport(
         val buffer = CharArray(READ_BUFFER_CHARS)
         connection.inputStream.bufferedReader(StandardCharsets.UTF_8).use { reader ->
             while (true) {
+                currentCoroutineContext().ensureActive()
                 val read = reader.read(buffer)
                 if (read < 0) {
                     break

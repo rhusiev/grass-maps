@@ -131,6 +131,7 @@ import nl.r1a.grassmap.regions.RegionStore
 import nl.r1a.grassmap.regions.SupersededVersions
 import nl.r1a.grassmap.routing.RouteHistorySetting
 import nl.r1a.grassmap.routing.RouteHistoryStore
+import nl.r1a.grassmap.ui.shell.WidgetLayoutStore
 import java.io.File
 
 /**
@@ -477,6 +478,22 @@ class AppContainer(
             store = userDataRootProvider()?.let { root -> alertProfileFile(root) },
             writeScope = processScope,
             log = { message -> Log.w(ALERTS_TAG, message) },
+        )
+    }
+
+    /**
+     * The per-profile widget layout (T-0605). Construction is cheap;
+     * [WidgetLayoutStore.load] reads the file from the IO dispatcher.
+     */
+    val widgetLayoutStore: WidgetLayoutStore by lazy {
+        WidgetLayoutStore(
+            userDataRootProvider()?.let { root ->
+                ProfileValueFile(
+                    file = File(root, UserDataLayout.WIDGET_LAYOUT_PATH),
+                    schemaVersion = WidgetLayoutStore.SCHEMA_VERSION,
+                    errorId = WidgetLayoutStore.ERROR_ID,
+                )
+            },
         )
     }
 

@@ -20,6 +20,7 @@ internal object UserDataLayout {
     const val ROUTING_OPTIONS_PATH = "$PROFILES_DIRECTORY/routing-options.json"
     const val PROFILE_CATALOG_PATH = "$PROFILES_DIRECTORY/catalog.json"
     const val ALERT_SETTINGS_PATH = "$PROFILES_DIRECTORY/alerts.json"
+    const val WIDGET_LAYOUT_PATH = "$PROFILES_DIRECTORY/widgets.json"
 
     /** The unversioned files the profile stores migrate from, removed once the new file is verified. */
     const val LEGACY_ROUTING_OPTIONS_PATH = "settings/routing-options.json"

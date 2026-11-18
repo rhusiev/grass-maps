@@ -1248,6 +1248,34 @@ partial, repeated or old three-button order reads as
 receives control IDs, labels and callbacks, so it never touches the command bus
 or the map host.
 
+## Widget grid
+
+The read-only info widgets sit at the top left of the map as glass cells in a
+wrapping row. `WidgetLayoutStore` in `ui-shell` keeps the layout of each
+`ProfileId` through the `ProfileValueStore` contract: one inner key, `widgets`,
+holds the storage keys of the shown widgets joined by commas in reading order.
+A profile with no value shows altitude, GPS accuracy and the selected point. An
+empty string is a real layout with every widget removed. A key this build does
+not know is dropped and a repeated key is kept once. The file is
+`profiles/widgets.json` under `filesDir`, schema version 1, written by
+`ProfileValueFile`, so a file from a newer build is neither read nor
+overwritten.
+
+The v1 widgets are altitude, GPS accuracy, coordinates (the fix and the map
+centre), the current, average and max speed, and the selected point. Time,
+battery, sunset and bearing are v1.x and not built. `WidgetGridHost` in `app`
+subscribes to the `info-widgets` and `point-info` streams and turns each value
+into text with `widgetCells`, so `WidgetGrid` in `ui-shell` only draws strings.
+The selected-point cell draws nothing without a selection and carries the clear
+action that the old label had. The grid is hidden while a trip runs.
+
+The control bar's edit mode also edits the grid. Each cell gets move earlier,
+move later and remove actions, and a plus opens the list of the widgets that are
+not shown. Every change is written at once through `LayoutWriter`, which
+serializes the writes and saves the latest layout. The active profile is the
+profile `AlertSettingsStore` reports, which is the `walk` built-in until a trip
+activates another. The profile switcher replaces that source.
+
 ## Scale bar and units
 
 The scale bar is a Compose overlay in `ui-shell`; the round distance it spans
@@ -2409,6 +2437,7 @@ unreadable old file stays and reads as empty.
 | `ProfileCatalog` | `profiles/catalog.json` | none | 1 |
 | `RoutingOptionsSettings` | `profiles/routing-options.json` | `settings/routing-options.json` | 1 |
 | `AlertSettingsStore` | `profiles/alerts.json` | `settings/alerts.json` | 1 |
+| `WidgetLayoutStore` | `profiles/widgets.json` | none | 1 |
 
 ## Profile alert settings
 

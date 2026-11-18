@@ -144,9 +144,6 @@ import nl.r1a.grassmap.plugins.map.controls.CameraMode
 import nl.r1a.grassmap.plugins.map.controls.ScaleBar
 import nl.r1a.grassmap.plugins.map.controls.ScaleBarReading
 import nl.r1a.grassmap.plugins.map.controls.ScaleBarUnit
-import nl.r1a.grassmap.plugins.point.info.PointInfoContract
-import nl.r1a.grassmap.plugins.point.info.PointInfoLabel
-import nl.r1a.grassmap.plugins.point.info.SelectedPointValue
 import nl.r1a.grassmap.plugins.raster.RasterAreaSectionActions
 import nl.r1a.grassmap.plugins.raster.RasterAreaSectionModel
 import nl.r1a.grassmap.plugins.raster.RasterLayerPanel
@@ -214,11 +211,6 @@ private const val BANNER_CORNER_DP = 8
 private const val BANNER_HORIZONTAL_DP = 16
 private const val BANNER_VERTICAL_DP = 10
 private const val BANNER_FONT_SP = 14
-private const val LABEL_GAP_DP = 8
-private const val LABEL_ROW_GAP_DP = 2
-private const val LABEL_CLEAR_FONT_SP = 18
-private const val LABEL_CLEAR_PADDING_DP = 4
-private const val CLEAR_GLYPH = "×"
 private const val DISTANCE_BADGE_MILLIS = 4_000L
 private const val TRACK_IMPORT_NOTICE_MILLIS = 8_000L
 private const val BANNER_STACK_GAP_DP = 8
@@ -419,14 +411,6 @@ private fun MapContent(
         remember(layout, context, cameraMode) { controlButtons(layout, context, cameraMode) }
     val controlBarTexts = remember(context) { controlBarLabels(context) }
     var distance by remember { mutableStateOf<DistanceReadout?>(null) }
-    val selectionFlow =
-        remember(container) {
-            container.streamAccess.subscribe<SelectedPointValue>(PointInfoContract.selectionStream)
-        }
-    val selectedPoint by selectionFlow.collectAsState(initial = SelectedPointValue())
-    // Derived from the selection alone: a camera frame, a fix or a banner must
-    // not rebuild these rows.
-    val selectedRows = remember(selectedPoint, container.strings) { PointInfoLabel.rows(selectedPoint, container.strings) }
     val placeCard by PlaceCardSession.card.collectAsState()
     val listsVisible by FavouritesListsSession.visible.collectAsState()
     val downloadsVisible by DownloadsScreenSession.visible.collectAsState()
@@ -812,11 +796,10 @@ private fun MapContent(
                 }
             },
         )
-        if (!navigationActive && selectedRows.isNotEmpty()) {
-            SelectedPointLabel(
-                rows = selectedRows,
-                clearDescription = stringResource(R.string.point_info_clear_description),
-                onClear = { container.selectedPoint.clear() },
+        if (!navigationActive) {
+            WidgetGridHost(
+                container = container,
+                isEditing = isEditing,
                 modifier =
                     Modifier
                         .align(Alignment.TopStart)
@@ -2462,44 +2445,6 @@ private fun formatDistanceValue(
     value: Double,
     decimals: Int,
 ): String = String.format(Locale.getDefault(), "%.${decimals}f", value)
-
-@Suppress("ktlint:standard:function-naming")
-@Composable
-private fun SelectedPointLabel(
-    rows: List<String>,
-    clearDescription: String,
-    onClear: () -> Unit,
-    modifier: Modifier,
-) {
-    Row(
-        modifier =
-            modifier
-                .clip(RoundedCornerShape(BANNER_CORNER_DP.dp))
-                .background(DISTANCE_BADGE_BACKGROUND)
-                .padding(horizontal = BANNER_HORIZONTAL_DP.dp, vertical = BANNER_VERTICAL_DP.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(LABEL_GAP_DP.dp),
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(LABEL_ROW_GAP_DP.dp)) {
-            rows.forEach { row ->
-                BasicText(
-                    text = row,
-                    style = TextStyle(color = Color.White, fontSize = BANNER_FONT_SP.sp),
-                )
-            }
-        }
-        BasicText(
-            text = CLEAR_GLYPH,
-            style = TextStyle(color = Color.White, fontSize = LABEL_CLEAR_FONT_SP.sp),
-            modifier =
-                Modifier
-                    .clip(RoundedCornerShape(BANNER_CORNER_DP.dp))
-                    .clickable(onClick = onClear)
-                    .semantics { contentDescription = clearDescription }
-                    .padding(horizontal = LABEL_CLEAR_PADDING_DP.dp),
-        )
-    }
-}
 
 @Suppress("ktlint:standard:function-naming")
 @Composable

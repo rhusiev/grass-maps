@@ -59,7 +59,6 @@
     <string name="point_info_distance_metres">%1$s м</string>
     <string name="point_info_distance_kilometres">%1$s км</string>
     <string name="point_info_azimuth_degrees">%1$s°</string>
-    <string name="point_info_clear_description">Очистити вибрану точку</string>
     <string name="map_scale_description">Масштабна лінійка</string>
     <string name="map_scale_metres">%1$s м</string>
     <string name="map_scale_kilometres">%1$s км</string>

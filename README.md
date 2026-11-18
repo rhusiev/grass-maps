@@ -592,6 +592,7 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/route-warnings` | the warning list for fords, steps, barriers, railway crossings and private ways, with its profile filter and distance order | `plugin-api` |
 | `plugins/proximity-alerts` | the proximity schedule for favourites, track waypoints and chosen place kinds: the three chosen radii, the one-per-approach latch and its lookup refresh | `plugin-api` |
 | `plugins/downloads-ui` | the downloads screen: catalogue rows with their parts and data date, the first-run offer, the region sheet, the refresh, download, cancel, remove and server commands, and their state stream | `plugin-api` |
+| `plugins/profiles-ui` | the profiles screen: the list, the new-profile and copy-settings sheets, the editor's copy and reset rows, the undo notice, the create, copy settings, reset and undo commands, and their state stream | `plugin-api`, `plugin-ui-api` |
 
 ## Online tiles
 
@@ -2482,6 +2483,39 @@ unreadable old file stays and reads as empty.
 | `RoutingOptionsSettings` | `profiles/routing-options.json` | `settings/routing-options.json` | 1 |
 | `AlertSettingsStore` | `profiles/alerts.json` | `settings/alerts.json` | 1 |
 | `WidgetLayoutStore` | `profiles/widgets.json` | none | 1 |
+
+### Create, copy, reset and undo
+
+`ProfileCatalog` also lists custom profiles. A custom entry holds `name`,
+`copied_from` and the route profile it routes with, and the file keeps an
+`order` key so the list stays in creation order. A rewrite keeps entries it
+cannot parse and any extra key it does not know. A name has 1 to 40 characters.
+
+`ProfileSettingsService` (`core-services`) owns the actions. It reaches each
+per-profile store through `ProfileSettingsGroup` (`plugin-api`): `ROUTING` and
+`ALERTS` implement `read` and `replace` of one profile's values. The service
+builds every action from these two calls:
+
+1. Create a profile, or copy one, writes the new catalog entry and replaces the
+   new profile's values in each group with the source's values.
+2. Copy settings replaces the target's values in the chosen groups with the
+   source's values.
+3. Reset replaces the profile's values with its baseline. The baseline is the
+   current values of the profile it was copied from, or the defaults when it
+   was not copied.
+4. Undo replaces each touched group with the snapshot taken before the action.
+   The history holds the last 20 actions.
+
+`PluginServices.profileSettings` (`ProfileSettingsAccess`) gives plugins the
+state and these actions. `plugins/profiles-ui` (T-0602) owns the screen and the
+commands `profiles.ui.create`, `copy_settings`, `reset` and `undo`. It
+publishes `profiles.ui.state`. A `copy_settings` call without `groups` copies
+every group. `app` hosts the screen over the map. The map has no profiles entry
+point yet, so the debug build opens it with `core.profiles.show` and closes it
+with `core.profiles.hide`. Every change still goes through the `profiles.ui`
+commands. The screen colours are fixed light colours, as on the downloads
+screen. Map style, buttons and navigation settings are not per-profile stores
+yet, so the screen does not offer them.
 
 ## Profile alert settings
 

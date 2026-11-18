@@ -1779,6 +1779,9 @@ private fun MapContent(
                 modifier = Modifier.fillMaxSize(),
             )
         }
+        if (!navigationActive) {
+            ProfilesScreenHost(container)
+        }
         if (downloadsVisible && !navigationActive) {
             val downloadsFlow =
                 remember(container) {

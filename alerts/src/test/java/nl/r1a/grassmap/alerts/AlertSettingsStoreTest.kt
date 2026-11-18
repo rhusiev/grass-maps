@@ -24,6 +24,24 @@ import kotlin.coroutines.CoroutineContext
 /** The per-profile alert settings (T-0413) on the profile store (T-0601). */
 class AlertSettingsStoreTest {
     @Test
+    fun theStoredValuesCopyToAnotherProfileAsAGroup() {
+        val backing = MemoryStore()
+        val store = AlertSettingsStore(backing).also { it.load() }
+        store.set(RouteProfile.Bike, ProfileAlertSettings(settings = AlertSettings(signal = true), poiKinds = setOf("cafe")))
+
+        val copied = store.replace(ProfileId("gravel"), store.read(BuiltInProfiles.BIKE))
+
+        assertEquals(Outcome.Success(Unit), copied)
+        assertEquals(store.forProfile(RouteProfile.Bike), store.forProfile(ProfileId("gravel")))
+        assertTrue(store.read(BuiltInProfiles.WALK).isEmpty())
+
+        store.replace(ProfileId("gravel"), emptyMap())
+
+        assertEquals(ProfileAlertSettings(), store.forProfile(ProfileId("gravel")))
+        assertFalse((backing.read() as Outcome.Success).value.containsKey(ProfileId("gravel")))
+    }
+
+    @Test
     fun aSwitchOnBikeLeavesWalkOffAndSurvivesAReload() {
         val backing = MemoryStore()
         val store = AlertSettingsStore(backing).also { it.load() }

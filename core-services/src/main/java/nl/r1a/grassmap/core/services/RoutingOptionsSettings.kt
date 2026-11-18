@@ -14,6 +14,7 @@ import nl.r1a.grassmap.plugin.api.model.ProfileId
 import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 import nl.r1a.grassmap.plugin.api.provider.RoutePreference
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmap.plugin.api.service.ProfileSettingsGroup
 import nl.r1a.grassmap.plugin.api.service.ProfileValueStore
 import nl.r1a.grassmap.plugin.api.service.ProfileValues
 import java.io.File
@@ -45,8 +46,10 @@ import java.io.IOException
  */
 class RoutingOptionsSettings(
     private val store: ProfileValueStore? = null,
-) {
+) : ProfileSettingsGroup {
     private val state = MutableStateFlow(load(store))
+
+    override val id: String = ProfileSettingsGroup.ROUTING
 
     /** The options of every profile that differs from the defaults. */
     val options: StateFlow<Map<ProfileId, RouteOptions>> = state.asStateFlow()
@@ -73,6 +76,13 @@ class RoutingOptionsSettings(
         profile: RouteProfile,
         options: RouteOptions,
     ): Outcome<Unit> = set(BuiltInProfiles.idOf(profile), options)
+
+    override fun read(profile: ProfileId): Map<String, String> = state.value[profile]?.let(::encodeOptions).orEmpty()
+
+    override fun replace(
+        profile: ProfileId,
+        values: Map<String, String>,
+    ): Outcome<Unit> = set(profile, decode(values))
 
     companion object {
         const val SCHEMA_VERSION = 1
@@ -103,15 +113,16 @@ class RoutingOptionsSettings(
                 .filterValues { !it.isDefault }
 
         private fun encode(options: Map<ProfileId, RouteOptions>): ProfileValues =
-            options.mapValues { (_, value) ->
-                mapOf(
-                    HILLS_KEY to value.hills.serializedValue,
-                    BUSY_ROADS_KEY to value.busyRoads.serializedValue,
-                    ROUGH_SURFACES_KEY to value.roughSurfaces.serializedValue,
-                    STEPS_KEY to value.steps.serializedValue,
-                    TRAIL_DIFFICULTY_KEY to value.trailDifficulty.serializedValue,
-                )
-            }
+            options.mapValues { (_, value) -> encodeOptions(value) }
+
+        private fun encodeOptions(value: RouteOptions): Map<String, String> =
+            mapOf(
+                HILLS_KEY to value.hills.serializedValue,
+                BUSY_ROADS_KEY to value.busyRoads.serializedValue,
+                ROUGH_SURFACES_KEY to value.roughSurfaces.serializedValue,
+                STEPS_KEY to value.steps.serializedValue,
+                TRAIL_DIFFICULTY_KEY to value.trailDifficulty.serializedValue,
+            )
 
         private fun decode(values: Map<String, String>): RouteOptions =
             RouteOptions(

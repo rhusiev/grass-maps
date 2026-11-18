@@ -65,7 +65,7 @@ class ProfileCatalog(
         val source = entries(stored).firstOrNull { it.id == from } ?: return Outcome.Failure(AppError.NotFound)
         val all = withBuiltIns(stored)
         val entry = ProfileEntry(uniqueId(trimmed, all.keys), source.routeProfile, isBuiltIn = false, name = trimmed, copiedFrom = from)
-        return writeStored(all + (entry.id to encode(entry))).map { entry }
+        return writeStored(all + (entry.id to encode(entry) + (ORDER_KEY to nextOrder(all).toString()))).map { entry }
     }
 
     /** Removes the user profile [id]. A built-in profile or an entry this build cannot parse stays. */
@@ -93,7 +93,7 @@ class ProfileCatalog(
         ProfileEntry(id, requireNotNull(BuiltInProfiles.routeProfileOf(id)), isBuiltIn = true)
 
     private fun userEntries(stored: ProfileValues): List<ProfileEntry> =
-        stored.mapNotNull { (id, values) ->
+        stored.entries.sortedBy { orderOf(it.value) }.mapNotNull { (id, values) ->
             val routeProfile = values[ROUTE_PROFILE_KEY]?.let { BuiltInProfiles.routeProfileOf(ProfileId(it)) }
             routeProfile?.let {
                 ProfileEntry(
@@ -121,6 +121,11 @@ class ProfileCatalog(
             entry.copiedFrom?.let { COPIED_FROM_KEY to it.value },
         ).toMap()
 
+    private fun orderOf(values: Map<String, String>): Long = values[ORDER_KEY]?.toLongOrNull() ?: 0L
+
+    /** The file is sorted by id, so the creation order of user profiles is stored in each entry. */
+    private fun nextOrder(stored: ProfileValues): Long = (stored.values.maxOfOrNull(::orderOf) ?: 0L) + 1L
+
     private fun uniqueId(
         name: String,
         taken: Set<ProfileId>,
@@ -139,6 +144,7 @@ class ProfileCatalog(
         const val BUILT_IN_KEY = "built_in"
         const val NAME_KEY = "name"
         const val COPIED_FROM_KEY = "copied_from"
+        const val ORDER_KEY = "order"
 
         /** The longest name a user profile may have. */
         const val NAME_MAX_LENGTH = 40

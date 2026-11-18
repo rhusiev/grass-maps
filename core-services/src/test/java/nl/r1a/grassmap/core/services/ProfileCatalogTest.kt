@@ -104,6 +104,17 @@ class ProfileCatalogTest {
     }
 
     @Test
+    fun userProfilesKeepTheirCreationOrderEvenThoughTheFileIsSortedById() {
+        withStore { store ->
+            val catalog = ProfileCatalog(store)
+            catalog.create("Zed", BuiltInProfiles.WALK)
+            catalog.create("Alpha", BuiltInProfiles.WALK)
+
+            assertEquals(listOf("walk", "bike", "hike", "zed", "alpha"), ProfileCatalog(store).load().map { it.id.value })
+        }
+    }
+
+    @Test
     fun aBlankOrOverlongNameOrAnUnknownSourceIsRefused() {
         val catalog = ProfileCatalog()
 

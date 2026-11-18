@@ -111,4 +111,10 @@ interface PluginServices {
      * with the tuned defaults.
      */
     val routingOptions: RoutingOptionsAccess get() = NoRoutingOptionsAccess
+
+    /**
+     * The profile list and the actions on it behind `plugins/profiles-ui`
+     * (T-0602). Inert until `app` wires the profile stores.
+     */
+    val profileSettings: ProfileSettingsAccess get() = NoProfileSettingsAccess
 }

@@ -20,6 +20,7 @@ import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.BuiltInProfiles
 import nl.r1a.grassmap.plugin.api.model.ProfileId
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmap.plugin.api.service.ProfileSettingsGroup
 import nl.r1a.grassmap.plugin.api.service.ProfileValueStore
 import nl.r1a.grassmap.plugin.api.service.ProfileValues
 import java.io.File
@@ -82,7 +83,9 @@ class AlertSettingsStore(
     private val writeScope: CoroutineScope? = null,
     private val log: (String) -> Unit = {},
     private val writeDispatcher: CoroutineDispatcher = Dispatchers.IO,
-) {
+) : ProfileSettingsGroup {
+    override val id: String = ProfileSettingsGroup.ALERTS
+
     private val states = mutableMapOf<ProfileId, ProfileAlertSettings>()
     private var activeProfile: ProfileId = BuiltInProfiles.idOf(initialProfile)
     private val activeState = MutableStateFlow(ProfileAlertSettings())
@@ -152,6 +155,14 @@ class AlertSettingsStore(
             }
             persist()
         }
+
+    override fun read(profile: ProfileId): Map<String, String> =
+        forProfile(profile).takeUnless { it.isDefault }?.let(::encode).orEmpty()
+
+    override fun replace(
+        profile: ProfileId,
+        values: Map<String, String>,
+    ): Outcome<Unit> = set(profile, decode(values))
 
     /** Stores [value] for the built-in profile that carries [profile]. */
     fun set(

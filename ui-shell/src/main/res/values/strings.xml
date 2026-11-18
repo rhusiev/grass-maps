@@ -302,4 +302,29 @@
     <string name="alerts_place_campsite">Campsite</string>
     <string name="alerts_place_cafe">Cafe</string>
     <string name="alerts_place_pharmacy">Pharmacy</string>
+
+    <string name="widget_grid_altitude">Altitude</string>
+    <string name="widget_grid_gps_accuracy">GPS accuracy</string>
+    <string name="widget_grid_coordinates">Coordinates</string>
+    <string name="widget_grid_speed_current">Speed</string>
+    <string name="widget_grid_speed_average">Average speed</string>
+    <string name="widget_grid_speed_max">Max speed</string>
+    <string name="widget_grid_selected_point">Selected point</string>
+    <string name="widget_grid_altitude_label">alt</string>
+    <string name="widget_grid_gps_label">GPS</string>
+    <string name="widget_grid_fix_label">GPS</string>
+    <string name="widget_grid_centre_label">center</string>
+    <string name="widget_grid_speed_average_label">avg</string>
+    <string name="widget_grid_speed_max_label">max</string>
+    <string name="widget_grid_metres">%1$s m</string>
+    <string name="widget_grid_accuracy">±%1$s m</string>
+    <string name="widget_grid_coordinates_value">%1$s, %2$s</string>
+    <string name="widget_grid_add">+</string>
+    <string name="widget_grid_add_description">Add a widget</string>
+    <string name="widget_grid_not_shown">Widgets not shown</string>
+    <string name="widget_grid_remove_description">Remove %1$s</string>
+    <string name="widget_grid_move_earlier_description">Move %1$s earlier</string>
+    <string name="widget_grid_move_later_description">Move %1$s later</string>
+    <string name="widget_grid_pick_description">Add %1$s</string>
+    <string name="widget_grid_clear_description">Clear the selected point</string>
 </resources>

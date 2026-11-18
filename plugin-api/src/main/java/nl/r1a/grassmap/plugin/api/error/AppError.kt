@@ -64,6 +64,15 @@ sealed interface AppError {
         val limitMeters: Double,
     ) : AppError
 
+    /**
+     * A store on disk was written by a newer build ([found]) than this one
+     * understands ([supported]). The store refuses to read or overwrite it.
+     */
+    data class NewerSchema(
+        val found: Int,
+        val supported: Int,
+    ) : AppError
+
     data class Internal(
         val id: String,
         val detail: String? = null,

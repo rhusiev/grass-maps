@@ -14,4 +14,13 @@ internal object UserDataLayout {
     const val REGIONS_DIRECTORY = "regions"
     const val SEARCH_HISTORY_PATH = "history/search-history.json"
     const val ROUTE_HISTORY_PATH = "history/route-history.json"
+
+    /** The per-profile stores, one versioned file each (architecture sections 11 and 20). */
+    const val PROFILES_DIRECTORY = "profiles"
+    const val ROUTING_OPTIONS_PATH = "$PROFILES_DIRECTORY/routing-options.json"
+    const val ALERT_SETTINGS_PATH = "$PROFILES_DIRECTORY/alerts.json"
+
+    /** The unversioned files the profile stores migrate from, removed once the new file is verified. */
+    const val LEGACY_ROUTING_OPTIONS_PATH = "settings/routing-options.json"
+    const val LEGACY_ALERT_SETTINGS_PATH = "settings/alerts.json"
 }

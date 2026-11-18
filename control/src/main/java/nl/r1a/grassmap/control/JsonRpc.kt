@@ -187,6 +187,15 @@ object JsonRpcCodec {
                 refusal(RpcCodes.INTERNAL, "cancelled", "cancelled")
             }
 
+            is AppError.NewerSchema -> {
+                refusal(
+                    RpcCodes.INTERNAL,
+                    "newer_schema",
+                    "newer schema",
+                    mapOf("found" to JsonPrimitive(error.found), "supported" to JsonPrimitive(error.supported)),
+                )
+            }
+
             is AppError.PluginFailed -> {
                 refusal(
                     RpcCodes.INTERNAL,

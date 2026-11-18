@@ -79,7 +79,7 @@ open class GrassMapsApplication : Application() {
             rasterSettingsFileProvider = { File(filesDir, RASTER_SETTINGS_PATH) },
             mapStyleSettingsFileProvider = { File(filesDir, MAP_STYLE_SETTINGS_PATH) },
             routeHistoryFileProvider = { File(filesDir, UserDataLayout.ROUTE_HISTORY_PATH) },
-            routingOptionsFileProvider = { File(filesDir, ROUTING_OPTIONS_SETTINGS_PATH) },
+            userDataRootProvider = { filesDir },
             alertSettingsFileProvider = { File(filesDir, ALERT_SETTINGS_PATH) },
             favouritesRootProvider = { filesDir },
             platformActions = AndroidPlatformActions(this, documentSaver),
@@ -262,7 +262,6 @@ open class GrassMapsApplication : Application() {
         const val MAP_STYLE_SETTINGS_PATH = "settings/style.json"
         const val DOWNLOADS_SETTINGS_PATH = "settings/downloads.json"
         const val AUTO_UPDATE_LEDGER_PATH = "settings/auto-update.json"
-        const val ROUTING_OPTIONS_SETTINGS_PATH = "settings/routing-options.json"
         const val ALERT_SETTINGS_PATH = "settings/alerts.json"
         const val DEV_TOOLS_GPX_ASSET = "mock-walk.gpx"
         const val BYTES_PER_KILOBYTE = 1024L

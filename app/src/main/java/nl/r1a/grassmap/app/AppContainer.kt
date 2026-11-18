@@ -166,7 +166,7 @@ class AppContainer(
     private val rasterSettingsFileProvider: () -> File? = { null },
     private val mapStyleSettingsFileProvider: () -> File? = { null },
     private val routeHistoryFileProvider: () -> File? = { null },
-    private val routingOptionsFileProvider: () -> File? = { null },
+    private val userDataRootProvider: () -> File? = { null },
     private val alertSettingsFileProvider: () -> File? = { null },
     private val favouritesRootProvider: () -> File? = { null },
     private val favouritesBackupClock: Clock = SystemClock,
@@ -301,7 +301,12 @@ class AppContainer(
      * file, so the planner asks it through the host and never on Main.
      */
     val routingOptionsSettings: RoutingOptionsSettings by lazy {
-        RoutingOptionsSettings(routingOptionsFileProvider())
+        userDataRootProvider()?.let { root ->
+            RoutingOptionsSettings.open(
+                file = File(root, UserDataLayout.ROUTING_OPTIONS_PATH),
+                legacyFile = File(root, UserDataLayout.LEGACY_ROUTING_OPTIONS_PATH),
+            )
+        } ?: RoutingOptionsSettings()
     }
 
     /**

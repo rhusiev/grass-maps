@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="plugin.manager.name">Плагіни</string>
-    <string name="plugin.manager.description">Вмикає й вимикає необов'язкові плагіни.</string>
+    <string name="plugin.manager.description">Вмикає й вимикає необов\'язкові плагіни.</string>
 
     <string name="plugin_manager_title">Плагіни</string>
     <plurals name="plugin_manager_count">

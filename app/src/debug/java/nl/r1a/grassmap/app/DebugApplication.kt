@@ -106,7 +106,7 @@ class DebugApplication : GrassMapsApplication() {
                     acceptedDrawCount = { container.routeLayer.acceptedDrawCount },
                 ),
             ) + placeCardCommands { container } + favouritesListsCommands() + trackLibraryCommands() +
-                downloadsScreenCommands { container } + profilesScreenCommands()
+                downloadsScreenCommands { container } + profilesScreenCommands() + pluginManagerCommands()
         }
 
     /** Debug builds treat the developer as the AI-control switch holder. */

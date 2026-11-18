@@ -98,6 +98,7 @@ import nl.r1a.grassmap.places.SearchScreenState
 import nl.r1a.grassmap.places.SearchScreenStatus
 import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.contract.PluginId
+import nl.r1a.grassmap.plugin.api.contract.PluginManagement
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.error.onFailure
@@ -148,6 +149,7 @@ import nl.r1a.grassmap.plugins.info.widgets.InfoWidgetsContract
 import nl.r1a.grassmap.plugins.layers.panel.LayersButton
 import nl.r1a.grassmap.plugins.layers.panel.MapStyleChoice
 import nl.r1a.grassmap.plugins.layers.panel.MapStylePanel
+import nl.r1a.grassmap.plugins.manager.PluginManagerScreen
 import nl.r1a.grassmap.plugins.map.controls.CameraMode
 import nl.r1a.grassmap.plugins.map.controls.ScaleBar
 import nl.r1a.grassmap.plugins.map.controls.ScaleBarReading
@@ -440,7 +442,11 @@ private fun MapContent(
     // moment an event needs it, so a pan does not recompose the map content;
     // only the search markers, which have to follow the map, collect it.
     val cameraNow: () -> Camera = remember(surface) { { surface.host.camera.value } }
-    val contoursEnabled by container.contoursSettings.enabled.collectAsState()
+    val contoursSwitch by container.contoursSettings.enabled.collectAsState()
+    val pluginStatuses by container.pluginHost.statuses.collectAsState()
+    val contoursPluginOn = pluginStatuses.firstOrNull { it.pluginId == CONTOURS_PLUGIN }?.enabled != false
+    val contoursEnabled = contoursSwitch && contoursPluginOn
+    val managerVisible by PluginManagerScreenSession.visible.collectAsState()
     val styleChoice by container.mapStyleSettings.active.collectAsState()
     val activeStyle = if (styleChoice == MapStyleChoice.TOURING) bundle.touring else bundle.style
     val activeLayers = if (styleChoice == MapStyleChoice.TOURING) bundle.touringLayers else bundle.layers
@@ -1782,6 +1788,18 @@ private fun MapContent(
         if (!navigationActive) {
             ProfilesScreenHost(container)
         }
+        if (managerVisible && !navigationActive) {
+            BackHandler { PluginManagerScreenSession.hide() }
+            PluginManagerScreen(
+                statuses = pluginStatuses,
+                resolve = { key -> container.strings.resolve(key) },
+                onSetEnabled = { id, enabled ->
+                    scope.launch { setPluginEnabled(container, id, enabled) }
+                },
+                onClose = PluginManagerScreenSession::hide,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
         if (downloadsVisible && !navigationActive) {
             val downloadsFlow =
                 remember(container) {
@@ -2515,6 +2533,22 @@ private suspend fun invokeDownloadsCommand(
     }
 }
 
+/** Switches one plugin through `core.plugins.set_enabled` and logs a typed failure. */
+private suspend fun setPluginEnabled(
+    container: AppContainer,
+    id: PluginId,
+    enabled: Boolean,
+) {
+    val params =
+        buildJsonObject {
+            put("plugin", id.value)
+            put("enabled", enabled)
+        }
+    container.commandBus.invoke(PluginManagement.setEnabled, params).onFailure { error ->
+        Log.w(TAG, "plugin switch ${id.value} failed: $error")
+    }
+}
+
 /** Runs one lists command and logs a typed failure; the sheet keeps its state. */
 private suspend fun invokeListsCommand(
     container: AppContainer,
@@ -2550,6 +2584,7 @@ private suspend fun loadBundle(
 ): MapBundle? {
     // Resolve the layer switches on the caller's IO dispatcher before the
     // screen collects them, so a settings read never lands on Main.
+    container.pluginHost.load()
     container.contoursSettings.isEnabled()
     container.rasterSettings.current()
     container.mapStyleSettings.current()

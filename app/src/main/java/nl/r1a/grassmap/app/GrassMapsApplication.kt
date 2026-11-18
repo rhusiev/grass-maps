@@ -76,6 +76,7 @@ open class GrassMapsApplication : Application() {
             searchHistorySettingsFileProvider = { File(filesDir, SEARCH_HISTORY_SETTINGS_PATH) },
             onlineSearchSettingsFileProvider = { File(filesDir, ONLINE_SEARCH_SETTINGS_PATH) },
             contoursSettingsFileProvider = { File(filesDir, CONTOURS_SETTINGS_PATH) },
+            pluginEnabledFileProvider = { File(filesDir, PLUGIN_ENABLED_PATH) },
             rasterSettingsFileProvider = { File(filesDir, RASTER_SETTINGS_PATH) },
             mapStyleSettingsFileProvider = { File(filesDir, MAP_STYLE_SETTINGS_PATH) },
             mapLabelSettingsFileProvider = { File(filesDir, MAP_LABEL_SETTINGS_PATH) },
@@ -259,6 +260,7 @@ open class GrassMapsApplication : Application() {
         const val SEARCH_HISTORY_SETTINGS_PATH = "settings/search-history.json"
         const val ONLINE_SEARCH_SETTINGS_PATH = "settings/online-search.json"
         const val CONTOURS_SETTINGS_PATH = "settings/contours.json"
+        const val PLUGIN_ENABLED_PATH = "settings/plugins.json"
         const val RASTER_SETTINGS_PATH = "settings/raster.json"
         const val MAP_STYLE_SETTINGS_PATH = "settings/style.json"
         const val MAP_LABEL_SETTINGS_PATH = "settings/map-labels.json"

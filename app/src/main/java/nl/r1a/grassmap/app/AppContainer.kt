@@ -24,8 +24,11 @@ import nl.r1a.grassmap.app.generated.GeneratedPlugins
 import nl.r1a.grassmap.app.generated.GeneratedStreams
 import nl.r1a.grassmap.core.CommandBus
 import nl.r1a.grassmap.core.CommandDispatchers
+import nl.r1a.grassmap.core.FilePluginEnabledStore
+import nl.r1a.grassmap.core.NoPluginEnabledStore
 import nl.r1a.grassmap.core.PluginHost
 import nl.r1a.grassmap.core.ProviderRegistry
+import nl.r1a.grassmap.core.SetPluginEnabledCommand
 import nl.r1a.grassmap.core.StreamRegistry
 import nl.r1a.grassmap.core.services.DEFAULT_PROFILE
 import nl.r1a.grassmap.core.services.DeviceInfo
@@ -92,6 +95,7 @@ import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.api.service.SwitchState
 import nl.r1a.grassmap.plugin.api.service.SystemClock
 import nl.r1a.grassmap.plugins.coordinates.Coordinates
+import nl.r1a.grassmap.plugins.manager.PluginGroups
 import nl.r1a.grassmap.plugins.map.controls.CameraModeController
 import nl.r1a.grassmap.plugins.map.controls.MapControls
 import nl.r1a.grassmap.plugins.map.controls.PositionOffsetFraction
@@ -170,6 +174,7 @@ class AppContainer(
     private val searchHistorySettingsFileProvider: () -> File? = { null },
     private val onlineSearchSettingsFileProvider: () -> File? = { null },
     private val contoursSettingsFileProvider: () -> File? = { null },
+    private val pluginEnabledFileProvider: () -> File? = { null },
     private val rasterSettingsFileProvider: () -> File? = { null },
     private val mapStyleSettingsFileProvider: () -> File? = { null },
     private val mapLabelSettingsFileProvider: () -> File? = { null },
@@ -1176,6 +1181,7 @@ class AppContainer(
             UnitsCommand({ unitSettings }) +
             MapLabelsCommand({ mapLabelSettings }) +
             SearchHistorySettingCommand({ searchHistorySettings }) +
+            SetPluginEnabledCommand({ pluginHost }) +
             extraCommands(mapSession) +
             diagnosticsCommands { diagnostics }
     }
@@ -1239,6 +1245,8 @@ class AppContainer(
             regionDownloadsAccess = regionStore ?: NoRegionDownloadsAccess,
             elevationAccess = elevationAccess,
             logger = pluginLogger,
+            enabledStore = pluginEnabledFileProvider()?.let(::FilePluginEnabledStore) ?: NoPluginEnabledStore,
+            switchable = PluginGroups.switchableIds,
         )
     }
 

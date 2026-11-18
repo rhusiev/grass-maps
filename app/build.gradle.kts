@@ -254,6 +254,7 @@ dependencies {
     implementation(project(":plugins:raster"))
     implementation(project(":plugins:downloads-ui"))
     implementation(project(":plugins:profiles-ui"))
+    implementation(project(":plugins:plugin-manager"))
 
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("org.jetbrains.compose.ui:ui:1.12.1")

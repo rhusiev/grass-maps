@@ -1486,6 +1486,19 @@ A failed save leaves the plugin as it was and answers `AppError.Internal`.
 
 The control transport reports the refusal as `plugin_disabled` with the plugin id.
 
+`plugins/plugin-manager` draws the list. It owns `PluginGroups`, the 12 ids a user
+may turn off (`map.contours`, `track.layer`, `valhalla`, `guidance.ui`,
+`way.alerts`, `osm.places`, `favourites.ui`, `coordinates`, `online.search`,
+`share`, `links`, `info.widgets`), and `AppContainer` passes that set to the host.
+The file is `files/settings/plugins.json`. `MapScreen` loads it with
+`PluginHost.load()` before the map draws, so a disabled contours plugin never
+flashes. It ANDs the contours plugin state with the user's "Contours" layer
+switch, which stays a separate setting: a disabled plugin removes the contour
+and contour-index layers, and enabling it restores them. `MapScreen` draws a
+disabled plugin's own composables as before. The manager has no entry point in
+the map UI yet. The debug build opens it with `core.plugins.show` and closes it
+with `core.plugins.hide`, both allowlisted for control in the debug build only.
+
 ## Speed widgets
 
 The info widgets include three speeds (T-0316), fed by the location fix stream:

@@ -39,6 +39,7 @@ import nl.r1a.grassmap.core.services.NoHeadingSource
 import nl.r1a.grassmap.core.services.NoLocationSource
 import nl.r1a.grassmap.core.services.OnlineSearchSettings
 import nl.r1a.grassmap.core.services.PrivacyNetworkGate
+import nl.r1a.grassmap.core.services.ProfileCatalog
 import nl.r1a.grassmap.core.services.PrivacySwitchSettings
 import nl.r1a.grassmap.core.services.ProfileValueFile
 import nl.r1a.grassmap.core.services.RoutingOptionsSettings
@@ -295,6 +296,18 @@ class AppContainer(
      */
     val rasterTiles: RasterTilesAccess by lazy {
         RasterTilesAccess(providerRegistry, networkGate)
+    }
+
+    /**
+     * The profiles (T-0601). [ProfileCatalog.load] writes walk, bike and hike on
+     * the first start, so the application calls it once off the Main thread.
+     */
+    val profileCatalog: ProfileCatalog by lazy {
+        ProfileCatalog(
+            userDataRootProvider()?.let { root ->
+                ProfileValueFile(File(root, UserDataLayout.PROFILE_CATALOG_PATH), ProfileCatalog.SCHEMA_VERSION, ProfileCatalog.ERROR_ID)
+            },
+        )
     }
 
     /**

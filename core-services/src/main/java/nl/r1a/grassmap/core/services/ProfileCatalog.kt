@@ -55,6 +55,7 @@ class ProfileCatalog(
 
     companion object {
         const val SCHEMA_VERSION = 1
+        const val ERROR_ID = "core.services.profile_catalog"
         const val ROUTE_PROFILE_KEY = "route_profile"
         const val BUILT_IN_KEY = "built_in"
         private const val TRUE = "true"

@@ -108,6 +108,7 @@ open class GrassMapsApplication : Application() {
         // host is built for it, and the IO dispatcher keeps the first screen
         // from waiting on it.
         maintenanceScope.launch { container.applyAutoUpdateSchedule() }
+        maintenanceScope.launch { container.profileCatalog.load() }
         maintenanceScope.launch {
             TrackTrash.purge(
                 File(filesDir, UserDataLayout.TRACKS_DIRECTORY),

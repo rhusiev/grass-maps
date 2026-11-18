@@ -18,6 +18,7 @@ internal object UserDataLayout {
     /** The per-profile stores, one versioned file each (architecture sections 11 and 20). */
     const val PROFILES_DIRECTORY = "profiles"
     const val ROUTING_OPTIONS_PATH = "$PROFILES_DIRECTORY/routing-options.json"
+    const val PROFILE_CATALOG_PATH = "$PROFILES_DIRECTORY/catalog.json"
     const val ALERT_SETTINGS_PATH = "$PROFILES_DIRECTORY/alerts.json"
 
     /** The unversioned files the profile stores migrate from, removed once the new file is verified. */

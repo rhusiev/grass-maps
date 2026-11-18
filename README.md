@@ -654,9 +654,12 @@ switch off removes the online layer and leaves the areas. One switch in the card
 stored as `areasShown` in `settings/raster.json`, hides all areas.
 
 The contours and raster cards are closed by default behind a small `Layers`
-button at the top start. A card that is always open covers the map's centre on
-a phone, and it sat inside the map goldens' comparison window. The button
-(`plugins/layers-panel`) is view state. The card it opens starts with the map
+button at the bottom end, right-aligned above the scale bar, and the card
+opens upward from it. Presses sit at the bottom within thumb reach, so the top
+start is not used. The button and the card hide while a route, track, relation,
+analysis or follow sheet uses the bottom centre. A card that is always open
+covers the map's centre on a phone. The button (`plugins/layers-panel`) is view
+state. The card it opens starts with the map
 styles card, two radio rows: Meadow (Standard, "Everyday and city") and Trail
 (Touring, "Cycling and hiking"). The choice is stored in `settings/style.json`
 (`{"style":"touring"}`) and a missing or unknown value means Standard. The

@@ -97,6 +97,7 @@ import nl.r1a.grassmap.plugin.api.model.RouteHistoryEntry
 import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanRole
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
+import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
 import nl.r1a.grassmap.plugin.api.model.ScreenOffset
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
@@ -211,7 +212,6 @@ private const val DISTANCE_BADGE_MILLIS = 4_000L
 private const val TRACK_IMPORT_NOTICE_MILLIS = 8_000L
 private const val BANNER_STACK_GAP_DP = 8
 private const val BANNER_TICK_MILLIS = 1_000L
-private const val CONTOURS_PANEL_TOP_DP = 80
 private const val PANEL_GAP_DP = 8
 private const val METRE_DECIMALS = 1
 private const val KILOMETRE_DECIMALS = 2
@@ -804,19 +804,22 @@ private fun MapContent(
             )
         }
         if (!navigationActive) {
+            val bottomSheetShown =
+                plan.status != RoutePlanStatus.Idle ||
+                    selectedTrack != null ||
+                    (selectedRelation != null && relationSummary != null) ||
+                    (analysisTrack != null && analysisSummary != null) ||
+                    followSheet != null
             Column(
                 modifier =
                     Modifier
-                        .align(Alignment.TopStart)
-                        .statusBarsPadding()
-                        .padding(top = CONTOURS_PANEL_TOP_DP.dp, start = BAR_PADDING_DP.dp),
+                        .align(Alignment.BottomEnd)
+                        .navigationBarsPadding()
+                        .padding(BAR_PADDING_DP.dp),
+                horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
             ) {
-                LayersButton(
-                    open = layersOpen,
-                    onToggle = { layersOpen = !layersOpen },
-                )
-                if (layersOpen) {
+                if (layersOpen && !bottomSheetShown) {
                     MapStylePanel(
                         active = styleChoice,
                         onSelect = { choice ->
@@ -920,18 +923,18 @@ private fun MapContent(
                         },
                     )
                 }
+                if (!bottomSheetShown) {
+                    LayersButton(
+                        open = layersOpen,
+                        onToggle = { layersOpen = !layersOpen },
+                    )
+                }
+                MapScaleOverlay(
+                    surface = surface,
+                    settings = unitStore,
+                    modifier = Modifier,
+                )
             }
-        }
-        if (!navigationActive) {
-            MapScaleOverlay(
-                surface = surface,
-                settings = unitStore,
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .navigationBarsPadding()
-                        .padding(BAR_PADDING_DP.dp),
-            )
         }
         if (!navigationActive) {
             MapControlBar(

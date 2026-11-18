@@ -39,8 +39,8 @@ private const val UNSELECTED_MARK = "○"
  * The one small button the layers controls hide behind.
  *
  * The cards are closed until this is pressed. A card that is always open
- * covers the map's centre on a phone, and the closed button is part of the map
- * goldens' comparison window, so its size and colours must not change.
+ * covers the map's centre on a phone. The button sits at the bottom end of the
+ * map, above the scale bar, and the cards open above it.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable

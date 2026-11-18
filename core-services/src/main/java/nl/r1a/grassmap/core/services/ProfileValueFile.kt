@@ -105,8 +105,7 @@ class ProfileValueFile(
     private fun merge(
         base: ProfileValues,
         overlay: ProfileValues,
-    ): ProfileValues =
-        (base.keys + overlay.keys).associateWith { profile -> base[profile].orEmpty() + overlay[profile].orEmpty() }
+    ): ProfileValues = (base.keys + overlay.keys).associateWith { profile -> base[profile].orEmpty() + overlay[profile].orEmpty() }
 
     private fun migrate(old: LegacyProfileFile): ProfileValues {
         val expected = old.read(old.file) ?: return emptyMap()

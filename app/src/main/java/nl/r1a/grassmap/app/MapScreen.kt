@@ -1060,8 +1060,7 @@ private fun MapContent(
                 Modifier
                     .align(Alignment.BottomStart)
                     .navigationBarsPadding()
-                    .padding(BAR_PADDING_DP.dp)
-                    .reportsBottomChrome(),
+                    .padding(BAR_PADDING_DP.dp),
             )
         }
         if (!navigationActive) {

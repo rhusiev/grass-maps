@@ -21,7 +21,9 @@ import kotlin.coroutines.resume
  * Captures the current activity window as PNG for the control channel.
  *
  * The window arrives from the debug application's activity callbacks, so the
- * control module never sees an Android type. Capture tries `PixelCopy` first,
+ * control module never sees an Android type. When the window holds a map
+ * surface, the map is read from that surface and the content is drawn over it
+ * (see [MapSurfaceCompositor]). Otherwise capture tries `PixelCopy` first,
  * which is the only path that sees surface content such as the map, and falls
  * back to drawing the view hierarchy, which is what a window with no surface
  * content (the current skeleton screen) needs. The response names the path that
@@ -44,6 +46,7 @@ class AndroidWindowCapture : ControlScreenshot {
         if (view.width <= 0 || view.height <= 0) {
             return Outcome.Failure(AppError.NotReady)
         }
+        MapSurfaceCompositor.compose(window)?.let { return encode(it, MAP_COMPOSITE) }
         val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
         val captured =
             when (val copied = copyWindow(window, bitmap)) {
@@ -127,6 +130,7 @@ class AndroidWindowCapture : ControlScreenshot {
     private companion object {
         const val PIXEL_COPY = "pixel_copy"
         const val VIEW_DRAW = "view_draw"
+        const val MAP_COMPOSITE = "pixel_copy_map_surface"
         const val PNG_QUALITY = 100
     }
 }

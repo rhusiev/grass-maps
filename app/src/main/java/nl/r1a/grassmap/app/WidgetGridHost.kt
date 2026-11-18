@@ -8,7 +8,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.Dispatchers
@@ -45,12 +44,11 @@ internal fun WidgetGridHost(
     val profile = remember(container) { container.alertSettings.activeProfileId() }
     val store = container.widgetLayoutStore
     var layout by remember { mutableStateOf(WidgetLayout.DEFAULT) }
-    val currentLayout = rememberUpdatedState(layout)
     val scope = rememberCoroutineScope()
     val writer =
         remember(store, profile) {
             LayoutWriter(
-                currentLayout = { currentLayout.value },
+                currentLayout = { layout },
                 save = { value -> withContext(Dispatchers.IO) { store.save(profile, value) } },
             )
         }

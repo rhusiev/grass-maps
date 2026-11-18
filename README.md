@@ -2362,7 +2362,9 @@ stable strings. `ProfileValueFile` (`core-services`) implements it as
 `{"schema_version":1,"profiles":{"<id>":{"<key>":"<value>"}}}`, written through
 the atomic temporary-file write. One store has one schema version. A file with a
 newer `schema_version` is refused with `AppError.NewerSchema` on read and on
-write, and never overwritten. A missing or corrupt file reads as empty.
+write, and never overwritten. Only a missing file reads as empty. A file that
+exists but cannot be read or decoded fails with `AppError.CorruptData` or
+`AppError.Internal` on read and on write, and no migration replaces it.
 
 A store that replaces an older file passes a `LegacyProfileFile`. With no new
 file, the first read follows these steps:
@@ -2371,7 +2373,10 @@ file, the first read follows these steps:
 2. Write the new file, then read it back and compare.
 3. Remove the old file only when the two are equal.
 
-A crash at any step leaves the old file, so the next start migrates again. If the
+A write before the first read migrates the same way: the old values are merged
+key by key under the written ones, then the old file is removed after the
+read-back check. A crash at any step leaves the old file, so the next start
+migrates again. If the
 new file already exists it wins, and the old file is removed only when equal. An
 unreadable old file stays and reads as empty.
 
@@ -2390,10 +2395,12 @@ and writes `profiles/alerts.json`, schema version 1, and stores only a
 profile that differs from the defaults. A profile holds stable snake-case
 string keys (`off_route`, `railway_crossing`, `track_waypoint`, `poi_kinds`),
 switches as `true` or `false` and `poi_kinds` as a JSON array in a string. The
-`RouteProfile` overloads read and write the built-in profile that carries it. A
-missing, unreadable or corrupt file reads as every profile at the defaults, and
-a newer schema makes `load` fail with `AppError.NewerSchema` and every write
-fail. The old `settings/alerts.json` is read forward and removed after the
+`RouteProfile` overloads read and write the built-in profile that carries it.
+Writes run one at a time, each from a snapshot taken when it starts, so the file
+ends with the newest state. A missing file reads as every profile at the
+defaults. An unreadable, corrupt or newer-schema file makes `load` fail, leaves
+every profile at the defaults and makes every write fail, so the file is never
+replaced. The old `settings/alerts.json` is read forward and removed after the
 migration, as the profile store describes. Construction
 does not touch the disk: `AppContainer.alerts` loads it on the IO dispatcher,
 and a change is written atomically on that dispatcher, coalescing a burst into

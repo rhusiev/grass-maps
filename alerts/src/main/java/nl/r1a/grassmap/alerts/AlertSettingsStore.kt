@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -69,7 +71,9 @@ data class ProfileAlertSettings(
  * Construction does not read the store. [load] does, so the app runs it off the
  * Main thread. When [writeScope] is present, writes are coalesced on the IO
  * dispatcher: a second change while a write is in flight causes one more write
- * of the latest value instead of a write per change.
+ * of the latest value instead of a write per change. One write runs at a time
+ * and each takes its snapshot when it starts, so the file ends with the newest
+ * state.
  */
 class AlertSettingsStore(
     private val store: ProfileValueStore? = null,
@@ -81,6 +85,7 @@ class AlertSettingsStore(
     private var activeProfile: ProfileId = BuiltInProfiles.idOf(initialProfile)
     private val activeState = MutableStateFlow(ProfileAlertSettings())
     private val writeRequested = AtomicBoolean(false)
+    private val writeLock = Mutex()
 
     /** The switches, channels and chosen place kinds of the active profile. */
     val active: StateFlow<ProfileAlertSettings> = activeState.asStateFlow()
@@ -165,15 +170,22 @@ class AlertSettingsStore(
             scope.launch(Dispatchers.IO) {
                 do {
                     writeRequested.set(false)
-                    val snapshot = synchronized(this@AlertSettingsStore) { states.toMap() }
-                    val result = write(target, snapshot)
-                    if (result is Outcome.Failure) {
-                        log("alert settings not saved: ${result.error}")
-                    }
+                    writeLatest(target)
                 } while (writeRequested.get())
             }
         }
         return Outcome.Success(Unit)
+    }
+
+    /** Takes the snapshot inside the write lock, so the last write to run holds the newest state. */
+    private suspend fun writeLatest(target: ProfileValueStore) {
+        writeLock.withLock {
+            val snapshot = synchronized(this) { states.toMap() }
+            val result = write(target, snapshot)
+            if (result is Outcome.Failure) {
+                log("alert settings not saved: ${result.error}")
+            }
+        }
     }
 
     private fun write(

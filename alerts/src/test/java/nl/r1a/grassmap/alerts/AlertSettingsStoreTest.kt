@@ -1,5 +1,8 @@
 package nl.r1a.grassmap.alerts
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.runBlocking
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.BuiltInProfiles
@@ -11,6 +14,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 /** The per-profile alert settings (T-0413) on the profile store (T-0601). */
 class AlertSettingsStoreTest {
@@ -146,6 +152,50 @@ class AlertSettingsStoreTest {
             store.set(RouteProfile.Bike, ProfileAlertSettings(settings = AlertSettings(signal = true))),
         )
         assertEquals(emptyMap<ProfileId, Map<String, String>>(), backing.stored)
+    }
+
+    @Test
+    fun twoWritersRacingLeaveTheNewestSnapshotInTheFile() {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val secondWritten = CountDownLatch(1)
+        val calls = AtomicInteger()
+        val backing =
+            object : ProfileValueStore {
+                @Volatile var stored: ProfileValues = emptyMap()
+
+                override fun read(): Outcome<ProfileValues> = Outcome.Success(stored)
+
+                override fun write(values: ProfileValues): Outcome<Unit> {
+                    if (calls.incrementAndGet() == 1) {
+                        entered.countDown()
+                        release.await()
+                    } else {
+                        secondWritten.countDown()
+                    }
+                    stored = values
+                    return Outcome.Success(Unit)
+                }
+            }
+        val job = Job()
+        val store = AlertSettingsStore(backing, writeScope = CoroutineScope(job))
+        val older = ProfileAlertSettings(settings = AlertSettings(signal = true))
+        val newer = ProfileAlertSettings(settings = AlertSettings(signal = true, reroute = true))
+
+        store.set(RouteProfile.Walk, older)
+        assertTrue(entered.await(WAIT_S, TimeUnit.SECONDS))
+        store.set(RouteProfile.Walk, newer)
+        secondWritten.await(SECOND_WRITER_GRACE_MS, TimeUnit.MILLISECONDS)
+        release.countDown()
+        runBlocking { job.children.toList().forEach { it.join() } }
+
+        val reloaded = AlertSettingsStore(backing).also { it.load() }
+        assertEquals(newer, reloaded.forProfile(RouteProfile.Walk))
+    }
+
+    private companion object {
+        const val WAIT_S = 10L
+        const val SECOND_WRITER_GRACE_MS = 300L
     }
 
     private class MemoryStore(

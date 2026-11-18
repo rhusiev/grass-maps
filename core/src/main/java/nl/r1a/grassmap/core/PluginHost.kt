@@ -18,11 +18,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import nl.r1a.grassmap.plugin.api.command.Command
 import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.contract.Plugin
 import nl.r1a.grassmap.plugin.api.contract.PluginContext
 import nl.r1a.grassmap.plugin.api.contract.PluginId
+import nl.r1a.grassmap.plugin.api.contract.PluginManagement
 import nl.r1a.grassmap.plugin.api.contract.StreamId
 import nl.r1a.grassmap.plugin.api.contract.WidgetId
 import nl.r1a.grassmap.plugin.api.error.AppError
@@ -61,6 +63,7 @@ import nl.r1a.grassmap.plugin.api.manifest.PluginManifest
 import nl.r1a.grassmap.plugin.api.manifest.WidgetDeclaration
 import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmap.plugin.api.model.PluginInfo
 import nl.r1a.grassmap.plugin.api.model.PluginState
 import nl.r1a.grassmap.plugin.api.model.PluginStatus
 import nl.r1a.grassmap.plugin.api.provider.Provider
@@ -72,6 +75,7 @@ import nl.r1a.grassmap.plugin.api.service.NetworkGate
 import nl.r1a.grassmap.plugin.api.service.NoLogger
 import nl.r1a.grassmap.plugin.api.service.NoNetworkGate
 import nl.r1a.grassmap.plugin.api.widget.WidgetDescriptor
+import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
@@ -83,6 +87,12 @@ import kotlin.time.TimeSource
  *
  * [hostCommands] are process-level commands the host itself owns, such as the map
  * controls. They are looked up directly and never activate a plugin.
+ *
+ * The user can turn a plugin in [switchable] off. [enabledStore] keeps that
+ * choice across restarts. A disabled plugin is deactivated and every command,
+ * stream, widget and provider lookup answers [AppError.PluginDisabled] until it
+ * is turned back on. The constructor does no I/O: [load] reads the store, and
+ * every lookup that can activate a plugin calls it first.
  */
 class PluginHost(
     plugins: List<PluginFactory>,
@@ -107,6 +117,8 @@ class PluginHost(
     private val regionDownloadsAccess: RegionDownloadsAccess = NoRegionDownloadsAccess,
     private val profileSettingsAccess: ProfileSettingsAccess = NoProfileSettingsAccess,
     private val logger: Logger = NoLogger,
+    private val enabledStore: PluginEnabledStore = NoPluginEnabledStore,
+    private val switchable: Set<PluginId> = emptySet(),
 ) {
     private val factories: Map<PluginId, PluginFactory> = plugins.associateBy { it.manifest.id }
     private val streamOwners: Map<StreamId, PluginId> = streams.associate { it.id to it.pluginId }
@@ -126,10 +138,16 @@ class PluginHost(
     private val activations = ConcurrentHashMap<PluginId, Deferred<Outcome<Unit>>>()
     private val active = mutableMapOf<PluginId, ActivePlugin>()
     private val failed = mutableSetOf<PluginId>()
+    private val disabled = mutableSetOf<PluginId>()
+
+    @Volatile
+    private var loaded = false
     private val _statuses =
         MutableStateFlow(
-            plugins.map { PluginStatus(pluginId = it.manifest.id, state = PluginState.DECLARED) },
+            plugins.map { initialStatus(it.manifest, it.manifest.id in switchable) },
         )
+    private val stateStream: StreamDescriptor<List<PluginStatus>> =
+        StreamDescriptor(PluginManagement.stateStream, pluginStateSerializer, _statuses)
 
     val statuses: StateFlow<List<PluginStatus>> = _statuses.asStateFlow()
 
@@ -143,6 +161,7 @@ class PluginHost(
         if (currentCoroutineContext()[ActivationElement]?.pluginId == pluginId) {
             return Outcome.Failure(AppError.NotReady)
         }
+        load()
         val activation = mutex.withLock { claimActivation(pluginId) }
         val job =
             when (activation) {
@@ -166,6 +185,9 @@ class PluginHost(
      * A finished job removes its own entry, never a newer job for the same plugin.
      */
     private fun claimActivation(pluginId: PluginId): Activation {
+        if (pluginId in disabled) {
+            return Activation.Ready(Outcome.Failure(AppError.PluginDisabled(pluginId)))
+        }
         if (active.containsKey(pluginId)) {
             return Activation.Ready(Outcome.Success(Unit))
         }
@@ -209,6 +231,10 @@ class PluginHost(
     }
 
     suspend fun stream(id: StreamId): Outcome<StreamDescriptor<*>> {
+        if (id == PluginManagement.stateStream) {
+            load()
+            return Outcome.Success(stateStream)
+        }
         val owner = streamOwners[id] ?: return Outcome.Failure(AppError.NotFound)
         val activation = ensureActive(owner)
         if (activation is Outcome.Failure) {
@@ -261,6 +287,107 @@ class PluginHost(
                 Outcome.Failure(AppError.NotFound)
             } else {
                 Outcome.Success(provider)
+            }
+        }
+    }
+
+    /**
+     * Reads the persisted switches once, off the caller's thread. Later calls
+     * return at once. A plugin the user turned off starts as DEACTIVATED.
+     */
+    suspend fun load() {
+        if (loaded) {
+            return
+        }
+        mutex.withLock {
+            if (loaded) {
+                return
+            }
+            val stored = withContext(dispatcher) { enabledStore.loadDisabled() }
+            disabled += stored.filter { it in factories && it in switchable }
+            loaded = true
+            disabled.forEach { id -> markSwitch(id, enabled = false, state = PluginState.DEACTIVATED) }
+        }
+    }
+
+    /**
+     * Turns [pluginId] on or off and persists the choice. Only a [switchable]
+     * plugin can change. Turning one off deactivates it. Turning one on clears
+     * a failure, so a stopped plugin restarts on its next use.
+     */
+    suspend fun setEnabled(
+        pluginId: PluginId,
+        enabled: Boolean,
+    ): Outcome<PluginStatus> {
+        load()
+        if (pluginId !in factories) {
+            return Outcome.Failure(AppError.NotFound)
+        }
+        if (pluginId !in switchable) {
+            return Outcome.Failure(AppError.Unsupported)
+        }
+        val deactivated =
+            mutex.withLock { switchLocked(pluginId, enabled) }
+                ?: return Outcome.Failure(AppError.Internal(STORE_ERROR_ID))
+        deactivated.plugin?.let(::deactivateQuietly)
+        return Outcome.Success(checkNotNull(statusOf(pluginId)))
+    }
+
+    /** Applies the switch under the lock. Returns null when the store refused the write. */
+    private suspend fun switchLocked(
+        pluginId: PluginId,
+        enabled: Boolean,
+    ): Switched? {
+        val wasDisabled = pluginId in disabled
+        val next = if (enabled) disabled - pluginId else disabled + pluginId
+        if (next != disabled) {
+            try {
+                withContext(dispatcher) { enabledStore.saveDisabled(next) }
+            } catch (exception: IOException) {
+                return null
+            } catch (exception: SecurityException) {
+                return null
+            }
+        }
+        disabled.clear()
+        disabled += next
+        if (!enabled) {
+            val removed = active.remove(pluginId)
+            markSwitch(pluginId, enabled = false, state = PluginState.DEACTIVATED)
+            return Switched(removed?.plugin)
+        }
+        if (pluginId in failed || wasDisabled) {
+            failed -= pluginId
+            markSwitch(pluginId, enabled = true, state = PluginState.DECLARED, resetFailures = true)
+        }
+        return Switched(null)
+    }
+
+    private fun deactivateQuietly(plugin: Plugin) {
+        try {
+            plugin.deactivate()
+        } catch (exception: Exception) {
+            // Deactivation is best effort; the plugin is already off.
+        }
+    }
+
+    private fun markSwitch(
+        pluginId: PluginId,
+        enabled: Boolean,
+        state: PluginState,
+        resetFailures: Boolean = false,
+    ) {
+        _statuses.update { statuses ->
+            statuses.map { status ->
+                if (status.pluginId != pluginId) {
+                    status
+                } else {
+                    status.copy(
+                        enabled = enabled,
+                        state = state,
+                        failures = if (resetFailures) 0 else status.failures,
+                    )
+                }
             }
         }
     }
@@ -321,7 +448,7 @@ class PluginHost(
 
         val activePlugin =
             when (
-                val contributions = validateContributions(factory.manifest, session)
+                val contributions = validateContributions(factory.manifest, session, plugin)
             ) {
                 is Outcome.Success -> {
                     contributions.value
@@ -333,7 +460,19 @@ class PluginHost(
                 }
             }
 
-        mutex.withLock { active[pluginId] = activePlugin }
+        val stillEnabled =
+            mutex.withLock {
+                (pluginId !in disabled).also { enabled ->
+                    if (enabled) {
+                        active[pluginId] = activePlugin
+                    }
+                }
+            }
+        if (!stillEnabled) {
+            deactivateQuietly(plugin)
+            updateState(pluginId, PluginState.DEACTIVATED)
+            return Outcome.Failure(AppError.PluginDisabled(pluginId))
+        }
         val activatedAt = clockMillis()
         updateState(
             pluginId = pluginId,
@@ -347,6 +486,7 @@ class PluginHost(
     private fun validateContributions(
         manifest: PluginManifest,
         session: ActivationSession,
+        plugin: Plugin,
     ): Outcome<ActivePlugin> {
         val commands = session.commands.associateBy { it.id }
         val streams = session.streams.associateBy { it.id }
@@ -417,6 +557,7 @@ class PluginHost(
 
         return Outcome.Success(
             ActivePlugin(
+                plugin = plugin,
                 commands = commands,
                 streams = streams,
                 providers = providers,
@@ -471,6 +612,11 @@ class PluginHost(
         }
     }
 
+    /** The plugin instance a switch-off took out of service, to deactivate outside the lock. */
+    private class Switched(
+        val plugin: Plugin?,
+    )
+
     private sealed interface Activation {
         data class Ready(
             val outcome: Outcome<Unit>,
@@ -489,6 +635,7 @@ class PluginHost(
     }
 
     private class ActivePlugin(
+        val plugin: Plugin,
         val commands: Map<CommandId, Command<*, *>>,
         val streams: Map<StreamId, StreamDescriptor<*>>,
         val providers: Map<ProviderContract, Provider>,
@@ -563,6 +710,28 @@ class PluginHost(
     private companion object {
         /** Commands the host owns carry the core plugin id in the bus catalog. */
         val HOST_COMMAND_OWNER: PluginId = PluginId("core")
+
+        const val STORE_ERROR_ID: String = "core.plugin_enabled_store"
+
+        fun initialStatus(
+            manifest: PluginManifest,
+            isSwitchable: Boolean,
+        ): PluginStatus =
+            PluginStatus(
+                pluginId = manifest.id,
+                state = PluginState.DECLARED,
+                switchable = isSwitchable,
+                info =
+                    PluginInfo(
+                        nameKey = manifest.name,
+                        descriptionKey = manifest.description,
+                        version = manifest.version,
+                        commandCount = manifest.contributes.commands.size,
+                        network = manifest.needs.network,
+                        location = manifest.needs.location,
+                        regions = manifest.needs.regions,
+                    ),
+            )
     }
 }
 

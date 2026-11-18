@@ -98,6 +98,8 @@ internal fun testHost(
     scheduler: TestCoroutineScheduler,
     manifest: PluginManifest,
     streams: List<GeneratedStream> = emptyList(),
+    enabledStore: PluginEnabledStore = NoPluginEnabledStore,
+    switchable: Set<PluginId> = emptySet(),
     create: () -> Plugin,
 ): PluginHost =
     PluginHost(
@@ -108,6 +110,8 @@ internal fun testHost(
                 testGeneratedCommand(it, manifest.id)
             },
         dispatcher = StandardTestDispatcher(scheduler),
+        enabledStore = enabledStore,
+        switchable = switchable,
     )
 
 internal fun testBus(

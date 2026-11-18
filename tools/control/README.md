@@ -43,7 +43,7 @@ Stream values arrive as `control.stream.data` notifications with
 `{subscription, stream, value}`. Refusals carry a JSON-RPC error whose `data`
 has a `kind`. The kinds are `unauthorized`, `not_allowlisted`,
 `unknown_command`, `unknown_stream`, `not_subscribed`, `switch_off`,
-`plugin_failed`, `routing_pack_absent`, `routing_pack_incomplete` and
+`plugin_failed`, `plugin_disabled`, `routing_pack_absent`, `routing_pack_incomplete` and
 `routing_pack_unusable`.
 
 A routing-pack refusal uses code `-32005`. Its message is `routing pack absent`,

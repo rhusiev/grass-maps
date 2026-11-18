@@ -1,5 +1,8 @@
 package nl.r1a.grassmap.plugin.api.contract
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 @JvmInline
 value class PluginId(
     val value: String,

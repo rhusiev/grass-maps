@@ -1456,6 +1456,35 @@ over an undeclared stream, or a policy field the generator does not understand.
 Every module that carries a manifest wires the check into `check`, as does
 `app:check`.
 
+## Plugin switches (T-0607)
+
+`PluginHost` can turn a switchable plugin off and on. The app passes the set of
+switchable plugin ids to the host. Every other plugin is essential and
+`core.plugins.set_enabled` answers `Unsupported` for it.
+
+`core.plugins.state` is a host stream of `List<PluginStatus>`. Each status adds
+`enabled`, `switchable` and a `PluginInfo` (name and description keys, version,
+command count, network and location needs, map data). `core.plugins.set_enabled`
+takes `{plugin, enabled}` and returns the new `PluginStatus`. It runs on the IO
+dispatcher, is not undoable and is not allowlisted for the control transport,
+like the map controls.
+
+Turning a plugin off marks it `DEACTIVATED`, calls `Plugin.deactivate()` and
+makes `command`, `stream`, `widget` and `provider` answer
+`AppError.PluginDisabled` until it is turned on again. Turning one on clears a
+failure, so a stopped plugin restarts on its next use. A disable that arrives
+while the plugin is still activating wins: the activation is rolled back. A
+stream a consumer already collects keeps emitting after a disable.
+
+The disabled ids persist through `PluginEnabledStore`. `FilePluginEnabledStore`
+writes `{"version":1,"disabled":[...]}` through a `.part` sibling and an atomic
+rename. A missing, corrupt or wrong-version file reads as "all enabled", and a
+stored id that is unknown or essential is ignored. The host reads the store in
+`PluginHost.load()`, which runs on the first use, so the constructor does no I/O.
+A failed save leaves the plugin as it was and answers `AppError.Internal`.
+
+The control transport reports the refusal as `plugin_disabled` with the plugin id.
+
 ## Speed widgets
 
 The info widgets include three speeds (T-0316), fed by the location fix stream:

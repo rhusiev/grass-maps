@@ -803,6 +803,7 @@ class RoutePlanner(
             AppError.NotFound,
             AppError.NotReady,
             is AppError.PluginFailed,
+            is AppError.PluginDisabled,
             -> {
                 RoutePlanFailure.EngineUnavailable
             }

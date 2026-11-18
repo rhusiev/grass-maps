@@ -275,7 +275,9 @@ internal class TrackShareImport(
  */
 internal fun trackImportFailure(error: AppError): TrackImportFailure =
     when (error) {
-        AppError.Unsupported, AppError.InvalidInput, AppError.CorruptData, is AppError.PluginFailed -> {
+        AppError.Unsupported, AppError.InvalidInput, AppError.CorruptData, is AppError.PluginFailed,
+        is AppError.PluginDisabled,
+        -> {
             TrackImportFailure.NotATrack
         }
 

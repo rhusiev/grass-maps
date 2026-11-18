@@ -39,6 +39,11 @@ sealed interface AppError {
         val pluginId: PluginId,
     ) : AppError
 
+    /** The user turned [pluginId] off in the plugin manager, so it serves nothing. */
+    data class PluginDisabled(
+        val pluginId: PluginId,
+    ) : AppError
+
     /**
      * A routing pack is absent, incomplete or unreadable, so no engine can
      * serve a route. [detail] is diagnostic data for the log, never user text.

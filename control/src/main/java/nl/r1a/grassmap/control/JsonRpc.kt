@@ -209,6 +209,15 @@ object JsonRpcCodec {
                 )
             }
 
+            is AppError.PluginDisabled -> {
+                refusal(
+                    RpcCodes.INTERNAL,
+                    "plugin_disabled",
+                    "plugin disabled",
+                    mapOf("plugin" to JsonPrimitive(error.pluginId.value)),
+                )
+            }
+
             is AppError.RoutingPackUnavailable -> {
                 val kind =
                     when (error.reason) {

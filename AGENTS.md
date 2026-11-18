@@ -35,8 +35,8 @@ document, section 3, plus the build and module rules of this repository.
   Anything like it later is opt-in and a user decision. No Google Play Services
   dependency (F-Droid)
 - Network access only through the core network capability, which refuses every
-  request whose privacy switch is off. A new kind of network contact is a user
-  decision
+  request whose privacy switch is off, and cancels a request already running
+  when its switch goes off. A new kind of network contact is a user decision
 - Location never leaves the device unless the user shares it themselves
   (one-off share). Live location sharing and tracking are not built
 

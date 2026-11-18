@@ -3588,6 +3588,20 @@ Every download runs through `NetworkAccess`. Production wires
 `network.region_updates` and is refused while that switch is off. The debug
 trigger can replace the gate with a logged bypass; nothing else may.
 
+Turning a switch off also stops a request already running behind it
+(architecture section 26). `PrivacyNetworkGate` watches `PrivacySwitches.changes`
+while the block runs. When the switch goes off it cancels the block, and the
+request returns `AppError.SwitchOff` at the transport's next chunk, because each
+transport checks for cancellation before every read: `HttpDownloadTransport`,
+`HttpPhotonTransport` and `HttpRasterTileTransport`. The switch's counter
+records the one contact the gate permitted and nothing after it. A region
+download that is cancelled this way installs nothing and deletes its work and
+staging directory under `.incoming`. Its partial archive stays, as after a lost
+connection, so turning the switch back on resumes the download. The map engine
+fetches its own tiles through its native HTTP stack: `GatedTileInterceptor`
+refuses every new tile URL once the switch is off, but a tile the engine has
+already started loading ends by itself.
+
 The store layout is:
 
 ```

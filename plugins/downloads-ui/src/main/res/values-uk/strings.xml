@@ -7,7 +7,7 @@
     <string name="downloads_first_run_title">Завантажити для початку</string>
     <string name="downloads_on_this_phone">На цьому телефоні</string>
     <string name="downloads_available">Доступні</string>
-    <string name="downloads_map_description">Мапа областей. Торкніться області, щоб відкрити її</string>
+    <string name="downloads_map_description">Мапа областей, розфарбована за станом завантаження. Відкрийте область зі списку</string>
     <string name="downloads_search_hint">Пошук областей</string>
     <string name="downloads_search_results">Результати пошуку</string>
     <string name="downloads_search_empty">Жодна область не підходить</string>

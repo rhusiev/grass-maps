@@ -68,6 +68,22 @@ class DownloadsUiStringsTest {
         }
     }
 
+    @Test
+    fun theMapOverviewIsNotAButton() {
+        for (path in listOf(ENGLISH, UKRAINIAN)) {
+            val description = resources(path).getValue("downloads_map_description")
+            assertTrue("$path: the map has no description", description.isNotBlank())
+            assertFalse(
+                "$path: the map asks for a per-region tap",
+                description.contains("Tap", true) || description.contains("Торкніться", true),
+            )
+            assertTrue(
+                "$path: the map does not name the list",
+                description.contains("list") || description.contains("списку"),
+            )
+        }
+    }
+
     private fun resources(path: String): Map<String, String> =
         Regex("""<string name="([^"]+)">([^<]*)</string>""")
             .findAll(File(path).readText())

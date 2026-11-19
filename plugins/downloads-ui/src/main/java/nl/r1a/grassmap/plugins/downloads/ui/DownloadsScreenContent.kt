@@ -30,7 +30,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -140,7 +144,7 @@ fun DownloadsScreenContent(
                     style = TextStyle(color = INK, fontSize = BACK_GLYPH_SP.sp),
                     modifier =
                         Modifier
-                            .clickable(onClick = onClose)
+                            .clickable(role = Role.Button, onClick = onClose)
                             .semantics { contentDescription = close }
                             .padding(BACK_TOUCH_DP.dp),
                 )
@@ -383,7 +387,12 @@ private fun SearchField(
         decorationBox = { innerTextField ->
             Box {
                 if (text.isEmpty()) {
-                    BasicText(text = hint, style = TextStyle(color = MUTED, fontSize = BODY_FONT_SP.sp))
+                    BasicText(
+                        text = hint,
+                        style = TextStyle(color = MUTED, fontSize = BODY_FONT_SP.sp),
+                        // The field already carries the hint as its label.
+                        modifier = Modifier.clearAndSetSemantics {},
+                    )
                 }
                 innerTextField()
             }
@@ -665,7 +674,10 @@ private fun TransferBar(percent: Int) {
                 .fillMaxWidth()
                 .height(PROGRESS_BAR_DP.dp)
                 .clip(RoundedCornerShape(PROGRESS_BAR_DP.dp))
-                .background(BORDER),
+                .background(BORDER)
+                .semantics {
+                    progressBarRangeInfo = ProgressBarRangeInfo(percent.coerceIn(0, 100) / 100f, 0f..1f)
+                },
     ) {
         Box(
             modifier =
@@ -708,7 +720,7 @@ private fun Card(
             .background(CARD)
             .padding(CARD_PADDING_DP.dp)
     Column(
-        modifier = if (onClick == null) base else base.clickable(onClick = onClick),
+        modifier = if (onClick == null) base else base.clickable(role = Role.Button, onClick = onClick),
         verticalArrangement = Arrangement.spacedBy(SPACED_DP.dp),
     ) {
         content()
@@ -740,7 +752,7 @@ private fun ActionButton(
             Modifier
                 .clip(RoundedCornerShape(CARD_CORNER_DP.dp))
                 .background(background)
-                .clickable(onClick = onClick)
+                .clickable(role = Role.Button, onClick = onClick)
                 .padding(horizontal = CARD_PADDING_DP.dp, vertical = GAP_DP.dp),
     ) {
         BasicText(

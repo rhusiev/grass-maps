@@ -4,6 +4,7 @@ import android.content.Context
 import nl.r1a.grassmap.map.MapTileSource
 import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.InstalledPack
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
 import nl.r1a.grassmap.plugin.api.model.SourceId
 import nl.r1a.grassmap.regions.RegionIdentifiers
@@ -13,6 +14,15 @@ import nl.r1a.grassmap.regions.RegionMounts
 import nl.r1a.grassmap.regions.RegionTileSources
 import nl.r1a.grassmap.regions.TileKind
 import java.io.File
+
+/**
+ * One pack the map serves: the region id and the version directory that
+ * mounted. Two resolutions that name the same packs serve the same tiles.
+ */
+internal data class ServedPack(
+    val region: String,
+    val version: String,
+)
 
 /**
  * Resolves the logical map sources of T-0020, in this order:
@@ -44,6 +54,8 @@ internal class MapSources private constructor(
     val hasContours: Boolean,
     val regionProblem: RegionMountProblem?,
     val problemRegion: String?,
+    /** The packs these sources serve, by region id and version, in tile-ownership order. */
+    val packs: List<ServedPack>,
 ) {
     fun uri(id: SourceId): String? = uris[id]
 
@@ -86,6 +98,7 @@ internal class MapSources private constructor(
         ): MapSources {
             val mounts = regionsRoot?.let(mount)
             val problem = mounts?.broken?.firstOrNull()
+            val packs = packsOf(mounts)
             val tiles = mounts?.let { RegionTileSources.open(it.installed) } ?: RegionTileSources.empty()
             if (tiles.has(TileKind.MAP)) {
                 return MapSources(
@@ -98,6 +111,7 @@ internal class MapSources private constructor(
                     // its "needs re-download" banner is never lost.
                     regionProblem = problem?.problem,
                     problemRegion = problem?.region,
+                    packs = packs,
                 )
             }
             val lviv = directories.map { File(it, LVIV_ARCHIVE) }.firstOrNull { it.isUsable() }
@@ -123,8 +137,17 @@ internal class MapSources private constructor(
                 hasContours = contours != null,
                 regionProblem = problem?.problem,
                 problemRegion = problem?.region,
+                packs = packs,
             )
         }
+
+        /** The mounted packs in the order that decides tile ownership. */
+        private fun packsOf(mounts: RegionMounts?): List<ServedPack> =
+            mounts
+                ?.installed
+                .orEmpty()
+                .sortedBy { it.region }
+                .map { ServedPack(it.region, it.version) }
 
         /**
          * The one logical source per kind. `world` and `region` are two source
@@ -177,3 +200,11 @@ internal class MapSources private constructor(
         private fun File.isUsable(): Boolean = isFile && length() > 0
     }
 }
+
+/**
+ * The packs [installed] publishes, in the same form and order as
+ * [MapSources.packs]. Equal lists mean the map already serves the packs on the
+ * phone, so a store update is no reason to mount the store again.
+ */
+internal fun servedPacks(installed: List<InstalledPack>): List<ServedPack> =
+    installed.sortedBy { it.region }.map { ServedPack(it.region, it.version) }

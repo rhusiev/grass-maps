@@ -9,8 +9,10 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
 import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
+import nl.r1a.grassmap.regions.InstalledPacks
 import nl.r1a.grassmap.regions.RegionIdentifiers
 import nl.r1a.grassmap.regions.RegionMountProblem
+import nl.r1a.grassmap.regions.RegionMountResolver
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -49,6 +51,7 @@ class MapSourcesTest {
         assertTrue(sources.hasContours)
         assertNull(sources.regionProblem)
         assertEquals("region:ua-46/${TestRegions.DEFAULT_VERSION}", sources.regionName)
+        assertEquals(listOf(ServedPack("ua-46", TestRegions.DEFAULT_VERSION)), sources.packs)
     }
 
     @Test
@@ -151,6 +154,19 @@ class MapSourcesTest {
         assertNull(sources.uri(MapSourceIds.REGION))
         assertTrue(sources.tileSources.isEmpty())
         assertEquals("none", sources.regionName)
+        assertTrue(sources.packs.isEmpty())
+    }
+
+    @Test
+    fun theServedPacksAreThePacksTheStorePublishes() {
+        install("ua-46")
+        install("ua-61")
+        installWorld()
+
+        val sources = resolve()
+        val installed = InstalledPacks.of(store.toFile(), RegionMountResolver(store.toFile()).resolveAll().installed)
+
+        assertEquals(servedPacks(installed), sources.packs)
     }
 
     @Test
@@ -182,30 +198,8 @@ class MapSourcesTest {
         assertEquals(pmtiles(contours), sources.uri(MapSourceIds.CONTOURS))
     }
 
-    /**
-     * Installs the committed fixture package under [region], copied into the
-     * temporary store so nothing can delete the repository's test data.
-     */
-    private fun install(region: String) {
-        val source = TestRegions.load().root
-        val target = Files.createDirectories(store.resolve(region).resolve(TestRegions.DEFAULT_VERSION))
-        Files.list(source).use { entries ->
-            entries.forEach { file ->
-                val name = file.fileName.toString()
-                val bytes = Files.readAllBytes(file)
-                val content =
-                    if (name == "manifest.json") {
-                        String(bytes, Charsets.UTF_8)
-                            .replace("\"region\": \"${TestRegions.DEFAULT_REGION}\"", "\"region\": \"$region\"")
-                            .toByteArray(Charsets.UTF_8)
-                    } else {
-                        bytes
-                    }
-                Files.write(target.resolve(name), content)
-            }
-        }
-        Files.writeString(store.resolve(region).resolve("current"), TestRegions.DEFAULT_VERSION + "\n")
-    }
+    /** Installs the committed fixture package under [region] into the temporary store. */
+    private fun install(region: String) = installFixturePack(store, region)
 
     /** A real map-only world package: the fixture's map file and a manifest that lists only it. */
     private fun installWorld() {

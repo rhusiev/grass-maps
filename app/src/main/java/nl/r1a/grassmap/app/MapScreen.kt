@@ -264,21 +264,35 @@ internal fun MapScreen(
     harness: MapHarness,
 ) {
     val context = LocalContext.current
-    val bundle by
-        produceState<MapBundle?>(null) {
-            value =
-                withContext(Dispatchers.IO) {
-                    prepareMapEngine(context.applicationContext, container.rasterTiles.policy)
-                    loadBundle(container, context.applicationContext)
-                }
-            if (value == null) {
-                Log.w(TAG, "no map style provider; check the style.standard plugin manifest")
+    var bundle by remember { mutableStateOf<MapBundle?>(null) }
+    LaunchedEffect(container) {
+        bundle =
+            withContext(Dispatchers.IO) {
+                prepareMapEngine(context.applicationContext, container.rasterTiles.policy)
+                loadBundle(container, context.applicationContext)
             }
+        if (bundle == null) {
+            Log.w(TAG, "no map style provider; check the style.standard plugin manifest")
         }
+    }
     val loaded = bundle
     if (loaded == null) {
         Box(Modifier.fillMaxSize().background(Color(0xFF202020)))
         return
+    }
+    // A region installed or removed while this screen is open must draw
+    // without a restart. The region store publishes the packs it mounted, so
+    // that list, and not a fix or a recomposition, decides when the sources are
+    // resolved again.
+    var sources by remember(loaded) { mutableStateOf(loaded.sources) }
+    LaunchedEffect(container, loaded) {
+        val store = container.regionStore ?: return@LaunchedEffect
+        mapSourcesFollowing(loaded.sources, store.data.map { it.installed }) {
+            withContext(Dispatchers.IO) { MapSources.resolve(context.applicationContext, container.regionsRoot) }
+        }.collect { next ->
+            sources = next
+            Log.i(TAG, "map sources reloaded region=${next.regionName} contours=${next.hasContours}")
+        }
     }
     val ageLabel =
         remember(context) {
@@ -293,9 +307,20 @@ internal fun MapScreen(
             appTiles = loaded.sources.tileSources,
             labels = container.mapLabelSettings.options,
         )
+    LaunchedEffect(surface.host, sources) {
+        // The surface was built with the first resolution; only a later one is
+        // a change, and an unchanged one would rebuild the plan for nothing.
+        if (sources === loaded.sources) {
+            return@LaunchedEffect
+        }
+        surface.host.setSources(sources::uri, sources.tileSources).onFailure { error ->
+            Log.w(TAG, "map sources rejected: $error")
+        }
+    }
+    val shown = remember(loaded, sources) { loaded.copy(sources = sources) }
     BindMapSession(container, container.mapSession, surface)
     CompositionLocalProvider(LocalBottomChrome provides remember { BottomChrome() }) {
-        MapContent(container, surface, loaded, harness)
+        MapContent(container, surface, shown, harness)
     }
 }
 

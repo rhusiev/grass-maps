@@ -691,8 +691,11 @@ the full texts with their links. It sits above the engine's logo in the
 bottom-left corner and rises above any bottom bar or sheet that is showing
 (the navigation trip bar, the route, track and follow sheets, the layers
 card): each reports its top edge through `BottomChrome` in `ui-shell`, and
-`MapAttributionOverlay` takes the highest as `bottomInset`. MapLibre's logo is
-optional under its BSD licence, while the source credits are not. OSM's tile
+`MapAttributionOverlay` takes the highest as `bottomInset`. The scale bar reads
+the same collector: a bottom sheet hides it rather than letting it sit on the
+sheet's own controls. The debug build's development-tools panel takes the
+sheet's reach as bottom padding, so it stays above an open sheet. MapLibre's
+logo is optional under its BSD licence, while the source credits are not. OSM's tile
 policy forbids offline bulk download, so `RasterOfflineDownload.prepare`
 refuses it. The same refusal applies to a custom template on the same host.
 
@@ -1414,9 +1417,12 @@ The unit system is `UnitSystem` in `plugin-api`, and `core-services`
 `UnitSettings` stores it as `filesDir/settings/units.json` with metric as the
 default; a missing or corrupt file reads as metric. `MapScreen` resolves the
 settings object off Main and collects its flow, so a change redraws the bar.
-Until a settings screen exists, the control-channel command
-`core.settings.units` sets it: `{"units":"imperial"}` or the bare string. The
-command is allowlisted for control and runs on the IO dispatcher.
+The route planner sheet reads the same value: its preview, turn and warning
+distances go through `distanceText`, and its elevation chart labels both the
+distance axis and the climb in the set units. Until a settings screen exists,
+the control-channel command `core.settings.units` sets it:
+`{"units":"imperial"}` or the bare string. The command is allowlisted for
+control and runs on the IO dispatcher.
 
 The release build installs `AndroidLocationSource`, which reads the platform
 `LocationManager` GPS and network providers; there is no Play Services and no
@@ -1735,10 +1741,10 @@ or labels.
 
 A route preview frames the selected route in the map area above the planner
 sheet. `MapHost.fitBounds(bounds, bottomInsetDp)` pads the camera by the height
-the sheet covers: `BottomChrome.reachOf` for the planner sheet's own key, read
-once it has held for 150 ms, or 0 after 1.5 s. The fit is skipped when the
-camera moved during that wait. A host without padding falls back to
-`fitBounds(bounds)`.
+the sheet covers: `BottomChrome.reachOf` for `BOTTOM_SHEET_KEY`, the key every
+bottom sheet over the map reports under, read once it has held for 150 ms, or 0
+after 1.5 s. The fit is skipped when the camera moved during that wait. A host
+without padding falls back to `fitBounds(bounds)`.
 
 `plugins/direct-engine` is the second `routing.engine` provider (T-0305), and
 the proof that the engine seam is real: the planner and the follower consume

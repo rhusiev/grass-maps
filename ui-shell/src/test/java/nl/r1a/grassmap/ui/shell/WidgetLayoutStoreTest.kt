@@ -48,7 +48,7 @@ class WidgetLayoutStoreTest {
     }
 
     @Test
-    fun unknownKeysAreDroppedAndDuplicatesKeptOnce() {
+    fun unknownKeysAreNotShownAndDuplicatesKeptOnce() {
         val store = WidgetLayoutStore(FakeStore(mapOf(walk to mapOf("widgets" to "altitude,battery,altitude,speed_max"))))
         store.load()
         assertEquals(listOf(GridWidget.Altitude, GridWidget.SpeedMax), store.layoutOf(walk).widgets)
@@ -65,14 +65,50 @@ class WidgetLayoutStoreTest {
         assertEquals(emptyMap<ProfileId, Map<String, String>>(), backing.values)
     }
 
+    @Test
+    fun aSaveAfterAFailedLoadRetriesTheLoadAndKeepsTheOtherProfiles() {
+        val backing = FakeStore(mapOf(bike to mapOf("widgets" to "altitude")), failure = AppError.PermissionDenied)
+        val store = WidgetLayoutStore(backing)
+        assertTrue(store.load() is Outcome.Failure)
+        backing.failure = null
+        assertTrue(store.save(walk, WidgetLayout(listOf(GridWidget.SpeedMax))) is Outcome.Success)
+        assertEquals("altitude", backing.values[bike]?.get("widgets"))
+        assertEquals("speed_max", backing.values[walk]?.get("widgets"))
+    }
+
+    @Test
+    fun aSaveWhileTheLoadKeepsFailingWritesNothing() {
+        val stored = mapOf(bike to mapOf("widgets" to "altitude"))
+        val backing = FakeStore(stored, failure = AppError.PermissionDenied, failsOnlyReads = true)
+        val store = WidgetLayoutStore(backing)
+        assertTrue(store.load() is Outcome.Failure)
+        assertTrue(store.save(walk, WidgetLayout(listOf(GridWidget.SpeedMax))) is Outcome.Failure)
+        assertEquals(stored, backing.values)
+        assertEquals(0, backing.writes)
+    }
+
+    @Test
+    fun savingKeepsAKeyThisBuildDoesNotKnowAtItsPosition() {
+        val backing = FakeStore(mapOf(walk to mapOf("widgets" to "altitude,battery,speed_max,battery")))
+        val store = WidgetLayoutStore(backing)
+        store.load()
+        store.save(walk, store.layoutOf(walk).move(GridWidget.SpeedMax, -1))
+        assertEquals("speed_max,battery,altitude", backing.values[walk]?.get("widgets"))
+        assertEquals(listOf(GridWidget.SpeedMax, GridWidget.Altitude), store.layoutOf(walk).widgets)
+    }
+
     private class FakeStore(
         var values: ProfileValues = emptyMap(),
-        private val failure: AppError? = null,
+        var failure: AppError? = null,
+        private val failsOnlyReads: Boolean = false,
     ) : ProfileValueStore {
+        var writes = 0
+
         override fun read(): Outcome<ProfileValues> = failure?.let { Outcome.Failure(it) } ?: Outcome.Success(values)
 
         override fun write(values: ProfileValues): Outcome<Unit> {
-            failure?.let { return Outcome.Failure(it) }
+            writes += 1
+            failure?.takeUnless { failsOnlyReads }?.let { return Outcome.Failure(it) }
             this.values = values
             return Outcome.Success(Unit)
         }

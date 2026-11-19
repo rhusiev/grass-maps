@@ -22,6 +22,12 @@ import nl.r1a.grassmap.plugin.api.service.ProfileValues
  * Construction does not read the store. [load] does, so the app runs it off the
  * Main thread. [save] loads first when nobody did, so it never replaces the
  * layouts of the other profiles with a partial view.
+ *
+ * The store never writes before a load succeeded. A save after a failed load
+ * retries the load first and fails when the retry fails, so a transient read
+ * error cannot replace the file with the layout of one profile. A key this
+ * build does not know stays in the stored value on save, at its old position,
+ * so an older build does not erase a widget a newer build added.
  */
 class WidgetLayoutStore(
     private val store: ProfileValueStore?,
@@ -33,15 +39,16 @@ class WidgetLayoutStore(
     @Synchronized
     fun load(): Outcome<Unit> {
         val read = store?.read() ?: Outcome.Success(emptyMap())
-        isLoaded = true
         return when (read) {
             is Outcome.Success -> {
                 values = read.value
+                isLoaded = true
                 Outcome.Success(Unit)
             }
 
             is Outcome.Failure -> {
                 values = emptyMap()
+                isLoaded = false
                 read
             }
         }
@@ -58,14 +65,34 @@ class WidgetLayoutStore(
         layout: WidgetLayout,
     ): Outcome<Unit> {
         if (!isLoaded) {
-            load()
+            val read = load()
+            if (read is Outcome.Failure) {
+                return read
+            }
         }
-        val next = values + (profile to (values[profile].orEmpty() + (LAYOUT_KEY to encode(layout))))
+        val next = values + (profile to (values[profile].orEmpty() + (LAYOUT_KEY to encode(profile, layout))))
         val target = store ?: return Outcome.Success(Unit).also { values = next }
         return target.write(next).also { if (it is Outcome.Success) values = next }
     }
 
-    private fun encode(layout: WidgetLayout): String = layout.widgets.joinToString(SEPARATOR) { it.storageKey }
+    private fun encode(
+        profile: ProfileId,
+        layout: WidgetLayout,
+    ): String {
+        val keys = layout.widgets.mapTo(mutableListOf()) { it.storageKey }
+        unknownKeys(values[profile]?.get(LAYOUT_KEY)).forEach { (index, key) ->
+            keys.add(index.coerceAtMost(keys.size), key)
+        }
+        return keys.joinToString(SEPARATOR)
+    }
+
+    private fun unknownKeys(stored: String?): List<IndexedValue<String>> =
+        stored
+            ?.split(SEPARATOR)
+            .orEmpty()
+            .withIndex()
+            .filter { (_, key) -> key.isNotEmpty() && GridWidget.fromStorageKey(key) == null }
+            .distinctBy { it.value }
 
     private fun decode(stored: String): WidgetLayout =
         WidgetLayout(stored.split(SEPARATOR).mapNotNull(GridWidget::fromStorageKey).distinct())

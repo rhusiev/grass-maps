@@ -74,6 +74,7 @@ import nl.r1a.grassmap.plugin.api.host.StreamAccess
 import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
 import nl.r1a.grassmap.plugin.api.model.InstalledPack
 import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
+import nl.r1a.grassmap.plugin.api.model.ProfileId
 import nl.r1a.grassmap.plugin.api.provider.CoordinateParser
 import nl.r1a.grassmap.plugin.api.provider.PlaceProvider
 import nl.r1a.grassmap.plugin.api.provider.PlaceProviderContract
@@ -133,6 +134,7 @@ import nl.r1a.grassmap.routing.RouteHistorySetting
 import nl.r1a.grassmap.routing.RouteHistoryStore
 import nl.r1a.grassmap.ui.shell.WidgetLayoutStore
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The one composition root. It wires the generated registries to the core host;
@@ -496,6 +498,24 @@ class AppContainer(
             },
         )
     }
+
+    private val widgetControllers = ConcurrentHashMap<ProfileId, WidgetLayoutController>()
+
+    /**
+     * The widget layout controller of [profile] (T-0605). It lives as long as the
+     * process, so a save the grid requested just before it left the composition
+     * still finishes.
+     */
+    internal fun widgetLayoutController(profile: ProfileId): WidgetLayoutController =
+        widgetControllers.getOrPut(profile) {
+            WidgetLayoutController(
+                store = widgetLayoutStore,
+                profile = profile,
+                scope = processScope,
+                ioDispatcher = Dispatchers.IO,
+                onFailure = { message -> Log.w(WIDGET_TAG, message) },
+            )
+        }
 
     private fun alertProfileFile(root: File): ProfileValueFile =
         ProfileValueFile(

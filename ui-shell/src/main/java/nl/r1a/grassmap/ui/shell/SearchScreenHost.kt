@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -64,6 +65,8 @@ import nl.r1a.grassmap.plugin.api.provider.PlaceHit
  *
  * [cardModifier] positions the field and the list (the app adds status-bar and
  * edge padding there); the markers always use the full map viewport.
+ * [onCollapsedCardSize] receives the size of the closed field, so a screen can
+ * place its own elements below it at any font scale.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -85,6 +88,7 @@ fun SearchScreenHost(
     positionAllowed: Boolean = false,
     onEnableOnlineSearch: () -> Unit = {},
     onAllowPosition: (Boolean) -> Unit = {},
+    onCollapsedCardSize: (IntSize) -> Unit = {},
 ) {
     val labels =
         SearchScreenLabels(
@@ -128,6 +132,7 @@ fun SearchScreenHost(
                 style = TextStyle(color = TEXT_PRIMARY, fontSize = FIELD_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
                 modifier =
                     cardModifier
+                        .onSizeChanged(onCollapsedCardSize)
                         .background(PANEL_BACKGROUND, RoundedCornerShape(PANEL_CORNER_DP.dp))
                         .clickable { expanded = true }
                         .padding(FIELD_PADDING_DP.dp),

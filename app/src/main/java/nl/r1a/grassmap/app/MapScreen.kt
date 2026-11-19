@@ -36,7 +36,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -207,10 +206,7 @@ private const val TAG = "GrassMapsMap"
 private const val LAYOUT_DIRECTORY = "controls"
 private const val LAYOUT_FILE = "button-layout.json"
 private const val BAR_PADDING_DP = 16
-private const val SEARCH_CARD_HEIGHT_DP = 34
 private const val WIDGET_GRID_GAP_DP = 8
-private const val CONTROL_BAR_WIDTH_DP = 59
-private const val CONTROL_BAR_EDIT_WIDTH_DP = 148
 private const val BANNER_CORNER_DP = 8
 private const val BANNER_HORIZONTAL_DP = 16
 private const val BANNER_VERTICAL_DP = 10
@@ -409,6 +405,8 @@ private fun MapContent(
         }
     var layout by remember { mutableStateOf(MapControlCommands.DEFAULT_ORDER) }
     var isEditing by remember { mutableStateOf(false) }
+    var searchCardHeightPx by remember { mutableIntStateOf(0) }
+    var controlBarWidthPx by remember { mutableIntStateOf(0) }
     // The bar's buttons and labels are built from the layout, the mode and the
     // strings, so a camera frame, a fix or a banner does not rebuild them.
     val controlBarButtons =
@@ -621,12 +619,11 @@ private fun MapContent(
         produceState<UnitSettings?>(null) {
             value = withContext(Dispatchers.IO) { container.unitSettings }
         }
-    val currentLayout = rememberUpdatedState(layout)
     val writer =
         remember(store) {
             store?.let { store ->
                 LayoutWriter(
-                    currentLayout = { currentLayout.value },
+                    currentLayout = { layout },
                     save = { layout -> withContext(Dispatchers.IO) { store.save(DEFAULT_PROFILE, layout) } },
                 )
             }
@@ -810,12 +807,8 @@ private fun MapContent(
                         .statusBarsPadding()
                         .padding(
                             start = BAR_PADDING_DP.dp,
-                            top = (BAR_PADDING_DP + SEARCH_CARD_HEIGHT_DP + WIDGET_GRID_GAP_DP).dp,
-                            end =
-                                (
-                                    BAR_PADDING_DP + WIDGET_GRID_GAP_DP +
-                                        if (isEditing) CONTROL_BAR_EDIT_WIDTH_DP else CONTROL_BAR_WIDTH_DP
-                                ).dp,
+                            top = (BAR_PADDING_DP + WIDGET_GRID_GAP_DP).dp + with(density) { searchCardHeightPx.toDp() },
+                            end = (BAR_PADDING_DP + WIDGET_GRID_GAP_DP).dp + with(density) { controlBarWidthPx.toDp() },
                         ),
             )
         }
@@ -1001,7 +994,8 @@ private fun MapContent(
                     Modifier
                         .align(Alignment.TopEnd)
                         .statusBarsPadding()
-                        .padding(BAR_PADDING_DP.dp),
+                        .padding(BAR_PADDING_DP.dp)
+                        .onSizeChanged { controlBarWidthPx = it.width },
             )
         }
         Column(
@@ -1167,6 +1161,7 @@ private fun MapContent(
                         onlineSearchEnabled = container.onlineSearchEnabled
                     }
                 },
+                onCollapsedCardSize = { size -> searchCardHeightPx = size.height },
                 onAllowPosition = { allowed ->
                     scope.launch {
                         withContext(Dispatchers.IO) {
@@ -1969,6 +1964,7 @@ private fun SearchOverlay(
     positionAllowed: Boolean,
     onEnableOnlineSearch: () -> Unit,
     onAllowPosition: (Boolean) -> Unit,
+    onCollapsedCardSize: (IntSize) -> Unit,
 ) {
     val camera by surface.host.camera.collectAsState()
     SearchScreenHost(
@@ -1992,6 +1988,7 @@ private fun SearchOverlay(
         positionAllowed = positionAllowed,
         onEnableOnlineSearch = onEnableOnlineSearch,
         onAllowPosition = onAllowPosition,
+        onCollapsedCardSize = onCollapsedCardSize,
     )
 }
 

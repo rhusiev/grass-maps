@@ -1256,7 +1256,8 @@ wrapping row. `WidgetLayoutStore` in `ui-shell` keeps the layout of each
 holds the storage keys of the shown widgets joined by commas in reading order.
 A profile with no value shows altitude, GPS accuracy and the selected point. An
 empty string is a real layout with every widget removed. A key this build does
-not know is dropped and a repeated key is kept once. The file is
+not know is not shown, but a save keeps it at its old position, so a newer
+build's widget survives. A repeated key is kept once. The file is
 `profiles/widgets.json` under `filesDir`, schema version 1, written by
 `ProfileValueFile`, so a file from a newer build is neither read nor
 overwritten.
@@ -1264,7 +1265,7 @@ overwritten.
 The v1 widgets are altitude, GPS accuracy, coordinates (the fix and the map
 centre), the current, average and max speed, and the selected point. Time,
 battery, sunset and bearing are v1.x and not built. `WidgetGridHost` in `app`
-subscribes to the `info-widgets` and `point-info` streams and turns each value
+subscribes only to the streams of the shown widgets and turns each value
 into text with `widgetCells`, so `WidgetGrid` in `ui-shell` only draws strings.
 The selected-point cell draws nothing without a selection and carries the clear
 action that the old label had. The grid is hidden while a trip runs.
@@ -1272,7 +1273,15 @@ action that the old label had. The grid is hidden while a trip runs.
 The control bar's edit mode also edits the grid. Each cell gets move earlier,
 move later and remove actions, and a plus opens the list of the widgets that are
 not shown. Every change is written at once through `LayoutWriter`, which
-serializes the writes and saves the latest layout. The active profile is the
+serializes the writes and saves the latest layout.
+`WidgetLayoutController` owns the edit rules and lives in `AppContainer`, one
+per profile, on the process scope, so a save that starts as the map screen
+closes still finishes. Edits are ignored until the stored layout has loaded. If
+the load fails, the grid shows the default read-only and the next screen visit
+retries the load. The store writes nothing before a load succeeded, so a failed
+read cannot erase the layouts of other profiles. The grid sits below the
+collapsed search card and left of the control bar, using their measured sizes at
+the current font scale. The active profile is the
 profile `AlertSettingsStore` reports, which is the `walk` built-in until a trip
 activates another. The profile switcher replaces that source.
 

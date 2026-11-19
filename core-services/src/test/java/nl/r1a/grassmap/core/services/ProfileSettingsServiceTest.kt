@@ -12,6 +12,7 @@ import nl.r1a.grassmap.plugin.api.service.ProfileValueStore
 import nl.r1a.grassmap.plugin.api.service.ProfileValues
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -228,18 +229,30 @@ class ProfileSettingsServiceTest {
 
     @Test
     fun aRollbackThatFailsTooIsReportedAndTheHistoryIsCleared() {
-        success(service.copySettings("walk", "bike"))
-        val unreliable = UnreliableGroup(failAfterWrites = 1)
-        val broken = ProfileSettingsService(ProfileCatalog(catalogFile), listOf(unreliable, FailingGroup))
+        val routingStore = WriteFailsAfter(routingFile, writes = Int.MAX_VALUE)
+        val extraStore = WriteFailsAfter(extraFile, writes = Int.MAX_VALUE)
+        val flakyRouting = RoutingOptionsSettings(routingStore)
+        flakyRouting.set(BuiltInProfiles.WALK, RouteOptions(hills = RoutePreference.Avoid))
+        val flaky = ProfileSettingsService(ProfileCatalog(catalogFile), listOf(flakyRouting, FileGroup(extraStore)))
+        success(flaky.copySettings("walk", "bike"))
+        assertEquals(ProfileActionKind.COPIED, success(flaky.state()).undo?.kind)
+        assertNull(stored(routingFile)[BuiltInProfiles.HIKE])
+        routingStore.writes = 1
+        extraStore.writes = 0
 
-        val result = broken.copySettings("walk", "hike")
+        val result = flaky.copySettings("walk", "hike")
 
         assertEquals(
             Outcome.Failure(AppError.Internal(ProfileSettingsService.ERROR_ID, ProfileSettingsService.ROLLBACK_FAILED)),
             result,
         )
-        assertNull(success(broken.state()).undo)
-        assertEquals(Outcome.Failure(AppError.NotFound), broken.undo())
+        assertNull("the history that no longer matches the files is gone", success(flaky.state()).undo)
+        assertEquals(Outcome.Failure(AppError.NotFound), flaky.undo())
+        assertEquals(
+            "the restore was refused, so the written copy stays on disk",
+            stored(routingFile).getValue(BuiltInProfiles.WALK),
+            stored(routingFile).getValue(BuiltInProfiles.HIKE),
+        )
     }
 
     @Test
@@ -253,6 +266,35 @@ class ProfileSettingsServiceTest {
             Outcome.Failure(AppError.Internal(ProfileSettingsService.ERROR_ID, ProfileSettingsService.ROLLBACK_FAILED)),
             result,
         )
+        assertTrue("the entry stays because its removal was refused", stored(catalogFile).containsKey(ProfileId("gravel")))
+    }
+
+    @Test
+    fun aCreateWhoseRollbackFailsTooLeavesNoHalfBuiltProfile() {
+        val unreliable = UnreliableGroup(failAfterWrites = 1)
+        val broken = ProfileSettingsService(ProfileCatalog(catalogFile), listOf(unreliable, FailingGroup))
+
+        val result = broken.create("Gravel", "bike")
+
+        assertEquals(
+            Outcome.Failure(AppError.Internal(ProfileSettingsService.ERROR_ID, ProfileSettingsService.ROLLBACK_FAILED)),
+            result,
+        )
+        assertFalse("the half-built profile is gone from the catalog on disk", stored(catalogFile).containsKey(ProfileId("gravel")))
+    }
+
+    @Test
+    fun aCreateWhoseRollbackAndCatalogRemovalBothFailReportsBoth() {
+        val removing = ProfileCatalog(WriteFailsAfter(catalogFile, writes = 1))
+        val broken = ProfileSettingsService(removing, listOf(UnreliableGroup(failAfterWrites = 1), FailingGroup))
+
+        val result = broken.create("Gravel", "bike")
+
+        assertEquals(
+            Outcome.Failure(AppError.Internal(ProfileSettingsService.ERROR_ID, ProfileSettingsService.ROLLBACK_AND_CATALOG_FAILED)),
+            result,
+        )
+        assertTrue(stored(catalogFile).containsKey(ProfileId("gravel")))
     }
 
     @Test
@@ -276,14 +318,23 @@ class ProfileSettingsServiceTest {
     }
 
     @Test
-    fun aGroupThatIsNotReadyRefusesEveryAction() {
+    fun aGroupThatIsNotReadyRefusesOnlyTheActionsThatIncludeIt() {
         val refused = AppError.NewerSchema(found = 2, supported = 1)
-        val gated = ProfileSettingsService(ProfileCatalog(catalogFile), listOf(routing, extra)) { Outcome.Failure(refused) }
+        val gated =
+            ProfileSettingsService(ProfileCatalog(catalogFile), listOf(routing, extra)) { group ->
+                if (group === extra) Outcome.Failure(refused) else Outcome.Success(Unit)
+            }
 
         assertEquals(Outcome.Failure(refused), gated.create("Gravel", "bike"))
         assertEquals(Outcome.Failure(refused), gated.copySettings("walk", "bike"))
         assertEquals(Outcome.Failure(refused), gated.reset("bike"))
+        assertEquals(Outcome.Failure(refused), gated.reset("bike", setOf("extra")))
         assertTrue(stored(catalogFile).isEmpty())
+
+        routing.set(BuiltInProfiles.WALK, RouteOptions(hills = RoutePreference.Avoid))
+
+        assertEquals(ProfileActionKind.COPIED, success(gated.copySettings("walk", "bike", setOf(ProfileSettingsGroup.ROUTING))).undo?.kind)
+        assertEquals(ProfileActionKind.RESET, success(gated.reset("bike", setOf(ProfileSettingsGroup.ROUTING))).undo?.kind)
     }
 
     private fun bikeModeIndex(): Int =
@@ -330,7 +381,7 @@ class ProfileSettingsServiceTest {
 
     private class WriteFailsAfter(
         private val store: ProfileValueStore,
-        private var writes: Int,
+        var writes: Int,
     ) : ProfileValueStore {
         override fun read(): Outcome<ProfileValues> = store.read()
 

@@ -17,6 +17,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
+import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.BuiltInProfiles
 import nl.r1a.grassmap.plugin.api.model.ProfileId
@@ -24,6 +25,7 @@ import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.service.ProfileSettingsGroup
 import nl.r1a.grassmap.plugin.api.service.ProfileValueStore
 import nl.r1a.grassmap.plugin.api.service.ProfileValues
+import nl.r1a.grassmap.plugin.api.service.withKnownValues
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -64,7 +66,10 @@ data class ProfileAlertSettings(
  * navigation. A store written by a newer build makes [load] fail with
  * [nl.r1a.grassmap.plugin.api.error.AppError.NewerSchema], every profile reads
  * as its defaults, and every write fails, so the newer data is never
- * overwritten.
+ * overwritten. A write keeps every key of the file that this build does not
+ * know, so a newer build's keys in the same schema survive. A store that
+ * could not be read, as the IO failure of [AppError.Internal], is read again by
+ * the next [ensureLoaded] or write, and the write fails until that read works.
  *
  * The active profile is the profile a trip currently uses. The app activates
  * the trip's profile when guidance starts, so a trip reads that profile's
@@ -94,6 +99,9 @@ class AlertSettingsStore(
     private val writeLock = Mutex()
     private var loadResult: Outcome<Unit>? = null
 
+    /** Every key of the store as this instance last read or wrote it, the keys it does not know included. */
+    private var raw: ProfileValues = emptyMap()
+
     /** The switches, channels and chosen place kinds of the active profile. */
     val active: StateFlow<ProfileAlertSettings> = activeState.asStateFlow()
 
@@ -120,9 +128,8 @@ class AlertSettingsStore(
     fun load(): Outcome<Unit> {
         val read = store?.read() ?: Outcome.Success(emptyMap())
         states.clear()
-        if (read is Outcome.Success) {
-            states.putAll(read.value.mapValues { (_, values) -> decode(values) }.filterValues { !it.isDefault })
-        }
+        raw = (read as? Outcome.Success)?.value ?: emptyMap()
+        states.putAll(raw.mapValues { (_, values) -> decode(values) }.filterValues { !it.isDefault })
         activeState.value = states[activeProfile] ?: ProfileAlertSettings()
         val result = if (read is Outcome.Failure) read else Outcome.Success(Unit)
         loadResult = result
@@ -132,10 +139,12 @@ class AlertSettingsStore(
     /**
      * Reads the store unless [load] already did, so a second caller cannot
      * replace values that were set and are still being written. A repeat call
-     * returns the result of the first read, a failure included.
+     * returns the result of the first read, a corrupt or newer file included,
+     * because that file stays refused. A read that failed with an IO error is
+     * not kept: the next call reads again.
      */
     @Synchronized
-    fun ensureLoaded(): Outcome<Unit> = loadResult ?: load()
+    fun ensureLoaded(): Outcome<Unit> = loadResult?.takeUnless(::isTransient) ?: load()
 
     /**
      * Makes [profile] the profile a trip reads. The host's active switches and
@@ -154,8 +163,9 @@ class AlertSettingsStore(
     /**
      * Stores [value] for [profile]; every other profile keeps its values. With a
      * write scope the change is visible at once and written in the background,
-     * and a failed write is only logged. Without one, the change is visible only
-     * after the write succeeded.
+     * and a failed write is logged and the settings go back to what the file
+     * holds, unless a newer change is already waiting to be written. Without a
+     * write scope, the change is visible only after the write succeeded.
      */
     fun set(
         profile: ProfileId,
@@ -182,6 +192,7 @@ class AlertSettingsStore(
             persist()
         }
 
+    /** Takes [writeLock] before the monitor, the one lock order every path uses. */
     private fun store(
         profile: ProfileId,
         value: ProfileAlertSettings,
@@ -191,10 +202,12 @@ class AlertSettingsStore(
             synchronized(this) { commit(profile, value) }
             return Outcome.Success(Unit)
         }
+        val ready = ensureLoaded()
+        if (ready is Outcome.Failure) return ready
         return runBlocking {
             writeLock.withLock {
-                val next = synchronized(this@AlertSettingsStore) { replaced(states.toMap(), profile, value) }
-                val result = write(target, next)
+                val next = synchronized(this@AlertSettingsStore) { rawWith(profile, value) }
+                val result = target.write(next)
                 if (result is Outcome.Success) {
                     synchronized(this@AlertSettingsStore) { commit(profile, value) }
                 }
@@ -203,16 +216,16 @@ class AlertSettingsStore(
         }
     }
 
-    private fun replaced(
-        map: Map<ProfileId, ProfileAlertSettings>,
+    private fun rawWith(
         profile: ProfileId,
         value: ProfileAlertSettings,
-    ): Map<ProfileId, ProfileAlertSettings> = if (value.isDefault) map - profile else map + (profile to value)
+    ): ProfileValues = raw.withKnownValues(profile, KNOWN_KEYS, if (value.isDefault) emptyMap() else encode(value))
 
     private fun commit(
         profile: ProfileId,
         value: ProfileAlertSettings,
     ) {
+        raw = rawWith(profile, value)
         if (value.isDefault) {
             states.remove(profile)
         } else {
@@ -230,10 +243,7 @@ class AlertSettingsStore(
     ): Outcome<Unit> = set(BuiltInProfiles.idOf(profile), value)
 
     /** Stores [value] for the active profile. */
-    fun setActive(value: ProfileAlertSettings): Outcome<Unit> =
-        synchronized(this) {
-            set(activeProfile, value)
-        }
+    fun setActive(value: ProfileAlertSettings): Outcome<Unit> = set(activeProfileId(), value)
 
     private fun persist(): Outcome<Unit> {
         val target = store ?: return Outcome.Success(Unit)
@@ -252,22 +262,27 @@ class AlertSettingsStore(
     /** Takes the snapshot inside the write lock, so the last write to run holds the newest state. */
     private suspend fun writeLatest(target: ProfileValueStore) {
         writeLock.withLock {
-            val snapshot = synchronized(this) { states.toMap() }
-            val result = write(target, snapshot)
+            val (loaded, snapshot) = synchronized(this) { (loadResult is Outcome.Success) to raw }
+            val result = if (loaded) target.write(snapshot) else Outcome.Failure(AppError.Internal(ERROR_ID, NOT_LOADED))
             if (result is Outcome.Failure) {
                 log("alert settings not saved: ${result.error}")
+                restoreFromStore()
             }
         }
     }
 
-    private fun write(
-        target: ProfileValueStore,
-        snapshot: Map<ProfileId, ProfileAlertSettings>,
-    ): Outcome<Unit> = target.write(snapshot.filterValues { !it.isDefault }.mapValues { (_, value) -> encode(value) })
+    /** Puts memory back to what the file holds, unless a newer change is waiting for the next write. */
+    private fun restoreFromStore() =
+        synchronized(this) {
+            if (!writeRequested.get()) load()
+        }
+
+    private fun isTransient(result: Outcome<Unit>): Boolean = (result as? Outcome.Failure)?.error is AppError.Internal
 
     companion object {
         const val SCHEMA_VERSION = 1
         const val ERROR_ID = "alerts.settings_store"
+        private const val NOT_LOADED = "not_loaded"
         private const val TRUE = "true"
         private const val SIGNAL_KEY = "signal"
         private const val REROUTE_KEY = "reroute"
@@ -283,6 +298,24 @@ class AlertSettingsStore(
         private const val SOUND_KEY = "sound"
         private const val VIBRATION_KEY = "vibration"
         private const val POI_KINDS_KEY = "poi_kinds"
+
+        private val KNOWN_KEYS =
+            setOf(
+                SIGNAL_KEY,
+                REROUTE_KEY,
+                OFF_ROUTE_KEY,
+                ARRIVAL_KEY,
+                TUNNEL_KEY,
+                RAILWAY_CROSSING_KEY,
+                HAZARD_KEY,
+                FAVOURITE_KEY,
+                TRACK_WAYPOINT_KEY,
+                POI_KEY,
+                BANNER_KEY,
+                SOUND_KEY,
+                VIBRATION_KEY,
+                POI_KINDS_KEY,
+            )
 
         private val JSON =
             Json {

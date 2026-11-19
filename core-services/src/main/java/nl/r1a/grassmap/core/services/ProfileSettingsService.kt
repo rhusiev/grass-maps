@@ -30,14 +30,16 @@ import nl.r1a.grassmap.plugin.api.service.ProfileSettingsGroup
  * outcome, so an action succeeds only when every write reached the disk. When a
  * write fails, the groups already written are put back. When that fails too, the
  * result is [AppError.Internal] with detail [ROLLBACK_FAILED], and the history
- * is cleared because it no longer matches the stored values. [ensureReady] runs
- * before every action that reads or writes a group, and its failure refuses the
- * action.
+ * is cleared because it no longer matches the stored values. A create whose
+ * settings were not written also takes its catalog entry out again, and when
+ * that fails too the detail is [ROLLBACK_AND_CATALOG_FAILED]. [ensureReady] runs
+ * for each group an action reads or writes, and its failure refuses the action,
+ * so a group that cannot be read blocks only the actions that include it.
  */
 class ProfileSettingsService(
     private val catalog: ProfileCatalog,
     private val groups: List<ProfileSettingsGroup>,
-    private val ensureReady: () -> Outcome<Unit> = { Outcome.Success(Unit) },
+    private val ensureReady: (ProfileSettingsGroup) -> Outcome<Unit> = { Outcome.Success(Unit) },
 ) : ProfileSettingsAccess {
     private val history = ArrayDeque<Undoable>()
 
@@ -50,8 +52,8 @@ class ProfileSettingsService(
         from: String,
     ): Outcome<ProfilesState> {
         val source = ProfileId(from)
-        val ready = ensureReady()
-        if (ready is Outcome.Failure) return ready
+        val ready = notReady(groups)
+        if (ready != null) return ready
         val created =
             when (val result = catalog.create(name, source)) {
                 is Outcome.Failure -> return result
@@ -70,12 +72,27 @@ class ProfileSettingsService(
         )
     }
 
-    /** Takes a profile whose settings could not be written out of the catalog again. */
+    /**
+     * Takes a profile whose settings could not be written out of the catalog
+     * again, also when the settings could not be put back. When the entry
+     * cannot be removed, the failure says so.
+     */
     private fun removeAfterFailure(
         id: ProfileId,
         failure: Outcome.Failure,
-    ): Outcome<ProfilesState> =
-        if (failure.error == rollbackFailed() || catalog.remove(id) is Outcome.Success) failure else brokenRollback()
+    ): Outcome<ProfilesState> {
+        val removed = catalog.remove(id)
+        val settingsRestored = failure.error != rollbackFailed()
+        return when {
+            removed is Outcome.Success -> failure
+            settingsRestored -> brokenRollback()
+            else -> brokenRollback(AppError.Internal(ERROR_ID, ROLLBACK_AND_CATALOG_FAILED))
+        }
+    }
+
+    /** The first refusal of a group in [chosen] that is not ready, or null when all are. */
+    private fun notReady(chosen: List<ProfileSettingsGroup>): Outcome.Failure? =
+        chosen.firstNotNullOfOrNull { group -> ensureReady(group) as? Outcome.Failure }
 
     @Synchronized
     override fun copySettings(
@@ -86,8 +103,8 @@ class ProfileSettingsService(
         val source = ProfileId(from)
         val target = ProfileId(to)
         val chosen = chooseGroups(groups) ?: return Outcome.Failure(AppError.InvalidInput)
-        val ready = ensureReady()
-        if (ready is Outcome.Failure) return ready
+        val ready = notReady(chosen)
+        if (ready != null) return ready
         if (source == target) return Outcome.Failure(AppError.InvalidInput)
         if (!exists(source) || !exists(target)) return Outcome.Failure(AppError.NotFound)
         return change(ProfileAction(ProfileActionKind.COPIED, to, from), target, chosen.associateWith { it.read(source) })
@@ -100,8 +117,8 @@ class ProfileSettingsService(
     ): Outcome<ProfilesState> {
         val target = ProfileId(profile)
         val chosen = chooseGroups(groups) ?: return Outcome.Failure(AppError.InvalidInput)
-        val ready = ensureReady()
-        if (ready is Outcome.Failure) return ready
+        val ready = notReady(chosen)
+        if (ready != null) return ready
         val entry = catalog.load().firstOrNull { it.id == target } ?: return Outcome.Failure(AppError.NotFound)
         val baseline = entry.copiedFrom?.takeIf(::exists)
         val values = chosen.associateWith { group -> baseline?.let(group::read).orEmpty() }
@@ -170,9 +187,9 @@ class ProfileSettingsService(
         return Outcome.Success(Unit)
     }
 
-    private fun brokenRollback(): Outcome.Failure {
+    private fun brokenRollback(error: AppError = rollbackFailed()): Outcome.Failure {
         history.clear()
-        return Outcome.Failure(rollbackFailed())
+        return Outcome.Failure(error)
     }
 
     private fun rollbackFailed(): AppError = AppError.Internal(ERROR_ID, ROLLBACK_FAILED)
@@ -206,6 +223,9 @@ class ProfileSettingsService(
 
         /** The [AppError.Internal] detail when a failed action could not be put back. */
         const val ROLLBACK_FAILED = "rollback_failed"
+
+        /** The [AppError.Internal] detail when a created profile's settings and its catalog entry could not be put back. */
+        const val ROLLBACK_AND_CATALOG_FAILED = "rollback_and_catalog_failed"
         const val ERROR_ID = "core.services.profile_settings"
     }
 }

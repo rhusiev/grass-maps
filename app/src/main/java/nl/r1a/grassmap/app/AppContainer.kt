@@ -324,14 +324,14 @@ class AppContainer(
 
     /**
      * The profile list and the actions on it (T-0602). It copies and resets the
-     * routing options and the alert settings. Its first use reads the alert
-     * settings, so the plugin calls it from an IO dispatcher.
+     * routing options and the alert settings. An action that includes the alert
+     * settings reads them first, so the plugin calls it from an IO dispatcher.
      */
     val profileSettings: ProfileSettingsService by lazy {
         ProfileSettingsService(
             profileCatalog,
             listOf(routingOptionsSettings, alertSettings),
-            ensureReady = alertSettings::ensureLoaded,
+            ensureReady = { group -> if (group === alertSettings) alertSettings.ensureLoaded() else Outcome.Success(Unit) },
         )
     }
 

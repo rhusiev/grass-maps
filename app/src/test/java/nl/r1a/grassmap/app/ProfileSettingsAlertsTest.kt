@@ -2,11 +2,15 @@ package nl.r1a.grassmap.app
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import nl.r1a.grassmap.alerts.AlertSettings
 import nl.r1a.grassmap.alerts.AlertSettingsStore
 import nl.r1a.grassmap.alerts.ProfileAlertSettings
 import nl.r1a.grassmap.core.services.ProfileCatalog
 import nl.r1a.grassmap.core.services.ProfileSettingsService
+import nl.r1a.grassmap.core.services.ProfileValueFile
 import nl.r1a.grassmap.core.services.RoutingOptionsSettings
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -14,11 +18,16 @@ import nl.r1a.grassmap.plugin.api.model.BuiltInProfiles
 import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 import nl.r1a.grassmap.plugin.api.provider.RoutePreference
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmap.plugin.api.service.ProfileSettingsGroup
 import nl.r1a.grassmap.plugin.api.service.ProfileValueStore
 import nl.r1a.grassmap.plugin.api.service.ProfileValues
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Before
 import org.junit.Test
+import java.io.File
+import java.nio.file.Files
 
 /** The profile actions on the real alert store with its background writer, as the app wires them (T-0602). */
 class ProfileSettingsAlertsTest {
@@ -64,15 +73,100 @@ class ProfileSettingsAlertsTest {
         assertEquals(Outcome.Failure(newer), service.create("Gravel", "bike"))
     }
 
+    @Test
+    fun unknownKeysInTheAlertsFileSurviveEveryAction() {
+        val file = File(directory, "alerts.json")
+        file.writeText(
+            """{"schema_version":1,"profiles":{"bike":{"signal":"true","surface":"smooth"},"hike":{"surface":"rough"},"walk":{"poi":"true"}}}""",
+        )
+        val alerts =
+            AlertSettingsStore(
+                ProfileValueFile(file, AlertSettingsStore.SCHEMA_VERSION, AlertSettingsStore.ERROR_ID),
+            ).also { it.load() }
+        val service = serviceOn(alerts)
+
+        service.copySettings("walk", "bike", setOf(ProfileSettingsGroup.ALERTS))
+        service.reset("hike", setOf(ProfileSettingsGroup.ALERTS))
+        service.create("Gravel", "bike")
+        service.reset("bike", setOf(ProfileSettingsGroup.ALERTS))
+        alerts.set(RouteProfile.Walk, ProfileAlertSettings.DEFAULT)
+
+        val profiles =
+            Json
+                .parseToJsonElement(file.readText())
+                .jsonObject
+                .getValue("profiles")
+                .jsonObject
+        assertEquals(
+            "smooth",
+            profiles
+                .getValue("bike")
+                .jsonObject
+                .getValue("surface")
+                .jsonPrimitive.content,
+        )
+        assertEquals("""{"surface":"rough"}""", profiles.getValue("hike").toString())
+        assertEquals(null, profiles["walk"])
+        assertEquals(
+            "false",
+            profiles
+                .getValue("gravel")
+                .jsonObject
+                .getValue("signal")
+                .jsonPrimitive.content,
+        )
+    }
+
+    @Test
+    fun aCorruptAlertsFileStillLetsARoutingOnlyActionRun() {
+        val alerts = AlertSettingsStore(SwitchableStore(readFailure = AppError.CorruptData))
+        val service = serviceOn(alerts)
+
+        assertEquals(true, service.copySettings("walk", "bike", setOf(ProfileSettingsGroup.ROUTING)) is Outcome.Success)
+        assertEquals(Outcome.Failure(AppError.CorruptData), service.copySettings("walk", "hike"))
+        assertEquals(Outcome.Failure(AppError.CorruptData), service.reset("bike", setOf(ProfileSettingsGroup.ALERTS)))
+    }
+
+    @Test
+    fun anAlertsFileThatCouldNotBeReadIsReadAgainByTheNextAction() {
+        val backing = SwitchableStore(readFailure = AppError.Internal(AlertSettingsStore.ERROR_ID, "IOException"))
+        val service = serviceOn(AlertSettingsStore(backing))
+
+        assertEquals(true, service.create("Gravel", "bike") is Outcome.Failure)
+        backing.readFailure = null
+
+        assertEquals(true, service.create("Gravel", "bike") is Outcome.Success)
+    }
+
+    private lateinit var directory: File
+
+    @Before
+    fun makeDirectory() {
+        directory = Files.createTempDirectory("alerts-actions-").toFile()
+    }
+
+    @After
+    fun removeDirectory() {
+        directory.deleteRecursively()
+    }
+
     private fun serviceOn(alerts: AlertSettingsStore): ProfileSettingsService {
         val routing = RoutingOptionsSettings()
         routing.set(BuiltInProfiles.WALK, RouteOptions(hills = RoutePreference.Avoid))
-        return ProfileSettingsService(ProfileCatalog(), listOf(routing, alerts), ensureReady = alerts::ensureLoaded)
+        return ProfileSettingsService(ProfileCatalog(), listOf(routing, alerts), ensureReady = { group ->
+            if (group ===
+                alerts
+            ) {
+                alerts.ensureLoaded()
+            } else {
+                Outcome.Success(Unit)
+            }
+        })
     }
 
     private class SwitchableStore(
         var stored: ProfileValues = emptyMap(),
-        private val readFailure: AppError? = null,
+        var readFailure: AppError? = null,
         var failWrites: Boolean = false,
     ) : ProfileValueStore {
         override fun read(): Outcome<ProfileValues> = readFailure?.let { Outcome.Failure(it) } ?: Outcome.Success(stored)

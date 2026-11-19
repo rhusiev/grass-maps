@@ -2,6 +2,7 @@ package nl.r1a.grassmap.alerts
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import nl.r1a.grassmap.plugin.api.error.AppError
@@ -38,7 +39,7 @@ class AlertSettingsStoreTest {
         store.replace(ProfileId("gravel"), emptyMap())
 
         assertEquals(ProfileAlertSettings(), store.forProfile(ProfileId("gravel")))
-        assertFalse((backing.read() as Outcome.Success).value.containsKey(ProfileId("gravel")))
+        assertTrue((backing.read() as Outcome.Success).value[ProfileId("gravel")].isNullOrEmpty())
     }
 
     @Test
@@ -157,7 +158,7 @@ class AlertSettingsStoreTest {
 
         store.set(RouteProfile.Bike, ProfileAlertSettings.DEFAULT)
 
-        assertEquals(emptyMap<ProfileId, Map<String, String>>(), backing.stored)
+        assertTrue("no value is left, and the file writes no entry for it", backing.stored.values.all { it.isEmpty() })
     }
 
     @Test
@@ -198,7 +199,7 @@ class AlertSettingsStoreTest {
             }
         val job = Job()
         val dispatcher = CountingDispatcher(secondWriterParked)
-        val store = AlertSettingsStore(backing, writeScope = CoroutineScope(job), writeDispatcher = dispatcher)
+        val store = AlertSettingsStore(backing, writeScope = CoroutineScope(job), writeDispatcher = dispatcher).also { it.load() }
         val older = ProfileAlertSettings(settings = AlertSettings(signal = true))
         val newer = ProfileAlertSettings(settings = AlertSettings(signal = true, reroute = true))
 
@@ -231,6 +232,7 @@ class AlertSettingsStoreTest {
 
         assertEquals(ProfileAlertSettings.DEFAULT, store.forProfile(RouteProfile.Bike))
         assertTrue(store.read(BuiltInProfiles.BIKE).isEmpty())
+        assertEquals(emptyMap<ProfileId, Map<String, String>>(), backing.stored)
     }
 
     @Test
@@ -250,16 +252,125 @@ class AlertSettingsStoreTest {
     }
 
     @Test
-    fun theLoadResultIsKeptForEnsureLoaded() {
+    fun aSuccessfulLoadIsKeptAndNotReadAgain() {
+        val backing = MemoryStore(stored = mapOf(BuiltInProfiles.BIKE to SIGNAL_ON))
+        val store = AlertSettingsStore(backing)
+
+        assertEquals(Outcome.Success(Unit), store.ensureLoaded())
+        backing.stored = emptyMap()
+
+        assertEquals(Outcome.Success(Unit), store.ensureLoaded())
+        assertEquals(ProfileAlertSettings(settings = AlertSettings(signal = true)), store.forProfile(RouteProfile.Bike))
+    }
+
+    @Test
+    fun aNewerSchemaIsKeptAndRefusesEveryLaterCall() {
         val newer = AppError.NewerSchema(found = 2, supported = AlertSettingsStore.SCHEMA_VERSION)
-        val store = AlertSettingsStore(MemoryStore(failure = newer))
+        val backing = MemoryStore(failure = newer)
+        val store = AlertSettingsStore(backing)
 
         assertEquals(Outcome.Failure(newer), store.ensureLoaded())
+        backing.failure = null
+
         assertEquals(Outcome.Failure(newer), store.ensureLoaded())
     }
 
+    @Test
+    fun anUnreadableStoreIsReadAgainOnTheNextCall() {
+        val transient = AppError.Internal(AlertSettingsStore.ERROR_ID, "IOException")
+        val backing = MemoryStore(stored = mapOf(BuiltInProfiles.BIKE to SIGNAL_ON), failure = transient)
+        val store = AlertSettingsStore(backing)
+
+        assertEquals(Outcome.Failure(transient), store.ensureLoaded())
+        assertEquals(Outcome.Failure(transient), store.set(RouteProfile.Walk, ProfileAlertSettings(settings = AlertSettings(poi = true))))
+        backing.failure = null
+
+        assertEquals(Outcome.Success(Unit), store.ensureLoaded())
+        assertEquals(AlertSettings(signal = true), store.forProfile(RouteProfile.Bike).settings)
+        assertEquals(Outcome.Success(Unit), store.set(RouteProfile.Walk, ProfileAlertSettings(settings = AlertSettings(poi = true))))
+        assertEquals(setOf(BuiltInProfiles.BIKE, BuiltInProfiles.WALK), backing.stored.keys)
+    }
+
+    @Test
+    fun keysThisBuildDoesNotKnowSurviveEveryWrite() {
+        val backing =
+            MemoryStore(
+                stored =
+                    mapOf(
+                        BuiltInProfiles.BIKE to mapOf("signal" to "true", "surface" to "smooth"),
+                        BuiltInProfiles.HIKE to mapOf("surface" to "rough"),
+                    ),
+            )
+        val store = AlertSettingsStore(backing).also { it.load() }
+
+        store.set(RouteProfile.Bike, ProfileAlertSettings.DEFAULT)
+        store.replace(BuiltInProfiles.HIKE, emptyMap())
+        store.replace(BuiltInProfiles.WALK, mapOf("poi" to "true"))
+
+        assertEquals(mapOf("surface" to "smooth"), backing.stored[BuiltInProfiles.BIKE])
+        assertEquals(mapOf("surface" to "rough"), backing.stored[BuiltInProfiles.HIKE])
+        assertEquals("true", backing.stored.getValue(BuiltInProfiles.WALK)["poi"])
+    }
+
+    @Test
+    fun aFailedBackgroundWriteRestoresWhatTheFileHolds() {
+        val backing = MemoryStore()
+        val store = unconfinedStore(backing)
+        val signal = ProfileAlertSettings(settings = AlertSettings(signal = true))
+        store.set(RouteProfile.Bike, signal)
+        backing.writeFailure = AppError.CorruptData
+
+        assertEquals(Outcome.Success(Unit), store.set(RouteProfile.Walk, ProfileAlertSettings(settings = AlertSettings(poi = true))))
+
+        assertEquals(ProfileAlertSettings.DEFAULT, store.forProfile(RouteProfile.Walk))
+        assertEquals(signal, store.forProfile(RouteProfile.Bike))
+        assertEquals(store.read(BuiltInProfiles.BIKE), backing.stored.getValue(BuiltInProfiles.BIKE))
+        assertEquals(setOf(BuiltInProfiles.BIKE), backing.stored.keys)
+    }
+
+    @Test
+    fun setActiveAndReplaceFromTwoThreadsWithoutAWriteScopeDoNotDeadlock() {
+        val backing = MemoryStore()
+        val store = AlertSettingsStore(backing).also { it.load() }
+        val done = CountDownLatch(CONTENDERS)
+        val on = ProfileAlertSettings(settings = AlertSettings(signal = true))
+        val actions =
+            listOf<() -> Unit>(
+                { repeat(CONTENTION_ROUNDS) { store.setActive(if (it % 2 == 0) on else ProfileAlertSettings.DEFAULT) } },
+                {
+                    repeat(CONTENTION_ROUNDS) {
+                        store.replace(
+                            BuiltInProfiles.BIKE,
+                            if (it % 2 ==
+                                0
+                            ) {
+                                store.read(BuiltInProfiles.WALK)
+                            } else {
+                                emptyMap()
+                            },
+                        )
+                    }
+                },
+            )
+
+        actions.forEach { action ->
+            Thread {
+                action()
+                done.countDown()
+            }.apply { isDaemon = true }.start()
+        }
+
+        assertTrue("both threads finished", done.await(WAIT_S, TimeUnit.SECONDS))
+    }
+
+    private fun unconfinedStore(backing: ProfileValueStore): AlertSettingsStore =
+        AlertSettingsStore(backing, writeScope = CoroutineScope(Job()), writeDispatcher = Dispatchers.Unconfined).also { it.load() }
+
     private companion object {
         const val WAIT_S = 10L
+        val SIGNAL_ON = mapOf("signal" to "true")
+        const val CONTENDERS = 2
+        const val CONTENTION_ROUNDS = 5_000
     }
 
     /**
@@ -294,7 +405,7 @@ class AlertSettingsStoreTest {
 
     private class MemoryStore(
         var stored: ProfileValues = emptyMap(),
-        private val failure: AppError? = null,
+        var failure: AppError? = null,
         var writeFailure: AppError? = null,
     ) : ProfileValueStore {
         override fun read(): Outcome<ProfileValues> = failure?.let { Outcome.Failure(it) } ?: Outcome.Success(stored)

@@ -140,10 +140,11 @@ the bindings from the host library, and packages `libgrass_regions.so`, so the
 two crates do not collide at APK merge. `./gradlew :regions:test` needs no
 device and no emulator.
 
-The index itself is not bundled in the app. The debug build reads it from
-`<externalFilesDir>/search/<region>/`; the committed Lviv section under
-`places/src/test/resources/search` is the quality oracle for the P4a probes.
-`./gradlew :places:test` needs no device and no emulator.
+The index itself is not bundled in the app. A downloaded pack carries its
+section, which the app reads in place from the pack; the debug build can also
+read a pushed section from `<externalFilesDir>/search/<name>/`; the committed
+Lviv section under `places/src/test/resources/search` is the quality oracle for
+the P4a probes. `./gradlew :places:test` needs no device and no emulator.
 
 ```sh
 rustup toolchain install 1.93.1 --profile minimal \
@@ -2960,8 +2961,27 @@ prefix walk. `ZolochivSearchTest` asserts the acceptance case: "zloczow",
 crate and by `NormalisationVectorsTest` through those bindings, so the builder
 and the app cannot fold a name differently.
 
-The index is external data: the provider reads
-`<externalFilesDir>/search/<region>/`. The committed Lviv section under
+A search section is data the package carries, not a second copy the app stores:
+`PlacesAccess` opens the section of a mounted pack in place, from
+`<app files>/regions/<region>/<version>/`, where its files sit beside the map.
+The external directory `<externalFilesDir>/search/<name>/` remains the debug
+and bench source; the keystroke bench pushes a section there. A name resolves
+to a mounted pack first and to the external directory when no pack has it, so
+the pushed section keeps working beside downloaded packs.
+
+The field queries one index: the first mounted pack in region-id order that
+carries a complete section. That is the same pack that serves a shared map tile
+and the one the single-region readers (`MapSources`, `RegionElevation`) take as
+active. The world overview has no search section and is skipped, and so is a
+pack whose section is incomplete, so neither can hide an oblast. With two
+oblasts installed, the search covers the first one; the app has no picker that
+makes the other active. `SearchIndexes` follows the region store's published
+installed list, so a pack installed or updated while the app runs becomes
+searchable without a restart. It resolves the store only when that list
+changes, never per keystroke, and it opens no index until a query reaches the
+provider.
+
+The committed Lviv section under
 `places/src/test/resources/search` is 10.1 MiB and ODbL-licensed; its
 `features.bin` is an empty placeholder because the P4a spike predates the
 component, so those places have no identity or tags. The house-number fixture
@@ -2980,11 +3000,13 @@ tools/control/grassctl.py invoke core.search.query \
 
 It times every keystroke, logs the prefix, milliseconds, hit count and top hit,
 and returns p50/p99. `{"cancel":true}` runs an already-superseded keystroke and
-reports `cancelled=true hits=0`. On the API 35 emulator (`grassmaps-bench`,
-host OpenGL), a street prefix measured p50 3.7 ms and p99 5.5 ms per keystroke
-including the JNA bridge; the full string of 13 keystrokes took 111 ms. The
-first single-letter keystroke after opening the index cost 63.6 ms (cold FST
-walk); later single-letter keystrokes stayed under 11 ms.
+reports `cancelled=true hits=0`. `index` names an external section by directory
+name, such as the pushed `lviv` one; without it the command searches the mounted
+pack the app serves. On the API 35 emulator (`grassmaps-bench`, host OpenGL), a
+street prefix measured p50 3.7 ms and p99 5.5 ms per keystroke including the JNA
+bridge; the full string of 13 keystrokes took 111 ms. The first single-letter
+keystroke after opening the index cost 63.6 ms (cold FST walk); later
+single-letter keystrokes stayed under 11 ms.
 
 ## Search screen
 
@@ -2993,6 +3015,15 @@ street or a house number. `ui-shell`'s `SearchScreenHost` draws the field, the
 result list and the map markers. `places`' `SearchScreenSession` holds the one
 query path: it calls `PlacesAccess.search` and publishes a `SearchScreenState`
 that carries the newest result set. The screen never reaches an index directly.
+
+The index name is not a constant. `AppContainer.searchIndexes` publishes the
+section of every mounted pack, and `MapScreen` sends the active name on each
+keystroke. The rule is the first mounted pack in region-id order, the same pack
+whose tiles the map serves and whose components the single-region readers open
+(T-0620). A result row carries the index that produced it as `regionBuild`, so
+the place card opens the same section even when the active pack changed between
+the search and the tap. A pack installed while the screen is open enters the
+published list, and the next keystroke searches it.
 
 A keystroke travels through the command bus as `core.search.screen` with a
 sequence number. The command is registered with the `core.search.screen.query`
@@ -4001,8 +4032,10 @@ them through `startDownload`, one claim at a time, so the `claimMutex` rule for
 WAITING and DOWNLOADING moves holds. An update downloads, verifies and stages
 the whole new archive, routing part included, beside the old version. It takes
 effect at the next app start: the routing engine reopens on a mount change, but
-the map, search and elevation readers open once per process and keep reading
-the old directory until then. The downloads screen says so: `DownloadsData.mountedPacks`
+the map and elevation readers open once per process and keep reading
+the old directory until then. The search index is the exception: it follows the
+store's installed list, so a pack installed or updated while the app runs is
+searchable at once (T-0620). The downloads screen says so: `DownloadsData.mountedPacks`
 holds the packs the app's readers mounted when they first resolved (`AppContainer`
 hands them to the store), or, while no reader has resolved, the packs the store found at
 its first operation of any kind, and while an
@@ -4051,6 +4084,17 @@ v3 header. Its result is `None`, `Mounted` or `Invalid` with a typed
 `RegionMounts`: the packs that mount, in region-id order, and the ones that do
 not with their problem. It never hashes a whole file, so it is safe to call
 while the map is starting.
+
+A mounted pack also reports its search section (T-0620). `MountedRegion.search`
+is the package's version directory when the manifest declares the seven table
+components (`search-terms`, `search-postings`, `search-places`,
+`search-context`, `search-entities`, `search-kinds`, `search-strings`) and the
+`features` component, and each declared file is a regular file of its declared
+size. The reader opens those files by name from that directory, so the
+directory is the section. `format.bin` is optional: a version-1 section
+predates it, and a version-2 declaration requires it. An incomplete section is
+`search = null`, never a mount failure: the map still mounts and search reports
+that no index is ready instead of answering from an empty table.
 
 `RegionMountResolver` also reports each pack's routing part as `RoutingPart`:
 `Directory` for a verified `routing/` directory, `LegacyArchive` for a

@@ -69,8 +69,11 @@ class PlacesAccess(
             return null
         }
         packIndex(indexName)?.let { return it }
-        return externalFilesRoot?.let { File(File(it, SEARCH_DIRECTORY), indexName) }
+        return externalIndexRoot()?.let { File(it, indexName) }
     }
+
+    /** The directory the pushed debug and bench sections live under, or null without a root. */
+    fun externalIndexRoot(): File? = externalFilesRoot?.let { File(it, SEARCH_DIRECTORY) }
 
     suspend fun provider(indexName: String): Outcome<RustPlaceProvider> =
         mutex.withLock {

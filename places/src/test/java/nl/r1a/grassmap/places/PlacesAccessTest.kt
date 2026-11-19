@@ -31,6 +31,12 @@ class PlacesAccessTest {
     }
 
     @Test
+    fun theExternalRootIsTheSearchDirectoryUnderTheFilesRoot() {
+        assertEquals(File("/tmp/places-root", "search"), places.externalIndexRoot())
+        assertNull("no root means no external index", PlacesAccess(externalFilesRoot = null).externalIndexRoot())
+    }
+
+    @Test
     fun aPackSectionWinsOverTheExternalSearchRoot() {
         val pack = Files.createTempDirectory("places-pack-section").toFile()
         try {

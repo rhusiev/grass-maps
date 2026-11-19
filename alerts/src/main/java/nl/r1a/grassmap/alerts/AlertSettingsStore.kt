@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.SerialName
@@ -91,7 +92,7 @@ class AlertSettingsStore(
     private val activeState = MutableStateFlow(ProfileAlertSettings())
     private val writeRequested = AtomicBoolean(false)
     private val writeLock = Mutex()
-    private var isLoaded = false
+    private var loadResult: Outcome<Unit>? = null
 
     /** The switches, channels and chosen place kinds of the active profile. */
     val active: StateFlow<ProfileAlertSettings> = activeState.asStateFlow()
@@ -117,22 +118,24 @@ class AlertSettingsStore(
      */
     @Synchronized
     fun load(): Outcome<Unit> {
-        isLoaded = true
         val read = store?.read() ?: Outcome.Success(emptyMap())
         states.clear()
         if (read is Outcome.Success) {
             states.putAll(read.value.mapValues { (_, values) -> decode(values) }.filterValues { !it.isDefault })
         }
         activeState.value = states[activeProfile] ?: ProfileAlertSettings()
-        return if (read is Outcome.Failure) read else Outcome.Success(Unit)
+        val result = if (read is Outcome.Failure) read else Outcome.Success(Unit)
+        loadResult = result
+        return result
     }
 
     /**
      * Reads the store unless [load] already did, so a second caller cannot
-     * replace values that were set and are still being written.
+     * replace values that were set and are still being written. A repeat call
+     * returns the result of the first read, a failure included.
      */
     @Synchronized
-    fun ensureLoaded(): Outcome<Unit> = if (isLoaded) Outcome.Success(Unit) else load()
+    fun ensureLoaded(): Outcome<Unit> = loadResult ?: load()
 
     /**
      * Makes [profile] the profile a trip reads. The host's active switches and
@@ -148,29 +151,77 @@ class AlertSettingsStore(
     /** Makes the built-in profile that carries [profile] the profile a trip reads. */
     fun activate(profile: RouteProfile) = activate(BuiltInProfiles.idOf(profile))
 
-    /** Stores [value] for [profile]; every other profile keeps its values. */
+    /**
+     * Stores [value] for [profile]; every other profile keeps its values. With a
+     * write scope the change is visible at once and written in the background,
+     * and a failed write is only logged. Without one, the change is visible only
+     * after the write succeeded.
+     */
     fun set(
+        profile: ProfileId,
+        value: ProfileAlertSettings,
+    ): Outcome<Unit> = if (writeScope == null) store(profile, value) else setAndPersistLater(profile, value)
+
+    override fun read(profile: ProfileId): Map<String, String> = forProfile(profile).takeUnless { it.isDefault }?.let(::encode).orEmpty()
+
+    /**
+     * Writes the values before returning and changes memory only when the write
+     * succeeded, even with a write scope, so a caller sees the real outcome.
+     */
+    override fun replace(
+        profile: ProfileId,
+        values: Map<String, String>,
+    ): Outcome<Unit> = store(profile, decode(values))
+
+    private fun setAndPersistLater(
         profile: ProfileId,
         value: ProfileAlertSettings,
     ): Outcome<Unit> =
         synchronized(this) {
-            if (value.isDefault) {
-                states.remove(profile)
-            } else {
-                states[profile] = value
-            }
-            if (profile == activeProfile) {
-                activeState.value = value
-            }
+            commit(profile, value)
             persist()
         }
 
-    override fun read(profile: ProfileId): Map<String, String> = forProfile(profile).takeUnless { it.isDefault }?.let(::encode).orEmpty()
-
-    override fun replace(
+    private fun store(
         profile: ProfileId,
-        values: Map<String, String>,
-    ): Outcome<Unit> = set(profile, decode(values))
+        value: ProfileAlertSettings,
+    ): Outcome<Unit> {
+        val target = store
+        if (target == null) {
+            synchronized(this) { commit(profile, value) }
+            return Outcome.Success(Unit)
+        }
+        return runBlocking {
+            writeLock.withLock {
+                val next = synchronized(this@AlertSettingsStore) { replaced(states.toMap(), profile, value) }
+                val result = write(target, next)
+                if (result is Outcome.Success) {
+                    synchronized(this@AlertSettingsStore) { commit(profile, value) }
+                }
+                result
+            }
+        }
+    }
+
+    private fun replaced(
+        map: Map<ProfileId, ProfileAlertSettings>,
+        profile: ProfileId,
+        value: ProfileAlertSettings,
+    ): Map<ProfileId, ProfileAlertSettings> = if (value.isDefault) map - profile else map + (profile to value)
+
+    private fun commit(
+        profile: ProfileId,
+        value: ProfileAlertSettings,
+    ) {
+        if (value.isDefault) {
+            states.remove(profile)
+        } else {
+            states[profile] = value
+        }
+        if (profile == activeProfile) {
+            activeState.value = value
+        }
+    }
 
     /** Stores [value] for the built-in profile that carries [profile]. */
     fun set(
@@ -186,7 +237,7 @@ class AlertSettingsStore(
 
     private fun persist(): Outcome<Unit> {
         val target = store ?: return Outcome.Success(Unit)
-        val scope = writeScope ?: return write(target, synchronized(this) { states.toMap() })
+        val scope = writeScope ?: return Outcome.Success(Unit)
         if (writeRequested.compareAndSet(false, true)) {
             scope.launch(writeDispatcher) {
                 do {

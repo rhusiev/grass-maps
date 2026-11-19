@@ -60,15 +60,22 @@ class RoutingOptionsSettings(
     /** The options of the built-in profile that carries [profile]. */
     fun forProfile(profile: RouteProfile): RouteOptions = forProfile(BuiltInProfiles.idOf(profile))
 
-    /** Stores one profile's options; the other profiles keep their values. */
+    /**
+     * Stores one profile's options; the other profiles keep their values. The
+     * options change in memory only when the write succeeded, so the planner
+     * never uses a value that is not on disk.
+     */
     @Synchronized
     fun set(
         profile: ProfileId,
         options: RouteOptions,
     ): Outcome<Unit> {
         val next = if (options.isDefault) state.value - profile else state.value + (profile to options)
-        state.value = next
-        return store?.write(encode(next)) ?: Outcome.Success(Unit)
+        val written = store?.write(encode(next)) ?: Outcome.Success(Unit)
+        if (written is Outcome.Success) {
+            state.value = next
+        }
+        return written
     }
 
     /** Stores the options of the built-in profile that carries [profile]. */

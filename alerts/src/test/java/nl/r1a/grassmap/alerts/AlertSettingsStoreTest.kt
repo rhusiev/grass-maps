@@ -213,6 +213,45 @@ class AlertSettingsStoreTest {
         assertEquals(newer, reloaded.forProfile(RouteProfile.Walk))
     }
 
+    @Test
+    fun aFailedWriteLeavesTheSettingsInMemoryAsTheyWere() {
+        val backing = MemoryStore()
+        val store = AlertSettingsStore(backing).also { it.load() }
+        val signal = ProfileAlertSettings(settings = AlertSettings(signal = true))
+        backing.writeFailure = AppError.CorruptData
+
+        assertEquals(Outcome.Failure(AppError.CorruptData), store.set(RouteProfile.Bike, signal))
+        assertEquals(Outcome.Failure(AppError.CorruptData), store.replace(BuiltInProfiles.BIKE, store.read(BuiltInProfiles.BIKE) + ("x" to "y")))
+
+        assertEquals(ProfileAlertSettings.DEFAULT, store.forProfile(RouteProfile.Bike))
+        assertTrue(store.read(BuiltInProfiles.BIKE).isEmpty())
+    }
+
+    @Test
+    fun replaceWritesBeforeItReturnsEvenWithAWriteScope() {
+        val backing = MemoryStore()
+        val job = Job()
+        val store = AlertSettingsStore(backing, writeScope = CoroutineScope(job)).also { it.load() }
+        val source = AlertSettingsStore().also { it.set(RouteProfile.Walk, ProfileAlertSettings(settings = AlertSettings(signal = true))) }
+
+        assertEquals(Outcome.Success(Unit), store.replace(BuiltInProfiles.BIKE, source.read(BuiltInProfiles.WALK)))
+
+        assertEquals(source.read(BuiltInProfiles.WALK), backing.stored.getValue(BuiltInProfiles.BIKE))
+        backing.writeFailure = AppError.CorruptData
+        assertEquals(Outcome.Failure(AppError.CorruptData), store.replace(BuiltInProfiles.BIKE, emptyMap()))
+        assertEquals(source.forProfile(RouteProfile.Walk), store.forProfile(RouteProfile.Bike))
+        job.cancel()
+    }
+
+    @Test
+    fun theLoadResultIsKeptForEnsureLoaded() {
+        val newer = AppError.NewerSchema(found = 2, supported = AlertSettingsStore.SCHEMA_VERSION)
+        val store = AlertSettingsStore(MemoryStore(failure = newer))
+
+        assertEquals(Outcome.Failure(newer), store.ensureLoaded())
+        assertEquals(Outcome.Failure(newer), store.ensureLoaded())
+    }
+
     private companion object {
         const val WAIT_S = 10L
     }
@@ -250,11 +289,12 @@ class AlertSettingsStoreTest {
     private class MemoryStore(
         var stored: ProfileValues = emptyMap(),
         private val failure: AppError? = null,
+        var writeFailure: AppError? = null,
     ) : ProfileValueStore {
         override fun read(): Outcome<ProfileValues> = failure?.let { Outcome.Failure(it) } ?: Outcome.Success(stored)
 
         override fun write(values: ProfileValues): Outcome<Unit> {
-            failure?.let { return Outcome.Failure(it) }
+            (failure ?: writeFailure)?.let { return Outcome.Failure(it) }
             stored = values
             return Outcome.Success(Unit)
         }

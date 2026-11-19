@@ -233,6 +233,20 @@ class TrackLibraryContentTest {
         assertEquals("a saved route says which it is", "Route · 7.5 km · 12 Oct", rows.last().meta)
     }
 
+    @Test
+    fun theChromeAndEveryRowHaveSpokenLabels() {
+        val content = content()
+
+        assertTrue("close has no label", content.close.isNotBlank())
+        assertTrue("undo has no label", content.undo.isNotBlank())
+        assertTrue("rename has no label", content.renameFolder.isNotBlank())
+        assertTrue("the list has no rows", content.rows.isNotEmpty())
+        for (row in content.rows) {
+            assertTrue("a row has no name", row.name.isNotBlank())
+            assertTrue("${row.name} has no meta line", row.meta.isNotBlank())
+        }
+    }
+
     private fun content(): TrackLibraryContent = trackLibraryContent(STATE, strings(ENGLISH, APP_ENGLISH), Locale.ENGLISH)
 
     /** The fixture library with its first track hidden, in both the entry and the row. */

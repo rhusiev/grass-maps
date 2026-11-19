@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -38,7 +40,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -372,7 +377,7 @@ private fun Header(
             style = TextStyle(color = colors.textPrimary, fontSize = TITLE_FONT_SP.sp),
             modifier =
                 Modifier
-                    .clickable(onClick = onClose)
+                    .clickable(role = Role.Button, onClick = onClose)
                     .semantics { contentDescription = content.close }
                     .padding(ACTION_PADDING_DP.dp),
         )
@@ -403,7 +408,8 @@ private fun FolderTiles(
                         .background(
                             if (folder.selected) colors.selectedSurface else colors.surface,
                             RoundedCornerShape(TILE_CORNER_DP.dp),
-                        ).clickable { onSelect(folder.id) }
+                        ).clickable(role = Role.Button) { onSelect(folder.id) }
+                        .semantics { selected = folder.selected }
                         .padding(TILE_PADDING_DP.dp),
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(ACTION_PADDING_DP.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -419,7 +425,7 @@ private fun FolderTiles(
                             style = TextStyle(color = colors.selectedText, fontSize = ROW_FONT_SP.sp),
                             modifier =
                                 Modifier
-                                    .clickable { folder.id?.let(onRename) }
+                                    .clickable(role = Role.Button) { folder.id?.let(onRename) }
                                     .semantics { contentDescription = content.renameFolder }
                                     .padding(ACTION_PADDING_DP.dp),
                         )
@@ -477,7 +483,7 @@ private fun SectionHeader(
                         .background(
                             if (row.selected) colors.selectedSurface else colors.surface,
                             RoundedCornerShape(CHIP_CORNER_DP.dp),
-                        ).clickable { onSortChange(row.sort) }
+                        ).selectable(selected = row.selected, role = Role.RadioButton) { onSortChange(row.sort) }
                         .padding(CHIP_PADDING_DP.dp),
             )
         }
@@ -526,9 +532,11 @@ private fun TrackRow(
                     if (selected) colors.selection else colors.surface,
                     RoundedCornerShape(TILE_CORNER_DP.dp),
                 ).combinedClickable(
+                    role = Role.Button,
                     onClick = onSelect,
                     onLongClick = onSelect,
-                ).padding(TILE_PADDING_DP.dp),
+                ).semantics { this.selected = selected }
+                .padding(TILE_PADDING_DP.dp),
         horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -635,7 +643,7 @@ private fun UndoBar(
         BasicText(
             text = undo,
             style = TextStyle(color = colors.accent, fontSize = ROW_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
-            modifier = Modifier.clickable(onClick = onUndo).padding(ACTION_PADDING_DP.dp),
+            modifier = Modifier.clickable(role = Role.Button, onClick = onUndo).padding(ACTION_PADDING_DP.dp),
         )
     }
 }
@@ -682,7 +690,7 @@ private fun SelectionBar(
             style = TextStyle(color = colors.textPrimary, fontSize = TITLE_FONT_SP.sp),
             modifier =
                 Modifier
-                    .clickable(onClick = onClose)
+                    .clickable(role = Role.Button, onClick = onClose)
                     .semantics { contentDescription = content.close }
                     .padding(ACTION_PADDING_DP.dp),
         )
@@ -698,7 +706,7 @@ private fun SelectionBar(
                 modifier =
                     Modifier
                         .weight(WEIGHT_ONE)
-                        .clickable { onAction(action.kind) }
+                        .clickable(role = Role.Button) { onAction(action.kind) }
                         .padding(ACTION_PADDING_DP.dp),
             )
         }
@@ -804,7 +812,7 @@ private fun VisibilityRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable { onChange(!checked) }
+                .toggleable(value = checked, role = Role.Switch) { onChange(it) }
                 .padding(vertical = ACTION_PADDING_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),

@@ -8,6 +8,7 @@ import nl.r1a.grassmap.plugin.ui.api.AlertsPageSwitch
 import nl.r1a.grassmap.plugin.ui.api.AlertsPageSwitches
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Locale
@@ -143,6 +144,44 @@ class AlertsScreenContentTest {
 
         assertEquals("2 on", row.value)
         assertEquals("Outputs: Banner, Vibration", row.detail)
+    }
+
+    @Test
+    fun everySwitchRowSaysWhetherItIsOn() {
+        val content = alertsPageContent(STATE, MapStrings(ENGLISH))
+
+        for (row in content.switchRows) {
+            assertTrue("$row has no spoken description", row.description.isNotBlank())
+            assertNotEquals("${row.title} repeats itself", row.title, row.description)
+            val lower = row.description.lowercase(Locale.ROOT)
+            assertTrue("${row.description} does not name the state", lower.endsWith(", on") || lower.endsWith(", off"))
+        }
+    }
+
+    @Test
+    fun everyChannelSaysWhetherItIsOn() {
+        val off = alertsPageContent(STATE, MapStrings(ENGLISH)).channels
+        val on =
+            alertsPageContent(
+                STATE.copy(channels = AlertsPageChannels(banner = true, sound = true, vibration = true)),
+                MapStrings(ENGLISH),
+            ).channels
+
+        for ((offChannel, onChannel) in off.zip(on)) {
+            assertNotEquals(offChannel.description, onChannel.description)
+            assertTrue(offChannel.description.lowercase(Locale.ROOT).endsWith(", off"))
+            assertTrue(onChannel.description.lowercase(Locale.ROOT).endsWith(", on"))
+        }
+    }
+
+    @Test
+    fun thePickerSaysWhichKindsAreChosen() {
+        val picker = alertsPlacePickerContent(setOf("amenity=drinking_water"), MapStrings(ENGLISH))
+        val chosen = picker.kinds.first { kind -> kind.selected }
+        val notChosen = picker.kinds.first { kind -> !kind.selected }
+
+        assertTrue(chosen.description.endsWith(", selected"))
+        assertTrue(notChosen.description.endsWith(", not selected"))
     }
 
     private class MapStrings(

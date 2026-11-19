@@ -5,6 +5,7 @@ package nl.r1a.grassmap.ui.shell
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -30,6 +32,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -217,10 +222,14 @@ private fun Header(
                 Modifier
                     .size(BACK_BUTTON_DP.dp)
                     .semantics { contentDescription = content.backDescription }
-                    .clickable(onClick = onBack),
+                    .clickable(role = Role.Button, onClick = onBack),
             contentAlignment = Alignment.Center,
         ) {
-            BasicText(text = BACK_GLYPH, style = TextStyle(color = colors.ink, fontSize = BACK_GLYPH_SP.sp))
+            BasicText(
+                text = BACK_GLYPH,
+                style = TextStyle(color = colors.ink, fontSize = BACK_GLYPH_SP.sp),
+                modifier = Modifier.clearAndSetSemantics {},
+            )
         }
         Column {
             BasicText(
@@ -261,18 +270,19 @@ private fun AlertRow(
     onPlaces: () -> Unit,
 ) {
     val switch = row.switch
+    val interaction =
+        if (switch == null) {
+            Modifier.clickable(role = Role.Button) { onPlaces() }
+        } else {
+            Modifier.toggleable(value = row.on, role = Role.Switch) { on -> onSwitch(switch, on) }
+        }
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .semantics { contentDescription = row.description }
-                .clickable {
-                    if (switch != null) {
-                        onSwitch(switch, !row.on)
-                    } else {
-                        onPlaces()
-                    }
-                }.padding(vertical = ROW_VERTICAL_DP.dp),
+                .then(interaction)
+                .padding(vertical = ROW_VERTICAL_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -297,6 +307,7 @@ private fun AlertRow(
             BasicText(
                 text = CHEVRON_GLYPH,
                 style = TextStyle(color = colors.chevron, fontSize = 22.sp),
+                modifier = Modifier.clearAndSetSemantics {},
             )
         }
     }
@@ -325,6 +336,7 @@ private fun IconCircle(
         BasicText(
             text = glyph,
             style = TextStyle(color = colour, fontSize = ICON_GLYPH_SP.sp, fontWeight = FontWeight.Bold),
+            modifier = Modifier.clearAndSetSemantics {},
         )
     }
 }
@@ -395,7 +407,7 @@ private fun ChannelChip(
                 .height(CHANNEL_HEIGHT_DP.dp)
                 .background(if (channel.on) colors.accent.copy(alpha = 0.14f) else colors.soft, RoundedCornerShape(CHANNEL_CORNER_DP.dp))
                 .semantics { contentDescription = channel.description }
-                .clickable(onClick = onClick)
+                .toggleable(value = channel.on, role = Role.Switch, onValueChange = { onClick() })
                 .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
@@ -403,6 +415,7 @@ private fun ChannelChip(
         BasicText(
             text = channel.channel.glyph(),
             style = TextStyle(color = ink, fontSize = 14.sp),
+            modifier = Modifier.clearAndSetSemantics {},
         )
         BasicText(
             text = " ${channel.label}",
@@ -427,7 +440,7 @@ private fun DoneButton(
                 .padding(horizontal = CONTENT_HORIZONTAL_DP.dp, vertical = 10.dp)
                 .height(DONE_HEIGHT_DP.dp)
                 .background(colors.amber, RoundedCornerShape(DONE_CORNER_DP.dp))
-                .clickable(onClick = onDone),
+                .clickable(role = Role.Button, onClick = onDone),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
@@ -439,6 +452,7 @@ private fun DoneButton(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                 ),
+            modifier = Modifier.clearAndSetSemantics {},
         )
         BasicText(
             text = "  $label",
@@ -460,7 +474,11 @@ private fun PlacePicker(
     onClose: () -> Unit,
 ) {
     Box(
-        modifier = Modifier.fillMaxSize().background(SCRIM).clickable(onClick = onClose),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(SCRIM)
+                .pointerInput(Unit) { detectTapGestures { onClose() } },
         contentAlignment = Alignment.BottomCenter,
     ) {
         Column(
@@ -484,7 +502,7 @@ private fun PlacePicker(
                 BasicText(
                     text = content.close,
                     style = TextStyle(color = colors.accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
-                    modifier = Modifier.clickable(onClick = onClose).padding(8.dp),
+                    modifier = Modifier.clickable(role = Role.Button, onClick = onClose).padding(8.dp),
                 )
             }
             content.kinds.forEach { kind ->
@@ -493,8 +511,9 @@ private fun PlacePicker(
                         Modifier
                             .fillMaxWidth()
                             .semantics { contentDescription = kind.description }
-                            .clickable { onSelect(kind.indexKind, !kind.selected) }
-                            .padding(vertical = 11.dp),
+                            .toggleable(value = kind.selected, role = Role.Checkbox) { selected ->
+                                onSelect(kind.indexKind, selected)
+                            }.padding(vertical = 11.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
@@ -506,7 +525,7 @@ private fun PlacePicker(
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold,
                             ),
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(20.dp).clearAndSetSemantics {},
                     )
                     BasicText(
                         text = kind.label,

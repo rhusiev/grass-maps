@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmap.plugin.api.model.TrackFollowPlan
 import nl.r1a.grassmap.plugin.api.model.TrackFollowStart
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
 import java.util.Locale
 import kotlin.math.roundToLong
@@ -84,12 +85,12 @@ fun followTrackSheetDisplay(
     selected: TrackFollowStart,
     strings: Strings,
     locale: Locale = Locale.getDefault(),
+    units: UnitSystem = UnitSystem.Metric,
 ): FollowTrackSheetDisplay {
     val trackName = name?.takeIf { it.isNotBlank() } ?: strings.resolve(FOLLOW_UNTITLED_KEY)
-    val subtitleParts = mutableListOf(distanceText(distanceMeters, strings, locale))
-    val ascent = ascentMeters.roundToLong()
-    if (ascent > 0L) {
-        subtitleParts += strings.resolve(FOLLOW_ASCENT_KEY, listOf(ascent.toString()))
+    val subtitleParts = mutableListOf(distanceText(distanceMeters, strings, locale, units))
+    if (ascentMeters.roundToLong() > 0L) {
+        subtitleParts += elevationLabel(ascentMeters, units, strings, FOLLOW_ASCENT_KEY, FOLLOW_ASCENT_FEET_KEY)
     }
     return FollowTrackSheetDisplay(
         title = strings.resolve(FOLLOW_TITLE_KEY, listOf(trackName)),
@@ -107,7 +108,7 @@ fun followTrackSheetDisplay(
                                 } else {
                                     FOLLOW_HINT_KEY
                                 }
-                            strings.resolve(key, listOf(distanceText(distance, strings, locale)))
+                            strings.resolve(key, listOf(distanceText(distance, strings, locale, units)))
                         },
                     selected = option.start == selected,
                 )
@@ -364,6 +365,7 @@ private fun StartGlyph(
 private const val FOLLOW_TITLE_KEY = "follow_track_title"
 private const val FOLLOW_UNTITLED_KEY = "follow_track_untitled"
 private const val FOLLOW_ASCENT_KEY = "follow_track_ascent"
+private const val FOLLOW_ASCENT_FEET_KEY = "follow_track_ascent_feet"
 private const val FOLLOW_FROM_START_KEY = "follow_track_from_start"
 private const val FOLLOW_FROM_END_KEY = "follow_track_from_end_reversed"
 private const val FOLLOW_FROM_NEAREST_KEY = "follow_track_from_nearest"

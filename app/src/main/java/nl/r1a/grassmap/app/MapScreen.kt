@@ -1545,6 +1545,7 @@ private fun MapContent(
                         ascentMeters = openFollowSheet.track.analysis.ascentMeters,
                         selected = openFollowSheet.selected,
                         strings = container.strings,
+                        units = units,
                     ),
                 dark = isSystemInDarkTheme(),
                 onSelect = { start -> followSheet = openFollowSheet.copy(selected = start) },

@@ -4,6 +4,7 @@ import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.TrackFollowOption
 import nl.r1a.grassmap.plugin.api.model.TrackFollowPlan
 import nl.r1a.grassmap.plugin.api.model.TrackFollowStart
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -42,6 +43,21 @@ class FollowTrackContentTest {
                 "1.4 km to get there",
                 "1.4 km to get there · the loop the other way",
                 "120 m to get there",
+            ),
+            display.rows.map { it.hint },
+        )
+    }
+
+    @Test
+    fun theSheetShowsImperialDistanceAscentAndWalkWhenImperialIsSet() {
+        val display = display(units = UnitSystem.Imperial)
+
+        assertEquals("4.7 mi · ↑719 ft", display.subtitle)
+        assertEquals(
+            listOf(
+                "4593 ft to get there",
+                "4593 ft to get there · the loop the other way",
+                "394 ft to get there",
             ),
             display.rows.map { it.hint },
         )
@@ -114,6 +130,7 @@ class FollowTrackContentTest {
         selected: TrackFollowStart = TrackFollowStart.DEFAULT,
         strings: Strings = MapStrings(ENGLISH),
         locale: Locale = Locale.ENGLISH,
+        units: UnitSystem = UnitSystem.Metric,
     ): FollowTrackSheetDisplay =
         followTrackSheetDisplay(
             plan = plan,
@@ -123,6 +140,7 @@ class FollowTrackContentTest {
             selected = selected,
             strings = strings,
             locale = locale,
+            units = units,
         )
 
     private class MapStrings(
@@ -159,6 +177,7 @@ class FollowTrackContentTest {
                 "follow_track_title" to "Follow %1\$s",
                 "follow_track_untitled" to "this track",
                 "follow_track_ascent" to "↑%1\$s m",
+                "follow_track_ascent_feet" to "↑%1\$s ft",
                 "follow_track_from_start" to "From the start",
                 "follow_track_from_end_reversed" to "From the end, reversed",
                 "follow_track_from_nearest" to "From the nearest point",
@@ -168,6 +187,8 @@ class FollowTrackContentTest {
                 "follow_track_close" to "Close the start choices",
                 "route_preview_metres" to "%1\$s m",
                 "route_preview_kilometres" to "%1\$s km",
+                "route_preview_feet" to "%1\$s ft",
+                "route_preview_miles" to "%1\$s mi",
             )
 
         val UKRAINIAN =

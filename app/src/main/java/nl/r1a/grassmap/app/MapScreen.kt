@@ -456,6 +456,7 @@ private fun MapContent(
     val libraryVisible by TrackLibraryScreen.visible.collectAsState()
     val libraryQuerySequence = remember { longArrayOf(0L) }
     val searchState by container.searchScreen.state.collectAsState()
+    val searchIndexes by container.searchIndexes.state.collectAsState()
     val searchSequence = remember { longArrayOf(0L) }
     var onlineSearchEnabled by remember { mutableStateOf(container.onlineSearchEnabled) }
     val positionAllowed by
@@ -1117,7 +1118,7 @@ private fun MapContent(
                                 searchKeystrokeParams(
                                     query = text,
                                     sequence = sequence,
-                                    index = SearchScreenSession.DEFAULT_INDEX,
+                                    index = searchIndexes.active?.name,
                                     limit = SearchScreenSession.DEFAULT_LIMIT,
                                     position = cameraNow().center,
                                     positionAllowed = positionAllowed,
@@ -1146,9 +1147,10 @@ private fun MapContent(
                             // A coordinate row is a point, not a place: there is no card
                             // behind it, so the map moves and no card is opened (T-0206).
                             // An online row has no offline record either, so it moves the
-                            // map and opens no card (T-0212).
-                            if (hit?.isCoordinate != true && hit?.source != PlaceSource.ONLINE) {
-                                container.showPlaceCard(SearchScreenSession.DEFAULT_INDEX, placeId).onFailure { error ->
+                            // map and opens no card (T-0212). The card opens the section
+                            // that produced the hit, which may not be the active one.
+                            if (hit != null && !hit.isCoordinate && hit.source != PlaceSource.ONLINE) {
+                                container.showPlaceCard(hit.regionBuild, placeId).onFailure { error ->
                                     Log.w(TAG, "search result card failed: $error")
                                 }
                             }
@@ -1165,7 +1167,7 @@ private fun MapContent(
                                 searchSubmitParams(
                                     query = text,
                                     sequence = sequence,
-                                    index = SearchScreenSession.DEFAULT_INDEX,
+                                    index = searchIndexes.active?.name,
                                     limit = SearchScreenSession.DEFAULT_LIMIT,
                                     position = cameraNow().center,
                                     positionAllowed = positionAllowed,
@@ -1184,7 +1186,7 @@ private fun MapContent(
                                 SEARCH_SCREEN_COMMAND,
                                 searchPickParams(
                                     query = text,
-                                    index = SearchScreenSession.DEFAULT_INDEX,
+                                    index = searchIndexes.active?.name,
                                     limit = SearchScreenSession.DEFAULT_LIMIT,
                                     position = cameraNow().center,
                                     positionAllowed = positionAllowed,
@@ -2617,6 +2619,10 @@ private suspend fun loadBundle(
     container.rasterSettings.current()
     container.mapStyleSettings.current()
     container.mapLabelSettings.options
+    // The search field needs the mounted pack's section before the first
+    // keystroke; this reads the store on the caller's IO dispatcher and then
+    // follows it, so a pack installed later needs no restart.
+    container.startSearchIndexes()
     val sources = MapSources.resolve(context, container.regionsRoot)
     val standard = loadStyle(container, STANDARD_STYLE_PLUGIN, STANDARD) ?: return null
     // A missing Touring plugin leaves Trail drawing the Standard style.

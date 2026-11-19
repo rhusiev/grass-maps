@@ -13,6 +13,21 @@ class SearchQueryParamsTest {
     private val point = GeoPoint(49.8419, 24.0316)
 
     @Test
+    fun withoutAMountedIndexTheRequestNamesNone() {
+        val params =
+            searchKeystrokeParams(
+                query = "Львів",
+                sequence = 3,
+                index = null,
+                limit = 5,
+                position = point,
+                positionAllowed = true,
+            )
+
+        assertFalse("the command must choose the index, not the screen", params.containsKey("index"))
+    }
+
+    @Test
     fun withTheAllowanceOffTheRequestHasNoPosition() {
         val params =
             searchKeystrokeParams(

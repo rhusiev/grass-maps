@@ -7,14 +7,16 @@ import kotlinx.serialization.json.put
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 
 /**
- * The parameters one search request sends through the command bus (T-0203,
- * T-0212, T-0207). The map position is added only when the separate "send my
- * position" allowance is on; the search path itself never invents one.
+ * The search screen's command parameters (T-0203, T-0212, T-0207). [index] is
+ * the section the query runs against; null means the app has no mounted
+ * section, so the key is left out and the command reports "not ready" after it
+ * tries a typed coordinate. The map position is added only when the separate
+ * "send my position" allowance is on.
  */
 internal fun searchKeystrokeParams(
     query: String,
     sequence: Long,
-    index: String,
+    index: String?,
     limit: Int,
     position: GeoPoint?,
     positionAllowed: Boolean,
@@ -28,7 +30,7 @@ internal fun searchKeystrokeParams(
 internal fun searchSubmitParams(
     query: String,
     sequence: Long,
-    index: String,
+    index: String?,
     limit: Int,
     position: GeoPoint?,
     positionAllowed: Boolean,
@@ -42,7 +44,7 @@ internal fun searchSubmitParams(
 /** A picked result row: its text is stored, and no new search runs. */
 internal fun searchPickParams(
     query: String,
-    index: String,
+    index: String?,
     limit: Int,
     position: GeoPoint?,
     positionAllowed: Boolean,
@@ -54,13 +56,15 @@ internal fun searchPickParams(
 
 private fun JsonObjectBuilder.putSearchRequest(
     query: String,
-    index: String,
+    index: String?,
     limit: Int,
     position: GeoPoint?,
     positionAllowed: Boolean,
 ) {
     put("query", query)
-    put("index", index)
+    if (index != null) {
+        put("index", index)
+    }
     put("limit", limit)
     if (positionAllowed && position != null) {
         put(

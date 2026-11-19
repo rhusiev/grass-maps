@@ -92,13 +92,18 @@ class SearchScreenSession(
      * Runs one keystroke. [sequence] orders keystrokes; 0 means "no ordering",
      * which only a one-off caller passes.
      *
+     * [index] is the section the query runs against. An empty name means the
+     * caller named none: the provider still answers a typed coordinate, and
+     * reports [AppError.NotReady] for every other query. The app sends the
+     * section of the mounted pack the map serves.
+     *
      * A blank query publishes [SearchScreenStatus.IDLE] with no hits and does
      * not reach the provider.
      */
     suspend fun submit(
         query: String,
         sequence: Long = 0,
-        index: String = DEFAULT_INDEX,
+        index: String = "",
         limit: Int = defaultLimit,
         context: SearchContext = SearchContext(),
     ): Outcome<SearchScreenState> {
@@ -249,9 +254,6 @@ class SearchScreenSession(
         }
 
     companion object {
-        /** The index the debug commands use until the region picker exists. */
-        const val DEFAULT_INDEX: String = "lviv"
-
         /** Enough rows for the sheet and the markers the map draws. */
         const val DEFAULT_LIMIT: Int = 5
     }

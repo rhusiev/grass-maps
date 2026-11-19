@@ -37,9 +37,13 @@ private fun isSafeIndexName(value: String): Boolean = INDEX_NAME.matches(value) 
  * The app's handle on the offline search indexes. One [RustPlaceProvider] per
  * mounted region build, opened on first use and kept afterwards.
  *
- * The root is the app's external files directory (or null when the platform
- * gives none); a missing root or a missing index is [AppError.NotReady], so a
- * device without the pushed index reports a typed failure instead of crashing.
+ * An index name resolves to a mounted pack's section first and to
+ * [externalFilesRoot] after that. The external root keeps the pushed debug and
+ * bench section working; a downloaded pack carries its section beside its map,
+ * so a pack needs no copy under `search/`.
+ *
+ * A missing root or a missing index is [AppError.NotReady], so a device without
+ * a pushed index reports a typed failure instead of crashing.
  *
  * A [CoordinateParser] runs before the index (T-0206): a coordinate the user
  * types is one row at that point on any device, with or without an installed
@@ -51,34 +55,43 @@ class PlacesAccess(
     private val externalFilesRoot: File?,
     private val coordinateParser: CoordinateParser = CoordinateParser.None,
     private val log: (String) -> Unit = {},
+    /** A mounted pack's section by index name; it wins over [externalFilesRoot]. */
+    private val packIndex: (String) -> File? = { null },
 ) {
     private val mutex = Mutex()
+
+    /** Opened readers by section directory, so a new pack version opens a new one. */
     private val providers = mutableMapOf<String, Outcome<RustPlaceProvider>>()
 
-    /** The directory the debug command and the region installer agree on. */
+    /** The directory [indexName] opens: the pack's section, else the external one. */
     fun indexDirectory(indexName: String): File? {
         if (!isSafeIndexName(indexName)) {
             return null
         }
+        packIndex(indexName)?.let { return it }
         return externalFilesRoot?.let { File(File(it, SEARCH_DIRECTORY), indexName) }
     }
 
     suspend fun provider(indexName: String): Outcome<RustPlaceProvider> =
         mutex.withLock {
+            if (indexName.isEmpty()) {
+                log("search: no index name")
+                return@withLock Outcome.Failure(AppError.NotReady)
+            }
             if (!isSafeIndexName(indexName)) {
                 log("search: unsafe index name rejected")
                 return@withLock Outcome.Failure(AppError.InvalidInput)
             }
-            providers[indexName]?.let { return@withLock it }
+            val directory = indexDirectory(indexName)
+            if (directory == null) {
+                log("search: no directory for index $indexName")
+                return@withLock Outcome.Failure(AppError.NotReady)
+            }
+            val key = directory.absolutePath
+            providers[key]?.let { return@withLock it }
             val opened =
                 withContext(Dispatchers.IO) {
-                    val directory = indexDirectory(indexName)
                     when {
-                        directory == null -> {
-                            log("search: no external files root")
-                            Outcome.Failure(AppError.NotReady)
-                        }
-
                         !directory.isDirectory -> {
                             log("search: index directory missing: ${directory.absolutePath}")
                             Outcome.Failure(AppError.NotReady)
@@ -90,7 +103,7 @@ class PlacesAccess(
                     }
                 }
             if (opened is Outcome.Success) {
-                providers[indexName] = opened
+                providers[key] = opened
             }
             opened
         }

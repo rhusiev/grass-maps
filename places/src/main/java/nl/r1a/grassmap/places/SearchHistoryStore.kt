@@ -107,13 +107,14 @@ class SearchHistoryStore(
     }
 
     /**
-     * Records one submitted or picked search. A blank or malformed search is
-     * [AppError.InvalidInput]; with history off the result is success and the
-     * file is not read or written.
+     * Records one submitted or picked search. [index] is the section the search
+     * ran against, so a stored row reopens the place it came from. A blank or
+     * malformed search is [AppError.InvalidInput]; with history off the result
+     * is success and the file is not read or written.
      */
     suspend fun remember(
         query: String,
-        index: String = SearchScreenSession.DEFAULT_INDEX,
+        index: String,
         limit: Int = SearchScreenSession.DEFAULT_LIMIT,
         context: SearchContext = SearchContext(),
     ): Outcome<Unit> =

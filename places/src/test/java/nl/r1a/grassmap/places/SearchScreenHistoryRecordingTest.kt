@@ -41,7 +41,7 @@ class SearchScreenHistoryRecordingTest {
                 Outcome.Success(listOf(hit(request.query)))
             }
         }
-    private val command = SearchScreenCommand(session, history)
+    private val command = SearchScreenCommand(session, history, { "lviv" })
 
     @After
     fun removeRoot() {

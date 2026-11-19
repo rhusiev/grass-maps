@@ -19,8 +19,6 @@ import nl.r1a.grassmap.ui.shell.placeCardContent
 internal val SHOW_PLACE_CARD_COMMAND: CommandId = CommandId("core.place.card_show")
 internal val HIDE_PLACE_CARD_COMMAND: CommandId = CommandId("core.place.card_hide")
 
-private const val DEFAULT_INDEX = "lviv"
-
 internal fun placeCardCommands(container: () -> AppContainer): List<Command<*, *>> =
     listOf(ShowPlaceCardCommand(container), HidePlaceCardCommand())
 
@@ -56,12 +54,13 @@ internal class ShowPlaceCardCommand(
         }
     }
 
-    private fun parse(params: JsonElement): Request? {
+    private suspend fun parse(params: JsonElement): Request? {
         val json = params as? JsonObject ?: return null
         val placeId = (json["id"] as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() } ?: return null
         val index =
             (json["index"] as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
-                ?: DEFAULT_INDEX
+                ?: container().searchIndexName()
+                ?: ""
         return Request(index, placeId)
     }
 

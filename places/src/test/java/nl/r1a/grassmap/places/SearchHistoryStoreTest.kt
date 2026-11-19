@@ -161,7 +161,7 @@ class SearchHistoryStoreTest {
             val sentinel = file.readBytes()
             setting.enabled = false
 
-            assertEquals(Outcome.Success(Unit), store.remember("кава"))
+            assertEquals(Outcome.Success(Unit), store.remember("кава", index = "lviv"))
             assertEquals(emptyList<SearchHistoryEntry>(), entries())
 
             assertArrayEquals(sentinel, file.readBytes())
@@ -185,7 +185,7 @@ class SearchHistoryStoreTest {
             writeRaw("""{"format":2,"entries":[]}""")
             val sentinel = file.readBytes()
 
-            assertEquals(Outcome.Failure(AppError.Unsupported), store.remember("кава"))
+            assertEquals(Outcome.Failure(AppError.Unsupported), store.remember("кава", index = "lviv"))
             assertEquals(Outcome.Failure(AppError.Unsupported), store.list())
             assertArrayEquals("a newer file must not be overwritten", sentinel, file.readBytes())
 
@@ -215,7 +215,7 @@ class SearchHistoryStoreTest {
     @Test
     fun `a blank query is refused and writes nothing`() =
         runTest {
-            assertEquals(Outcome.Failure(AppError.InvalidInput), store.remember("   "))
+            assertEquals(Outcome.Failure(AppError.InvalidInput), store.remember("   ", index = "lviv"))
 
             assertFalse(file.exists())
         }
@@ -223,8 +223,8 @@ class SearchHistoryStoreTest {
     @Test
     fun `a limit outside the contract is refused`() =
         runTest {
-            assertEquals(Outcome.Failure(AppError.InvalidInput), store.remember("кава", limit = 0))
-            assertEquals(Outcome.Failure(AppError.InvalidInput), store.remember("кава", limit = MAX_SEARCH_RESULTS + 1))
+            assertEquals(Outcome.Failure(AppError.InvalidInput), store.remember("кава", index = "lviv", limit = 0))
+            assertEquals(Outcome.Failure(AppError.InvalidInput), store.remember("кава", index = "lviv", limit = MAX_SEARCH_RESULTS + 1))
 
             assertFalse(file.exists())
         }
@@ -234,7 +234,7 @@ class SearchHistoryStoreTest {
         query: String,
     ): Outcome<Unit> {
         clock.nowMillis = millis
-        val outcome = store.remember(query)
+        val outcome = store.remember(query, index = "lviv")
         assertEquals("remember failed for $query", Outcome.Success(Unit), outcome)
         return outcome
     }

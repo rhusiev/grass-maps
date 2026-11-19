@@ -73,7 +73,7 @@ class SearchHistoryCommandsTest {
     private suspend fun seed(vararg queries: String) {
         queries.forEach { query ->
             clock.now += 1_000L
-            assertEquals(Outcome.Success(Unit), store.remember(query))
+            assertEquals(Outcome.Success(Unit), store.remember(query, index = "lviv"))
         }
     }
 

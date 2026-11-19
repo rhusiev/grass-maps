@@ -29,7 +29,6 @@ import java.util.concurrent.TimeUnit
 internal val SEARCH_QUERY_COMMAND: CommandId = CommandId("core.search.query")
 
 private const val TAG = "GrassMapsSearch"
-private const val DEFAULT_INDEX = "lviv"
 private const val DEFAULT_LIMIT = 5
 
 /**
@@ -37,11 +36,15 @@ private const val DEFAULT_LIMIT = 5
  * logs each prefix's hits and milliseconds. With `{"cancel": true}` it runs an
  * already-superseded keystroke and reports that no result came back.
  *
+ * An `index` parameter names one section; without it the command uses
+ * [defaultIndex], which the app sets to the mounted pack the map serves.
+ *
  * The command is a host command with no UI binding; only the debug control
  * channel can invoke it. T-0203 owns the search screen.
  */
 internal class SearchQueryCommand(
     private val places: () -> PlacesAccess,
+    private val defaultIndex: suspend () -> String? = { null },
     private val log: (String) -> Unit = { message -> Log.i(TAG, message) },
 ) : Command<JsonElement, String>(
         id = SEARCH_QUERY_COMMAND,
@@ -152,7 +155,7 @@ internal class SearchQueryCommand(
         return sorted[rank] / 1000.0
     }
 
-    private fun parse(params: JsonElement): Selection? {
+    private suspend fun parse(params: JsonElement): Selection? {
         val objectValue =
             when (params) {
                 is JsonNull -> JsonObject(emptyMap())
@@ -163,7 +166,10 @@ internal class SearchQueryCommand(
         if (query.isEmpty()) {
             return null
         }
-        val index = (objectValue["index"] as? JsonPrimitive)?.contentOrNull ?: DEFAULT_INDEX
+        val index =
+            (objectValue["index"] as? JsonPrimitive)?.contentOrNull
+                ?: defaultIndex()
+                ?: ""
         val limit =
             (objectValue["limit"] as? JsonPrimitive)?.intOrNull ?: DEFAULT_LIMIT
         if (limit !in 1..MAX_SEARCH_RESULTS) {
@@ -188,4 +194,7 @@ internal class SearchQueryCommand(
     )
 }
 
-internal fun searchCommands(places: () -> PlacesAccess): List<Command<*, *>> = listOf(SearchQueryCommand(places))
+internal fun searchCommands(
+    places: () -> PlacesAccess,
+    defaultIndex: suspend () -> String? = { null },
+): List<Command<*, *>> = listOf(SearchQueryCommand(places, defaultIndex))

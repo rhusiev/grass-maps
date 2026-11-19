@@ -714,13 +714,18 @@ class AppContainer(
                     favourites = { favourites.load() },
                     tracks = { tracks.storedTracks() },
                     pois = { box, kinds ->
-                        places.pois(
-                            indexName = SearchScreenSession.DEFAULT_INDEX,
-                            bbox = box,
-                            categories = kinds,
-                            limit = PROXIMITY_POI_LIMIT,
-                            cancellation = CancellationHandle.None,
-                        )
+                        val index = searchIndexes.state.value.active
+                        if (index == null) {
+                            Outcome.Failure(AppError.NotReady)
+                        } else {
+                            places.pois(
+                                indexName = index.name,
+                                bbox = box,
+                                categories = kinds,
+                                limit = PROXIMITY_POI_LIMIT,
+                                cancellation = CancellationHandle.None,
+                            )
+                        }
                     },
                     log = { message -> Log.i(PROXIMITY_ALERTS_TAG, message) },
                 ),
@@ -755,15 +760,45 @@ class AppContainer(
     }
 
     /**
-     * The offline search indexes over the app's external files directory, with
-     * the coordinate parser in front of them (T-0206): a typed coordinate is a
-     * result row even when no index is installed.
+     * The search sections of the mounted packs (T-0620). The active one is the
+     * first pack in region-id order, the pack whose tiles the map serves and
+     * whose components the single-region readers mount. It follows the region
+     * store's published installed list, so a pack installed after the map
+     * opened is searchable without a restart. [startSearchIndexes] resolves it
+     * off Main; no index is opened until a query reaches [places].
+     */
+    internal val searchIndexes: SearchIndexes by lazy {
+        SearchIndexes(
+            root = { regionsRoot },
+            installed = { regionStore?.data?.map { it.installed } },
+            scope = processScope,
+            log = { message -> Log.i(SEARCH_TAG, message) },
+        )
+    }
+
+    /** Resolves the mounted search sections and follows the store; call off Main. */
+    internal suspend fun startSearchIndexes() {
+        searchIndexes.start()
+    }
+
+    /** The active index name, or null when no mounted pack has a section. Call off Main. */
+    internal suspend fun searchIndexName(): String? {
+        searchIndexes.start()
+        return searchIndexes.state.value.active
+            ?.name
+    }
+
+    /**
+     * The offline search indexes over the mounted packs and the app's external
+     * files directory, with the coordinate parser in front of them (T-0206): a
+     * typed coordinate is a result row even when no index is installed.
      */
     val places: PlacesAccess by lazy {
         PlacesAccess(
             externalFilesRoot = searchFilesProvider(),
             coordinateParser = Coordinates.parser,
             log = { message -> Log.i(SEARCH_TAG, message) },
+            packIndex = { name -> searchIndexes.directory(name) },
         )
     }
 
@@ -1166,8 +1201,8 @@ class AppContainer(
         mapCommands(mapSession, locationController, locationPermission, cameraModes) +
             routeCommands(mapSession, routingEngine, { dataSources }) +
             navCommands(mapSession, routingEngine, navigation, guidance, { beeps }, { alerts }) +
-            searchCommands { places } +
-            searchScreenCommands(searchScreen, searchHistory) { message -> Log.i(SEARCH_TAG, message) } +
+            searchCommands({ places }, { searchIndexName() }) +
+            searchScreenCommands(searchScreen, searchHistory, { searchIndexName() }) { message -> Log.i(SEARCH_TAG, message) } +
             searchHistoryCommands(searchHistory) +
             trackCommands({ tracks }, assetReader) +
             favouriteCommands({ favourites }, assetReader).map { command ->

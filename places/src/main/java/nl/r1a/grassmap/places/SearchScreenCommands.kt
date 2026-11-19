@@ -66,8 +66,9 @@ private val REMEMBERED_STATUSES: Set<SearchScreenStatus> = setOf(SearchScreenSta
  * .., "north": .., "east": ..}` and restricts every result to the visible map
  * area, which is "search this area" (T-0206). `clear: true` empties the screen
  * without reaching the provider, and a blank query in any other event is
- * [AppError.InvalidInput]. The result is a one-line summary; the screen itself
- * reads [SearchScreenSession.state].
+ * [AppError.InvalidInput]. An absent `index` uses [defaultIndex], which the app
+ * sets to the mounted pack the map serves. The result is a one-line summary;
+ * the screen itself reads [SearchScreenSession.state].
  *
  * History is written on two events only. `submit: true` runs the query and
  * remembers it, because the user confirmed the field. `pick: true` remembers
@@ -78,6 +79,8 @@ private val REMEMBERED_STATUSES: Set<SearchScreenStatus> = setOf(SearchScreenSta
 class SearchScreenCommand(
     private val session: SearchScreenSession,
     private val history: SearchHistoryStore? = null,
+    /** The index a request without one uses, or null when no pack has a section. */
+    private val defaultIndex: suspend () -> String? = { null },
     private val log: (String) -> Unit = {},
 ) : Command<JsonElement, String>(
         id = SEARCH_SCREEN_COMMAND,
@@ -130,13 +133,13 @@ class SearchScreenCommand(
         }
     }
 
-    private fun parse(params: JsonElement): Request? {
+    private suspend fun parse(params: JsonElement): Request? {
         val json = params as? JsonObject ?: if (params is JsonNull) JsonObject(emptyMap()) else return null
         if ((json[PARAM_CLEAR] as? JsonPrimitive)?.booleanOrNull == true) {
             return Request(
                 query = "",
                 sequence = 0L,
-                index = SearchScreenSession.DEFAULT_INDEX,
+                index = "",
                 limit = SearchScreenSession.DEFAULT_LIMIT,
                 context = SearchContext(),
                 clear = true,
@@ -149,7 +152,10 @@ class SearchScreenCommand(
             return null
         }
         val sequence = (json[PARAM_SEQUENCE] as? JsonPrimitive)?.longOrNull ?: 0L
-        val index = (json[PARAM_INDEX] as? JsonPrimitive)?.contentOrNull ?: SearchScreenSession.DEFAULT_INDEX
+        val index =
+            (json[PARAM_INDEX] as? JsonPrimitive)?.contentOrNull
+                ?: defaultIndex()
+                ?: ""
         val limit = (json[PARAM_LIMIT] as? JsonPrimitive)?.intOrNull ?: SearchScreenSession.DEFAULT_LIMIT
         if (limit !in 1..MAX_SEARCH_RESULTS) {
             return null
@@ -221,6 +227,8 @@ class SearchScreenCommand(
  */
 class ReplaySearchCommand(
     private val session: SearchScreenSession,
+    /** The index a request without one uses, or null when no pack has a section. */
+    private val defaultIndex: suspend () -> String? = { null },
     private val log: (String) -> Unit = {},
 ) : Command<JsonElement, String>(
         id = SEARCH_REPLAY_COMMAND,
@@ -281,7 +289,7 @@ class ReplaySearchCommand(
         return Outcome.Success(CommandResult(summary))
     }
 
-    private fun parse(params: JsonElement): Request? {
+    private suspend fun parse(params: JsonElement): Request? {
         val json = params as? JsonObject ?: return null
         val queries =
             (json[PARAM_QUERIES] as? JsonArray)
@@ -291,7 +299,10 @@ class ReplaySearchCommand(
         if (queries.isEmpty() || queries.size > MAX_REPLAY_QUERIES) {
             return null
         }
-        val index = (json[PARAM_INDEX] as? JsonPrimitive)?.contentOrNull ?: SearchScreenSession.DEFAULT_INDEX
+        val index =
+            (json[PARAM_INDEX] as? JsonPrimitive)?.contentOrNull
+                ?: defaultIndex()
+                ?: ""
         val limit = (json[PARAM_LIMIT] as? JsonPrimitive)?.intOrNull ?: SearchScreenSession.DEFAULT_LIMIT
         if (limit !in 1..MAX_SEARCH_RESULTS) {
             return null
@@ -343,8 +354,14 @@ class ReplaySearchCommand(
 fun searchScreenCommands(
     session: SearchScreenSession,
     history: SearchHistoryStore? = null,
+    /** The index a request without one uses, or null when no pack has a section. */
+    defaultIndex: suspend () -> String? = { null },
     log: (String) -> Unit = {},
-): List<Command<*, *>> = listOf(SearchScreenCommand(session, history, log), ReplaySearchCommand(session, log))
+): List<Command<*, *>> =
+    listOf(
+        SearchScreenCommand(session, history, defaultIndex, log),
+        ReplaySearchCommand(session, defaultIndex, log),
+    )
 
 /**
  * The nearest-rank percentile of [timings] in microseconds. Empty input is 0,

@@ -221,7 +221,13 @@ class AlertSettingsStoreTest {
         backing.writeFailure = AppError.CorruptData
 
         assertEquals(Outcome.Failure(AppError.CorruptData), store.set(RouteProfile.Bike, signal))
-        assertEquals(Outcome.Failure(AppError.CorruptData), store.replace(BuiltInProfiles.BIKE, store.read(BuiltInProfiles.BIKE) + ("x" to "y")))
+        assertEquals(
+            Outcome.Failure(AppError.CorruptData),
+            store.replace(
+                BuiltInProfiles.BIKE,
+                store.read(BuiltInProfiles.BIKE) + ("x" to "y"),
+            ),
+        )
 
         assertEquals(ProfileAlertSettings.DEFAULT, store.forProfile(RouteProfile.Bike))
         assertTrue(store.read(BuiltInProfiles.BIKE).isEmpty())

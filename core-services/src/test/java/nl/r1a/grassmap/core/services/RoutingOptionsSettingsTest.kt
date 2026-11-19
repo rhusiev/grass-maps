@@ -174,7 +174,13 @@ class RoutingOptionsSettingsTest {
             assertEquals(Outcome.Failure(AppError.NewerSchema(found = 2, supported = RoutingOptionsSettings.SCHEMA_VERSION)), outcome)
             assertEquals(newer, files.file.readText())
             assertEquals("the planner never sees values that are not on disk", RouteOptions(), settings.forProfile(RouteProfile.Bike))
-            assertEquals(Outcome.Failure(AppError.NewerSchema(found = 2, supported = RoutingOptionsSettings.SCHEMA_VERSION)), settings.replace(ProfileId("bike"), mapOf("hills" to "avoid")))
+            assertEquals(
+                Outcome.Failure(AppError.NewerSchema(found = 2, supported = RoutingOptionsSettings.SCHEMA_VERSION)),
+                settings.replace(
+                    ProfileId("bike"),
+                    mapOf("hills" to "avoid"),
+                ),
+            )
             assertTrue(settings.read(ProfileId("bike")).isEmpty())
         }
 

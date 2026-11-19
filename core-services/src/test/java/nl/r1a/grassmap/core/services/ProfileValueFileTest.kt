@@ -1,10 +1,10 @@
 package nl.r1a.grassmap.core.services
 
+import kotlinx.serialization.json.Json
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.ProfileId
 import nl.r1a.grassmap.plugin.api.service.ProfileValues
-import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

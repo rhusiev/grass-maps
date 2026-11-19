@@ -186,7 +186,11 @@ class ProfileValueFile(
         values: ProfileValues,
         extras: Extras?,
     ): JsonObject {
-        val entries = values.entries.associate { (profile, entries) -> profile.value to encodeProfile(entries, extras?.keys?.get(profile.value)) }
+        val entries =
+            values.entries.associate { (profile, entries) ->
+                profile.value to
+                    encodeProfile(entries, extras?.keys?.get(profile.value))
+            }
         val opaque = extras?.opaque.orEmpty().filterKeys { it !in entries }
         return JsonObject((entries + opaque).toSortedMap())
     }

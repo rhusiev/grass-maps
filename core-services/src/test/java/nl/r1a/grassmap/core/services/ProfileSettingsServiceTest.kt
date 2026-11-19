@@ -287,7 +287,11 @@ class ProfileSettingsServiceTest {
     }
 
     private fun bikeModeIndex(): Int =
-        stored(extraFile).getValue(BuiltInProfiles.BIKE).getValue("mode").dropWhile { !it.isDigit() }.toInt()
+        stored(extraFile)
+            .getValue(BuiltInProfiles.BIKE)
+            .getValue("mode")
+            .dropWhile { !it.isDigit() }
+            .toInt()
 
     private fun file(name: String) = ProfileValueFile(File(directory, name), ProfileCatalog.SCHEMA_VERSION, "test")
 
@@ -321,8 +325,7 @@ class ProfileSettingsServiceTest {
         override fun replace(
             profile: ProfileId,
             values: Map<String, String>,
-        ): Outcome<Unit> =
-            if (failAfterWrites-- > 0) Outcome.Success(Unit) else Outcome.Failure(AppError.CorruptData)
+        ): Outcome<Unit> = if (failAfterWrites-- > 0) Outcome.Success(Unit) else Outcome.Failure(AppError.CorruptData)
     }
 
     private class WriteFailsAfter(

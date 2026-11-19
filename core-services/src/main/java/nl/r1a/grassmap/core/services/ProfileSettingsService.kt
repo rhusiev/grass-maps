@@ -132,8 +132,7 @@ class ProfileSettingsService(
     private fun restoreAfterFailure(
         entry: Undoable,
         failure: Outcome.Failure,
-    ): Outcome<ProfilesState> =
-        if (replaceAll(entry.profile, entry.after) is Outcome.Success) failure else brokenRollback()
+    ): Outcome<ProfilesState> = if (replaceAll(entry.profile, entry.after) is Outcome.Success) failure else brokenRollback()
 
     private fun change(
         action: ProfileAction,

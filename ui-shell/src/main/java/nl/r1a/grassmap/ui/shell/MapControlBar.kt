@@ -40,6 +40,7 @@ data class ControlBarLabels(
     val edit: String,
     val editDone: String,
     val editDescription: String,
+    val editDoneDescription: String,
     val moveLeft: String,
     val moveLeftDescription: String,
     val moveRight: String,
@@ -106,7 +107,7 @@ fun MapControlBar(
         }
         ActionBox(
             label = if (isEditing) labels.editDone else labels.edit,
-            description = labels.editDescription,
+            description = if (isEditing) labels.editDoneDescription else labels.editDescription,
             enabled = true,
             onClick = { onEditingChange(!isEditing) },
             shape = shape,

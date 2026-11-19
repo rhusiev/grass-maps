@@ -2556,6 +2556,7 @@ private fun controlBarLabels(context: Context): ControlBarLabels =
         edit = context.getString(R.string.control_edit_label),
         editDone = context.getString(R.string.control_edit_done_label),
         editDescription = context.getString(R.string.control_edit_description),
+        editDoneDescription = context.getString(R.string.control_edit_done_description),
         moveLeft = context.getString(R.string.control_move_left_label),
         moveLeftDescription = context.getString(R.string.control_move_left_description),
         moveRight = context.getString(R.string.control_move_right_label),

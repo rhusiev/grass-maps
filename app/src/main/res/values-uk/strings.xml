@@ -42,6 +42,7 @@
     <string name="control_edit_label">Змінити</string>
     <string name="control_edit_done_label">Готово</string>
     <string name="control_edit_description">Змінити кнопки</string>
+    <string name="control_edit_done_description">Завершити редагування кнопок</string>
     <string name="control_move_left_label">&#8249;</string>
     <string name="control_move_left_description">Перемістити ліворуч</string>
     <string name="control_move_right_label">&#8250;</string>

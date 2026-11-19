@@ -48,8 +48,10 @@ class MapControlLabelsTest {
     @Test
     fun theEditControlsAndTheScaleBarAreNamed() {
         for (key in CHROME_KEYS) {
-            assertTrue("$key is missing in English", english[key]?.isNotBlank() == true)
+            val value = english[key]
+            assertTrue("$key is missing in English", value?.isNotBlank() == true)
             assertTrue("$key is missing in Ukrainian", ukrainian[key]?.isNotBlank() == true)
+            assertTrue("$key is not a phrase: '$value'", value!!.contains(' '))
         }
     }
 
@@ -86,6 +88,7 @@ class MapControlLabelsTest {
                 "control_follow_description_heading",
                 "control_route_planner_description",
                 "control_edit_description",
+                "control_edit_done_description",
                 "control_move_left_description",
                 "control_move_right_description",
                 "map_scale_description",

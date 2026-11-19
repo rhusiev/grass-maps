@@ -53,4 +53,37 @@ class ProviderRegistryTest {
             )
             assertEquals(3, provider.calls)
         }
+
+    @Test
+    fun switchingThePluginBackOnClearsTheBreaker() =
+        runTest {
+            val provider = ThrowingTestProvider()
+            val id = PluginId(TEST_PLUGIN_ID)
+            val manifest =
+                testManifest(
+                    providers = listOf(ProviderDeclaration(contract = "test.throwing", version = "1.0.0")),
+                )
+            var activations = 0
+            val host =
+                testHost(testScheduler, manifest, enabledStore = MemoryEnabledStore(), switchable = setOf(id)) {
+                    activations += 1
+                    TestPlugin(providers = listOf(provider))
+                }
+            val registry = ProviderRegistry(host)
+            repeat(ProviderRegistry.DEFAULT_FAILURE_LIMIT) {
+                registry.invoke(id, provider.contract) { current -> (current as ThrowingTestProvider).fail() }
+            }
+            assertEquals(Outcome.Failure(AppError.NotReady), registry.invoke(id, provider.contract) { 0 })
+
+            host.setEnabled(id, enabled = false)
+            host.setEnabled(id, enabled = true)
+
+            assertEquals(Outcome.Success(SEVEN), registry.invoke(id, provider.contract) { SEVEN })
+            assertEquals(2, activations)
+            assertEquals(ProviderState.ACTIVE, registry.statusOf(id, provider.contract)?.state)
+        }
+
+    private companion object {
+        const val SEVEN = 7
+    }
 }

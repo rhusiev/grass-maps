@@ -17,7 +17,9 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Calls providers behind a boundary that turns an unexpected exception into a
  * [AppError.PluginFailed] value. After [failureLimit] failures in one session the
- * provider is disabled without stopping the app or the host.
+ * provider is disabled without stopping the app or the host. Switching the
+ * plugin back on clears the count and the stop, so the user's own recovery
+ * action also recovers the providers.
  */
 class ProviderRegistry(
     private val host: PluginHost,
@@ -27,7 +29,18 @@ class ProviderRegistry(
     private val disabled = ConcurrentHashMap.newKeySet<ProviderKey>()
     private val _statuses = MutableStateFlow<List<ProviderStatus>>(emptyList())
 
+    init {
+        host.onPluginEnabled(::reset)
+    }
+
     val statuses: StateFlow<List<ProviderStatus>> = _statuses.asStateFlow()
+
+    /** Forgets the count and the stop of every provider [pluginId] owns. */
+    private fun reset(pluginId: PluginId) {
+        failures.keys.removeIf { it.pluginId == pluginId }
+        disabled.removeIf { it.pluginId == pluginId }
+        _statuses.update { statuses -> statuses.filterNot { it.pluginId == pluginId } }
+    }
 
     fun statusOf(
         pluginId: PluginId,

@@ -11,7 +11,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nl.r1a.grassmap.app.MapChromeSession
-import nl.r1a.grassmap.places.SearchScreenSession
 import nl.r1a.grassmap.places.SearchScreenStatus
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
@@ -124,8 +123,9 @@ internal class ScreenshotsStep(
         }
         val (query, source) = used
         if (hits.isEmpty()) {
-            skipScene("search_results", "no query found a place (tried ${attempts.joinToString()}), ${searchIndexNote()}")
-            skipScene("place_card", "no search hit to open")
+            val note = searchIndexNote()
+            skipScene("search_results", "no query found a place (tried ${attempts.joinToString()}), $note")
+            skipScene("place_card", "no search hit to open: $note")
             return
         }
         shoot(
@@ -213,17 +213,22 @@ internal class ScreenshotsStep(
     }
 
     /**
-     * Where the search path looks for its index and whether it is there. A
-     * downloaded pack keeps its search section in the region store, which this
-     * path does not read, so a run against a fresh download states the missing
-     * directory instead of blaming the query.
+     * Where the search path reads its index: the active mounted pack's section
+     * when one is mounted, else the external root a pushed debug section would
+     * live under. A download with no usable section is named here instead of
+     * blaming the query.
      */
-    private fun searchIndexNote(): String {
-        val index = SearchScreenSession.DEFAULT_INDEX
-        val directory = context.container.places.indexDirectory(index)
-        val present = directory?.isDirectory == true
-        return "the search path reads index \"$index\" at ${directory?.path ?: "no external files root"}: " +
-            if (present) "present, ${searchPartNote()}" else "missing, ${searchPartNote()}"
+    private suspend fun searchIndexNote(): String {
+        context.container.startSearchIndexes()
+        val active = context.container.searchIndexes.state.value.active
+        if (active != null) {
+            val state = if (active.directory.isDirectory) "present" else "missing"
+            return "the search path reads the active pack's section, index \"${active.name}\" " +
+                "at ${active.directory.path}: $state, ${searchPartNote()}"
+        }
+        val root = context.container.places.externalIndexRoot()
+        return "no mounted pack has a search section; the external search root is " +
+            "${root?.path ?: "absent"}, no index name is selected, ${searchPartNote()}"
     }
 
     private suspend fun plannerScene() {

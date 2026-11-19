@@ -32,11 +32,18 @@ private val PANEL_BACKGROUND = Color(0xCC000000)
 private val PANEL_FOREGROUND = Color.White
 private const val PANEL_CORNER_DP = 8
 private const val PANEL_HORIZONTAL_DP = 12
-private const val PANEL_VERTICAL_DP = 8
+private const val PANEL_VERTICAL_DP = 6
 private const val PANEL_GAP_DP = 6
 private const val PANEL_FONT_SP = 13
 private const val ACTION_VERTICAL_DP = 2
 private const val BYTES_PER_MEGABYTE = 1024L * 1024L
+private const val PANEL_SEPARATOR = " \u00B7 "
+
+// The map credit's top edge is 54 dp above the window edge. This gap, on top of
+// the map's 16 dp padding, keeps the panel above the credit line and the scale
+// bar, and the compact rows keep the panel's top edge below the map goldens'
+// comparison window.
+private const val BOTTOM_CONTROL_CLEARANCE_DP = 42
 
 /**
  * The development-tools panel. It binds the plugin's state stream and invokes
@@ -64,12 +71,20 @@ internal fun DevToolsPanel(
     Column(
         modifier =
             modifier
+                .padding(bottom = BOTTOM_CONTROL_CLEARANCE_DP.dp)
                 .clip(RoundedCornerShape(PANEL_CORNER_DP.dp))
                 .background(PANEL_BACKGROUND)
                 .padding(horizontal = PANEL_HORIZONTAL_DP.dp, vertical = PANEL_VERTICAL_DP.dp),
         verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
     ) {
-        PanelText(stringResource(R.string.dev_tools_title))
+        val usedMemoryMb = state.usedMemoryBytes / BYTES_PER_MEGABYTE
+        PanelText(
+            listOf(
+                stringResource(R.string.dev_tools_title),
+                stringResource(R.string.dev_tools_fps, state.framesPerSecond),
+                stringResource(R.string.dev_tools_memory, usedMemoryMb),
+            ).joinToString(PANEL_SEPARATOR),
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp)) {
             PanelText(
                 stringResource(
@@ -82,13 +97,6 @@ internal fun DevToolsPanel(
             )
             PanelText(stringResource(R.string.dev_check_build, BuildConfig.BUILD_COMMIT, BuildConfig.BUILD_COMMIT_TIME))
         }
-        PanelText(stringResource(R.string.dev_tools_fps, state.framesPerSecond))
-        PanelText(
-            stringResource(
-                R.string.dev_tools_memory,
-                state.usedMemoryBytes / BYTES_PER_MEGABYTE,
-            ),
-        )
         Row(horizontalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp)) {
             PanelAction(stringResource(R.string.dev_tools_start_replay)) {
                 scope.launch { container.commandBus.invoke(DevToolsContract.startReplayCommand) }

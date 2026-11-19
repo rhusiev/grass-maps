@@ -20,7 +20,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -61,6 +66,27 @@ data class WidgetGridLabels(
     val moveLater: (title: String) -> String,
     val pick: (title: String) -> String,
 )
+
+/**
+ * The one spoken line of a cell: its title and each value. The short labels
+ * under the values are visual unit hints; the values already carry their unit,
+ * so repeating the labels would say the same thing twice.
+ */
+fun widgetCellDescription(cell: WidgetCell): String {
+    val values = cell.lines.map { it.value }.filter { it.isNotBlank() }
+    return when {
+        cell.title.isBlank() -> values.joinToString(", ")
+        values.isEmpty() -> cell.title
+        else -> "${cell.title}: ${values.joinToString(", ")}"
+    }
+}
+
+/**
+ * Whether a value change is announced. Only the selected point changes on a
+ * user action; altitude, GPS accuracy, coordinates and speeds move with every
+ * fix, and a live region on them would chatter.
+ */
+fun widgetAnnouncesValueChanges(widget: GridWidget): Boolean = widget == GridWidget.SelectedPoint
 
 /**
  * The read-only info widgets at the top of the map. Outside edit mode it draws
@@ -150,8 +176,39 @@ private fun WidgetCellView(
     onMove: (Int) -> Unit,
     onClear: () -> Unit,
 ) {
+    val description = widgetCellDescription(cell)
+    val moveActions =
+        buildList {
+            if (isEditing && canMoveEarlier) {
+                add(
+                    CustomAccessibilityAction(labels.moveEarlier(cell.title)) {
+                        onMove(-1)
+                        true
+                    },
+                )
+            }
+            if (isEditing && canMoveLater) {
+                add(
+                    CustomAccessibilityAction(labels.moveLater(cell.title)) {
+                        onMove(1)
+                        true
+                    },
+                )
+            }
+        }
     Row(
-        modifier = Modifier.glass().padding(horizontal = CELL_PADDING_DP.dp, vertical = CELL_VERTICAL_PADDING_DP.dp),
+        modifier =
+            Modifier
+                .glass()
+                .semantics(mergeDescendants = true) {
+                    contentDescription = description
+                    if (moveActions.isNotEmpty()) {
+                        customActions = moveActions
+                    }
+                    if (!isEditing && widgetAnnouncesValueChanges(cell.widget)) {
+                        liveRegion = LiveRegionMode.Polite
+                    }
+                }.padding(horizontal = CELL_PADDING_DP.dp, vertical = CELL_VERTICAL_PADDING_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(GRID_GAP_DP.dp),
     ) {
@@ -195,7 +252,7 @@ private fun GridGlyph(
         modifier =
             Modifier
                 .clip(RoundedCornerShape(GRID_CORNER_DP.dp))
-                .clickable(enabled = enabled, onClick = onClick)
+                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
                 .semantics { contentDescription = description }
                 .padding(horizontal = GLYPH_PADDING_DP.dp),
     )
@@ -218,7 +275,7 @@ private fun GridAction(
                 .background(GLASS_COLOR, shape)
                 .border(1.dp, RING_COLOR, shape)
                 .clip(shape)
-                .clickable(enabled = enabled, onClick = onClick)
+                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
                 .semantics { contentDescription = description }
                 .padding(horizontal = CELL_PADDING_DP.dp, vertical = CELL_VERTICAL_PADDING_DP.dp),
     )

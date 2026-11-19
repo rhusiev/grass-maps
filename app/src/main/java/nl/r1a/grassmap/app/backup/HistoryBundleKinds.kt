@@ -94,6 +94,10 @@ internal class SearchHistoryBundleKind(
 
     private fun entryOf(entry: BundleEntry): SearchHistoryEntry? {
         val value = entry.value
+        val query = value.stringValue(QUERY_KEY) ?: entry.id
+        if (query != entry.id) {
+            return null
+        }
         val index = value.stringValue(INDEX_KEY) ?: return null
         val limit = value.intValue(LIMIT_KEY) ?: return null
         val atMillis = value.longValue(AT_MILLIS_KEY) ?: return null
@@ -124,7 +128,7 @@ internal class SearchHistoryBundleKind(
                 }
             }
         return SearchHistoryEntry(
-            query = value.stringValue(QUERY_KEY) ?: entry.id,
+            query = query,
             index = index,
             limit = limit,
             atMillis = atMillis,
@@ -199,6 +203,9 @@ internal class RouteHistoryBundleKind(
                 } catch (exception: IllegalArgumentException) {
                     return Outcome.Failure(AppError.InvalidInput)
                 }
+            if (chainId(incoming) != entry.id) {
+                return Outcome.Failure(AppError.InvalidInput)
+            }
             val index = merged.indexOfFirst { current -> RouteHistoryRules.sameChain(current, incoming) }
             if (index >= 0) merged[index] = incoming else merged += incoming
         }

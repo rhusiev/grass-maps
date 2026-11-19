@@ -243,6 +243,8 @@
     <string name="backup_description">Один файл із вашими треками, збереженими місцями, профілями, налаштуваннями та історією.</string>
     <string name="backup_export">Експортувати набір</string>
     <string name="backup_import">Імпортувати набір</string>
+    <string name="backup_close_glyph">×</string>
+    <string name="backup_check_glyph">✓</string>
     <string name="backup_close">Закрити</string>
     <string name="backup_working">Працюю…</string>
     <string name="backup_counts_title">У цьому наборі</string>

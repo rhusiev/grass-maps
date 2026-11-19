@@ -234,6 +234,8 @@
     <string name="backup_description">One file with your tracks, saved places, profiles, settings and history.</string>
     <string name="backup_export">Export bundle</string>
     <string name="backup_import">Import bundle</string>
+    <string name="backup_close_glyph">×</string>
+    <string name="backup_check_glyph">✓</string>
     <string name="backup_close">Close</string>
     <string name="backup_working">Working…</string>
     <string name="backup_counts_title">In this bundle</string>

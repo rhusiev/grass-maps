@@ -186,7 +186,10 @@ internal fun BackupScreenContent(
                             .semantics { contentDescription = close },
                     contentAlignment = Alignment.Center,
                 ) {
-                    BasicText("×", style = TextStyle(color = MUTED, fontSize = 26.sp))
+                    BasicText(
+                        stringResource(R.string.backup_close_glyph),
+                        style = TextStyle(color = MUTED, fontSize = 26.sp),
+                    )
                 }
             }
             BasicText(
@@ -314,6 +317,7 @@ private fun ConflictCard(
     onAnswer: (BundleConflictChoice, Boolean) -> Unit,
 ) {
     var applyAll by remember(state.currentConflict) { mutableStateOf(false) }
+    var answered by remember(state.currentConflict) { mutableStateOf(false) }
     Box(
         modifier = Modifier.fillMaxSize().background(SCRIM).padding(PADDING_DP.dp),
         contentAlignment = Alignment.Center,
@@ -354,7 +358,10 @@ private fun ConflictCard(
                     contentAlignment = Alignment.Center,
                 ) {
                     if (applyAll) {
-                        BasicText("✓", style = TextStyle(color = CARD, fontSize = 13.sp))
+                        BasicText(
+                            stringResource(R.string.backup_check_glyph),
+                            style = TextStyle(color = CARD, fontSize = 13.sp),
+                        )
                     }
                 }
                 BasicText(
@@ -369,16 +376,26 @@ private fun ConflictCard(
             ) {
                 ActionButton(
                     label = stringResource(R.string.backup_conflict_keep),
-                    enabled = true,
-                    onClick = { onAnswer(BundleConflictChoice.EXISTING, applyAll) },
+                    enabled = !answered,
+                    onClick = {
+                        if (!answered) {
+                            answered = true
+                            onAnswer(BundleConflictChoice.EXISTING, applyAll)
+                        }
+                    },
                     modifier = Modifier.weight(1f),
                     background = CARD,
                     foreground = INK,
                 )
                 ActionButton(
                     label = stringResource(R.string.backup_conflict_use),
-                    enabled = true,
-                    onClick = { onAnswer(BundleConflictChoice.INCOMING, applyAll) },
+                    enabled = !answered,
+                    onClick = {
+                        if (!answered) {
+                            answered = true
+                            onAnswer(BundleConflictChoice.INCOMING, applyAll)
+                        }
+                    },
                     modifier = Modifier.weight(1f),
                 )
             }

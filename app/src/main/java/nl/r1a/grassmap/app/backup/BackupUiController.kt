@@ -130,7 +130,16 @@ class BackupUiController(
 
     /** Reads and plans the bundle; nothing is written until the queue is empty. */
     fun startImport(input: InputStream) {
-        mutable.value = mutable.value.copy(phase = BackupPhase.WORKING, error = null)
+        mutable.value =
+            mutable.value.copy(
+                phase = BackupPhase.WORKING,
+                error = null,
+                summary = null,
+                warnings = emptyList(),
+                currentConflict = null,
+                existingText = "",
+                incomingText = "",
+            )
         scope.launch(Dispatchers.IO) {
             when (val planned = coordinator.prepare(input)) {
                 is Outcome.Success -> {

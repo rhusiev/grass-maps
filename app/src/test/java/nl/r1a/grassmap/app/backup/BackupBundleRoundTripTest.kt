@@ -84,6 +84,15 @@ class BackupBundleRoundTripTest {
             val export = exportOf(source)
             assertEquals(listOf(1, 2, 4, 1, 1, 2, 1, 1, 1), export.counts.dropLast(1).map { count -> count.count })
             assertEquals(PluginGroups.switchableIds.size, export.counts.last().count)
+            val names = entriesOf(export.bytes).map { entry -> entry.first }
+            val trackId =
+                source.tracks
+                    .storedTracks()
+                    .single()
+                    .id.value
+            assertTrue("manifest.json" in names)
+            assertTrue("favourites/favourites.gpx" in names)
+            assertTrue("tracks/$trackId.gpx" in names)
             val exported = export.bytes
 
             val target = stores(targetRoot)

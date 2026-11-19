@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -157,6 +158,7 @@ internal fun RouteWarningsEntry(
         BasicText(
             text = CHEVRON_GLYPH,
             style = TextStyle(color = ROUTE_WARNING_TITLE_COLOR, fontSize = SHEET_TITLE_FONT_SP.sp),
+            modifier = Modifier.clearAndSetSemantics {},
         )
     }
 }
@@ -249,6 +251,9 @@ private fun WarningGlyphCircle(
         BasicText(
             text = glyph,
             style = TextStyle(color = ROUTE_WARNING_ICON_COLOR, fontSize = ENTRY_TITLE_FONT_SP.sp),
+            // The kind is written beside the pictogram; the character itself is
+            // decoration.
+            modifier = Modifier.clearAndSetSemantics {},
         )
     }
 }

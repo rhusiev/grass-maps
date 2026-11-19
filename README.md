@@ -221,7 +221,10 @@ emulator or Robolectric.
 User-facing text goes through the `Strings` service in `plugin-api`. Core and
 feature modules receive it as a `plugin-api` interface and never take an
 Android `Context`. `core-services` implements it over the application's
-resources; `app` wires `AndroidStrings` in the composition root.
+resources; `app` wires `AndroidStrings` in the composition root. Distances,
+elevations and speeds go through `UnitText` in `plugin-api`, which formats
+them and resolves the `unit_*` labels, so a plugin never converts a unit
+itself.
 
 `checkPluginBoundaries` enforces the plugin module dependency rule. It checks
 `app` as well as every library: `app`'s release allowlist is exactly the
@@ -627,7 +630,7 @@ application ID is `nl.r1a.grassmap`.
 
 | Module | Owns | Depends on |
 |---|---|---|
-| `plugin-api` | base types, domain value types, host interfaces, service contracts, capability contracts, manifest schema, contract versions | Kotlin stdlib, coroutines, serialization |
+| `plugin-api` | base types, domain value types, host interfaces, service contracts, capability contracts, the unit text formatter, manifest schema, contract versions | Kotlin stdlib, coroutines, serialization |
 | `plugin-ui-api` | Compose UI contracts for compiled-in UI plugins | `plugin-api` |
 | `core` | command bus, plugin host, stream registry, capability registry, lifecycle, undo/redo stacks | `plugin-api` |
 | `core-services` | settings and profiles, storage, location, network gate, i18n, clock, logging | `core`, `plugin-api` |
@@ -1417,20 +1420,22 @@ The unit system is `UnitSystem` in `plugin-api`, and `core-services`
 `UnitSettings` stores it as `filesDir/settings/units.json` with metric as the
 default; a missing or corrupt file reads as metric. `MapScreen` resolves the
 settings object off Main and collects its flow, so a change redraws the bar.
-The route planner sheet reads the same value: its preview, turn and warning
-distances go through `distanceText`, and its elevation chart labels both the
-distance axis and the climb in the set units. The track card, the track
-analysis panel, the relation chart and the follow-track sheet read it too:
-every distance goes through the same `distanceText`, every ascent and descent
-through `elevationLabel`, and the analysis speed is converted from metres per
-second to km/h or mph. `UnitText` in `ui-shell` holds those helpers, so the
-sheets share one conversion. The track library screen, the navigation guidance
-panel, the navigation notification and the widget grid still format metric:
-the library has no product entry point yet, and the other three live in modules
-with their own formatters. Until a settings screen exists,
-the control-channel command `core.settings.units` sets it:
-`{"units":"imperial"}` or the bare string. The command is allowlisted for
-control and runs on the IO dispatcher.
+The one display formatter is `UnitText` in `plugin-api`: it converts and
+formats distances, elevations and speeds, and resolves the `unit_*` labels
+from the app bundle. Every surface calls it, so none keeps a second
+conversion: the route planner sheet, the elevation chart axis, the track card
+and analysis panel, the relation chart, the follow-track sheet, and since
+T-0624 the guidance panel, the navigation screen, the navigation notification,
+the widget grid and the point-info label. `GuidanceInput` carries the units
+into the panel, and `NavigationScreenState.speedUnit` carries the label beside
+the speed number. A unit change redraws the visible surfaces without a
+restart, and the notification service collects the setting too, so the lock
+screen changes at once. The track library screen still formats metric: it has
+no product entry point yet. The two-finger distance badge also stays metric
+because `MapDistance` owns its rounded readout, not a display formatter. Until
+a settings screen exists, the control-channel command `core.settings.units`
+sets it: `{"units":"imperial"}` or the bare string. The command is allowlisted
+for control and runs on the IO dispatcher.
 
 The release build installs `AndroidLocationSource`, which reads the platform
 `LocationManager` GPS and network providers; there is no Play Services and no

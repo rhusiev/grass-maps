@@ -69,11 +69,7 @@ internal class ScreenshotsStep(
                 "unavailable" to JsonPrimitive(context.unavailable.size),
                 "dark_theme" to JsonPrimitive(DARK_THEME_NOTE),
             )
-        return when {
-            context.screenshots.isEmpty() -> StepOutcome.fail("no screenshot could be taken", numbers)
-            blankMaps.isNotEmpty() -> StepOutcome.fail("the map area is blank in: ${blankMaps.joinToString()}", numbers)
-            else -> StepOutcome.pass(numbers)
-        }
+        return screenshotsOutcome(context.screenshots.size, blankMaps, numbers)
     }
 
     private suspend fun walk() {
@@ -337,8 +333,33 @@ internal class ScreenshotsStep(
         return mapOf(
             "map_dominant_color_share" to JsonPrimitive(area.dominantShare),
             "map_area_blank" to JsonPrimitive(area.isBlank),
+            "map_blank_rule" to
+                JsonPrimitive(
+                    if (installed) {
+                        "armed: ${context.region?.id} is installed"
+                    } else {
+                        "not armed: no region is installed, so a flat map is the empty style"
+                    },
+                ),
         )
     }
 
     private fun styleParams(style: String): JsonObject = buildJsonObject { put("style", style) }
 }
+
+/**
+ * The screenshots step's verdict: no picture, or a blank map area on a run that
+ * installed a region, fails it. The blank rule is what catches a map surface
+ * that is not composited into the capture: that shows as one color over the
+ * whole area, and a map with data never does.
+ */
+internal fun screenshotsOutcome(
+    taken: Int,
+    blankMaps: List<String>,
+    numbers: Map<String, JsonElement>,
+): StepOutcome =
+    when {
+        taken == 0 -> StepOutcome.fail("no screenshot could be taken", numbers)
+        blankMaps.isNotEmpty() -> StepOutcome.fail("the map area is blank in: ${blankMaps.joinToString()}", numbers)
+        else -> StepOutcome.pass(numbers)
+    }

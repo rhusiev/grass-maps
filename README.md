@@ -91,7 +91,9 @@ or times out is recorded and the later steps still run. The steps, in order:
    installed - the English name of a rendered place feature when it has one - then
    the region's catalogue name, then a fixed name, and the report says which query
    and which source found the place. A map area of near-uniform pixels fails the
-   step, because a map should show data. A scene that cannot be reached is listed
+   step, because a map should show data. The rule is armed only when a region is
+   installed, because without one the empty style is flat by design; each checked
+   shot says whether the rule was armed. A scene that cannot be reached is listed
    with its reason
 7. labels: `en`, `uk` and 150 % through `core.settings.map_labels`, with the rendered
    label of the downloaded region read back each time. The owner's setting is restored. The step is skipped

@@ -171,6 +171,8 @@
     <string name="route_preview_hours_minutes">%1$s h %2$s min</string>
     <string name="route_preview_metres">%1$s m</string>
     <string name="route_preview_kilometres">%1$s km</string>
+    <string name="route_preview_feet">%1$s ft</string>
+    <string name="route_preview_miles">%1$s mi</string>
     <string name="time_model_tobler_walk">Tobler walk</string>
     <string name="time_model_tobler_hike">Tobler hike</string>
     <string name="time_model_bike_power">Bike power</string>

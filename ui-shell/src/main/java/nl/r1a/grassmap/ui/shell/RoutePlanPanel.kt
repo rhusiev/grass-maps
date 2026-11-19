@@ -34,6 +34,7 @@ import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
 import nl.r1a.grassmap.plugin.api.model.RoutePointEntry
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.model.routePointEntry
 import nl.r1a.grassmap.plugin.api.provider.CoordinateParser
 import nl.r1a.grassmap.plugin.api.provider.RouteOptions
@@ -109,11 +110,12 @@ fun RoutePlanPanel(
     chart: ElevationChartState = ElevationChartState(),
     onChartAxis: (ElevationChartAxis) -> Unit = {},
     time: RoutePreviewTime? = null,
+    units: UnitSystem = UnitSystem.Metric,
     dark: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     if (state.status == RoutePlanStatus.Idle) return
-    val preview = routePlanPreview(state, strings, time = time)
+    val preview = routePlanPreview(state, strings, time = time, units = units)
     var detailsExpanded by remember(state.selected) { mutableStateOf(false) }
     var preferencesVisible by remember { mutableStateOf(false) }
     var warningsVisible by remember { mutableStateOf(false) }
@@ -166,7 +168,7 @@ fun RoutePlanPanel(
                     MissingRegionsCard(missing, state.missingDownload, strings, preferUkrainian, onDownloadMissing)
                     return@Column
                 }
-                val text = routePlanFailureText(state, strings)
+                val text = routePlanFailureText(state, strings, units = units)
                 StatusLine(text, text)
             }
 
@@ -198,6 +200,7 @@ fun RoutePlanPanel(
                             strings = strings,
                             dark = dark,
                             onAxis = onChartAxis,
+                            units = units,
                         )
                     }
                 }
@@ -205,6 +208,7 @@ fun RoutePlanPanel(
                     turns = routePlanTurns(state, strings),
                     turnIndex = turnIndex,
                     strings = strings,
+                    units = units,
                     onTurnChange = onTurnChange,
                 )
             }
@@ -234,6 +238,7 @@ fun RoutePlanPanel(
                             distanceMeters = selected.distanceMeters,
                             warnings = warnings,
                             strings = strings,
+                            units = units,
                         ),
                     onBack = { warningsVisible = false },
                 )
@@ -490,6 +495,7 @@ private fun TurnStepper(
     turns: List<RouteTurnStep>,
     turnIndex: Int,
     strings: Strings,
+    units: UnitSystem,
     onTurnChange: (Int) -> Unit,
 ) {
     val step = routeTurnStep(turns, turnIndex) ?: return
@@ -509,7 +515,7 @@ private fun TurnStepper(
             style = TextStyle(color = ROUTE_STATUS_COLOR, fontSize = STATUS_FONT_SP.sp),
         )
         BasicText(
-            text = "${step.text} - ${routeTurnDistanceText(step.distanceMeters, strings)}",
+            text = "${step.text} - ${routeTurnDistanceText(step.distanceMeters, strings, units = units)}",
             style =
                 TextStyle(
                     color = ROUTE_VALUE_COLOR,
@@ -762,6 +768,7 @@ internal fun routePlanFailureText(
     state: RoutePlanState,
     strings: Strings,
     locale: Locale = Locale.getDefault(),
+    units: UnitSystem = UnitSystem.Metric,
 ): String {
     val limit = state.maxDistanceMeters
     return when (state.failure) {
@@ -769,7 +776,7 @@ internal fun routePlanFailureText(
             if (limit == null) {
                 strings.resolve(FAILED_KEY)
             } else {
-                strings.resolve(TOO_FAR_KEY, listOf(distanceText(limit, strings, locale)))
+                strings.resolve(TOO_FAR_KEY, listOf(distanceText(limit, strings, locale, units)))
             }
         }
 

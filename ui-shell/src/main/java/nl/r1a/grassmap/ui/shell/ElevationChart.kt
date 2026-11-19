@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
@@ -232,9 +233,13 @@ fun ElevationChart(
     locale: Locale = Locale.getDefault(),
     zone: ZoneId = ZoneId.systemDefault(),
     onRange: ((ElevationChartRange?) -> Unit)? = null,
+    units: UnitSystem = UnitSystem.Metric,
 ) {
     var colour by remember { mutableStateOf(ElevationChartColour.Slope) }
-    val content = remember(state, strings, locale, zone, colour) { elevationChartContent(state, strings, locale, zone, colour) }
+    val content =
+        remember(state, strings, locale, zone, colour, units) {
+            elevationChartContent(state, strings, locale, zone, colour, units)
+        }
     if (content == null) {
         return
     }

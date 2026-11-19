@@ -4,6 +4,7 @@ import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanOption
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.provider.RouteInstruction
 import nl.r1a.grassmap.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
@@ -81,6 +82,8 @@ class RoutePlanTurnsTest {
     fun theDistanceTextUsesThePreviewRule() {
         assertEquals("at 222 m", routeTurnDistanceText(222.0, strings()))
         assertEquals("at 1.2 km", routeTurnDistanceText(1_234.0, strings()))
+        assertEquals("at 728 ft", routeTurnDistanceText(222.0, strings(), units = UnitSystem.Imperial))
+        assertEquals("at 4049 ft", routeTurnDistanceText(1_234.0, strings(), units = UnitSystem.Imperial))
     }
 
     private fun ready(instructions: List<RouteInstruction>): RoutePlanState =
@@ -104,6 +107,8 @@ class RoutePlanTurnsTest {
                 mapOf(
                     "route_preview_metres" to "%1\$s m",
                     "route_preview_kilometres" to "%1\$s km",
+                    "route_preview_feet" to "%1\$s ft",
+                    "route_preview_miles" to "%1\$s mi",
                     "route_planner_arrive" to "Arrive at the destination",
                     "route_planner_turn_at" to "at %1\$s",
                 )

@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.ui.shell
 
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
@@ -67,6 +68,22 @@ class RouteWarningsContentTest {
         assertEquals(listOf("Ford", "Private way", "Steps"), content.rows.map { row -> row.kind })
         assertEquals(listOf(null, "access=private", "push the bike"), content.rows.map { row -> row.detail })
         assertEquals(listOf("1.2 km", "3.4 km", "4.5 km"), content.rows.map { row -> row.distance })
+    }
+
+    @Test
+    fun theWarningsSheetUsesTheActiveUnitSystem() {
+        val content =
+            routeWarningsSheetContent(
+                RouteProfile.Bike,
+                1140.0,
+                4600.0,
+                ROWS,
+                MapStrings(ENGLISH),
+                units = UnitSystem.Imperial,
+            )
+
+        assertEquals("Bike profile · 19 min, 2.9 mi · by distance", content.scope)
+        assertEquals(listOf("3937 ft", "2.1 mi", "2.8 mi"), content.rows.map { row -> row.distance })
     }
 
     @Test
@@ -162,6 +179,8 @@ class RouteWarningsContentTest {
                 "route_preview_hours_minutes" to "%1\$s h %2\$s min",
                 "route_preview_metres" to "%1\$s m",
                 "route_preview_kilometres" to "%1\$s km",
+                "route_preview_feet" to "%1\$s ft",
+                "route_preview_miles" to "%1\$s mi",
             )
 
         val UKRAINIAN =

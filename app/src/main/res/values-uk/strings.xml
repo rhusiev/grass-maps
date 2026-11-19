@@ -172,6 +172,8 @@
     <string name="route_preview_hours_minutes">%1$s год %2$s хв</string>
     <string name="route_preview_metres">%1$s м</string>
     <string name="route_preview_kilometres">%1$s км</string>
+    <string name="route_preview_feet">%1$s фут</string>
+    <string name="route_preview_miles">%1$s миля</string>
     <string name="time_model_tobler_walk">Tobler пішки</string>
     <string name="time_model_tobler_hike">Tobler похід</string>
     <string name="time_model_bike_power">Велосипед: потужність</string>

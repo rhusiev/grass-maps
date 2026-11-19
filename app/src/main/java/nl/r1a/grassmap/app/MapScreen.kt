@@ -661,6 +661,7 @@ private fun MapContent(
         produceState<UnitSettings?>(null) {
             value = withContext(Dispatchers.IO) { container.unitSettings }
         }
+    val units = unitStore?.units?.collectAsState()?.value ?: UnitSystem.Metric
     val writer =
         remember(store) {
             store?.let { store ->
@@ -1407,6 +1408,7 @@ private fun MapContent(
                 chart = routeChart,
                 onChartAxis = { axis -> chartAxis = axis },
                 time = routePreviewTime,
+                units = units,
                 dark = isSystemInDarkTheme(),
                 modifier =
                     Modifier

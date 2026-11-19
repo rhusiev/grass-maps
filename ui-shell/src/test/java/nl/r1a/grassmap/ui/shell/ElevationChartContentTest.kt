@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.ui.shell
 
 import androidx.compose.ui.graphics.Color
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartPoint
@@ -142,6 +143,44 @@ class ElevationChartContentTest {
         val content = chart(ElevationChartState(points = TIMED_POINTS))
 
         assertEquals(listOf("340 m", "327 m", "313 m", "300 m"), content.yTicks.map { it.label })
+    }
+
+    @Test
+    fun imperialUnitsLabelTheClimbInFeet() {
+        val content = chart(ElevationChartState(points = TIMED_POINTS), units = UnitSystem.Imperial)
+
+        assertEquals(listOf("1115 ft", "1072 ft", "1028 ft", "984 ft"), content.yTicks.map { it.label })
+        assertEquals(
+            "984 ft low ... 1115 ft high",
+            chart(
+                ElevationChartState(points = TIMED_POINTS),
+                colour = ElevationChartColour.Altitude,
+                units = UnitSystem.Imperial,
+            ).legend.caption,
+        )
+    }
+
+    @Test
+    fun imperialUnitsLabelTheDistanceAxisInFeetAndMiles() {
+        val short = chart(ElevationChartState(points = TIMED_POINTS), units = UnitSystem.Imperial)
+        val long =
+            chart(
+                ElevationChartState(
+                    points =
+                        listOf(
+                            ElevationChartPoint(distanceMeters = 0.0, elevationMeters = 280.0),
+                            ElevationChartPoint(distanceMeters = 2_300.0, elevationMeters = 300.0),
+                            ElevationChartPoint(distanceMeters = 4_600.0, elevationMeters = 340.0),
+                        ),
+                ),
+                units = UnitSystem.Imperial,
+            )
+
+        assertEquals(
+            listOf("0 ft", "1000 ft", "2000 ft", "3000 ft", "3281 ft"),
+            short.xTicks.map { it.label },
+        )
+        assertEquals(listOf("0 mi", "1 mi", "2 mi", "2.9 mi"), long.xTicks.map { it.label })
     }
 
     @Test
@@ -365,8 +404,9 @@ class ElevationChartContentTest {
         state: ElevationChartState,
         strings: Strings = MapStrings(ENGLISH),
         colour: ElevationChartColour = ElevationChartColour.Slope,
+        units: UnitSystem = UnitSystem.Metric,
     ): ElevationChartContent {
-        val content = elevationChartContent(state, strings, LOCALE, ZONE, colour)
+        val content = elevationChartContent(state, strings, LOCALE, ZONE, colour, units)
         assertNotNull(content)
         return content ?: error("no chart content")
     }
@@ -464,8 +504,11 @@ class ElevationChartContentTest {
                 "elevation_chart_colour_altitude" to "Altitude",
                 "elevation_chart_legend_slope" to "down ... up % · hike scale",
                 "elevation_chart_legend_altitude" to "%1\$s m low ... %2\$s m high",
+                "elevation_chart_legend_altitude_feet" to "%1\$s ft low ... %2\$s ft high",
                 "elevation_chart_metres" to "%1\$s m",
                 "elevation_chart_kilometres" to "%1\$s km",
+                "elevation_chart_feet" to "%1\$s ft",
+                "elevation_chart_miles" to "%1\$s mi",
                 "elevation_chart_minutes" to "%1\$s min",
                 "elevation_chart_hours" to "%1\$s h",
                 "elevation_chart_hours_minutes" to "%1\$s h %2\$s min",

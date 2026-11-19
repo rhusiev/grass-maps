@@ -20,6 +20,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.service.Strings
 import java.util.Locale
@@ -297,6 +298,7 @@ internal fun routeWarningsSheetContent(
     warnings: List<RouteWarningRow>,
     strings: Strings,
     locale: Locale = Locale.getDefault(),
+    units: UnitSystem = UnitSystem.Metric,
 ): RouteWarningsSheetContent =
     RouteWarningsSheetContent(
         title = strings.resolve(SHEET_TITLE_KEY),
@@ -307,7 +309,7 @@ internal fun routeWarningsSheetContent(
                     // The profile opens the line, so it takes the sentence's capital.
                     profileLabel(profile, strings).replaceFirstChar { it.titlecase() },
                     routePlanAlternativeText(durationSeconds, strings),
-                    distanceText(distanceMeters, strings, locale),
+                    distanceText(distanceMeters, strings, locale, units),
                 ),
             ),
         rows =
@@ -316,7 +318,7 @@ internal fun routeWarningsSheetContent(
                     glyph = row.glyph,
                     kind = routeWarningKindText(row.glyph, strings),
                     detail = routeWarningDetail(row.glyph, profile, strings),
-                    distance = distanceText(row.distanceAlongRouteMeters, strings, locale),
+                    distance = distanceText(row.distanceAlongRouteMeters, strings, locale, units),
                 )
             },
         back = strings.resolve(BACK_KEY),

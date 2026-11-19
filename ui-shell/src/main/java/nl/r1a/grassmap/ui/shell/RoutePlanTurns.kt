@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.ui.shell
 
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.ui.api.RouteTurnStep
 import nl.r1a.grassmap.plugin.ui.api.routeTurns
@@ -55,7 +56,8 @@ fun routeTurnDistanceText(
     meters: Double,
     strings: Strings,
     locale: Locale = Locale.getDefault(),
-): String = strings.resolve(AT_KEY, listOf(distanceText(meters, strings, locale)))
+    units: UnitSystem = UnitSystem.Metric,
+): String = strings.resolve(AT_KEY, listOf(distanceText(meters, strings, locale, units)))
 
 private const val ARRIVE_KEY = "route_planner_arrive"
 private const val AT_KEY = "route_planner_turn_at"

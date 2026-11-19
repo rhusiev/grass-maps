@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.ui.shell
 
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartPoint
@@ -119,6 +120,7 @@ fun elevationChartContent(
     locale: Locale = Locale.getDefault(),
     zone: ZoneId = ZoneId.systemDefault(),
     colour: ElevationChartColour = ElevationChartColour.Slope,
+    units: UnitSystem = UnitSystem.Metric,
 ): ElevationChartContent? {
     if (!state.isDrawable) {
         return null
@@ -148,9 +150,9 @@ fun elevationChartContent(
         colours = colourChips(strings, colour),
         line = line,
         fills = fills(state, line, colour, minElevation, maxElevation),
-        legend = legend(colour, minElevation, maxElevation, strings),
-        yTicks = elevationTicks(minElevation, maxElevation, strings),
-        xTicks = axisTicks(state, axis, strings, locale, zone),
+        legend = legend(colour, minElevation, maxElevation, strings, units),
+        yTicks = elevationTicks(minElevation, maxElevation, strings, units),
+        xTicks = axisTicks(state, axis, strings, locale, zone, units),
         minElevationMeters = minElevation,
         maxElevationMeters = maxElevation,
         band = band(state),
@@ -452,6 +454,7 @@ private fun legend(
     minElevationMeters: Double,
     maxElevationMeters: Double,
     strings: Strings,
+    units: UnitSystem,
 ): ElevationChartLegend =
     ElevationChartLegend(
         caption =
@@ -462,8 +465,11 @@ private fun legend(
 
                 ElevationChartColour.Altitude -> {
                     strings.resolve(
-                        LEGEND_ALTITUDE_KEY,
-                        listOf(minElevationMeters.roundToLong().toString(), maxElevationMeters.roundToLong().toString()),
+                        if (units == UnitSystem.Imperial) LEGEND_ALTITUDE_FEET_KEY else LEGEND_ALTITUDE_KEY,
+                        listOf(
+                            elevationValue(minElevationMeters, units),
+                            elevationValue(maxElevationMeters, units),
+                        ),
                     )
                 }
             },
@@ -474,6 +480,7 @@ private fun elevationTicks(
     minElevationMeters: Double,
     maxElevationMeters: Double,
     strings: Strings,
+    units: UnitSystem,
 ): List<ElevationChartTick> {
     val steps = COUNT_BETWEEN_TICKS
     return (0..steps).map { index ->
@@ -481,10 +488,24 @@ private fun elevationTicks(
         val elevation = maxElevationMeters - (maxElevationMeters - minElevationMeters) * fraction
         ElevationChartTick(
             fraction = fraction,
-            label = strings.resolve(METRES_KEY, listOf(elevation.roundToLong().toString())),
+            label =
+                strings.resolve(
+                    if (units == UnitSystem.Imperial) FEET_KEY else METRES_KEY,
+                    listOf(elevationValue(elevation, units)),
+                ),
         )
     }
 }
+
+/** The whole display value for one elevation in the active unit system. */
+private fun elevationValue(
+    elevationMeters: Double,
+    units: UnitSystem,
+): String =
+    when (units) {
+        UnitSystem.Metric -> elevationMeters.roundToLong().toString()
+        UnitSystem.Imperial -> (elevationMeters / METRES_PER_FOOT).roundToLong().toString()
+    }
 
 private fun axisTicks(
     state: ElevationChartState,
@@ -492,18 +513,19 @@ private fun axisTicks(
     strings: Strings,
     locale: Locale,
     zone: ZoneId,
+    units: UnitSystem,
 ): List<ElevationChartTick> {
     val (start, end) = axisRange(state) ?: return emptyList()
     val span = end - start
     if (span <= 0.0) {
         return emptyList()
     }
-    val step = tickStep(axis, span)
+    val step = tickStep(axis, span, units)
     val ticks = mutableListOf<ElevationChartTick>()
     ticks +=
         ElevationChartTick(
             fraction = 0f,
-            label = tickLabel(axis, start, step, strings, locale, zone),
+            label = tickLabel(axis, start, step, strings, locale, zone, units),
         )
     var value = ceil(start / step) * step
     if (value == start) {
@@ -513,7 +535,7 @@ private fun axisTicks(
         ticks +=
             ElevationChartTick(
                 fraction = ((value - start) / span).toFloat().coerceIn(0f, 1f),
-                label = tickLabel(axis, value, step, strings, locale, zone),
+                label = tickLabel(axis, value, step, strings, locale, zone, units),
             )
         value += step
     }
@@ -521,11 +543,11 @@ private fun axisTicks(
         ticks +=
             ElevationChartTick(
                 fraction = 1f,
-                label = tickLabel(axis, end, step, strings, locale, zone),
+                label = tickLabel(axis, end, step, strings, locale, zone, units),
             )
     }
     if (ticks.size > MAXIMUM_TICKS) {
-        return evenTicks(axis, start, span, strings, locale, zone)
+        return evenTicks(axis, start, span, strings, locale, zone, units)
     }
     return ticks
 }
@@ -537,23 +559,42 @@ private fun axisTicks(
 private fun tickStep(
     axis: ElevationChartAxis,
     span: Double,
+    units: UnitSystem,
 ): Double {
-    val candidates = tickCandidates(axis)
+    val candidates = tickCandidates(axis, units)
     return candidates.firstOrNull { span / it <= MAXIMUM_TICK_SPACING } ?: candidates.last()
 }
 
-private fun tickCandidates(axis: ElevationChartAxis): List<Double> =
+private fun tickCandidates(
+    axis: ElevationChartAxis,
+    units: UnitSystem,
+): List<Double> =
     when (axis) {
         ElevationChartAxis.Distance -> {
-            listOf(
-                METRES_PER_KILOMETRE / 10,
-                METRES_PER_KILOMETRE / 5,
-                METRES_PER_KILOMETRE / 2,
-                METRES_PER_KILOMETRE,
-                2 * METRES_PER_KILOMETRE,
-                5 * METRES_PER_KILOMETRE,
-                10 * METRES_PER_KILOMETRE,
-            )
+            if (units == UnitSystem.Imperial) {
+                listOf(
+                    METRES_PER_FOOT * 100,
+                    METRES_PER_FOOT * 200,
+                    METRES_PER_FOOT * 500,
+                    METRES_PER_FOOT * 1_000,
+                    METRES_PER_FOOT * 2_000,
+                    METRES_PER_MILE / 2,
+                    METRES_PER_MILE,
+                    2 * METRES_PER_MILE,
+                    5 * METRES_PER_MILE,
+                    10 * METRES_PER_MILE,
+                )
+            } else {
+                listOf(
+                    METRES_PER_KILOMETRE / 10,
+                    METRES_PER_KILOMETRE / 5,
+                    METRES_PER_KILOMETRE / 2,
+                    METRES_PER_KILOMETRE,
+                    2 * METRES_PER_KILOMETRE,
+                    5 * METRES_PER_KILOMETRE,
+                    10 * METRES_PER_KILOMETRE,
+                )
+            }
         }
 
         ElevationChartAxis.Duration -> {
@@ -584,13 +625,14 @@ private fun evenTicks(
     strings: Strings,
     locale: Locale,
     zone: ZoneId,
+    units: UnitSystem,
 ): List<ElevationChartTick> =
     (0..COUNT_BETWEEN_TICKS).map { index ->
         val fraction = index / COUNT_BETWEEN_TICKS.toFloat()
         val value = start + span * fraction
         ElevationChartTick(
             fraction = fraction,
-            label = tickLabel(axis, value, span / COUNT_BETWEEN_TICKS, strings, locale, zone),
+            label = tickLabel(axis, value, span / COUNT_BETWEEN_TICKS, strings, locale, zone, units),
         )
     }
 
@@ -601,10 +643,11 @@ private fun tickLabel(
     strings: Strings,
     locale: Locale,
     zone: ZoneId,
+    units: UnitSystem,
 ): String =
     when (axis) {
         ElevationChartAxis.Distance -> {
-            distanceLabel(value, step, strings, locale)
+            distanceLabel(value, step, strings, locale, units)
         }
 
         ElevationChartAxis.Duration -> {
@@ -621,8 +664,11 @@ private fun distanceLabel(
     step: Double,
     strings: Strings,
     locale: Locale,
+    units: UnitSystem,
 ): String =
-    if (step < METRES_PER_KILOMETRE) {
+    if (units == UnitSystem.Imperial) {
+        imperialDistanceLabel(metres, step, strings, locale)
+    } else if (step < METRES_PER_KILOMETRE) {
         strings.resolve(METRES_KEY, listOf(metres.roundToLong().toString()))
     } else {
         val kilometres = metres / METRES_PER_KILOMETRE
@@ -634,6 +680,25 @@ private fun distanceLabel(
             }
         strings.resolve(KILOMETRES_KEY, listOf(text))
     }
+
+private fun imperialDistanceLabel(
+    metres: Double,
+    step: Double,
+    strings: Strings,
+    locale: Locale,
+): String {
+    if (step < METRES_PER_MILE) {
+        return strings.resolve(FEET_KEY, listOf((metres / METRES_PER_FOOT).roundToLong().toString()))
+    }
+    val miles = metres / METRES_PER_MILE
+    val text =
+        if (abs(miles - miles.roundToLong()) < WHOLE_NUMBER_TOLERANCE) {
+            miles.roundToLong().toString()
+        } else {
+            String.format(locale, "%.1f", miles)
+        }
+    return strings.resolve(MILES_KEY, listOf(text))
+}
 
 internal fun durationLabel(
     milliseconds: Double,
@@ -657,8 +722,11 @@ private const val COLOUR_SLOPE_KEY = "elevation_chart_colour_slope"
 private const val COLOUR_ALTITUDE_KEY = "elevation_chart_colour_altitude"
 private const val LEGEND_SLOPE_KEY = "elevation_chart_legend_slope"
 private const val LEGEND_ALTITUDE_KEY = "elevation_chart_legend_altitude"
+private const val LEGEND_ALTITUDE_FEET_KEY = "elevation_chart_legend_altitude_feet"
 private const val METRES_KEY = "elevation_chart_metres"
 private const val KILOMETRES_KEY = "elevation_chart_kilometres"
+private const val FEET_KEY = "elevation_chart_feet"
+private const val MILES_KEY = "elevation_chart_miles"
 private const val MINUTES_KEY = "elevation_chart_minutes"
 private const val HOURS_KEY = "elevation_chart_hours"
 private const val HOURS_MINUTES_KEY = "elevation_chart_hours_minutes"
@@ -673,6 +741,8 @@ private const val MIDDLE_SHARE = 0.5
 private const val PERCENT = 100.0
 private const val WHOLE_NUMBER_TOLERANCE = 0.05
 private const val METRES_PER_KILOMETRE = 1_000.0
+private const val METRES_PER_FOOT = 0.3048
+private const val METRES_PER_MILE = 1_609.344
 private const val MILLIS_PER_MINUTE = 60_000.0
 private const val MINUTES_PER_HOUR = 60L
 

@@ -5,6 +5,7 @@ import nl.r1a.grassmap.plugin.api.model.RoutePlanOption
 import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -135,6 +136,30 @@ class RoutePlanPreviewTest {
     }
 
     @Test
+    fun thePreviewShowsTheDistanceInTheActiveUnitSystem() {
+        val imperial =
+            routePlanPreview(
+                READY,
+                strings(),
+                Locale.US,
+                ZoneId.of("UTC"),
+                units = UnitSystem.Imperial,
+            ) ?: error("no preview")
+        val short =
+            READY.copy(
+                options =
+                    listOf(
+                        READY.options.first().copy(distanceMeters = 100.0),
+                    ),
+            )
+        val shortImperial = routePlanPreview(short, strings(), Locale.US, ZoneId.of("UTC"), units = UnitSystem.Imperial)
+
+        assertEquals("4.4 mi", imperial.distance)
+        assertEquals("328 ft", shortImperial?.distance)
+        assertEquals("7.1 km", routePlanPreview(READY, strings(), Locale.US, ZoneId.of("UTC"))?.distance)
+    }
+
+    @Test
     fun theAlternativeChipUsesTheSameDurationRule() {
         assertEquals("25 min", routePlanAlternativeText(1_482.0, strings()))
         assertEquals("2 h 3 min", routePlanAlternativeText(7_380.0, strings()))
@@ -196,6 +221,8 @@ class RoutePlanPreviewTest {
                     "route_preview_hours_minutes" to "%1\$s h %2\$s min",
                     "route_preview_metres" to "%1\$s m",
                     "route_preview_kilometres" to "%1\$s km",
+                    "route_preview_feet" to "%1\$s ft",
+                    "route_preview_miles" to "%1\$s mi",
                     "route_preview_start" to "Start",
                     "route_preview_save" to "Save",
                 )

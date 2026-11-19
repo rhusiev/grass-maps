@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import sys
 import time
@@ -48,14 +49,19 @@ CASES = (
 )
 CAMERA = {"lat": 49.9480, "lon": 23.9460, "zoom": 15.0, "bearing": 0.0, "tilt": 45.0}
 FIXTURE_SETTLE_S = 1.2
+ROUTE_POLL_S = 0.5
+ROUTE_POINTS = len(ROUTE["geometry"])
+ROUTE_LAYER_REPLY = re.compile(r"points=(?P<points>\d+) draws=(?P<draws>\d+)")
 
 
 def fixture_params(
+    case: str,
     sheet: str,
     dark: bool,
     alerts: tuple[str, ...],
 ) -> dict[str, object]:
     return {
+        "case": case,
         "route": ROUTE,
         "phase": "following",
         "sheet": sheet,
@@ -81,6 +87,35 @@ def invoke_fixture(client, params: dict[str, object]) -> str:
             if time.monotonic() >= deadline:
                 raise g.GoldenError("screen fixture did not answer") from error
         time.sleep(g.RETRY_PAUSE_S)
+
+
+def read_route_layer(client) -> tuple[int, int]:
+    """Return the drawn point count and the accepted draw count."""
+    reply = str(client.invoke("core.map.route_layer_points", {}))
+    match = ROUTE_LAYER_REPLY.fullmatch(reply)
+    if match is None:
+        raise g.GoldenError(f"unexpected route layer reply: {reply!r}")
+    return int(match["points"]), int(match["draws"])
+
+
+def wait_for_route_layer(client, expected_points: int) -> None:
+    """Wait until the map holds the fixture's route and no draw or clear follows.
+
+    The draw count separates the cases: a clear or a redraw after the first
+    read changes it, so a stale count from the previous case never passes.
+    """
+    deadline = time.monotonic() + g.CAMERA_READY_TIMEOUT_S
+    previous = None
+    while True:
+        current = read_route_layer(client)
+        if current[0] == expected_points and current == previous:
+            return
+        if time.monotonic() >= deadline:
+            raise g.GoldenError(
+                f"the route layer held points={current[0]} draws={current[1]}, expected {expected_points} points"
+            )
+        previous = current
+        time.sleep(ROUTE_POLL_S)
 
 
 def wait_for_fixture(adb: g.Adb, marker: str) -> None:
@@ -114,9 +149,11 @@ def capture_theme(
     g.invoke_camera(client, CAMERA)
     shots = []
     for name, sheet, alerts in CASES:
-        marker = f"navigation-screen-fixture phase=following sheet={sheet}"
-        result = invoke_fixture(client, fixture_params(sheet, theme == "dark", alerts))
+        marker = f"navigation-screen-fixture phase=following sheet={sheet} along_m=0.0 alerts={len(alerts)} case={name}"
+        adb.logcat("-c", timeout_s=15)
+        result = invoke_fixture(client, fixture_params(name, sheet, theme == "dark", alerts))
         wait_for_fixture(adb, marker)
+        wait_for_route_layer(client, ROUTE_POINTS)
         time.sleep(FIXTURE_SETTLE_S)
         shot = g.capture_position(
             adb,

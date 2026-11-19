@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -686,7 +687,7 @@ private fun MapContent(
     LaunchedEffect(container, surface.host, navigationActive, drawnRoute) {
         val routes =
             if (navigationActive) {
-                container.navigation.state.map { state -> state.activeRoute }
+                navigationRoutes(container.navigationScreenFixture.state, container.navigation.state)
             } else {
                 flowOf<Route?>(null)
             }
@@ -2587,6 +2588,17 @@ internal fun mapRouteToDraw(
     activeRoute: Route?,
     plannedRoute: Route?,
 ): Route? = if (navigationActive) activeRoute else plannedRoute
+
+/**
+ * The route a trip draws. A shown fixture owns the screen, so its state is the
+ * source and the live state, which holds no route under the debug fixture, is
+ * ignored. Without a fixture the live state is the source. One flow feeds the
+ * one drawing effect, so nothing else clears or replaces the line.
+ */
+internal fun navigationRoutes(
+    fixture: Flow<NavigationScreenFixture?>,
+    live: Flow<NavigationState>,
+): Flow<Route?> = combine(fixture, live) { shown, state -> (shown?.state ?: state).activeRoute }
 
 /** The phases that keep the navigation screen on top of the map. */
 private fun NavigationPhase.isActiveNavigation(): Boolean =

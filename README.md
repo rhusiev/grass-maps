@@ -429,6 +429,20 @@ installs took 18-29 s from the runner's SDK cache. A pre-pulled image needs a
 custom runner image: GitHub-hosted runners are ephemeral and the action still
 calls `sdkmanager`, so the repo cannot remove that failure.
 
+Three more hosted-emulator symptoms were seen on 2026-11-18:
+
+- `unresponsive after the readiness gate passed`: the readiness gate passed,
+  and the device then stopped answering
+- `DELETE_FAILED_INTERNAL_ERROR` in the follower replay: a package delete
+  failed inside the emulator
+- `device did not return after the dialog-suppression reboot`: the emulator did
+  not come back after the reboot in `android-navigation-goldens.sh` that applies
+  the dialog-suppression settings
+
+The logs name each symptom but not its cause. Treat each as a runner event of
+the kind above until a log shows a code path, and rerun only after reading the
+log.
+
 The honest limit is that these jobs depend on a software-emulated runner that
 sometimes loses its services or downloads a corrupt image. A self-hosted runner
 with `/dev/kvm` is the fix. Without one, a red emulator job is a runner event,
@@ -1979,12 +1993,20 @@ profile, the speed labels, and the alert names for railway crossing, tunnel,
 ford, barrier, hazard, lost and regained GPS and a recalculated route.
 
 `core.nav.show_screen` is a debug-only command for deterministic captures. It
-draws the committed `test-data/navigation/screen-route.json` and fills the
+carries the committed `test-data/navigation/screen-route.json` and fills the
 screen with one fixed state (`following`, `offroute`, `paused`, `arrived`), an
 optional trip sheet, a speed, a list of alert kinds and the dark flag. The
 screen is the production composable; only the input state is fixed, so this is
 a fixture, not a static screenshot. Clearing it returns the screen to the live
-session.
+session. The command draws no route. The map screen has one route-drawing
+effect, and while a fixture is shown it reads the route from the fixture's
+state, so no second writer can clear the line after the fixture drew it. The
+optional `case` parameter is echoed in the ready log line, and
+`core.map.route_layer_points` returns `points=N draws=M`, the point count the
+route layer last drew and the number of draws and clears it accepted. The goldens
+script clears logcat per case, waits for the case's own ready line and polls
+until two reads 0.5 s apart show the full point count and the same draw count,
+so a clear or redraw between cases is caught.
 
 The goldens are `test-data/navigation-goldens/light|dark/following.png`,
 `expanded.png` and `alert.png`, captured at 1080x1920 on the API 29 AVD. Each is
@@ -2014,6 +2036,12 @@ ends; no other component starts the service. The service declares
 `foregroundServiceType="location"`, so the system shows it as a location
 foreground service and `dumpsys activity services` reports `isForeground=true`
 with type `0x8`.
+
+Android refuses the `location` foreground type without a granted runtime
+location permission. A session that reads the real location is stopped then.
+A session on the debug location replay needs no permission, so it keeps running
+without the service and the navigation screen stays up after Start
+(`endsSessionOnRefusal`).
 
 The notification shows the next turn's text as its title and the distance to it
 as its text. It offers Pause and Stop while guidance runs, Resume and Stop while

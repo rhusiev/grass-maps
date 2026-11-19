@@ -20,6 +20,22 @@ class RouteLayer(
     private val host: () -> MapHost?,
     private val log: (String) -> Unit = {},
 ) {
+    /**
+     * The point count of the route the host last accepted, 0 after a clear.
+     * A debug probe reads it to know the map holds the route before a capture.
+     */
+    @Volatile
+    var drawnPointCount: Int = 0
+        private set
+
+    /**
+     * How many draws and clears the host accepted. A probe that sees it change
+     * knows the line was drawn or cleared again since its last read.
+     */
+    @Volatile
+    var acceptedDrawCount: Int = 0
+        private set
+
     /** Draws [route] as [drawing] asks, or clears the route when it is null. */
     suspend fun draw(
         route: Route?,
@@ -31,6 +47,11 @@ class RouteLayer(
                 RouteLineDrawing.Plain -> RouteLineStyle()
                 is RouteLineDrawing.Coloured -> RouteColouring.style(route, drawing.mode, drawing.dark)
             }
-        return map.setRoute(route, style).onFailure { error -> log("route layer not drawn: $error") }
+        val outcome = map.setRoute(route, style)
+        if (outcome is Outcome.Success) {
+            drawnPointCount = route?.geometry?.size ?: 0
+            acceptedDrawCount += 1
+        }
+        return outcome.onFailure { error -> log("route layer not drawn: $error") }
     }
 }

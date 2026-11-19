@@ -44,6 +44,8 @@ internal class FakeMapHost(
     val routes = mutableListOf<Route?>()
     val routeStyles = mutableListOf<RouteLineStyle>()
     val tracks = mutableListOf<List<MapTrack>>()
+    val fittedBounds = mutableListOf<BoundingBox>()
+    var routeOutcome: Outcome<Unit> = Outcome.Success(Unit)
 
     override val camera: StateFlow<Camera> = cameraState
     override val events: Flow<MapEvent> = emptyFlow()
@@ -86,7 +88,10 @@ internal class FakeMapHost(
         return Outcome.Success(Unit)
     }
 
-    override suspend fun fitBounds(bounds: BoundingBox): Outcome<Unit> = Outcome.Success(Unit)
+    override suspend fun fitBounds(bounds: BoundingBox): Outcome<Unit> {
+        fittedBounds += bounds
+        return Outcome.Success(Unit)
+    }
 
     override suspend fun setTrackingMode(mode: TrackingMode): Outcome<Unit> {
         trackingModes += mode
@@ -109,7 +114,7 @@ internal class FakeMapHost(
     ): Outcome<Unit> {
         routes += route
         routeStyles += style
-        return Outcome.Success(Unit)
+        return routeOutcome
     }
 
     override suspend fun setTracks(tracks: List<MapTrack>): Outcome<Unit> {

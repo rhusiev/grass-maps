@@ -1,6 +1,8 @@
 package nl.r1a.grassmap.app
 
 import kotlinx.coroutines.test.runTest
+import nl.r1a.grassmap.plugin.api.error.AppError
+import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.AttributeValue
 import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
@@ -40,6 +42,37 @@ class RouteLineDrawingTest {
                 RouteRound10Palette.slopeColours(dark = false)[RouteRound10Palette.slopeBin(GRADE_PERCENT)],
                 planned.runs.single().colour,
             )
+        }
+
+    @Test
+    fun theDrawnCountFollowsTheAcceptedDrawsAndClears() =
+        runTest {
+            val host = FakeMapHost(Camera(center = GeoPoint(49.84, 24.03), zoom = 14.0))
+            val layer = RouteLayer(host = { host })
+            val route = gradedRoute()
+
+            layer.draw(route, routeLineDrawing(navigationActive = false))
+            assertEquals(route.geometry.size, layer.drawnPointCount)
+            assertEquals(1, layer.acceptedDrawCount)
+
+            layer.draw(null, routeLineDrawing(navigationActive = false))
+            assertEquals(0, layer.drawnPointCount)
+            assertEquals(2, layer.acceptedDrawCount)
+        }
+
+    @Test
+    fun aRefusedDrawLeavesTheDrawnCountAlone() =
+        runTest {
+            val host = FakeMapHost(Camera(center = GeoPoint(49.84, 24.03), zoom = 14.0))
+            val layer = RouteLayer(host = { host })
+            val route = gradedRoute()
+            layer.draw(route, routeLineDrawing(navigationActive = false))
+            host.routeOutcome = Outcome.Failure(AppError.NotReady)
+
+            layer.draw(null, routeLineDrawing(navigationActive = false))
+
+            assertEquals(route.geometry.size, layer.drawnPointCount)
+            assertEquals(1, layer.acceptedDrawCount)
         }
 
     /** One run over the whole line, so the read would colour it if asked. */

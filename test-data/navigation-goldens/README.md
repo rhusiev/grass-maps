@@ -8,7 +8,9 @@ would remove them.
 The state is deterministic: `core.map.set_camera` fixes the map, and the debug
 command `core.nav.show_screen` fills the production screen with
 `test-data/navigation/screen-route.json`. The command supplies a published
-navigation state, not a picture.
+navigation state, not a picture. The map screen draws the route from that
+state. Each case has its own ready line (`case=following|expanded|alert`), and
+the script waits for `core.map.route_layer_points` before it captures.
 
 The comparator is the map goldens' 108x192 mean-RGB block grid with the same
 32-per-channel delta and 1 % mismatch tolerance, applied to the full frame. The

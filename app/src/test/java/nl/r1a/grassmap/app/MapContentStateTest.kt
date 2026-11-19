@@ -1,5 +1,8 @@
 package nl.r1a.grassmap.app
 
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.navigation.NavigationPhase
 import nl.r1a.grassmap.navigation.NavigationState
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
@@ -79,6 +82,37 @@ class MapContentStateTest {
     fun noTripAndNoPlanDrawsNothing() {
         assertNull(mapRouteToDraw(navigationActive = false, activeRoute = null, plannedRoute = null))
     }
+
+    @Test
+    fun aShownFixtureDrawsItsOwnRouteWhileTheLiveStateHasNone() =
+        runTest {
+            val fixture = NavigationScreenFixture(state = NavigationState(activeRoute = TRIP_ROUTE))
+
+            val routes = navigationRoutes(flowOf(fixture), flowOf(NavigationState())).toList()
+
+            assertEquals(listOf<Route?>(TRIP_ROUTE), routes)
+        }
+
+    @Test
+    fun withoutAFixtureTheLiveRouteIsDrawn() =
+        runTest {
+            val live = NavigationState(activeRoute = PLAN_ROUTE)
+
+            val routes = navigationRoutes(flowOf(null), flowOf(live)).toList()
+
+            assertEquals(listOf<Route?>(PLAN_ROUTE), routes)
+        }
+
+    @Test
+    fun clearingTheFixtureFallsBackToTheLiveRoute() =
+        runTest {
+            val fixture = NavigationScreenFixture(state = NavigationState(activeRoute = TRIP_ROUTE))
+            val live = NavigationState(activeRoute = PLAN_ROUTE)
+
+            val routes = navigationRoutes(flowOf(fixture, null), flowOf(live)).toList()
+
+            assertEquals(PLAN_ROUTE, routes.last())
+        }
 
     private companion object {
         val TRIP_ROUTE = route(60.0)

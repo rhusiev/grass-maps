@@ -124,6 +124,7 @@ step "Rust tests"
 
 step "Script tests (map goldens, android smoke, benchmark, test count, oblast pipeline)"
 python3 scripts/ci/map_goldens_test.py || fail "script tests (map goldens)"
+python3 scripts/ci/navigation_goldens_test.py || fail "script tests (navigation goldens)"
 python3 scripts/ci/android_smoke_test.py || fail "script tests (android smoke)"
 python3 scripts/ci/device_test.py || fail "script tests (device gate)"
 python3 scripts/ci/android_benchmark_test.py || fail "script tests (benchmark)"

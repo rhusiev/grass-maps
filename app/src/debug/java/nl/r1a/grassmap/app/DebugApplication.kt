@@ -100,7 +100,11 @@ class DebugApplication : GrassMapsApplication() {
                     contours = { container.contours },
                     contoursEnabled = { container.contoursSettings.isEnabled() },
                 ),
-                ShowNavigationScreenCommand(session, container.navigationScreenFixture),
+                ShowNavigationScreenCommand(container.navigationScreenFixture),
+                RouteLayerPointsCommand(
+                    drawnPointCount = { container.routeLayer.drawnPointCount },
+                    acceptedDrawCount = { container.routeLayer.acceptedDrawCount },
+                ),
             ) + placeCardCommands { container } + favouritesListsCommands() + trackLibraryCommands() +
                 downloadsScreenCommands { container }
         }

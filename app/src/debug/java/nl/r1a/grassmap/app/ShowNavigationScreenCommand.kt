@@ -23,7 +23,6 @@ import nl.r1a.grassmap.plugin.api.command.CommandResult
 import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.error.onFailure
 import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
 import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
@@ -41,12 +40,12 @@ internal val NAV_SHOW_SCREEN_COMMAND: CommandId = CommandId("core.nav.show_scree
  * The golden harness and the emulator acceptance use it because a live session
  * cannot be stopped at an exact turn: the fixture carries the same values a
  * published state does, so the real navigation screen renders it without a
- * static screenshot. The command also draws the route on the map. It exists in
- * the debug source set only, and clearing it returns the screen to the live
- * navigation state.
+ * static screenshot. The command draws no route: the map screen draws the
+ * fixture's route from the same state, so one effect owns the route layer. It
+ * exists in the debug source set only, and clearing it returns the screen to
+ * the live navigation state.
  */
 internal class ShowNavigationScreenCommand(
-    private val session: MapSessionHolder,
     private val fixtures: NavigationScreenFixtureStore,
     private val log: (String) -> Unit = { message -> Log.i(TAG, message) },
 ) : Command<JsonElement, String>(
@@ -57,7 +56,8 @@ internal class ShowNavigationScreenCommand(
             "Shows a deterministic navigation screen fixture. Parameters: route (stable route JSON), " +
                 "optional phase (following, offroute, paused, arrived), sheet (collapsed, trip, settings), " +
                 "speed_kmh, along_m, destination, next_stop, alerts (list of crossing, tunnel, ford, barrier, " +
-                "hazard, recalc, gps_lost), signal_lost, dark; clear=true removes the fixture.",
+                "hazard, recalc, gps_lost), signal_lost, dark, case (a label echoed in the ready log line); " +
+                "clear=true removes the fixture. The map screen draws the fixture's route itself.",
         policy =
             CommandPolicy(
                 allowlistedForControl = true,
@@ -68,7 +68,6 @@ internal class ShowNavigationScreenCommand(
         val objectValue = params as? JsonObject ?: return Outcome.Failure(AppError.InvalidInput)
         if ((objectValue["clear"] as? JsonPrimitive)?.booleanOrNull == true) {
             fixtures.clear()
-            session.hostOrNull()?.setRoute(null)?.onFailure { error -> log("screen-route-clear failed: $error") }
             log("navigation-screen-fixture cleared")
             return Outcome.Success(CommandResult("cleared=true"))
         }
@@ -141,8 +140,11 @@ internal class ShowNavigationScreenCommand(
                 dark = dark,
             ),
         )
-        session.hostOrNull()?.setRoute(route)?.onFailure { error -> log("screen-route-failed: $error") }
-        log("navigation-screen-fixture phase=$phase sheet=$sheetName along_m=$along alerts=${alerts.size}")
+        val caseName = (objectValue["case"] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
+        log(
+            "navigation-screen-fixture phase=$phase sheet=$sheetName along_m=$along alerts=${alerts.size}" +
+                (caseName?.let { " case=$it" } ?: ""),
+        )
         return Outcome.Success(CommandResult("phase=$phase sheet=$sheetName alerts=${alerts.size}"))
     }
 

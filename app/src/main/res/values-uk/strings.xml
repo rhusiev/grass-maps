@@ -37,6 +37,8 @@
     <string name="location_age_now">щойно</string>
     <string name="location_age_seconds">%1$d с тому</string>
     <string name="location_age_minutes">%1$d хв тому</string>
+    <string name="location_age_hours">%1$d год тому</string>
+    <string name="location_age_long_ago">дуже давно</string>
     <string name="control_edit_label">Змінити</string>
     <string name="control_edit_done_label">Готово</string>
     <string name="control_edit_description">Змінити кнопки</string>

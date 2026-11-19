@@ -2305,26 +2305,6 @@ private fun formatScaleBarValue(value: Double): String =
         String.format(Locale.getDefault(), "%.1f", value)
     }
 
-/**
- * The age shown next to the grey ring. Seconds under a minute, minutes after
- * that; "just now" covers a fix that is only a few seconds old.
- */
-internal fun formatPuckAge(
-    context: Context,
-    ageMillis: Long,
-): String {
-    val seconds = ageMillis / MILLIS_PER_SECOND
-    return when {
-        seconds < AGE_NOW_SECONDS -> context.getString(R.string.location_age_now)
-        seconds < SECONDS_PER_MINUTE -> context.getString(R.string.location_age_seconds, seconds)
-        else -> context.getString(R.string.location_age_minutes, seconds / SECONDS_PER_MINUTE)
-    }
-}
-
-private const val MILLIS_PER_SECOND = 1_000L
-private const val AGE_NOW_SECONDS = 10L
-private const val SECONDS_PER_MINUTE = 60L
-
 /** Sends one picked point to the planner; the plugin requests the route. */
 private suspend fun setPlanPoint(
     container: AppContainer,

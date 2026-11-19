@@ -480,6 +480,7 @@ private fun MapContent(
     val contoursPluginOn = pluginStatuses.firstOrNull { it.pluginId == CONTOURS_PLUGIN }?.enabled != false
     val contoursEnabled = contoursSwitch && contoursPluginOn
     val managerVisible by PluginManagerScreenSession.visible.collectAsState()
+    val backupVisible by BackupScreenSession.visible.collectAsState()
     val styleChoice by container.mapStyleSettings.active.collectAsState()
     val activeStyle = if (styleChoice == MapStyleChoice.TOURING) bundle.touring else bundle.style
     val activeLayers = if (styleChoice == MapStyleChoice.TOURING) bundle.touringLayers else bundle.layers
@@ -1837,6 +1838,9 @@ private fun MapContent(
         }
         if (!navigationActive) {
             ProfilesScreenHost(container)
+        }
+        if (backupVisible && !navigationActive) {
+            BackupScreenHost(container)
         }
         if (managerVisible && !navigationActive) {
             BackHandler { PluginManagerScreenSession.hide() }

@@ -108,7 +108,12 @@ class DebugApplication : GrassMapsApplication() {
                     acceptedDrawCount = { container.routeLayer.acceptedDrawCount },
                 ),
             ) + placeCardCommands { container } + favouritesListsCommands() + trackLibraryCommands() +
-                downloadsScreenCommands { container } + profilesScreenCommands() + pluginManagerCommands()
+                downloadsScreenCommands { container } + profilesScreenCommands() + pluginManagerCommands() +
+                backupScreenCommands(
+                    backup = { container.backup },
+                    ui = { container.backupUi },
+                    captureRoot = { java.io.File(filesDir, "backup-captures") },
+                )
         }
 
     /** Debug builds treat the developer as the AI-control switch holder. */

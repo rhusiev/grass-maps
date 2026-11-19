@@ -1,6 +1,8 @@
 package nl.r1a.grassmap.app
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -57,5 +59,21 @@ class NavigationServiceTest {
 
         assertEquals(ForegroundStartResult.Started, result)
         assertEquals(emptyList<String>(), log)
+    }
+
+    @Test
+    fun aReplaySessionSurvivesTheMissingLocationPermission() {
+        assertFalse(endsSessionOnRefusal(ForegroundStartResult.PermissionRefused, locationPermissionRequired = false))
+    }
+
+    @Test
+    fun aRealLocationSessionEndsWhenThePermissionIsRefused() {
+        assertTrue(endsSessionOnRefusal(ForegroundStartResult.PermissionRefused, locationPermissionRequired = true))
+    }
+
+    @Test
+    fun aBackgroundRefusalEndsTheSessionWhateverTheSource() {
+        assertTrue(endsSessionOnRefusal(ForegroundStartResult.NotAllowedRefused, locationPermissionRequired = false))
+        assertFalse(endsSessionOnRefusal(ForegroundStartResult.Started, locationPermissionRequired = true))
     }
 }

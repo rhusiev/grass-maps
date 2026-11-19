@@ -56,6 +56,22 @@ internal fun foregroundStartResult(
     }
 
 /**
+ * Whether a refused foreground start must end the session. A refusal for the
+ * missing location permission ends it only when the session reads the real
+ * location: a debug replay needs no permission, so its session keeps running
+ * without the service instead of vanishing right after Start.
+ */
+internal fun endsSessionOnRefusal(
+    result: ForegroundStartResult,
+    locationPermissionRequired: Boolean,
+): Boolean =
+    when (result) {
+        ForegroundStartResult.Started -> false
+        ForegroundStartResult.NotAllowedRefused -> true
+        ForegroundStartResult.PermissionRefused -> locationPermissionRequired
+    }
+
+/**
  * The location foreground service that keeps guidance alive while the app is
  * not in the foreground.
  *
@@ -189,28 +205,24 @@ class NavigationService : Service() {
      * refuse the start because the app is in the background; that is the same
      * [ForegroundStartResult.NotAllowedRefused] path.
      */
-    private fun startForegroundSafely(notification: Notification): Boolean =
-        when (
+    private fun startForegroundSafely(notification: Notification): Boolean {
+        val result =
             foregroundStartResult(
                 start = {
                     startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
                 },
                 log = { message -> Log.w(TAG, message) },
             )
-        ) {
-            ForegroundStartResult.Started -> {
-                Log.i(TAG, "navigation-service-start type=location")
-                true
-            }
-
-            ForegroundStartResult.PermissionRefused,
-            ForegroundStartResult.NotAllowedRefused,
-            -> {
-                controller.stop()
-                stopSelf()
-                false
-            }
+        if (result == ForegroundStartResult.Started) {
+            Log.i(TAG, "navigation-service-start type=location")
+            return true
         }
+        if (endsSessionOnRefusal(result, controller.locationPermissionRequired())) {
+            controller.stop()
+        }
+        stopSelf()
+        return false
+    }
 
     private fun notificationFor(state: NavigationState): Notification {
         val content = navigationNotificationContent(state, strings)

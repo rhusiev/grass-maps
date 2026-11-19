@@ -79,6 +79,9 @@ class NavigationController(
     val isActive: Boolean
         get() = synchronized(lock) { job != null }
 
+    /** Whether a session reads a real location, so the foreground service needs the permission. */
+    fun locationPermissionRequired(): Boolean = requiresLocationPermission()
+
     /**
      * Starts guidance on [route]. Returns true when this call started a
      * session, false when one already existed. A missing location permission,

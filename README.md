@@ -2488,8 +2488,17 @@ unreadable old file stays and reads as empty.
 
 `ProfileCatalog` also lists custom profiles. A custom entry holds `name`,
 `copied_from` and the route profile it routes with, and the file keeps an
-`order` key so the list stays in creation order. A rewrite keeps entries it
-cannot parse and any extra key it does not know. A name has 1 to 40 characters.
+`order` key so the list stays in creation order. A name has 1 to 40 characters.
+
+Every per-profile file keeps what it does not understand. A rewrite writes back
+each unknown top-level key, each entry that is not an object, and each value in
+a profile entry that is not a string (number, boolean, null, array, object) as
+the same JSON that was read. A key that the caller sets replaces the kept one,
+and a profile that leaves the values loses its kept values with it. A file that
+a newer build wrote is still refused, and a file that does not parse is
+refused. The first write after a missing file adds the values of an old
+unversioned file only when nothing has read the store before. A read has then
+already returned them, and a profile reset to its defaults must stay reset.
 
 `ProfileSettingsService` (`core-services`) owns the actions. It reaches each
 per-profile store through `ProfileSettingsGroup` (`plugin-api`): `ROUTING` and
@@ -2504,7 +2513,20 @@ builds every action from these two calls:
    current values of the profile it was copied from, or the defaults when it
    was not copied.
 4. Undo replaces each touched group with the snapshot taken before the action.
-   The history holds the last 20 actions.
+   The history holds the last 20 actions. Undo checks first that the profile
+   still holds what the action wrote. After another change, such as an alert
+   switched in the meantime, it refuses with `AppError.Conflict`, writes
+   nothing and drops that history entry.
+
+A group writes in `replace` and reports the real result. `RoutingOptionsSettings`
+and `AlertSettingsStore` keep the new values in memory only after the file
+write succeeded, so the planner never uses values that are not on disk. The
+alert store writes `set` calls in the background, but its `replace` writes
+before it returns. A failed write fails the action, and the service puts the
+groups it already wrote back. When that fails too, the action returns
+`AppError.Internal` with detail `rollback_failed` and the history is cleared.
+The service first calls `ensureReady`, which loads the alert store. A store
+that cannot load refuses every action.
 
 `PluginServices.profileSettings` (`ProfileSettingsAccess`) gives plugins the
 state and these actions. `plugins/profiles-ui` (T-0602) owns the screen and the

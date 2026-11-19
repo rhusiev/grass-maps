@@ -1,8 +1,10 @@
 package nl.r1a.grassmap.core.services
 
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.service.LogRecord
 import org.junit.After
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -42,6 +44,7 @@ class CrashGuardTest {
         assertTrue(text.contains("# Grass Maps crash report"))
         assertTrue(text.contains("java.lang.IllegalStateException"))
         assertTrue(text.contains("boom"))
+        assertTrue(text.contains("at nl.r1a.grassmap.core.services.CrashGuardTest."))
         assertTrue(text.contains("Pixel 7"))
         assertTrue(text.contains("Android 14"))
         assertTrue(text.contains("last thing before the crash"))
@@ -50,50 +53,109 @@ class CrashGuardTest {
     }
 
     @Test
-    fun anInstalledHandlerWritesTheReportAndChainsToThePreviousHandler() {
+    fun aStackOverflowReportSkipsTheStackAndStillWrites() {
+        val overflow = stackOverflow()
+
+        val outcome = guardAt().report(Thread("main"), overflow)
+
+        assertTrue(outcome is Outcome.Success)
+        val text = (outcome as Outcome.Success).value.readText()
+        assertTrue(text.contains("exception=java.lang.StackOverflowError"))
+        assertTrue(text.contains("# stack skipped: stack overflow"))
+        assertFalse(text.contains("at nl.r1a.grassmap.core.services.CrashGuardTest."))
+        assertFalse(text.contains("\tat "))
+    }
+
+    @Test
+    fun aStackThatCannotBeFormattedStillWritesTheRestOfTheReport() {
+        val failure =
+            object : IllegalStateException("boom") {
+                override fun toString(): String = throw IllegalStateException("cannot print this stack")
+            }
+
+        val outcome = guardAt().report(Thread("main"), failure)
+
+        assertTrue(outcome is Outcome.Success)
+        val text = (outcome as Outcome.Success).value.readText()
+        assertTrue(text.contains("exception="))
+        assertTrue(text.contains("boom"))
+        assertTrue(text.contains("# stack skipped: the stack could not be formatted"))
+        assertFalse(text.contains("at nl.r1a.grassmap.core.services.CrashGuardTest."))
+    }
+
+    @Test
+    fun anInstalledHandlerWritesTheReportOnItsOwnThreadAndChainsToThePrevious() {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         var chained: Throwable? = null
+        var reportedOn: String? = null
         val guard =
-            CrashGuard(
-                directory = directory,
-                records = { emptyList() },
-                deviceInfo = { DeviceInfo.UNKNOWN },
+            guardAt(
+                records = {
+                    reportedOn = Thread.currentThread().name
+                    emptyList()
+                },
                 clock = { 7L },
             )
         try {
             Thread.setDefaultUncaughtExceptionHandler { _, throwable -> chained = throwable }
             installCrashGuard { guard }
             val failure = IllegalStateException("boom")
+            val caller = Thread.currentThread().name
 
-            Thread.getDefaultUncaughtExceptionHandler()?.uncaughtException(Thread.currentThread(), failure)
+            Thread.getDefaultUncaughtExceptionHandler()?.uncaughtException(Thread("crasher"), failure)
 
             assertTrue(File(directory, "crash-7.txt").isFile)
-            assertTrue(chained === failure)
+            assertSame(failure, chained)
+            assertTrue(reportedOn != null && reportedOn != caller)
         } finally {
             Thread.setDefaultUncaughtExceptionHandler(previous)
         }
     }
 
     @Test
-    fun anUnwritableDirectoryReturnsAFailureInsteadOfThrowing() {
+    fun aReportThatCannotBeWrittenStillChainsTheOriginalThrowable() {
+        directory.mkdirs()
         val blocked = File(directory, "blocked")
-        blocked.mkdirs()
-        blocked.setWritable(false)
-        val guard =
-            CrashGuard(
-                directory = blocked,
-                records = { emptyList() },
-                deviceInfo = { DeviceInfo.UNKNOWN },
-                clock = { 42L },
-            )
+        assertTrue(blocked.createNewFile())
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        var chained: Throwable? = null
+        val guard = guardAt(writeDirectory = blocked, clock = { 9L })
+        try {
+            Thread.setDefaultUncaughtExceptionHandler { _, throwable -> chained = throwable }
+            installCrashGuard { guard }
+            val failure = IllegalStateException("boom")
 
-        val outcome =
-            try {
-                guard.report(Thread("main"), IllegalStateException("boom"))
-            } finally {
-                blocked.setWritable(true)
-            }
+            Thread.getDefaultUncaughtExceptionHandler()?.uncaughtException(Thread("crasher"), failure)
 
-        assertTrue(outcome is Outcome.Failure)
+            assertSame(failure, chained)
+        } finally {
+            Thread.setDefaultUncaughtExceptionHandler(previous)
+        }
+    }
+
+    private fun guardAt(
+        writeDirectory: File = directory,
+        records: () -> List<LogRecord> = { emptyList() },
+        clock: () -> Long = { DEFAULT_CLOCK },
+    ): CrashGuard =
+        CrashGuard(
+            directory = writeDirectory,
+            records = records,
+            deviceInfo = { DeviceInfo.UNKNOWN },
+            clock = clock,
+        )
+
+    private fun stackOverflow(): StackOverflowError =
+        try {
+            recurse()
+            error("unreachable after the stack overflow")
+        } catch (overflow: StackOverflowError) {
+            overflow
+        }
+
+    private fun recurse(): Unit = recurse()
+
+    private companion object {
+        const val DEFAULT_CLOCK = 42L
     }
 }

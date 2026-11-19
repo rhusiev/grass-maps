@@ -1589,6 +1589,7 @@ private fun MapContent(
             NavigationOverlay(
                 container = container,
                 surface = surface,
+                units = units,
                 sheet = navigationSheet,
                 destination = navigationDestination,
                 nextStop = navigationNextStop,
@@ -2088,6 +2089,7 @@ private fun SearchOverlay(
 private fun NavigationOverlay(
     container: AppContainer,
     surface: MapSurface,
+    units: UnitSystem,
     sheet: NavigationSheet,
     destination: String?,
     nextStop: String?,
@@ -2155,7 +2157,7 @@ private fun NavigationOverlay(
         }
     }
     val guidance =
-        remember(active, container.strings) {
+        remember(active, container.strings, units) {
             val route = active.activeRoute
             if (route == null) {
                 null
@@ -2168,13 +2170,14 @@ private fun NavigationOverlay(
                         active.relation == RouteRelation.OffRoute -> GuidanceStatus.OffRoute
                         else -> GuidanceStatus.Following
                     }
-                guidancePanel(GuidanceInput(route, along, status), container.strings)
+                guidancePanel(GuidanceInput(route, along, status, units), container.strings)
             }
         }
     val navigationScreen =
         remember(
             active,
             guidance,
+            units,
             speedCurrent,
             speedAverage,
             speedMax,
@@ -2201,6 +2204,7 @@ private fun NavigationOverlay(
                     signalLost = fixture?.signalLost ?: navigationAlerts.signalLost,
                     camera = cameraSettings,
                     alertSettings = alertSettings,
+                    units = units,
                 ),
                 container.strings,
                 Locale.getDefault(),

@@ -176,7 +176,7 @@ fun NavigationScreenHost(
                 content = { modifier -> turnCard(modifier) },
             )
             if (state.status != NavigationScreenStatus.Arrived) {
-                ReadoutRow(state.readout, strings, colors)
+                ReadoutRow(state.readout, state.speedUnit, strings, colors)
                 AlertBanners(state.alerts.take(MAX_BANNERS), colors)
             }
         }
@@ -286,6 +286,7 @@ private fun TurnCardSlot(
 @Composable
 private fun ReadoutRow(
     readout: NavigationReadout,
+    speedUnit: String,
     strings: Strings,
     colors: NavigationPalette,
 ) {
@@ -318,11 +319,11 @@ private fun ReadoutRow(
         ) {
             Glyph("\u25D4", 14, colors.muted)
             BasicText(
-                text = readout.speedKmh ?: DASH,
+                text = readout.speed ?: DASH,
                 style = TextStyle(color = colors.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold),
             )
             BasicText(
-                text = strings.resolve(NavigationScreenStrings.SPEED_UNIT),
+                text = speedUnit,
                 style = TextStyle(color = colors.muted, fontSize = 12.sp),
             )
         }
@@ -550,7 +551,7 @@ private fun TripSheet(
             )
         }
         Spacer(Modifier.height(8.dp))
-        SpeedTiles(state.trip, strings, colors)
+        SpeedTiles(state.trip, state.speedUnit, strings, colors)
         Spacer(Modifier.height(10.dp))
         // Round 8 moves the camera switches to the profile editor's "While
         // navigating" row. That editor does not exist yet, so this sheet is
@@ -790,13 +791,14 @@ private fun TripRow(
 @Composable
 private fun SpeedTiles(
     trip: NavigationTripSummary,
+    speedUnit: String,
     strings: Strings,
     colors: NavigationPalette,
 ) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        SpeedTile(strings.resolve(NavigationScreenStrings.SPEED_CURRENT), trip.speedCurrent, strings, colors, Modifier.weight(1f))
-        SpeedTile(strings.resolve(NavigationScreenStrings.SPEED_AVERAGE), trip.speedAverage, strings, colors, Modifier.weight(1f))
-        SpeedTile(strings.resolve(NavigationScreenStrings.SPEED_MAX), trip.speedMax, strings, colors, Modifier.weight(1f))
+        SpeedTile(strings.resolve(NavigationScreenStrings.SPEED_CURRENT), trip.speedCurrent, speedUnit, colors, Modifier.weight(1f))
+        SpeedTile(strings.resolve(NavigationScreenStrings.SPEED_AVERAGE), trip.speedAverage, speedUnit, colors, Modifier.weight(1f))
+        SpeedTile(strings.resolve(NavigationScreenStrings.SPEED_MAX), trip.speedMax, speedUnit, colors, Modifier.weight(1f))
     }
 }
 
@@ -804,7 +806,7 @@ private fun SpeedTiles(
 private fun SpeedTile(
     label: String,
     value: String?,
-    strings: Strings,
+    speedUnit: String,
     colors: NavigationPalette,
     modifier: Modifier,
 ) {
@@ -822,7 +824,7 @@ private fun SpeedTile(
             )
             Spacer(Modifier.width(2.dp))
             BasicText(
-                text = strings.resolve(NavigationScreenStrings.SPEED_UNIT),
+                text = speedUnit,
                 style =
                     TextStyle(
                         color = colors.muted,

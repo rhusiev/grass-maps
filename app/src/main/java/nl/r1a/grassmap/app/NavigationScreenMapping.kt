@@ -8,8 +8,10 @@ import nl.r1a.grassmap.navigation.NavigationCameraSettings
 import nl.r1a.grassmap.navigation.NavigationPhase
 import nl.r1a.grassmap.navigation.NavigationState
 import nl.r1a.grassmap.navigation.RouteRelation
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.api.unit.UnitText
 import nl.r1a.grassmap.plugin.ui.api.NavigationAlertGlyph
 import nl.r1a.grassmap.plugin.ui.api.NavigationAlertSwitches
 import nl.r1a.grassmap.plugin.ui.api.NavigationAlertTone
@@ -24,7 +26,6 @@ import nl.r1a.grassmap.plugin.ui.api.NavigationTurnCard
 import nl.r1a.grassmap.plugins.guidance.ui.GuidancePanel
 import nl.r1a.grassmap.plugins.guidance.ui.GuidancePanelEntry
 import nl.r1a.grassmap.plugins.guidance.ui.GuidancePanelField
-import nl.r1a.grassmap.plugins.guidance.ui.guidanceDistanceText
 import nl.r1a.grassmap.plugins.guidance.ui.guidanceDurationText
 import nl.r1a.grassmap.plugins.guidance.ui.turnArrow
 import nl.r1a.grassmap.ui.shell.NavigationScreenStrings
@@ -32,7 +33,6 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.math.roundToLong
 
 /** Everything one navigation screen derivation reads, in plain values. */
 internal data class NavigationScreenInput(
@@ -47,6 +47,7 @@ internal data class NavigationScreenInput(
     val signalLost: Boolean = false,
     val camera: NavigationCameraSettings = NavigationCameraSettings(),
     val alertSettings: AlertSettings = AlertSettings.ALL_OFF,
+    val units: UnitSystem = UnitSystem.Metric,
 )
 
 /**
@@ -93,7 +94,8 @@ internal fun navigationScreenState(
         turn = turnCard(input, status, next, second, destination, strings, locale),
         readout = readout(input, status, speed, strings, locale),
         trip = trip(input, status, destination, speed, strings, locale, zone),
-        alerts = input.alerts.mapNotNull { banner -> screenAlert(banner, strings, locale) },
+        alerts = input.alerts.mapNotNull { banner -> screenAlert(banner, strings, locale, input.units) },
+        speedUnit = UnitText.speedUnit(input.units, strings),
         camera =
             NavigationCameraSwitches(
                 autoZoom = input.camera.autoZoom,
@@ -125,8 +127,8 @@ private fun turnCard(
 ): NavigationTurnCard {
     val fallback = input.state.nextInstruction
     val distance =
-        next?.distanceMeters?.let { guidanceDistanceText(it, strings, locale) }
-            ?: fallback?.distanceToInstructionMeters?.let { guidanceDistanceText(it, strings, locale) }
+        next?.distanceMeters?.let { UnitText.distance(it, input.units, strings, locale) }
+            ?: fallback?.distanceToInstructionMeters?.let { UnitText.distance(it, input.units, strings, locale) }
             ?: DASH
     val street = next?.let { it.streetName ?: it.title } ?: fallback?.text.orEmpty()
     val arrow = next?.let { turnArrow(it.maneuver, it.title) } ?: NavigationTurnArrow.Straight
@@ -195,7 +197,12 @@ private fun readout(
     val stopTime =
         input.panel?.entries?.firstOrNull { it.field == GuidancePanelField.NextStopTime }
     return NavigationReadout(
-        stopDistance = if (showStop) stopDistance?.distanceMeters?.let { guidanceDistanceText(it, strings, locale) } else null,
+        stopDistance =
+            if (showStop) {
+                stopDistance?.distanceMeters?.let { UnitText.distance(it, input.units, strings, locale) }
+            } else {
+                null
+            },
         stopTime = if (showStop) stopTime?.durationSeconds?.let { guidanceDurationText(it, strings) } else null,
         stopName =
             if (showStop && (stopDistance != null || stopTime != null)) {
@@ -203,7 +210,7 @@ private fun readout(
             } else {
                 null
             },
-        speedKmh = formatSpeedKmh(speed, locale),
+        speed = UnitText.speed(speed, input.units, strings, locale)?.value,
     )
 }
 
@@ -218,22 +225,28 @@ private fun trip(
 ): NavigationTripSummary =
     NavigationTripSummary(
         destination = destination,
-        remainingDistance = guidanceDistanceText(input.state.remainingDistanceMeters, strings, locale),
+        remainingDistance = UnitText.distance(input.state.remainingDistanceMeters, input.units, strings, locale),
         arrivalTime = input.state.etaEpochMillis?.let { formatArrival(it, zone) },
         remainingTime = guidanceDurationText(input.state.remainingDurationSeconds, strings),
         profile =
             input.state.profile
                 ?.name
                 ?.lowercase(Locale.ROOT) ?: DEFAULT_PROFILE,
-        speedCurrent = if (status == NavigationScreenStatus.Paused) null else formatSpeedKmh(speed, locale),
-        speedAverage = formatSpeedKmh(input.speedAverageMetersPerSecond, locale),
-        speedMax = formatSpeedKmh(input.speedMaxMetersPerSecond, locale),
+        speedCurrent =
+            if (status == NavigationScreenStatus.Paused) {
+                null
+            } else {
+                UnitText.speed(speed, input.units, strings, locale)?.value
+            },
+        speedAverage = UnitText.speed(input.speedAverageMetersPerSecond, input.units, strings, locale)?.value,
+        speedMax = UnitText.speed(input.speedMaxMetersPerSecond, input.units, strings, locale)?.value,
     )
 
 private fun screenAlert(
     banner: AlertBanner,
     strings: Strings,
     locale: Locale,
+    units: UnitSystem,
 ): NavigationScreenAlert? {
     // Off route and arrival are turn-card states; a banner would say the same
     // thing twice.
@@ -259,12 +272,12 @@ private fun screenAlert(
             featureDistance != null && banner.kind in WAY_ALERT_KINDS -> {
                 strings.resolve(
                     NavigationScreenStrings.ALERT_IN,
-                    listOf(guidanceDistanceText(featureDistance, strings, locale)),
+                    listOf(UnitText.distance(featureDistance, units, strings, locale)),
                 )
             }
 
             banner.kind in PROXIMITY_ALERT_KINDS -> {
-                placeDetail(banner, strings, locale)
+                placeDetail(banner, strings, locale, units)
             }
 
             else -> {
@@ -376,12 +389,13 @@ private fun placeDetail(
     banner: AlertBanner,
     strings: Strings,
     locale: Locale,
+    units: UnitSystem,
 ): String? {
     val distance =
         banner.placeDistanceMeters?.let { meters ->
             strings.resolve(
                 NavigationScreenStrings.ALERT_IN,
-                listOf(guidanceDistanceText(meters, strings, locale)),
+                listOf(UnitText.distance(meters, units, strings, locale)),
             )
         }
     val name = banner.placeName
@@ -400,22 +414,6 @@ private fun placeDetail(
     }
 }
 
-/** Whole km/h from 10, one decimal below; a missing value draws a dash. */
-internal fun formatSpeedKmh(
-    metersPerSecond: Double?,
-    locale: Locale = Locale.getDefault(),
-): String? {
-    if (metersPerSecond == null || !metersPerSecond.isFinite() || metersPerSecond < 0.0) {
-        return null
-    }
-    val kmh = metersPerSecond * SECONDS_PER_HOUR / METERS_PER_KILOMETER
-    return if (kmh >= WHOLE_KMH_FROM) {
-        kmh.roundToLong().toString()
-    } else {
-        String.format(locale, "%.1f", kmh)
-    }
-}
-
 private fun formatArrival(
     epochMillis: Long,
     zone: ZoneId,
@@ -429,6 +427,3 @@ private val ARRIVAL_FORMAT = DateTimeFormatter.ofPattern("HH:mm")
 private const val DASH = "–"
 private const val DEFAULT_PROFILE = "walk"
 private const val MILLIS_PER_SECOND = 1_000L
-private const val SECONDS_PER_HOUR = 3_600.0
-private const val METERS_PER_KILOMETER = 1_000.0
-private const val WHOLE_KMH_FROM = 10.0

@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.plugins.guidance.ui
 
 import nl.r1a.grassmap.plugin.api.model.AttributeValue
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.provider.RouteAttributes
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -66,6 +67,42 @@ class GuidancePanelTest {
         assertEquals(300.0, next.durationSeconds ?: -1.0, TOLERANCE)
         assertEquals("in 300 m, 5 min", next.detail)
         assertEquals(listOf(GuidancePanelField.NextTurn), panel.entries.map { it.field })
+    }
+
+    @Test
+    fun imperialShowsTurnDistancesInFeetAndMiles() {
+        val short =
+            straightRoute(
+                distanceMeters = 300.0,
+                durationSeconds = 300.0,
+                instructions = listOf(instruction("Turn right onto A", 0.0, 300.0)),
+                segments = listOf(leg(300.0, 300.0)),
+            )
+        val long =
+            straightRoute(
+                distanceMeters = 1_800.0,
+                durationSeconds = 1_800.0,
+                instructions = listOf(instruction("Turn right onto A", 0.0, 1_800.0)),
+                segments = listOf(leg(1_800.0, 1_800.0)),
+            )
+
+        val shortPanel =
+            requireNotNull(
+                guidancePanel(
+                    GuidanceInput(short, alongMeters = 0.0, units = UnitSystem.Imperial),
+                    TestStrings,
+                ),
+            )
+        val longPanel =
+            requireNotNull(
+                guidancePanel(
+                    GuidanceInput(long, alongMeters = 0.0, units = UnitSystem.Imperial),
+                    TestStrings,
+                ),
+            )
+
+        assertEquals("in 984 ft, 5 min", shortPanel.entry(GuidancePanelField.NextTurn).detail)
+        assertEquals("in 1.1 mi, 30 min", longPanel.entry(GuidancePanelField.NextTurn).detail)
     }
 
     @Test

@@ -1,15 +1,16 @@
 package nl.r1a.grassmap.plugins.guidance.ui
 
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.provider.RouteProgress
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.api.unit.UnitText
 import nl.r1a.grassmap.plugin.ui.api.RouteTurnStep
 import nl.r1a.grassmap.plugin.ui.api.routeTurns
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.ceil
-import kotlin.math.round
 
 /**
  * What the guidance panel shows, in the guidance state's own terms.
@@ -23,6 +24,7 @@ data class GuidanceInput(
     val route: Route?,
     val alongMeters: Double,
     val status: GuidanceStatus = GuidanceStatus.Following,
+    val units: UnitSystem = UnitSystem.Metric,
 )
 
 /** The guidance relation the panel is told about; it does not measure it. */
@@ -98,8 +100,6 @@ object GuidanceStrings {
     const val OFF_ROUTE = "guidance_panel_off_route"
     const val IN = "guidance_panel_in"
     const val THEN_IN = "guidance_panel_then_in"
-    const val METRES = "guidance_panel_metres"
-    const val KILOMETRES = "guidance_panel_kilometres"
     const val MINUTES = "guidance_panel_minutes"
     const val HOURS = "guidance_panel_hours"
     const val HOURS_MINUTES = "guidance_panel_hours_minutes"
@@ -161,9 +161,9 @@ fun guidancePanel(
     val next = ahead.getOrNull(0) ?: arrivalTurn(route, total, arriveText)
     val second = ahead.getOrNull(1)
     val entries = mutableListOf<GuidancePanelEntry>()
-    entries += turnEntry(GuidancePanelField.NextTurn, next, along, progress, strings, locale)
+    entries += turnEntry(GuidancePanelField.NextTurn, next, along, progress, input.units, strings, locale)
     if (second != null) {
-        entries += turnEntry(GuidancePanelField.SecondTurn, second, along, progress, strings, locale)
+        entries += turnEntry(GuidancePanelField.SecondTurn, second, along, progress, input.units, strings, locale)
     }
     val stop = legBoundaries(route, total).firstOrNull { it > along + PASSED_METERS }
     if (stop != null) {
@@ -173,7 +173,7 @@ fun guidancePanel(
             GuidancePanelEntry(
                 field = GuidancePanelField.NextStopDistance,
                 title = strings.resolve(GuidanceStrings.NEXT_STOP),
-                detail = distanceText(distance, strings, locale),
+                detail = UnitText.distance(distance, input.units, strings, locale),
                 distanceMeters = distance,
             )
         entries +=
@@ -195,6 +195,7 @@ private fun turnEntry(
     turn: RouteTurnStep,
     along: Double,
     progress: RouteProgress,
+    units: UnitSystem,
     strings: Strings,
     locale: Locale,
 ): GuidancePanelEntry {
@@ -204,7 +205,11 @@ private fun turnEntry(
     return GuidancePanelEntry(
         field = field,
         title = turn.text,
-        detail = strings.resolve(format, listOf(distanceText(distance, strings, locale), durationText(seconds, strings))),
+        detail =
+            strings.resolve(
+                format,
+                listOf(UnitText.distance(distance, units, strings, locale), durationText(seconds, strings)),
+            ),
         distanceMeters = distance,
         durationSeconds = seconds,
         streetName = turn.streetName,
@@ -257,27 +262,6 @@ private fun legBoundaries(
     }
 }
 
-private fun distanceText(
-    meters: Double,
-    strings: Strings,
-    locale: Locale,
-): String = guidanceDistanceText(meters, strings, locale)
-
-/** The distance the panel and the navigation screen format, in the user's units. */
-fun guidanceDistanceText(
-    meters: Double,
-    strings: Strings,
-    locale: Locale = Locale.getDefault(),
-): String =
-    if (meters < METRES_PER_KILOMETRE) {
-        strings.resolve(GuidanceStrings.METRES, listOf(round(meters).toLong().toString()))
-    } else {
-        strings.resolve(
-            GuidanceStrings.KILOMETRES,
-            listOf(String.format(locale, "%.1f", meters / METRES_PER_KILOMETRE)),
-        )
-    }
-
 private fun durationText(
     seconds: Double,
     strings: Strings,
@@ -302,6 +286,5 @@ fun guidanceDurationText(
 private const val PASSED_METERS = 1.0
 private const val MIN_LEGS = 2
 private const val LEG_TOLERANCE = 0.005
-private const val METRES_PER_KILOMETRE = 1_000.0
 private const val SECONDS_PER_MINUTE = 60.0
 private const val MINUTES_PER_HOUR = 60L

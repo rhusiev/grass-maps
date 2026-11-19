@@ -71,7 +71,6 @@
     <string name="nav_screen_back">Назад</string>
     <string name="nav_screen_speed_current">Зараз</string>
     <string name="nav_screen_speed_average">Середня</string>
-    <string name="nav_screen_speed_unit">км/год</string>
     <string name="nav_screen_speed_max">Макс.</string>
     <string name="nav_screen_trip_left">%1$s залишилось · прибуття %2$s</string>
     <string name="nav_screen_trip_left_no_arrival">%1$s залишилось</string>

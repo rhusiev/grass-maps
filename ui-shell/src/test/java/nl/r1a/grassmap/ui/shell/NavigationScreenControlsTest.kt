@@ -123,5 +123,6 @@ class NavigationScreenControlsTest {
                     paused -> NavigationScreenStatus.Paused
                     else -> NavigationScreenStatus.Following
                 },
+            speedUnit = "km/h",
         )
 }

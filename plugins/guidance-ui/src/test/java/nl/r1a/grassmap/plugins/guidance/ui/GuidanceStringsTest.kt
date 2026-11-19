@@ -51,8 +51,6 @@ class GuidanceStringsTest {
                 GuidanceStrings.OFF_ROUTE,
                 GuidanceStrings.IN,
                 GuidanceStrings.THEN_IN,
-                GuidanceStrings.METRES,
-                GuidanceStrings.KILOMETRES,
                 GuidanceStrings.MINUTES,
                 GuidanceStrings.HOURS,
                 GuidanceStrings.HOURS_MINUTES,

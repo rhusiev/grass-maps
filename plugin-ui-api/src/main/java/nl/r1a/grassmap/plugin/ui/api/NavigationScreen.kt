@@ -64,7 +64,7 @@ data class NavigationReadout(
     val stopDistance: String? = null,
     val stopTime: String? = null,
     val stopName: String? = null,
-    val speedKmh: String? = null,
+    val speed: String? = null,
 )
 
 /** The trip and speed facts the expanded sheet shows. */
@@ -142,6 +142,8 @@ data class NavigationScreenState(
             remainingTime = "",
         ),
     val alerts: List<NavigationScreenAlert> = emptyList(),
+    /** The label for [NavigationReadout.speed] and the trip's speeds: km/h or mph. */
+    val speedUnit: String,
     val camera: NavigationCameraSwitches = NavigationCameraSwitches(),
     val alertSwitches: NavigationAlertSwitches = NavigationAlertSwitches(),
     val recentreVisible: Boolean = false,

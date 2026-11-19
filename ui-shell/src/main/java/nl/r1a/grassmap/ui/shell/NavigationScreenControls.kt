@@ -155,7 +155,6 @@ object NavigationScreenStrings {
     const val SPEED_CURRENT = "nav_screen_speed_current"
     const val SPEED_AVERAGE = "nav_screen_speed_average"
     const val SPEED_MAX = "nav_screen_speed_max"
-    const val SPEED_UNIT = "nav_screen_speed_unit"
     const val TRIP_LEFT = "nav_screen_trip_left"
     const val TRIP_LEFT_NO_ARRIVAL = "nav_screen_trip_left_no_arrival"
     const val NEXT_STOP = "nav_screen_next_stop"

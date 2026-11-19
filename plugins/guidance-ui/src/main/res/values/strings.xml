@@ -8,8 +8,6 @@
     <string name="guidance_panel_off_route">Off route</string>
     <string name="guidance_panel_in">in %1$s, %2$s</string>
     <string name="guidance_panel_then_in">then in %1$s, %2$s</string>
-    <string name="guidance_panel_metres">%1$s m</string>
-    <string name="guidance_panel_kilometres">%1$s km</string>
     <string name="guidance_panel_minutes">%1$s min</string>
     <string name="guidance_panel_hours">%1$s h</string>
     <string name="guidance_panel_hours_minutes">%1$s h %2$s min</string>

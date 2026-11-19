@@ -8,8 +8,6 @@
     <string name="guidance_panel_off_route">Поза маршрутом</string>
     <string name="guidance_panel_in">через %1$s, %2$s</string>
     <string name="guidance_panel_then_in">потім через %1$s, %2$s</string>
-    <string name="guidance_panel_metres">%1$s м</string>
-    <string name="guidance_panel_kilometres">%1$s км</string>
     <string name="guidance_panel_minutes">%1$s хв</string>
     <string name="guidance_panel_hours">%1$s год</string>
     <string name="guidance_panel_hours_minutes">%1$s год %2$s хв</string>

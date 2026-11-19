@@ -71,7 +71,6 @@
     <string name="nav_screen_back">Back</string>
     <string name="nav_screen_speed_current">Current</string>
     <string name="nav_screen_speed_average">Average</string>
-    <string name="nav_screen_speed_unit">km/h</string>
     <string name="nav_screen_speed_max">Max</string>
     <string name="nav_screen_trip_left">%1$s left · arrive %2$s</string>
     <string name="nav_screen_trip_left_no_arrival">%1$s left</string>

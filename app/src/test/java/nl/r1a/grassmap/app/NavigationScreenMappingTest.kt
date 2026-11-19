@@ -10,12 +10,14 @@ import nl.r1a.grassmap.navigation.NavigationState
 import nl.r1a.grassmap.navigation.RouteRelation
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
 import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.provider.RouteInstruction
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.provider.RouteSegment
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.api.unit.UnitText
 import nl.r1a.grassmap.plugin.ui.api.NavigationAlertGlyph
 import nl.r1a.grassmap.plugin.ui.api.NavigationAlertTone
 import nl.r1a.grassmap.plugin.ui.api.NavigationScreenStatus
@@ -54,13 +56,34 @@ class NavigationScreenMappingTest {
         assertFalse(screen.turn.dimmed)
         assertEquals("200 m", screen.readout.stopDistance)
         assertEquals("Svit Kavy", screen.readout.stopName)
-        assertEquals("4.8", screen.readout.speedKmh)
+        assertEquals("4.8", screen.readout.speed)
         assertEquals("800 m", screen.trip.remainingDistance)
         assertEquals("14:21", screen.trip.arrivalTime)
         assertEquals("bike", screen.trip.profile)
         assertEquals("4.8", screen.trip.speedCurrent)
         assertEquals("4.6", screen.trip.speedAverage)
         assertEquals("6.1", screen.trip.speedMax)
+        assertEquals("km/h", screen.speedUnit)
+    }
+
+    @Test
+    fun imperialShowsFeetMilesAndMilesPerHour() {
+        val state = state(remainingDistance = 2_000.0)
+        val screen =
+            screen(
+                state = state,
+                panel = panel(state, along = 200.0, units = UnitSystem.Imperial),
+                units = UnitSystem.Imperial,
+            )
+
+        assertEquals("591 ft", screen.turn.distance)
+        assertEquals("656 ft", screen.readout.stopDistance)
+        assertEquals("1.2 mi", screen.trip.remainingDistance)
+        assertEquals("3.0", screen.readout.speed)
+        assertEquals("3.0", screen.trip.speedCurrent)
+        assertEquals("2.9", screen.trip.speedAverage)
+        assertEquals("3.8", screen.trip.speedMax)
+        assertEquals("mph", screen.speedUnit)
     }
 
     @Test
@@ -105,7 +128,7 @@ class NavigationScreenMappingTest {
         assertEquals("Navigation paused", screen.turn.detail)
         assertEquals("No guidance, alerts or rerouting until you resume", screen.turn.strip)
         assertEquals(NavigationTurnArrow.Pause, screen.turn.arrow)
-        assertNull(screen.readout.speedKmh)
+        assertNull(screen.readout.speed)
         assertNull(screen.trip.speedCurrent)
         assertEquals("4.6", screen.trip.speedAverage)
     }
@@ -122,7 +145,7 @@ class NavigationScreenMappingTest {
         assertEquals(NavigationTurnArrow.Reroute, screen.turn.arrow)
         assertNull(screen.readout.stopDistance)
         assertNull(screen.readout.stopName)
-        assertEquals("4.8", screen.readout.speedKmh)
+        assertEquals("4.8", screen.readout.speed)
     }
 
     @Test
@@ -143,7 +166,7 @@ class NavigationScreenMappingTest {
 
         assertTrue(screen.turn.dimmed)
         assertEquals("Last known turn - waiting for GPS", screen.turn.strip)
-        assertNull(screen.readout.speedKmh)
+        assertNull(screen.readout.speed)
         assertNull(screen.trip.speedCurrent)
         assertTrue(screen.signalLost)
     }
@@ -254,11 +277,11 @@ class NavigationScreenMappingTest {
 
     @Test
     fun speedIsWholeFromTenAndOneDecimalBelow() {
-        assertEquals("4.8", formatSpeedKmh(1.3333, Locale.US))
-        assertEquals("17", formatSpeedKmh(4.7222, Locale.US))
-        assertEquals("9.9", formatSpeedKmh(2.75, Locale.US))
-        assertEquals("10", formatSpeedKmh(2.7778, Locale.US))
-        assertNull(formatSpeedKmh(null, Locale.US))
+        assertEquals("4.8", speedValue(1.3333))
+        assertEquals("17", speedValue(4.7222))
+        assertEquals("9.9", speedValue(2.75))
+        assertEquals("10", speedValue(2.7778))
+        assertNull(speedValue(null))
     }
 
     @Test
@@ -299,6 +322,7 @@ class NavigationScreenMappingTest {
         alerts: List<AlertBanner> = emptyList(),
         camera: NavigationCameraSettings = NavigationCameraSettings(),
         alertSettings: AlertSettings = AlertSettings.ALL_OFF,
+        units: UnitSystem = UnitSystem.Metric,
     ) = navigationScreenState(
         NavigationScreenInput(
             state = state,
@@ -312,6 +336,7 @@ class NavigationScreenMappingTest {
             signalLost = signalLost,
             camera = camera,
             alertSettings = alertSettings,
+            units = units,
         ),
         TestStrings,
         Locale.US,
@@ -335,7 +360,11 @@ class NavigationScreenMappingTest {
     private fun panel(
         state: NavigationState,
         along: Double,
-    ) = requireNotNull(guidancePanel(GuidanceInput(ROUTE, along), TestStrings, Locale.US))
+        units: UnitSystem = UnitSystem.Metric,
+    ) = requireNotNull(guidancePanel(GuidanceInput(ROUTE, along, units = units), TestStrings, Locale.US))
+
+    private fun speedValue(metersPerSecond: Double?): String? =
+        UnitText.speed(metersPerSecond, UnitSystem.Metric, TestStrings, Locale.US)?.value
 
     private fun state(
         phase: NavigationPhase = NavigationPhase.Following,
@@ -361,8 +390,12 @@ class NavigationScreenMappingTest {
                 "guidance_panel_off_route" to "Off route",
                 "guidance_panel_in" to "in %1\$s, %2\$s",
                 "guidance_panel_then_in" to "then in %1\$s, %2\$s",
-                "guidance_panel_metres" to "%1\$s m",
-                "guidance_panel_kilometres" to "%1\$s km",
+                "unit_distance_metres" to "%1\$s m",
+                "unit_distance_kilometres" to "%1\$s km",
+                "unit_distance_feet" to "%1\$s ft",
+                "unit_distance_miles" to "%1\$s mi",
+                "unit_speed_kilometres_per_hour" to "km/h",
+                "unit_speed_miles_per_hour" to "mph",
                 "guidance_panel_minutes" to "%1\$s min",
                 "guidance_panel_hours" to "%1\$s h",
                 "guidance_panel_hours_minutes" to "%1\$s h %2\$s min",

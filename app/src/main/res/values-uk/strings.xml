@@ -80,6 +80,7 @@
     <string name="plugin.nav_simulator.description">Проходить поточний маршрут зі швидкістю 5 км/год і повідомляє про прибуття.</string>
     <string name="control_route_planner_label">Р</string>
     <string name="control_route_planner_description">Спланувати маршрут</string>
+    <string name="route_planner_sheet_title">Планування маршруту</string>
     <string name="route_planner_swap">Поміняти початок і призначення</string>
     <string name="route_planner_close">Закрити маршрут</string>
     <string name="route_planner_pick_start">Торкніться карти або результату пошуку, щоб задати початок</string>
@@ -106,7 +107,7 @@
     <string name="route_planner_missing_part_routing">Маршрутизація</string>
     <string name="route_planner_missing_part_contours">Ізолінії</string>
     <string name="route_planner_no_alternatives">Для цих картографічних даних немає альтернативних маршрутів</string>
-    <string name="route_planner_alternative_description">Альтернативний маршрут %1$s</string>
+    <string name="route_planner_alternative_description">Альтернативний маршрут %1$s, %2$s</string>
     <string name="route_planner_start_unavailable">Навігація ще недоступна в цій збірці</string>
     <string name="route_planner_undo">Скасувати останню зміну плану</string>
     <string name="route_planner_redo">Повторити скасовану зміну плану</string>

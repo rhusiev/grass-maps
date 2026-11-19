@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
@@ -729,7 +731,7 @@ private fun ElevationChip(
             Modifier
                 .border(CHIP_BORDER_DP.dp, if (selected) palette.chipSelected else palette.chipBorder, CHIP_SHAPE)
                 .background(background, CHIP_SHAPE)
-                .clickable(onClick = onClick)
+                .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
                 .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp, vertical = CHIP_PADDING_VERTICAL_DP.dp),
     )
 }
@@ -756,7 +758,11 @@ fun AnalysisDetailsToggle(
     BasicText(
         text = "$glyph  ${strings.resolve(key)}",
         style = TextStyle(color = colour, fontSize = DETAILS_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
-        modifier = modifier.clickable(onClick = onClick),
+        modifier =
+            modifier
+                .clickable(role = Role.Button, onClick = onClick)
+                // The chevron is decoration; the spoken label is the action.
+                .semantics { contentDescription = strings.resolve(key) },
     )
 }
 

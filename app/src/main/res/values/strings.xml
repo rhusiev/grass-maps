@@ -79,6 +79,7 @@
     <string name="plugin.nav_simulator.description">Runs the current route at 5 km/h and reports arrival.</string>
     <string name="control_route_planner_label">R</string>
     <string name="control_route_planner_description">Plan a route</string>
+    <string name="route_planner_sheet_title">Route planner</string>
     <string name="route_planner_swap">Swap start and destination</string>
     <string name="route_planner_close">Close the route plan</string>
     <string name="route_planner_pick_start">Tap the map or a search result to set the start</string>
@@ -105,7 +106,7 @@
     <string name="route_planner_missing_part_routing">Routing</string>
     <string name="route_planner_missing_part_contours">Contours</string>
     <string name="route_planner_no_alternatives">No alternative routes for this map data</string>
-    <string name="route_planner_alternative_description">Alternative route %1$s</string>
+    <string name="route_planner_alternative_description">Alternative route %1$s, %2$s</string>
     <string name="route_planner_start_unavailable">Guidance is not available in this build yet</string>
     <string name="route_planner_undo">Undo the last plan edit</string>
     <string name="route_planner_redo">Redo the undone plan edit</string>

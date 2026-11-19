@@ -9,19 +9,29 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -119,13 +129,18 @@ fun RoutePlanPanel(
     var detailsExpanded by remember(state.selected) { mutableStateOf(false) }
     var preferencesVisible by remember { mutableStateOf(false) }
     var warningsVisible by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
     Column(
         modifier =
             modifier
                 .padding(PANEL_PADDING_DP.dp)
                 .widthIn(max = PANEL_MAX_WIDTH_DP.dp)
                 .background(ROUTE_PANEL_BACKGROUND, RoundedCornerShape(PANEL_CORNER_DP.dp))
-                .padding(PANEL_PADDING_DP.dp),
+                .padding(PANEL_PADDING_DP.dp)
+                .focusRequester(focusRequester)
+                .focusTarget()
+                .semantics { paneTitle = strings.resolve(PANE_TITLE_KEY) },
         verticalArrangement = Arrangement.spacedBy(PANEL_ROW_GAP_DP.dp),
     ) {
         PanelControls(
@@ -151,15 +166,15 @@ fun RoutePlanPanel(
         )
         when (state.status) {
             RoutePlanStatus.PickingStart -> {
-                StatusLine(strings.resolve(PICK_START_KEY), strings.resolve(PICK_START_KEY))
+                StatusLine(strings.resolve(PICK_START_KEY), live = true)
             }
 
             RoutePlanStatus.PickingDestination -> {
-                StatusLine(strings.resolve(PICK_DESTINATION_KEY), strings.resolve(PICK_DESTINATION_KEY))
+                StatusLine(strings.resolve(PICK_DESTINATION_KEY), live = true)
             }
 
             RoutePlanStatus.Planning -> {
-                StatusLine(strings.resolve(PLANNING_KEY), strings.resolve(PLANNING_KEY))
+                StatusLine(strings.resolve(PLANNING_KEY), live = true)
             }
 
             RoutePlanStatus.Failed -> {
@@ -169,7 +184,7 @@ fun RoutePlanPanel(
                     return@Column
                 }
                 val text = routePlanFailureText(state, strings, units = units)
-                StatusLine(text, text)
+                StatusLine(text, live = true)
             }
 
             RoutePlanStatus.Ready -> {
@@ -180,10 +195,7 @@ fun RoutePlanPanel(
                         onSelectAlternative = onSelectAlternative,
                     )
                 } else {
-                    StatusLine(
-                        strings.resolve(NO_ALTERNATIVES_KEY),
-                        strings.resolve(NO_ALTERNATIVES_KEY),
-                    )
+                    StatusLine(strings.resolve(NO_ALTERNATIVES_KEY), live = true)
                 }
                 if (preview != null) {
                     PreviewCard(preview = preview, onSave = onSave, onStart = onStart)
@@ -331,19 +343,24 @@ private fun ControlGlyph(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    BasicText(
-        text = glyph,
-        style =
-            TextStyle(
-                color = if (enabled) ROUTE_VALUE_COLOR else ROUTE_DISABLED_COLOR,
-                fontSize = CONTROL_FONT_SP.sp,
-            ),
+    Box(
         modifier =
             Modifier
                 .semantics { contentDescription = description }
-                .clickable(enabled = enabled, onClick = onClick)
+                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
                 .padding(SWAP_PADDING_DP.dp),
-    )
+    ) {
+        BasicText(
+            text = glyph,
+            style =
+                TextStyle(
+                    color = if (enabled) ROUTE_VALUE_COLOR else ROUTE_DISABLED_COLOR,
+                    fontSize = CONTROL_FONT_SP.sp,
+                ),
+            // The description names the action; the glyph is decoration.
+            modifier = Modifier.clearAndSetSemantics {},
+        )
+    }
 }
 
 /**
@@ -384,9 +401,12 @@ private fun CoordinateEntry(
                 decorationBox = { inner ->
                     Box {
                         if (text.isEmpty()) {
+                            // The field's content description is the hint; the
+                            // drawn copy is decoration.
                             BasicText(
                                 text = hint,
                                 style = TextStyle(color = ROUTE_STATUS_COLOR, fontSize = STATUS_FONT_SP.sp),
+                                modifier = Modifier.clearAndSetSemantics {},
                             )
                         }
                         inner()
@@ -430,7 +450,7 @@ private fun CoordinateEntry(
             }
         }
         if (refused) {
-            StatusLine(strings.resolve(COORDINATE_REFUSED_KEY), strings.resolve(COORDINATE_REFUSED_KEY))
+            StatusLine(strings.resolve(COORDINATE_REFUSED_KEY), live = true)
         }
     }
 }
@@ -450,7 +470,7 @@ private fun StopList(
 ) {
     if (stops.size <= 1) return
     Column(verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp)) {
-        StatusLine(strings.resolve(STOPS_KEY), strings.resolve(STOPS_KEY))
+        StatusLine(strings.resolve(STOPS_KEY))
         stops.forEachIndexed { index, stop ->
             val isVia = index != 0 && index != stops.lastIndex
             val viaIndex = index - 1
@@ -521,7 +541,7 @@ private fun TurnStepper(
                     color = ROUTE_VALUE_COLOR,
                     fontSize = STATUS_FONT_SP.sp,
                 ),
-            modifier = Modifier.weight(1f).semantics { contentDescription = step.text },
+            modifier = Modifier.weight(1f),
         )
         ControlGlyph(
             glyph = NEXT_TURN_GLYPH,
@@ -547,16 +567,17 @@ private fun RecentRoutes(
 ) {
     if (!visible || recent.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp)) {
-        StatusLine(strings.resolve(RECENT_KEY), strings.resolve(RECENT_KEY))
+        StatusLine(strings.resolve(RECENT_KEY))
         recent.take(RECENT_LIMIT).forEach { entry ->
             val text = "${stopText(entry.start)} - ${stopText(entry.destination)}"
+            val row = "$text - ${routePlanAlternativeText(entry.durationSeconds, strings)}"
             BasicText(
-                text = "$text - ${routePlanAlternativeText(entry.durationSeconds, strings)}",
+                text = row,
                 style = TextStyle(color = ROUTE_VALUE_COLOR, fontSize = STATUS_FONT_SP.sp),
                 modifier =
                     Modifier
-                        .clickable { onReuse(entry) }
-                        .semantics { contentDescription = strings.resolve(REUSE_KEY, listOf(text)) },
+                        .clickable(role = Role.Button) { onReuse(entry) }
+                        .semantics { contentDescription = strings.resolve(REUSE_KEY, listOf(row)) },
             )
         }
     }
@@ -575,7 +596,7 @@ internal fun ActionChip(
         modifier =
             Modifier
                 .background(background, RoundedCornerShape(CHIP_CORNER_DP.dp))
-                .clickable(onClick = onClick)
+                .clickable(role = Role.Button, onClick = onClick)
                 .padding(
                     horizontal = CHIP_PADDING_HORIZONTAL_DP.dp,
                     vertical = CHIP_PADDING_VERTICAL_DP.dp,
@@ -603,9 +624,11 @@ private fun AlternativeChips(
     ) {
         state.options.forEachIndexed { index, option ->
             val selected = index == state.selectedIndex
-            val description = strings.resolve(ALTERNATIVE_DESCRIPTION_KEY, listOf((index + 1).toString()))
+            val duration = routePlanAlternativeText(option.durationSeconds, strings)
+            val description =
+                strings.resolve(ALTERNATIVE_DESCRIPTION_KEY, listOf((index + 1).toString(), duration))
             BasicText(
-                text = routePlanAlternativeText(option.durationSeconds, strings),
+                text = duration,
                 style =
                     TextStyle(
                         color = ROUTE_VALUE_COLOR,
@@ -618,8 +641,11 @@ private fun AlternativeChips(
                         .background(
                             if (selected) ROUTE_CHIP_SELECTED_COLOR else ROUTE_CHIP_COLOR,
                             RoundedCornerShape(CHIP_CORNER_DP.dp),
-                        ).clickable { onSelectAlternative(index) }
-                        .padding(
+                        ).selectable(
+                            selected = selected,
+                            role = Role.RadioButton,
+                            onClick = { onSelectAlternative(index) },
+                        ).padding(
                             horizontal = CHIP_PADDING_HORIZONTAL_DP.dp,
                             vertical = CHIP_PADDING_VERTICAL_DP.dp,
                         ),
@@ -686,7 +712,7 @@ private fun StartChip(
         modifier =
             Modifier
                 .background(ROUTE_ACTION_COLOR, RoundedCornerShape(CHIP_CORNER_DP.dp))
-                .clickable(onClick = onClick)
+                .clickable(role = Role.Button, onClick = onClick)
                 .padding(
                     horizontal = CHIP_PADDING_HORIZONTAL_DP.dp,
                     vertical = CHIP_PADDING_VERTICAL_DP.dp,
@@ -707,12 +733,13 @@ private fun ValueText(text: String) {
 @Composable
 private fun StatusLine(
     text: String,
-    description: String,
+    live: Boolean = false,
 ) {
     BasicText(
         text = text,
         style = TextStyle(color = ROUTE_STATUS_COLOR, fontSize = STATUS_FONT_SP.sp),
-        modifier = Modifier.semantics { contentDescription = description },
+        // A planning status change is worth saying once, without interrupting.
+        modifier = if (live) Modifier.semantics { liveRegion = LiveRegionMode.Polite } else Modifier,
     )
 }
 
@@ -730,6 +757,7 @@ private const val CHIP_CORNER_DP = 8
 private const val VALUE_GAP_DP = 12
 private const val ROW_GAP_DP = 4
 private const val FIELD_MIN_WIDTH_DP = 220
+private const val PANE_TITLE_KEY = "route_planner_sheet_title"
 private const val PICK_START_KEY = "route_planner_pick_start"
 private const val PICK_DESTINATION_KEY = "route_planner_pick_destination"
 private const val PLANNING_KEY = "route_planner_planning"

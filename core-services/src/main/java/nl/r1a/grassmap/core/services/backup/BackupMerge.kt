@@ -4,6 +4,8 @@ import kotlinx.serialization.json.JsonObject
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.error.map
+import java.io.ByteArrayInputStream
+import java.io.InputStream
 
 /**
  * One kind's access to its store. [read] is what the store holds now, [apply]
@@ -16,6 +18,9 @@ interface BundleKindSource {
     suspend fun read(): Outcome<List<BundleEntry>>
 
     suspend fun apply(entries: List<BundleEntry>): Outcome<Unit>
+
+    /** Kind-wide attachments that are not an entry, such as the library's own GPX. */
+    suspend fun files(): Outcome<List<BundleFile>> = Outcome.Success(emptyList())
 
     /** How many records this kind would write, for the screen. [read] by default. */
     suspend fun count(): Outcome<Int> = read().map { entries -> entries.size }
@@ -123,18 +128,21 @@ class BackupImporter(
      * written here, so the conflict list the screen shows cannot already have
      * changed a value. A newer bundle is [AppError.NewerSchema].
      */
-    suspend fun prepare(bytes: ByteArray): Outcome<PreparedBackup> {
+    suspend fun prepare(bytes: ByteArray): Outcome<PreparedBackup> = prepare(ByteArrayInputStream(bytes))
+
+    /** Reads [input] with the bounded ZIP reader; the stream is closed with the ZIP. */
+    suspend fun prepare(input: InputStream): Outcome<PreparedBackup> {
         val bundle =
-            when (val read = BundleZipReader.read(bytes)) {
+            when (val read = BundleZipReader.read(input)) {
                 is Outcome.Success -> read.value
                 is Outcome.Failure -> return read
             }
-        val plan =
-            when (val planned = plan(bundle)) {
-                is Outcome.Success -> planned.value
-                is Outcome.Failure -> return planned
+        val planned =
+            when (val result = plan(bundle)) {
+                is Outcome.Success -> result.value
+                is Outcome.Failure -> return result
             }
-        return Outcome.Success(PreparedBackup(bundle, plan))
+        return Outcome.Success(PreparedBackup(bundle, planned))
     }
 
     private suspend fun plan(bundle: BackupBundle): Outcome<BundleMergePlan> {
@@ -152,8 +160,14 @@ class BackupImporter(
             for (incoming in kind.entries) {
                 val current = existing[incoming.id]
                 when {
-                    current == null -> added += incoming
-                    current.value == incoming.value -> unchanged += 1
+                    current == null -> {
+                        added += incoming
+                    }
+
+                    current.value == incoming.value -> {
+                        unchanged += 1
+                    }
+
                     else -> {
                         conflicts +=
                             BundleConflict(
@@ -210,7 +224,7 @@ class BackupImporter(
                 continue
             }
             when (val written = source.apply(chosen)) {
-                is Outcome.Success ->
+                is Outcome.Success -> {
                     results +=
                         BundleKindResult(
                             kind = kind.id,
@@ -218,9 +232,11 @@ class BackupImporter(
                             replaced = chosen.size - added.size,
                             kept = kept,
                         )
+                }
 
-                is Outcome.Failure ->
+                is Outcome.Failure -> {
                     results += BundleKindResult(kind.id, added = 0, replaced = 0, kept = kept, error = written.error)
+                }
             }
         }
         return Outcome.Success(BundleImportSummary(results, prepared.bundle.warnings))

@@ -24,8 +24,20 @@ class BackupMergeTest {
             assertEquals(listOf("a"), prepared.plan.conflicts.map { conflict -> conflict.entryId })
             assertEquals(1, prepared.plan.additionsCount)
             assertEquals(1, prepared.plan.unchanged)
-            assertEquals("old", prepared.plan.conflicts.single().existing.string("name"))
-            assertEquals("new", prepared.plan.conflicts.single().incoming.string("name"))
+            assertEquals(
+                "old",
+                prepared.plan.conflicts
+                    .single()
+                    .existing
+                    .string("name"),
+            )
+            assertEquals(
+                "new",
+                prepared.plan.conflicts
+                    .single()
+                    .incoming
+                    .string("name"),
+            )
         }
 
     @Test
@@ -40,7 +52,13 @@ class BackupMergeTest {
             val summary = applied(importer, prepared, decisions)
 
             assertTrue(source.applied.isEmpty())
-            assertEquals("old", source.entries.single().value.string("name"))
+            assertEquals(
+                "old",
+                source.entries
+                    .single()
+                    .value
+                    .string("name"),
+            )
             assertEquals(1, summary.kept)
             assertEquals(0, summary.replaced)
         }
@@ -122,7 +140,13 @@ class BackupMergeTest {
 
             assertEquals(listOf(BackupWarning.UnknownKind("from-a-newer-build")), summary.warnings)
             assertEquals(1, source.applied.single().size)
-            assertEquals("trail", source.entries.single().value.string("value"))
+            assertEquals(
+                "trail",
+                source.entries
+                    .single()
+                    .value
+                    .string("value"),
+            )
         }
 
     @Test
@@ -220,8 +244,7 @@ class BackupMergeTest {
             pairs.forEach { (key, value) -> put(key, value) }
         }
 
-    private fun JsonObject.string(key: String): String =
-        (this[key] as kotlinx.serialization.json.JsonPrimitive).content
+    private fun JsonObject.string(key: String): String = (this[key] as kotlinx.serialization.json.JsonPrimitive).content
 
     private class FakeSource(
         override val kind: String,

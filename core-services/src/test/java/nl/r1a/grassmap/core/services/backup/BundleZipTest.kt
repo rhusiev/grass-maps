@@ -46,8 +46,24 @@ class BundleZipTest {
         assertEquals("0.1.0", read.appVersion)
         assertEquals(1_794_000_000_000L, read.createdAtMillis)
         assertEquals(listOf("tracks", "profiles"), read.kinds.map { kind -> kind.id })
-        assertEquals(listOf("abc"), read.kinds.first().entries.map { entry -> entry.id })
-        assertEquals(gpx.decodeToString(), read.kinds.first().entries.first().files.single().bytes.decodeToString())
+        assertEquals(
+            listOf("abc"),
+            read.kinds
+                .first()
+                .entries
+                .map { entry -> entry.id },
+        )
+        assertEquals(
+            gpx.decodeToString(),
+            read.kinds
+                .first()
+                .entries
+                .first()
+                .files
+                .single()
+                .bytes
+                .decodeToString(),
+        )
         assertTrue(read.warnings.isEmpty())
     }
 

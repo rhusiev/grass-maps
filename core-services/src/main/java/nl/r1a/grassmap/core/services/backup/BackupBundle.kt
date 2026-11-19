@@ -48,8 +48,7 @@ class BundleFile(
     val path: String,
     val bytes: ByteArray,
 ) {
-    override fun equals(other: Any?): Boolean =
-        other is BundleFile && path == other.path && bytes.contentEquals(other.bytes)
+    override fun equals(other: Any?): Boolean = other is BundleFile && path == other.path && bytes.contentEquals(other.bytes)
 
     override fun hashCode(): Int = 31 * path.hashCode() + bytes.contentHashCode()
 }
@@ -65,10 +64,11 @@ data class BundleEntry(
     val files: List<BundleFile> = emptyList(),
 )
 
-/** One kind's records, in the store's order. */
+/** One kind's records, in the store's order. [files] are kind-wide attachments that are not an entry. */
 data class BundleKind(
     val id: String,
     val entries: List<BundleEntry>,
+    val files: List<BundleFile> = emptyList(),
 )
 
 /** A warning from reading, so the import can tell the user what it skipped. */

@@ -154,22 +154,51 @@ object BundleZipReader {
             val value = objectEntry[VALUE_KEY] as? JsonObject ?: return Outcome.Failure(AppError.CorruptData)
             val files =
                 when (val fileList = objectEntry[FILES_KEY]) {
-                    null -> emptyList()
-                    is JsonArray ->
+                    null -> {
+                        emptyList()
+                    }
+
+                    is JsonArray -> {
                         fileList.map { pathElement ->
-                            val path = (pathElement as? JsonPrimitive)?.takeIf { it.isString }?.content
-                                ?: return Outcome.Failure(AppError.CorruptData)
+                            val path =
+                                (pathElement as? JsonPrimitive)?.takeIf { it.isString }?.content
+                                    ?: return Outcome.Failure(AppError.CorruptData)
                             if (!isPathInside(path, folder) || path !in declared) {
                                 return Outcome.Failure(AppError.CorruptData)
                             }
                             BundleFile(path, entries.getValue(path))
                         }
+                    }
 
-                    else -> return Outcome.Failure(AppError.CorruptData)
+                    else -> {
+                        return Outcome.Failure(AppError.CorruptData)
+                    }
                 }
             parsed += BundleEntry(entryId, value, files)
         }
-        return Outcome.Success(BundleKind(id, parsed))
+        val kindFiles =
+            when (val fileList = indexObject[FILES_KEY]) {
+                null -> {
+                    emptyList()
+                }
+
+                is JsonArray -> {
+                    fileList.map { pathElement ->
+                        val path =
+                            (pathElement as? JsonPrimitive)?.takeIf { it.isString }?.content
+                                ?: return Outcome.Failure(AppError.CorruptData)
+                        if (!isPathInside(path, folder) || path !in declared) {
+                            return Outcome.Failure(AppError.CorruptData)
+                        }
+                        BundleFile(path, entries.getValue(path))
+                    }
+                }
+
+                else -> {
+                    return Outcome.Failure(AppError.CorruptData)
+                }
+            }
+        return Outcome.Success(BundleKind(id, parsed, kindFiles))
     }
 
     private fun readEntries(input: InputStream): Outcome<Map<String, ByteArray>> {
@@ -232,8 +261,7 @@ object BundleZipReader {
         folder: String,
     ): Boolean = isSafePath(path) && path.startsWith(folder + "/") && path.length > folder.length + 1
 
-    private fun JsonObject.string(key: String): String? =
-        (this[key] as? JsonPrimitive)?.takeIf { primitive -> primitive.isString }?.content
+    private fun JsonObject.string(key: String): String? = (this[key] as? JsonPrimitive)?.takeIf { primitive -> primitive.isString }?.content
 
     private fun JsonObject.int(key: String): Int? = (this[key] as? JsonPrimitive)?.intOrNull
 

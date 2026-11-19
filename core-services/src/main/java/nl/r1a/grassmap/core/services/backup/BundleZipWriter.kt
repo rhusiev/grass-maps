@@ -79,6 +79,11 @@ object BundleZipWriter {
                 return Outcome.Failure(AppError.InvalidInput)
             }
             val ids = mutableSetOf<String>()
+            for (file in kind.files) {
+                if (!isPathInside(file.path, kind.id) || !seenPaths.add(file.path)) {
+                    return Outcome.Failure(AppError.InvalidInput)
+                }
+            }
             val entriesJson =
                 buildJsonArray {
                     for (entry in kind.entries) {
@@ -100,10 +105,14 @@ object BundleZipWriter {
             val indexBytes =
                 buildJsonObject {
                     put(KIND_KEY, kind.id)
+                    if (kind.files.isNotEmpty()) {
+                        put(FILES_KEY, JsonArray(kind.files.map { file -> JsonPrimitive(file.path) }))
+                    }
                     put(ENTRIES_KEY, entriesJson)
                 }.toString().toByteArray()
             val kindFiles = mutableListOf<BundleFile>()
             kindFiles += BundleFile(indexPath, indexBytes)
+            kindFiles += kind.files
             for (entry in kind.entries) {
                 kindFiles += entry.files
             }

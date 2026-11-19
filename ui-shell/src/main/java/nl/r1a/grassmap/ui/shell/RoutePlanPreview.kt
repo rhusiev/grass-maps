@@ -158,55 +158,12 @@ internal fun durationText(
     }
 }
 
-internal fun distanceText(
-    meters: Double,
-    strings: Strings,
-    locale: Locale,
-    units: UnitSystem = UnitSystem.Metric,
-): String =
-    when (units) {
-        UnitSystem.Metric -> metricDistanceText(meters, strings, locale)
-        UnitSystem.Imperial -> imperialDistanceText(meters, strings, locale)
-    }
-
-private fun metricDistanceText(
-    meters: Double,
-    strings: Strings,
-    locale: Locale,
-): String =
-    if (meters < METRES_PER_KILOMETRE) {
-        strings.resolve(METRES_KEY, listOf(meters.roundToLong().toString()))
-    } else {
-        strings.resolve(
-            KILOMETRES_KEY,
-            listOf(String.format(locale, "%.1f", meters / METRES_PER_KILOMETRE)),
-        )
-    }
-
-/** Feet below a mile and miles from one, the scale bar's own unit rule. */
-private fun imperialDistanceText(
-    meters: Double,
-    strings: Strings,
-    locale: Locale,
-): String =
-    if (meters < METRES_PER_MILE) {
-        strings.resolve(FEET_KEY, listOf((meters / METRES_PER_FOOT).roundToLong().toString()))
-    } else {
-        strings.resolve(
-            MILES_KEY,
-            listOf(String.format(locale, "%.1f", meters / METRES_PER_MILE)),
-        )
-    }
-
 private fun Double.roundToLong(): Long = kotlin.math.round(this).toLong()
 
 private val ARRIVAL_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 private const val SECONDS_PER_MINUTE = 60.0
 private const val MINUTES_PER_HOUR = 60L
-private const val METRES_PER_KILOMETRE = 1_000.0
-private const val METRES_PER_FOOT = 0.3048
-private const val METRES_PER_MILE = 1_609.344
 private const val MILLIS_PER_SECOND = 1_000.0
 private const val MODEL_SEPARATOR = " · "
 private const val START_KEY = "route_preview_start"
@@ -214,7 +171,3 @@ private const val SAVE_KEY = "route_preview_save"
 private const val MINUTES_KEY = "route_preview_minutes"
 private const val HOURS_KEY = "route_preview_hours"
 private const val HOURS_MINUTES_KEY = "route_preview_hours_minutes"
-private const val METRES_KEY = "route_preview_metres"
-private const val KILOMETRES_KEY = "route_preview_kilometres"
-private const val FEET_KEY = "route_preview_feet"
-private const val MILES_KEY = "route_preview_miles"

@@ -581,7 +581,6 @@ private const val CLIMB_ASCENT_WIDTH_DP = 52
 private const val CLIMB_GRADE_WIDTH_DP = 32
 private const val CLIMB_TIME_WIDTH_DP = 46
 private const val RANGE_MATCH_METERS = 1.0
-private const val METRES_PER_KILOMETRE = 1_000.0
 private const val FOLLOW_FONT_SP = 15
 private const val FOLLOW_CORNER_DP = 22
 private const val FOLLOW_PADDING_VERTICAL_DP = 11

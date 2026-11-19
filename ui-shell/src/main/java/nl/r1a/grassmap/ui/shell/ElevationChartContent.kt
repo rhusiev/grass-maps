@@ -497,16 +497,6 @@ private fun elevationTicks(
     }
 }
 
-/** The whole display value for one elevation in the active unit system. */
-private fun elevationValue(
-    elevationMeters: Double,
-    units: UnitSystem,
-): String =
-    when (units) {
-        UnitSystem.Metric -> elevationMeters.roundToLong().toString()
-        UnitSystem.Imperial -> (elevationMeters / METRES_PER_FOOT).roundToLong().toString()
-    }
-
 private fun axisTicks(
     state: ElevationChartState,
     axis: ElevationChartAxis,
@@ -740,9 +730,6 @@ private const val MIDDLE_FRACTION = 0.5f
 private const val MIDDLE_SHARE = 0.5
 private const val PERCENT = 100.0
 private const val WHOLE_NUMBER_TOLERANCE = 0.05
-private const val METRES_PER_KILOMETRE = 1_000.0
-private const val METRES_PER_FOOT = 0.3048
-private const val METRES_PER_MILE = 1_609.344
 private const val MILLIS_PER_MINUTE = 60_000.0
 private const val MINUTES_PER_HOUR = 60L
 

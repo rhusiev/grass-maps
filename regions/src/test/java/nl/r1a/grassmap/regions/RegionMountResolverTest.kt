@@ -1,5 +1,12 @@
 package nl.r1a.grassmap.regions
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -247,6 +254,57 @@ class RegionMountResolverTest {
         return renamed.substring(0, start) + block + renamed.substring(end)
     }
 
+    @Test
+    fun aVersionTwoSearchSectionCarriesItsFormatFile() {
+        install(manifest = ::versionTwoSearch)
+        Files.write(versionDirectory().resolve(SEARCH_FORMAT_FILE), ByteArray(SEARCH_FORMAT_BYTES))
+
+        val search = requireNotNull(mounts().installed.single().search) { "a version-2 section must mount" }
+
+        assertEquals(versionDirectory().toFile(), search)
+    }
+
+    @Test
+    fun aVersionTwoSearchSectionWithoutItsFormatFileIsNotSearchable() {
+        install(manifest = ::versionTwoSearch)
+
+        assertNull("a version-2 table without format.bin is incomplete", mounts().installed.single().search)
+    }
+
+    /**
+     * The fixture's search components as a version-2 section: every table and
+     * the new `format.bin` declare version 2. The mount checks sizes only, so
+     * a stand-in file of the declared size is enough; the reader checks it.
+     */
+    private fun versionTwoSearch(manifest: String): String {
+        val root = Json.parseToJsonElement(manifest).jsonObject
+        val components = root.getValue("components").jsonArray.map { it.jsonObject }
+        val upgraded =
+            components.map { component ->
+                if (component.getValue("kind").jsonPrimitive.content.startsWith("search-")) {
+                    JsonObject(component + ("formatVersion" to JsonPrimitive(2)))
+                } else {
+                    component
+                }
+            }
+        val format =
+            JsonObject(
+                mapOf(
+                    "kind" to JsonPrimitive("search-format"),
+                    "file" to JsonPrimitive(SEARCH_FORMAT_FILE),
+                    "format" to JsonPrimitive("search-section"),
+                    "formatVersion" to JsonPrimitive(2),
+                    "version" to JsonPrimitive(FixturePackages.FIXTURE_VERSION),
+                    "bytes" to JsonPrimitive(SEARCH_FORMAT_BYTES),
+                    "sha256" to JsonPrimitive("0".repeat(64)),
+                    "standIn" to JsonPrimitive(false),
+                ),
+            )
+        return JsonObject(
+            root + ("components" to JsonArray(upgraded + format)),
+        ).toString()
+    }
+
     private fun mounts(): RegionMounts = RegionMountResolver(root.toFile()).resolveAll()
 
     /** The store holds one region, and its problem is [problem]. */
@@ -280,7 +338,7 @@ class RegionMountResolverTest {
             val content =
                 if (name == RegionIdentifiers.MANIFEST_FILE) {
                     manifest(String(bytes, Charsets.UTF_8))
-                        .replace("\"region\": \"fixture-mini\"", "\"region\": \"$region\"")
+                        .replace(Regex("\"region\":\\s*\"fixture-mini\""), "\"region\": \"$region\"")
                         .toByteArray(Charsets.UTF_8)
                 } else {
                     bytes
@@ -295,4 +353,9 @@ class RegionMountResolverTest {
     }
 
     private fun byteArrayAsStream(bytes: ByteArray) = bytes.inputStream()
+
+    private companion object {
+        const val SEARCH_FORMAT_FILE = "format.bin"
+        const val SEARCH_FORMAT_BYTES = 10
+    }
 }

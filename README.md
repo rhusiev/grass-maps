@@ -2493,12 +2493,18 @@ unreadable old file stays and reads as empty.
 Every per-profile file keeps what it does not understand. A rewrite writes back
 each unknown top-level key, each entry that is not an object, and each value in
 a profile entry that is not a string (number, boolean, null, array, object) as
-the same JSON that was read. A key that the caller sets replaces the kept one,
-and a profile that leaves the values loses its kept values with it. A file that
-a newer build wrote is still refused, and a file that does not parse is
-refused. The first write after a missing file adds the values of an old
-unversioned file only when nothing has read the store before. A read has then
-already returned them, and a profile reset to its defaults must stay reset.
+the same JSON that was read. A key that the caller sets replaces the kept one.
+A profile the caller leaves out of the values loses its kept values with it. A
+profile the caller lists with no string value keeps them and is written only
+when something is left. `RoutingOptionsSettings` and `AlertSettingsStore` keep
+the string keys they do not know the same way: each holds the last values of
+the whole file and writes back the keys it does not own for every profile, so a
+newer build's `"surface":"smooth"` in the same schema survives a set, copy or
+reset, and a profile that holds only unknown keys stays. A file that a newer
+build wrote is still refused, and a file that does not parse is refused. The
+first write after a missing file adds the values of an old unversioned file
+only when nothing has read the store before. A read has then already returned
+them, and a profile reset to its defaults must stay reset.
 
 `ProfileSettingsService` (`core-services`) owns the actions. It reaches each
 per-profile store through `ProfileSettingsGroup` (`plugin-api`): `ROUTING` and
@@ -2519,14 +2525,22 @@ builds every action from these two calls:
    nothing and drops that history entry.
 
 A group writes in `replace` and reports the real result. `RoutingOptionsSettings`
-and `AlertSettingsStore` keep the new values in memory only after the file
-write succeeded, so the planner never uses values that are not on disk. The
-alert store writes `set` calls in the background, but its `replace` writes
-before it returns. A failed write fails the action, and the service puts the
-groups it already wrote back. When that fails too, the action returns
-`AppError.Internal` with detail `rollback_failed` and the history is cleared.
-The service first calls `ensureReady`, which loads the alert store. A store
-that cannot load refuses every action.
+keeps the new values in memory only after the file write succeeded, so the
+planner never uses values that are not on disk. `AlertSettingsStore` does the
+same in `replace`, which writes before it returns. Its `set` calls write in the
+background and show the value at once. When such a write fails, the store reads
+the file again and shows what it holds, unless a newer change is waiting to be
+written. A failed write fails the action, and the service puts the groups it
+already wrote back. When that fails too, the action returns `AppError.Internal`
+with detail `rollback_failed` and the history is cleared. A create that fails
+also removes its catalog entry again, also after `rollback_failed`. When that
+removal fails too after a failed rollback, the detail is
+`rollback_and_catalog_failed`.
+The service calls `ensureReady` for each group an action includes. For the alert
+store it loads the file once. A file that is corrupt or from a newer build is
+refused every time, and only actions that include the alerts group fail. An IO
+error is not kept: the next call reads the file again, and a write waits for
+that read.
 
 `PluginServices.profileSettings` (`ProfileSettingsAccess`) gives plugins the
 state and these actions. `plugins/profiles-ui` (T-0602) owns the screen and the

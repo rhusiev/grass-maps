@@ -349,6 +349,7 @@ internal class ScreenshotsStep(
         }
         return mapOf(
             "map_dominant_color_share" to JsonPrimitive(area.dominantShare),
+            "map_transparent_share" to JsonPrimitive(area.transparentShare),
             "map_area_blank" to JsonPrimitive(area.isBlank),
             "map_blank_rule" to
                 JsonPrimitive(

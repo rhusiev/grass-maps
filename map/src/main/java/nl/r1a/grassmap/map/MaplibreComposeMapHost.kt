@@ -63,6 +63,7 @@ import nl.r1a.grassmap.plugin.api.model.StyleId
 import nl.r1a.grassmap.plugin.api.model.StyleSpec
 import nl.r1a.grassmap.plugin.api.model.TrackingMode
 import nl.r1a.grassmap.plugin.api.provider.Route
+import org.maplibre.compose.camera.CameraFit
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.map.DefaultMapRuntime
 import org.maplibre.compose.map.MapRuntimeOptions
@@ -577,7 +578,12 @@ class MaplibreComposeMapHost internal constructor(
             Outcome.Success(Unit)
         }
 
-    override suspend fun fitBounds(bounds: BoundingBox): Outcome<Unit> =
+    override suspend fun fitBounds(bounds: BoundingBox): Outcome<Unit> = fitBounds(bounds, bottomInsetDp = 0f)
+
+    override suspend fun fitBounds(
+        bounds: BoundingBox,
+        bottomInsetDp: Float,
+    ): Outcome<Unit> =
         withContext(Dispatchers.Main.immediate) {
             state.animateCameraToBounds(
                 org.maplibre.spatialk.geojson.BoundingBox(
@@ -586,6 +592,7 @@ class MaplibreComposeMapHost internal constructor(
                     east = bounds.northEast.longitude,
                     north = bounds.northEast.latitude,
                 ),
+                fit = CameraFit(fitPadding = DpPadding(0.dp, 0.dp, 0.dp, bottomInsetDp.coerceAtLeast(0f).dp)),
             )
             Outcome.Success(Unit)
         }

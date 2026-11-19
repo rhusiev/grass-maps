@@ -71,6 +71,17 @@ interface MapHost {
 
     suspend fun fitBounds(bounds: BoundingBox): Outcome<Unit>
 
+    /**
+     * Fits [bounds] into the part of the map a bottom sheet leaves visible:
+     * [bottomInsetDp] is the height the sheet covers from the bottom edge. A
+     * host that cannot pad its camera fits the whole viewport through
+     * [fitBounds] instead of refusing, which is why the default delegates.
+     */
+    suspend fun fitBounds(
+        bounds: BoundingBox,
+        bottomInsetDp: Float,
+    ): Outcome<Unit> = fitBounds(bounds)
+
     suspend fun setTrackingMode(mode: TrackingMode): Outcome<Unit>
 
     /** Draws the position puck at [fix], or removes it when [fix] is null. */

@@ -31,6 +31,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -134,7 +136,7 @@ fun SearchScreenHost(
                     cardModifier
                         .onSizeChanged(onCollapsedCardSize)
                         .background(PANEL_BACKGROUND, RoundedCornerShape(PANEL_CORNER_DP.dp))
-                        .clickable { expanded = true }
+                        .clickable(role = Role.Button) { expanded = true }
                         .padding(FIELD_PADDING_DP.dp),
             )
         } else {
@@ -166,14 +168,15 @@ fun SearchScreenHost(
                                 .weight(WEIGHT_ONE)
                                 .focusRequester(focusRequester)
                                 .background(FIELD_BACKGROUND, RoundedCornerShape(FIELD_CORNER_DP.dp))
-                                .padding(FIELD_PADDING_DP.dp),
+                                .padding(FIELD_PADDING_DP.dp)
+                                .semantics { contentDescription = content.labels.hint },
                     )
                     BasicText(
                         text = CLOSE_GLYPH,
                         style = TextStyle(color = TEXT_PRIMARY, fontSize = CLOSE_FONT_SP.sp),
                         modifier =
                             Modifier
-                                .clickable {
+                                .clickable(role = Role.Button) {
                                     expanded = false
                                     typed = ""
                                     onClear()
@@ -182,7 +185,13 @@ fun SearchScreenHost(
                     )
                 }
                 if (typed.isBlank()) {
-                    BasicText(text = content.labels.hint, style = secondaryStyle())
+                    // The field already carries this hint as its label; the
+                    // drawn copy must not be a second announcement.
+                    BasicText(
+                        text = content.labels.hint,
+                        style = secondaryStyle(),
+                        modifier = Modifier.clearAndSetSemantics {},
+                    )
                 }
                 if (content.loading && content.rows.isEmpty()) {
                     BasicText(text = content.labels.loading, style = secondaryStyle())
@@ -195,7 +204,7 @@ fun SearchScreenHost(
                             style = TextStyle(color = TEXT_PRIMARY, fontSize = DETAIL_FONT_SP.sp),
                             modifier =
                                 Modifier
-                                    .clickable {
+                                    .clickable(role = Role.Button) {
                                         when (notice.actionKind) {
                                             SearchOnlineAction.ENABLE -> onEnableOnlineSearch()
                                             SearchOnlineAction.ALLOW_POSITION -> onAllowPosition(true)
@@ -273,7 +282,7 @@ private fun SearchResultRowContent(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onSelect)
+                .clickable(role = Role.Button, onClick = onSelect)
                 .padding(ROW_PADDING_DP.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

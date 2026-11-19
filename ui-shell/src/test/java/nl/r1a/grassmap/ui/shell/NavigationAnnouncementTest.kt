@@ -124,7 +124,7 @@ class NavigationAnnouncementTest {
     private fun state(
         turn: NavigationTurnCard,
         status: NavigationScreenStatus = NavigationScreenStatus.Following,
-    ): NavigationScreenState = NavigationScreenState(status = status, turn = turn)
+    ): NavigationScreenState = NavigationScreenState(status = status, turn = turn, speedUnit = "km/h")
 
     private fun turn(
         distance: String = "200 m",

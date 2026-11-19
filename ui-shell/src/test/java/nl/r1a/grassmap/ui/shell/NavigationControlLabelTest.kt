@@ -93,7 +93,7 @@ class NavigationControlLabelTest {
             NavigationControl.Done to NavigationScreenStrings.DONE,
         )
 
-    private fun state(status: NavigationScreenStatus) = NavigationScreenState(status = status)
+    private fun state(status: NavigationScreenStatus) = NavigationScreenState(status = status, speedUnit = "km/h")
 
     private companion object {
         /** Read-only read-outs the reachability set carries beside the controls. */

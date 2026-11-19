@@ -48,7 +48,10 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -2514,11 +2517,18 @@ private fun DistanceBadge(
             modifier
                 .clip(RoundedCornerShape(BANNER_CORNER_DP.dp))
                 .background(DISTANCE_BADGE_BACKGROUND)
-                .padding(horizontal = BANNER_HORIZONTAL_DP.dp, vertical = BANNER_VERTICAL_DP.dp),
+                .padding(horizontal = BANNER_HORIZONTAL_DP.dp, vertical = BANNER_VERTICAL_DP.dp)
+                // The badge appears once per two-finger tap, so a polite
+                // announcement cannot repeat with a camera frame.
+                .clearAndSetSemantics {
+                    contentDescription = text
+                    liveRegion = LiveRegionMode.Polite
+                },
     ) {
         BasicText(
             text = text,
             style = TextStyle(color = Color.White, fontSize = BANNER_FONT_SP.sp),
+            modifier = Modifier.clearAndSetSemantics {},
         )
     }
 }
@@ -2560,11 +2570,17 @@ private fun RegionProblemBanner(
             modifier
                 .clip(RoundedCornerShape(BANNER_CORNER_DP.dp))
                 .background(NEEDS_REDOWNLOAD_BACKGROUND)
-                .padding(horizontal = BANNER_HORIZONTAL_DP.dp, vertical = BANNER_VERTICAL_DP.dp),
+                .padding(horizontal = BANNER_HORIZONTAL_DP.dp, vertical = BANNER_VERTICAL_DP.dp)
+                // The banner appears when a mounted pack breaks, not per frame.
+                .clearAndSetSemantics {
+                    contentDescription = text
+                    liveRegion = LiveRegionMode.Polite
+                },
     ) {
         BasicText(
             text = text,
             style = TextStyle(color = Color.White, fontSize = BANNER_FONT_SP.sp),
+            modifier = Modifier.clearAndSetSemantics {},
         )
     }
 }

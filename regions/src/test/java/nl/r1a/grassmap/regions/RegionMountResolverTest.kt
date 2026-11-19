@@ -281,7 +281,11 @@ class RegionMountResolverTest {
         val components = root.getValue("components").jsonArray.map { it.jsonObject }
         val upgraded =
             components.map { component ->
-                if (component.getValue("kind").jsonPrimitive.content.startsWith("search-")) {
+                if (component
+                        .getValue("kind")
+                        .jsonPrimitive.content
+                        .startsWith("search-")
+                ) {
                     JsonObject(component + ("formatVersion" to JsonPrimitive(2)))
                 } else {
                     component

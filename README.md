@@ -4283,6 +4283,143 @@ build opens the screen with `core.downloads.show` and closes it with
 on, because the switch starts off and no settings screen owns it until
 milestone 6. Every transfer still goes through the `downloads.ui` commands.
 
+## Backup bundle (T-0608, T-0609)
+
+The backup screen writes one ZIP and restores it. The format is versioned; its
+reader is strict about versions and skips a kind it does not know, so an older
+build can still restore the parts it understands.
+
+### Shape
+
+```text
+manifest.json
+tracks/index.json
+tracks/<track-id>.gpx
+favourites/index.json
+favourites/favourites.gpx
+profiles/index.json
+routing/index.json
+alerts/index.json
+privacy/index.json
+search-history/index.json
+route-history/index.json
+map-style/index.json
+plugins/index.json
+```
+
+Each kind is one folder, the same shape a region pack uses. `index.json` holds
+the kind's records:
+
+```json
+{"kind":"tracks","entries":[{"id":"<store id>","value":{},"files":["tracks/<id>.gpx"]}]}
+```
+
+A `files` array at the top of an index names a kind-wide attachment; the
+favourites GPX is the one this build writes. Every file is also listed in the
+manifest with its byte count and SHA-256, and the reader checks both before it
+reads the kind. It extracts nothing to disk.
+
+The manifest (`formatVersion` 1):
+
+| Key | Meaning |
+|---|---|
+| `format` | `grass-maps-backup`; a ZIP without it is not a bundle |
+| `formatVersion` | the bundle version, currently `1` |
+| `appVersion` | the app version that wrote it (`BuildConfig.VERSION_NAME`) |
+| `createdAt` | the export time, ISO-8601 UTC |
+| `createdAtMillis` | the same time in epoch milliseconds |
+| `kinds` | one entry per kind: `kind`, `folder`, `count`, and `files` (`path`, `bytes`, `sha256`) |
+| `excluded` | objects `{id, description}` naming what the bundle deliberately leaves out |
+
+### Kinds
+
+| Kind | Store | Entry id | Entry value |
+|---|---|---|---|
+| `tracks` | `TrackStore` through `TrackAccess` | the record id (document hash, `:<index>` for a later record) | name, description, list, colour, width, hidden, kind, document SHA-256; the attached file is the stored GPX document |
+| `favourites` | `FavouritesStore` | a point's derived `FavouriteId`, or `list:<name>` | the point or list fields, including shape and Home/Work |
+| `profiles` | `ProfileCatalog` | the profile id | route profile, built-in flag, name, source profile, order |
+| `routing` | `RoutingOptionsSettings` | the profile id | the five three-step preferences |
+| `alerts` | `AlertSettingsStore` | the profile id | the stored switch, channel and place-kind keys |
+| `privacy` | `SearchHistorySettings` and `OnlineSearchSettings` | `search_history`, `online_search_position` | its boolean |
+| `search-history` | `SearchHistoryStore` | the query | the full replay entry with its viewport, position, language and time |
+| `route-history` | `RouteHistoryStore` | SHA-256 of the waypoint chain | the route entry, preferences included |
+| `map-style` | `MapStyleSettings` | `style` | the style id |
+| `plugins` | `PluginHost` and `FilePluginEnabledStore` | the plugin id | enabled |
+
+Every kind reads and writes the store that owns it, through that store's
+atomic write. The bundle adds no second store. Tracks are the stored GPX
+documents, one per record, so re-importing them produces the same record ids.
+
+### Merge rule
+
+`BundleZipReader` validates the manifest and files. `BackupImporter.prepare`
+then reads every store and compares by id without writing:
+
+1. an id that the store does not hold is an addition;
+2. an id whose value is equal is unchanged;
+3. an id whose value differs is a conflict.
+
+A conflict shows the existing and the incoming value, one at a time, in the
+order the manifest lists them. Two buttons choose the device's value or the
+bundle's. A checkbox applies that choice to the remaining conflicts of the same
+kind only; a conflict answered before the checkbox keeps its own answer, and
+other kinds still ask. `BundleConflictDecisions.choiceFor` reads the per-entry
+answer first, then the kind answer.
+
+`apply` refuses with `AppError.Conflict` while any conflict is unanswered, and
+writes nothing. Otherwise it writes only the additions and the conflicts
+answered `INCOMING`; an `EXISTING` entry is never passed to its store. A kind
+whose write fails leaves its store unchanged and does not stop the others; the
+summary names the failed kind. The merge is not a transaction across kinds.
+
+The stores' defaults are real values, so a fresh install can ask about the map
+style, the privacy switches and the plugin switches. Nothing is overwritten
+before the question is answered.
+
+### Version and unknown kinds
+
+- `formatVersion` above `1` is `AppError.NewerSchema(found, supported)` before
+  any store is read or written, like the profile and plugin stores.
+- A version below `1` is `AppError.Unsupported`.
+- A kind id the build does not know is skipped whole with
+  `BackupWarning.UnknownKind`; the known kinds still restore.
+- A missing or malformed manifest, a file whose size or SHA-256 does not match,
+  an undeclared or escaping path, a duplicate entry, or a bundle over the caps
+  is `AppError.CorruptData`. The caps are 4,096 ZIP entries, 32 MiB for one
+  entry and 256 MiB total.
+
+### What the bundle leaves out
+
+The manifest's `excluded` list names these, and the writer never reads them:
+
+- the region-server token, the debug control token and every other token or key;
+- logs, diagnostics, crash reports and the debug capture folder;
+- installed region packages, the routing mount and the external search index;
+- length units, map label settings, the contour and raster layer switches, and
+  the button and widget layouts;
+- the session-only network switches, because this build does not persist them.
+
+Search and route history follow the "keep local history" switch. With it off
+the store returns an empty list, so the bundle holds none, and an import refuses
+those two kinds with `AppError.PermissionDenied` instead of reporting a write it
+did not make.
+
+The export is written only where the system create-document picker points; the
+import reads only the picked document. The debug build can drive the same
+coordinator to `filesDir/backup-captures` with `core.backup.export_file` and
+`core.backup.import_file`, and opens the screen with `core.backup.show`.
+
+The format and its reader, writer and merge decisions are in
+`core-services/.../core/services/backup`. `app/.../app/backup` holds one
+`BundleKindSource` per store, the coordinator and the screen's controller;
+`app/BackupScreen.kt` is the interim screen, not the designed settings surface.
+
+Tests: `BundleZipTest` (round trip, newer refusal, unknown-kind warning, hash
+and path checks, foreign format), `BackupMergeTest` (conflict list, keep,
+apply-to-all, unanswered refusal, unknown kind, a failed kind), and
+`BackupBundleRoundTripTest` (restores every kind into an empty store, both
+conflict answers, and the token absence from the ZIP and every entry).
+
 ## Privacy
 
 `AGENTS.md` holds the privacy rules. This section records what the build does

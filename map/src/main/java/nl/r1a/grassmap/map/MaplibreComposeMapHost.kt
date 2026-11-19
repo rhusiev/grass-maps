@@ -89,9 +89,13 @@ internal class MapHostState(
     initialStyle: StyleSpec,
     initialCamera: Camera,
     val ageLabel: PuckAgeFormatter = PuckAgeFormatter.None,
-    private val appTiles: Map<SourceId, MapTileSource> = emptyMap(),
-    val sourceResolver: (SourceId) -> String?,
+    appTiles: Map<SourceId, MapTileSource> = emptyMap(),
+    sourceResolver: (SourceId) -> String?,
 ) {
+    /** The style and the app sources the base style is built from; a region change replaces the sources. */
+    private var styleSpec: StyleSpec = initialStyle
+    private var appTiles: Map<SourceId, MapTileSource> = appTiles
+    private var sourceResolver: (SourceId) -> String? = sourceResolver
     val style = mutableStateOf(buildBaseStyle(initialStyle, sourceResolver, appTiles) ?: emptyBuiltStyle())
     val layers = mutableStateOf<List<OwnedLayer>>(emptyList())
     val puck = mutableStateOf<PuckDisplay?>(null)
@@ -141,6 +145,7 @@ internal class MapHostState(
     /** Loads [style] and makes it the style later diffs must match. */
     fun applyStyle(style: StyleSpec): Outcome<Unit> {
         val built = buildBaseStyle(style, sourceResolver, appTiles) ?: return Outcome.Failure(AppError.InvalidInput)
+        styleSpec = style
         // The first composition can call setStyle with the style this state was
         // built from. Reloading it would clear styleReady and re-run the engine
         // for nothing, so an unchanged style is a successful no-op. Styles that
@@ -155,6 +160,32 @@ internal class MapHostState(
         pendingStyleId = null
         loadedStyleId = style.id
         this.style.value = built
+        return Outcome.Success(Unit)
+    }
+
+    /**
+     * Replaces the app's tile sources and the URIs the style falls back to.
+     * A source the app supplies is not in the base document, so a swap between
+     * packs rebuilds the plan and the composed sources in place; only a change
+     * that edits the document, such as a URI source appearing, waits for an
+     * engine style reload.
+     */
+    fun applySources(
+        resolver: (SourceId) -> String?,
+        appTiles: Map<SourceId, MapTileSource>,
+    ): Outcome<Unit> {
+        val built = buildBaseStyle(styleSpec, resolver, appTiles) ?: return Outcome.Failure(AppError.InvalidInput)
+        val previous = style.value
+        sourceResolver = resolver
+        this.appTiles = appTiles
+        if (built == previous) {
+            return Outcome.Success(Unit)
+        }
+        if (built.json != previous.json) {
+            styleReady.value = false
+            pendingStyleId = null
+        }
+        style.value = built
         return Outcome.Success(Unit)
     }
 
@@ -514,6 +545,20 @@ class MaplibreComposeMapHost internal constructor(
     override suspend fun setStyle(style: StyleSpec): Outcome<Unit> =
         withContext(Dispatchers.Main.immediate) {
             session.applyStyle(style)
+        }
+
+    /**
+     * Replaces the app's own tile sources and the URIs the style falls back to,
+     * after the installed region packs changed. A set that serves the same data
+     * changes nothing, so a caller may pass its current sources on first
+     * composition as well.
+     */
+    suspend fun setSources(
+        sourceResolver: (SourceId) -> String?,
+        appTiles: Map<SourceId, MapTileSource>,
+    ): Outcome<Unit> =
+        withContext(Dispatchers.Main.immediate) {
+            session.applySources(sourceResolver, appTiles)
         }
 
     override suspend fun applyStyleDiff(diff: StyleDiff): Outcome<Unit> =

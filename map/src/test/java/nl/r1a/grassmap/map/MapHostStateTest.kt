@@ -1,9 +1,12 @@
 package nl.r1a.grassmap.map
 
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import nl.r1a.grassmap.map.style.StyleLayerCompiler
 import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.error.AppError
@@ -14,13 +17,16 @@ import nl.r1a.grassmap.plugin.api.model.LayerId
 import nl.r1a.grassmap.plugin.api.model.LayerSlot
 import nl.r1a.grassmap.plugin.api.model.LayerSpec
 import nl.r1a.grassmap.plugin.api.model.LayerType
+import nl.r1a.grassmap.plugin.api.model.MapSource
 import nl.r1a.grassmap.plugin.api.model.MapSourceIds
 import nl.r1a.grassmap.plugin.api.model.MapTrack
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
+import nl.r1a.grassmap.plugin.api.model.SourceId
 import nl.r1a.grassmap.plugin.api.model.StyleDiff
 import nl.r1a.grassmap.plugin.api.model.StyleId
 import nl.r1a.grassmap.plugin.api.model.StyleSpec
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -371,9 +377,94 @@ class MapHostStateTest {
         assertTrue(session.tracks.value.isEmpty())
     }
 
-    private fun session(): MapHostState = MapHostState(style(LOADED_STYLE), Camera(center = GeoPoint(0.0, 0.0), zoom = 1.0)) { null }
+    @Test
+    fun aNewAppSourceReplacesThePlanAndKeepsTheLoadedStyle() {
+        val session = MapHostState(declaredStyle(), CAMERA) { null }
+        session.onStyleLoaded()
+        val document = session.style.value.json
+        val tiles = MapTileSource { _, _, _ -> EMPTY_TILE }
+
+        val result = session.applySources(EMPTY_RESOLVER, mapOf(MapSourceIds.REGION to tiles))
+
+        assertEquals(Outcome.Success(Unit), result)
+        assertSame(
+            tiles,
+            session.style.value.plan.app
+                .single()
+                .tiles,
+        )
+        assertEquals("an app source is not in the document, so nothing reloads", document, session.style.value.json)
+        assertTrue("no reload is pending, so the layers stay ready", session.styleReady.value)
+        assertEquals(LOADED_STYLE, session.loadedStyleId)
+    }
+
+    @Test
+    fun aUriSourceAppearingWaitsForTheStyleReload() {
+        val session = MapHostState(declaredStyle(), CAMERA) { null }
+        session.onStyleLoaded()
+
+        val result = session.applySources({ id -> "pmtiles://file:///$id.pmtiles" }, emptyMap())
+
+        assertEquals(Outcome.Success(Unit), result)
+        assertEquals("pmtiles://file:///region.pmtiles", session.style.value.plan.uris[MapSourceIds.REGION])
+        assertTrue("the engine reloads the changed document, so ready must wait", !session.styleReady.value)
+    }
+
+    @Test
+    fun theSameSourcesChangeNothing() {
+        val session = MapHostState(declaredStyle(), CAMERA) { null }
+        session.onStyleLoaded()
+        val tiles = MapTileSource { _, _, _ -> EMPTY_TILE }
+        session.applySources(EMPTY_RESOLVER, mapOf(MapSourceIds.REGION to tiles))
+        val applied = session.style.value
+
+        val result = session.applySources(EMPTY_RESOLVER, mapOf(MapSourceIds.REGION to tiles))
+
+        assertEquals(Outcome.Success(Unit), result)
+        assertSame("a repeated set must not rebuild the style", applied, session.style.value)
+    }
+
+    @Test
+    fun aStyleSwitchKeepsTheAppSources() {
+        val session = MapHostState(declaredStyle(), CAMERA) { null }
+        val tiles = MapTileSource { _, _, _ -> EMPTY_TILE }
+        session.applySources(EMPTY_RESOLVER, mapOf(MapSourceIds.REGION to tiles))
+
+        session.applyStyle(StyleSpec(LOADED_STYLE, TOURING_DOCUMENT, sources = declaredSources()))
+
+        assertSame(
+            tiles,
+            session.style.value.plan.app
+                .single()
+                .tiles,
+        )
+    }
+
+    @Test
+    fun aSourceRefreshBuildsFromTheStyleLastSet() {
+        val session = MapHostState(declaredStyle(), CAMERA) { null }
+        session.applyStyle(StyleSpec(LOADED_STYLE, TOURING_DOCUMENT, sources = declaredSources()))
+        val tiles = MapTileSource { _, _, _ -> EMPTY_TILE }
+
+        session.applySources(EMPTY_RESOLVER, mapOf(MapSourceIds.REGION to tiles))
+
+        val document = Json.parseToJsonElement(session.style.value.json.json).jsonObject
+        assertEquals("touring", document.getValue("glyphs").jsonPrimitive.content)
+        assertSame(
+            tiles,
+            session.style.value.plan.app
+                .single()
+                .tiles,
+        )
+    }
+
+    private fun session(): MapHostState = MapHostState(style(LOADED_STYLE), CAMERA) { null }
 
     private fun style(id: StyleId): StyleSpec = StyleSpec(id = id, baseStyleJson = VALID_STYLE)
+
+    private fun declaredStyle(): StyleSpec = StyleSpec(id = LOADED_STYLE, baseStyleJson = VALID_STYLE, sources = declaredSources())
+
+    private fun declaredSources(): List<MapSource> = listOf(MapSource(MapSourceIds.REGION, minZoom = 8, maxZoom = 14))
 
     private fun background(id: String): SlottedLayer = SlottedLayer(LayerSlot.Base, backgroundSpec(id))
 
@@ -402,5 +493,9 @@ class MapHostStateTest {
     private companion object {
         val LOADED_STYLE: StyleId = StyleId("standard")
         const val VALID_STYLE = """{"version":8}"""
+        const val TOURING_DOCUMENT = """{"version":8,"glyphs":"touring"}"""
+        val CAMERA = Camera(center = GeoPoint(0.0, 0.0), zoom = 1.0)
+        val EMPTY_RESOLVER: (SourceId) -> String? = { null }
+        val EMPTY_TILE = ByteArray(0)
     }
 }

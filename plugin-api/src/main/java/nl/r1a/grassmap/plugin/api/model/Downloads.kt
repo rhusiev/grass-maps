@@ -271,7 +271,15 @@ data class InstalledPack(
      * installed packs mean a half-finished update.
      */
     val build: String? = null,
-)
+) {
+    /** True when the pack carries heights for the elevation reader, base grid or add-on. */
+    internal val providesElevation: Boolean
+        get() = CatalogPartKind.ELEVATION in parts || hasElevationAddon
+
+    /** True when the pack carries the 30 m elevation add-on. */
+    internal val hasElevationAddon: Boolean
+        get() = CatalogPartKind.ELEVATION_30M in parts
+}
 
 /** Why a catalogue or a download did not finish. It carries data, never user text. */
 @Serializable
@@ -393,11 +401,11 @@ data class DownloadsData(
     /** Whether the monthly background check and update runs (T-0508). On by default. */
     val autoUpdate: Boolean = true,
     /**
-     * The packs as they were on the phone when the store first looked in this
-     * process, which is before any install it makes. The search, routing and
-     * elevation readers open once per process, so these are the packs they read
-     * until it restarts; the map resolves its own sources again when
-     * [installed] changes. Null while that is not known.
+     * The packs the app's readers mounted when they first resolved, which is
+     * before any install this process makes. The elevation reader is the only
+     * reader that keeps them: the map resolves its own sources again when
+     * [installed] changes, the search index follows it, and the routing engine
+     * reopens on a new mount. Null while that is not known.
      */
     val mountedPacks: List<InstalledPack>? = null,
     /** The borders of the catalogue's regions the store has, from the server or its cache. */
@@ -420,19 +428,25 @@ data class DownloadsData(
         get() = catalog?.regions.orEmpty().filter { entry -> installed(entry.id)?.let { it.version != entry.version } == true }
 
     /**
-     * True when an installed pack is newer than the one the running process
-     * reads: another version, a part the mounted pack lacks (the 30 m add-on),
-     * or a region that was not mounted. The search, routing and elevation
-     * readers pick it up at the next start; the map resolves its sources again
-     * when it is shown.
+     * True when the elevation reader's pack changed since this process opened
+     * it. The map and the search index follow [installed], and the routing
+     * engine reopens when the mounted pack changes; the elevation reader is the
+     * one that opens its pack once, so only a change to the pack it reads waits
+     * for the next start. It reads the first installed region and that region's
+     * 30 m add-on, so a change to any other pack raises no hint.
      */
     val appliesAtNextStart: Boolean
         get() {
             val mounted = mountedPacks ?: return false
-            return installed.any { pack ->
-                val read = mounted.firstOrNull { it.region == pack.region }
-                read == null || read.version != pack.version || !read.parts.containsAll(pack.parts)
+            val installedSource = installed.minByOrNull { it.region } ?: return false
+            val servedSource = mounted.minByOrNull { it.region }
+            if (servedSource == null || installedSource.region != servedSource.region) {
+                return installedSource.providesElevation
             }
+            val changed =
+                installedSource.version != servedSource.version ||
+                    installedSource.hasElevationAddon != servedSource.hasElevationAddon
+            return changed && (installedSource.providesElevation || servedSource.providesElevation)
         }
 
     /** True when the installed packs come from more than one monthly tile build. */
@@ -564,7 +578,7 @@ data class DownloadsState(
     val waitingForWifi: Boolean = false,
     /** Whether the monthly automatic update is on. */
     val autoUpdate: Boolean = true,
-    /** True while an installed map waits for the next app start to be read. */
+    /** True while the elevation reader waits for the next app start to read an installed map. */
     val appliesAtNextStart: Boolean = false,
     /** The borders the downloads map draws; a region with none is listed but not drawn. */
     val outlines: List<RegionOutline> = emptyList(),

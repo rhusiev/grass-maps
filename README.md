@@ -4049,19 +4049,19 @@ differs from the installed one. "Update all" (`RegionDownloadsAccess.updateAll`,
 command `downloads.ui.update_all`) fetches the catalogue, then queues each of
 them through `startDownload`, one claim at a time, so the `claimMutex` rule for
 WAITING and DOWNLOADING moves holds. An update downloads, verifies and stages
-the whole new archive, routing part included, beside the old version. It takes
-effect at the next app start: the routing engine reopens on a mount change, but
-the map and elevation readers open once per process and keep reading
-the old directory until then. The search index is the exception: it follows the
-store's installed list, so a pack installed or updated while the app runs is
-searchable at once (T-0620). The downloads screen says so: `DownloadsData.mountedPacks`
-holds the packs the app's readers mounted when they first resolved (`AppContainer`
-hands them to the store), or, while no reader has resolved, the packs the store found at
-its first operation of any kind, and while an
-installed pack differs from them (another version, a part they lack such as the
-30 m add-on, or a region they lack) `DownloadsData.appliesAtNextStart` is true and the
-screen shows "The maps apply the next time you start the app", the same text as the
-T-0508 notification. There is no restart button. The old
+the whole new archive, routing part included, beside the old version. Most of it
+is in use at once: the map resolves its sources again when the installed list
+changes, the search index follows the store's list (T-0620), and the routing
+engine reopens when the mount changes (T-0511). The elevation reader is the
+exception: it opens the first mounted region and that region's 30 m add-on once
+per process, so new heights wait for the next start. The downloads screen names
+that one reader: `DownloadsData.mountedPacks` holds the packs the app's readers
+mounted when they first resolved (`AppContainer` hands them to the store), or,
+while no reader has resolved, the packs the store found at its first operation
+of any kind, and while the first installed region differs from the first
+mounted one in region, version or 30 m add-on and elevation is involved,
+`DownloadsData.appliesAtNextStart` is true and the screen shows "Elevation uses
+the new maps the next time you start the app". There is no restart button. The old
 version stays current and mounted until the pointer flips, and a failed
 download, a failed check or a cancel before the flip leaves it untouched. The
 installer checks for a cancel just before the move, and the flip is the commit

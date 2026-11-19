@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.plugins.downloads.ui
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -44,6 +45,27 @@ class DownloadsUiStringsTest {
         assertTrue(english.contains("token"))
         assertTrue(english.contains("IP address"))
         assertTrue(english.contains("which maps"))
+    }
+
+    /**
+     * Only the elevation reader waits for the next start: the map, the search
+     * index and the routing engine all pick up an installed pack in this
+     * process. The hint must not promise a restart for them (T-0626).
+     */
+    @Test
+    fun theNextStartSentenceNamesOnlyTheElevationReader() {
+        for (path in listOf(ENGLISH, UKRAINIAN)) {
+            val sentence = resources(path).getValue("downloads_applies_at_next_start")
+
+            assertFalse("$path names search: $sentence", sentence.contains("Search", ignoreCase = true))
+            assertFalse("$path names search: $sentence", sentence.contains("Пошук", ignoreCase = true))
+            assertFalse("$path names routing: $sentence", sentence.contains("routing", ignoreCase = true))
+            assertFalse("$path names routing: $sentence", sentence.contains("аршрутизац"))
+            assertTrue(
+                "$path names elevation: $sentence",
+                sentence.contains("Elevation", ignoreCase = true) || sentence.contains("Висоти"),
+            )
+        }
     }
 
     private fun resources(path: String): Map<String, String> =

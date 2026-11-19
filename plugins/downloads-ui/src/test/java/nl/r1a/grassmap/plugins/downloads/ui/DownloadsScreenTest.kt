@@ -187,8 +187,22 @@ class DownloadsScreenTest {
 
     @Test
     fun theNextStartHintShowsOnlyWhenAnInstalledPackIsNewerThanTheMountedOne() {
-        val mounted = listOf(InstalledPack(CatalogFixture.LVIV, "2026-10-01-0"))
-        val updated = listOf(InstalledPack(CatalogFixture.LVIV, CatalogFixture.VERSION))
+        val mounted =
+            listOf(
+                InstalledPack(
+                    CatalogFixture.LVIV,
+                    "2026-10-01-0",
+                    parts = listOf(CatalogPartKind.MAP, CatalogPartKind.ELEVATION),
+                ),
+            )
+        val updated =
+            listOf(
+                InstalledPack(
+                    CatalogFixture.LVIV,
+                    CatalogFixture.VERSION,
+                    parts = listOf(CatalogPartKind.MAP, CatalogPartKind.ELEVATION),
+                ),
+            )
 
         val unchanged = DownloadsData(installed = mounted, mountedPacks = mounted)
         val newer = DownloadsData(installed = updated, mountedPacks = mounted)

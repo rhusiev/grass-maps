@@ -55,23 +55,85 @@ class DownloadsDataTest {
         assertEquals(null, catalog.download("ua-46-mystery-pack"))
     }
 
+    /**
+     * The elevation reader is the only one that opens a pack once per process:
+     * the map, the search index and the routing engine all follow the store in
+     * this process, so their packs never raise the hint (T-0626).
+     */
     @Test
-    fun anInstalledPackNewerThanTheMountedOneAppliesAtTheNextStart() {
-        val mounted = listOf(InstalledPack("a", "1", parts = listOf(CatalogPartKind.MAP)))
+    fun onlyTheSourcePackOfTheElevationReaderWaitsForTheNextStart() {
+        val mounted = listOf(pack("a", "1", CatalogPartKind.MAP, CatalogPartKind.ELEVATION))
 
         assertFalse(DownloadsData(installed = mounted).appliesAtNextStart)
         assertFalse(DownloadsData(installed = mounted, mountedPacks = mounted).appliesAtNextStart)
         assertTrue(
-            DownloadsData(installed = listOf(InstalledPack("a", "2")), mountedPacks = mounted).appliesAtNextStart,
-        )
-        assertTrue(
             DownloadsData(
-                installed = listOf(InstalledPack("a", "1", parts = listOf(CatalogPartKind.MAP, CatalogPartKind.ELEVATION_30M))),
+                installed = listOf(pack("a", "2", CatalogPartKind.MAP, CatalogPartKind.ELEVATION)),
                 mountedPacks = mounted,
             ).appliesAtNextStart,
         )
-        assertTrue(DownloadsData(installed = mounted + InstalledPack("b", "1"), mountedPacks = mounted).appliesAtNextStart)
         assertFalse(DownloadsData(installed = emptyList(), mountedPacks = mounted).appliesAtNextStart)
+    }
+
+    @Test
+    fun anUpdatedPackThatIsNotTheElevationSourceDoesNotWaitForTheNextStart() {
+        val mounted =
+            listOf(
+                pack("a", "1", CatalogPartKind.MAP, CatalogPartKind.ELEVATION),
+                pack("b", "1", CatalogPartKind.MAP, CatalogPartKind.ELEVATION),
+            )
+        val updated =
+            listOf(
+                pack("a", "1", CatalogPartKind.MAP, CatalogPartKind.ELEVATION),
+                pack("b", "2", CatalogPartKind.MAP, CatalogPartKind.ELEVATION),
+            )
+
+        assertFalse(DownloadsData(installed = updated, mountedPacks = mounted).appliesAtNextStart)
+    }
+
+    @Test
+    fun aPackWithoutElevationDoesNotWaitForTheNextStart() {
+        val mounted = listOf(pack("world", "1", CatalogPartKind.MAP))
+
+        assertFalse(
+            DownloadsData(installed = listOf(pack("world", "2", CatalogPartKind.MAP)), mountedPacks = mounted).appliesAtNextStart,
+        )
+    }
+
+    @Test
+    fun theElevationAddonOfTheSourcePackWaitsForTheNextStart() {
+        val mounted = listOf(pack("a", "1", CatalogPartKind.MAP, CatalogPartKind.ELEVATION))
+
+        assertTrue(
+            DownloadsData(
+                installed = listOf(pack("a", "1", CatalogPartKind.MAP, CatalogPartKind.ELEVATION, CatalogPartKind.ELEVATION_30M)),
+                mountedPacks = mounted,
+            ).appliesAtNextStart,
+        )
+        assertTrue(
+            DownloadsData(
+                installed = listOf(pack("a", "2", CatalogPartKind.MAP, CatalogPartKind.ELEVATION)),
+                mountedPacks = listOf(pack("a", "1", CatalogPartKind.MAP)),
+            ).appliesAtNextStart,
+        )
+    }
+
+    @Test
+    fun aNewFirstRegionWithElevationWaitsForTheNextStart() {
+        val mounted = listOf(pack("b", "1", CatalogPartKind.MAP, CatalogPartKind.ELEVATION))
+        val newFirst =
+            listOf(
+                pack("a", "1", CatalogPartKind.MAP, CatalogPartKind.ELEVATION),
+                pack("b", "1", CatalogPartKind.MAP, CatalogPartKind.ELEVATION),
+            )
+
+        assertTrue(DownloadsData(installed = newFirst, mountedPacks = mounted).appliesAtNextStart)
+        assertFalse(
+            DownloadsData(
+                installed = listOf(pack("a", "1", CatalogPartKind.MAP)) + mounted,
+                mountedPacks = mounted,
+            ).appliesAtNextStart,
+        )
     }
 
     @Test
@@ -84,6 +146,12 @@ class DownloadsDataTest {
         assertEquals(100L, over.fractionOf(100))
         assertEquals(0L, unknown.fractionOf(100))
     }
+
+    private fun pack(
+        region: String,
+        version: String,
+        vararg parts: CatalogPartKind,
+    ) = InstalledPack(region, version, parts = parts.toList())
 
     private fun data(
         catalog: List<CatalogRegion> = emptyList(),

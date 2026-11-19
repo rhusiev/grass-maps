@@ -69,5 +69,5 @@
     <string name="downloads_mobile_data_any">Wi-Fi and mobile data</string>
     <string name="downloads_auto_update_start">Update maps automatically, monthly</string>
     <string name="downloads_auto_update_stop">Stop updating maps automatically</string>
-    <string name="downloads_applies_at_next_start">Search and routing use the new maps the next time you start the app</string>
+    <string name="downloads_applies_at_next_start">Elevation uses the new maps the next time you start the app</string>
 </resources>

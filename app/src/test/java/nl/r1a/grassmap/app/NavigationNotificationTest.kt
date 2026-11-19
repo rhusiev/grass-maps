@@ -4,6 +4,7 @@ import nl.r1a.grassmap.navigation.NavigationInstruction
 import nl.r1a.grassmap.navigation.NavigationPhase
 import nl.r1a.grassmap.navigation.NavigationState
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.provider.Route
 import nl.r1a.grassmap.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
@@ -51,6 +52,27 @@ class NavigationNotificationTest {
     }
 
     @Test
+    fun imperialShowsFeetAndMiles() {
+        val short =
+            content(
+                NavigationState(phase = NavigationPhase.Following, nextInstruction = TURN, activeRoute = ROUTE),
+                UnitSystem.Imperial,
+            )
+        val long =
+            content(
+                NavigationState(
+                    phase = NavigationPhase.Following,
+                    nextInstruction = TURN.copy(distanceToInstructionMeters = 2_400.0),
+                    activeRoute = ROUTE,
+                ),
+                UnitSystem.Imperial,
+            )
+
+        assertEquals("820 ft", short.text)
+        assertEquals("1.5 mi", long.text)
+    }
+
+    @Test
     fun pausedKeepsTheTurnAndSaysPaused() {
         val content = content(NavigationState(phase = NavigationPhase.Paused, nextInstruction = TURN, activeRoute = ROUTE))
 
@@ -87,8 +109,10 @@ class NavigationNotificationTest {
         )
     }
 
-    private fun content(state: NavigationState): NavigationNotificationContent =
-        navigationNotificationContent(state, TestStrings, Locale.ROOT)
+    private fun content(
+        state: NavigationState,
+        units: UnitSystem = UnitSystem.Metric,
+    ): NavigationNotificationContent = navigationNotificationContent(state, TestStrings, units, Locale.ROOT)
 
     private object TestStrings : Strings {
         override fun resolve(
@@ -101,8 +125,10 @@ class NavigationNotificationTest {
                 NavigationNotificationStrings.ARRIVED -> "You have arrived"
                 NavigationNotificationStrings.PAUSED -> "Navigation paused"
                 NavigationNotificationStrings.STOPPED -> "Navigation stopped"
-                "map_distance_metres" -> "${arguments.first()} m"
-                "map_distance_kilometres" -> "${arguments.first()} km"
+                "unit_distance_metres" -> "${arguments.first()} m"
+                "unit_distance_kilometres" -> "${arguments.first()} km"
+                "unit_distance_feet" -> "${arguments.first()} ft"
+                "unit_distance_miles" -> "${arguments.first()} mi"
                 else -> key
             }
 

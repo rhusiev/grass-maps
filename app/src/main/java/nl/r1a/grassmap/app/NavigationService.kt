@@ -16,6 +16,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import nl.r1a.grassmap.core.services.UnitSettings
 import nl.r1a.grassmap.navigation.NavigationPhase
 import nl.r1a.grassmap.navigation.NavigationState
 import nl.r1a.grassmap.plugin.api.service.Strings
@@ -96,6 +97,7 @@ class NavigationService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private lateinit var controller: NavigationController
     private lateinit var strings: Strings
+    private lateinit var unitSettings: UnitSettings
     private var foregroundStarted = false
     private var lastLoggedContent: String? = null
 
@@ -104,9 +106,15 @@ class NavigationService : Service() {
         val container = (application as GrassMapsApplication).container
         controller = container.navigation
         strings = container.strings
+        unitSettings = container.unitSettings
         createChannel()
         scope.launch {
             controller.state.collect { state -> showState(state) }
+        }
+        // A unit change redraws the same notification instead of waiting for
+        // the next fix, so the lock screen follows the setting at once.
+        scope.launch {
+            unitSettings.units.collect { showState(controller.state.value) }
         }
     }
 
@@ -230,7 +238,7 @@ class NavigationService : Service() {
     }
 
     private fun notificationFor(state: NavigationState): Notification {
-        val content = navigationNotificationContent(state, strings)
+        val content = navigationNotificationContent(state, strings, unitSettings.units.value)
         val builder =
             Notification
                 .Builder(this, CHANNEL_ID)
@@ -341,7 +349,7 @@ class NavigationService : Service() {
      * text and the distance, which is the same evidence the notification shows.
      */
     private fun logContent(state: NavigationState) {
-        val content = navigationNotificationContent(state, strings)
+        val content = navigationNotificationContent(state, strings, unitSettings.units.value)
         val line =
             "navigation-notification phase=${state.phase} " +
                 "title=\"${content.title}\" text=\"${content.text.orEmpty()}\""

@@ -2,9 +2,10 @@ package nl.r1a.grassmap.app
 
 import nl.r1a.grassmap.navigation.NavigationPhase
 import nl.r1a.grassmap.navigation.NavigationState
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.api.unit.UnitText
 import java.util.Locale
-import kotlin.math.roundToLong
 
 /**
  * What the navigation notification shows, derived from one published state.
@@ -64,6 +65,7 @@ fun navigationNotificationActions(phase: NavigationPhase): List<NavigationNotifi
 fun navigationNotificationContent(
     state: NavigationState,
     strings: Strings,
+    units: UnitSystem = UnitSystem.Metric,
     locale: Locale = Locale.getDefault(),
 ): NavigationNotificationContent =
     when (state.phase) {
@@ -89,7 +91,7 @@ fun navigationNotificationContent(
                 } else {
                     val meters =
                         instruction?.distanceToInstructionMeters ?: state.remainingDistanceMeters.takeIf { state.activeRoute != null }
-                    meters?.let { distanceText(it, strings, locale) }
+                    meters?.let { distanceText(it, units, strings, locale) }
                 }
             NavigationNotificationContent(title = title, text = text, paused = paused)
         }
@@ -97,25 +99,12 @@ fun navigationNotificationContent(
 
 private fun distanceText(
     meters: Double,
+    units: UnitSystem,
     strings: Strings,
     locale: Locale,
 ): String? {
     if (!meters.isFinite() || meters < 0.0) {
         return null
     }
-    return if (meters < METRES_PER_KILOMETRE) {
-        strings.resolve(
-            DISTANCE_METRES,
-            listOf(meters.roundToLong().toString()),
-        )
-    } else {
-        strings.resolve(
-            DISTANCE_KILOMETRES,
-            listOf(String.format(locale, "%.1f", meters / METRES_PER_KILOMETRE)),
-        )
-    }
+    return UnitText.distance(meters, units, strings, locale)
 }
-
-private const val DISTANCE_METRES = "map_distance_metres"
-private const val DISTANCE_KILOMETRES = "map_distance_kilometres"
-private const val METRES_PER_KILOMETRE = 1_000.0

@@ -179,6 +179,18 @@ class RegionStore(
         refreshMutex.withLock {
             ensureBaseline()
             val currentToken = token
+            // The installed packs are read from disk whatever the network does,
+            // so an offline refresh still publishes what is on the phone. An
+            // install this store did not make - the debug trigger, or a pack
+            // that arrived while it ran - becomes visible with this read.
+            val installed = readInstalled()
+            mutable.update {
+                it.copy(
+                    installed = installed,
+                    serverUrl = serverUrl,
+                    tokenPresent = currentToken != null,
+                )
+            }
             val fetchedCatalog =
                 // The catalogue is network contact like a package, so it names the
                 // same switch and is refused before a socket is opened.
@@ -196,14 +208,10 @@ class RegionStore(
                         fetched.value
                     }
                 }
-            val installed = readInstalled()
             mutable.update {
                 it.copy(
                     catalog = catalog,
                     catalogProblem = null,
-                    installed = installed,
-                    serverUrl = serverUrl,
-                    tokenPresent = currentToken != null,
                 )
             }
             refreshOutlines(catalog, currentToken)

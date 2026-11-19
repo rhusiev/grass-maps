@@ -60,14 +60,22 @@ internal object FixturePackages {
     fun at(
         region: String,
         version: String,
-    ): ByteArray =
-        withManifest(
-            transform = { manifest ->
-                manifest
-                    .replace("\"region\": \"${TestRegions.DEFAULT_REGION}\"", "\"region\": \"$region\"")
-                    .replace(FIXTURE_VERSION, version)
-            },
-        )
+    ): ByteArray = zip(filesAt(region, version))
+
+    /** [files] with the manifest re-tagged as [region] at [version]. */
+    fun filesAt(
+        region: String,
+        version: String,
+    ): LinkedHashMap<String, ByteArray> {
+        val files = files()
+        val manifest = String(files.getValue(RegionIdentifiers.MANIFEST_FILE), Charsets.UTF_8)
+        val retagged =
+            manifest
+                .replace("\"region\": \"${TestRegions.DEFAULT_REGION}\"", "\"region\": \"$region\"")
+                .replace(FIXTURE_VERSION, version)
+        files[RegionIdentifiers.MANIFEST_FILE] = retagged.toByteArray(Charsets.UTF_8)
+        return files
+    }
 
     /**
      * The fixture files with the way-alert component replaced by [geojson] and

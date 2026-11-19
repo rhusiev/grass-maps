@@ -59,6 +59,41 @@ class RegionStoreLocalServerTest {
     }
 
     @Test
+    fun aFailedCatalogueStillPublishesThePacksOnThePhone() =
+        runBlocking {
+            RegionStores.install(
+                paths.root.toPath(),
+                CatalogFixture.LVIV,
+                CatalogFixture.VERSION,
+                FixturePackages.filesAt(CatalogFixture.LVIV, CatalogFixture.VERSION),
+            )
+            val store = unconfiguredStore()
+            try {
+                // The first read is the disk reader's, so its one publication is
+                // behind us before the store starts a refresh.
+                withTimeout(10_000) { store.data.first { it.installed.isNotEmpty() } }
+                RegionStores.install(
+                    paths.root.toPath(),
+                    CatalogFixture.VINNYTSIA,
+                    CatalogFixture.VERSION,
+                    FixturePackages.filesAt(CatalogFixture.VINNYTSIA, CatalogFixture.VERSION),
+                )
+                TestHttpServer { send(it, 503, ByteArray(0)) }.use { offline ->
+                    assertTrue("the catalogue fetch must fail", store.setServer(offline.baseUrl) is Outcome.Failure)
+
+                    assertEquals(
+                        "a failed refresh still re-reads what is on the phone",
+                        listOf(CatalogFixture.VINNYTSIA, CatalogFixture.LVIV),
+                        store.data.value.installed
+                            .map { it.region },
+                    )
+                }
+            } finally {
+                store.close()
+            }
+        }
+
+    @Test
     fun theRealCatalogueIsReadAndItsDataDateIsShown() =
         runBlocking {
             catalogServer(CatalogFixture.bytes()).use { server ->
@@ -480,18 +515,21 @@ class RegionStoreLocalServerTest {
         MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
     private suspend fun store(baseUrl: String): RegionStore {
-        val store =
-            RegionStore(
-                paths = paths,
-                policy = policy(),
-                network = permissive(),
-                scope = scope,
-                transport = HttpDownloadTransport(),
-                log = logs::add,
-            )
+        val store = unconfiguredStore()
         store.setServer(baseUrl, null)
         return store
     }
+
+    /** A store on the build's default server settings, before any call sets one. */
+    private fun unconfiguredStore(): RegionStore =
+        RegionStore(
+            paths = paths,
+            policy = policy(),
+            network = permissive(),
+            scope = scope,
+            transport = HttpDownloadTransport(),
+            log = logs::add,
+        )
 
     private fun policy(): DownloadPolicy =
         DownloadPolicy(

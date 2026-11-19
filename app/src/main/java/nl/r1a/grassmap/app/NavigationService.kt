@@ -118,7 +118,12 @@ class NavigationService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 startForegroundFor(controller.state.value)
-                stopIfStranded()
+                if (startGate.reached()) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                } else {
+                    stopIfStranded()
+                }
             }
 
             ACTION_PAUSE -> {
@@ -347,6 +352,8 @@ class NavigationService : Service() {
     }
 
     companion object {
+        internal val startGate = ForegroundStartGate()
+
         const val ACTION_START: String = "nl.r1a.grassmap.action.NAVIGATION_START"
         const val ACTION_PAUSE: String = "nl.r1a.grassmap.action.NAVIGATION_PAUSE"
         const val ACTION_RESUME: String = "nl.r1a.grassmap.action.NAVIGATION_RESUME"

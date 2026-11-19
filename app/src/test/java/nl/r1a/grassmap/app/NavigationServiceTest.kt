@@ -76,4 +76,60 @@ class NavigationServiceTest {
         assertTrue(endsSessionOnRefusal(ForegroundStartResult.NotAllowedRefused, locationPermissionRequired = false))
         assertFalse(endsSessionOnRefusal(ForegroundStartResult.Started, locationPermissionRequired = true))
     }
+
+    @Test
+    fun aStopRightAfterAStartWaitsForTheForegroundStart() {
+        val gate = ForegroundStartGate()
+        var stops = 0
+        val handle = AndroidNavigationServiceHandle(startService = {}, stopService = { stops++ }, gate = gate)
+
+        handle.start()
+        handle.stop()
+
+        assertEquals(0, stops)
+        assertTrue(gate.reached())
+    }
+
+    @Test
+    fun aStopAfterTheForegroundStartRunsAtOnce() {
+        val gate = ForegroundStartGate()
+        var stops = 0
+        val handle = AndroidNavigationServiceHandle(startService = {}, stopService = { stops++ }, gate = gate)
+
+        handle.start()
+        gate.reached()
+        handle.stop()
+
+        assertEquals(1, stops)
+        assertFalse(gate.reached())
+    }
+
+    @Test
+    fun aNewStartDropsAStopRecordedForTheEarlierSession() {
+        val gate = ForegroundStartGate()
+        val handle = AndroidNavigationServiceHandle(startService = {}, stopService = {}, gate = gate)
+
+        handle.start()
+        handle.stop()
+        handle.start()
+
+        assertFalse(gate.reached())
+    }
+
+    @Test
+    fun aStartThatThrowsLeavesNoPendingStart() {
+        val gate = ForegroundStartGate()
+        var stops = 0
+        val handle =
+            AndroidNavigationServiceHandle(
+                startService = { throw IllegalStateException("not allowed") },
+                stopService = { stops++ },
+                gate = gate,
+            )
+
+        runCatching { handle.start() }
+        handle.stop()
+
+        assertEquals(1, stops)
+    }
 }

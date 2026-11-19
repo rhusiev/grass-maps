@@ -75,7 +75,6 @@ private fun groupLabel(group: PluginGroup): Int =
         PluginGroup.MAP -> R.string.plugin_manager_group_map
         PluginGroup.ROUTING -> R.string.plugin_manager_group_routing
         PluginGroup.PLACES -> R.string.plugin_manager_group_places
-        PluginGroup.SHARING -> R.string.plugin_manager_group_sharing
         PluginGroup.WIDGETS -> R.string.plugin_manager_group_widgets
     }
 

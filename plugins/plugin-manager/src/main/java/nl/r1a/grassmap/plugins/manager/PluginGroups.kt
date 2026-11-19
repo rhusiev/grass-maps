@@ -7,7 +7,6 @@ enum class PluginGroup {
     MAP,
     ROUTING,
     PLACES,
-    SHARING,
     WIDGETS,
 }
 
@@ -16,14 +15,18 @@ enum class PluginGroup {
  * them. Every other plugin is essential: the host refuses to switch it, and the
  * screen does not draw it. `app` hands [switchableIds] to the host, so this
  * list is the one place that decides what a user can turn off.
+ *
+ * A plugin belongs here only when every app path that uses it goes through the
+ * host, so switching it off really stops it. `links`, `coordinates`,
+ * `way.alerts`, `track.layer`, `share` and `guidance.ui` are called directly by
+ * `app` today; they stay essential until those call sites read the switch.
  */
 object PluginGroups {
     private val ORDERED: List<Pair<PluginGroup, List<String>>> =
         listOf(
-            PluginGroup.MAP to listOf("map.contours", "track.layer"),
-            PluginGroup.ROUTING to listOf("valhalla", "guidance.ui", "way.alerts"),
-            PluginGroup.PLACES to listOf("osm.places", "favourites.ui", "coordinates", "online.search"),
-            PluginGroup.SHARING to listOf("share", "links"),
+            PluginGroup.MAP to listOf("map.contours"),
+            PluginGroup.ROUTING to listOf("valhalla"),
+            PluginGroup.PLACES to listOf("osm.places", "favourites.ui", "online.search"),
             PluginGroup.WIDGETS to listOf("info.widgets"),
         )
 

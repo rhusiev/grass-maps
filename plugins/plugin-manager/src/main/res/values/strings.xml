@@ -16,7 +16,6 @@
     <string name="plugin_manager_group_map">Map</string>
     <string name="plugin_manager_group_routing">Routing</string>
     <string name="plugin_manager_group_places">Places</string>
-    <string name="plugin_manager_group_sharing">Sharing</string>
     <string name="plugin_manager_group_widgets">Widgets</string>
 
     <string name="plugin_manager_state_off">Off</string>

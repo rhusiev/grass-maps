@@ -6,6 +6,7 @@ import nl.r1a.grassmap.plugin.api.model.PluginState
 import nl.r1a.grassmap.plugin.api.model.PluginStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -19,7 +20,7 @@ class PluginManagerModelTest {
         failures: Int = 0,
     ) = PluginStatus(PluginId(id), state, failures = failures, enabled = enabled, switchable = switchable, info = info)
 
-    private val resolve: (String) -> String = { key -> key.replace("track.layer", "Track line") }
+    private val resolve: (String) -> String = { key -> key.replace("osm.places", "Places") }
 
     @Test
     fun onlyTheListedSwitchablePluginsAppear() {
@@ -38,26 +39,39 @@ class PluginManagerModelTest {
     }
 
     @Test
+    fun aPluginTheAppCallsDirectlyIsNotListed() {
+        val sections = pluginSections(listOf(status("links"), status("share"), status("coordinates")), resolve)
+
+        assertTrue(sections.isEmpty())
+    }
+
+    @Test
     fun sectionsAndRowsFollowTheFixedOrder() {
         val sections =
-            pluginSections(listOf(status("info.widgets"), status("links"), status("track.layer"), status("map.contours")), resolve)
+            pluginSections(
+                listOf(status("info.widgets"), status("osm.places"), status("valhalla"), status("map.contours")),
+                resolve,
+            )
 
-        assertEquals(listOf(PluginGroup.MAP, PluginGroup.SHARING, PluginGroup.WIDGETS), sections.map { it.group })
-        assertEquals(listOf("map.contours", "track.layer"), sections.first().rows.map { it.status.pluginId.value })
+        assertEquals(
+            listOf(PluginGroup.MAP, PluginGroup.ROUTING, PluginGroup.PLACES, PluginGroup.WIDGETS),
+            sections.map { it.group },
+        )
+        assertEquals(listOf("map.contours"), sections.first().rows.map { it.status.pluginId.value })
     }
 
     @Test
     fun searchMatchesNameOrDescriptionIgnoringCase() {
-        val all = listOf(status("track.layer"), status("map.contours"))
+        val all = listOf(status("osm.places"), status("map.contours"))
 
-        assertEquals(1, pluginSections(all, resolve, "TRACK LINE").sumOf { it.rows.size })
+        assertEquals(1, pluginSections(all, resolve, "PLACES").sumOf { it.rows.size })
         assertEquals(1, pluginSections(all, resolve, "contours.desc").sumOf { it.rows.size })
         assertTrue(pluginSections(all, resolve, "zzz").isEmpty())
     }
 
     @Test
     fun countsTotalAndOff() {
-        val counts = pluginCounts(listOf(status("map.contours", enabled = false), status("links"), status("core.x", switchable = false)))
+        val counts = pluginCounts(listOf(status("map.contours", enabled = false), status("valhalla"), status("core.x", switchable = false)))
 
         assertEquals(PluginCounts(total = 2, off = 1), counts)
     }
@@ -67,7 +81,7 @@ class PluginManagerModelTest {
         fun health(
             state: PluginState,
             enabled: Boolean = true,
-        ) = PluginRow(status("links", state, enabled), "n", "d").health
+        ) = PluginRow(status("map.contours", state, enabled), "n", "d").health
 
         assertEquals(PluginHealth.OFF, health(PluginState.RUNNING, enabled = false))
         assertEquals(PluginHealth.STOPPED, health(PluginState.FAILED))
@@ -79,14 +93,17 @@ class PluginManagerModelTest {
     fun networkUseComesFromTheManifestNeeds() {
         val online = PluginInfo("n", "d", "1", 0, network = listOf("example.org"))
 
-        assertTrue(PluginRow(status("links", info = online), "n", "d").usesNetwork)
-        assertFalse(PluginRow(status("links"), "n", "d").usesNetwork)
+        assertTrue(PluginRow(status("map.contours", info = online), "n", "d").usesNetwork)
+        assertFalse(PluginRow(status("map.contours"), "n", "d").usesNetwork)
     }
 
     @Test
-    fun theSwitchableSetHasTheTwelveListedIds() {
-        assertEquals(12, PluginGroups.switchableIds.size)
+    fun theSwitchableSetIsEveryPluginTheHostServes() {
+        assertEquals(
+            setOf("map.contours", "valhalla", "osm.places", "favourites.ui", "online.search", "info.widgets"),
+            PluginGroups.switchableIds.map { it.value }.toSet(),
+        )
         assertEquals(PluginGroup.ROUTING, PluginGroups.groupOf(PluginId("valhalla")))
-        assertEquals(null, PluginGroups.groupOf(PluginId("plugin.manager")))
+        assertNull(PluginGroups.groupOf(PluginId("plugin.manager")))
     }
 }

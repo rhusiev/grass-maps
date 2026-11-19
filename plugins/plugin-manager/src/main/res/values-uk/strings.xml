@@ -18,7 +18,6 @@
     <string name="plugin_manager_group_map">Мапа</string>
     <string name="plugin_manager_group_routing">Маршрути</string>
     <string name="plugin_manager_group_places">Місця</string>
-    <string name="plugin_manager_group_sharing">Обмін</string>
     <string name="plugin_manager_group_widgets">Віджети</string>
 
     <string name="plugin_manager_state_off">Вимкнено</string>

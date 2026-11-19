@@ -886,6 +886,7 @@ private fun MapContent(
                 verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp, Alignment.Bottom),
             ) {
                 if (layersOpen && !bottomSheetShown) {
+                    val layersPaneTitle = stringResource(LayersStrings.string.layers_panel_button)
                     Column(
                         modifier =
                             Modifier
@@ -893,7 +894,7 @@ private fun MapContent(
                                 .widthIn(max = LAYERS_CARD_MAX_WIDTH_DP.dp)
                                 .width(IntrinsicSize.Max)
                                 .verticalScroll(rememberScrollState())
-                                .semantics { paneTitle = context.getString(LayersStrings.string.layers_panel_button) }
+                                .semantics { paneTitle = layersPaneTitle }
                                 .reportsBottomChrome(),
                         horizontalAlignment = Alignment.End,
                         verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),

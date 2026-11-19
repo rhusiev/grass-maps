@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.ui.shell
 
 import nl.r1a.grassmap.plugin.api.model.RouteNetwork
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -17,6 +18,13 @@ class RelationAnalysisContentTest {
         assertEquals("Local hiking route", display.subtitle)
         assertEquals("14.2 km · ↑410 m · ↓395 m", display.stats)
         assertEquals("ref 12", display.reference)
+    }
+
+    @Test
+    fun thePanelShowsImperialDistanceAndClimbsWhenImperialIsSet() {
+        val display = relationAnalysisDisplay(SUMMARY, MapStrings(ENGLISH), Locale.ENGLISH, UnitSystem.Imperial)
+
+        assertEquals("8.8 mi · ↑1345 ft · ↓1296 ft", display.stats)
     }
 
     @Test
@@ -103,9 +111,13 @@ class RelationAnalysisContentTest {
                 "relation_analysis_cycling_regional" to "Regional cycling route",
                 "relation_analysis_cycling_local" to "Local cycling route",
                 "elevation_chart_range_ascent" to "↑%1\$s m",
+                "elevation_chart_range_ascent_feet" to "↑%1\$s ft",
                 "elevation_chart_range_descent" to "↓%1\$s m",
+                "elevation_chart_range_descent_feet" to "↓%1\$s ft",
                 "route_preview_metres" to "%1\$s m",
                 "route_preview_kilometres" to "%1\$s km",
+                "route_preview_feet" to "%1\$s ft",
+                "route_preview_miles" to "%1\$s mi",
             )
 
         val UKRAINIAN =

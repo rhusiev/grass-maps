@@ -1497,6 +1497,7 @@ private fun MapContent(
                 summary = relationSummaryNow,
                 chart = relationChart,
                 strings = container.strings,
+                units = units,
                 dark = isSystemInDarkTheme(),
                 onClose = { selectedRelation = null },
                 modifier =

@@ -21,11 +21,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmap.plugin.api.model.RouteNetwork
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartState
 import java.util.Locale
-import kotlin.math.roundToLong
 
 /**
  * A route relation's chart as the panel reads it (T-0420): the relation's
@@ -61,13 +61,14 @@ fun relationAnalysisDisplay(
     summary: RelationAnalysisSummary,
     strings: Strings,
     locale: Locale = Locale.getDefault(),
+    units: UnitSystem = UnitSystem.Metric,
 ): RelationAnalysisDisplay {
-    val parts = mutableListOf(distanceText(summary.distanceMeters, strings, locale))
+    val parts = mutableListOf(distanceText(summary.distanceMeters, strings, locale, units))
     if (summary.ascentMeters > 0.0) {
-        parts += strings.resolve(RELATION_ASCENT_KEY, listOf(summary.ascentMeters.roundToLong().toString()))
+        parts += elevationLabel(summary.ascentMeters, units, strings, RELATION_ASCENT_KEY, RELATION_ASCENT_FEET_KEY)
     }
     if (summary.descentMeters > 0.0) {
-        parts += strings.resolve(RELATION_DESCENT_KEY, listOf(summary.descentMeters.roundToLong().toString()))
+        parts += elevationLabel(summary.descentMeters, units, strings, RELATION_DESCENT_KEY, RELATION_DESCENT_FEET_KEY)
     }
     return RelationAnalysisDisplay(
         title = summary.name?.takeIf { it.isNotBlank() } ?: strings.resolve(RELATION_UNTITLED_KEY),
@@ -104,8 +105,9 @@ fun RelationAnalysisPanel(
     dark: Boolean,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    units: UnitSystem = UnitSystem.Metric,
 ) {
-    val display = relationAnalysisDisplay(summary, strings)
+    val display = relationAnalysisDisplay(summary, strings, units = units)
     Column(
         modifier =
             modifier
@@ -165,6 +167,7 @@ fun RelationAnalysisPanel(
                 strings = strings,
                 dark = dark,
                 onAxis = { _: ElevationChartAxis -> },
+                units = units,
             )
         }
     }
@@ -186,7 +189,9 @@ private const val RELATION_UNTITLED_KEY = "relation_analysis_untitled"
 private const val RELATION_REF_KEY = "relation_analysis_ref"
 private const val RELATION_CLOSE_KEY = "relation_analysis_close"
 private const val RELATION_ASCENT_KEY = "elevation_chart_range_ascent"
+private const val RELATION_ASCENT_FEET_KEY = "elevation_chart_range_ascent_feet"
 private const val RELATION_DESCENT_KEY = "elevation_chart_range_descent"
+private const val RELATION_DESCENT_FEET_KEY = "elevation_chart_range_descent_feet"
 private const val RELATION_HIKING_INTERNATIONAL_KEY = "relation_analysis_hiking_international"
 private const val RELATION_HIKING_NATIONAL_KEY = "relation_analysis_hiking_national"
 private const val RELATION_HIKING_REGIONAL_KEY = "relation_analysis_hiking_regional"

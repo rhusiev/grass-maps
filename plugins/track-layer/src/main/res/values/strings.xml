@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.track_layer.name">Track line</string>
+    <string name="plugin.track_layer.description">Draws the stored tracks and their points on the map.</string>
+</resources>

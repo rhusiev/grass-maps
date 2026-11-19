@@ -877,6 +877,7 @@ private fun MapContent(
                         )
                         ContoursLayerPanel(
                             modifier = Modifier.fillMaxWidth(),
+                            pluginEnabled = contoursPluginOn,
                             enabled = contoursEnabled,
                             onEnabledChange = { enabled ->
                                 scope.launch {

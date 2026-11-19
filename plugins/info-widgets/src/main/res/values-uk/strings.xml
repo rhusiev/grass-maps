@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.info_widgets.name">Інформаційні віджети</string>
+    <string name="plugin.info_widgets.description">Висота, координати, точність GPS і поточна, середня та максимальна швидкість.</string>
+</resources>

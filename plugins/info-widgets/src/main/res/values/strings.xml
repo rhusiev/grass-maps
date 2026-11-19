@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.info_widgets.name">Info widgets</string>
+    <string name="plugin.info_widgets.description">Altitude, coordinates, GPS accuracy and the current, average and max speed.</string>
+</resources>

@@ -33,15 +33,19 @@ private const val PANEL_FONT_SP = 13
  * The Layers button and the style switch live in `plugins/layers-panel`
  * (T-0109). This card is one layer row below them. It persists through the
  * host's `ContoursSettings`. The panel is chrome: the plugin supplies the row
- * and the app supplies the state and the callback.
+ * and the app supplies the state and the callback. A plugin the user turned off
+ * in the Plugins screen has no row here: the switch would keep a setting no
+ * layer reads, so the card is drawn only while [pluginEnabled] is true.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 fun ContoursLayerPanel(
+    pluginEnabled: Boolean,
     enabled: Boolean,
     onEnabledChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val toggle = contoursPanelToggle(pluginEnabled, enabled) ?: return
     Column(
         modifier =
             modifier
@@ -56,7 +60,7 @@ fun ContoursLayerPanel(
                 Modifier
                     .clip(RoundedCornerShape(PANEL_CORNER_DP.dp))
                     .toggleable(
-                        value = enabled,
+                        value = toggle,
                         role = Role.Switch,
                         onValueChange = onEnabledChange,
                     ).padding(vertical = PANEL_GAP_DP.dp),
@@ -65,13 +69,22 @@ fun ContoursLayerPanel(
             PanelText(stringResource(R.string.map_contours_toggle), PANEL_FOREGROUND)
             PanelText(
                 stringResource(
-                    if (enabled) R.string.map_contours_on else R.string.map_contours_off,
+                    if (toggle) R.string.map_contours_on else R.string.map_contours_off,
                 ),
                 PANEL_MUTED,
             )
         }
     }
 }
+
+/**
+ * The row's own switch state, or null when the card must not be drawn because
+ * the plugin behind it is off.
+ */
+fun contoursPanelToggle(
+    pluginEnabled: Boolean,
+    enabled: Boolean,
+): Boolean? = if (pluginEnabled) enabled else null
 
 @Suppress("ktlint:standard:function-naming")
 @Composable

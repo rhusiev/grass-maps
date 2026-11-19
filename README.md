@@ -944,6 +944,16 @@ twice. `SourcePlan` in `map` holds that rule. The app path uses
 maplibre-compose's `CustomVectorTileSource`, so the device runs no tile server
 and opens no listener.
 
+A region installed or removed while the map screen is open draws without a
+restart. The screen follows the packs the region store publishes and resolves
+its sources again only when that set changes by region id or version, so a fix,
+a frame, a progress tick or a recomposition resolves nothing. A pack the app
+supplies tiles for changes the plan and the composed sources in place; a change
+that edits the base style document, such as the fallback archive appearing
+after the last pack is removed, reloads the style. Search, routing and the 30 m
+elevation reader still mount once per process, which is why the downloads
+screen still says the new maps apply at the next start.
+
 `MapHost.setTracks(List<MapTrack>)` draws the stored tracks. `map` turns the
 list into one GeoJSON `MultiLineString` per track in the `Overlays` slot, so a
 segment gap is never crossed and a pan or a zoom never rebuilds the geometry
@@ -4008,6 +4018,9 @@ transfer; a 401 becomes `TOKEN_REQUIRED` when no token was sent and
 `TOKEN_REJECTED` when one was. Cancel sets a cooperative flag and returns only
 after the worker has stopped, so the work directory is already deleted and
 nothing was mounted. Remove deletes the region directory and re-reads the store.
+A refresh re-reads the installed packs before it asks for the catalogue, so a
+fetch that fails offline still publishes what is on the phone, and a pack
+installed outside the store's queue becomes visible there.
 The token lives only in the store: the published data says whether one is
 present, and no log line, row or state carries its value.
 

@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.app.devcheck
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonElement
 
 /** What a step reports when it ends. */
@@ -24,9 +25,12 @@ internal class StepOutcome(
     }
 }
 
-/** One named step of the check. */
+internal const val DEFAULT_STEP_TIMEOUT_MS = 120_000L
+
+/** One named step of the check. A step that outlives [timeoutMs] is recorded as failed. */
 internal class CheckStep(
     val id: String,
+    val timeoutMs: Long = DEFAULT_STEP_TIMEOUT_MS,
     val run: suspend () -> StepOutcome,
 )
 
@@ -54,7 +58,8 @@ internal class DeviceCheckRunner(
         val start = clockMs()
         val outcome =
             try {
-                step.run()
+                withTimeoutOrNull(step.timeoutMs) { step.run() }
+                    ?: StepOutcome.fail("timed out after ${step.timeoutMs} ms")
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (

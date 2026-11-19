@@ -6,8 +6,11 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import nl.r1a.grassmap.app.AppContainer
 import nl.r1a.grassmap.devtools.AndroidWindowCapture
+import nl.r1a.grassmap.map.MaplibreComposeMapHost
 import nl.r1a.grassmap.plugin.api.contract.CommandId
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.model.CatalogRegion
+import nl.r1a.grassmap.plugin.api.model.RoutePlanOption
 
 /** Everything the steps share while one check runs. */
 internal class CheckContext(
@@ -21,6 +24,19 @@ internal class CheckContext(
     val pngs = mutableListOf<ZipFileEntry>()
     val unavailable = mutableListOf<UnavailableScreen>()
     private val logLines = mutableListOf<String>()
+
+    /** The region the download step installed or found, for the route and navigation steps. */
+    var region: CatalogRegion? = null
+
+    /** True when the check installed [region], so the cleanup step removes it. */
+    var installedByCheck: Boolean = false
+
+    /** The region-downloads switch as the owner had it, or null while the check has not touched it. */
+    var downloadsSwitchWas: Boolean? = null
+
+    /** The route the planning step produced, and the two points it was planned between. */
+    var plannedRoute: RoutePlanOption? = null
+    var plannedPoints: PlanPoints? = null
 
     /** Appends one scrubbed line to the log that goes into the archive. */
     fun log(line: String) {
@@ -36,6 +52,9 @@ internal class CheckContext(
         id: String,
         params: JsonElement = JsonObject(emptyMap()),
     ): Outcome<JsonElement> = container.commandBus.invoke(CommandId(id), params)
+
+    /** The point count of the route the map layer holds now, or null when no map host is attached. */
+    suspend fun routeLayerPoints(): Int? = (container.mapSession.hostOrNull() as? MaplibreComposeMapHost)?.routePointCount()
 
     /** The window and font facts a screenshot record needs, read now. */
     fun displayFacts(): DisplayFacts {

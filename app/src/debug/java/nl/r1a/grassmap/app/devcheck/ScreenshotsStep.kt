@@ -11,11 +11,8 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nl.r1a.grassmap.app.MapChromeSession
-import nl.r1a.grassmap.map.MaplibreComposeMapHost
 import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
-import nl.r1a.grassmap.plugins.route.planner.RoutePlannerContract
 
 private const val SETTLE_MS = 1_200L
 private const val SCENE_ZOOM = 14.0
@@ -131,11 +128,9 @@ internal class ScreenshotsStep(
             .hits
 
     private suspend fun plannerScene() {
-        context.command("route.planner.begin")
-        context.command("route.planner.set_point", pointParams("start", PLAN_START_LAT, PLAN_START_LON))
-        context.command("route.planner.set_point", pointParams("destination", PLAN_END_LAT, PLAN_END_LON))
-        context.command("route.planner.plan")
-        val state = withTimeoutOrNull(PLAN_WAIT_MS) { awaitPlanEnd() }
+        val points = context.plannedPoints ?: PlanPoints(PLAN_START_LAT, PLAN_START_LON, PLAN_END_LAT, PLAN_END_LON)
+        val driver = PlannerDriver(context)
+        val state = driver.plan(points, PLAN_WAIT_MS)
         val status = state?.status?.name?.lowercase() ?: "timeout"
         val extra = mapOf("plan_status" to JsonPrimitive(status), "plan_failure" to JsonPrimitive(state?.failure?.toString()))
         if (state?.status == RoutePlanStatus.Ready) {
@@ -144,24 +139,8 @@ internal class ScreenshotsStep(
             context.unavailable += UnavailableScreen("route_planner_ready", "the plan ended as $status: ${state?.failure}")
             shoot("route_planner_$status", THEME_LIGHT, extra)
         }
-        context.command("route.planner.clear")
+        driver.clear()
     }
-
-    private suspend fun awaitPlanEnd(): RoutePlanState =
-        context.container.streamAccess
-            .subscribe<RoutePlanState>(RoutePlannerContract.stateStream)
-            .first { it.status == RoutePlanStatus.Ready || it.status == RoutePlanStatus.Failed }
-
-    private fun pointParams(
-        role: String,
-        lat: Double,
-        lon: Double,
-    ): JsonObject =
-        buildJsonObject {
-            put("role", role)
-            put("lat", lat)
-            put("lon", lon)
-        }
 
     private suspend fun navigationScenes() {
         val route =
@@ -196,11 +175,9 @@ internal class ScreenshotsStep(
             skipScene(name, "the navigation fixture was refused: ${shown.error}")
             return
         }
-        val points = routeLayerPoints()
+        val points = context.routeLayerPoints()
         shoot(name, if (dark) THEME_MAP_DARK else THEME_LIGHT, mapOf("route_layer_points" to JsonPrimitive(points)))
     }
-
-    private suspend fun routeLayerPoints(): Int? = (context.container.mapSession.hostOrNull() as? MaplibreComposeMapHost)?.routePointCount()
 
     private suspend fun downloadsScenes() {
         context.command("core.downloads.show")

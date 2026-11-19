@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.app.devcheck
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
@@ -49,5 +50,26 @@ class DeviceCheckRunnerTest {
         runBlocking { runner.run(steps) }
 
         assertEquals(listOf("a", "b", "c"), order)
+    }
+
+    @Test
+    fun aStepThatOutlivesItsTimeoutFailsAndTheNextStepRuns() {
+        val steps =
+            listOf(
+                CheckStep("slow", timeoutMs = 20) {
+                    delay(SLOW_STEP_MS)
+                    StepOutcome.pass()
+                },
+                CheckStep("after") { StepOutcome.pass() },
+            )
+
+        val results = runBlocking { runner.run(steps) }
+
+        assertEquals(listOf(StepStatus.FAILED, StepStatus.PASSED), results.map { it.status })
+        assertTrue(results[0].note!!.contains("timed out"))
+    }
+
+    private companion object {
+        const val SLOW_STEP_MS = 60_000L
     }
 }

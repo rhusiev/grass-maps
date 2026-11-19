@@ -1,5 +1,8 @@
 package nl.r1a.grassmap.app.devcheck
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -12,9 +15,20 @@ import java.io.File
 
 /** The device-check steps that only read state: build identity and the profile files. */
 internal object IdentityStep {
-    fun run(): StepOutcome =
+    private val PERMISSIONS =
+        listOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.POST_NOTIFICATIONS,
+        )
+
+    fun permissionNames(): List<String> = PERMISSIONS
+
+    /** Never asks: a missing permission is recorded and the later steps carry on without it. */
+    fun run(context: Context): StepOutcome =
         StepOutcome.pass(
             mapOf(
+                "permissions" to permissionStates(context),
                 "commit" to JsonPrimitive(BuildConfig.BUILD_COMMIT),
                 "commit_time" to JsonPrimitive(BuildConfig.BUILD_COMMIT_TIME),
                 "tree_dirty" to JsonPrimitive(BuildConfig.BUILD_TREE_DIRTY),
@@ -26,6 +40,14 @@ internal object IdentityStep {
             ),
         )
 }
+
+private fun permissionStates(context: Context): JsonObject =
+    JsonObject(
+        IdentityStep.permissionNames().associate { name ->
+            val granted = context.checkSelfPermission(name) == PackageManager.PERMISSION_GRANTED
+            name.substringAfterLast('.') to JsonPrimitive(if (granted) "granted" else "denied")
+        },
+    )
 
 /** What a profile file holds, with the keys counted and the values never read out. */
 internal data class ProfileFileSummary(

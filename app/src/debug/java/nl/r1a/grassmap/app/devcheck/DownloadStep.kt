@@ -3,9 +3,7 @@ package nl.r1a.grassmap.app.devcheck
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonPrimitive
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -19,8 +17,9 @@ private const val POLL_INTERVAL_MS = 500L
 
 /**
  * One real download of the smallest oblast in the live catalogue through the
- * normal store path, with the embedded or user token. It runs on Wi-Fi only,
- * and it removes the pack afterwards unless it was installed before.
+ * normal store path, with the embedded or user token. It runs on Wi-Fi only.
+ * The pack stays for the route and navigation steps, and the cleanup step
+ * removes it when this step installed it.
  */
 internal class DownloadStep(
     private val context: CheckContext,
@@ -28,23 +27,16 @@ internal class DownloadStep(
 ) {
     suspend fun run(): StepOutcome {
         val store = context.container.regionStore ?: return StepOutcome.skip("no region store in this build")
-        if (!isOnWifi()) {
-            return StepOutcome.skip("not on Wi-Fi: the check does not download on mobile data")
+        val transports = activeTransports()
+        if (!isUnmeteredLink(transports)) {
+            return StepOutcome.skip("not on Wi-Fi: the check does not download on mobile data (active transports: $transports)")
         }
         if (!store.data.value.tokenPresent) {
             return StepOutcome.skip("no region-server token: embed one at build time or enter one in Maps settings")
         }
-        val switchWasOn = context.container.regionDownloadsEnabled
-        if (!switchWasOn) {
-            context.container.setRegionDownloadsEnabled(true)
-        }
-        try {
-            return download(store)
-        } finally {
-            if (!switchWasOn) {
-                withContext(NonCancellable) { context.container.setRegionDownloadsEnabled(false) }
-            }
-        }
+        context.downloadsSwitchWas = context.container.regionDownloadsEnabled
+        context.container.setRegionDownloadsEnabled(true)
+        return download(store)
     }
 
     private suspend fun download(store: RegionStore): StepOutcome {
@@ -59,14 +51,12 @@ internal class DownloadStep(
         val smallest =
             entries.filter { it.kind == CatalogRegionKind.REGION }.minByOrNull { it.bytes }
                 ?: return StepOutcome.fail("the catalogue has no region", mapOf("catalog_entries" to JsonPrimitive(entries.size)))
+        context.region = smallest
         if (store.data.value.installed(smallest.id) != null) {
             return StepOutcome.skip("${smallest.id} was already installed, so the check leaves it alone")
         }
-        return try {
-            installAndVerify(store, smallest, entries.size)
-        } finally {
-            withContext(NonCancellable) { store.remove(smallest.id) }
-        }
+        context.installedByCheck = true
+        return installAndVerify(store, smallest, entries.size)
     }
 
     private suspend fun installAndVerify(
@@ -133,9 +123,23 @@ internal class DownloadStep(
         }
     }
 
-    private fun isOnWifi(): Boolean {
+    private fun activeTransports(): List<String> {
         val manager = context.app.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val capabilities = manager.getNetworkCapabilities(manager.activeNetwork) ?: return false
-        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+        val capabilities = manager.getNetworkCapabilities(manager.activeNetwork) ?: return emptyList()
+        return TRANSPORTS.filter { (_, id) -> capabilities.hasTransport(id) }.map { it.first }
+    }
+
+    private fun isUnmeteredLink(transports: List<String>): Boolean = WIFI in transports || ETHERNET in transports
+
+    private companion object {
+        const val WIFI = "wifi"
+        const val ETHERNET = "ethernet"
+        val TRANSPORTS =
+            listOf(
+                WIFI to NetworkCapabilities.TRANSPORT_WIFI,
+                ETHERNET to NetworkCapabilities.TRANSPORT_ETHERNET,
+                "cellular" to NetworkCapabilities.TRANSPORT_CELLULAR,
+                "vpn" to NetworkCapabilities.TRANSPORT_VPN,
+            )
     }
 }

@@ -57,22 +57,38 @@ time of the build (`BuildConfig.BUILD_COMMIT`, `BUILD_COMMIT_TIME`, `BUILD_TREE_
 debug builds only, so the release build stays reproducible) and a "Device check" button.
 One press runs a fixed script and shows the step and a final pass or fail summary:
 
-1. build identity: sha, commit time, device model, Android version
-2. profile store: legacy settings files present or retired, and the keys per profile
-   file as counts (no values)
+The user presses once and taps nothing else except the share sheet. A step that fails
+or times out is recorded and the later steps still run. The steps, in order:
+
+1. build identity: sha, commit time, device model, Android version, and whether the
+   location and notification permissions are granted. The check never asks for them,
+   so no Android prompt can stop the run
+2. settings and profile store dump: the values of units, map labels, style, contours,
+   raster, online search, auto update, `profiles/catalog.json`, routing options and
+   alerts, with keys and URL parameters that look like secrets replaced by `<redacted>`.
+   Downloads settings (the token), search history and route history give key names and
+   entry counts only
 3. one download: the smallest oblast in the live catalogue through the normal store
-   path, on Wi-Fi only. It is skipped with a reason on mobile data or without a token.
-   The pack is verified (version and size), timed, and removed again unless it was
-   installed before
-4. window screenshots (PixelCopy, no screen-capture permission) of the screens
-   reachable by command: map in the light and dark map style, layers, search results,
-   place card, route planner, navigation (following, expanded, alert, dark), downloads,
-   Maps token form, favourites lists and track library. A scene that cannot be reached
-   (for example search without an installed pack) is listed with its reason
-5. labels: `en`, `uk` and 150 % through `core.settings.map_labels`, with the rendered
-   Lviv label read back each time. The owner's setting is restored
-6. frame pacing from the development-tools frame-rate stream while the camera moves.
+   path, on Wi-Fi or Ethernet only. It is skipped with a reason on mobile data or
+   without a token. The pack is verified (version and size), timed, and compared with
+   the catalogue byte count. It stays installed for steps 4 and 5
+4. route plan: a walking route between two points about 1 km apart around the centre of
+   the region's bounding box. The report holds status, distance, duration, instruction
+   count and the route layer's point count
+5. navigation: starts guidance on that route through `core.nav.start`, records whether
+   the navigation phase becomes Following within 15 s, and stops it. A failed start is
+   recorded as a failure and nothing is repaired
+6. window screenshots (map surface composed with the view tree, no screen-capture
+   permission) of the screens reachable by command: map in the light and dark map
+   style, layers, search results, place card, route planner, navigation (following,
+   expanded, alert, dark), downloads, Maps token form, favourites lists and track
+   library. A scene that cannot be reached is listed with its reason
+7. labels: `en`, `uk` and 150 % through `core.settings.map_labels`, with the rendered
+   Lviv label read back each time. The owner's setting is restored. The step is skipped
+   when no case renders any label, because the map then has no data to judge
+8. frame pacing from the development-tools frame-rate stream while the camera moves.
    Cold start is recorded as not run: it needs the benchmark build, a separate APK
+9. cleanup: removes the pack when the check installed it and restores the downloads switch
 
 The check then opens the Android share sheet with one ZIP from the app cache
 (`device-check/`, shared through the debug-only `DeviceCheckFileProvider`). The ZIP holds

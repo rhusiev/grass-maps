@@ -27,6 +27,16 @@ class BottomChromeTest {
     }
 
     @Test
+    fun anElementsOwnReachIsReadApartFromTheHigherOnes() {
+        val chrome = BottomChrome()
+        chrome.report(SHEET_KEY, SHEET_REACH_PX)
+        chrome.report(BAR_KEY, BAR_REACH_PX)
+
+        assertEquals(BAR_REACH_PX, chrome.reachOf(BAR_KEY))
+        assertEquals(0, chrome.reachOf("unreported"))
+    }
+
+    @Test
     fun nothingReportedMeansNoInset() {
         assertEquals(0, BottomChrome().insetPx)
     }

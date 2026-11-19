@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,15 +56,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -697,14 +702,20 @@ private fun MapContent(
                 .onFailure { error -> Log.w(TAG, "route not drawn: $error") }
         }
     }
+    val bottomChrome = LocalBottomChrome.current
     LaunchedEffect(plan.generation) {
         if (plan.generation == 0L) {
             return@LaunchedEffect
         }
         logRoutePreferences(plan.profile, plan.overridePreferences != null, plan.preferences)
         boundsOf(plan.selected?.geometry)?.let { bounds ->
-            surface.host.fitBounds(bounds).onFailure { error ->
-                Log.w(TAG, "route not fitted: $error")
+            fitAfterSheetSettles(
+                insets = snapshotFlow { bottomChrome?.reachOf(PLANNER_SHEET_KEY) ?: 0 },
+                camera = { surface.host.camera.value },
+            ) { sheetPx ->
+                surface.host.fitBounds(bounds, with(density) { sheetPx.toDp().value }).onFailure { error ->
+                    Log.w(TAG, "route not fitted: $error")
+                }
             }
         }
     }
@@ -1363,7 +1374,7 @@ private fun MapContent(
                     Modifier
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
-                        .reportsBottomChrome(),
+                        .reportsBottomChrome(key = PLANNER_SHEET_KEY),
             )
         }
         val trackCardTrack = selectedTrack
@@ -2588,6 +2599,44 @@ internal fun mapRouteToDraw(
     activeRoute: Route?,
     plannedRoute: Route?,
 ): Route? = if (navigationActive) activeRoute else plannedRoute
+
+/**
+ * The height the bottom sheet covers once it has stopped growing, in pixels.
+ *
+ * The planner reports its height after its first layout, and the route
+ * options below it settle a moment later. A fit started at the first report
+ * would frame the route for a sheet that is still short, so this waits until
+ * the inset has held for [INSET_SETTLE_MS]. It gives up after
+ * [INSET_SETTLE_TIMEOUT_MS] with 0, which fits the whole viewport.
+ */
+@OptIn(FlowPreview::class)
+internal suspend fun settledBottomInsetPx(insets: Flow<Int>): Int =
+    withTimeoutOrNull(INSET_SETTLE_TIMEOUT_MS) {
+        insets.debounce(INSET_SETTLE_MS).first { inset -> inset > 0 }
+    } ?: 0
+
+/**
+ * Fits the camera once the sheet has settled, unless the camera moved while
+ * waiting. A pan or zoom during the wait is the user's, and a late fit would
+ * snatch it back.
+ */
+internal suspend fun fitAfterSheetSettles(
+    insets: Flow<Int>,
+    camera: () -> Camera,
+    fit: suspend (sheetPx: Int) -> Unit,
+) {
+    val before = camera()
+    val sheetPx = settledBottomInsetPx(insets)
+    if (camera() == before) {
+        fit(sheetPx)
+    }
+}
+
+/** The key under which the route planner sheet reports its own reach. */
+private val PLANNER_SHEET_KEY = Any()
+
+private const val INSET_SETTLE_MS = 150L
+private const val INSET_SETTLE_TIMEOUT_MS = 1_500L
 
 /**
  * The route a trip draws. A shown fixture owns the screen, so its state is the

@@ -1,10 +1,14 @@
 package nl.r1a.grassmap.app
 
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.navigation.NavigationPhase
 import nl.r1a.grassmap.navigation.NavigationState
+import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.provider.Route
 import org.junit.Assert.assertEquals
@@ -114,7 +118,65 @@ class MapContentStateTest {
             assertEquals(PLAN_ROUTE, routes.last())
         }
 
+    @Test
+    fun theFitWaitsUntilTheSheetHasHeldItsHeight() =
+        runTest {
+            val growing =
+                flow {
+                    emit(0)
+                    delay(40)
+                    emit(300)
+                    delay(40)
+                    emit(520)
+                    awaitCancellation()
+                }
+
+            val settled = settledBottomInsetPx(growing)
+
+            assertEquals(520, settled)
+            assertEquals(40L + 40L + 150L, testScheduler.currentTime)
+        }
+
+    @Test
+    fun aCameraMovedDuringTheWaitIsNotFittedOver() =
+        runTest {
+            var camera = CAMERA
+            val fits = mutableListOf<Int>()
+            val sheet =
+                flow {
+                    emit(520)
+                    awaitCancellation()
+                }
+
+            fitAfterSheetSettles(sheet, { camera }) { sheetPx -> fits += sheetPx }
+            assertEquals(listOf(520), fits)
+
+            fits.clear()
+            val panning =
+                flow {
+                    emit(520)
+                    camera = CAMERA.copy(zoom = CAMERA.zoom + 1.0)
+                    awaitCancellation()
+                }
+            fitAfterSheetSettles(panning, { camera }) { sheetPx -> fits += sheetPx }
+
+            assertEquals(emptyList<Int>(), fits)
+        }
+
+    @Test
+    fun aMapWithNoSheetFitsTheWholeViewportAfterTheTimeout() =
+        runTest {
+            val never =
+                flow {
+                    emit(0)
+                    awaitCancellation()
+                }
+
+            assertEquals(0, settledBottomInsetPx(never))
+        }
+
     private companion object {
+        val CAMERA = Camera(center = GeoPoint(49.84, 24.03), zoom = 14.0)
         val TRIP_ROUTE = route(60.0)
         val PLAN_ROUTE = route(120.0)
         val ACTIVE_PHASES =

@@ -1589,6 +1589,13 @@ does not change. The app logs the values the request carried as
 `route-preferences` beside the existing route summary; values only, no points
 or labels.
 
+A route preview frames the selected route in the map area above the planner
+sheet. `MapHost.fitBounds(bounds, bottomInsetDp)` pads the camera by the height
+the sheet covers: `BottomChrome.reachOf` for the planner sheet's own key, read
+once it has held for 150 ms, or 0 after 1.5 s. The fit is skipped when the
+camera moved during that wait. A host without padding falls back to
+`fitBounds(bounds)`.
+
 `plugins/direct-engine` is the second `routing.engine` provider (T-0305), and
 the proof that the engine seam is real: the planner and the follower consume
 its routes exactly as they consume Valhalla's, and only the source of the

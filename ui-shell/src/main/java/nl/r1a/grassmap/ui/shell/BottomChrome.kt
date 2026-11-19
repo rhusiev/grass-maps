@@ -25,6 +25,9 @@ class BottomChrome {
     /** The height in pixels from the window bottom to the top of the highest element. */
     val insetPx: Int get() = reachByKey.values.maxOrNull() ?: 0
 
+    /** The reach of the element that reported under [key], or 0 when it has not reported. */
+    fun reachOf(key: Any): Int = reachByKey[key] ?: 0
+
     internal fun report(
         key: Any,
         reachPx: Int,
@@ -43,12 +46,15 @@ val LocalBottomChrome = staticCompositionLocalOf<BottomChrome?> { null }
 /**
  * Reports this element's top edge to [chrome] while it is in the composition.
  * Put it after the modifiers that place the element, so the edge is the
- * element's own.
+ * element's own. A caller that needs to read this element's reach alone passes
+ * its own [key] and asks [BottomChrome.reachOf].
  */
 @Composable
-fun Modifier.reportsBottomChrome(chrome: BottomChrome? = LocalBottomChrome.current): Modifier {
+fun Modifier.reportsBottomChrome(
+    chrome: BottomChrome? = LocalBottomChrome.current,
+    key: Any = remember { Any() },
+): Modifier {
     if (chrome == null) return this
-    val key = remember { Any() }
     DisposableEffect(chrome, key) { onDispose { chrome.forget(key) } }
     return onGloballyPositioned { coordinates ->
         val windowHeight = coordinates.findRootCoordinates().size.height

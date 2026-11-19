@@ -2,6 +2,9 @@ package nl.r1a.grassmap.devtools
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
 import android.os.Handler
 import android.os.Looper
 import android.view.PixelCopy
@@ -20,8 +23,10 @@ import kotlin.coroutines.resume
  *
  * A window `PixelCopy` can return the map area as a plain fill on some devices,
  * because the map renders on its own surface. This reads the largest map
- * surface (a `SurfaceView` or a `TextureView`) directly, places it at its
- * window position and draws the Compose content over it on a software canvas.
+ * surface (a `SurfaceView` or a `TextureView`) directly. A `SurfaceView` clears
+ * its area to transparent when drawn on a software canvas, so the content is
+ * drawn first and the surface bitmap is composited behind it at its window
+ * position.
  */
 internal object MapSurfaceCompositor {
     private const val NO_SURFACE_AREA = 0
@@ -80,11 +85,12 @@ internal object MapSurfaceCompositor {
         val decor = window.decorView
         val out = Bitmap.createBitmap(decor.width, decor.height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(out)
+        decor.draw(canvas)
         val origin = IntArray(LOCATION_SIZE)
         surface.getLocationInWindow(origin)
-        canvas.drawBitmap(surfaceBitmap, origin[0].toFloat(), origin[1].toFloat(), null)
+        val behind = Paint().apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_OVER) }
+        canvas.drawBitmap(surfaceBitmap, origin[0].toFloat(), origin[1].toFloat(), behind)
         surfaceBitmap.recycle()
-        window.findViewById<View>(android.R.id.content).draw(canvas)
         return out
     }
 

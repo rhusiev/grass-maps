@@ -93,6 +93,32 @@ class RouteHistoryStore(
             }
         }
 
+    /**
+     * Replaces the stored history with [entries], which is the bundle import
+     * path. The switch still gates it: with history off nothing is written. An
+     * invalid entry is [AppError.InvalidInput] and leaves the file alone; a
+     * newer file keeps its refusal.
+     */
+    suspend fun restore(entries: List<RouteHistoryEntry>): Outcome<Unit> =
+        mutex.withLock {
+            if (!setting.isEnabled()) {
+                return@withLock Outcome.Success(Unit)
+            }
+            if (entries.any { entry -> !isValid(entry) }) {
+                return@withLock Outcome.Failure(AppError.InvalidInput)
+            }
+            val ordered =
+                entries
+                    .sortedByDescending { entry -> entry.atMillis }
+                    .fold(mutableListOf<RouteHistoryEntry>()) { kept, entry ->
+                        if (kept.none { existing -> RouteHistoryRules.sameChain(existing, entry) }) {
+                            kept += entry
+                        }
+                        kept
+                    }.take(maxEntries)
+            writeLocked(ordered)
+        }
+
     override suspend fun recent(): Outcome<List<RouteHistoryEntry>> =
         mutex.withLock {
             if (!setting.isEnabled()) {

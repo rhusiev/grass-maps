@@ -450,6 +450,13 @@ class FavouritesStore(
         }
 
     /**
+     * Reads one GPX document without writing the store, so a bundle import can
+     * plan its conflicts against the library it finds. The dialect and its
+     * refusal rules are the ones [import] uses.
+     */
+    fun parse(bytes: ByteArray): Outcome<FavouriteDocument> = FavouritesGpx.read(bytes)
+
+    /**
      * Replaces the whole library with [document], which must be one
      * [FavouritesGpx.write] produced. The bytes land unmodified, so a restored
      * library is byte-identical to the copy, and the cached snapshot becomes the

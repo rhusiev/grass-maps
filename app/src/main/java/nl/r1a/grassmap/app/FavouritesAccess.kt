@@ -2,6 +2,7 @@ package nl.r1a.grassmap.app
 
 import nl.r1a.grassmap.places.DeletedFavourite
 import nl.r1a.grassmap.places.Favourite
+import nl.r1a.grassmap.places.FavouriteDocument
 import nl.r1a.grassmap.places.FavouriteGroup
 import nl.r1a.grassmap.places.FavouriteId
 import nl.r1a.grassmap.places.FavouriteImport
@@ -57,6 +58,13 @@ class FavouritesAccess internal constructor(
     suspend fun undoListAction(token: FavouriteUndoToken): Outcome<FavouriteUndo> = access { store -> store.undoListAction(token) }
 
     suspend fun import(bytes: ByteArray): Outcome<FavouriteImport> = access { store -> store.import(bytes) }
+
+    /** Reads a favourites document without writing it, for a bundle import plan. */
+    suspend fun parse(bytes: ByteArray): Outcome<FavouriteDocument> =
+        when (val target = store) {
+            null -> Outcome.Failure(AppError.NotReady)
+            else -> target.parse(bytes)
+        }
 
     /**
      * Replaces the whole library with [document], a backup copy. The store's

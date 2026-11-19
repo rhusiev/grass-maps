@@ -21,6 +21,8 @@ data class ProfileEntry(
     val isBuiltIn: Boolean,
     val name: String? = null,
     val copiedFrom: ProfileId? = null,
+    /** The creation order a user profile keeps; built-ins and older entries are 0. */
+    val order: Long = 0L,
 )
 
 /**
@@ -81,6 +83,39 @@ class ProfileCatalog(
         return writeStored(stored - id)
     }
 
+    /**
+     * Puts one profile from a bundle into the catalog, keeping its id and its
+     * order. A built-in entry can only confirm the fixed profile it names. Every
+     * entry this build does not know stays written back unchanged.
+     */
+    @Synchronized
+    fun upsert(entry: ProfileEntry): Outcome<Unit> {
+        val name = entry.name?.trim()
+        if (entry.id.value.isBlank() || entry.id.value.length > ID_MAX_LENGTH) return Outcome.Failure(AppError.InvalidInput)
+        if (entry.isBuiltIn) {
+            if (name != null) return Outcome.Failure(AppError.InvalidInput)
+        } else if (name.isNullOrEmpty() || name.length > NAME_MAX_LENGTH) {
+            return Outcome.Failure(AppError.InvalidInput)
+        }
+        val stored =
+            when (val read = readStored()) {
+                is Outcome.Failure -> return read
+                is Outcome.Success -> read.value
+            }
+        val all = withBuiltIns(stored)
+        val existing = entries(all).firstOrNull { it.id == entry.id }
+        if (existing?.isBuiltIn == true) {
+            return if (existing.routeProfile == entry.routeProfile) Outcome.Success(Unit) else Outcome.Failure(AppError.InvalidInput)
+        }
+        if (entry.isBuiltIn || BuiltInProfiles.routeProfileOf(entry.id) != null) {
+            return Outcome.Failure(AppError.InvalidInput)
+        }
+        val order = entry.order.takeIf { it > 0L } ?: stored[entry.id]?.let(::orderOf) ?: nextOrder(all)
+        return writeStored(
+            all + (entry.id to encode(entry.copy(name = name)) + (ORDER_KEY to order.toString())),
+        )
+    }
+
     private fun readStored(): Outcome<ProfileValues> = store?.read() ?: Outcome.Success(memory)
 
     private fun writeStored(values: ProfileValues): Outcome<Unit> = store?.write(values) ?: Outcome.Success(Unit).also { memory = values }
@@ -101,6 +136,7 @@ class ProfileCatalog(
                     isBuiltIn = values[BUILT_IN_KEY] == TRUE,
                     name = values[NAME_KEY],
                     copiedFrom = values[COPIED_FROM_KEY]?.let(::ProfileId),
+                    order = orderOf(values),
                 )
             }
         }
@@ -117,6 +153,7 @@ class ProfileCatalog(
             BUILT_IN_KEY to entry.isBuiltIn.toString(),
             entry.name?.let { NAME_KEY to it },
             entry.copiedFrom?.let { COPIED_FROM_KEY to it.value },
+            entry.order.takeIf { it > 0L }?.let { ORDER_KEY to it.toString() },
         ).toMap()
 
     private fun orderOf(values: Map<String, String>): Long = values[ORDER_KEY]?.toLongOrNull() ?: 0L
@@ -151,6 +188,10 @@ class ProfileCatalog(
 
         /** The longest name a user profile may have. */
         const val NAME_MAX_LENGTH = 40
+
+        /** The longest profile id a bundle may carry. */
+        const val ID_MAX_LENGTH = 64
+
         private const val FALLBACK_ID = "profile"
         private const val TRUE = "true"
         private val NON_ID_CHARACTERS = Regex("[^\\p{L}\\p{N}]+")

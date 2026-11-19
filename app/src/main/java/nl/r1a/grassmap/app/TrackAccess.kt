@@ -126,6 +126,9 @@ class TrackAccess internal constructor(
 
     suspend fun stored(id: TrackId): Outcome<StoredTrack> = importer.stored(id)
 
+    /** The raw GPX document of a record, as the bundle exports and re-imports it. */
+    suspend fun document(id: TrackId): Outcome<ByteArray> = store.document(id)
+
     suspend fun storedTracks(): List<StoredTrack> = importer.storedTracks()
 
     suspend fun summaries(): List<TrackSummary> = store.summaries()

@@ -130,6 +130,13 @@ interface TrackStore {
 
     suspend fun get(id: TrackId): Outcome<StoredTrack>
 
+    /**
+     * The document exactly as it was imported, which is what a bundle writes
+     * and re-imports so a record keeps its id. A record whose document is gone
+     * is [AppError.NotFound].
+     */
+    suspend fun document(id: TrackId): Outcome<ByteArray>
+
     /** Every stored track, ordered by id. */
     suspend fun all(): List<StoredTrack>
 
@@ -237,6 +244,11 @@ class InMemoryTrackStore(
     override suspend fun get(id: TrackId): Outcome<StoredTrack> =
         mutex.withLock {
             tracks[id]?.let { Outcome.Success(it) } ?: Outcome.Failure(AppError.NotFound)
+        }
+
+    override suspend fun document(id: TrackId): Outcome<ByteArray> =
+        mutex.withLock {
+            sources[id]?.let { Outcome.Success(it) } ?: Outcome.Failure(AppError.NotFound)
         }
 
     override suspend fun all(): List<StoredTrack> = mutex.withLock { ordered() }

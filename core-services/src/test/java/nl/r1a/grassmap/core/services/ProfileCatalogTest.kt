@@ -137,6 +137,54 @@ class ProfileCatalogTest {
         assertEquals(Outcome.Failure(AppError.NotFound), catalog.remove(gravel.id))
     }
 
+    @Test
+    fun upsertRestoresAUserProfileWithItsIdAndOrder() {
+        withStore { store ->
+            val source = ProfileCatalog(store)
+            val gravel = (source.create("Gravel", BuiltInProfiles.BIKE) as Outcome.Success).value
+            val packing = (source.create("Packing", BuiltInProfiles.WALK) as Outcome.Success).value
+            val copied = source.load().filter { entry -> !entry.isBuiltIn }
+
+            withStore { empty ->
+                val restored = ProfileCatalog(empty)
+                copied.forEach { entry ->
+                    assertEquals(Outcome.Success(Unit), restored.upsert(entry))
+                }
+                assertEquals(copied, restored.load().filter { entry -> !entry.isBuiltIn })
+            }
+
+            assertEquals(listOf(gravel.id, packing.id), copied.map { entry -> entry.id })
+            assertTrue(copied.all { entry -> entry.order > 0L })
+        }
+    }
+
+    @Test
+    fun upsertKeepsWhatItDoesNotKnowAndRefusesABuiltInChange() {
+        withStore { store ->
+            store.write(
+                mapOf(
+                    ProfileId("bike") to mapOf("route_profile" to "bike", "built_in" to "true", "future_key" to "kept"),
+                    ProfileId("mystery") to mapOf("route_profile" to "unicycle", "note" to "from a later build"),
+                ),
+            )
+            val catalog = ProfileCatalog(store)
+
+            assertEquals(
+                Outcome.Success(Unit),
+                catalog.upsert(ProfileEntry(ProfileId("gravel"), RouteProfile.Bike, false, name = "Gravel")),
+            )
+            assertEquals(
+                Outcome.Failure(AppError.InvalidInput),
+                catalog.upsert(ProfileEntry(BuiltInProfiles.WALK, RouteProfile.Bike, isBuiltIn = true)),
+            )
+
+            val stored = (store.read() as Outcome.Success).value
+            assertEquals("kept", stored.getValue(ProfileId("bike"))["future_key"])
+            assertEquals("from a later build", stored.getValue(ProfileId("mystery"))["note"])
+            assertTrue(stored.containsKey(ProfileId("gravel")))
+        }
+    }
+
     private fun withStore(block: (ProfileValueStore) -> Unit) {
         val directory = Files.createTempDirectory("profile-catalog-").toFile()
         try {

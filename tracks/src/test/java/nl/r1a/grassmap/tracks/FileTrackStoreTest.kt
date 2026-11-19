@@ -59,6 +59,19 @@ class FileTrackStoreTest {
         }
 
     @Test
+    fun theStoredDocumentIsTheImportedBytes() =
+        runTest {
+            val store = store()
+            val record = success(store.save(record(SOURCE_A), SOURCE_A))
+
+            assertEquals(SOURCE_A.decodeToString(), success(store.document(record.id)).decodeToString())
+            assertEquals(
+                Outcome.Failure(AppError.NotFound),
+                store.document(TrackId("missing")),
+            )
+        }
+
+    @Test
     fun aHiddenTrackLeavesTheMapAndStaysInTheLibrary() =
         runTest {
             val store = store()

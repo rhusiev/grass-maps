@@ -203,6 +203,46 @@ class RouteHistoryStoreTest {
             assertFalse(file.exists())
         }
 
+    @Test
+    fun `restore writes the bundle entries with their own times and keeps the newest of a chain`() =
+        runTest {
+            val older = ENTRY.copy(start = ENTRY.start.copy(label = "older"), atMillis = 1_000L)
+            val newer = older.copy(atMillis = 2_000L)
+            val other = ENTRY.copy(start = ENTRY.start.copy(label = "other"), atMillis = 3_000L)
+
+            assertEquals(Outcome.Success(Unit), store.restore(listOf(older, other, newer)))
+
+            val restored = entries()
+            assertEquals(listOf("other", "older"), restored.map { entry -> entry.start.label })
+            assertEquals(2_000L, restored.last().atMillis)
+        }
+
+    @Test
+    fun `restore is a no-op with history off`() =
+        runTest {
+            rememberAt(1_000L, "one")
+            val before = file.readBytes()
+            setting.enabled = false
+
+            assertEquals(Outcome.Success(Unit), store.restore(listOf(ENTRY.copy(atMillis = 3_000L))))
+
+            assertArrayEquals(before, file.readBytes())
+        }
+
+    @Test
+    fun `restore refuses an invalid entry and leaves the file alone`() =
+        runTest {
+            rememberAt(1_000L, "one")
+            val before = file.readBytes()
+
+            assertEquals(
+                Outcome.Failure(AppError.InvalidInput),
+                store.restore(listOf(ENTRY.copy(distanceMeters = -1.0))),
+            )
+
+            assertArrayEquals(before, file.readBytes())
+        }
+
     private suspend fun rememberAt(
         atMillis: Long,
         label: String,

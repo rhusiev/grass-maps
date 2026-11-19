@@ -229,6 +229,51 @@ class SearchHistoryStoreTest {
             assertFalse(file.exists())
         }
 
+    @Test
+    fun `restore writes the bundle entries with their own times and keeps the newest of a query`() =
+        runTest {
+            val entries =
+                listOf(
+                    SearchHistoryEntry("кава", "lviv", 5, 1_000L),
+                    SearchHistoryEntry("парк", "lviv", 5, 3_000L),
+                    SearchHistoryEntry("кава", "lviv", 5, 2_000L),
+                )
+
+            assertEquals(Outcome.Success(Unit), store.restore(entries))
+
+            assertEquals(listOf("парк", "кава"), entries().map { entry -> entry.query })
+            assertEquals(2_000L, entries().last().atMillis)
+        }
+
+    @Test
+    fun `restore is a no-op with history off`() =
+        runTest {
+            rememberAt(1_000L, "кава")
+            val before = file.readBytes()
+            setting.enabled = false
+
+            assertEquals(
+                Outcome.Success(Unit),
+                store.restore(listOf(SearchHistoryEntry("парк", "lviv", 5, 3_000L))),
+            )
+
+            assertArrayEquals(before, file.readBytes())
+        }
+
+    @Test
+    fun `restore refuses an invalid entry and leaves the file alone`() =
+        runTest {
+            rememberAt(1_000L, "кава")
+            val before = file.readBytes()
+
+            assertEquals(
+                Outcome.Failure(AppError.InvalidInput),
+                store.restore(listOf(SearchHistoryEntry("", "lviv", 5, 3_000L))),
+            )
+
+            assertArrayEquals(before, file.readBytes())
+        }
+
     private suspend fun rememberAt(
         millis: Long,
         query: String,

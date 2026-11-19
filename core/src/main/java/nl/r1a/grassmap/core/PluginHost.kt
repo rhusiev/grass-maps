@@ -329,6 +329,12 @@ class PluginHost(
     }
 
     /**
+     * The switchable plugins the user turned off, as the store last held them.
+     * A bundle exports these choices; [setEnabled] is the only writer.
+     */
+    fun disabledIds(): Set<PluginId> = synchronized(this) { disabled.toSet() }
+
+    /**
      * Turns [pluginId] on or off and persists the choice. Only a [switchable]
      * plugin can change. Turning one off deactivates it. Turning one on clears
      * a failure and tells [onPluginEnabled] listeners, so a breaker that

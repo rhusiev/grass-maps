@@ -144,6 +144,28 @@ class SearchHistoryStore(
             writeLocked((listOf(entry) + withoutQuery(stored, text)).take(maxEntries))
         }
 
+    /**
+     * Replaces the stored history with [entries], which is the bundle import
+     * path. The switch still gates it: with history off nothing is written. A
+     * blank, oversized or out-of-contract entry is [AppError.InvalidInput] and
+     * leaves the file alone; a newer file keeps its refusal.
+     */
+    suspend fun restore(entries: List<SearchHistoryEntry>): Outcome<Unit> =
+        mutex.withLock {
+            if (!setting.isEnabled()) {
+                return@withLock Outcome.Success(Unit)
+            }
+            if (entries.any { entry -> !isValidEntry(entry) }) {
+                return@withLock Outcome.Failure(AppError.InvalidInput)
+            }
+            val ordered =
+                entries
+                    .sortedByDescending { entry -> entry.atMillis }
+                    .distinctBy { entry -> entry.query }
+                    .take(maxEntries)
+            writeLocked(ordered)
+        }
+
     /** The stored searches, newest first. Empty when history is off. */
     suspend fun list(): Outcome<List<SearchHistoryEntry>> =
         mutex.withLock {
@@ -184,6 +206,9 @@ class SearchHistoryStore(
         entries: List<SearchHistoryEntry>,
         query: String,
     ): List<SearchHistoryEntry> = entries.filterNot { entry -> entry.query == query }
+
+    private fun isValidEntry(entry: SearchHistoryEntry): Boolean =
+        entry.atMillis >= 0L && isValidSearch(entry.query.trim(), entry.index, entry.limit, entry.context())
 
     private fun isValidSearch(
         query: String,

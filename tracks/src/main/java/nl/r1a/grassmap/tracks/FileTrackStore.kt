@@ -154,6 +154,26 @@ class FileTrackStore(
             }
         }
 
+    override suspend fun document(id: TrackId): Outcome<ByteArray> =
+        mutex.withLock {
+            withContext(Dispatchers.IO) {
+                load()
+                val sidecar = sidecars[id] ?: return@withContext Outcome.Failure(AppError.NotFound)
+                val document = File(root, documentFileName(sidecar.documentHash))
+                try {
+                    if (!document.isFile) {
+                        Outcome.Failure(AppError.NotFound)
+                    } else {
+                        Outcome.Success(document.readBytes())
+                    }
+                } catch (exception: IOException) {
+                    Outcome.Failure(AppError.Internal(ERROR_ID, exception.javaClass.simpleName))
+                } catch (exception: SecurityException) {
+                    Outcome.Failure(AppError.Internal(ERROR_ID, exception.javaClass.simpleName))
+                }
+            }
+        }
+
     override suspend fun all(): List<StoredTrack> =
         mutex.withLock {
             withContext(Dispatchers.IO) {

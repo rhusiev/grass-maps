@@ -117,6 +117,9 @@ class AlertSettingsStore(
     /** The values of [profile]; the defaults when the user never changed them. */
     fun forProfile(profile: ProfileId): ProfileAlertSettings = synchronized(this) { states[profile] ?: ProfileAlertSettings() }
 
+    /** The profiles that hold values that differ from the defaults, for a bundle. */
+    fun storedProfiles(): Set<ProfileId> = synchronized(this) { states.keys.toSet() }
+
     /** The values of the built-in profile that carries [profile]. */
     fun forProfile(profile: RouteProfile): ProfileAlertSettings = forProfile(BuiltInProfiles.idOf(profile))
 

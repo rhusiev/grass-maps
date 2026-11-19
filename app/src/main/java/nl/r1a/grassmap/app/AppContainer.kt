@@ -328,8 +328,11 @@ class AppContainer(
      * settings, so the plugin calls it from an IO dispatcher.
      */
     val profileSettings: ProfileSettingsService by lazy {
-        alertSettings.ensureLoaded()
-        ProfileSettingsService(profileCatalog, listOf(routingOptionsSettings, alertSettings))
+        ProfileSettingsService(
+            profileCatalog,
+            listOf(routingOptionsSettings, alertSettings),
+            ensureReady = alertSettings::ensureLoaded,
+        )
     }
 
     /**

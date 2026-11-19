@@ -169,6 +169,126 @@ class ProfileSettingsServiceTest {
         assertTrue(state.profiles.take(BuiltInProfiles.ALL.size).all { it.builtIn && it.name == null })
     }
 
+    @Test
+    fun undoIsRefusedWithAConflictWhenTheProfileChangedMeanwhile() {
+        routing.set(BuiltInProfiles.BIKE, RouteOptions(hills = RoutePreference.Avoid))
+        success(service.copySettings("bike", "hike"))
+        extra.replace(BuiltInProfiles.HIKE, mapOf("mode" to "toggled meanwhile"))
+        val before = stored(extraFile)
+
+        assertEquals(Outcome.Failure(AppError.Conflict), service.undo())
+
+        assertEquals(before, stored(extraFile))
+        assertEquals("avoid", stored(routingFile).getValue(BuiltInProfiles.HIKE)["hills"])
+        assertEquals(Outcome.Failure(AppError.NotFound), service.undo())
+    }
+
+    @Test
+    fun undoOfACreateIsRefusedAfterTheNewProfileChanged() {
+        success(service.create("Gravel", "bike"))
+        routing.set(ProfileId("gravel"), RouteOptions(steps = RoutePreference.Avoid))
+
+        assertEquals(Outcome.Failure(AppError.Conflict), service.undo())
+
+        assertTrue(ProfileId("gravel") in stored(catalogFile))
+    }
+
+    @Test
+    fun theHistoryKeepsTheNewestTwentyAndUndoesThemNewestFirst() {
+        val kinds = listOf("quiet", "loud", "calm")
+        repeat(ProfileSettingsService.UNDO_LIMIT + 3) { index ->
+            routing.set(BuiltInProfiles.WALK, RouteOptions(hills = if (index % 2 == 0) RoutePreference.Avoid else RoutePreference.DontMind))
+            extra.replace(BuiltInProfiles.WALK, mapOf("mode" to kinds[index % kinds.size] + index))
+            success(service.copySettings("walk", "bike"))
+            assertEquals(stored(extraFile)[BuiltInProfiles.WALK], stored(extraFile)[BuiltInProfiles.BIKE])
+        }
+
+        repeat(ProfileSettingsService.UNDO_LIMIT) { undone ->
+            val state = success(service.undo())
+            val expected = ProfileSettingsService.UNDO_LIMIT + 3 - 2 - undone
+            assertEquals("copy number $expected is what the next undo restores", expected, bikeModeIndex())
+            assertEquals(undone < ProfileSettingsService.UNDO_LIMIT - 1, state.undo != null)
+        }
+
+        assertEquals(Outcome.Failure(AppError.NotFound), service.undo())
+        assertEquals("the three oldest copies cannot be undone", 2, bikeModeIndex())
+    }
+
+    @Test
+    fun aFailedGroupWriteRestoresTheGroupsAlreadyWritten() {
+        routing.set(BuiltInProfiles.HIKE, RouteOptions(hills = RoutePreference.Avoid))
+        routing.set(BuiltInProfiles.WALK, RouteOptions(steps = RoutePreference.Avoid))
+        val failing = ProfileSettingsService(ProfileCatalog(catalogFile), listOf(routing, FailingGroup))
+
+        assertEquals(Outcome.Failure(AppError.CorruptData), failing.copySettings("walk", "hike"))
+
+        assertEquals(RouteOptions(hills = RoutePreference.Avoid), routing.forProfile(BuiltInProfiles.HIKE))
+        assertEquals("avoid", stored(routingFile).getValue(BuiltInProfiles.HIKE)["hills"])
+    }
+
+    @Test
+    fun aRollbackThatFailsTooIsReportedAndTheHistoryIsCleared() {
+        success(service.copySettings("walk", "bike"))
+        val unreliable = UnreliableGroup(failAfterWrites = 1)
+        val broken = ProfileSettingsService(ProfileCatalog(catalogFile), listOf(unreliable, FailingGroup))
+
+        val result = broken.copySettings("walk", "hike")
+
+        assertEquals(
+            Outcome.Failure(AppError.Internal(ProfileSettingsService.ERROR_ID, ProfileSettingsService.ROLLBACK_FAILED)),
+            result,
+        )
+        assertNull(success(broken.state()).undo)
+        assertEquals(Outcome.Failure(AppError.NotFound), broken.undo())
+    }
+
+    @Test
+    fun aCreateWhoseCatalogRemovalFailsIsReported() {
+        val removing = ProfileCatalog(WriteFailsAfter(catalogFile, writes = 1))
+        val broken = ProfileSettingsService(removing, listOf(FailingGroup))
+
+        val result = broken.create("Gravel", "bike")
+
+        assertEquals(
+            Outcome.Failure(AppError.Internal(ProfileSettingsService.ERROR_ID, ProfileSettingsService.ROLLBACK_FAILED)),
+            result,
+        )
+    }
+
+    @Test
+    fun aNewerCatalogRefusesACreateAndTouchesNothing() {
+        val newer = """{"schema_version":9,"profiles":{}}"""
+        File(directory, "catalog.json").writeText(newer)
+
+        val result = service.create("Gravel", "bike")
+
+        assertEquals(Outcome.Failure(AppError.NewerSchema(found = 9, supported = ProfileCatalog.SCHEMA_VERSION)), result)
+        assertEquals(newer, File(directory, "catalog.json").readText())
+        assertNull(stored(routingFile)[ProfileId("gravel")])
+    }
+
+    @Test
+    fun aCorruptCatalogRefusesACreate() {
+        File(directory, "catalog.json").writeText("{not json")
+
+        assertEquals(Outcome.Failure(AppError.CorruptData), service.create("Gravel", "bike"))
+        assertNull(stored(routingFile)[ProfileId("gravel")])
+    }
+
+    @Test
+    fun aGroupThatIsNotReadyRefusesEveryAction() {
+        val refused = AppError.NewerSchema(found = 2, supported = 1)
+        val gated = ProfileSettingsService(ProfileCatalog(catalogFile), listOf(routing, extra)) { Outcome.Failure(refused) }
+
+        assertEquals(Outcome.Failure(refused), gated.create("Gravel", "bike"))
+        assertEquals(Outcome.Failure(refused), gated.copySettings("walk", "bike"))
+        assertEquals(Outcome.Failure(refused), gated.reset("bike"))
+        assertTrue(stored(catalogFile).isEmpty())
+    }
+
+    private fun bikeModeIndex(): Int =
+        stored(extraFile).getValue(BuiltInProfiles.BIKE).getValue("mode").dropWhile { !it.isDigit() }.toInt()
+
     private fun file(name: String) = ProfileValueFile(File(directory, name), ProfileCatalog.SCHEMA_VERSION, "test")
 
     private fun stored(store: ProfileValueStore): ProfileValues = success(store.read())
@@ -189,6 +309,30 @@ class ProfileSettingsServiceTest {
             val all = (store.read() as Outcome.Success).value
             return store.write(if (values.isEmpty()) all - profile else all + (profile to values))
         }
+    }
+
+    private class UnreliableGroup(
+        private var failAfterWrites: Int,
+    ) : ProfileSettingsGroup {
+        override val id: String = "unreliable"
+
+        override fun read(profile: ProfileId): Map<String, String> = emptyMap()
+
+        override fun replace(
+            profile: ProfileId,
+            values: Map<String, String>,
+        ): Outcome<Unit> =
+            if (failAfterWrites-- > 0) Outcome.Success(Unit) else Outcome.Failure(AppError.CorruptData)
+    }
+
+    private class WriteFailsAfter(
+        private val store: ProfileValueStore,
+        private var writes: Int,
+    ) : ProfileValueStore {
+        override fun read(): Outcome<ProfileValues> = store.read()
+
+        override fun write(values: ProfileValues): Outcome<Unit> =
+            if (writes-- > 0) store.write(values) else Outcome.Failure(AppError.CorruptData)
     }
 
     private object FailingGroup : ProfileSettingsGroup {

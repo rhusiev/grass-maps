@@ -32,6 +32,9 @@ sealed interface AppError {
 
     data object Cancelled : AppError
 
+    /** The stored state changed since the action was recorded, so repeating it would overwrite that change. */
+    data object Conflict : AppError
+
     data class PluginFailed(
         val pluginId: PluginId,
     ) : AppError

@@ -187,6 +187,10 @@ object JsonRpcCodec {
                 refusal(RpcCodes.INTERNAL, "cancelled", "cancelled")
             }
 
+            AppError.Conflict -> {
+                refusal(RpcCodes.INTERNAL, "conflict", "conflict")
+            }
+
             is AppError.NewerSchema -> {
                 refusal(
                     RpcCodes.INTERNAL,

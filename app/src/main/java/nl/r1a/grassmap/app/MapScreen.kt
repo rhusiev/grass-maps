@@ -137,6 +137,7 @@ import nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartStretch
+import nl.r1a.grassmap.plugin.ui.api.NavigationScreenState
 import nl.r1a.grassmap.plugin.ui.api.NavigationScreenStatus
 import nl.r1a.grassmap.plugins.contours.ContoursLayerPanel
 import nl.r1a.grassmap.plugins.downloads.ui.DownloadsScreenContent
@@ -184,6 +185,7 @@ import nl.r1a.grassmap.ui.shell.LocalBottomChrome
 import nl.r1a.grassmap.ui.shell.MapControlBar
 import nl.r1a.grassmap.ui.shell.MapScaleBar
 import nl.r1a.grassmap.ui.shell.NavigationAlertSwitch
+import nl.r1a.grassmap.ui.shell.NavigationAnnouncement
 import nl.r1a.grassmap.ui.shell.NavigationScreenHost
 import nl.r1a.grassmap.ui.shell.NavigationSheet
 import nl.r1a.grassmap.ui.shell.PlaceCardHost
@@ -201,6 +203,7 @@ import nl.r1a.grassmap.ui.shell.TrackMapCardHost
 import nl.r1a.grassmap.ui.shell.TrackTap
 import nl.r1a.grassmap.ui.shell.aboveBottomSheet
 import nl.r1a.grassmap.ui.shell.followTrackSheetDisplay
+import nl.r1a.grassmap.ui.shell.navigationAnnouncement
 import nl.r1a.grassmap.ui.shell.reportsBottomChrome
 import nl.r1a.grassmap.ui.shell.routePlanTurns
 import nl.r1a.grassmap.ui.shell.routeTurnStep
@@ -2202,6 +2205,17 @@ private fun NavigationOverlay(
                 ZoneId.systemDefault(),
             ).copy(recentreVisible = cameraPanned)
         }
+    // The card is spoken when the instruction changes, not when the distance
+    // to it does; the edge states are spoken once each.
+    var previousScreen by remember { mutableStateOf<NavigationScreenState?>(null) }
+    var announcement by remember { mutableStateOf<NavigationAnnouncement?>(null) }
+    LaunchedEffect(navigationScreen) {
+        val next = navigationAnnouncement(previousScreen, navigationScreen, container.strings)
+        previousScreen = navigationScreen
+        if (next != null) {
+            announcement = next
+        }
+    }
     val activity = context as? Activity
     DisposableEffect(navigationScreen.status) {
         if (activity == null) {
@@ -2257,6 +2271,7 @@ private fun NavigationOverlay(
         },
         onOpenAlerts = onOpenAlerts,
         modifier = Modifier.fillMaxSize(),
+        announcement = announcement,
     )
 }
 

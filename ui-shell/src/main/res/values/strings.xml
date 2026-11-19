@@ -55,6 +55,7 @@
     <string name="nav_screen_collapse">Collapse</string>
     <string name="nav_screen_recenter">Recenter</string>
     <string name="nav_screen_camera_and_alerts">Camera and alerts</string>
+    <string name="nav_screen_settings_pane">Navigation settings</string>
     <string name="nav_screen_settings_subtitle">For this trip. The defaults are in the %1$s profile.</string>
     <string name="nav_screen_camera">Camera</string>
     <string name="nav_screen_alerts">Alerts</string>

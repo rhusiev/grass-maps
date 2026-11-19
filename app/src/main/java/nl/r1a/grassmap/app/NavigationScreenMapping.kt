@@ -176,6 +176,7 @@ private fun turnCard(
                 thenArrow = second?.let { turnArrow(it.maneuver, it.title) },
                 strip = if (input.signalLost) strings.resolve(NavigationScreenStrings.LAST_TURN) else null,
                 dimmed = input.signalLost,
+                spokenInstruction = next?.title ?: fallback?.text,
             )
         }
     }

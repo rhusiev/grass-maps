@@ -21,14 +21,25 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -146,6 +157,7 @@ fun NavigationScreenHost(
     onResetToProfile: () -> Unit,
     onOpenAlerts: () -> Unit,
     modifier: Modifier = Modifier,
+    announcement: NavigationAnnouncement? = null,
 ) {
     val colors = palette(dark)
     val controls = navigationControls(state, sheet)
@@ -159,7 +171,10 @@ fun NavigationScreenHost(
                     .padding(horizontal = SCREEN_EDGE_DP.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            turnCard(Modifier.fillMaxWidth())
+            TurnCardSlot(
+                announcement = announcement,
+                content = { modifier -> turnCard(modifier) },
+            )
             if (state.status != NavigationScreenStatus.Arrived) {
                 ReadoutRow(state.readout, strings, colors)
                 AlertBanners(state.alerts.take(MAX_BANNERS), colors)
@@ -231,6 +246,40 @@ fun NavigationScreenHost(
                         .reportsBottomChrome(),
             )
         }
+    }
+}
+
+/**
+ * The turn card as one spoken node.
+ *
+ * The card is a status read-out, not a set of controls. When the app has an
+ * announcement, the whole card is that one node and its live region speaks it
+ * when it changes: the instruction once per turn, the off-route state
+ * assertively, the arrival politely. Without an announcement the card keeps its
+ * own text.
+ */
+@Composable
+private fun TurnCardSlot(
+    announcement: NavigationAnnouncement?,
+    content: @Composable (Modifier) -> Unit,
+) {
+    val live = announcement
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .then(
+                    if (live == null) {
+                        Modifier
+                    } else {
+                        Modifier.clearAndSetSemantics {
+                            contentDescription = live.text
+                            liveRegion = if (live.urgent) LiveRegionMode.Assertive else LiveRegionMode.Polite
+                        }
+                    },
+                ),
+    ) {
+        content(Modifier.fillMaxWidth())
     }
 }
 
@@ -465,6 +514,8 @@ private fun TripSheet(
     onAlerts: () -> Unit,
     modifier: Modifier,
 ) {
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
     Column(
         modifier =
             modifier
@@ -476,7 +527,10 @@ private fun TripSheet(
                 ).background(
                     colors.surface,
                     RoundedCornerShape(topStart = SHEET_CORNER_DP.dp, topEnd = SHEET_CORNER_DP.dp),
-                ).padding(horizontal = SHEET_PADDING_DP.dp),
+                ).padding(horizontal = SHEET_PADDING_DP.dp)
+                .focusRequester(focusRequester)
+                .focusTarget()
+                .semantics { paneTitle = strings.resolve(NavigationScreenStrings.THIS_TRIP) },
     ) {
         SheetHandle(colors)
         TripRow(
@@ -569,7 +623,7 @@ private fun SheetEntryRow(
     onClick: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 5.dp),
+        modifier = Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick).padding(vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -602,6 +656,8 @@ private fun SettingsSheet(
     onAlertSwitch: (NavigationAlertSwitch, Boolean) -> Unit,
     modifier: Modifier,
 ) {
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
     Column(
         modifier =
             modifier
@@ -614,7 +670,12 @@ private fun SettingsSheet(
                     colors.surface,
                     RoundedCornerShape(topStart = SHEET_CORNER_DP.dp, topEnd = SHEET_CORNER_DP.dp),
                 ).padding(horizontal = SHEET_PADDING_DP.dp)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .focusRequester(focusRequester)
+                .focusTarget()
+                .semantics {
+                    paneTitle = strings.resolve(NavigationScreenStrings.SETTINGS_PANE)
+                },
     ) {
         SheetHandle(colors)
         // Round 8 puts these camera switches in the profile editor's "While
@@ -799,7 +860,7 @@ private fun AlertChips(
                         .background(
                             if (on) colors.accent.copy(alpha = 0.16f) else colors.soft,
                             RoundedCornerShape(CHIP_CORNER_DP.dp),
-                        ).clickable { onChange(switch, !on) }
+                        ).toggleable(value = on, role = Role.Switch) { onChange(switch, !on) }
                         .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -832,7 +893,11 @@ private fun SwitchRow(
         return
     }
     Row(
-        modifier = Modifier.fillMaxWidth().clickable { onChange(!checked) }.padding(vertical = 7.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .toggleable(value = checked, role = Role.Switch) { onChange(!checked) }
+                .padding(vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -911,7 +976,7 @@ private fun EndPill(
             modifier
                 .height(END_HEIGHT_DP.dp)
                 .background(colors.dangerSoft, RoundedCornerShape(END_CORNER_DP.dp))
-                .clickable(onClick = onClick)
+                .clickable(role = Role.Button, onClick = onClick)
                 .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -937,7 +1002,7 @@ private fun PrimaryPill(
         modifier =
             modifier
                 .background(background, RoundedCornerShape(25.dp))
-                .clickable(onClick = onClick),
+                .clickable(role = Role.Button, onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
@@ -965,7 +1030,7 @@ private fun RoundButton(
             Modifier
                 .size(size.dp)
                 .background(colors.soft, RoundedCornerShape((size / 2).dp))
-                .clickable(onClick = onClick)
+                .clickable(role = Role.Button, onClick = onClick)
                 .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
@@ -986,7 +1051,7 @@ private fun RecentreButton(
                 .size(RECENTRE_DP.dp)
                 .border(1.dp, colors.muted.copy(alpha = 0.18f), RoundedCornerShape((RECENTRE_DP / 2).dp))
                 .background(colors.surface, RoundedCornerShape((RECENTRE_DP / 2).dp))
-                .clickable(onClick = onClick)
+                .clickable(role = Role.Button, onClick = onClick)
                 .semantics { contentDescription = buttonLabel },
         contentAlignment = Alignment.Center,
     ) {
@@ -1008,6 +1073,9 @@ private fun Glyph(
                 fontSize = size.sp,
                 fontWeight = FontWeight.SemiBold,
             ),
+        // Every glyph is decoration beside a label or inside a described
+        // control; a bare arrow must never become its own spoken stop.
+        modifier = Modifier.clearAndSetSemantics {},
     )
 }
 

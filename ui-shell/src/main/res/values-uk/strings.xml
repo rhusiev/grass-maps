@@ -55,6 +55,7 @@
     <string name="nav_screen_collapse">Згорнути</string>
     <string name="nav_screen_recenter">Центрувати</string>
     <string name="nav_screen_camera_and_alerts">Камера й сповіщення</string>
+    <string name="nav_screen_settings_pane">Налаштування навігації</string>
     <string name="nav_screen_settings_subtitle">Для цієї поїздки. Типові значення - у профілі %1$s.</string>
     <string name="nav_screen_camera">Камера</string>
     <string name="nav_screen_alerts">Сповіщення</string>

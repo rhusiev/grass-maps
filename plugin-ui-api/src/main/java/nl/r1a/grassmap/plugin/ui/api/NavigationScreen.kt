@@ -39,6 +39,11 @@ enum class NavigationTurnArrow {
  * ([NavigationScreenStatus.OffRoute], [NavigationScreenStatus.Paused],
  * [NavigationScreenStatus.Arrived]) puts its own [title] and [detail] there
  * instead and keeps the turn facts out of the card.
+ *
+ * [spokenInstruction] is the engine's own instruction text ("Turn left onto
+ * Rynok Square"). The card does not draw it, because the design shows the arrow
+ * and the street; a screen reader says it, so the manoeuvre is not left to the
+ * arrow glyph.
  */
 data class NavigationTurnCard(
     val status: NavigationScreenStatus = NavigationScreenStatus.Following,
@@ -51,6 +56,7 @@ data class NavigationTurnCard(
     val detail: String? = null,
     val strip: String? = null,
     val dimmed: Boolean = false,
+    val spokenInstruction: String? = null,
 )
 
 /** The two read-only glass chips under the turn card. */

@@ -138,6 +138,7 @@ object NavigationScreenStrings {
     const val COLLAPSE = "nav_screen_collapse"
     const val RECENTER = "nav_screen_recenter"
     const val CAMERA_AND_ALERTS = "nav_screen_camera_and_alerts"
+    const val SETTINGS_PANE = "nav_screen_settings_pane"
     const val SETTINGS_SUBTITLE = "nav_screen_settings_subtitle"
     const val CAMERA = "nav_screen_camera"
     const val ALERTS = "nav_screen_alerts"

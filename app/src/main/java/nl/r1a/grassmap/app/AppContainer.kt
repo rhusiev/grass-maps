@@ -20,6 +20,8 @@ import nl.r1a.grassmap.alerts.BeepHost
 import nl.r1a.grassmap.alerts.BeepSink
 import nl.r1a.grassmap.alerts.NoopAlertEffectSink
 import nl.r1a.grassmap.alerts.NoopBeepSink
+import nl.r1a.grassmap.app.backup.BackupCoordinator
+import nl.r1a.grassmap.app.backup.BackupUiController
 import nl.r1a.grassmap.app.generated.GeneratedPlugins
 import nl.r1a.grassmap.app.generated.GeneratedStreams
 import nl.r1a.grassmap.core.CommandBus
@@ -1028,6 +1030,32 @@ class AppContainer(
     }
 
     private val favouritesLock = Any()
+
+    /**
+     * The export and import of every user-data kind (T-0608/T-0609). Each kind
+     * reads and writes the store that owns it; this object adds no store of its
+     * own and writes the bundle only where the system picker points.
+     */
+    val backup: BackupCoordinator by lazy {
+        BackupCoordinator(
+            tracks = { tracks },
+            favourites = favourites,
+            profileCatalog = profileCatalog,
+            routing = routingOptionsSettings,
+            alerts = alertSettings,
+            searchHistorySettings = searchHistorySettings,
+            onlineSearchSettings = onlineSearchSettings,
+            searchHistory = searchHistory,
+            routeHistory = routeHistory,
+            mapStyle = mapStyleSettings,
+            pluginHost = pluginHost,
+            switchablePluginIds = PluginGroups.switchableIds,
+            appVersion = BuildConfig.VERSION_NAME,
+        )
+    }
+
+    /** The screen's state and its conflict queue (T-0609). */
+    val backupUi: BackupUiController by lazy { BackupUiController(backup, processScope) }
 
     /**
      * The lists screen access over the favourites library (T-0213). It is the

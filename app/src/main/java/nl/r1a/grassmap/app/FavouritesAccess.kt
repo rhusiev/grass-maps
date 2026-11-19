@@ -59,6 +59,9 @@ class FavouritesAccess internal constructor(
 
     suspend fun import(bytes: ByteArray): Outcome<FavouriteImport> = access { store -> store.import(bytes) }
 
+    /** Replaces the whole library from a merged snapshot; the store validates and writes it atomically. */
+    suspend fun save(snapshot: FavouritesSnapshot): Outcome<Unit> = access { store -> store.save(snapshot) }
+
     /** Reads a favourites document without writing it, for a bundle import plan. */
     suspend fun parse(bytes: ByteArray): Outcome<FavouriteDocument> =
         when (val target = store) {

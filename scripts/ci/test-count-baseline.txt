@@ -1,5 +1,5 @@
 alerts	53
-app	388
+app	493
 control	45
 core	33
 core-services	100
@@ -42,4 +42,4 @@ plugins/way-alerts	15
 regions	94
 routing	67
 tracks	174
-ui-shell	205
+ui-shell	221

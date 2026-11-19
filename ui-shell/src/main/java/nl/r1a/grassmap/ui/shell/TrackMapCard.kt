@@ -28,6 +28,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
 import java.time.Instant
 import java.time.ZoneId
@@ -88,6 +89,7 @@ fun trackMapCardContent(
     card: TrackMapCard,
     strings: Strings,
     locale: Locale = Locale.getDefault(),
+    units: UnitSystem = UnitSystem.Metric,
 ): TrackMapCardContent {
     val parts = mutableListOf<String>()
     card.listName
@@ -101,7 +103,7 @@ fun trackMapCardContent(
         name = card.name?.trim()?.takeIf { it.isNotEmpty() } ?: strings.resolve(TRACK_ANALYSIS_UNTITLED_KEY),
         colour = favouriteColour(card.colour),
         meta = parts.takeIf { it.isNotEmpty() }?.joinToString(META_SEPARATOR),
-        stats = statsLine(card, strings, locale),
+        stats = statsLine(card, strings, locale, units),
         analysis = strings.resolve(TRACK_CARD_ANALYSIS_KEY),
         colourAction = strings.resolve(TRACK_CARD_COLOUR_KEY),
         visibilityAction = strings.resolve(if (card.hidden) TRACK_CARD_SHOW_KEY else TRACK_CARD_HIDE_KEY),
@@ -122,16 +124,17 @@ private fun statsLine(
     card: TrackMapCard,
     strings: Strings,
     locale: Locale,
+    units: UnitSystem,
 ): String {
     val parts = mutableListOf<String>()
     if (card.distanceMeters > 0.0) {
-        parts += distanceText(card.distanceMeters, strings, locale)
+        parts += distanceText(card.distanceMeters, strings, locale, units)
     }
     if (card.ascentMeters > 0.0) {
         parts +=
             strings.resolve(
                 TRACK_CARD_ASCENT_KEY,
-                listOf(strings.resolve(TRACK_ANALYSIS_METRES_KEY, listOf(card.ascentMeters.toLong().toString()))),
+                listOf(elevationLabel(card.ascentMeters, units, strings, TRACK_ANALYSIS_METRES_KEY, TRACK_ANALYSIS_FEET_KEY)),
             )
     }
     card.movingMillis?.takeIf { it > 0L }?.let { millis ->
@@ -168,8 +171,9 @@ fun TrackMapCardHost(
     onAction: (TrackMapCardAction) -> Unit,
     onColour: (String) -> Unit,
     modifier: Modifier = Modifier,
+    units: UnitSystem = UnitSystem.Metric,
 ) {
-    val content = trackMapCardContent(card, strings)
+    val content = trackMapCardContent(card, strings, units = units)
     var coloursShown by remember(card.id) { mutableStateOf(false) }
     Column(
         modifier =
@@ -305,6 +309,7 @@ private fun ActionButton(
 
 private const val TRACK_ANALYSIS_UNTITLED_KEY = "track_analysis_untitled"
 private const val TRACK_ANALYSIS_METRES_KEY = "track_analysis_metres"
+private const val TRACK_ANALYSIS_FEET_KEY = "track_analysis_feet"
 private const val TRACK_CARD_ANALYSIS_KEY = "track_card_analysis"
 private const val TRACK_CARD_COLOUR_KEY = "track_card_colour"
 private const val TRACK_CARD_HIDE_KEY = "track_card_hide"

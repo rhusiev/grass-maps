@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.ui.shell
 
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -20,6 +21,13 @@ class TrackMapCardContentTest {
         assertEquals("Hide", content.visibilityAction)
         assertEquals(0xFF1B8A3AL, content.colour)
         assertNull(content.hiddenNotice)
+    }
+
+    @Test
+    fun theCardShowsImperialDistanceAndAscentWhenImperialIsSet() {
+        val content = trackMapCardContent(CARD, MapStrings(ENGLISH), Locale.ENGLISH, UnitSystem.Imperial)
+
+        assertEquals("4.7 mi · 719 ft up · 2 h 41 min", content.stats)
     }
 
     @Test
@@ -105,6 +113,7 @@ class TrackMapCardContentTest {
             mapOf(
                 "track_analysis_untitled" to "Track",
                 "track_analysis_metres" to "%1\$s m",
+                "track_analysis_feet" to "%1\$s ft",
                 "track_card_analysis" to "Analysis",
                 "track_card_colour" to "Color",
                 "track_card_hide" to "Hide",
@@ -114,6 +123,8 @@ class TrackMapCardContentTest {
                 "track_card_colour_choice" to "Colour %1\$s",
                 "route_preview_metres" to "%1\$s m",
                 "route_preview_kilometres" to "%1\$s km",
+                "route_preview_feet" to "%1\$s ft",
+                "route_preview_miles" to "%1\$s mi",
                 "route_preview_minutes" to "%1\$s min",
                 "route_preview_hours" to "%1\$s h",
                 "route_preview_hours_minutes" to "%1\$s h %2\$s min",

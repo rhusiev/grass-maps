@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.ui.shell
 
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartClimb
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
@@ -19,14 +20,41 @@ class TrackAnalysisContentTest {
 
         assertEquals("Znesinnia ridges", display.title)
         assertEquals(listOf("Distance", "Ascent", "Moving", "Speed"), display.tiles.map { it.label })
-        assertEquals(listOf("7.5 km", "219 m", "2 h 6 min", "3.6 km/h"), display.tiles.map { it.value })
+        assertEquals(listOf("7.5 km", "219 m", "2 h 6 min", "13.0 km/h"), display.tiles.map { it.value })
     }
 
     @Test
     fun theMetaLineCarriesTotalStoppedMaximumAndDescent() {
         val display = display(SUMMARY)
 
-        assertEquals("Total 2 h 41 min · stopped 35 min · max 6.2 km/h · ↓219 m", display.meta)
+        assertEquals("Total 2 h 41 min · stopped 35 min · max 22.3 km/h · ↓219 m", display.meta)
+    }
+
+    @Test
+    fun thePanelShowsImperialDistanceClimbAndSpeedWhenImperialIsSet() {
+        val display = display(SUMMARY, units = UnitSystem.Imperial)
+
+        assertEquals(listOf("4.7 mi", "719 ft", "2 h 6 min", "8.1 mph"), display.tiles.map { it.value })
+        assertEquals("Total 2 h 41 min · stopped 35 min · max 13.9 mph · ↓719 ft", display.meta)
+    }
+
+    @Test
+    fun theRangeAndClimbRowsUseImperialUnits() {
+        val row = trackAnalysisRangeRow(ELEVATION_STATE, MapStrings(ENGLISH), Locale.ENGLISH, UnitSystem.Imperial)
+        val climbs = trackAnalysisClimbRows(CLIMB_STATE, MapStrings(ENGLISH), Locale.ENGLISH, UnitSystem.Imperial)
+
+        assertEquals("984-3609 ft · ↑344 ft · 18 min", row?.text)
+        assertEquals(listOf("984-3609 ft", "1.3-2.2 mi", "3.5-4.0 mi"), climbs.map { it.title })
+        assertEquals(listOf("↑344 ft", "↑210 ft", "↑105 ft"), climbs.map { it.ascent })
+    }
+
+    @Test
+    fun theSpeedReadsTheEnginesMetresPerSecondAsKilometresPerHour() {
+        val display = display(SUMMARY)
+
+        assertEquals("13.0 km/h", display.tiles[3].value)
+        assertEquals("2 h 6 min", display.tiles[2].value)
+        assertEquals("Total 2 h 41 min · stopped 35 min · max 22.3 km/h · ↓219 m", display.meta)
     }
 
     @Test
@@ -56,7 +84,7 @@ class TrackAnalysisContentTest {
             trackAnalysisDisplay(SUMMARY, MapStrings(UKRAINIAN), UKRAINIAN_LOCALE, expanded = false)
 
         assertEquals(listOf("Відстань", "Підйом", "У русі", "Швидкість"), display.tiles.map { it.label })
-        assertEquals("3,6 км/год", display.tiles[3].value)
+        assertEquals("13,0 км/год", display.tiles[3].value)
         assertEquals("Показати подробиці", display.detailsLabel)
     }
 
@@ -183,7 +211,8 @@ class TrackAnalysisContentTest {
     private fun display(
         summary: TrackAnalysisSummary,
         expanded: Boolean = false,
-    ): TrackAnalysisDisplay = trackAnalysisDisplay(summary, MapStrings(ENGLISH), Locale.ENGLISH, expanded)
+        units: UnitSystem = UnitSystem.Metric,
+    ): TrackAnalysisDisplay = trackAnalysisDisplay(summary, MapStrings(ENGLISH), Locale.ENGLISH, expanded, units)
 
     private class MapStrings(
         private val values: Map<String, String>,
@@ -242,11 +271,14 @@ class TrackAnalysisContentTest {
                 "track_analysis_moving" to "Moving",
                 "track_analysis_speed" to "Speed",
                 "track_analysis_speed_value" to "%1\$s km/h",
+                "track_analysis_speed_value_mph" to "%1\$s mph",
                 "track_analysis_metres" to "%1\$s m",
+                "track_analysis_feet" to "%1\$s ft",
                 "track_analysis_total" to "Total %1\$s",
                 "track_analysis_stopped" to "stopped %1\$s",
                 "track_analysis_max_speed" to "max %1\$s",
                 "track_analysis_descent" to "↓%1\$s m",
+                "track_analysis_descent_feet" to "↓%1\$s ft",
                 "track_analysis_untitled" to "Track",
                 "track_analysis_close" to "Close the analysis",
                 "elevation_chart_details_show" to "Show details",
@@ -254,7 +286,11 @@ class TrackAnalysisContentTest {
                 "elevation_chart_range_kilometres" to "%1\$s-%2\$s km",
                 "elevation_chart_range_metres" to "%1\$s-%2\$s m",
                 "elevation_chart_range_ascent" to "↑%1\$s m",
+                "elevation_chart_range_ascent_feet" to "↑%1\$s ft",
                 "elevation_chart_range_descent" to "↓%1\$s m",
+                "elevation_chart_range_descent_feet" to "↓%1\$s ft",
+                "elevation_chart_range_miles" to "%1\$s-%2\$s mi",
+                "elevation_chart_range_feet" to "%1\$s-%2\$s ft",
                 "elevation_chart_range_grade" to "%1\$s%%",
                 "elevation_chart_range_clear" to "Clear",
                 "elevation_chart_climbs_title" to "Climbs · tap one to select it",
@@ -263,6 +299,8 @@ class TrackAnalysisContentTest {
                 "elevation_chart_hours_minutes" to "%1\$s h %2\$s min",
                 "route_preview_metres" to "%1\$s m",
                 "route_preview_kilometres" to "%1\$s km",
+                "route_preview_feet" to "%1\$s ft",
+                "route_preview_miles" to "%1\$s mi",
                 "route_preview_minutes" to "%1\$s min",
                 "route_preview_hours" to "%1\$s h",
                 "route_preview_hours_minutes" to "%1\$s h %2\$s min",

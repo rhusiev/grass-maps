@@ -1441,6 +1441,7 @@ private fun MapContent(
                         colours = TrackPalette.COLOURS,
                     ),
                 strings = container.strings,
+                units = units,
                 onAction = { action ->
                     when (action) {
                         TrackMapCardAction.ANALYSIS -> {
@@ -1511,6 +1512,7 @@ private fun MapContent(
                 summary = analysisSummaryNow,
                 chart = analysisChart,
                 strings = container.strings,
+                units = units,
                 dark = isSystemInDarkTheme(),
                 onAxis = { axis -> analysisAxis = axis },
                 onRange = { range -> analysisRange = range },

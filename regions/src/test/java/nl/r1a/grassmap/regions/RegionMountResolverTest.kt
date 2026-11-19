@@ -5,6 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -166,6 +167,29 @@ class RegionMountResolverTest {
         install()
 
         assertNull(mounts().installed.single().routing)
+    }
+
+    @Test
+    fun aMountedPackReportsItsSearchSection() {
+        install()
+
+        val mounted = mounts().installed.single()
+        val search = requireNotNull(mounted.search) { "the pack reports no search section" }
+
+        assertEquals(versionDirectory().toFile(), search)
+        assertTrue("the section carries its terms", File(search, "terms.fst").isFile)
+        assertTrue("the section carries its features", File(search, "features.bin").isFile)
+    }
+
+    @Test
+    fun aPackWithABrokenSearchSectionStillMountsItsMap() {
+        install()
+        Files.delete(versionDirectory().resolve("terms.fst"))
+
+        val mounted = mounts().installed.single()
+
+        assertNull("an incomplete section is not a search directory", mounted.search)
+        assertTrue("a search problem must not hide the map", mounted.map.isFile)
     }
 
     @Test

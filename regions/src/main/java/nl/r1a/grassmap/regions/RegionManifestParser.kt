@@ -102,15 +102,18 @@ object RegionManifestParser {
         // search section, such as the world overview, needs no features. Only
         // the world package may omit them: an oblast that lost its search
         // section must stay corrupt instead of mounting with silent empty search.
-        val features = present.filter { it.kind == FEATURES_KIND }
-        val hasSearch = present.any { it.kind.startsWith(SEARCH_KIND_PREFIX) }
+        val features = present.filter { it.kind == RegionSearchSection.FEATURES_KIND }
+        val hasSearch = present.any { it.kind.startsWith(RegionSearchSection.KIND_PREFIX) }
         val mayOmitFeatures = region == RegionIdentifiers.WORLD_REGION && !hasSearch
         if (features.size > 1 || (features.isEmpty() && !mayOmitFeatures)) {
             return null
         }
         val declared = features.singleOrNull()
         if (declared != null &&
-            (declared.format != FEATURES_FORMAT || declared.formatVersion != FEATURES_FORMAT_VERSION)
+            (
+                declared.format != RegionSearchSection.FEATURES_FORMAT ||
+                    declared.formatVersion != RegionSearchSection.FEATURES_FORMAT_VERSION
+            )
         ) {
             return null
         }
@@ -249,11 +252,7 @@ object RegionManifestParser {
 
     private const val TYPE_FILE = "file"
     private const val TYPE_DIRECTORY = "directory"
-    private const val FEATURES_KIND = "features"
     private const val ELEVATION_KIND = "elevation"
-    private const val SEARCH_KIND_PREFIX = "search-"
     private const val PMTILES_FORMAT = "pmtiles"
     private const val PMTILES_FORMAT_VERSION = 3
-    private const val FEATURES_FORMAT = "place-features"
-    private const val FEATURES_FORMAT_VERSION = 1
 }

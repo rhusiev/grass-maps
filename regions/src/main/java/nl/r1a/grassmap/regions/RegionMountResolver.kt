@@ -15,6 +15,12 @@ data class MountedRegion(
     val contours: File?,
     val manifest: RegionManifest,
     val routing: RoutingPart? = null,
+    /**
+     * The package's search section, or null when it declares no complete one.
+     * The section's files sit beside the map, so this is [directory]; the
+     * reader opens the files it names. A missing section never hides the map.
+     */
+    val search: File? = null,
 )
 
 /** Why an installed region cannot be mounted. */
@@ -195,8 +201,57 @@ class RegionMountResolver(
                 contours = contours,
                 manifest = manifest,
                 routing = routingPart(directory, manifest),
+                search = searchSection(directory, manifest),
             ),
         )
+    }
+
+    /**
+     * The version directory when the package declares a complete search
+     * section, or null. Every table component and the feature component must
+     * be a regular file of its declared size; the reader checks the content.
+     * An incomplete section is absent rather than a mount failure, so a bad
+     * search file never hides a working map.
+     */
+    private fun searchSection(
+        directory: File,
+        manifest: RegionManifest,
+    ): File? {
+        val declared = manifest.components.filter { it.kind.startsWith(RegionSearchSection.KIND_PREFIX) }
+        if (declared.isEmpty() || !declared.map { it.kind }.containsAll(RegionSearchSection.REQUIRED_KINDS)) {
+            return null
+        }
+        val versions = declared.map { it.formatVersion }.toSet()
+        if (versions.size != 1 || versions.single() !in RegionSearchSection.FORMAT_VERSIONS) {
+            return null
+        }
+        if (versions.single() >= RegionSearchSection.FIRST_FORMAT_FILE_VERSION &&
+            declared.none { it.kind == RegionSearchSection.FORMAT_KIND }
+        ) {
+            return null
+        }
+        val tables =
+            declared.all { component ->
+                component.format == RegionSearchSection.FORMAT &&
+                    !component.isDirectory &&
+                    isDeclaredFile(directory, component)
+            }
+        val features = manifest.components.firstOrNull { it.kind == RegionSearchSection.FEATURES_KIND } ?: return null
+        val featureFile =
+            features.format == RegionSearchSection.FEATURES_FORMAT &&
+                features.formatVersion == RegionSearchSection.FEATURES_FORMAT_VERSION &&
+                !features.isDirectory &&
+                isDeclaredFile(directory, features)
+        return directory.takeIf { tables && featureFile }
+    }
+
+    /** True when the component is one regular file of its declared size. */
+    private fun isDeclaredFile(
+        directory: File,
+        component: RegionComponent,
+    ): Boolean {
+        val file = File(directory, component.file)
+        return file.isFile && !Files.isSymbolicLink(file.toPath()) && file.length() == component.bytes
     }
 
     /**

@@ -21,7 +21,7 @@ internal const val LVIV_LAT = 49.8397
 internal const val LVIV_LON = 24.0297
 internal const val LABEL_ZOOM = 9.0
 private const val MAX_LABEL_TEXTS = 5
-internal const val LABEL_WAIT_MS = 8_000L
+internal const val LABEL_WAIT_MS = 20_000L
 private const val LABEL_POLL_MS = 500L
 private const val LABEL_SIZE_BIG_PERCENT = 150
 private const val PACING_SAMPLES = 4
@@ -75,6 +75,7 @@ internal class LabelsStep(
         return buildJsonObject {
             put("language", language)
             put("size_percent", sizePercent)
+            put("applied", set is Outcome.Success)
             put("count", texts.size)
             put("texts", JsonArray(texts.map { JsonPrimitive(it) }))
         }

@@ -59,13 +59,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -711,7 +714,7 @@ private fun MapContent(
         boundsOf(plan.selected?.geometry)?.let { bounds ->
             fitAfterSheetSettles(
                 insets = snapshotFlow { bottomChrome?.reachOf(PLANNER_SHEET_KEY) ?: 0 },
-                camera = { surface.host.camera.value },
+                camera = surface.host.camera,
             ) { sheetPx ->
                 surface.host.fitBounds(bounds, with(density) { sheetPx.toDp().value }).onFailure { error ->
                     Log.w(TAG, "route not fitted: $error")
@@ -2619,24 +2622,54 @@ internal suspend fun settledBottomInsetPx(insets: Flow<Int>): Int =
  * Fits the camera once the sheet has settled, unless the camera moved while
  * waiting. A pan or zoom during the wait is the user's, and a late fit would
  * snatch it back.
+ *
+ * The sheet can still grow after it first held its height, because its route
+ * summary and warnings arrive later. For [INSET_REFIT_WINDOW_MS] after the
+ * first fit, every new settled height fits again, as long as the camera is
+ * where the previous fit left it.
  */
+@OptIn(FlowPreview::class)
 internal suspend fun fitAfterSheetSettles(
     insets: Flow<Int>,
-    camera: () -> Camera,
+    camera: StateFlow<Camera>,
     fit: suspend (sheetPx: Int) -> Unit,
 ) {
-    val before = camera()
-    val sheetPx = settledBottomInsetPx(insets)
-    if (camera() == before) {
-        fit(sheetPx)
+    val before = camera.value
+    var fittedPx = settledBottomInsetPx(insets)
+    if (camera.value != before) {
+        return
+    }
+    fit(fittedPx)
+    var expected = settledCamera(camera)
+    withTimeoutOrNull(INSET_REFIT_WINDOW_MS) {
+        insets
+            .debounce(INSET_SETTLE_MS)
+            .filter { inset -> inset > 0 && inset != fittedPx }
+            .takeWhile { camera.value == expected }
+            .collect { inset ->
+                fit(inset)
+                fittedPx = inset
+                expected = settledCamera(camera)
+            }
     }
 }
+
+/**
+ * The camera once its animation stopped. The fit animates, so a read right
+ * after it still shows the position the animation started from, and that would
+ * make every later comparison fail.
+ */
+private suspend fun settledCamera(camera: StateFlow<Camera>): Camera =
+    withTimeoutOrNull(INSET_SETTLE_TIMEOUT_MS) {
+        camera.debounce(INSET_SETTLE_MS).first()
+    } ?: camera.value
 
 /** The key under which the route planner sheet reports its own reach. */
 private val PLANNER_SHEET_KEY = Any()
 
 private const val INSET_SETTLE_MS = 150L
 private const val INSET_SETTLE_TIMEOUT_MS = 1_500L
+private const val INSET_REFIT_WINDOW_MS = 3_000L
 
 /**
  * The route a trip draws. A shown fixture owns the screen, so its state is the

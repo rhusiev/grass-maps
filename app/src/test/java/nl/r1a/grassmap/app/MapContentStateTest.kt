@@ -2,9 +2,11 @@ package nl.r1a.grassmap.app
 
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import nl.r1a.grassmap.navigation.NavigationPhase
 import nl.r1a.grassmap.navigation.NavigationState
@@ -140,7 +142,7 @@ class MapContentStateTest {
     @Test
     fun aCameraMovedDuringTheWaitIsNotFittedOver() =
         runTest {
-            var camera = CAMERA
+            val camera = MutableStateFlow(CAMERA)
             val fits = mutableListOf<Int>()
             val sheet =
                 flow {
@@ -148,19 +150,77 @@ class MapContentStateTest {
                     awaitCancellation()
                 }
 
-            fitAfterSheetSettles(sheet, { camera }) { sheetPx -> fits += sheetPx }
+            fitAfterSheetSettles(sheet, camera) { sheetPx -> fits += sheetPx }
             assertEquals(listOf(520), fits)
 
             fits.clear()
             val panning =
                 flow {
                     emit(520)
-                    camera = CAMERA.copy(zoom = CAMERA.zoom + 1.0)
+                    camera.value = CAMERA.copy(zoom = CAMERA.zoom + 1.0)
                     awaitCancellation()
                 }
-            fitAfterSheetSettles(panning, { camera }) { sheetPx -> fits += sheetPx }
+            fitAfterSheetSettles(panning, camera) { sheetPx -> fits += sheetPx }
 
             assertEquals(emptyList<Int>(), fits)
+        }
+
+    @Test
+    fun aSheetThatGrowsAfterTheFirstFitIsFittedAgain() =
+        runTest {
+            val fits = mutableListOf<Int>()
+            val growing =
+                flow {
+                    emit(520)
+                    delay(400)
+                    emit(700)
+                    awaitCancellation()
+                }
+
+            fitAfterSheetSettles(growing, MutableStateFlow(CAMERA)) { sheetPx -> fits += sheetPx }
+
+            assertEquals(listOf(520, 700), fits)
+        }
+
+    @Test
+    fun aSheetThatGrowsAfterTheFitAnimatesIsFittedAgain() =
+        runTest {
+            val camera = MutableStateFlow(CAMERA)
+            val fits = mutableListOf<Int>()
+            val growing =
+                flow {
+                    emit(520)
+                    delay(400)
+                    emit(700)
+                    awaitCancellation()
+                }
+
+            backgroundScope.launch {
+                delay(200)
+                camera.value = CAMERA.copy(zoom = CAMERA.zoom - 0.5)
+            }
+            fitAfterSheetSettles(growing, camera) { sheetPx -> fits += sheetPx }
+
+            assertEquals(listOf(520, 700), fits)
+        }
+
+    @Test
+    fun aCameraMovedAfterTheFirstFitIsNotFittedOver() =
+        runTest {
+            val camera = MutableStateFlow(CAMERA)
+            val fits = mutableListOf<Int>()
+            val growing =
+                flow {
+                    emit(520)
+                    delay(400)
+                    camera.value = CAMERA.copy(zoom = CAMERA.zoom + 1.0)
+                    emit(700)
+                    awaitCancellation()
+                }
+
+            fitAfterSheetSettles(growing, camera) { sheetPx -> fits += sheetPx }
+
+            assertEquals(listOf(520), fits)
         }
 
     @Test

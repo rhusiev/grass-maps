@@ -13,8 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,7 +41,9 @@ fun MapScaleBar(
             modifier
                 .background(Color(0x99000000), RoundedCornerShape(BAR_CORNER_DP.dp))
                 .padding(horizontal = BAR_PADDING_HORIZONTAL_DP.dp, vertical = BAR_PADDING_VERTICAL_DP.dp)
-                .semantics { contentDescription = description },
+                // One node: TalkBack otherwise reads the name and the value as
+                // two separate stops, and never as one scale.
+                .clearAndSetSemantics { contentDescription = "$description, $label" },
         horizontalAlignment = Alignment.Start,
     ) {
         BasicText(

@@ -18,6 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -135,7 +137,7 @@ private fun ActionBox(
                 .alpha(if (enabled) 1f else DISABLED_ALPHA)
                 .background(Color(0xCC1F1F1F), shape)
                 .border(1.dp, Color(0x66FFFFFF), shape)
-                .clickable(enabled = enabled, onClick = onClick)
+                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
                 .padding(horizontal = if (wide) WIDE_BUTTON_PADDING_DP.dp else 0.dp)
                 .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
@@ -148,6 +150,9 @@ private fun ActionBox(
                     fontSize = BUTTON_FONT_SP.sp,
                     fontWeight = FontWeight.SemiBold,
                 ),
+            // The description names the control; the drawn glyph is decoration
+            // and would otherwise be read as its own character.
+            modifier = Modifier.clearAndSetSemantics {},
         )
     }
 }

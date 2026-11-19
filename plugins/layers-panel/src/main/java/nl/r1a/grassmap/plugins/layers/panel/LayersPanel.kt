@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -114,7 +115,13 @@ private fun StyleRow(
                 ).padding(vertical = PANEL_GAP_DP.dp),
         horizontalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
     ) {
-        PanelText(if (selected) SELECTED_MARK else UNSELECTED_MARK, PANEL_FOREGROUND)
+        PanelText(
+            text = if (selected) SELECTED_MARK else UNSELECTED_MARK,
+            color = PANEL_FOREGROUND,
+            // The radio role already carries the selected state; the mark is
+            // decoration and must not be read as a character.
+            modifier = Modifier.clearAndSetSemantics {},
+        )
         PanelText(name, PANEL_FOREGROUND)
         PanelText(hint, PANEL_MUTED)
     }
@@ -137,6 +144,7 @@ private fun MapStyleChoice.hintRes(): Int =
 private fun PanelText(
     text: String,
     color: Color,
+    modifier: Modifier = Modifier,
 ) {
-    BasicText(text = text, style = TextStyle(color = color, fontSize = PANEL_FONT_SP.sp))
+    BasicText(text = text, style = TextStyle(color = color, fontSize = PANEL_FONT_SP.sp), modifier = modifier)
 }

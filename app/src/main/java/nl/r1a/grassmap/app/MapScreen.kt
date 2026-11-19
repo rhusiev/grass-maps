@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.IntSize
@@ -210,6 +211,7 @@ import java.time.ZoneId
 import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.pow
+import nl.r1a.grassmap.plugins.layers.panel.R as LayersStrings
 
 private val STANDARD_STYLE_PLUGIN = PluginId("style.standard")
 private val TOURING_STYLE_PLUGIN = PluginId("style.touring")
@@ -888,6 +890,7 @@ private fun MapContent(
                                 .widthIn(max = LAYERS_CARD_MAX_WIDTH_DP.dp)
                                 .width(IntrinsicSize.Max)
                                 .verticalScroll(rememberScrollState())
+                                .semantics { paneTitle = context.getString(LayersStrings.string.layers_panel_button) }
                                 .reportsBottomChrome(),
                         horizontalAlignment = Alignment.End,
                         verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),

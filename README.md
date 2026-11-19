@@ -1419,7 +1419,15 @@ default; a missing or corrupt file reads as metric. `MapScreen` resolves the
 settings object off Main and collects its flow, so a change redraws the bar.
 The route planner sheet reads the same value: its preview, turn and warning
 distances go through `distanceText`, and its elevation chart labels both the
-distance axis and the climb in the set units. Until a settings screen exists,
+distance axis and the climb in the set units. The track card, the track
+analysis panel, the relation chart and the follow-track sheet read it too:
+every distance goes through the same `distanceText`, every ascent and descent
+through `elevationLabel`, and the analysis speed is converted from metres per
+second to km/h or mph. `UnitText` in `ui-shell` holds those helpers, so the
+sheets share one conversion. The track library screen, the navigation guidance
+panel, the navigation notification and the widget grid still format metric:
+the library has no product entry point yet, and the other three live in modules
+with their own formatters. Until a settings screen exists,
 the control-channel command `core.settings.units` sets it:
 `{"units":"imperial"}` or the bare string. The command is allowlisted for
 control and runs on the IO dispatcher.

@@ -75,8 +75,8 @@ import nl.r1a.grassmap.plugin.api.service.NetworkGate
 import nl.r1a.grassmap.plugin.api.service.NoLogger
 import nl.r1a.grassmap.plugin.api.service.NoNetworkGate
 import nl.r1a.grassmap.plugin.api.widget.WidgetDescriptor
-import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.TimeSource
@@ -91,8 +91,10 @@ import kotlin.time.TimeSource
  * The user can turn a plugin in [switchable] off. [enabledStore] keeps that
  * choice across restarts. A disabled plugin is deactivated and every command,
  * stream, widget and provider lookup answers [AppError.PluginDisabled] until it
- * is turned back on. The constructor does no I/O: [load] reads the store, and
- * every lookup that can activate a plugin calls it first.
+ * is turned back on. A store that refuses its file leaves every plugin on and
+ * every switch answers that refusal, so the file is never overwritten. The
+ * constructor does no I/O: [load] reads the store, and every lookup that can
+ * activate a plugin calls it first.
  */
 class PluginHost(
     plugins: List<PluginFactory>,
@@ -134,11 +136,23 @@ class PluginHost(
         commands.associate { it.id to it.pluginId } +
             hostCommandById.keys.associateWith { HOST_COMMAND_OWNER }
     private val mutex = Mutex()
+
+    /**
+     * Serializes the whole switch, from the store read to the old instance's
+     * deactivation, so two taps cannot reorder in the gap between the load and
+     * the store write. The main [mutex] is released across the store I/O so a
+     * lookup never waits on the disk.
+     */
+    private val switchMutex = Mutex()
     private val activationScope = CoroutineScope(SupervisorJob() + dispatcher)
     private val activations = ConcurrentHashMap<PluginId, Deferred<Outcome<Unit>>>()
     private val active = mutableMapOf<PluginId, ActivePlugin>()
     private val failed = mutableSetOf<PluginId>()
     private val disabled = mutableSetOf<PluginId>()
+    private val switchedOnListeners = CopyOnWriteArrayList<(PluginId) -> Unit>()
+
+    /** Set when the store refused its file, so every switch answers the same refusal. */
+    private var storeRefusal: AppError? = null
 
     @Volatile
     private var loaded = false
@@ -293,7 +307,9 @@ class PluginHost(
 
     /**
      * Reads the persisted switches once, off the caller's thread. Later calls
-     * return at once. A plugin the user turned off starts as DEACTIVATED.
+     * return at once. A plugin the user turned off starts as DEACTIVATED. A
+     * store that refuses its file leaves every plugin on and makes
+     * [setEnabled] answer the same refusal, so the file is never guessed over.
      */
     suspend fun load() {
         if (loaded) {
@@ -303,8 +319,10 @@ class PluginHost(
             if (loaded) {
                 return
             }
-            val stored = withContext(dispatcher) { enabledStore.loadDisabled() }
-            disabled += stored.filter { it in factories && it in switchable }
+            when (val stored = withContext(dispatcher) { enabledStore.loadDisabled() }) {
+                is Outcome.Success -> disabled += stored.value.filter { it in factories && it in switchable }
+                is Outcome.Failure -> storeRefusal = stored.error
+            }
             loaded = true
             disabled.forEach { id -> markSwitch(id, enabled = false, state = PluginState.DEACTIVATED) }
         }
@@ -313,40 +331,63 @@ class PluginHost(
     /**
      * Turns [pluginId] on or off and persists the choice. Only a [switchable]
      * plugin can change. Turning one off deactivates it. Turning one on clears
-     * a failure, so a stopped plugin restarts on its next use.
+     * a failure and tells [onPluginEnabled] listeners, so a breaker that
+     * stopped the plugin's providers starts again from zero.
+     *
+     * Toggles are serialized end to end, so the last tap decides. The old
+     * instance is deactivated before the switch lock is released: no second
+     * switch can start a new instance beside it, and a disabled plugin cannot
+     * activate at all.
      */
     suspend fun setEnabled(
         pluginId: PluginId,
         enabled: Boolean,
-    ): Outcome<PluginStatus> {
-        load()
-        if (pluginId !in factories) {
-            return Outcome.Failure(AppError.NotFound)
+    ): Outcome<PluginStatus> =
+        switchMutex.withLock {
+            load()
+            if (pluginId !in factories) {
+                return@withLock Outcome.Failure(AppError.NotFound)
+            }
+            if (pluginId !in switchable) {
+                return@withLock Outcome.Failure(AppError.Unsupported)
+            }
+            storeRefusal?.let { return@withLock Outcome.Failure(it) }
+            val removed =
+                when (val switched = switchLocked(pluginId, enabled)) {
+                    is Outcome.Failure -> return@withLock switched
+                    is Outcome.Success -> switched.value
+                }
+            removed?.let(::deactivateQuietly)
+            if (enabled) {
+                switchedOnListeners.forEach { listener -> listener(pluginId) }
+            }
+            Outcome.Success(checkNotNull(statusOf(pluginId)))
         }
-        if (pluginId !in switchable) {
-            return Outcome.Failure(AppError.Unsupported)
-        }
-        val deactivated =
-            mutex.withLock { switchLocked(pluginId, enabled) }
-                ?: return Outcome.Failure(AppError.Internal(STORE_ERROR_ID))
-        deactivated.plugin?.let(::deactivateQuietly)
-        return Outcome.Success(checkNotNull(statusOf(pluginId)))
+
+    /**
+     * Registers [listener] to run after a plugin is switched on, with the
+     * switch lock still held. The host keeps no state about what a listener
+     * does, so a listener must not call back into the host.
+     */
+    fun onPluginEnabled(listener: (PluginId) -> Unit) {
+        switchedOnListeners += listener
     }
 
-    /** Applies the switch under the lock. Returns null when the store refused the write. */
+    /**
+     * Applies the switch under the lock. The returned instance was taken out of
+     * service and is deactivated by the caller; a failed store write changes
+     * nothing.
+     */
     private suspend fun switchLocked(
         pluginId: PluginId,
         enabled: Boolean,
-    ): Switched? {
+    ): Outcome<Plugin?> {
         val wasDisabled = pluginId in disabled
         val next = if (enabled) disabled - pluginId else disabled + pluginId
         if (next != disabled) {
-            try {
-                withContext(dispatcher) { enabledStore.saveDisabled(next) }
-            } catch (exception: IOException) {
-                return null
-            } catch (exception: SecurityException) {
-                return null
+            when (val saved = withContext(dispatcher) { enabledStore.saveDisabled(next) }) {
+                is Outcome.Failure -> return saved
+                is Outcome.Success -> Unit
             }
         }
         disabled.clear()
@@ -354,13 +395,13 @@ class PluginHost(
         if (!enabled) {
             val removed = active.remove(pluginId)
             markSwitch(pluginId, enabled = false, state = PluginState.DEACTIVATED)
-            return Switched(removed?.plugin)
+            return Outcome.Success(removed?.plugin)
         }
         if (pluginId in failed || wasDisabled) {
             failed -= pluginId
             markSwitch(pluginId, enabled = true, state = PluginState.DECLARED, resetFailures = true)
         }
-        return Switched(null)
+        return Outcome.Success(null)
     }
 
     private fun deactivateQuietly(plugin: Plugin) {
@@ -612,11 +653,6 @@ class PluginHost(
         }
     }
 
-    /** The plugin instance a switch-off took out of service, to deactivate outside the lock. */
-    private class Switched(
-        val plugin: Plugin?,
-    )
-
     private sealed interface Activation {
         data class Ready(
             val outcome: Outcome<Unit>,
@@ -710,8 +746,6 @@ class PluginHost(
     private companion object {
         /** Commands the host owns carry the core plugin id in the bus catalog. */
         val HOST_COMMAND_OWNER: PluginId = PluginId("core")
-
-        const val STORE_ERROR_ID: String = "core.plugin_enabled_store"
 
         fun initialStatus(
             manifest: PluginManifest,

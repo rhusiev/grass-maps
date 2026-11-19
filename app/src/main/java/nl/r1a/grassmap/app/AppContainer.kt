@@ -24,7 +24,6 @@ import nl.r1a.grassmap.app.generated.GeneratedPlugins
 import nl.r1a.grassmap.app.generated.GeneratedStreams
 import nl.r1a.grassmap.core.CommandBus
 import nl.r1a.grassmap.core.CommandDispatchers
-import nl.r1a.grassmap.core.FilePluginEnabledStore
 import nl.r1a.grassmap.core.NoPluginEnabledStore
 import nl.r1a.grassmap.core.PluginHost
 import nl.r1a.grassmap.core.ProviderRegistry
@@ -34,6 +33,7 @@ import nl.r1a.grassmap.core.services.DEFAULT_PROFILE
 import nl.r1a.grassmap.core.services.DeviceInfo
 import nl.r1a.grassmap.core.services.Diagnostics
 import nl.r1a.grassmap.core.services.FavouritesBackupRecorder
+import nl.r1a.grassmap.core.services.FilePluginEnabledStore
 import nl.r1a.grassmap.core.services.InMemoryLocationPermissionStore
 import nl.r1a.grassmap.core.services.LegacyProfileFile
 import nl.r1a.grassmap.core.services.LocationPermissionStore

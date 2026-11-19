@@ -21,6 +21,7 @@ import nl.r1a.grassmap.plugin.api.contract.PluginId
 import nl.r1a.grassmap.plugin.api.contract.StreamId
 import nl.r1a.grassmap.plugin.api.contract.SwitchId
 import nl.r1a.grassmap.plugin.api.contract.WidgetId
+import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
 import nl.r1a.grassmap.plugin.api.manifest.CommandDeclaration
@@ -358,5 +359,31 @@ internal class ThrowingTestProvider : Provider {
     fun fail(): Nothing {
         calls += 1
         throw IllegalStateException("test provider failure")
+    }
+}
+
+/**
+ * A store in memory: the host's switch logic is tested without a file, and the
+ * file store has its own test in `core-services`. [loadRefusal] and
+ * [saveRefusal] stand in for a file the store will not read or replace.
+ */
+internal class MemoryEnabledStore(
+    initial: Set<PluginId> = emptySet(),
+    private val loadRefusal: AppError? = null,
+    private val saveRefusal: AppError? = null,
+) : PluginEnabledStore {
+    var stored: Set<PluginId> = initial
+        private set
+
+    var saves: Int = 0
+        private set
+
+    override fun loadDisabled(): Outcome<Set<PluginId>> = loadRefusal?.let { Outcome.Failure(it) } ?: Outcome.Success(stored)
+
+    override fun saveDisabled(disabled: Set<PluginId>): Outcome<Unit> {
+        saveRefusal?.let { return Outcome.Failure(it) }
+        stored = disabled
+        saves += 1
+        return Outcome.Success(Unit)
     }
 }

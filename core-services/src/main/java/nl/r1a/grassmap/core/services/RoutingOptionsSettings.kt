@@ -17,6 +17,7 @@ import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.service.ProfileSettingsGroup
 import nl.r1a.grassmap.plugin.api.service.ProfileValueStore
 import nl.r1a.grassmap.plugin.api.service.ProfileValues
+import nl.r1a.grassmap.plugin.api.service.withKnownValues
 import java.io.File
 import java.io.IOException
 
@@ -42,14 +43,31 @@ import java.io.IOException
  * Construction reads the store, so resolve it off the Main thread. A missing,
  * unreadable or corrupt store reads as defaults, because a routing preference
  * must not stop the planner. A store written by a newer build is refused: it
- * reads as defaults and is never overwritten, because every write fails.
+ * reads as defaults and is never overwritten, because every write fails. A
+ * write keeps every key of the file that this build does not know, string or
+ * not, and every profile entry it cannot interpret.
  */
 class RoutingOptionsSettings(
     private val store: ProfileValueStore? = null,
 ) : ProfileSettingsGroup {
-    private val state = MutableStateFlow(load(store))
+    private var raw: ProfileValues = emptyMap()
+    private var isLoaded = false
+    private val state = MutableStateFlow(load())
 
     override val id: String = ProfileSettingsGroup.ROUTING
+
+    private fun load(): Map<ProfileId, RouteOptions> {
+        val read = store?.read() ?: Outcome.Success(emptyMap())
+        isLoaded = read is Outcome.Success
+        raw = read.valueOrEmpty()
+        return options(raw)
+    }
+
+    private fun adopt(values: ProfileValues) {
+        raw = values
+        isLoaded = true
+        state.value = options(values)
+    }
 
     /** The options of every profile that differs from the defaults. */
     val options: StateFlow<Map<ProfileId, RouteOptions>> = state.asStateFlow()
@@ -61,9 +79,12 @@ class RoutingOptionsSettings(
     fun forProfile(profile: RouteProfile): RouteOptions = forProfile(BuiltInProfiles.idOf(profile))
 
     /**
-     * Stores one profile's options; the other profiles keep their values. The
-     * options change in memory only when the write succeeded, so the planner
-     * never uses a value that is not on disk.
+     * Stores one profile's options; the other profiles keep their values, and
+     * so does every key in the file that this build does not know. The options
+     * change in memory only when the write succeeded, so the planner never uses
+     * a value that is not on disk. A store that could not be read at
+     * construction is read again first, and the write fails when it still
+     * cannot be read, so keys it holds are never dropped.
      */
     @Synchronized
     fun set(
@@ -71,8 +92,20 @@ class RoutingOptionsSettings(
         options: RouteOptions,
     ): Outcome<Unit> {
         val next = if (options.isDefault) state.value - profile else state.value + (profile to options)
-        val written = store?.write(encode(next)) ?: Outcome.Success(Unit)
+        val target = store
+        if (target == null) {
+            state.value = next
+            return Outcome.Success(Unit)
+        }
+        if (!isLoaded) {
+            val read = target.read()
+            if (read is Outcome.Failure) return read
+            adopt(read.valueOrEmpty())
+        }
+        val nextRaw = raw.withKnownValues(profile, KNOWN_KEYS, if (options.isDefault) emptyMap() else encodeOptions(options))
+        val written = target.write(nextRaw)
         if (written is Outcome.Success) {
+            raw = nextRaw
             state.value = next
         }
         return written
@@ -114,10 +147,12 @@ class RoutingOptionsSettings(
                 ProfileValueFile(file, SCHEMA_VERSION, ERROR_ID, LegacyProfileFile(legacyFile, ::readLegacy)),
             )
 
-        private fun load(store: ProfileValueStore?): Map<ProfileId, RouteOptions> =
-            ((store?.read() as? Outcome.Success)?.value ?: emptyMap())
-                .mapValues { (_, values) -> decode(values) }
-                .filterValues { !it.isDefault }
+        private val KNOWN_KEYS = setOf(HILLS_KEY, BUSY_ROADS_KEY, ROUGH_SURFACES_KEY, STEPS_KEY, TRAIL_DIFFICULTY_KEY)
+
+        private fun Outcome<ProfileValues>.valueOrEmpty(): ProfileValues = (this as? Outcome.Success)?.value ?: emptyMap()
+
+        private fun options(values: ProfileValues): Map<ProfileId, RouteOptions> =
+            values.mapValues { (_, entry) -> decode(entry) }.filterValues { !it.isDefault }
 
         private fun encode(options: Map<ProfileId, RouteOptions>): ProfileValues = options.mapValues { (_, value) -> encodeOptions(value) }
 

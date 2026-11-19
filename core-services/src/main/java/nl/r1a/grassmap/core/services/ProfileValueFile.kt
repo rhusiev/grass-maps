@@ -54,6 +54,12 @@ enum class MigrationStep {
  * place, so the next [read] migrates again. A [write] before the first [read]
  * migrates too: the old values are merged key by key under the written ones
  * before the new file is created, so no old value is lost.
+ *
+ * A write keeps unknown top-level keys, and the values that are not strings of
+ * every profile it is given, even with no string value left. A profile it is
+ * not given loses all its values. The string values are the writer's own, so a
+ * group that must keep keys it does not know passes them back, see
+ * [nl.r1a.grassmap.plugin.api.service.withKnownValues].
  */
 class ProfileValueFile(
     private val file: File,
@@ -187,10 +193,9 @@ class ProfileValueFile(
         extras: Extras?,
     ): JsonObject {
         val entries =
-            values.entries.associate { (profile, entries) ->
-                profile.value to
-                    encodeProfile(entries, extras?.keys?.get(profile.value))
-            }
+            values.entries
+                .associate { (profile, entries) -> profile.value to encodeProfile(entries, extras?.keys?.get(profile.value)) }
+                .filterValues { it.isNotEmpty() }
         val opaque = extras?.opaque.orEmpty().filterKeys { it !in entries }
         return JsonObject((entries + opaque).toSortedMap())
     }
@@ -227,8 +232,9 @@ class ProfileValueFile(
 
     /**
      * What a rewrite writes back unchanged: unknown top-level keys, profile
-     * entries that are not objects, and values of a kept profile that are not
-     * strings (numbers, booleans, null, objects and arrays).
+     * entries that are not objects, and values of a profile the writer still
+     * lists that are not strings (numbers, booleans, null, objects and
+     * arrays). A profile that ends up with no value is not written.
      */
     private class Extras(
         val topLevel: Map<String, JsonElement>,

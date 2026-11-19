@@ -1,5 +1,7 @@
 package nl.r1a.grassmap.core.services
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.ProfileId
@@ -182,6 +184,28 @@ class RoutingOptionsSettingsTest {
                 ),
             )
             assertTrue(settings.read(ProfileId("bike")).isEmpty())
+        }
+
+    @Test
+    fun valuesThisBuildDoesNotKnowSurviveEveryWrite() =
+        withFiles { files ->
+            val future =
+                """{"schema_version":1,"profiles":{"bike":{"hills":"avoid","surface":"smooth","grip":3},"""
+            files.file.parentFile?.mkdirs()
+            files.file.writeText(future + """"hike":{"shoes":"boots"},"walk":{"hills":"strongly_avoid"}}}""")
+            val settings = RoutingOptionsSettings.open(files.file, files.legacy)
+
+            settings.set(RouteProfile.Bike, RouteOptions(hills = RoutePreference.DontMind))
+            settings.replace(ProfileId("bike"), mapOf("steps" to "avoid"))
+            settings.set(ProfileId("gravel"), RouteOptions(busyRoads = RoutePreference.Avoid))
+            settings.replace(ProfileId("bike"), emptyMap())
+
+            val root = Json.parseToJsonElement(files.file.readText()).jsonObject
+            val profiles = root.getValue("profiles").jsonObject
+            assertEquals(Json.parseToJsonElement("""{"surface":"smooth","grip":3}"""), profiles.getValue("bike"))
+            assertEquals(Json.parseToJsonElement("""{"shoes":"boots"}"""), profiles.getValue("hike"))
+            assertEquals(Json.parseToJsonElement("""{"hills":"strongly_avoid"}"""), profiles.getValue("walk"))
+            assertEquals(RouteOptions(busyRoads = RoutePreference.Avoid), settings.forProfile(ProfileId("gravel")))
         }
 
     @Test

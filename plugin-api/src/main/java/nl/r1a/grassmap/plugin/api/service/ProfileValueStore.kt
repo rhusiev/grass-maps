@@ -20,3 +20,20 @@ interface ProfileValueStore {
 
     fun write(values: ProfileValues): Outcome<Unit>
 }
+
+/**
+ * These values with [profile] holding [values] for the keys in [knownKeys] and
+ * every other key it already held, so a build writes back the keys it does not
+ * know. A profile the store already listed stays listed with no value, so
+ * values of it that are not strings are kept, and a store writes no entry for
+ * it. A profile it did not list is not added without a value.
+ */
+fun ProfileValues.withKnownValues(
+    profile: ProfileId,
+    knownKeys: Set<String>,
+    values: Map<String, String>,
+): ProfileValues {
+    val unknown = this[profile].orEmpty().filterKeys { it !in knownKeys }
+    val merged = unknown + values
+    return if (merged.isEmpty() && profile !in this) this else this + (profile to merged)
+}

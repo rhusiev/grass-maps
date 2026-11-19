@@ -41,10 +41,25 @@ class BottomChromeTest {
         assertEquals(0, BottomChrome().insetPx)
     }
 
+    @Test
+    fun anOpenSheetRaisesTheClearanceAboveTheNavBar() {
+        val chrome = BottomChrome()
+        chrome.report(BOTTOM_SHEET_KEY, SHEET_REACH_PX)
+
+        assertEquals(SHEET_REACH_PX, bottomClearancePx(NAV_BAR_PX, chrome.reachOf(BOTTOM_SHEET_KEY)))
+    }
+
+    @Test
+    fun noOpenSheetKeepsTheNavigationBarClearance() {
+        assertEquals(NAV_BAR_PX, bottomClearancePx(NAV_BAR_PX, BottomChrome().reachOf(BOTTOM_SHEET_KEY)))
+        assertEquals(0, bottomClearancePx(0, BottomChrome().reachOf(BOTTOM_SHEET_KEY)))
+    }
+
     private companion object {
         const val BAR_KEY = "bar"
         const val SHEET_KEY = "sheet"
         const val BAR_REACH_PX = 165
         const val SHEET_REACH_PX = 640
+        const val NAV_BAR_PX = 48
     }
 }

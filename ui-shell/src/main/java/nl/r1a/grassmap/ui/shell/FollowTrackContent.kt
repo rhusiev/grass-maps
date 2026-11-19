@@ -158,7 +158,7 @@ fun FollowTrackSheet(
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .widthIn(max = SHEET_MAX_WIDTH_DP.dp)
-                    .reportsBottomChrome()
+                    .reportsBottomChrome(key = BOTTOM_SHEET_KEY)
                     .background(colors.surface, RoundedCornerShape(SHEET_CORNER_DP.dp))
                     .navigationBarsPadding()
                     .padding(horizontal = SHEET_PADDING_DP.dp)

@@ -173,6 +173,7 @@ import nl.r1a.grassmap.tracks.TrackId
 import nl.r1a.grassmap.tracks.TrackPalette
 import nl.r1a.grassmap.tracks.TrackSummary
 import nl.r1a.grassmap.ui.shell.AlertsScreenHost
+import nl.r1a.grassmap.ui.shell.BOTTOM_SHEET_KEY
 import nl.r1a.grassmap.ui.shell.BottomChrome
 import nl.r1a.grassmap.ui.shell.ControlBarLabels
 import nl.r1a.grassmap.ui.shell.ControlButton
@@ -197,6 +198,7 @@ import nl.r1a.grassmap.ui.shell.TrackMapCard
 import nl.r1a.grassmap.ui.shell.TrackMapCardAction
 import nl.r1a.grassmap.ui.shell.TrackMapCardHost
 import nl.r1a.grassmap.ui.shell.TrackTap
+import nl.r1a.grassmap.ui.shell.aboveBottomSheet
 import nl.r1a.grassmap.ui.shell.followTrackSheetDisplay
 import nl.r1a.grassmap.ui.shell.reportsBottomChrome
 import nl.r1a.grassmap.ui.shell.routePlanTurns
@@ -747,7 +749,7 @@ private fun MapContent(
         logRoutePreferences(plan.profile, plan.overridePreferences != null, plan.preferences)
         boundsOf(plan.selected?.geometry)?.let { bounds ->
             fitAfterSheetSettles(
-                insets = snapshotFlow { bottomChrome?.reachOf(PLANNER_SHEET_KEY) ?: 0 },
+                insets = snapshotFlow { bottomChrome?.reachOf(BOTTOM_SHEET_KEY) ?: 0 },
                 camera = surface.host.camera,
             ) { sheetPx ->
                 surface.host.fitBounds(bounds, with(density) { sheetPx.toDp().value }).onFailure { error ->
@@ -1004,11 +1006,15 @@ private fun MapContent(
                         onToggle = { layersOpen = !layersOpen },
                     )
                 }
-                MapScaleOverlay(
-                    surface = surface,
-                    settings = unitStore,
-                    modifier = Modifier,
-                )
+                // A sheet covers the map the bar measures, so the bar would only
+                // sit on the sheet's own controls. It returns when the sheet closes.
+                if ((bottomChrome?.reachOf(BOTTOM_SHEET_KEY) ?: 0) == 0) {
+                    MapScaleOverlay(
+                        surface = surface,
+                        settings = unitStore,
+                        modifier = Modifier,
+                    )
+                }
             }
         }
         if (!navigationActive) {
@@ -1099,7 +1105,7 @@ private fun MapContent(
             devToolsPanel(
                 Modifier
                     .align(Alignment.BottomStart)
-                    .navigationBarsPadding()
+                    .aboveBottomSheet()
                     .padding(BAR_PADDING_DP.dp),
             )
         }
@@ -1414,7 +1420,7 @@ private fun MapContent(
                     Modifier
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
-                        .reportsBottomChrome(key = PLANNER_SHEET_KEY),
+                        .reportsBottomChrome(key = BOTTOM_SHEET_KEY),
             )
         }
         val trackCardTrack = selectedTrack
@@ -1480,7 +1486,7 @@ private fun MapContent(
                     Modifier
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
-                        .reportsBottomChrome(),
+                        .reportsBottomChrome(key = BOTTOM_SHEET_KEY),
             )
         }
         val relation = selectedRelation
@@ -1496,7 +1502,7 @@ private fun MapContent(
                     Modifier
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
-                        .reportsBottomChrome(),
+                        .reportsBottomChrome(key = BOTTOM_SHEET_KEY),
             )
         }
         val analysisSummaryNow = analysisSummary
@@ -1513,7 +1519,7 @@ private fun MapContent(
                     Modifier
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
-                        .reportsBottomChrome(),
+                        .reportsBottomChrome(key = BOTTOM_SHEET_KEY),
                 onFollow = {
                     val track = analysisTrack
                     val plan = track?.followPlan(followPositionNow())
@@ -2737,9 +2743,6 @@ private suspend fun settledCamera(camera: StateFlow<Camera>): Camera =
     withTimeoutOrNull(INSET_SETTLE_TIMEOUT_MS) {
         camera.debounce(INSET_SETTLE_MS).first()
     } ?: camera.value
-
-/** The key under which the route planner sheet reports its own reach. */
-private val PLANNER_SHEET_KEY = Any()
 
 private const val INSET_SETTLE_MS = 150L
 private const val INSET_SETTLE_TIMEOUT_MS = 1_500L

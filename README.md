@@ -1473,29 +1473,38 @@ like the map controls.
 Turning a plugin off marks it `DEACTIVATED`, calls `Plugin.deactivate()` and
 makes `command`, `stream`, `widget` and `provider` answer
 `AppError.PluginDisabled` until it is turned on again. Turning one on clears a
-failure, so a stopped plugin restarts on its next use. A disable that arrives
-while the plugin is still activating wins: the activation is rolled back. A
-stream a consumer already collects keeps emitting after a disable.
+failure and clears the `ProviderRegistry` breaker for that plugin, so a stopped
+plugin restarts on its next use. A disable that arrives while the plugin is
+still activating wins: the activation is rolled back. A stream a consumer
+already collects keeps emitting after a disable. Toggles are serialized from the
+store read to the old instance's deactivation, so two quick taps end in the
+state of the last one.
 
 The disabled ids persist through `PluginEnabledStore`. `FilePluginEnabledStore`
-writes `{"version":1,"disabled":[...]}` through a `.part` sibling and an atomic
-rename. A missing, corrupt or wrong-version file reads as "all enabled", and a
-stored id that is unknown or essential is ignored. The host reads the store in
+in `core-services` writes `{"version":1,"disabled":[...]}` through
+`AtomicFiles`: a temporary sibling, an fsync, an atomic move, and the temporary
+removed when any step fails. A missing file reads as empty. A file this build
+cannot decode answers `CorruptData`, and one a newer build wrote answers
+`NewerSchema`, on read and on write: the host then leaves every plugin on and
+refuses switches, so a file it cannot understand is never overwritten. A stored
+id that is unknown or essential is ignored. The host reads the store in
 `PluginHost.load()`, which runs on the first use, so the constructor does no I/O.
-A failed save leaves the plugin as it was and answers `AppError.Internal`.
+A failed save leaves the plugin as it was and answers its typed error.
 
 The control transport reports the refusal as `plugin_disabled` with the plugin id.
 
-`plugins/plugin-manager` draws the list. It owns `PluginGroups`, the 12 ids a user
-may turn off (`map.contours`, `track.layer`, `valhalla`, `guidance.ui`,
-`way.alerts`, `osm.places`, `favourites.ui`, `coordinates`, `online.search`,
-`share`, `links`, `info.widgets`), and `AppContainer` passes that set to the host.
-The file is `files/settings/plugins.json`. `MapScreen` loads it with
+`plugins/plugin-manager` draws the list. It owns `PluginGroups`, the six ids a
+user may turn off (`map.contours`, `valhalla`, `osm.places`, `favourites.ui`,
+`online.search`, `info.widgets`), and `AppContainer` passes that set to the host.
+A plugin is listed only when every app path that uses it goes through the host.
+`links`, `coordinates`, `way.alerts`, `track.layer`, `share` and `guidance.ui`
+are called directly by `app` and stay essential until those call sites read the
+switch. The file is `files/settings/plugins.json`. `MapScreen` loads it with
 `PluginHost.load()` before the map draws, so a disabled contours plugin never
 flashes. It ANDs the contours plugin state with the user's "Contours" layer
 switch, which stays a separate setting: a disabled plugin removes the contour
-and contour-index layers, and enabling it restores them. `MapScreen` draws a
-disabled plugin's own composables as before. The manager has no entry point in
+and contour-index layers, and enabling it restores them. A disabled contours
+plugin also has no row in the Layers card. The manager has no entry point in
 the map UI yet. The debug build opens it with `core.plugins.show` and closes it
 with `core.plugins.hide`, both allowlisted for control in the debug build only.
 

@@ -6,7 +6,6 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
 import nl.r1a.grassmap.plugin.api.error.AppError
@@ -63,13 +62,17 @@ class ProfileValueFile(
     private val legacy: LegacyProfileFile? = null,
     private val checkpoint: (MigrationStep) -> Unit = {},
 ) : ProfileValueStore {
+    /** True once a [read] succeeded, so a later [write] holds values built on what that read returned. */
+    private var hasRead = false
+
     @Synchronized
     override fun read(): Outcome<ProfileValues> {
         val current =
             when (val stored = readStored()) {
                 is Outcome.Failure -> return stored
-                is Outcome.Success -> stored.value
+                is Outcome.Success -> stored.value?.values
             }
+        hasRead = true
         val old = legacy
         return when {
             old == null -> Outcome.Success(current ?: emptyMap())
@@ -80,18 +83,18 @@ class ProfileValueFile(
 
     @Synchronized
     override fun write(values: ProfileValues): Outcome<Unit> {
-        val current =
-            when (val stored = readStored()) {
-                is Outcome.Failure -> return stored
-                is Outcome.Success -> stored.value
+        val stored =
+            when (val result = readStored()) {
+                is Outcome.Failure -> return result
+                is Outcome.Success -> result.value
             }
         val old = legacy
-        val inherited = if (current == null && old != null) old.read(old.file) else null
+        val inherited = if (stored == null && old != null && !hasRead) old.read(old.file) else null
         if (old == null || inherited == null) {
-            return writeFile(values)
+            return writeFile(values, stored?.extras)
         }
         val merged = merge(inherited, values)
-        return writeFile(merged).also {
+        return writeFile(merged, null).also {
             if (it is Outcome.Success) {
                 checkpoint(MigrationStep.Written)
                 retireIfVerified(old, merged)
@@ -99,8 +102,10 @@ class ProfileValueFile(
         }
     }
 
-    private fun writeFile(values: ProfileValues): Outcome<Unit> =
-        AtomicFiles.write(file, errorId) { stream -> stream.write(encode(values).toByteArray()) }
+    private fun writeFile(
+        values: ProfileValues,
+        extras: Extras?,
+    ): Outcome<Unit> = AtomicFiles.write(file, errorId) { stream -> stream.write(encode(values, extras).toByteArray()) }
 
     private fun merge(
         base: ProfileValues,
@@ -109,7 +114,7 @@ class ProfileValueFile(
 
     private fun migrate(old: LegacyProfileFile): ProfileValues {
         val expected = old.read(old.file) ?: return emptyMap()
-        val written = AtomicFiles.write(file, errorId) { it.write(encode(expected).toByteArray()) }
+        val written = writeFile(expected, null)
         if (written is Outcome.Success) {
             checkpoint(MigrationStep.Written)
             retireIfEqual(old, expected)
@@ -131,7 +136,7 @@ class ProfileValueFile(
         old: LegacyProfileFile,
         current: ProfileValues,
     ) {
-        val readBack = (readStored() as? Outcome.Success)?.value
+        val readBack = (readStored() as? Outcome.Success)?.value?.values
         if (readBack != current) {
             return
         }
@@ -139,7 +144,7 @@ class ProfileValueFile(
         old.file.delete()
     }
 
-    private fun readStored(): Outcome<ProfileValues?> =
+    private fun readStored(): Outcome<Stored?> =
         try {
             if (!file.isFile) {
                 Outcome.Success(null)
@@ -152,7 +157,7 @@ class ProfileValueFile(
             Outcome.Failure(AppError.Internal(errorId, exception.javaClass.simpleName))
         }
 
-    private fun decode(text: String): Outcome<ProfileValues?> {
+    private fun decode(text: String): Outcome<Stored?> {
         val root =
             try {
                 Json.parseToJsonElement(text) as? JsonObject
@@ -164,27 +169,68 @@ class ProfileValueFile(
             return Outcome.Failure(AppError.NewerSchema(found = version, supported = schemaVersion))
         }
         val profiles = root[PROFILES_KEY] as? JsonObject ?: return Outcome.Failure(AppError.CorruptData)
-        return Outcome.Success(profiles.mapNotNull(::decodeProfile).toMap())
+        return Outcome.Success(Stored.of(root, profiles))
     }
 
-    private fun decodeProfile(entry: Map.Entry<String, JsonElement>): Pair<ProfileId, Map<String, String>>? {
-        val values = entry.value as? JsonObject ?: return null
-        val strings = values.mapNotNull { (key, value) -> (value as? JsonPrimitive)?.contentOrNull?.let { key to it } }
-        return ProfileId(entry.key) to strings.toMap()
-    }
-
-    private fun encode(values: ProfileValues): String =
+    private fun encode(
+        values: ProfileValues,
+        extras: Extras?,
+    ): String =
         buildJsonObject {
             put(SCHEMA_VERSION_KEY, schemaVersion)
-            put(
-                PROFILES_KEY,
-                buildJsonObject {
-                    for ((profile, entries) in values.entries.sortedBy { it.key.value }) {
-                        put(profile.value, buildJsonObject { entries.forEach { (key, value) -> put(key, value) } })
-                    }
-                },
-            )
+            put(PROFILES_KEY, encodeProfiles(values, extras))
+            extras?.topLevel?.forEach { (key, value) -> put(key, value) }
         }.toString()
+
+    private fun encodeProfiles(
+        values: ProfileValues,
+        extras: Extras?,
+    ): JsonObject {
+        val entries = values.entries.associate { (profile, entries) -> profile.value to encodeProfile(entries, extras?.keys?.get(profile.value)) }
+        val opaque = extras?.opaque.orEmpty().filterKeys { it !in entries }
+        return JsonObject((entries + opaque).toSortedMap())
+    }
+
+    private fun encodeProfile(
+        entries: Map<String, String>,
+        kept: Map<String, JsonElement>?,
+    ): JsonObject = JsonObject(kept.orEmpty().filterKeys { it !in entries } + entries.mapValues { (_, value) -> JsonPrimitive(value) })
+
+    /** What a decoded file held: the string values, and every other value kept as it was written. */
+    private class Stored(
+        val values: ProfileValues,
+        val extras: Extras,
+    ) {
+        companion object {
+            fun of(
+                root: JsonObject,
+                profiles: JsonObject,
+            ): Stored {
+                val decoded = profiles.mapNotNull { (id, entry) -> (entry as? JsonObject)?.let { id to it } }
+                val values = decoded.associate { (id, entry) -> ProfileId(id) to entry.stringValues() }
+                val kept = decoded.associate { (id, entry) -> id to entry.filterValues { !it.isString() } }
+                val opaque = profiles.filterValues { it !is JsonObject }
+                val topLevel = root.filterKeys { it != SCHEMA_VERSION_KEY && it != PROFILES_KEY }
+                return Stored(values, Extras(topLevel, kept, opaque))
+            }
+
+            private fun JsonObject.stringValues(): Map<String, String> =
+                mapNotNull { (key, value) -> (value as? JsonPrimitive)?.takeIf { it.isString }?.let { key to it.content } }.toMap()
+
+            private fun JsonElement.isString(): Boolean = this is JsonPrimitive && isString
+        }
+    }
+
+    /**
+     * What a rewrite writes back unchanged: unknown top-level keys, profile
+     * entries that are not objects, and values of a kept profile that are not
+     * strings (numbers, booleans, null, objects and arrays).
+     */
+    private class Extras(
+        val topLevel: Map<String, JsonElement>,
+        val keys: Map<String, Map<String, JsonElement>>,
+        val opaque: Map<String, JsonElement>,
+    )
 
     private companion object {
         const val SCHEMA_VERSION_KEY = "schema_version"

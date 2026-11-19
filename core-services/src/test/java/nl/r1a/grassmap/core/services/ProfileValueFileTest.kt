@@ -4,6 +4,7 @@ import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.ProfileId
 import nl.r1a.grassmap.plugin.api.service.ProfileValues
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -164,6 +165,51 @@ class ProfileValueFileTest {
 
             assertEquals(Outcome.Success(changed), result)
             assertTrue(legacy.file.exists())
+        }
+
+    @Test
+    fun aProfileResetAfterAFailedMigrationWriteDoesNotGetItsLegacyValuesBack() =
+        withDirectory { directory ->
+            val legacy = legacyFile(directory)
+            val target = File(directory, NEW_NAME).apply { mkdir() }
+            val store = ProfileValueFile(target, VERSION, ERROR_ID, legacy)
+
+            assertEquals(Outcome.Success(values), store.read())
+            target.deleteRecursively()
+
+            assertEquals(Outcome.Success(Unit), store.write(emptyMap()))
+
+            assertEquals(Outcome.Success(emptyMap<ProfileId, Map<String, String>>()), ProfileValueFile(target, VERSION, ERROR_ID).read())
+        }
+
+    @Test
+    fun unknownValuesAndEntriesWriteBackUnchanged() =
+        withDirectory { directory ->
+            val file = File(directory, NEW_NAME)
+            val text =
+                """{"schema_version":1,"future":{"a":[1,2]},"profiles":{"bike":{"hills":"avoid","n":12,"b":true,""" +
+                    """"z":null,"o":{"k":[1,{"x":2.50}]},"l":[1,"two"]},"odd":[1,2],"flag":true}}"""
+            file.writeText(text)
+            val store = ProfileValueFile(file, VERSION, ERROR_ID)
+
+            assertEquals(Outcome.Success(mapOf(bike to mapOf("hills" to "avoid"))), store.read())
+            assertEquals(Outcome.Success(Unit), store.write(mapOf(bike to mapOf("hills" to "normal"))))
+
+            val written = Json.parseToJsonElement(file.readText())
+            val expected = Json.parseToJsonElement(text.replace("\"avoid\"", "\"normal\""))
+            assertEquals(expected, written)
+        }
+
+    @Test
+    fun aProfileRemovedFromTheValuesLosesItsKeptValuesToo() =
+        withDirectory { directory ->
+            val file = File(directory, NEW_NAME)
+            file.writeText("""{"schema_version":1,"profiles":{"bike":{"hills":"avoid","n":1}}}""")
+            val store = ProfileValueFile(file, VERSION, ERROR_ID)
+
+            assertEquals(Outcome.Success(Unit), store.write(emptyMap()))
+
+            assertEquals(Json.parseToJsonElement("""{"schema_version":1,"profiles":{}}"""), Json.parseToJsonElement(file.readText()))
         }
 
     private fun legacyFile(directory: File): LegacyProfileFile {

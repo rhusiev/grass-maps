@@ -155,10 +155,12 @@ internal class CrashSnapshot private constructor(
  * The report is built on a fresh thread with an explicit stack size, never on
  * the thread that is failing. The original failure reaches the previous handler
  * whether or not the report was written, so a report problem cannot hide the
- * crash from the platform.
+ * crash from the platform. Installing again replaces this handler instead of
+ * chaining a second copy of it, so one crash never writes two reports.
  */
 fun installCrashGuard(guard: () -> CrashGuard?) {
-    val previous = Thread.getDefaultUncaughtExceptionHandler()
+    val current = Thread.getDefaultUncaughtExceptionHandler()
+    val previous = if (current is CrashHandler) current.previous else current
     Thread.setDefaultUncaughtExceptionHandler(CrashHandler(guard, previous))
 }
 

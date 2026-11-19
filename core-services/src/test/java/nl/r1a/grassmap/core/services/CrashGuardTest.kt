@@ -3,6 +3,7 @@ package nl.r1a.grassmap.core.services
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.service.LogRecord
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -128,6 +129,39 @@ class CrashGuardTest {
             Thread.getDefaultUncaughtExceptionHandler()?.uncaughtException(Thread("crasher"), failure)
 
             assertSame(failure, chained)
+        } finally {
+            Thread.setDefaultUncaughtExceptionHandler(previous)
+        }
+    }
+
+    @Test
+    fun installingTheGuardTwiceLeavesOneGuardInTheChain() {
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        var reports = 0
+        var chained: Throwable? = null
+        var chains = 0
+        val guard = guardAt(clock = { 11L })
+        try {
+            Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
+                chains += 1
+                chained = throwable
+            }
+            installCrashGuard {
+                reports += 1
+                guard
+            }
+            installCrashGuard {
+                reports += 1
+                guard
+            }
+            val failure = IllegalStateException("boom")
+
+            Thread.getDefaultUncaughtExceptionHandler()?.uncaughtException(Thread("crasher"), failure)
+
+            assertEquals(1, reports)
+            assertEquals(1, chains)
+            assertSame(failure, chained)
+            assertTrue(File(directory, "crash-11.txt").isFile)
         } finally {
             Thread.setDefaultUncaughtExceptionHandler(previous)
         }

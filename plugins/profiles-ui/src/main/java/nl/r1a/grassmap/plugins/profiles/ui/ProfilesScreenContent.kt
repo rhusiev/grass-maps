@@ -28,6 +28,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import nl.r1a.grassmap.plugin.api.model.ProfileAction
@@ -218,12 +222,16 @@ private fun Notice(
                     .padding(SCREEN_PADDING_DP.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            BasicText(text = noticeText(undo, state), style = BUTTON_STYLE.copy(color = SNACKBAR_TEXT))
+            BasicText(
+                text = noticeText(undo, state),
+                style = BUTTON_STYLE.copy(color = SNACKBAR_TEXT),
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            )
             BasicText(
                 text = stringResource(R.string.profiles_undo),
                 style = BUTTON_STYLE.copy(color = SNACKBAR_ACTION),
                 modifier =
-                    Modifier.clickable {
+                    Modifier.clickable(role = Role.Button) {
                         visible = false
                         onUndo()
                     },
@@ -238,15 +246,32 @@ private fun noticeText(
     undo: ProfileAction,
     state: ProfilesState,
 ): String {
-    val source =
-        undo.source
-            ?.let { ProfilesScreen.find(state, it) }
-            ?.let { profileName(it) }
-            .orEmpty()
-    val created = ProfilesScreen.find(state, undo.profile)?.let { profileName(it) } ?: undo.profile
-    return when (undo.kind) {
-        ProfileActionKind.CREATED -> stringResource(R.string.profiles_notice_created, created)
-        ProfileActionKind.COPIED -> stringResource(R.string.profiles_notice_copied, source)
-        ProfileActionKind.RESET -> stringResource(R.string.profiles_notice_reset)
-    }
+    val notice = profileNotice(undo)
+    val names = notice.profileIds.map { id -> ProfilesScreen.find(state, id)?.let { profileName(it) } ?: id }
+    return stringResource(notice.key, *names.toTypedArray())
 }
+
+/** The snackbar message as a resource key and the profiles it names. */
+internal data class ProfileNotice(
+    val key: Int,
+    val profileIds: List<String>,
+)
+
+/**
+ * The snackbar line that the polite live region announces. Pure so the named
+ * profile can be checked off-device.
+ */
+internal fun profileNotice(undo: ProfileAction): ProfileNotice =
+    when (undo.kind) {
+        ProfileActionKind.CREATED -> {
+            ProfileNotice(R.string.profiles_notice_created, listOf(undo.profile))
+        }
+
+        ProfileActionKind.COPIED -> {
+            ProfileNotice(R.string.profiles_notice_copied, listOfNotNull(undo.source))
+        }
+
+        ProfileActionKind.RESET -> {
+            ProfileNotice(R.string.profiles_notice_reset, emptyList())
+        }
+    }

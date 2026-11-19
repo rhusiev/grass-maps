@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -21,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -125,8 +128,13 @@ private fun ChoiceRow(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(FIELD_CORNER_DP.dp))
                 .background(if (selected && role == Role.RadioButton) ACCENT_TINT else Color.Transparent)
-                .clickable(role = role, onClick = onClick)
-                .padding(ROW_PADDING_DP.dp),
+                .then(
+                    if (role == Role.RadioButton) {
+                        Modifier.selectable(selected = selected, role = role, onClick = onClick)
+                    } else {
+                        Modifier.toggleable(value = selected, role = role) { onClick() }
+                    },
+                ).padding(ROW_PADDING_DP.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -164,7 +172,11 @@ private fun CheckMark(checked: Boolean) {
         contentAlignment = Alignment.Center,
     ) {
         if (checked) {
-            BasicText(text = CHECK_GLYPH, style = TextStyle(color = ON_ACCENT))
+            BasicText(
+                text = CHECK_GLYPH,
+                style = TextStyle(color = ON_ACCENT),
+                modifier = Modifier.clearAndSetSemantics {},
+            )
         }
     }
 }
@@ -195,7 +207,11 @@ internal fun NavigationRow(
             }
         }
         if (showChevron) {
-            BasicText(text = CHEVRON, style = TITLE_STYLE.copy(color = MUTED))
+            BasicText(
+                text = CHEVRON,
+                style = TITLE_STYLE.copy(color = MUTED),
+                modifier = Modifier.clearAndSetSemantics {},
+            )
         }
     }
 }

@@ -1,7 +1,7 @@
 package nl.r1a.grassmap.plugins.profiles.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import nl.r1a.grassmap.plugin.api.model.ProfilesState
@@ -37,7 +38,11 @@ private fun SheetFrame(
     content: @Composable () -> Unit,
 ) {
     Box(
-        modifier = Modifier.fillMaxSize().background(SCRIM).clickable(onClick = onDismiss),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(SCRIM)
+                .pointerInput(Unit) { detectTapGestures { onDismiss() } },
         contentAlignment = Alignment.BottomCenter,
     ) {
         Column(
@@ -46,7 +51,9 @@ private fun SheetFrame(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(topStart = SHEET_CORNER_DP.dp, topEnd = SHEET_CORNER_DP.dp))
                     .background(SURFACE)
-                    .clickable(enabled = false, onClick = {})
+                    // Swallow taps on the sheet body; a disabled clickable
+                    // would expose the whole sheet as a disabled button.
+                    .pointerInput(Unit) { detectTapGestures { } }
                     .navigationBarsPadding()
                     .imePadding()
                     .verticalScroll(rememberScrollState())

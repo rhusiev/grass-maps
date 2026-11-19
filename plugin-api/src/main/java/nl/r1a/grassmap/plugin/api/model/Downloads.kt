@@ -394,9 +394,10 @@ data class DownloadsData(
     val autoUpdate: Boolean = true,
     /**
      * The packs as they were on the phone when the store first looked in this
-     * process, which is before any install it makes. The map, search and
-     * elevation readers open once per process, so these are the packs the app
-     * reads until it restarts. Null while that is not known.
+     * process, which is before any install it makes. The search, routing and
+     * elevation readers open once per process, so these are the packs they read
+     * until it restarts; the map resolves its own sources again when
+     * [installed] changes. Null while that is not known.
      */
     val mountedPacks: List<InstalledPack>? = null,
     /** The borders of the catalogue's regions the store has, from the server or its cache. */
@@ -421,7 +422,9 @@ data class DownloadsData(
     /**
      * True when an installed pack is newer than the one the running process
      * reads: another version, a part the mounted pack lacks (the 30 m add-on),
-     * or a region that was not mounted. The readers pick it up at the next start.
+     * or a region that was not mounted. The search, routing and elevation
+     * readers pick it up at the next start; the map resolves its sources again
+     * when it is shown.
      */
     val appliesAtNextStart: Boolean
         get() {

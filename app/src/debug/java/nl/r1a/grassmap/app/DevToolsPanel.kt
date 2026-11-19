@@ -70,15 +70,18 @@ internal fun DevToolsPanel(
         verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
     ) {
         PanelText(stringResource(R.string.dev_tools_title))
-        PanelText(
-            stringResource(
-                if (state.replayActive) {
-                    R.string.dev_tools_replay_active
-                } else {
-                    R.string.dev_tools_replay_inactive
-                },
-            ),
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp)) {
+            PanelText(
+                stringResource(
+                    if (state.replayActive) {
+                        R.string.dev_tools_replay_active
+                    } else {
+                        R.string.dev_tools_replay_inactive
+                    },
+                ),
+            )
+            PanelText(stringResource(R.string.dev_check_build, BuildConfig.BUILD_COMMIT, BuildConfig.BUILD_COMMIT_TIME))
+        }
         PanelText(stringResource(R.string.dev_tools_fps, state.framesPerSecond))
         PanelText(
             stringResource(
@@ -93,8 +96,9 @@ internal fun DevToolsPanel(
             PanelAction(stringResource(R.string.dev_tools_stop_replay)) {
                 scope.launch { container.commandBus.invoke(DevToolsContract.stopReplayCommand) }
             }
+            DeviceCheckAction(checkUi, check::start)
         }
-        DeviceCheckSection(checkUi, check::start)
+        DeviceCheckState(checkUi)
     }
 }
 
@@ -126,18 +130,20 @@ private fun PanelAction(
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
-private fun DeviceCheckSection(
+private fun DeviceCheckAction(
     ui: DeviceCheckUi,
     onStart: () -> Unit,
 ) {
-    PanelText(
-        stringResource(R.string.dev_check_build, BuildConfig.BUILD_COMMIT, BuildConfig.BUILD_COMMIT_TIME),
-    )
     if (ui.running) {
         PanelText(stringResource(R.string.dev_check_running, ui.stepNumber, ui.stepCount, ui.stepId))
     } else {
         PanelAction(stringResource(R.string.dev_check_button), onStart)
     }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun DeviceCheckState(ui: DeviceCheckUi) {
     ui.finished?.let { report ->
         val summary = stringResource(R.string.dev_check_summary, report.passedCount, report.failedCount, report.skippedCount)
         PanelText(stringResource(if (report.isPass) R.string.dev_check_pass else R.string.dev_check_fail, summary))

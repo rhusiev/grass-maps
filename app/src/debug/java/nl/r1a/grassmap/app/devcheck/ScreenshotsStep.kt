@@ -11,6 +11,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nl.r1a.grassmap.app.MapChromeSession
+import nl.r1a.grassmap.places.SearchScreenSession
 import nl.r1a.grassmap.places.SearchScreenStatus
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
@@ -112,16 +113,18 @@ internal class ScreenshotsStep(
     private suspend fun searchAndPlaceScenes() {
         var hits = emptyList<PlaceHit>()
         var used = FALLBACK_SEARCH_QUERY to SEARCH_QUERY_FALLBACK
+        val attempts = mutableListOf<String>()
         for ((index, candidate) in searchQueries().withIndex()) {
             used = candidate
             hits = search(candidate.first, index + 1L)
+            attempts += "\"${candidate.first}\": ${hits.size}"
             if (hits.isNotEmpty()) {
                 break
             }
         }
         val (query, source) = used
         if (hits.isEmpty()) {
-            skipScene("search_results", "no query found a place: ${searchPartNote()}")
+            skipScene("search_results", "no query found a place (tried ${attempts.joinToString()}), ${searchIndexNote()}")
             skipScene("place_card", "no search hit to open")
             return
         }
@@ -207,6 +210,20 @@ internal class ScreenshotsStep(
     private fun searchPartNote(): String {
         val kinds = context.region?.parts?.joinToString { it.wireKind }
         return "the installed region has these parts: ${kinds ?: "none known"}"
+    }
+
+    /**
+     * Where the search path looks for its index and whether it is there. A
+     * downloaded pack keeps its search section in the region store, which this
+     * path does not read, so a run against a fresh download states the missing
+     * directory instead of blaming the query.
+     */
+    private fun searchIndexNote(): String {
+        val index = SearchScreenSession.DEFAULT_INDEX
+        val directory = context.container.places.indexDirectory(index)
+        val present = directory?.isDirectory == true
+        return "the search path reads index \"$index\" at ${directory?.path ?: "no external files root"}: " +
+            if (present) "present, ${searchPartNote()}" else "missing, ${searchPartNote()}"
     }
 
     private suspend fun plannerScene() {

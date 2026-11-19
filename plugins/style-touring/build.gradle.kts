@@ -41,6 +41,7 @@ androidComponents {
 dependencies {
     implementation(project(":plugin-api"))
 
+    testImplementation(testFixtures(project(":plugin-api")))
     testImplementation(libs.junit)
 }
 

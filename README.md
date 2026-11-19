@@ -110,8 +110,10 @@ and `screenshots/*.png`. The writer refuses to write an entry that contains the 
 The check also writes `device-check-progress.log` (scrubbed) into the app cache as it
 runs, so a crash still leaves the last step. The ZIP holds no token, no location history and no personal data. The system theme is
 not changed: dark shots use the dark map style and the dark navigation fixture, and each
-record says whether the system was in night mode, and `report.json` states that the dark
-shots are map-dark only because the app has no dark UI theme. Profiles create/copy/reset, the widget
+record says whether the system was in dark mode. The panels take their dark palette from
+`isSystemInDarkTheme()`, so the check cannot show a dark panel unless the phone is already
+in dark mode; a run with the phone in dark mode captures the same scenes with dark panels
+and `ui_night_mode` true in every record. `report.json` states the same. Profiles create/copy/reset, the widget
 grid and the plugin manager are listed in the report as not in this build.
 
 ### Rust core

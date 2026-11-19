@@ -33,7 +33,7 @@ private const val PLAN_END_LAT = 49.8326
 private const val PLAN_END_LON = 24.0230
 
 private const val DARK_THEME_NOTE =
-    "the dark shots use the dark map style only: the app has no dark UI theme, so ui_night_mode stays false"
+    "the dark shots use the dark map style only: the panels take their dark palette from the system night mode, and the check leaves the system theme alone"
 private const val FALLBACK_SEARCH_QUERY = "Lviv"
 private const val MAP_IDLE = "map_idle"
 private const val SEARCH_QUERY_REGION_LABEL = "region_label"

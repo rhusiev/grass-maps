@@ -185,10 +185,10 @@ class FollowTrackContentTest {
                 "follow_track_to_get_there_loop" to "%1\$s to get there · the loop the other way",
                 "follow_track_start" to "Start",
                 "follow_track_close" to "Close the start choices",
-                "route_preview_metres" to "%1\$s m",
-                "route_preview_kilometres" to "%1\$s km",
-                "route_preview_feet" to "%1\$s ft",
-                "route_preview_miles" to "%1\$s mi",
+                "unit_distance_metres" to "%1\$s m",
+                "unit_distance_kilometres" to "%1\$s km",
+                "unit_distance_feet" to "%1\$s ft",
+                "unit_distance_miles" to "%1\$s mi",
             )
 
         val UKRAINIAN =
@@ -203,8 +203,8 @@ class FollowTrackContentTest {
                 "follow_track_to_get_there_loop" to "%1\$s до старту · петля в інший бік",
                 "follow_track_start" to "Почати",
                 "follow_track_close" to "Закрити вибір старту",
-                "route_preview_metres" to "%1\$s м",
-                "route_preview_kilometres" to "%1\$s км",
+                "unit_distance_metres" to "%1\$s м",
+                "unit_distance_kilometres" to "%1\$s км",
             )
     }
 }

@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.api.unit.UnitText
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartClimb
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
@@ -118,11 +119,11 @@ fun trackAnalysisDisplay(
         listOf(
             TrackAnalysisTile(
                 label = strings.resolve(DISTANCE_KEY),
-                value = distanceText(summary.distanceMeters, strings, locale, units),
+                value = UnitText.distance(summary.distanceMeters, units, strings, locale),
             ),
             TrackAnalysisTile(
                 label = strings.resolve(ASCENT_KEY),
-                value = elevationLabel(summary.ascentMeters, units, strings, METRES_KEY, FEET_KEY),
+                value = UnitText.elevation(summary.ascentMeters, units, strings),
             ),
             TrackAnalysisTile(
                 label = strings.resolve(MOVING_KEY),
@@ -168,7 +169,7 @@ private fun metaLine(
         parts += strings.resolve(MAX_SPEED_KEY, listOf(speedText(speed, units, strings, locale)))
     }
     if (summary.descentMeters > 0.0) {
-        parts += elevationLabel(summary.descentMeters, units, strings, DESCENT_KEY, DESCENT_FEET_KEY)
+        parts += UnitText.elevationLabel(summary.descentMeters, units, strings, DESCENT_KEY, DESCENT_FEET_KEY)
     }
     return parts.takeIf { it.isNotEmpty() }?.joinToString(META_SEPARATOR)
 }
@@ -179,17 +180,11 @@ private fun speedText(
     units: UnitSystem,
     strings: Strings,
     locale: Locale,
-): String {
-    val reading =
-        when (units) {
-            UnitSystem.Metric -> metersPerSecond * SECONDS_PER_HOUR / METRES_PER_KILOMETRE
-            UnitSystem.Imperial -> metersPerSecond * SECONDS_PER_HOUR / METRES_PER_MILE
-        }
-    return strings.resolve(
-        if (units == UnitSystem.Imperial) SPEED_VALUE_MPH_KEY else SPEED_VALUE_KEY,
-        listOf(String.format(locale, "%.1f", reading)),
-    )
-}
+): String =
+    UnitText
+        .measuredSpeed(metersPerSecond, units, strings, locale)
+        ?.let { "${it.value} ${it.unit}" }
+        ?: NO_VALUE
 
 /**
  * The selected range's row, or null when the chart has no selection. The values
@@ -203,9 +198,9 @@ fun trackAnalysisRangeRow(
 ): TrackRangeRow? {
     val selection = state.selection ?: return null
     val parts = mutableListOf<String>()
-    parts += elevationLabel(selection.ascentMeters, units, strings, ASCENT_VALUE_KEY, ASCENT_VALUE_FEET_KEY)
+    parts += UnitText.elevationLabel(selection.ascentMeters, units, strings, ASCENT_VALUE_KEY, ASCENT_VALUE_FEET_KEY)
     if (selection.descentMeters > 0.0) {
-        parts += elevationLabel(selection.descentMeters, units, strings, DESCENT_VALUE_KEY, DESCENT_VALUE_FEET_KEY)
+        parts += UnitText.elevationLabel(selection.descentMeters, units, strings, DESCENT_VALUE_KEY, DESCENT_VALUE_FEET_KEY)
     }
     selection.durationMillis?.let { duration ->
         parts += durationLabel(duration.toDouble(), strings)
@@ -232,7 +227,7 @@ fun trackAnalysisClimbRows(
         TrackClimbRow(
             ordinal = index + 1,
             title = rangeText(climb.startMeters, climb.endMeters, strings, locale, units),
-            ascent = elevationLabel(climb.ascentMeters, units, strings, ASCENT_VALUE_KEY, ASCENT_VALUE_FEET_KEY),
+            ascent = UnitText.elevationLabel(climb.ascentMeters, units, strings, ASCENT_VALUE_KEY, ASCENT_VALUE_FEET_KEY),
             grade = strings.resolve(GRADE_VALUE_KEY, listOf(climb.averageGradePercent.roundToLong().toString())),
             duration = climb.durationMillis?.let { duration -> durationLabel(duration.toDouble(), strings) },
             selected = isSelected(state, climb),
@@ -263,29 +258,29 @@ private fun rangeText(
 ): String =
     when (units) {
         UnitSystem.Metric -> {
-            if (endMeters >= METRES_PER_KILOMETRE) {
+            if (endMeters >= UnitText.METRES_PER_KILOMETRE) {
                 strings.resolve(
                     RANGE_KILOMETRES_KEY,
-                    listOf(kilometresValue(startMeters, locale), kilometresValue(endMeters, locale)),
+                    listOf(UnitText.kilometresValue(startMeters, locale), UnitText.kilometresValue(endMeters, locale)),
                 )
             } else {
                 strings.resolve(
                     RANGE_METRES_KEY,
-                    listOf(metresValue(startMeters), metresValue(endMeters)),
+                    listOf(UnitText.metresValue(startMeters), UnitText.metresValue(endMeters)),
                 )
             }
         }
 
         UnitSystem.Imperial -> {
-            if (endMeters >= METRES_PER_MILE) {
+            if (endMeters >= UnitText.METRES_PER_MILE) {
                 strings.resolve(
                     RANGE_MILES_KEY,
-                    listOf(milesValue(startMeters, locale), milesValue(endMeters, locale)),
+                    listOf(UnitText.milesValue(startMeters, locale), UnitText.milesValue(endMeters, locale)),
                 )
             } else {
                 strings.resolve(
                     RANGE_FEET_KEY,
-                    listOf(feetValue(startMeters), feetValue(endMeters)),
+                    listOf(UnitText.feetValue(startMeters), UnitText.feetValue(endMeters)),
                 )
             }
         }
@@ -594,7 +589,6 @@ private const val CLOSE_PADDING_DP = 6
 private const val META_SEPARATOR = " · "
 private const val NO_VALUE = "-"
 private const val MILLIS_PER_SECOND = 1_000.0
-private const val SECONDS_PER_HOUR = 3_600.0
 private const val CLOSE_GLYPH = "\u00D7"
 private const val ROW_FONT_SP = 12
 private const val ROW_GAP_DP = 8
@@ -622,10 +616,6 @@ private const val DISTANCE_KEY = "track_analysis_distance"
 private const val ASCENT_KEY = "track_analysis_ascent"
 private const val MOVING_KEY = "track_analysis_moving"
 private const val SPEED_KEY = "track_analysis_speed"
-private const val SPEED_VALUE_KEY = "track_analysis_speed_value"
-private const val SPEED_VALUE_MPH_KEY = "track_analysis_speed_value_mph"
-private const val METRES_KEY = "track_analysis_metres"
-private const val FEET_KEY = "track_analysis_feet"
 private const val TOTAL_KEY = "track_analysis_total"
 private const val STOPPED_KEY = "track_analysis_stopped"
 private const val MAX_SPEED_KEY = "track_analysis_max_speed"

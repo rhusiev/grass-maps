@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.api.unit.UnitText
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -128,13 +129,13 @@ private fun statsLine(
 ): String {
     val parts = mutableListOf<String>()
     if (card.distanceMeters > 0.0) {
-        parts += distanceText(card.distanceMeters, strings, locale, units)
+        parts += UnitText.distance(card.distanceMeters, units, strings, locale)
     }
     if (card.ascentMeters > 0.0) {
         parts +=
             strings.resolve(
                 TRACK_CARD_ASCENT_KEY,
-                listOf(elevationLabel(card.ascentMeters, units, strings, TRACK_ANALYSIS_METRES_KEY, TRACK_ANALYSIS_FEET_KEY)),
+                listOf(UnitText.elevation(card.ascentMeters, units, strings)),
             )
     }
     card.movingMillis?.takeIf { it > 0L }?.let { millis ->
@@ -308,8 +309,6 @@ private fun ActionButton(
 }
 
 private const val TRACK_ANALYSIS_UNTITLED_KEY = "track_analysis_untitled"
-private const val TRACK_ANALYSIS_METRES_KEY = "track_analysis_metres"
-private const val TRACK_ANALYSIS_FEET_KEY = "track_analysis_feet"
 private const val TRACK_CARD_ANALYSIS_KEY = "track_card_analysis"
 private const val TRACK_CARD_COLOUR_KEY = "track_card_colour"
 private const val TRACK_CARD_HIDE_KEY = "track_card_hide"

@@ -49,6 +49,7 @@ import nl.r1a.grassmap.plugin.api.model.routePointEntry
 import nl.r1a.grassmap.plugin.api.provider.CoordinateParser
 import nl.r1a.grassmap.plugin.api.provider.RouteOptions
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.api.unit.UnitText
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartState
 import nl.r1a.grassmap.plugin.ui.api.RouteTurnStep
@@ -804,7 +805,7 @@ internal fun routePlanFailureText(
             if (limit == null) {
                 strings.resolve(FAILED_KEY)
             } else {
-                strings.resolve(TOO_FAR_KEY, listOf(distanceText(limit, strings, locale, units)))
+                strings.resolve(TOO_FAR_KEY, listOf(UnitText.distance(limit, units, strings, locale)))
             }
         }
 

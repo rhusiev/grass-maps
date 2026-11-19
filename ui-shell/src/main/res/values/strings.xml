@@ -71,8 +71,8 @@
     <string name="nav_screen_back">Back</string>
     <string name="nav_screen_speed_current">Current</string>
     <string name="nav_screen_speed_average">Average</string>
-    <string name="nav_screen_speed_max">Max</string>
     <string name="nav_screen_speed_unit">km/h</string>
+    <string name="nav_screen_speed_max">Max</string>
     <string name="nav_screen_trip_left">%1$s left · arrive %2$s</string>
     <string name="nav_screen_trip_left_no_arrival">%1$s left</string>
     <string name="nav_screen_next_stop">Next stop · %1$s</string>
@@ -124,10 +124,6 @@
     <string name="elevation_chart_legend_altitude_feet">%1$s ft low ... %2$s ft high</string>
     <string name="elevation_chart_details_show">Show details</string>
     <string name="elevation_chart_details_hide">Hide details</string>
-    <string name="elevation_chart_metres">%1$s m</string>
-    <string name="elevation_chart_kilometres">%1$s km</string>
-    <string name="elevation_chart_feet">%1$s ft</string>
-    <string name="elevation_chart_miles">%1$s mi</string>
     <string name="elevation_chart_minutes">%1$s min</string>
     <string name="elevation_chart_hours">%1$s h</string>
     <string name="elevation_chart_hours_minutes">%1$s h %2$s min</string>
@@ -171,10 +167,6 @@
     <string name="track_analysis_ascent">Ascent</string>
     <string name="track_analysis_moving">Moving</string>
     <string name="track_analysis_speed">Speed</string>
-    <string name="track_analysis_speed_value">%1$s km/h</string>
-    <string name="track_analysis_speed_value_mph">%1$s mph</string>
-    <string name="track_analysis_metres">%1$s m</string>
-    <string name="track_analysis_feet">%1$s ft</string>
     <string name="track_analysis_total">Total %1$s</string>
     <string name="track_analysis_stopped">stopped %1$s</string>
     <string name="track_analysis_max_speed">max %1$s</string>
@@ -325,11 +317,11 @@
     <string name="widget_grid_selected_point">Selected point</string>
     <string name="widget_grid_altitude_label">alt</string>
     <string name="widget_grid_gps_label">GPS</string>
+    <string name="widget_grid_metres">%1$s m</string>
     <string name="widget_grid_fix_label">GPS</string>
     <string name="widget_grid_centre_label">center</string>
     <string name="widget_grid_speed_average_label">avg</string>
     <string name="widget_grid_speed_max_label">max</string>
-    <string name="widget_grid_metres">%1$s m</string>
     <string name="widget_grid_accuracy">±%1$s m</string>
     <string name="widget_grid_coordinates_value">%1$s, %2$s</string>
     <string name="widget_grid_add">+</string>

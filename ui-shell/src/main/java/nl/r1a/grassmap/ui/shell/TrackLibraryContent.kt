@@ -6,7 +6,9 @@ import nl.r1a.grassmap.plugin.api.model.TrackLibraryAction
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryRow
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
 import nl.r1a.grassmap.plugin.api.model.TrackSort
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.api.unit.UnitText
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -153,7 +155,7 @@ fun trackLibraryContent(
             listTrackCount,
             listOf(
                 listTrackCount.toString(),
-                distanceText(allDistanceFor(state, selected?.id), strings, locale),
+                UnitText.distance(allDistanceFor(state, selected?.id), UnitSystem.Metric, strings, locale),
                 ascentValue(allAscentFor(state, selected?.id), strings),
             ),
         )
@@ -197,7 +199,7 @@ fun trackLibraryContent(
                         strings.resolveQuantity(
                             TRACK_LIBRARY_FOLDER_SUMMARY_KEY,
                             state.tracks.size,
-                            listOf(state.tracks.size.toString(), distanceText(allDistance, strings, locale)),
+                            listOf(state.tracks.size.toString(), UnitText.distance(allDistance, UnitSystem.Metric, strings, locale)),
                         ),
                     selected = browse.selectedListId == null,
                 ),
@@ -210,7 +212,10 @@ fun trackLibraryContent(
                             strings.resolveQuantity(
                                 TRACK_LIBRARY_FOLDER_SUMMARY_KEY,
                                 folder.trackCount,
-                                listOf(folder.trackCount.toString(), distanceText(folder.distanceMeters, strings, locale)),
+                                listOf(
+                                    folder.trackCount.toString(),
+                                    UnitText.distance(folder.distanceMeters, UnitSystem.Metric, strings, locale),
+                                ),
                             ),
                         selected = folder.id == browse.selectedListId,
                     )
@@ -332,7 +337,7 @@ private fun trackRowContent(
         parts += strings.resolve(TRACK_LIBRARY_KIND_ROUTE_KEY)
     }
     if (row.distanceMeters > 0.0) {
-        parts += distanceText(row.distanceMeters, strings, locale)
+        parts += UnitText.distance(row.distanceMeters, UnitSystem.Metric, strings, locale)
     }
     if (row.ascentMeters > 0.0) {
         parts += ascentText(row.ascentMeters, strings)
@@ -385,7 +390,7 @@ internal fun ascentText(
 private fun ascentValue(
     meters: Double,
     strings: Strings,
-): String = strings.resolve(METRES_KEY, listOf(meters.toLong().toString()))
+): String = UnitText.elevation(meters, UnitSystem.Metric, strings)
 
 private fun dateText(
     millis: Long,
@@ -441,7 +446,6 @@ internal const val TRACK_LIBRARY_FOLDER_NAME_KEY = "track_library_folder_name"
 internal const val TRACK_LIBRARY_CREATE_FOLDER_TITLE_KEY = "track_library_create_folder_title"
 internal const val TRACK_LIBRARY_RENAME_FOLDER_TITLE_KEY = "track_library_rename_folder_title"
 
-private const val METRES_KEY = "track_analysis_metres"
 private const val META_SEPARATOR = " · "
 private const val ASCENT_PREFIX = "↑"
 private const val DATE_PATTERN = "d MMM"

@@ -114,10 +114,10 @@ class RelationAnalysisContentTest {
                 "elevation_chart_range_ascent_feet" to "↑%1\$s ft",
                 "elevation_chart_range_descent" to "↓%1\$s m",
                 "elevation_chart_range_descent_feet" to "↓%1\$s ft",
-                "route_preview_metres" to "%1\$s m",
-                "route_preview_kilometres" to "%1\$s km",
-                "route_preview_feet" to "%1\$s ft",
-                "route_preview_miles" to "%1\$s mi",
+                "unit_distance_metres" to "%1\$s m",
+                "unit_distance_kilometres" to "%1\$s km",
+                "unit_distance_feet" to "%1\$s ft",
+                "unit_distance_miles" to "%1\$s mi",
             )
 
         val UKRAINIAN =
@@ -127,8 +127,8 @@ class RelationAnalysisContentTest {
                 "relation_analysis_hiking_local" to "Місцевий пішохідний маршрут",
                 "elevation_chart_range_ascent" to "↑%1\$s м",
                 "elevation_chart_range_descent" to "↓%1\$s м",
-                "route_preview_metres" to "%1\$s м",
-                "route_preview_kilometres" to "%1\$s км",
+                "unit_distance_metres" to "%1\$s м",
+                "unit_distance_kilometres" to "%1\$s км",
             )
     }
 }

@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import nl.r1a.grassmap.plugin.api.model.RouteNetwork
 import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.api.unit.UnitText
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartState
 import java.util.Locale
@@ -63,12 +64,12 @@ fun relationAnalysisDisplay(
     locale: Locale = Locale.getDefault(),
     units: UnitSystem = UnitSystem.Metric,
 ): RelationAnalysisDisplay {
-    val parts = mutableListOf(distanceText(summary.distanceMeters, strings, locale, units))
+    val parts = mutableListOf(UnitText.distance(summary.distanceMeters, units, strings, locale))
     if (summary.ascentMeters > 0.0) {
-        parts += elevationLabel(summary.ascentMeters, units, strings, RELATION_ASCENT_KEY, RELATION_ASCENT_FEET_KEY)
+        parts += UnitText.elevationLabel(summary.ascentMeters, units, strings, RELATION_ASCENT_KEY, RELATION_ASCENT_FEET_KEY)
     }
     if (summary.descentMeters > 0.0) {
-        parts += elevationLabel(summary.descentMeters, units, strings, RELATION_DESCENT_KEY, RELATION_DESCENT_FEET_KEY)
+        parts += UnitText.elevationLabel(summary.descentMeters, units, strings, RELATION_DESCENT_KEY, RELATION_DESCENT_FEET_KEY)
     }
     return RelationAnalysisDisplay(
         title = summary.name?.takeIf { it.isNotBlank() } ?: strings.resolve(RELATION_UNTITLED_KEY),

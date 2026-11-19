@@ -105,10 +105,10 @@ class RoutePlanTurnsTest {
         object : Strings {
             private val templates =
                 mapOf(
-                    "route_preview_metres" to "%1\$s m",
-                    "route_preview_kilometres" to "%1\$s km",
-                    "route_preview_feet" to "%1\$s ft",
-                    "route_preview_miles" to "%1\$s mi",
+                    "unit_distance_metres" to "%1\$s m",
+                    "unit_distance_kilometres" to "%1\$s km",
+                    "unit_distance_feet" to "%1\$s ft",
+                    "unit_distance_miles" to "%1\$s mi",
                     "route_planner_arrive" to "Arrive at the destination",
                     "route_planner_turn_at" to "at %1\$s",
                 )

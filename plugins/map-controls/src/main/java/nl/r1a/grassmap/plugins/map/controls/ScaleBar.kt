@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.plugins.map.controls
 
 import nl.r1a.grassmap.plugin.api.model.UnitSystem
+import nl.r1a.grassmap.plugin.api.unit.UnitText
 
 /** The unit one scale-bar reading is labelled in. */
 enum class ScaleBarUnit {
@@ -92,10 +93,7 @@ object ScaleBar {
     private const val MILE_DECADES = 5
     private const val WIDTH_EPSILON_DP = 1e-6
     private val DECADE_FACTORS = listOf(1.0, 2.0, 5.0)
-    private const val METRES_PER_KILOMETRE = 1_000.0
-    private const val METRES_PER_FOOT = 0.3048
-    private const val METRES_PER_MILE = 1_609.344
-    private const val FEET_PER_MILE = 5_280.0
+    private const val FEET_PER_MILE = UnitText.METRES_PER_MILE / UnitText.METRES_PER_FOOT
 
     private val metricSteps: List<Step> =
         buildList {
@@ -116,7 +114,7 @@ object ScaleBar {
                 for (factor in DECADE_FACTORS) {
                     val feet = decade * factor
                     if (feet < FEET_PER_MILE) {
-                        add(Step(feet * METRES_PER_FOOT, feet, ScaleBarUnit.Feet))
+                        add(Step(feet * UnitText.METRES_PER_FOOT, feet, ScaleBarUnit.Feet))
                     }
                 }
                 decade *= DECADE_FACTOR
@@ -125,15 +123,15 @@ object ScaleBar {
             repeat(MILE_DECADES) {
                 for (factor in DECADE_FACTORS) {
                     val value = miles * factor
-                    add(Step(value * METRES_PER_MILE, value, ScaleBarUnit.Miles))
+                    add(Step(value * UnitText.METRES_PER_MILE, value, ScaleBarUnit.Miles))
                 }
                 miles *= DECADE_FACTOR
             }
         }
 
     private fun stepMeters(meters: Double): Step =
-        if (meters >= METRES_PER_KILOMETRE) {
-            Step(meters, meters / METRES_PER_KILOMETRE, ScaleBarUnit.Kilometres)
+        if (meters >= UnitText.METRES_PER_KILOMETRE) {
+            Step(meters, meters / UnitText.METRES_PER_KILOMETRE, ScaleBarUnit.Kilometres)
         } else {
             Step(meters, meters, ScaleBarUnit.Metres)
         }

@@ -2,6 +2,8 @@ package nl.r1a.grassmap.ui.shell
 
 import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.api.unit.UnitStrings
+import nl.r1a.grassmap.plugin.api.unit.UnitText
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartPoint
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartState
@@ -467,8 +469,8 @@ private fun legend(
                     strings.resolve(
                         if (units == UnitSystem.Imperial) LEGEND_ALTITUDE_FEET_KEY else LEGEND_ALTITUDE_KEY,
                         listOf(
-                            elevationValue(minElevationMeters, units),
-                            elevationValue(maxElevationMeters, units),
+                            UnitText.elevationValue(minElevationMeters, units),
+                            UnitText.elevationValue(maxElevationMeters, units),
                         ),
                     )
                 }
@@ -490,8 +492,8 @@ private fun elevationTicks(
             fraction = fraction,
             label =
                 strings.resolve(
-                    if (units == UnitSystem.Imperial) FEET_KEY else METRES_KEY,
-                    listOf(elevationValue(elevation, units)),
+                    if (units == UnitSystem.Imperial) UnitStrings.ELEVATION_FEET else UnitStrings.ELEVATION_METRES,
+                    listOf(UnitText.elevationValue(elevation, units)),
                 ),
         )
     }
@@ -563,26 +565,26 @@ private fun tickCandidates(
         ElevationChartAxis.Distance -> {
             if (units == UnitSystem.Imperial) {
                 listOf(
-                    METRES_PER_FOOT * 100,
-                    METRES_PER_FOOT * 200,
-                    METRES_PER_FOOT * 500,
-                    METRES_PER_FOOT * 1_000,
-                    METRES_PER_FOOT * 2_000,
-                    METRES_PER_MILE / 2,
-                    METRES_PER_MILE,
-                    2 * METRES_PER_MILE,
-                    5 * METRES_PER_MILE,
-                    10 * METRES_PER_MILE,
+                    UnitText.METRES_PER_FOOT * 100,
+                    UnitText.METRES_PER_FOOT * 200,
+                    UnitText.METRES_PER_FOOT * 500,
+                    UnitText.METRES_PER_FOOT * 1_000,
+                    UnitText.METRES_PER_FOOT * 2_000,
+                    UnitText.METRES_PER_MILE / 2,
+                    UnitText.METRES_PER_MILE,
+                    2 * UnitText.METRES_PER_MILE,
+                    5 * UnitText.METRES_PER_MILE,
+                    10 * UnitText.METRES_PER_MILE,
                 )
             } else {
                 listOf(
-                    METRES_PER_KILOMETRE / 10,
-                    METRES_PER_KILOMETRE / 5,
-                    METRES_PER_KILOMETRE / 2,
-                    METRES_PER_KILOMETRE,
-                    2 * METRES_PER_KILOMETRE,
-                    5 * METRES_PER_KILOMETRE,
-                    10 * METRES_PER_KILOMETRE,
+                    UnitText.METRES_PER_KILOMETRE / 10,
+                    UnitText.METRES_PER_KILOMETRE / 5,
+                    UnitText.METRES_PER_KILOMETRE / 2,
+                    UnitText.METRES_PER_KILOMETRE,
+                    2 * UnitText.METRES_PER_KILOMETRE,
+                    5 * UnitText.METRES_PER_KILOMETRE,
+                    10 * UnitText.METRES_PER_KILOMETRE,
                 )
             }
         }
@@ -658,17 +660,17 @@ private fun distanceLabel(
 ): String =
     if (units == UnitSystem.Imperial) {
         imperialDistanceLabel(metres, step, strings, locale)
-    } else if (step < METRES_PER_KILOMETRE) {
-        strings.resolve(METRES_KEY, listOf(metres.roundToLong().toString()))
+    } else if (step < UnitText.METRES_PER_KILOMETRE) {
+        strings.resolve(UnitStrings.DISTANCE_METRES, listOf(metres.roundToLong().toString()))
     } else {
-        val kilometres = metres / METRES_PER_KILOMETRE
+        val kilometres = metres / UnitText.METRES_PER_KILOMETRE
         val text =
             if (abs(kilometres - kilometres.roundToLong()) < WHOLE_NUMBER_TOLERANCE) {
                 kilometres.roundToLong().toString()
             } else {
                 String.format(locale, "%.1f", kilometres)
             }
-        strings.resolve(KILOMETRES_KEY, listOf(text))
+        strings.resolve(UnitStrings.DISTANCE_KILOMETRES, listOf(text))
     }
 
 private fun imperialDistanceLabel(
@@ -677,17 +679,20 @@ private fun imperialDistanceLabel(
     strings: Strings,
     locale: Locale,
 ): String {
-    if (step < METRES_PER_MILE) {
-        return strings.resolve(FEET_KEY, listOf((metres / METRES_PER_FOOT).roundToLong().toString()))
+    if (step < UnitText.METRES_PER_MILE) {
+        return strings.resolve(
+            UnitStrings.DISTANCE_FEET,
+            listOf((metres / UnitText.METRES_PER_FOOT).roundToLong().toString()),
+        )
     }
-    val miles = metres / METRES_PER_MILE
+    val miles = metres / UnitText.METRES_PER_MILE
     val text =
         if (abs(miles - miles.roundToLong()) < WHOLE_NUMBER_TOLERANCE) {
             miles.roundToLong().toString()
         } else {
             String.format(locale, "%.1f", miles)
         }
-    return strings.resolve(MILES_KEY, listOf(text))
+    return strings.resolve(UnitStrings.DISTANCE_MILES, listOf(text))
 }
 
 internal fun durationLabel(
@@ -713,10 +718,6 @@ private const val COLOUR_ALTITUDE_KEY = "elevation_chart_colour_altitude"
 private const val LEGEND_SLOPE_KEY = "elevation_chart_legend_slope"
 private const val LEGEND_ALTITUDE_KEY = "elevation_chart_legend_altitude"
 private const val LEGEND_ALTITUDE_FEET_KEY = "elevation_chart_legend_altitude_feet"
-private const val METRES_KEY = "elevation_chart_metres"
-private const val KILOMETRES_KEY = "elevation_chart_kilometres"
-private const val FEET_KEY = "elevation_chart_feet"
-private const val MILES_KEY = "elevation_chart_miles"
 private const val MINUTES_KEY = "elevation_chart_minutes"
 private const val HOURS_KEY = "elevation_chart_hours"
 private const val HOURS_MINUTES_KEY = "elevation_chart_hours_minutes"

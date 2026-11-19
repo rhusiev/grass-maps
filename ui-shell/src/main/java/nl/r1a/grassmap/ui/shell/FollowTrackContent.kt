@@ -40,6 +40,7 @@ import nl.r1a.grassmap.plugin.api.model.TrackFollowPlan
 import nl.r1a.grassmap.plugin.api.model.TrackFollowStart
 import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.api.unit.UnitText
 import java.util.Locale
 import kotlin.math.roundToLong
 
@@ -88,9 +89,9 @@ fun followTrackSheetDisplay(
     units: UnitSystem = UnitSystem.Metric,
 ): FollowTrackSheetDisplay {
     val trackName = name?.takeIf { it.isNotBlank() } ?: strings.resolve(FOLLOW_UNTITLED_KEY)
-    val subtitleParts = mutableListOf(distanceText(distanceMeters, strings, locale, units))
+    val subtitleParts = mutableListOf(UnitText.distance(distanceMeters, units, strings, locale))
     if (ascentMeters.roundToLong() > 0L) {
-        subtitleParts += elevationLabel(ascentMeters, units, strings, FOLLOW_ASCENT_KEY, FOLLOW_ASCENT_FEET_KEY)
+        subtitleParts += UnitText.elevationLabel(ascentMeters, units, strings, FOLLOW_ASCENT_KEY, FOLLOW_ASCENT_FEET_KEY)
     }
     return FollowTrackSheetDisplay(
         title = strings.resolve(FOLLOW_TITLE_KEY, listOf(trackName)),
@@ -108,7 +109,7 @@ fun followTrackSheetDisplay(
                                 } else {
                                     FOLLOW_HINT_KEY
                                 }
-                            strings.resolve(key, listOf(distanceText(distance, strings, locale, units)))
+                            strings.resolve(key, listOf(UnitText.distance(distance, units, strings, locale)))
                         },
                     selected = option.start == selected,
                 )

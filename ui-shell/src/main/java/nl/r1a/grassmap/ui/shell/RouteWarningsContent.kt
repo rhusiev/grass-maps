@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.provider.RouteProfile
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.api.unit.UnitText
 import java.util.Locale
 
 private const val ENTRY_TITLE_FONT_SP = 14
@@ -314,7 +315,7 @@ internal fun routeWarningsSheetContent(
                     // The profile opens the line, so it takes the sentence's capital.
                     profileLabel(profile, strings).replaceFirstChar { it.titlecase() },
                     routePlanAlternativeText(durationSeconds, strings),
-                    distanceText(distanceMeters, strings, locale, units),
+                    UnitText.distance(distanceMeters, units, strings, locale),
                 ),
             ),
         rows =
@@ -323,7 +324,7 @@ internal fun routeWarningsSheetContent(
                     glyph = row.glyph,
                     kind = routeWarningKindText(row.glyph, strings),
                     detail = routeWarningDetail(row.glyph, profile, strings),
-                    distance = distanceText(row.distanceAlongRouteMeters, strings, locale, units),
+                    distance = UnitText.distance(row.distanceAlongRouteMeters, units, strings, locale),
                 )
             },
         back = strings.resolve(BACK_KEY),

@@ -71,8 +71,8 @@
     <string name="nav_screen_back">Назад</string>
     <string name="nav_screen_speed_current">Зараз</string>
     <string name="nav_screen_speed_average">Середня</string>
-    <string name="nav_screen_speed_max">Макс.</string>
     <string name="nav_screen_speed_unit">км/год</string>
+    <string name="nav_screen_speed_max">Макс.</string>
     <string name="nav_screen_trip_left">%1$s залишилось · прибуття %2$s</string>
     <string name="nav_screen_trip_left_no_arrival">%1$s залишилось</string>
     <string name="nav_screen_next_stop">Наступна зупинка · %1$s</string>
@@ -124,10 +124,6 @@
     <string name="elevation_chart_legend_altitude_feet">%1$s фут низько ... %2$s фут високо</string>
     <string name="elevation_chart_details_show">Показати подробиці</string>
     <string name="elevation_chart_details_hide">Сховати подробиці</string>
-    <string name="elevation_chart_metres">%1$s м</string>
-    <string name="elevation_chart_kilometres">%1$s км</string>
-    <string name="elevation_chart_feet">%1$s фут</string>
-    <string name="elevation_chart_miles">%1$s миля</string>
     <string name="elevation_chart_minutes">%1$s хв</string>
     <string name="elevation_chart_hours">%1$s год</string>
     <string name="elevation_chart_hours_minutes">%1$s год %2$s хв</string>
@@ -171,10 +167,6 @@
     <string name="track_analysis_ascent">Підйом</string>
     <string name="track_analysis_moving">У русі</string>
     <string name="track_analysis_speed">Швидкість</string>
-    <string name="track_analysis_speed_value">%1$s км/год</string>
-    <string name="track_analysis_speed_value_mph">%1$s миль/год</string>
-    <string name="track_analysis_metres">%1$s м</string>
-    <string name="track_analysis_feet">%1$s фут</string>
     <string name="track_analysis_total">Загалом %1$s</string>
     <string name="track_analysis_stopped">зупинки %1$s</string>
     <string name="track_analysis_max_speed">макс. %1$s</string>
@@ -335,11 +327,11 @@
     <string name="widget_grid_selected_point">Вибрана точка</string>
     <string name="widget_grid_altitude_label">вис.</string>
     <string name="widget_grid_gps_label">GPS</string>
+    <string name="widget_grid_metres">%1$s м</string>
     <string name="widget_grid_fix_label">GPS</string>
     <string name="widget_grid_centre_label">центр</string>
     <string name="widget_grid_speed_average_label">сер.</string>
     <string name="widget_grid_speed_max_label">макс.</string>
-    <string name="widget_grid_metres">%1$s м</string>
     <string name="widget_grid_accuracy">±%1$s м</string>
     <string name="widget_grid_coordinates_value">%1$s, %2$s</string>
     <string name="widget_grid_add">+</string>

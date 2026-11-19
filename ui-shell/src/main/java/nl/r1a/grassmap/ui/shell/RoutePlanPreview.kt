@@ -4,6 +4,7 @@ import nl.r1a.grassmap.plugin.api.model.RoutePlanOption
 import nl.r1a.grassmap.plugin.api.model.RoutePlanState
 import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.api.unit.UnitText
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -99,7 +100,7 @@ fun routePlanPreview(
                 RoutePreviewEntry(RoutePreviewField.Time, timeText(seconds, time?.model, strings)),
                 RoutePreviewEntry(
                     RoutePreviewField.Distance,
-                    distanceText(option.distanceMeters, strings, locale, units),
+                    UnitText.distance(option.distanceMeters, units, strings, locale),
                 ),
                 RoutePreviewEntry(
                     RoutePreviewField.Arrival,

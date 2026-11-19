@@ -223,6 +223,10 @@ val moduleTestDependencyAllowlist: Map<String, Set<String>> =
         ":plugins:downloads-ui" to setOf(":plugin-api", ":regions"),
         // T-0602: the profiles tests use the plugin-api test fixtures only.
         ":plugins:profiles-ui" to setOf(":plugin-api"),
+        // The style tests evaluate their water filters through the plugin-api
+        // filter fixture. Test only; the plugin's runtime classpath is unchanged.
+        ":plugins:style-standard" to setOf(":plugin-api"),
+        ":plugins:style-touring" to setOf(":plugin-api"),
     )
 val moduleBoundaryViolations = objects.listProperty(String::class.java)
 val moduleBoundaryEdges = objects.property(Int::class.java).convention(0)

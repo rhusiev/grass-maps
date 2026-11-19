@@ -74,6 +74,8 @@ import nl.r1a.grassmap.plugin.api.provider.PlaceHit
 @Composable
 fun SearchScreenHost(
     hits: List<PlaceHit>,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
     loading: Boolean,
     failed: Boolean,
     camera: Camera,
@@ -116,7 +118,6 @@ fun SearchScreenHost(
     // search text; the field is the user's.
     var typed by remember { mutableStateOf("") }
     val content = searchScreenContent(hits, typed, loading, failed, labels, onlineNotice)
-    var expanded by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -136,7 +137,7 @@ fun SearchScreenHost(
                     cardModifier
                         .onSizeChanged(onCollapsedCardSize)
                         .background(PANEL_BACKGROUND, RoundedCornerShape(PANEL_CORNER_DP.dp))
-                        .clickable(role = Role.Button) { expanded = true }
+                        .clickable(role = Role.Button) { onExpandedChange(true) }
                         .padding(FIELD_PADDING_DP.dp),
             )
         } else {
@@ -177,7 +178,7 @@ fun SearchScreenHost(
                         modifier =
                             Modifier
                                 .clickable(role = Role.Button) {
-                                    expanded = false
+                                    onExpandedChange(false)
                                     typed = ""
                                     onClear()
                                 }.semantics { contentDescription = content.labels.close }

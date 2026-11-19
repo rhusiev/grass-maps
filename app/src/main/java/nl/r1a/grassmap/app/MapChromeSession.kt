@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 object MapChromeSession {
     private val layersEvents = eventFlow()
     private val tokenFormEvents = eventFlow()
+    private val searchEvents = eventFlow()
 
     /** Open (true) or close (false) the layers card. */
     val layers: SharedFlow<Boolean> = layersEvents.asSharedFlow()
@@ -24,12 +25,19 @@ object MapChromeSession {
     /** Show (true) or hide (false) the server and token form on the downloads screen. */
     val tokenForm: SharedFlow<Boolean> = tokenFormEvents.asSharedFlow()
 
+    /** Expand (true) or collapse (false) the search field and its result list. */
+    val search: SharedFlow<Boolean> = searchEvents.asSharedFlow()
+
     fun requestLayers(open: Boolean) {
         layersEvents.tryEmit(open)
     }
 
     fun requestTokenForm(visible: Boolean) {
         tokenFormEvents.tryEmit(visible)
+    }
+
+    fun requestSearch(expanded: Boolean) {
+        searchEvents.tryEmit(expanded)
     }
 
     private fun eventFlow(): MutableSharedFlow<Boolean> =

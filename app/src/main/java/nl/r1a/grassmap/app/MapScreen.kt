@@ -465,6 +465,8 @@ private fun MapContent(
     val searchState by container.searchScreen.state.collectAsState()
     val searchIndexes by container.searchIndexes.state.collectAsState()
     val searchSequence = remember { longArrayOf(0L) }
+    var searchExpanded by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { MapChromeSession.search.collect { searchExpanded = it } }
     var onlineSearchEnabled by remember { mutableStateOf(container.onlineSearchEnabled) }
     val positionAllowed by
         produceState(false) {
@@ -1122,6 +1124,8 @@ private fun MapContent(
             SearchOverlay(
                 surface = surface,
                 state = searchState,
+                expanded = searchExpanded,
+                onExpandedChange = { searchExpanded = it },
                 viewport = viewport,
                 anchorOffset = screenOffset,
                 onQueryChange = { text ->
@@ -2044,6 +2048,8 @@ private fun MapContent(
 private fun SearchOverlay(
     surface: MapSurface,
     state: SearchScreenState,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
     viewport: IntSize,
     anchorOffset: ScreenOffset,
     onQueryChange: (String) -> Unit,
@@ -2060,6 +2066,8 @@ private fun SearchOverlay(
     val camera by surface.host.camera.collectAsState()
     SearchScreenHost(
         hits = state.hits,
+        expanded = expanded,
+        onExpandedChange = onExpandedChange,
         loading = state.status == SearchScreenStatus.LOADING,
         failed = state.status == SearchScreenStatus.FAILED,
         camera = camera,

@@ -6,6 +6,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -13,6 +14,8 @@ import kotlinx.serialization.json.put
 import nl.r1a.grassmap.app.MapChromeSession
 import nl.r1a.grassmap.places.SearchScreenStatus
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.model.BoundingBox
+import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
 import nl.r1a.grassmap.plugin.api.provider.PlaceHit
 
@@ -21,6 +24,7 @@ private const val SCENE_ZOOM = 14.0
 private const val SEARCH_WAIT_MS = 10_000L
 private const val SEARCH_POLL_MS = 250L
 private const val MAX_SEARCH_QUERIES = 4
+private const val SEARCH_EXPAND_SETTLE_MS = 800L
 private const val PLAN_WAIT_MS = 30_000L
 private const val ROUTE_ASSET = "device-check/screen-route.json"
 private const val STYLE_LIGHT = "standard"
@@ -53,6 +57,7 @@ internal class ScreenshotsStep(
     private val hidePanel: (Boolean) -> Unit,
 ) {
     private val blankMaps = mutableListOf<String>()
+    private val searchProblems = mutableListOf<String>()
 
     suspend fun run(): StepOutcome {
         hidePanel(true)
@@ -69,7 +74,7 @@ internal class ScreenshotsStep(
                 "unavailable" to JsonPrimitive(context.unavailable.size),
                 "dark_theme" to JsonPrimitive(DARK_THEME_NOTE),
             )
-        return screenshotsOutcome(context.screenshots.size, blankMaps, numbers)
+        return screenshotsOutcome(context.screenshots.size, blankMaps, searchProblems, numbers)
     }
 
     private suspend fun walk() {
@@ -89,6 +94,7 @@ internal class ScreenshotsStep(
         context.command("core.nav.show_screen", buildJsonObject { put("clear", true) })
         MapChromeSession.requestLayers(false)
         MapChromeSession.requestTokenForm(false)
+        MapChromeSession.requestSearch(false)
         listOf("core.place.card_hide", "core.downloads.hide", "core.favourites.lists_hide", "core.track.library_hide")
             .forEach { context.command(it) }
     }
@@ -110,10 +116,11 @@ internal class ScreenshotsStep(
     }
 
     private suspend fun searchAndPlaceScenes() {
+        val queries = searchQueries()
         var hits = emptyList<PlaceHit>()
-        var used = FALLBACK_SEARCH_QUERY to SEARCH_QUERY_FALLBACK
+        var used = queries.firstOrNull() ?: (FALLBACK_SEARCH_QUERY to SEARCH_QUERY_FALLBACK)
         val attempts = mutableListOf<String>()
-        for ((index, candidate) in searchQueries().withIndex()) {
+        for ((index, candidate) in queries.withIndex()) {
             used = candidate
             hits = search(candidate.first, index + 1L)
             attempts += "\"${candidate.first}\": ${hits.size}"
@@ -128,6 +135,17 @@ internal class ScreenshotsStep(
             skipScene("place_card", "no search hit to open: $note")
             return
         }
+        val region = context.region
+        val place = hits.firstOrNull { !it.isCoordinate }
+        val inside = insideBounds(region?.bounds, place?.position)
+        if (region != null && inside != true) {
+            searchProblems +=
+                "the top hit ${place?.name ?: "none"} at " +
+                "${place?.position?.latitude}, ${place?.position?.longitude} is not inside ${region.id}'s bbox"
+        }
+        val bboxText = region?.bbox?.takeIf { it.isNotEmpty() }?.joinToString()
+        MapChromeSession.requestSearch(true)
+        delay(SEARCH_EXPAND_SETTLE_MS)
         shoot(
             "search_results",
             THEME_LIGHT,
@@ -135,14 +153,27 @@ internal class ScreenshotsStep(
                 "hits" to JsonPrimitive(hits.size),
                 "search_query" to JsonPrimitive(query),
                 "search_query_source" to JsonPrimitive(source),
+                "search_index" to JsonPrimitive(region?.id ?: "active"),
+                "top_hit" to (place?.name?.let(::JsonPrimitive) ?: JsonNull),
+                "top_hit_lat" to (place?.position?.latitude?.let(::JsonPrimitive) ?: JsonNull),
+                "top_hit_lon" to (place?.position?.longitude?.let(::JsonPrimitive) ?: JsonNull),
+                "top_hit_inside_bbox" to JsonPrimitive(insideLabel(inside)),
+                "region_bbox" to (bboxText?.let(::JsonPrimitive) ?: JsonNull),
             ),
         )
-        val place = hits.firstOrNull { !it.isCoordinate }
+        MapChromeSession.requestSearch(false)
         if (place == null) {
             skipScene("place_card", "every hit is a coordinate row")
             return
         }
-        val shown = context.command("core.place.card_show", buildJsonObject { put("id", place.id) })
+        val shown =
+            context.command(
+                "core.place.card_show",
+                buildJsonObject {
+                    put("id", place.id)
+                    context.region?.id?.let { put("index", it) }
+                },
+            )
         if (shown is Outcome.Failure) {
             skipScene("place_card", "the card did not open: ${shown.error}")
         } else {
@@ -153,11 +184,9 @@ internal class ScreenshotsStep(
 
     /**
      * What to type into the search screen, best first: up to [MAX_SEARCH_QUERIES]
-     * place names the map draws in the installed region, then the region's own
-     * catalogue name, then a fixed name so a run without a downloaded region
-     * still tries. A name the region does not hold finds nothing, so the scene
-     * would otherwise show an empty screen on a phone that downloaded another
-     * oblast.
+     * place names the map draws around the downloaded region, then the region's
+     * own catalogue name. A fixed name is tried only when no region was
+     * downloaded, so a run with a pack never searches another region's places.
      */
     private suspend fun searchQueries(): List<Pair<String, String>> {
         val names = renderedPlaceNames().take(MAX_SEARCH_QUERIES)
@@ -167,7 +196,9 @@ internal class ScreenshotsStep(
                 ?.nameEn
                 ?.takeIf { it.isNotBlank() }
                 ?.let { add(it to SEARCH_QUERY_REGION_NAME) }
-            add(FALLBACK_SEARCH_QUERY to SEARCH_QUERY_FALLBACK)
+            if (context.region == null) {
+                add(FALLBACK_SEARCH_QUERY to SEARCH_QUERY_FALLBACK)
+            }
         }.distinctBy { it.first }
     }
 
@@ -185,16 +216,21 @@ internal class ScreenshotsStep(
         }.orEmpty()
     }
 
-    /** Runs one keystroke and waits for its terminal state, so an empty answer returns at once. */
+    /**
+     * Runs one keystroke against the downloaded region's section and waits for
+     * its terminal state, so an empty answer returns at once.
+     */
     private suspend fun search(
         query: String,
         sequence: Long,
     ): List<PlaceHit> {
+        val index = context.region?.id
         context.command(
             "core.search.screen",
             buildJsonObject {
                 put("query", query)
                 put("sequence", sequence)
+                index?.let { put("index", it) }
             },
         )
         return withTimeoutOrNull(SEARCH_WAIT_MS) {
@@ -213,18 +249,30 @@ internal class ScreenshotsStep(
     }
 
     /**
-     * Where the search path reads its index: the active mounted pack's section
-     * when one is mounted, else the external root a pushed debug section would
-     * live under. A download with no usable section is named here instead of
-     * blaming the query.
+     * The section the query named and whether the mounted packs hold it. A
+     * download with no usable section is named here instead of blaming the
+     * query.
      */
     private suspend fun searchIndexNote(): String {
         context.container.startSearchIndexes()
-        val active = context.container.searchIndexes.state.value.active
+        val set = context.container.searchIndexes.state.value
+        val region = context.region
+        if (region != null) {
+            val section = set.indexes.firstOrNull { it.name == region.id }
+            val state =
+                when {
+                    section == null -> "missing from the mounted packs"
+                    section.directory.isDirectory -> "present"
+                    else -> "missing on disk"
+                }
+            return "the search path was asked for index \"${region.id}\" at " +
+                "${section?.directory?.path ?: "no directory"}: $state, ${searchPartNote()}"
+        }
+        val active = set.active
         if (active != null) {
             val state = if (active.directory.isDirectory) "present" else "missing"
-            return "the search path reads the active pack's section, index \"${active.name}\" " +
-                "at ${active.directory.path}: $state, ${searchPartNote()}"
+            return "no region was downloaded; the search path reads the active pack's section, " +
+                "index \"${active.name}\" at ${active.directory.path}: $state, ${searchPartNote()}"
         }
         val root = context.container.places.externalIndexRoot()
         return "no mounted pack has a search section; the external search root is " +
@@ -370,19 +418,36 @@ internal class ScreenshotsStep(
     private fun styleParams(style: String): JsonObject = buildJsonObject { put("style", style) }
 }
 
+/** Whether [point] lies in [bounds]; null when either side is unknown. */
+internal fun insideBounds(
+    bounds: BoundingBox?,
+    point: GeoPoint?,
+): Boolean? = if (bounds == null || point == null) null else bounds.contains(point)
+
+private fun insideLabel(inside: Boolean?): String =
+    when (inside) {
+        true -> "inside"
+        false -> "outside"
+        null -> "unknown"
+    }
+
 /**
- * The screenshots step's verdict: no picture, or a blank map area on a run that
- * installed a region, fails it. The blank rule is what catches a map surface
- * that is not composited into the capture: that shows as one color over the
- * whole area, and a map with data never does.
+ * The screenshots step's verdict: no picture, a blank map area on a run that
+ * installed a region, or a search hit outside that region fails it. The blank
+ * rule catches a map surface that is not composited into the capture: that
+ * shows as one color over the whole area, and a map with data never does. The
+ * search rule catches a fuzzy hit from another pack, which a name search can
+ * return when the wrong index answers.
  */
 internal fun screenshotsOutcome(
     taken: Int,
     blankMaps: List<String>,
+    searchProblems: List<String>,
     numbers: Map<String, JsonElement>,
 ): StepOutcome =
     when {
         taken == 0 -> StepOutcome.fail("no screenshot could be taken", numbers)
         blankMaps.isNotEmpty() -> StepOutcome.fail("the map area is blank in: ${blankMaps.joinToString()}", numbers)
+        searchProblems.isNotEmpty() -> StepOutcome.fail(searchProblems.joinToString("; "), numbers)
         else -> StepOutcome.pass(numbers)
     }

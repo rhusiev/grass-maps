@@ -17,11 +17,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -55,9 +64,18 @@ fun PlaceCardHost(
         return
     }
     Box(
-        modifier = modifier.fillMaxSize().background(SCRIM_COLOR).clickable(onClick = onClose),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(SCRIM_COLOR)
+                // Tapping outside the card closes it, but the scrim is not a
+                // control: a screen reader user closes the card with its own
+                // close button instead of an unlabeled full-screen button.
+                .pointerInput(Unit) { detectTapGestures { onClose() } },
         contentAlignment = Alignment.Center,
     ) {
+        val focusRequester = remember { FocusRequester() }
+        LaunchedEffect(Unit) { focusRequester.requestFocus() }
         Column(
             modifier =
                 Modifier
@@ -66,7 +84,10 @@ fun PlaceCardHost(
                     .background(CARD_BACKGROUND, RoundedCornerShape(CARD_CORNER_DP.dp))
                     .pointerInput(Unit) { detectTapGestures(onTap = {}) }
                     .padding(CARD_PADDING_DP.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(rememberScrollState())
+                    .focusRequester(focusRequester)
+                    .focusTarget()
+                    .semantics { paneTitle = strings.resolve(PANE_TITLE_KEY) },
             verticalArrangement = Arrangement.spacedBy(SECTION_GAP_DP.dp),
         ) {
             CardHeader(content = content, strings = strings, onClose = onClose)
@@ -116,18 +137,20 @@ private fun CardHeader(
                         fontSize = TITLE_FONT_SP.sp,
                         fontWeight = FontWeight.SemiBold,
                     ),
+                modifier = Modifier.semantics { heading() },
             )
         }
         Box(
             modifier =
                 Modifier
-                    .clickable(onClick = onClose)
+                    .clickable(role = Role.Button, onClick = onClose)
                     .semantics { contentDescription = strings.resolve(CLOSE_DESCRIPTION) }
                     .padding(CLOSE_PADDING_DP.dp),
         ) {
             BasicText(
                 text = CLOSE_GLYPH,
                 style = TextStyle(color = TEXT_PRIMARY, fontSize = CLOSE_FONT_SP.sp),
+                modifier = Modifier.clearAndSetSemantics {},
             )
         }
     }
@@ -164,7 +187,7 @@ private fun LabeledRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .then(if (link == null) Modifier else Modifier.clickable { onAction(link) }),
+                .then(if (link == null) Modifier else Modifier.clickable(role = Role.Button) { onAction(link) }),
     ) {
         BasicText(
             text = label,
@@ -191,7 +214,7 @@ private fun Shortcuts(
                 Modifier
                     .fillMaxWidth()
                     .background(ACTION_BACKGROUND, RoundedCornerShape(ACTION_CORNER_DP.dp))
-                    .clickable { onAction(shortcut.link) }
+                    .clickable(role = Role.Button) { onAction(shortcut.link) }
                     .padding(ACTION_PADDING_DP.dp),
         ) {
             BasicText(
@@ -222,6 +245,7 @@ private const val CONTACT_TITLE = "place_card_contact"
 private const val ACCESSIBILITY_TITLE = "place_card_accessibility"
 private const val DETAILS_TITLE = "place_card_details"
 private const val CLOSE_DESCRIPTION = "place_card_close"
+private const val PANE_TITLE_KEY = "place_card_pane_title"
 private const val CLOSE_GLYPH = "×"
 
 private const val CARD_MARGIN_DP = 16

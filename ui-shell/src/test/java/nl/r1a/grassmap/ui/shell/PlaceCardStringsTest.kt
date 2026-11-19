@@ -40,6 +40,7 @@ class PlaceCardStringsTest {
                 "place_card_closed",
                 "place_card_unknown",
                 "place_card_close",
+                "place_card_pane_title",
                 "favourites_lists_title",
                 "favourites_lists_close",
                 "favourites_lists_undo",

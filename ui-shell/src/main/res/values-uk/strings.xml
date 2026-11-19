@@ -10,6 +10,7 @@
     <string name="place_card_closed">Зараз зачинено</string>
     <string name="place_card_unknown">Години невідомі</string>
     <string name="place_card_close">Закрити картку місця</string>
+    <string name="place_card_pane_title">Деталі місця</string>
 
     <string name="favourites_lists_title">Списки</string>
     <string name="favourites_lists_close">Закрити списки</string>

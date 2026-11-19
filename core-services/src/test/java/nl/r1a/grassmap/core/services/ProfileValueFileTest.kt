@@ -212,6 +212,23 @@ class ProfileValueFileTest {
             assertEquals(Json.parseToJsonElement("""{"schema_version":1,"profiles":{}}"""), Json.parseToJsonElement(file.readText()))
         }
 
+    @Test
+    fun aProfileResetToDefaultsLeavesNoEntryOnDiskAndOneWithOnlyExtrasKeepsIt() =
+        withDirectory { directory ->
+            val file = File(directory, NEW_NAME)
+            file.writeText(
+                """{"schema_version":1,"profiles":{"bike":{"hills":"avoid"},"walk":{"future":"x","n":1},"car":{"n":2}}}""",
+            )
+            val store = ProfileValueFile(file, VERSION, ERROR_ID)
+            val read = (store.read() as Outcome.Success).value
+            val reset = read + (bike to emptyMap()) + (ProfileId("run") to emptyMap())
+
+            assertEquals(Outcome.Success(Unit), store.write(reset))
+
+            val expected = """{"schema_version":1,"profiles":{"car":{"n":2},"walk":{"future":"x","n":1}}}"""
+            assertEquals(Json.parseToJsonElement(expected), Json.parseToJsonElement(file.readText()))
+        }
+
     private fun legacyFile(directory: File): LegacyProfileFile {
         val file = File(directory, OLD_NAME).apply { writeText("old") }
         return LegacyProfileFile(file) { if (it.isFile) values else null }

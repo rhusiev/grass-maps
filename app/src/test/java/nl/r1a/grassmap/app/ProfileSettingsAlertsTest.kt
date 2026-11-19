@@ -138,6 +138,30 @@ class ProfileSettingsAlertsTest {
         assertEquals(true, service.create("Gravel", "bike") is Outcome.Success)
     }
 
+    @Test
+    fun aProfileResetToTheAlertDefaultsLeavesNoEntryInTheFile() {
+        val file = File(directory, "alerts.json")
+        file.writeText("""{"schema_version":1,"profiles":{"bike":{"signal":"true"},"hike":{"poi":"true"}}}""")
+        val alerts =
+            AlertSettingsStore(
+                ProfileValueFile(file, AlertSettingsStore.SCHEMA_VERSION, AlertSettingsStore.ERROR_ID),
+            ).also { it.load() }
+        val service = serviceOn(alerts)
+
+        val reset = service.reset("bike", setOf(ProfileSettingsGroup.ALERTS))
+
+        assertEquals(true, reset is Outcome.Success)
+        val profiles =
+            Json
+                .parseToJsonElement(file.readText())
+                .jsonObject
+                .getValue("profiles")
+                .jsonObject
+        assertNull("the reset profile writes no entry", profiles["bike"])
+        assertEquals("""{"poi":"true"}""", profiles.getValue("hike").toString())
+        assertEquals(ProfileAlertSettings.DEFAULT, alerts.forProfile(RouteProfile.Bike))
+    }
+
     private lateinit var directory: File
 
     @Before

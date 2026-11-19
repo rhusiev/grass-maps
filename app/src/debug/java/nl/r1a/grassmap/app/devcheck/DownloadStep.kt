@@ -102,6 +102,7 @@ internal class DownloadStep(
             }
 
             else -> {
+                context.log("download: map reload ${if (context.reloadMap()) "done" else "skipped, no resumed activity"}")
                 StepOutcome.pass(numbers)
             }
         }

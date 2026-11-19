@@ -25,6 +25,9 @@ private const val ARCHIVE_MIME = "application/zip"
 private const val REPORT_NAME = "report.json"
 private const val LOG_NAME = "log.txt"
 
+/** Scrubbed lines appended as the check runs, so a crash still leaves evidence outside the ZIP. */
+private const val PROGRESS_NAME = "device-check-progress.log"
+
 /** What the panel shows about the check. */
 internal data class DeviceCheckUi(
     val running: Boolean = false,
@@ -71,7 +74,8 @@ internal class DeviceCheckController(
 
     private suspend fun execute() {
         val secrets = listOfNotNull(BuildConfig.GRASSMAPS_DEBUG_TOKEN.takeIf { it.isNotBlank() })
-        val context = CheckContext(app, container, capture, secrets) { }
+        val progress = File(app.cacheDir, PROGRESS_NAME).apply { writeText("") }
+        val context = CheckContext(app, container, capture, secrets) { line -> progress.appendText("$line\n") }
         val startedAt = Instant.now().toString()
         val steps = DeviceCheckSteps.build(context) { mutableCapturing.value = it }
         val runner =

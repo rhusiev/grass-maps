@@ -28,14 +28,19 @@ internal data class PlanPoints(
     val endLon: Double,
 )
 
-/** Picks two points about 1 km apart around the centre of [region]'s bounding box, or null without one. */
-internal fun pickPlanPoints(region: CatalogRegion): PlanPoints? {
+/** The centre of [region]'s bounding box as latitude and longitude, or null without a 4-value box. */
+internal fun regionCentre(region: CatalogRegion): Pair<Double, Double>? {
     val box = region.bbox
     if (box.size != BBOX_SIZE) {
         return null
     }
-    val lat = (box[BBOX_SOUTH] + box[BBOX_NORTH]) / 2
-    val lon = (box[BBOX_WEST] + box[BBOX_EAST]) / 2
+    return (box[BBOX_SOUTH] + box[BBOX_NORTH]) / 2 to (box[BBOX_WEST] + box[BBOX_EAST]) / 2
+}
+
+/** Picks two points about 1 km apart around the centre of [region]'s bounding box, or null without one. */
+internal fun pickPlanPoints(region: CatalogRegion): PlanPoints? {
+    val box = region.bbox
+    val (lat, lon) = regionCentre(region) ?: return null
     val points =
         PlanPoints(
             lat - DEGREES_PER_HALF_KM_LAT,

@@ -1,6 +1,8 @@
 package nl.r1a.grassmap.app.devcheck
 
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -13,6 +15,13 @@ import nl.r1a.grassmap.routing.toRoute
 
 const val PLAN_TIMEOUT_MS = 90_000L
 const val NAV_START_TIMEOUT_MS = 15_000L
+
+/**
+ * How long guidance runs before the stop. A stop within milliseconds of the
+ * start reaches the foreground service before it has called startForeground,
+ * and Android ends the process.
+ */
+const val NAV_HOLD_MS = 3_000L
 private const val NAV_POLL_MS = 250L
 private const val NAV_PROFILE = "walk"
 
@@ -56,6 +65,7 @@ internal class NavigationStep(
                 put("profile", NAV_PROFILE)
             }
         try {
+            context.log("navigation: starting guidance")
             val started = context.command("core.nav.start", params)
             val phase = awaitActive()
             val numbers =
@@ -77,7 +87,10 @@ internal class NavigationStep(
                 }
             }
         } finally {
-            context.command("core.nav.stop")
+            withContext(NonCancellable) {
+                delay(NAV_HOLD_MS)
+                context.command("core.nav.stop")
+            }
         }
     }
 

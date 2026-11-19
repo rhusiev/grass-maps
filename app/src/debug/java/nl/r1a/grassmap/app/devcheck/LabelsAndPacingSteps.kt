@@ -22,7 +22,8 @@ import nl.r1a.grassmap.plugins.dev.tools.DevToolsPanelState
 
 internal const val LVIV_LAT = 49.8397
 internal const val LVIV_LON = 24.0297
-private const val LABEL_ZOOM = 6.0
+private const val LABEL_ZOOM = 9.0
+private const val MAX_LABEL_TEXTS = 5
 private const val LABEL_WAIT_MS = 8_000L
 private const val LABEL_POLL_MS = 500L
 private const val LABEL_SIZE_BIG_PERCENT = 150
@@ -39,7 +40,7 @@ private val LABEL_CASES =
         "size150" to ("default" to LABEL_SIZE_BIG_PERCENT),
     )
 
-/** Sets en, uk and 150 percent through the settings command and reads the rendered Lviv label each time. */
+/** Sets en, uk and 150 percent through the settings command and reads the labels rendered around the installed region each time. */
 internal class LabelsStep(
     private val context: CheckContext,
 ) {
@@ -47,7 +48,8 @@ internal class LabelsStep(
         val original = context.container.mapLabelSettings.options.value
         val numbers = mutableMapOf<String, JsonElement>()
         try {
-            context.command("core.map.set_camera", camera(LVIV_LAT, LVIV_LON, LABEL_ZOOM))
+            val (lat, lon) = context.mapFocus()
+            context.command("core.map.set_camera", camera(lat, lon, LABEL_ZOOM))
             LABEL_CASES.forEach { (name, case) -> numbers[name] = runCase(case.first, case.second) }
         } finally {
             context.container.mapLabelSettings.set(original)
@@ -56,9 +58,9 @@ internal class LabelsStep(
         return if (missing.isEmpty()) {
             StepOutcome.pass(numbers)
         } else if (missing.size == numbers.size) {
-            StepOutcome.skip("no Lviv label rendered in any case: the map shows no data here, so the check cannot tell", numbers)
+            StepOutcome.skip("no label rendered in any case: the map shows no data here, so the check cannot tell", numbers)
         } else {
-            StepOutcome.fail("no rendered Lviv label for: ${missing.joinToString()}", numbers)
+            StepOutcome.fail("no rendered label for: ${missing.joinToString()}", numbers)
         }
     }
 
@@ -72,7 +74,7 @@ internal class LabelsStep(
                 put("sizePercent", sizePercent)
             }
         val set = context.command("core.settings.map_labels", params)
-        val texts = if (set is Outcome.Success) awaitLvivTexts() else emptyList()
+        val texts = if (set is Outcome.Success) awaitTexts() else emptyList()
         return buildJsonObject {
             put("language", language)
             put("size_percent", sizePercent)
@@ -81,21 +83,25 @@ internal class LabelsStep(
         }
     }
 
-    private suspend fun awaitLvivTexts(): List<String> =
+    private suspend fun awaitTexts(): List<String> =
         withTimeoutOrNull(LABEL_WAIT_MS) {
-            var texts = lvivTexts()
+            var texts = renderedTexts()
             while (texts.isEmpty()) {
                 delay(LABEL_POLL_MS)
-                texts = lvivTexts()
+                texts = renderedTexts()
             }
             texts
         } ?: emptyList()
 
-    private suspend fun lvivTexts(): List<String> {
-        val result = context.command("core.map.rendered_labels", buildJsonObject { put("nameEn", "Lviv") })
+    private suspend fun renderedTexts(): List<String> {
+        val result = context.command("core.map.rendered_labels", JsonObject(emptyMap()))
         val raw = ((result as? Outcome.Success)?.value as? JsonPrimitive)?.contentOrNull ?: return emptyList()
         val labels = runCatching { Json.parseToJsonElement(raw) as? JsonArray }.getOrNull() ?: return emptyList()
-        return labels.mapNotNull { (it.jsonObject["text"] as? JsonPrimitive)?.contentOrNull }.distinct()
+        return labels
+            .mapNotNull { (it.jsonObject["text"] as? JsonPrimitive)?.contentOrNull }
+            .distinct()
+            .sorted()
+            .take(MAX_LABEL_TEXTS)
     }
 }
 
@@ -145,8 +151,9 @@ internal class PacingStep(
 
     private suspend fun moveCamera() {
         while (true) {
-            context.command("core.map.set_camera", camera(LVIV_LAT, LVIV_LON, PACING_ZOOM_NEAR))
-            context.command("core.map.set_camera", camera(LVIV_LAT, LVIV_LON, PACING_ZOOM_FAR))
+            val (lat, lon) = context.mapFocus()
+            context.command("core.map.set_camera", camera(lat, lon, PACING_ZOOM_NEAR))
+            context.command("core.map.set_camera", camera(lat, lon, PACING_ZOOM_FAR))
         }
     }
 }

@@ -89,11 +89,17 @@ internal object DebugControl {
     /** Debug builds enable the channel unconditionally until the switch lands (T-0114). */
     val settings: ControlSettings = ControlSettings { true }
 
+    /** The activity that resumed last, or null once it paused. The device check recreates it. */
+    @Volatile
+    internal var resumedActivity: java.lang.ref.WeakReference<Activity>? = null
+        private set
+
     private class WindowTracker(
         private val capture: AndroidWindowCapture,
     ) : Application.ActivityLifecycleCallbacks {
         override fun onActivityResumed(activity: Activity) {
             capture.attach(activity.window)
+            resumedActivity = java.lang.ref.WeakReference(activity)
         }
 
         override fun onActivityPaused(activity: Activity) {

@@ -16,7 +16,6 @@ import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
 
 private const val SETTLE_MS = 1_200L
 private const val SCENE_ZOOM = 14.0
-private const val SEARCH_QUERY = "Lviv"
 private const val SEARCH_WAIT_MS = 10_000L
 private const val SEARCH_POLL_MS = 250L
 private const val PLAN_WAIT_MS = 30_000L
@@ -30,6 +29,11 @@ private const val PLAN_START_LON = 24.0315
 private const val PLAN_END_LAT = 49.8326
 private const val PLAN_END_LON = 24.0230
 
+private const val DARK_THEME_NOTE =
+    "the dark shots use the dark map style only: the app has no dark UI theme, so ui_night_mode stays false"
+private const val FALLBACK_SEARCH_QUERY = "Lviv"
+private const val MAP_IDLE = "map_idle"
+
 /** The screens this build does not have. They are listed so the report says so. */
 internal val SCREENS_NOT_IN_THIS_BUILD = listOf("profiles create/copy/reset", "widget grid", "plugin manager")
 
@@ -42,9 +46,12 @@ internal class ScreenshotsStep(
     private val context: CheckContext,
     private val hidePanel: (Boolean) -> Unit,
 ) {
+    private val blankMaps = mutableListOf<String>()
+
     suspend fun run(): StepOutcome {
         hidePanel(true)
         try {
+            restore()
             walk()
         } finally {
             restore()
@@ -54,8 +61,13 @@ internal class ScreenshotsStep(
             mapOf(
                 "taken" to JsonPrimitive(context.screenshots.size),
                 "unavailable" to JsonPrimitive(context.unavailable.size),
+                "dark_theme" to JsonPrimitive(DARK_THEME_NOTE),
             )
-        return if (context.screenshots.isEmpty()) StepOutcome.fail("no screenshot could be taken", numbers) else StepOutcome.pass(numbers)
+        return when {
+            context.screenshots.isEmpty() -> StepOutcome.fail("no screenshot could be taken", numbers)
+            blankMaps.isNotEmpty() -> StepOutcome.fail("the map area is blank in: ${blankMaps.joinToString()}", numbers)
+            else -> StepOutcome.pass(numbers)
+        }
     }
 
     private suspend fun walk() {
@@ -80,11 +92,12 @@ internal class ScreenshotsStep(
     }
 
     private suspend fun mapScenes() {
-        context.command("core.map.set_camera", camera(LVIV_LAT, LVIV_LON, SCENE_ZOOM))
+        val (lat, lon) = context.mapFocus()
+        context.command("core.map.set_camera", camera(lat, lon, SCENE_ZOOM))
         context.command("core.map.set_style", styleParams(STYLE_LIGHT))
-        shoot("map_idle", THEME_LIGHT)
+        shoot(MAP_IDLE, THEME_LIGHT, checkMap = true)
         context.command("core.map.set_style", styleParams(STYLE_DARK))
-        shoot("map_idle", THEME_MAP_DARK)
+        shoot(MAP_IDLE, THEME_MAP_DARK, checkMap = true)
         context.command("core.map.set_style", styleParams(STYLE_LIGHT))
     }
 
@@ -95,15 +108,16 @@ internal class ScreenshotsStep(
     }
 
     private suspend fun searchAndPlaceScenes() {
+        val query = context.region?.nameEn ?: FALLBACK_SEARCH_QUERY
         val request =
             buildJsonObject {
-                put("query", SEARCH_QUERY)
+                put("query", query)
                 put("sequence", 1)
             }
         context.command("core.search.screen", request)
         val hits = withTimeoutOrNull(SEARCH_WAIT_MS) { awaitHits() }.orEmpty()
         if (hits.isEmpty()) {
-            skipScene("search_results", "the search for \"$SEARCH_QUERY\" returned no hit: no search pack is installed")
+            skipScene("search_results", "the search for \"$query\" returned no hit: ${searchPartNote()}")
             skipScene("place_card", "no search hit to open")
             return
         }
@@ -120,6 +134,11 @@ internal class ScreenshotsStep(
             shoot("place_card", THEME_LIGHT)
         }
         context.command("core.place.card_hide")
+    }
+
+    private fun searchPartNote(): String {
+        val kinds = context.region?.parts?.joinToString { it.wireKind }
+        return "the installed region has these parts: ${kinds ?: "none known"}"
     }
 
     private suspend fun awaitHits() =
@@ -209,6 +228,7 @@ internal class ScreenshotsStep(
         screen: String,
         theme: String,
         extra: Map<String, JsonElement> = emptyMap(),
+        checkMap: Boolean = false,
     ) {
         delay(SETTLE_MS)
         val captured = context.capture.capturePng()
@@ -218,6 +238,7 @@ internal class ScreenshotsStep(
         }
         val capture = (captured as Outcome.Success).value
         val size = PngSize.of(capture.png) ?: (0 to 0)
+        val mapNumbers = if (checkMap) mapAreaNumbers(screen, theme, capture.png) else emptyMap()
         val facts = context.displayFacts()
         val file = "screenshots/%02d-%s-%s.png".format(context.screenshots.size + 1, screen, theme)
         context.pngs += ZipFileEntry(file, capture.png)
@@ -232,8 +253,24 @@ internal class ScreenshotsStep(
                 facts.density,
                 facts.fontScale,
                 capture.source,
-                extra,
+                extra + mapNumbers,
             )
+    }
+
+    private fun mapAreaNumbers(
+        screen: String,
+        theme: String,
+        png: ByteArray,
+    ): Map<String, JsonElement> {
+        val area = MapPixels.checkPng(png) ?: return emptyMap()
+        val installed = context.region != null
+        if (area.isBlank && installed) {
+            blankMaps += "$screen-$theme"
+        }
+        return mapOf(
+            "map_dominant_color_share" to JsonPrimitive(area.dominantShare),
+            "map_area_blank" to JsonPrimitive(area.isBlank),
+        )
     }
 
     private fun styleParams(style: String): JsonObject = buildJsonObject { put("style", style) }

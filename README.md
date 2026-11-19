@@ -71,20 +71,26 @@ or times out is recorded and the later steps still run. The steps, in order:
 3. one download: the smallest oblast in the live catalogue through the normal store
    path, on Wi-Fi or Ethernet only. It is skipped with a reason on mobile data or
    without a token. The pack is verified (version and size), timed, and compared with
-   the catalogue byte count. It stays installed for steps 4 and 5
+   the catalogue byte count. The check then recreates the resumed activity, because the
+   map reads the installed regions once when its screen starts. The pack stays installed
+   for steps 4 and 5
 4. route plan: a walking route between two points about 1 km apart around the centre of
    the region's bounding box. The report holds status, distance, duration, instruction
    count and the route layer's point count
 5. navigation: starts guidance on that route through `core.nav.start`, records whether
    the navigation phase becomes Following within 15 s, and stops it. A failed start is
-   recorded as a failure and nothing is repaired
+   recorded as a failure and nothing is repaired. Guidance runs 3 s before the stop,
+   because a stop within milliseconds of the start crashes the foreground service
 6. window screenshots (map surface composed with the view tree, no screen-capture
    permission) of the screens reachable by command: map in the light and dark map
    style, layers, search results, place card, route planner, navigation (following,
    expanded, alert, dark), downloads, Maps token form, favourites lists and track
-   library. A scene that cannot be reached is listed with its reason
+   library. Each scene starts from a reset state (panels closed, plain map), and the
+   camera looks at the middle of the planned walk, else of the downloaded region. A map
+   area of near-uniform pixels fails the step, because a map should show data. A scene
+   that cannot be reached is listed with its reason
 7. labels: `en`, `uk` and 150 % through `core.settings.map_labels`, with the rendered
-   Lviv label read back each time. The owner's setting is restored. The step is skipped
+   label of the downloaded region read back each time. The owner's setting is restored. The step is skipped
    when no case renders any label, because the map then has no data to judge
 8. frame pacing from the development-tools frame-rate stream while the camera moves.
    Cold start is recorded as not run: it needs the benchmark build, a separate APK
@@ -95,9 +101,11 @@ The check then opens the Android share sheet with one ZIP from the app cache
 `report.json` (every step with status, duration and key numbers, and per screenshot the
 screen, theme, window size in px and dp, density and font scale), `log.txt` (scrubbed),
 and `screenshots/*.png`. The writer refuses to write an entry that contains the token.
-The ZIP holds no token, no location history and no personal data. The system theme is
+The check also writes `device-check-progress.log` (scrubbed) into the app cache as it
+runs, so a crash still leaves the last step. The ZIP holds no token, no location history and no personal data. The system theme is
 not changed: dark shots use the dark map style and the dark navigation fixture, and each
-record says whether the system was in night mode. Profiles create/copy/reset, the widget
+record says whether the system was in night mode, and `report.json` states that the dark
+shots are map-dark only because the app has no dark UI theme. Profiles create/copy/reset, the widget
 grid and the plugin manager are listed in the report as not in this build.
 
 ### Rust core

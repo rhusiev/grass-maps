@@ -48,6 +48,7 @@ internal class DeviceCheckRunner(
     suspend fun run(steps: List<CheckStep>): List<StepResult> =
         steps.mapIndexed { index, step ->
             onStepStart(index, step)
+            log("step ${step.id}: start")
             runOne(step).also { result ->
                 log("step ${result.id}: ${result.status.wire} in ${result.durationMs} ms ${result.note.orEmpty()}".trim())
                 onStepEnd(result)

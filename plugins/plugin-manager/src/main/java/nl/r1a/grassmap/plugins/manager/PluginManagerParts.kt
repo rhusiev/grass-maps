@@ -2,6 +2,7 @@ package nl.r1a.grassmap.plugins.manager
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -42,7 +44,7 @@ internal fun BackButton(onClick: () -> Unit) {
         style = TextStyle(color = INK, fontSize = BACK_GLYPH_SP.sp),
         modifier =
             Modifier
-                .clickable(onClick = onClick)
+                .clickable(role = Role.Button, onClick = onClick)
                 .semantics { contentDescription = close }
                 .padding(BACK_TOUCH_DP.dp),
     )
@@ -86,7 +88,7 @@ private fun PluginRowView(
     onSetEnabled: (PluginId, Boolean) -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(ROW_PADDING_DP.dp),
+        modifier = Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onOpen).padding(ROW_PADDING_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(GAP_DP.dp),
     ) {
@@ -192,5 +194,11 @@ internal fun SearchPill(
 @Suppress("ktlint:standard:function-naming")
 @Composable
 internal fun Scrim(onClick: () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize().background(SCRIM).clickable(onClick = onClick))
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(SCRIM)
+                .pointerInput(Unit) { detectTapGestures { onClick() } },
+    )
 }

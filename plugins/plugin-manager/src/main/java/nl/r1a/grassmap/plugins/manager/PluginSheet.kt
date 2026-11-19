@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -209,7 +210,7 @@ private fun RowScope.SheetButton(
                 .weight(1f)
                 .clip(RoundedCornerShape(PILL_CORNER_DP.dp))
                 .background(SURFACE)
-                .clickable(onClick = onClick)
+                .clickable(role = Role.Button, onClick = onClick)
                 .padding(vertical = ROW_PADDING_DP.dp),
     )
 }

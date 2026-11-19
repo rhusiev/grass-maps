@@ -6,11 +6,28 @@ import nl.r1a.grassmap.plugin.api.model.PluginState
 import nl.r1a.grassmap.plugin.api.model.PluginStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PluginManagerModelTest {
+    @Test
+    fun everyRowHasASpokenNameAndDescription() {
+        val rows =
+            pluginSections(
+                listOf(status("map.contours"), status("valhalla"), status("osm.places"), status("info.widgets")),
+                resolve,
+            ).flatMap { section -> section.rows }
+
+        assertTrue(rows.isNotEmpty())
+        for (row in rows) {
+            assertTrue("${row.status.pluginId} has no name", row.name.isNotBlank())
+            assertTrue("${row.status.pluginId} has no description", row.description.isNotBlank())
+            assertNotEquals(row.name, row.description)
+        }
+    }
+
     private fun status(
         id: String,
         state: PluginState = PluginState.DECLARED,

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import nl.r1a.grassmap.plugin.api.contract.StreamId
 import nl.r1a.grassmap.plugin.api.host.StreamAccess
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.widget.AltitudeWidgetValue
 import nl.r1a.grassmap.plugin.api.widget.CoordinatesWidgetValue
 import nl.r1a.grassmap.plugin.api.widget.GpsInfoWidgetValue
@@ -21,6 +22,7 @@ import nl.r1a.grassmap.plugins.point.info.SelectedPointValue
 import nl.r1a.grassmap.ui.shell.GridWidget
 import nl.r1a.grassmap.ui.shell.WidgetGrid
 import nl.r1a.grassmap.ui.shell.WidgetLayout
+import java.util.Locale
 
 /**
  * The info widgets at the top of the map (T-0605). It draws the layout of the
@@ -33,6 +35,7 @@ import nl.r1a.grassmap.ui.shell.WidgetLayout
 @Composable
 internal fun WidgetGridHost(
     container: AppContainer,
+    units: UnitSystem,
     isEditing: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -44,7 +47,10 @@ internal fun WidgetGridHost(
     val readings = rememberWidgetReadings(container, layout)
     val strings = container.strings
     val showsEdit = isEditing && state.isEditable
-    val cells = remember(layout, readings, showsEdit, strings) { widgetCells(layout, readings, showsEdit, strings) }
+    val cells =
+        remember(layout, readings, showsEdit, strings, units) {
+            widgetCells(layout, readings, showsEdit, strings, Locale.getDefault(), units)
+        }
     val hidden = remember(layout, strings) { widgetOptions(layout, strings) }
     WidgetGrid(
         cells = cells,

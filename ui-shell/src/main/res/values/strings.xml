@@ -317,12 +317,11 @@
     <string name="widget_grid_selected_point">Selected point</string>
     <string name="widget_grid_altitude_label">alt</string>
     <string name="widget_grid_gps_label">GPS</string>
-    <string name="widget_grid_metres">%1$s m</string>
     <string name="widget_grid_fix_label">GPS</string>
     <string name="widget_grid_centre_label">center</string>
     <string name="widget_grid_speed_average_label">avg</string>
     <string name="widget_grid_speed_max_label">max</string>
-    <string name="widget_grid_accuracy">±%1$s m</string>
+    <string name="widget_grid_accuracy">±%1$s</string>
     <string name="widget_grid_coordinates_value">%1$s, %2$s</string>
     <string name="widget_grid_add">+</string>
     <string name="widget_grid_add_description">Add a widget</string>

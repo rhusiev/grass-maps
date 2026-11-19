@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.plugins.point.info
 
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -55,6 +56,33 @@ class PointInfoLabelTest {
             )
 
         assertEquals("Distance 0.1 m", rows.first())
+    }
+
+    @Test
+    fun imperialShowsFeetBelowAMileAndMilesFromOne() {
+        val near =
+            PointInfoLabel.rows(
+                SelectedPointValue(
+                    point = GeoPoint(latitude = 49.8419, longitude = 24.0317),
+                    distanceMeters = 120.0,
+                    azimuthDegrees = 90.0,
+                ),
+                strings,
+                UnitSystem.Imperial,
+            )
+        val far =
+            PointInfoLabel.rows(
+                SelectedPointValue(
+                    point = GeoPoint(latitude = 49.8500, longitude = 24.0400),
+                    distanceMeters = 2_400.0,
+                    azimuthDegrees = 33.842_680,
+                ),
+                strings,
+                UnitSystem.Imperial,
+            )
+
+        assertEquals("Distance 394 ft", near.first())
+        assertEquals("Distance 1.5 mi", far.first())
     }
 
     @Test

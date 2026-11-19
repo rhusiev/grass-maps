@@ -327,12 +327,11 @@
     <string name="widget_grid_selected_point">Вибрана точка</string>
     <string name="widget_grid_altitude_label">вис.</string>
     <string name="widget_grid_gps_label">GPS</string>
-    <string name="widget_grid_metres">%1$s м</string>
     <string name="widget_grid_fix_label">GPS</string>
     <string name="widget_grid_centre_label">центр</string>
     <string name="widget_grid_speed_average_label">сер.</string>
     <string name="widget_grid_speed_max_label">макс.</string>
-    <string name="widget_grid_accuracy">±%1$s м</string>
+    <string name="widget_grid_accuracy">±%1$s</string>
     <string name="widget_grid_coordinates_value">%1$s, %2$s</string>
     <string name="widget_grid_add">+</string>
     <string name="widget_grid_add_description">Додати віджет</string>

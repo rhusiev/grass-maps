@@ -15,7 +15,6 @@ object WidgetGridStrings {
     const val CENTRE_LABEL = "widget_grid_centre_label"
     const val SPEED_AVERAGE_LABEL = "widget_grid_speed_average_label"
     const val SPEED_MAX_LABEL = "widget_grid_speed_max_label"
-    const val METRES = "widget_grid_metres"
     const val ACCURACY = "widget_grid_accuracy"
     const val COORDINATES_VALUE = "widget_grid_coordinates_value"
     const val ADD = "widget_grid_add"

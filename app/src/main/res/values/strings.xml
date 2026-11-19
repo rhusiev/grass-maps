@@ -63,8 +63,6 @@
     <string name="dev_check_error">Device check stopped: %1$s</string>
     <string name="map_distance_metres">%1$s m</string>
     <string name="map_distance_kilometres">%1$s km</string>
-    <string name="point_info_distance_metres">%1$s m</string>
-    <string name="point_info_distance_kilometres">%1$s km</string>
     <string name="point_info_distance_row">Distance %1$s</string>
     <string name="point_info_azimuth_row">Azimuth %1$s</string>
     <string name="point_info_azimuth_degrees">%1$s°</string>

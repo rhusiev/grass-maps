@@ -109,8 +109,10 @@ internal class TestStrings(
             mapOf(
                 PointInfoLabel.DISTANCE_ROW_KEY to "Distance %1\$s",
                 PointInfoLabel.AZIMUTH_ROW_KEY to "Azimuth %1\$s",
-                "point_info_distance_metres" to "%1\$s m",
-                "point_info_distance_kilometres" to "%1\$s km",
+                "unit_distance_metres" to "%1\$s m",
+                "unit_distance_kilometres" to "%1\$s km",
+                "unit_distance_feet" to "%1\$s ft",
+                "unit_distance_miles" to "%1\$s mi",
                 "point_info_azimuth_degrees" to "%1\$s°",
             )
     }

@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.app
 
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.api.widget.AltitudeSource
 import nl.r1a.grassmap.plugin.api.widget.AltitudeWidgetValue
@@ -13,6 +14,7 @@ import nl.r1a.grassmap.ui.shell.WidgetLayout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Locale
 
@@ -33,7 +35,8 @@ class WidgetGridMappingTest {
         layout: WidgetLayout,
         isEditing: Boolean = false,
         value: WidgetReadings = readings,
-    ) = widgetCells(layout, value, isEditing, KeyStrings, locale)
+        units: UnitSystem = UnitSystem.Metric,
+    ) = widgetCells(layout, value, isEditing, KeyStrings, locale, units)
 
     @Test
     fun cellsFollowTheLayoutOrder() {
@@ -44,7 +47,19 @@ class WidgetGridMappingTest {
     @Test
     fun altitudeAndAccuracyAreWholeMetres() {
         val cell = cells(WidgetLayout(listOf(GridWidget.Altitude, GridWidget.GpsAccuracy)))
-        assertEquals(listOf("widget_grid_metres[296]", "widget_grid_accuracy[4]"), cell.map { it.lines.single().value })
+        assertEquals(listOf("296 m", "±4 m"), cell.map { it.lines.single().value })
+    }
+
+    @Test
+    fun altitudeAccuracySpeedAndTheSelectedPointFollowImperial() {
+        val layout = WidgetLayout(GridWidget.entries)
+        val lines = cells(layout, units = UnitSystem.Imperial).flatMap { it.lines }.map { it.value }
+
+        assertTrue(lines.contains("972 ft"))
+        assertTrue(lines.contains("±14 ft"))
+        assertTrue(lines.contains("6.7 mph"))
+        assertTrue(lines.contains("3.4 mph"))
+        assertTrue(lines.contains("Distance 394 ft"))
     }
 
     @Test
@@ -60,7 +75,7 @@ class WidgetGridMappingTest {
     fun speedsUseKilometresPerHourAndADashWhenMissing() {
         val layout = WidgetLayout(listOf(GridWidget.SpeedCurrent, GridWidget.SpeedAverage, GridWidget.SpeedMax))
         assertEquals(
-            listOf("11 nav_screen_speed_unit", "5.4 nav_screen_speed_unit", "-"),
+            listOf("11 km/h", "5.4 km/h", "-"),
             cells(layout).map { it.lines.single().value },
         )
     }
@@ -95,11 +110,30 @@ class WidgetGridMappingTest {
     }
 
     private object KeyStrings : Strings {
+        private val values =
+            mapOf(
+                "unit_distance_metres" to "%1\$s m",
+                "unit_distance_kilometres" to "%1\$s km",
+                "unit_distance_feet" to "%1\$s ft",
+                "unit_distance_miles" to "%1\$s mi",
+                "unit_elevation_metres" to "%1\$s m",
+                "unit_elevation_feet" to "%1\$s ft",
+                "unit_speed_kilometres_per_hour" to "km/h",
+                "unit_speed_miles_per_hour" to "mph",
+                "widget_grid_accuracy" to "±%1\$s",
+                "point_info_distance_row" to "Distance %1\$s",
+                "point_info_azimuth_row" to "Azimuth %1\$s",
+                "point_info_azimuth_degrees" to "%1\$s°",
+            )
+
         override fun resolve(
             key: String,
             arguments: List<String>,
-        ): String = if (arguments.isEmpty()) key else "$key[${arguments.joinToString("|")}]"
+        ): String {
+            val template = values[key] ?: return if (arguments.isEmpty()) key else "$key[${arguments.joinToString("|")}]"
+            return if (arguments.isEmpty()) template else String.format(Locale.US, template, *arguments.toTypedArray())
+        }
 
-        override fun contains(key: String): Boolean = false
+        override fun contains(key: String): Boolean = key in values
     }
 }

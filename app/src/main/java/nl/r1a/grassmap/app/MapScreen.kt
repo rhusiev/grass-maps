@@ -856,6 +856,7 @@ private fun MapContent(
         if (!navigationActive) {
             WidgetGridHost(
                 container = container,
+                units = units,
                 isEditing = isEditing,
                 modifier =
                     Modifier

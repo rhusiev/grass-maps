@@ -1,7 +1,9 @@
 package nl.r1a.grassmap.app
 
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.api.unit.UnitText
 import nl.r1a.grassmap.plugin.api.widget.AltitudeWidgetValue
 import nl.r1a.grassmap.plugin.api.widget.CoordinatesWidgetValue
 import nl.r1a.grassmap.plugin.api.widget.GpsInfoWidgetValue
@@ -9,7 +11,6 @@ import nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue
 import nl.r1a.grassmap.plugins.point.info.PointInfoLabel
 import nl.r1a.grassmap.plugins.point.info.SelectedPointValue
 import nl.r1a.grassmap.ui.shell.GridWidget
-import nl.r1a.grassmap.ui.shell.NavigationScreenStrings
 import nl.r1a.grassmap.ui.shell.WidgetCell
 import nl.r1a.grassmap.ui.shell.WidgetGridLabels
 import nl.r1a.grassmap.ui.shell.WidgetGridStrings
@@ -42,9 +43,10 @@ internal fun widgetCells(
     isEditing: Boolean,
     strings: Strings,
     locale: Locale = Locale.getDefault(),
+    units: UnitSystem = UnitSystem.Metric,
 ): List<WidgetCell> =
     layout.widgets
-        .map { widget -> widgetCell(widget, readings, strings, locale) }
+        .map { widget -> widgetCell(widget, readings, strings, locale, units) }
         .filter { cell -> isEditing || cell.lines.isNotEmpty() }
 
 /** The widgets that are not in [layout], as the picker lists them. */
@@ -70,11 +72,12 @@ private fun widgetCell(
     readings: WidgetReadings,
     strings: Strings,
     locale: Locale,
+    units: UnitSystem,
 ): WidgetCell =
     WidgetCell(
         widget = widget,
         title = widgetTitle(widget, strings),
-        lines = widgetLines(widget, readings, strings, locale),
+        lines = widgetLines(widget, readings, strings, locale, units),
         clearDescription =
             strings
                 .resolve(WidgetGridStrings.CLEAR_DESCRIPTION)
@@ -86,14 +89,15 @@ private fun widgetLines(
     readings: WidgetReadings,
     strings: Strings,
     locale: Locale,
+    units: UnitSystem,
 ): List<WidgetLine> =
     when (widget) {
         GridWidget.Altitude -> {
-            listOf(altitudeLine(readings.altitude, strings, locale))
+            listOf(altitudeLine(readings.altitude, strings, units))
         }
 
         GridWidget.GpsAccuracy -> {
-            listOf(accuracyLine(readings.gps, strings, locale))
+            listOf(accuracyLine(readings.gps, strings, locale, units))
         }
 
         GridWidget.Coordinates -> {
@@ -101,19 +105,19 @@ private fun widgetLines(
         }
 
         GridWidget.SpeedCurrent -> {
-            listOf(speedLine(readings.speedCurrent, null, strings, locale))
+            listOf(speedLine(readings.speedCurrent, null, strings, locale, units))
         }
 
         GridWidget.SpeedAverage -> {
-            listOf(speedLine(readings.speedAverage, WidgetGridStrings.SPEED_AVERAGE_LABEL, strings, locale))
+            listOf(speedLine(readings.speedAverage, WidgetGridStrings.SPEED_AVERAGE_LABEL, strings, locale, units))
         }
 
         GridWidget.SpeedMax -> {
-            listOf(speedLine(readings.speedMax, WidgetGridStrings.SPEED_MAX_LABEL, strings, locale))
+            listOf(speedLine(readings.speedMax, WidgetGridStrings.SPEED_MAX_LABEL, strings, locale, units))
         }
 
         GridWidget.SelectedPoint -> {
-            PointInfoLabel.rows(readings.selectedPoint, strings).map { row -> WidgetLine(row) }
+            PointInfoLabel.rows(readings.selectedPoint, strings, units, locale).map { row -> WidgetLine(row) }
         }
     }
 
@@ -136,11 +140,10 @@ private fun widgetTitle(
 private fun altitudeLine(
     value: AltitudeWidgetValue?,
     strings: Strings,
-    locale: Locale,
+    units: UnitSystem,
 ): WidgetLine {
     val metres = value?.altitudeMeters?.takeIf { it.isFinite() }
-    val text =
-        metres?.let { strings.resolve(WidgetGridStrings.METRES, listOf(String.format(locale, "%.0f", it))) }
+    val text = metres?.let { UnitText.elevation(it, units, strings) }
     return WidgetLine(text ?: MISSING_VALUE, strings.resolve(WidgetGridStrings.ALTITUDE_LABEL))
 }
 
@@ -148,10 +151,11 @@ private fun accuracyLine(
     value: GpsInfoWidgetValue?,
     strings: Strings,
     locale: Locale,
+    units: UnitSystem,
 ): WidgetLine {
     val metres = value?.accuracyMeters?.takeIf { it.isFinite() }
     val text =
-        metres?.let { strings.resolve(WidgetGridStrings.ACCURACY, listOf(String.format(locale, "%.0f", it))) }
+        metres?.let { strings.resolve(WidgetGridStrings.ACCURACY, listOf(UnitText.distance(it, units, strings, locale))) }
     return WidgetLine(text ?: MISSING_VALUE, strings.resolve(WidgetGridStrings.GPS_LABEL))
 }
 
@@ -185,11 +189,11 @@ private fun speedLine(
     labelKey: String?,
     strings: Strings,
     locale: Locale,
+    units: UnitSystem,
 ): WidgetLine {
-    val kmh = formatSpeedKmh(value?.speedMetersPerSecond, locale)
-    val unit = strings.resolve(NavigationScreenStrings.SPEED_UNIT)
+    val speed = UnitText.speed(value?.speedMetersPerSecond, units, strings, locale)
     return WidgetLine(
-        value = kmh?.let { "$it $unit" } ?: MISSING_VALUE,
+        value = speed?.let { "${it.value} ${it.unit}" } ?: MISSING_VALUE,
         label = labelKey?.let { strings.resolve(it) }.orEmpty(),
     )
 }

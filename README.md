@@ -86,9 +86,13 @@ or times out is recorded and the later steps still run. The steps, in order:
    style, layers, search results, place card, route planner, navigation (following,
    expanded, alert, dark), downloads, Maps token form, favourites lists and track
    library. Each scene starts from a reset state (panels closed, plain map), and the
-   camera looks at the middle of the planned walk, else of the downloaded region. A map
-   area of near-uniform pixels fails the step, because a map should show data. A scene
-   that cannot be reached is listed with its reason
+   camera looks at the middle of the planned walk, else of the downloaded region.
+   The search scene types a place name the map draws in the region this run
+   installed - the English name of a rendered place feature when it has one - then
+   the region's catalogue name, then a fixed name, and the report says which query
+   and which source found the place. A map area of near-uniform pixels fails the
+   step, because a map should show data. A scene that cannot be reached is listed
+   with its reason
 7. labels: `en`, `uk` and 150 % through `core.settings.map_labels`, with the rendered
    label of the downloaded region read back each time. The owner's setting is restored. The step is skipped
    when no case renders any label, because the map then has no data to judge

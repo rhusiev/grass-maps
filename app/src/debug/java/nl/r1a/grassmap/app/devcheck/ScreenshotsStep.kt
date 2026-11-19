@@ -11,13 +11,16 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nl.r1a.grassmap.app.MapChromeSession
+import nl.r1a.grassmap.places.SearchScreenStatus
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
+import nl.r1a.grassmap.plugin.api.provider.PlaceHit
 
 private const val SETTLE_MS = 1_200L
 private const val SCENE_ZOOM = 14.0
 private const val SEARCH_WAIT_MS = 10_000L
 private const val SEARCH_POLL_MS = 250L
+private const val MAX_SEARCH_QUERIES = 4
 private const val PLAN_WAIT_MS = 30_000L
 private const val ROUTE_ASSET = "device-check/screen-route.json"
 private const val STYLE_LIGHT = "standard"
@@ -33,6 +36,9 @@ private const val DARK_THEME_NOTE =
     "the dark shots use the dark map style only: the app has no dark UI theme, so ui_night_mode stays false"
 private const val FALLBACK_SEARCH_QUERY = "Lviv"
 private const val MAP_IDLE = "map_idle"
+private const val SEARCH_QUERY_REGION_LABEL = "region_label"
+private const val SEARCH_QUERY_REGION_NAME = "region_name"
+private const val SEARCH_QUERY_FALLBACK = "fallback"
 
 /** The screens this build does not have. They are listed so the report says so. */
 internal val SCREENS_NOT_IN_THIS_BUILD = listOf("profiles create/copy/reset", "widget grid", "plugin manager")
@@ -108,20 +114,30 @@ internal class ScreenshotsStep(
     }
 
     private suspend fun searchAndPlaceScenes() {
-        val query = context.region?.nameEn ?: FALLBACK_SEARCH_QUERY
-        val request =
-            buildJsonObject {
-                put("query", query)
-                put("sequence", 1)
+        var hits = emptyList<PlaceHit>()
+        var used = FALLBACK_SEARCH_QUERY to SEARCH_QUERY_FALLBACK
+        for ((index, candidate) in searchQueries().withIndex()) {
+            used = candidate
+            hits = search(candidate.first, index + 1L)
+            if (hits.isNotEmpty()) {
+                break
             }
-        context.command("core.search.screen", request)
-        val hits = withTimeoutOrNull(SEARCH_WAIT_MS) { awaitHits() }.orEmpty()
+        }
+        val (query, source) = used
         if (hits.isEmpty()) {
-            skipScene("search_results", "the search for \"$query\" returned no hit: ${searchPartNote()}")
+            skipScene("search_results", "no query found a place: ${searchPartNote()}")
             skipScene("place_card", "no search hit to open")
             return
         }
-        shoot("search_results", THEME_LIGHT, mapOf("hits" to JsonPrimitive(hits.size)))
+        shoot(
+            "search_results",
+            THEME_LIGHT,
+            mapOf(
+                "hits" to JsonPrimitive(hits.size),
+                "search_query" to JsonPrimitive(query),
+                "search_query_source" to JsonPrimitive(source),
+            ),
+        )
         val place = hits.firstOrNull { !it.isCoordinate }
         if (place == null) {
             skipScene("place_card", "every hit is a coordinate row")
@@ -136,15 +152,66 @@ internal class ScreenshotsStep(
         context.command("core.place.card_hide")
     }
 
+    /**
+     * What to type into the search screen, best first: up to [MAX_SEARCH_QUERIES]
+     * place names the map draws in the installed region, then the region's own
+     * catalogue name, then a fixed name so a run without a downloaded region
+     * still tries. A name the region does not hold finds nothing, so the scene
+     * would otherwise show an empty screen on a phone that downloaded another
+     * oblast.
+     */
+    private suspend fun searchQueries(): List<Pair<String, String>> {
+        val names = renderedPlaceNames().take(MAX_SEARCH_QUERIES)
+        return buildList {
+            names.forEach { add(it to SEARCH_QUERY_REGION_LABEL) }
+            context.region
+                ?.nameEn
+                ?.takeIf { it.isNotBlank() }
+                ?.let { add(it to SEARCH_QUERY_REGION_NAME) }
+            add(FALLBACK_SEARCH_QUERY to SEARCH_QUERY_FALLBACK)
+        }.distinctBy { it.first }
+    }
+
+    /** The place names the map draws around the region at the label zoom, waiting for the style to load. */
+    private suspend fun renderedPlaceNames(): List<String> {
+        val (lat, lon) = context.mapFocus()
+        context.command("core.map.set_camera", camera(lat, lon, LABEL_ZOOM))
+        return withTimeoutOrNull(LABEL_WAIT_MS) {
+            var names = placeNames(RenderedLabelReader(context).features())
+            while (names.isEmpty()) {
+                delay(SEARCH_POLL_MS)
+                names = placeNames(RenderedLabelReader(context).features())
+            }
+            names
+        }.orEmpty()
+    }
+
+    /** Runs one keystroke and waits for its terminal state, so an empty answer returns at once. */
+    private suspend fun search(
+        query: String,
+        sequence: Long,
+    ): List<PlaceHit> {
+        context.command(
+            "core.search.screen",
+            buildJsonObject {
+                put("query", query)
+                put("sequence", sequence)
+            },
+        )
+        return withTimeoutOrNull(SEARCH_WAIT_MS) {
+            context.container.searchScreen.state
+                .first { it.sequence >= sequence && it.status.isTerminal() }
+                .hits
+        }.orEmpty()
+    }
+
+    private fun SearchScreenStatus.isTerminal(): Boolean =
+        this == SearchScreenStatus.RESULTS || this == SearchScreenStatus.EMPTY || this == SearchScreenStatus.FAILED
+
     private fun searchPartNote(): String {
         val kinds = context.region?.parts?.joinToString { it.wireKind }
         return "the installed region has these parts: ${kinds ?: "none known"}"
     }
-
-    private suspend fun awaitHits() =
-        context.container.searchScreen.state
-            .first { it.hits.isNotEmpty() }
-            .hits
 
     private suspend fun plannerScene() {
         val points = context.plannedPoints ?: PlanPoints(PLAN_START_LAT, PLAN_START_LON, PLAN_END_LAT, PLAN_END_LON)

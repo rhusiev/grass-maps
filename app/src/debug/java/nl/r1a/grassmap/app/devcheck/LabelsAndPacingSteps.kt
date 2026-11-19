@@ -6,14 +6,11 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import nl.r1a.grassmap.map.LabelOptions
 import nl.r1a.grassmap.plugin.api.error.Outcome
@@ -22,9 +19,9 @@ import nl.r1a.grassmap.plugins.dev.tools.DevToolsPanelState
 
 internal const val LVIV_LAT = 49.8397
 internal const val LVIV_LON = 24.0297
-private const val LABEL_ZOOM = 9.0
+internal const val LABEL_ZOOM = 9.0
 private const val MAX_LABEL_TEXTS = 5
-private const val LABEL_WAIT_MS = 8_000L
+internal const val LABEL_WAIT_MS = 8_000L
 private const val LABEL_POLL_MS = 500L
 private const val LABEL_SIZE_BIG_PERCENT = 150
 private const val PACING_SAMPLES = 4
@@ -93,16 +90,13 @@ internal class LabelsStep(
             texts
         } ?: emptyList()
 
-    private suspend fun renderedTexts(): List<String> {
-        val result = context.command("core.map.rendered_labels", JsonObject(emptyMap()))
-        val raw = ((result as? Outcome.Success)?.value as? JsonPrimitive)?.contentOrNull ?: return emptyList()
-        val labels = runCatching { Json.parseToJsonElement(raw) as? JsonArray }.getOrNull() ?: return emptyList()
-        return labels
-            .mapNotNull { (it.jsonObject["text"] as? JsonPrimitive)?.contentOrNull }
+    private suspend fun renderedTexts(): List<String> =
+        RenderedLabelReader(context)
+            .features()
+            .mapNotNull { it.text }
             .distinct()
             .sorted()
             .take(MAX_LABEL_TEXTS)
-    }
 }
 
 /**

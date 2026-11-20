@@ -19,7 +19,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -31,6 +30,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmap.plugin.ui.api.ShellColors
 
 /** One line of a widget: the value and the short label that names it, for example "296 m" and "alt". */
 data class WidgetLine(
@@ -149,10 +150,10 @@ private fun WidgetPicker(
     onPick: (GridWidget) -> Unit,
 ) {
     Column(
-        modifier = Modifier.glass().padding(CELL_PADDING_DP.dp),
+        modifier = Modifier.glass(LocalShellColors.current).padding(CELL_PADDING_DP.dp),
         verticalArrangement = Arrangement.spacedBy(GRID_GAP_DP.dp),
     ) {
-        BasicText(labels.notShown, style = TextStyle(color = MUTED_COLOR, fontSize = LABEL_FONT_SP.sp))
+        BasicText(labels.notShown, style = TextStyle(color = LocalShellColors.current.muted, fontSize = LABEL_FONT_SP.sp))
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(GRID_GAP_DP.dp),
             verticalArrangement = Arrangement.spacedBy(GRID_GAP_DP.dp),
@@ -199,7 +200,7 @@ private fun WidgetCellView(
     Row(
         modifier =
             Modifier
-                .glass()
+                .glass(LocalShellColors.current)
                 .semantics(mergeDescendants = true) {
                     contentDescription = description
                     if (moveActions.isNotEmpty()) {
@@ -231,9 +232,10 @@ private fun WidgetCellView(
 @Composable
 private fun WidgetLineView(line: WidgetLine) {
     Row(horizontalArrangement = Arrangement.spacedBy(LABEL_GAP_DP.dp), verticalAlignment = Alignment.Bottom) {
-        BasicText(line.value, style = TextStyle(color = Color.White, fontSize = VALUE_FONT_SP.sp, fontWeight = FontWeight.SemiBold))
+        val colors = LocalShellColors.current
+        BasicText(line.value, style = TextStyle(color = colors.ink, fontSize = VALUE_FONT_SP.sp, fontWeight = FontWeight.SemiBold))
         if (line.label.isNotEmpty()) {
-            BasicText(line.label, style = TextStyle(color = MUTED_COLOR, fontSize = LABEL_FONT_SP.sp))
+            BasicText(line.label, style = TextStyle(color = colors.muted, fontSize = LABEL_FONT_SP.sp))
         }
     }
 }
@@ -248,7 +250,7 @@ private fun GridGlyph(
 ) {
     BasicText(
         text = glyph,
-        style = TextStyle(color = if (enabled) Color.White else DISABLED_COLOR, fontSize = GLYPH_FONT_SP.sp),
+        style = TextStyle(color = if (enabled) LocalShellColors.current.ink else LocalShellColors.current.faint, fontSize = GLYPH_FONT_SP.sp),
         modifier =
             Modifier
                 .clip(RoundedCornerShape(GRID_CORNER_DP.dp))
@@ -267,13 +269,14 @@ private fun GridAction(
     onClick: () -> Unit,
 ) {
     val shape = RoundedCornerShape(GRID_CORNER_DP.dp)
+    val colors = LocalShellColors.current
     BasicText(
         text = text,
-        style = TextStyle(color = Color.White, fontSize = VALUE_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
+        style = TextStyle(color = colors.ink, fontSize = VALUE_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
         modifier =
             Modifier
-                .background(GLASS_COLOR, shape)
-                .border(1.dp, RING_COLOR, shape)
+                .background(colors.glass, shape)
+                .border(1.dp, colors.ring, shape)
                 .clip(shape)
                 .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
                 .semantics { contentDescription = description }
@@ -281,10 +284,10 @@ private fun GridAction(
     )
 }
 
-private fun Modifier.glass(): Modifier =
+private fun Modifier.glass(colors: ShellColors): Modifier =
     this
-        .background(GLASS_COLOR, RoundedCornerShape(GRID_CORNER_DP.dp))
-        .border(1.dp, RING_COLOR, RoundedCornerShape(GRID_CORNER_DP.dp))
+        .background(colors.glass, RoundedCornerShape(GRID_CORNER_DP.dp))
+        .border(1.dp, colors.ring, RoundedCornerShape(GRID_CORNER_DP.dp))
 
 private const val MOVE_EARLIER_GLYPH = "‹"
 private const val MOVE_LATER_GLYPH = "›"
@@ -299,7 +302,3 @@ private const val VALUE_FONT_SP = 14
 private const val LABEL_FONT_SP = 12
 private const val GLYPH_FONT_SP = 18
 private const val LABEL_GAP_DP = 4
-private val GLASS_COLOR = Color(0xCC202020)
-private val RING_COLOR = Color(0x33FFFFFF)
-private val MUTED_COLOR = Color(0xFFBDBDBD)
-private val DISABLED_COLOR = Color(0xFF6E6E6E)

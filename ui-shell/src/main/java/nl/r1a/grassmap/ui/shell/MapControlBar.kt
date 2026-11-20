@@ -17,7 +17,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -27,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmap.plugin.api.contract.CommandId
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
 
 /** One configurable button: the command it runs and its visible text. */
 data class ControlButton(
@@ -67,11 +67,12 @@ fun MapControlBar(
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(BUTTON_CORNER_DP.dp)
+    val colors = LocalShellColors.current
     Column(
         modifier =
             modifier
-                .background(Color(0x99000000), RoundedCornerShape(BAR_CORNER_DP.dp))
-                .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(BAR_CORNER_DP.dp))
+                .background(colors.glass, RoundedCornerShape(BAR_CORNER_DP.dp))
+                .border(1.dp, colors.ring, RoundedCornerShape(BAR_CORNER_DP.dp))
                 .padding(BUTTON_GAP_DP.dp),
         verticalArrangement = Arrangement.spacedBy(BUTTON_GAP_DP.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -126,6 +127,7 @@ private fun ActionBox(
     shape: RoundedCornerShape,
     wide: Boolean = false,
 ) {
+    val colors = LocalShellColors.current
     val size =
         if (wide) {
             Modifier.height(BUTTON_SIZE_DP.dp).widthIn(min = BUTTON_SIZE_DP.dp)
@@ -136,8 +138,8 @@ private fun ActionBox(
         modifier =
             size
                 .alpha(if (enabled) 1f else DISABLED_ALPHA)
-                .background(Color(0xCC1F1F1F), shape)
-                .border(1.dp, Color(0x66FFFFFF), shape)
+                .background(colors.surface, shape)
+                .border(1.dp, colors.ring, shape)
                 .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
                 .padding(horizontal = if (wide) WIDE_BUTTON_PADDING_DP.dp else 0.dp)
                 .semantics { contentDescription = description },
@@ -147,7 +149,7 @@ private fun ActionBox(
             text = label,
             style =
                 TextStyle(
-                    color = Color.White,
+                    color = colors.ink,
                     fontSize = BUTTON_FONT_SP.sp,
                     fontWeight = FontWeight.SemiBold,
                 ),

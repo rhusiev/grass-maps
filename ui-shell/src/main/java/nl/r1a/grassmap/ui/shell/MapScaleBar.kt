@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.ui.shell
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
 
 /**
  * The map scale bar (T-0107).
@@ -36,10 +38,12 @@ fun MapScaleBar(
     description: String,
     modifier: Modifier = Modifier,
 ) {
+    val colors = LocalShellColors.current
     Column(
         modifier =
             modifier
-                .background(Color(0x99000000), RoundedCornerShape(BAR_CORNER_DP.dp))
+                .background(colors.glass, RoundedCornerShape(BAR_CORNER_DP.dp))
+                .border(1.dp, colors.ring, RoundedCornerShape(BAR_CORNER_DP.dp))
                 .padding(horizontal = BAR_PADDING_HORIZONTAL_DP.dp, vertical = BAR_PADDING_VERTICAL_DP.dp)
                 // One node: TalkBack otherwise reads the name and the value as
                 // two separate stops, and never as one scale.
@@ -50,7 +54,7 @@ fun MapScaleBar(
             text = label,
             style =
                 TextStyle(
-                    color = Color.White,
+                    color = colors.ink,
                     fontSize = FONT_SP.sp,
                     fontWeight = FontWeight.SemiBold,
                 ),
@@ -62,17 +66,17 @@ fun MapScaleBar(
                     .width(widthDp.coerceAtLeast(MIN_BAR_WIDTH_DP).dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Tick()
-            Box(Modifier.weight(1f).height(LINE_HEIGHT_DP.dp).background(Color.White))
-            Tick()
+            Tick(colors.ink)
+            Box(Modifier.weight(1f).height(LINE_HEIGHT_DP.dp).background(colors.ink))
+            Tick(colors.ink)
         }
     }
 }
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
-private fun Tick() {
-    Box(Modifier.width(TICK_WIDTH_DP.dp).height(TICK_HEIGHT_DP.dp).background(Color.White))
+private fun Tick(color: Color) {
+    Box(Modifier.width(TICK_WIDTH_DP.dp).height(TICK_HEIGHT_DP.dp).background(color))
 }
 
 private const val BAR_CORNER_DP = 8

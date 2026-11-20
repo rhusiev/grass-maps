@@ -31,7 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -46,6 +45,9 @@ import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.ui.api.AlertsPageChannel
 import nl.r1a.grassmap.plugin.ui.api.AlertsPageState
 import nl.r1a.grassmap.plugin.ui.api.AlertsPageSwitch
+import nl.r1a.grassmap.plugin.ui.api.ShellColors
+import nl.r1a.grassmap.plugin.ui.api.inkOn
+import nl.r1a.grassmap.plugin.ui.api.shellColors
 
 private const val PAGE_TITLE_SP = 21
 private const val PAGE_SUBTITLE_SP = 12.5f
@@ -71,74 +73,9 @@ private const val DONE_CORNER_DP = 25
 private const val BACK_BUTTON_DP = 40
 private const val BACK_GLYPH_SP = 26
 
-private val LIGHT_SURFACE = Color(0xFFFFFFFF)
-private val LIGHT_SOFT = Color(0xFFF2F1EE)
-private val LIGHT_INK = Color(0xFF202124)
-private val LIGHT_MUTED = Color(0xFF686C72)
-private val LIGHT_ACCENT = Color(0xFF1E7F53)
-private val LIGHT_AMBER = Color(0xFFD08A00)
-private val LIGHT_CHEVRON = Color(0xFFB5B1AA)
-private val LIGHT_SWITCH_BORDER = Color(0xFFB9B4AC)
-private val LIGHT_SWITCH_KNOB = Color(0xFF8F8A82)
-
-private val DARK_SURFACE = Color(0xFF24282D)
-private val DARK_SOFT = Color(0xFF2F343A)
-private val DARK_INK = Color(0xFFE8EAED)
-private val DARK_MUTED = Color(0xFF9AA0A6)
-private val DARK_ACCENT = Color(0xFF5FD39A)
-private val DARK_AMBER = Color(0xFFC99A12)
-private val DARK_CHEVRON = Color(0xFF9AA0A6)
-private val DARK_SWITCH_BORDER = Color(0xFF80868B)
-private val DARK_SWITCH_KNOB = Color(0xFF80868B)
-
-private val SCRIM = Color(0x66000000)
-private val SCORE_AMBER = Color(0xFFD08A00)
-private val SCORE_GREEN = Color(0xFF1B8A3A)
 private val CHECK_GLYPH = "\u2713"
 private val BACK_GLYPH = "\u2039"
 private val CHEVRON_GLYPH = "\u203A"
-
-private data class AlertsPalette(
-    val surface: Color,
-    val soft: Color,
-    val ink: Color,
-    val muted: Color,
-    val accent: Color,
-    val amber: Color,
-    val chevron: Color,
-    val switchBorder: Color,
-    val switchKnob: Color,
-    val dark: Boolean,
-)
-
-private fun palette(dark: Boolean): AlertsPalette =
-    if (dark) {
-        AlertsPalette(
-            surface = DARK_SURFACE,
-            soft = DARK_SOFT,
-            ink = DARK_INK,
-            muted = DARK_MUTED,
-            accent = DARK_ACCENT,
-            amber = DARK_AMBER,
-            chevron = DARK_CHEVRON,
-            switchBorder = DARK_SWITCH_BORDER,
-            switchKnob = DARK_SWITCH_KNOB,
-            dark = true,
-        )
-    } else {
-        AlertsPalette(
-            surface = LIGHT_SURFACE,
-            soft = LIGHT_SOFT,
-            ink = LIGHT_INK,
-            muted = LIGHT_MUTED,
-            accent = LIGHT_ACCENT,
-            amber = LIGHT_AMBER,
-            chevron = LIGHT_CHEVRON,
-            switchBorder = LIGHT_SWITCH_BORDER,
-            switchKnob = LIGHT_SWITCH_KNOB,
-            dark = false,
-        )
-    }
 
 /**
  * The profile alerts page (T-0413): the three sections of switches, the
@@ -161,7 +98,7 @@ fun AlertsScreenHost(
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = palette(dark)
+    val colors = shellColors(dark)
     val content = alertsPageContent(state, strings)
     val picker = alertsPlacePickerContent(state.chosenPlaceKinds, strings)
     var pickerOpen by remember { mutableStateOf(false) }
@@ -206,7 +143,7 @@ fun AlertsScreenHost(
 @Composable
 private fun Header(
     content: AlertsPageContent,
-    colors: AlertsPalette,
+    colors: ShellColors,
     onBack: () -> Unit,
 ) {
     Row(
@@ -247,7 +184,7 @@ private fun Header(
 @Composable
 private fun SectionTitle(
     title: String,
-    colors: AlertsPalette,
+    colors: ShellColors,
 ) {
     BasicText(
         text = title.uppercase(),
@@ -265,7 +202,7 @@ private fun SectionTitle(
 @Composable
 private fun AlertRow(
     row: AlertsRowContent,
-    colors: AlertsPalette,
+    colors: ShellColors,
     onSwitch: (AlertsPageSwitch, Boolean) -> Unit,
     onPlaces: () -> Unit,
 ) {
@@ -306,7 +243,7 @@ private fun AlertRow(
         } else {
             BasicText(
                 text = CHEVRON_GLYPH,
-                style = TextStyle(color = colors.chevron, fontSize = 22.sp),
+                style = TextStyle(color = colors.faint, fontSize = 22.sp),
                 modifier = Modifier.clearAndSetSemantics {},
             )
         }
@@ -316,13 +253,13 @@ private fun AlertRow(
 @Composable
 private fun IconCircle(
     row: AlertsRowContent,
-    colors: AlertsPalette,
+    colors: ShellColors,
 ) {
     val glyph = row.switch?.glyph() ?: "\u25C9"
     val colour =
         when (row.switch) {
-            AlertsPageSwitch.Favourite -> SCORE_AMBER
-            AlertsPageSwitch.TrackWaypoint -> SCORE_GREEN
+            AlertsPageSwitch.Favourite -> colors.amber
+            AlertsPageSwitch.TrackWaypoint -> colors.profiles.hike
             null -> colors.accent
             else -> colors.muted
         }
@@ -344,7 +281,7 @@ private fun IconCircle(
 @Composable
 private fun Switch(
     on: Boolean,
-    colors: AlertsPalette,
+    colors: ShellColors,
 ) {
     Box(
         modifier =
@@ -353,7 +290,7 @@ private fun Switch(
                 .background(if (on) colors.accent else colors.soft, RoundedCornerShape(14.dp))
                 .border(
                     SWITCH_BORDER_DP.dp,
-                    if (on) colors.accent else colors.switchBorder,
+                    if (on) colors.accent else colors.offSwitchBorder,
                     RoundedCornerShape(14.dp),
                 ),
     ) {
@@ -363,7 +300,7 @@ private fun Switch(
                     .align(if (on) Alignment.CenterEnd else Alignment.CenterStart)
                     .padding(horizontal = SWITCH_BORDER_DP.dp)
                     .size(SWITCH_KNOB_DP.dp)
-                    .background(if (on) Color.White else colors.switchKnob, CircleShape),
+                    .background(if (on) colors.onAccent else colors.offSwitchKnob, CircleShape),
         )
     }
 }
@@ -371,7 +308,7 @@ private fun Switch(
 @Composable
 private fun ReachSection(
     content: AlertsPageContent,
-    colors: AlertsPalette,
+    colors: ShellColors,
     onChannel: (AlertsPageChannel, Boolean) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = CONTENT_HORIZONTAL_DP.dp)) {
@@ -396,7 +333,7 @@ private fun ReachSection(
 @Composable
 private fun ChannelChip(
     channel: AlertsChannelContent,
-    colors: AlertsPalette,
+    colors: ShellColors,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -429,7 +366,7 @@ private fun ChannelChip(
 @Composable
 private fun DoneButton(
     label: String,
-    colors: AlertsPalette,
+    colors: ShellColors,
     onDone: () -> Unit,
 ) {
     Row(
@@ -448,7 +385,7 @@ private fun DoneButton(
             text = CHECK_GLYPH,
             style =
                 TextStyle(
-                    color = if (colors.dark) Color(0xFF202124) else Color.White,
+                    color = inkOn(colors.amber, colors),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                 ),
@@ -458,7 +395,7 @@ private fun DoneButton(
             text = "  $label",
             style =
                 TextStyle(
-                    color = if (colors.dark) Color(0xFF202124) else Color.White,
+                    color = inkOn(colors.amber, colors),
                     fontSize = DONE_LABEL_SP.sp,
                     fontWeight = FontWeight.Bold,
                 ),
@@ -469,7 +406,7 @@ private fun DoneButton(
 @Composable
 private fun PlacePicker(
     content: AlertsPlacePickerContent,
-    colors: AlertsPalette,
+    colors: ShellColors,
     onSelect: (String, Boolean) -> Unit,
     onClose: () -> Unit,
 ) {
@@ -477,7 +414,7 @@ private fun PlacePicker(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(SCRIM)
+                .background(colors.scrim)
                 .pointerInput(Unit) { detectTapGestures { onClose() } },
         contentAlignment = Alignment.BottomCenter,
     ) {

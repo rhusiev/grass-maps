@@ -56,6 +56,8 @@ import nl.r1a.grassmap.plugin.ui.api.NavigationScreenColors
 import nl.r1a.grassmap.plugin.ui.api.NavigationScreenState
 import nl.r1a.grassmap.plugin.ui.api.NavigationScreenStatus
 import nl.r1a.grassmap.plugin.ui.api.NavigationTripSummary
+import nl.r1a.grassmap.plugin.ui.api.ShellColors
+import nl.r1a.grassmap.plugin.ui.api.shellColors
 
 private const val SCREEN_EDGE_DP = 10
 private const val BAR_EDGE_DP = 12
@@ -80,45 +82,6 @@ private const val SWITCH_HEIGHT_DP = 26
 private const val SWITCH_KNOB_DP = 20
 private const val BANNER_CORNER_DP = 16
 private const val DASH = "–"
-
-private data class NavigationPalette(
-    val ink: Color,
-    val muted: Color,
-    val soft: Color,
-    val surface: Color,
-    val glass: Color,
-    val accent: Color,
-    val danger: Color,
-    val dangerSoft: Color,
-    val dark: Boolean,
-)
-
-private fun palette(dark: Boolean): NavigationPalette =
-    if (dark) {
-        NavigationPalette(
-            ink = Color(0xFFE8EAED),
-            muted = Color(0xFF9AA0A6),
-            soft = Color(0xFF2F343A),
-            surface = Color(0xFF24282D),
-            glass = Color(0xEB24282D),
-            accent = Color(0xFF5FD39A),
-            danger = Color(0xFFF28B82),
-            dangerSoft = Color(0xFF4A2524),
-            dark = true,
-        )
-    } else {
-        NavigationPalette(
-            ink = Color(0xFF202124),
-            muted = Color(0xFF686C72),
-            soft = Color(0xFFF2F1EE),
-            surface = Color.White,
-            glass = Color(0xE6FFFFFF),
-            accent = Color(NavigationScreenColors.GREEN),
-            danger = Color(NavigationScreenColors.DANGER),
-            dangerSoft = Color(NavigationScreenColors.DANGER_SOFT),
-            dark = false,
-        )
-    }
 
 /**
  * The navigation screen (T-0320): the turn card at the top, the next-stop and
@@ -159,7 +122,7 @@ fun NavigationScreenHost(
     modifier: Modifier = Modifier,
     announcement: NavigationAnnouncement? = null,
 ) {
-    val colors = palette(dark)
+    val colors = shellColors(dark)
     val controls = navigationControls(state, sheet)
     Box(modifier = modifier.fillMaxSize()) {
         Column(
@@ -288,7 +251,7 @@ private fun ReadoutRow(
     readout: NavigationReadout,
     speedUnit: String,
     strings: Strings,
-    colors: NavigationPalette,
+    colors: ShellColors,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
@@ -333,7 +296,7 @@ private fun ReadoutRow(
 @Composable
 private fun AlertBanners(
     alerts: List<NavigationScreenAlert>,
-    colors: NavigationPalette,
+    colors: ShellColors,
 ) {
     if (alerts.isEmpty()) {
         return
@@ -350,13 +313,15 @@ private fun AlertBanners(
 private fun Banner(
     alert: NavigationScreenAlert,
     slim: Boolean,
-    colors: NavigationPalette,
+    colors: ShellColors,
 ) {
     val warning = alert.tone == NavigationAlertTone.Warning
-    val background = Color(if (warning) NavigationScreenColors.WARNING_BG else NavigationScreenColors.INFO_BG)
-    val line = Color(if (warning) NavigationScreenColors.WARNING_LINE else NavigationScreenColors.INFO_LINE)
-    val ink = Color(if (warning) NavigationScreenColors.WARNING_INK else NavigationScreenColors.INFO_INK)
-    val sub = Color(if (warning) NavigationScreenColors.WARNING_SUB else NavigationScreenColors.INFO_SUB)
+    // The warning card takes the round 9 tokens; round 9 draws no dark info
+    // banner, so an info banner keeps the light card in both themes.
+    val background = if (warning) colors.warning.surface else Color(NavigationScreenColors.INFO_BG)
+    val line = if (warning) colors.warning.border else Color(NavigationScreenColors.INFO_LINE)
+    val ink = if (warning) colors.warning.title else Color(NavigationScreenColors.INFO_INK)
+    val sub = if (warning) colors.warning.text else Color(NavigationScreenColors.INFO_SUB)
     if (slim) {
         Row(
             modifier =
@@ -413,7 +378,7 @@ private fun Banner(
 private fun Bar(
     state: NavigationScreenState,
     strings: Strings,
-    colors: NavigationPalette,
+    colors: ShellColors,
     controls: Set<NavigationControl>,
     onEnd: () -> Unit,
     onResume: () -> Unit,
@@ -436,7 +401,7 @@ private fun Bar(
                 label = strings.resolve(NavigationScreenStrings.DONE),
                 glyph = "\u2713",
                 background = colors.accent,
-                ink = Color.White,
+                ink = colors.onAccent,
                 onClick = onDone,
                 modifier = Modifier.fillMaxWidth().height(DONE_HEIGHT_DP.dp),
             )
@@ -459,7 +424,7 @@ private fun Bar(
                     label = strings.resolve(NavigationScreenStrings.RESUME),
                     glyph = "\u25B6",
                     background = colors.accent,
-                    ink = Color.White,
+                    ink = colors.onAccent,
                     onClick = onResume,
                     modifier = Modifier.weight(1f).height(END_HEIGHT_DP.dp),
                 )
@@ -479,7 +444,7 @@ private fun Bar(
 @Composable
 private fun Eta(
     state: NavigationScreenState,
-    colors: NavigationPalette,
+    colors: ShellColors,
     modifier: Modifier,
 ) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -487,7 +452,7 @@ private fun Eta(
             text = state.trip.remainingTime,
             style =
                 TextStyle(
-                    color = if (colors.dark) colors.accent else Color(NavigationScreenColors.GREEN),
+                    color = colors.accent,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                 ),
@@ -505,7 +470,7 @@ private fun Eta(
 private fun TripSheet(
     state: NavigationScreenState,
     strings: Strings,
-    colors: NavigationPalette,
+    colors: ShellColors,
     controls: Set<NavigationControl>,
     onEnd: () -> Unit,
     onPause: () -> Unit,
@@ -620,7 +585,7 @@ private fun SheetEntryRow(
     glyph: String,
     title: String,
     detail: String,
-    colors: NavigationPalette,
+    colors: ShellColors,
     onClick: () -> Unit,
 ) {
     Row(
@@ -647,7 +612,7 @@ private fun SheetEntryRow(
 private fun SettingsSheet(
     state: NavigationScreenState,
     strings: Strings,
-    colors: NavigationPalette,
+    colors: ShellColors,
     controls: Set<NavigationControl>,
     onBack: () -> Unit,
     onReset: () -> Unit,
@@ -762,7 +727,7 @@ private fun TripRow(
     title: String,
     detail: String?,
     trailing: String?,
-    colors: NavigationPalette,
+    colors: ShellColors,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
@@ -793,7 +758,7 @@ private fun SpeedTiles(
     trip: NavigationTripSummary,
     speedUnit: String,
     strings: Strings,
-    colors: NavigationPalette,
+    colors: ShellColors,
 ) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         SpeedTile(strings.resolve(NavigationScreenStrings.SPEED_CURRENT), trip.speedCurrent, speedUnit, colors, Modifier.weight(1f))
@@ -807,7 +772,7 @@ private fun SpeedTile(
     label: String,
     value: String?,
     speedUnit: String,
-    colors: NavigationPalette,
+    colors: ShellColors,
     modifier: Modifier,
 ) {
     Column(
@@ -841,7 +806,7 @@ private fun SpeedTile(
 private fun AlertChips(
     state: NavigationScreenState,
     strings: Strings,
-    colors: NavigationPalette,
+    colors: ShellColors,
     controls: Set<NavigationControl>,
     onChange: (NavigationAlertSwitch, Boolean) -> Unit,
 ) {
@@ -886,7 +851,7 @@ private fun SwitchRow(
     label: String,
     detail: String,
     checked: Boolean,
-    colors: NavigationPalette,
+    colors: ShellColors,
     control: NavigationControl,
     controls: Set<NavigationControl>,
     onChange: (Boolean) -> Unit,
@@ -915,7 +880,7 @@ private fun SwitchRow(
 @Composable
 private fun Switch(
     checked: Boolean,
-    colors: NavigationPalette,
+    colors: ShellColors,
 ) {
     Box(
         modifier =
@@ -932,7 +897,7 @@ private fun Switch(
             modifier =
                 Modifier
                     .size(SWITCH_KNOB_DP.dp)
-                    .background(Color.White, RoundedCornerShape(SWITCH_KNOB_DP.dp)),
+                    .background(if (checked) colors.onAccent else colors.faint, RoundedCornerShape(SWITCH_KNOB_DP.dp)),
         )
     }
 }
@@ -940,7 +905,7 @@ private fun Switch(
 @Composable
 private fun SectionLabel(
     text: String,
-    colors: NavigationPalette,
+    colors: ShellColors,
 ) {
     BasicText(
         text = text.uppercase(),
@@ -955,21 +920,21 @@ private fun SectionLabel(
 }
 
 @Composable
-private fun SheetHandle(colors: NavigationPalette) {
+private fun SheetHandle(colors: ShellColors) {
     Box(
         modifier =
             Modifier
                 .padding(top = 9.dp, bottom = 10.dp)
                 .width(SHEET_HANDLE_WIDTH_DP.dp)
                 .height(SHEET_HANDLE_HEIGHT_DP.dp)
-                .background(if (colors.dark) Color(0xFF55595E) else Color(0xFFCFCCC6), RoundedCornerShape(2.dp)),
+                .background(colors.handle, RoundedCornerShape(2.dp)),
     )
 }
 
 @Composable
 private fun EndPill(
     label: String,
-    colors: NavigationPalette,
+    colors: ShellColors,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1023,7 +988,7 @@ private fun PrimaryPill(
 private fun RoundButton(
     glyph: String,
     description: String,
-    colors: NavigationPalette,
+    colors: ShellColors,
     onClick: () -> Unit,
     size: Int = ROUND_BUTTON_DP,
 ) {
@@ -1043,7 +1008,7 @@ private fun RoundButton(
 @Composable
 private fun RecentreButton(
     buttonLabel: String,
-    colors: NavigationPalette,
+    colors: ShellColors,
     onClick: () -> Unit,
     modifier: Modifier,
 ) {
@@ -1081,7 +1046,7 @@ private fun Glyph(
     )
 }
 
-private fun glassChip(colors: NavigationPalette): Modifier =
+private fun glassChip(colors: ShellColors): Modifier =
     Modifier
         .height(CHIP_HEIGHT_DP.dp)
         .background(colors.glass, RoundedCornerShape(CHIP_CORNER_DP.dp))

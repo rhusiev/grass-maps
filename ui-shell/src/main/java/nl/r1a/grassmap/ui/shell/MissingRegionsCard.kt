@@ -65,8 +65,8 @@ private val PART_KEYS =
 /**
  * The prompt a route shows when a stop lies in an oblast that is not on the
  * phone (T-0511): the oblast, what is missing with sizes, and one button that
- * downloads it all and then routes. The card keeps the fixed dark panel
- * colours, so it has no light and dark variants.
+ * downloads it all and then routes. The card draws the warning tokens of the
+ * current theme (T-0612).
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable

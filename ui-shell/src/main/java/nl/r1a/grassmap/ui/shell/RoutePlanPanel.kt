@@ -632,7 +632,7 @@ private fun AlternativeChips(
                 text = duration,
                 style =
                     TextStyle(
-                        color = ROUTE_VALUE_COLOR,
+                        color = if (selected) ROUTE_CHIP_SELECTED_INK else ROUTE_VALUE_COLOR,
                         fontSize = STATUS_FONT_SP.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                     ),
@@ -706,7 +706,7 @@ private fun StartChip(
         text = text,
         style =
             TextStyle(
-                color = Color.White,
+                color = ROUTE_ACTION_INK,
                 fontSize = ACTION_FONT_SP.sp,
                 fontWeight = FontWeight.Bold,
             ),

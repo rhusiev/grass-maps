@@ -185,6 +185,7 @@ import nl.r1a.grassmap.ui.shell.ControlBarLabels
 import nl.r1a.grassmap.ui.shell.ControlButton
 import nl.r1a.grassmap.ui.shell.FavouritesListsHost
 import nl.r1a.grassmap.ui.shell.FollowTrackSheet
+import nl.r1a.grassmap.ui.shell.GrassMapsTheme
 import nl.r1a.grassmap.ui.shell.LocalBottomChrome
 import nl.r1a.grassmap.ui.shell.MapControlBar
 import nl.r1a.grassmap.ui.shell.MapScaleBar
@@ -271,6 +272,20 @@ internal data class MapBundle(
 @Suppress("ktlint:standard:function-naming")
 @Composable
 internal fun MapScreen(
+    container: AppContainer,
+    harness: MapHarness,
+) {
+    // The theme is decided once, above every screen: the system night mode, or
+    // the navigation fixture's own theme while a capture drives it (T-0612).
+    val fixture by container.navigationScreenFixture.state.collectAsState()
+    GrassMapsTheme(dark = fixture?.dark ?: isSystemInDarkTheme()) {
+        MapScreenContent(container = container, harness = harness)
+    }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun MapScreenContent(
     container: AppContainer,
     harness: MapHarness,
 ) {

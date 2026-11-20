@@ -2160,7 +2160,10 @@ The screen state is derived once per published `NavigationState` by
 streams, the active alert banners and the live camera and alert settings, and
 never reads the map camera or an alert stream itself. The speed readout is whole
 km/h from 10 km/h and one decimal below; it is a dash while paused or after a
-lost fix. The ETA reads the state's remaining distance, remaining duration and
+lost fix. A lost fix means the last published fix is at least
+`AlertHost.SIGNAL_GAP_MILLIS` (10 s) old, computed on the banner tick and
+cleared by the next fix; it is not the retrospective lost/regained alert. The
+ETA reads the state's remaining distance, remaining duration and
 `etaEpochMillis`, not the clock. The turn card is the same green/amber/grey
 canon as round 3; off route, paused and arrival replace the turn facts with
 their own title and strip, and a lost fix dims the last known turn. The status
@@ -2312,6 +2315,23 @@ the earlier ones were missing. A gap of 9.999 s emits nothing. A timestamp that
 does not advance starts a new baseline and announces nothing, so a duplicate
 fix or a clock step is not a signal loss.
 
+That pair is the alert channel's announcement and is independent of the live
+no-fix relation the navigation screen draws. `NavigationAlertBanners` computes
+the relation from the age of the last published fix on its one-second tick: the
+last fix being at least 10 s old means a lost fix, and the next published fix
+clears it. It produces no event and no sound, and it does not need the signal
+switch, so the dimmed turn and the dashed speed stay honest while the switch is
+off. A gap that has just ended is a retrospective event, not a live state; the
+screen does not use the pair for the relation.
+
+`AppContainer` attaches the host once for the process to
+`NavigationController.state` and to `alertFixes`. That fix stream reads the
+shared location source only while a trip is live (`Following`, `Rerouting` or
+`Paused`), because a process-scoped collector on the raw source would hold the
+platform location providers after the trip. The host resets its revision, fix
+and off-route baselines on a terminal state, so the next trip's first state is
+a baseline rather than a reroute or a lost signal across the break.
+
 The other rules keep one episode to one announcement. Off route is announced
 once when the relation becomes `OffRoute`, and re-arms only after the relation
 leaves it, so the two fixes of the confirmation and a stream of off-route fixes
@@ -2347,10 +2367,14 @@ it emits no event and no effect while the session still reports the off-route
 fixes, the reroute and the arrival. With the reroute switch on it emits one
 notice carrying the replacement's distance; with the signal switch on it emits
 lost then regained once. The host tests cover the 10 s boundary, a 9.999 s gap,
-a repeated arrival, off-route episodes and the JSON round trip. The navigation
-screen collects the alert stream through `NavigationAlertBanners`, which keeps
-at most two banners, clears a way alert once its feature is behind and gives an
-info banner four seconds and a warning eight. Way alerts are T-0319.
+a repeated arrival, off-route episodes, a revision change, a break between two
+trips and the JSON round trip. The navigation screen collects the alert stream
+through `NavigationAlertBanners`, which keeps at most two banners, clears a way
+alert once its feature is behind and gives an info banner four seconds and a
+warning eight. It computes the live no-fix relation on the same tick from the
+last published fix's age; a test drives one gap through both the host and the
+presenter to show one pair of announcements and no live-state announcement.
+Way alerts are T-0319.
 
 ## Turn beeps
 

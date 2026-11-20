@@ -2116,7 +2116,9 @@ planner's turn stepper walks, so one route has one turn order. A turn passed by
 more than one metre is behind the driver. Time is
 `RouteProgress.durationBetween`. A stop is a leg end in `Route.segments`; a
 chain whose leg distances do not add up to the route total has no stop fact
-rather than a guessed one. The annotate pass writes its per-edge runs to
+rather than a guessed one. The navigation screen's next-stop name reads the
+same leg ends: it shows the plan's label for the next unpassed via, then the
+destination label on the last leg, and no name on a route without vias. The annotate pass writes its per-edge runs to
 `Route.runs` and leaves the legs, so an annotated route still shows its stops.
 Arrival shows the arrival fact alone and off route adds a notice beside the
 same facts.

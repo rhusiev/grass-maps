@@ -86,7 +86,11 @@ internal fun ActionButton(
                 .height(BUTTON_HEIGHT_DP.dp)
                 .clip(RoundedCornerShape(BUTTON_CORNER_DP.dp))
                 .background(if (enabled) background else NEUTRAL_BUTTON)
-                .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+                .border(
+                    1.dp,
+                    if (filled && enabled) ACCENT else CONTROL_LINE,
+                    RoundedCornerShape(BUTTON_CORNER_DP.dp),
+                ).clickable(enabled = enabled, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         BasicText(text = text, style = BUTTON_STYLE.copy(color = if (enabled) color else alpha))

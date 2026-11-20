@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.plugins.profiles.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -118,6 +119,7 @@ fun NewProfileSheet(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(FIELD_CORNER_DP.dp))
                     .background(FIELD)
+                    .border(1.dp, CONTROL_LINE, RoundedCornerShape(FIELD_CORNER_DP.dp))
                     .padding(ROW_PADDING_DP.dp),
         )
         BasicText(text = stringResource(R.string.profiles_start_from), style = LABEL_STYLE)

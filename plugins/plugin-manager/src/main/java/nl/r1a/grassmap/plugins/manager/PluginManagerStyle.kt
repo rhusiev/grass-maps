@@ -43,7 +43,11 @@ internal val SWITCH_OFF: Color
 
 internal val SWITCH_LINE: Color
     @Composable @ReadOnlyComposable
-    get() = LocalShellColors.current.offSwitchBorder
+    get() = LocalShellColors.current.controlBorder
+
+internal val FIELD_LINE: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.controlBorder
 
 internal val SCRIM: Color
     @Composable @ReadOnlyComposable

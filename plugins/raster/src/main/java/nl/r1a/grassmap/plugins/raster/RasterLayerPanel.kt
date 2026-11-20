@@ -58,6 +58,10 @@ internal val PANEL_MUTED: Color
 internal val FIELD_BACKGROUND: Color
     @Composable @ReadOnlyComposable
     get() = LocalShellColors.current.soft
+
+internal val FIELD_LINE: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.controlBorder
 internal const val PANEL_CORNER_DP = 8
 internal const val PANEL_HORIZONTAL_DP = 12
 internal const val PANEL_VERTICAL_DP = 8
@@ -157,6 +161,7 @@ fun RasterLayerPanel(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(PANEL_CORNER_DP.dp))
                         .background(FIELD_BACKGROUND)
+                        .border(1.dp, FIELD_LINE, RoundedCornerShape(PANEL_CORNER_DP.dp))
                         .padding(horizontal = PANEL_GAP_DP.dp, vertical = PANEL_GAP_DP.dp),
                 textStyle = TextStyle(color = PANEL_FOREGROUND, fontSize = PANEL_FONT_SP.sp),
                 singleLine = true,

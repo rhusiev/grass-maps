@@ -189,6 +189,7 @@ internal fun SearchPill(
                 .padding(SCREEN_PADDING_DP.dp)
                 .clip(RoundedCornerShape(PILL_CORNER_DP.dp))
                 .background(CARD)
+                .border(1.dp, FIELD_LINE, RoundedCornerShape(PILL_CORNER_DP.dp))
                 .padding(horizontal = CARD_PADDING_DP.dp, vertical = ROW_PADDING_DP.dp),
     ) {
         if (query.isEmpty()) {

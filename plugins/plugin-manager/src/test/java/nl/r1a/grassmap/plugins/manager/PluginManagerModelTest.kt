@@ -87,6 +87,16 @@ class PluginManagerModelTest {
     }
 
     @Test
+    fun theFilterStateIsQuietUntilAQueryArrives() {
+        val all = listOf(status("osm.places"), status("map.contours"))
+
+        assertNull(pluginFilterMatches("", pluginSections(all, resolve)))
+        assertNull(pluginFilterMatches("   ", pluginSections(all, resolve, "   ")))
+        assertEquals(1, pluginFilterMatches("places", pluginSections(all, resolve, "places")))
+        assertEquals(0, pluginFilterMatches("zzz", pluginSections(all, resolve, "zzz")))
+    }
+
+    @Test
     fun countsTotalAndOff() {
         val counts = pluginCounts(listOf(status("map.contours", enabled = false), status("valhalla"), status("core.x", switchable = false)))
 

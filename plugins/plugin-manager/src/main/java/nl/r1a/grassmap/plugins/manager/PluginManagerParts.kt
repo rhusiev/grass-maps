@@ -27,8 +27,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -162,11 +164,19 @@ internal fun PluginSwitch(
     }
 }
 
+/**
+ * The filter field at the bottom of the manager. The field carries the hint as
+ * its label, so a reader never meets an unnamed edit box, and reports how many
+ * plugins the filter leaves as its state description: that text changes only
+ * when the filter does, so it is spoken once per change instead of per redraw.
+ * The drawn hint is decoration, because the label already says it.
+ */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 internal fun SearchPill(
     query: String,
     onQueryChange: (String) -> Unit,
+    filterState: String?,
 ) {
     val hint = stringResource(R.string.plugin_manager_search)
     Box(
@@ -179,14 +189,28 @@ internal fun SearchPill(
                 .padding(horizontal = CARD_PADDING_DP.dp, vertical = ROW_PADDING_DP.dp),
     ) {
         if (query.isEmpty()) {
-            BasicText(text = hint, style = TextStyle(color = MUTED, fontSize = NAME_SP.sp))
+            // The field already carries this hint as its label; the drawn copy
+            // must not be a second announcement.
+            BasicText(
+                text = hint,
+                style = TextStyle(color = MUTED, fontSize = NAME_SP.sp),
+                modifier = Modifier.clearAndSetSemantics {},
+            )
         }
         BasicTextField(
             value = query,
             onValueChange = onQueryChange,
             singleLine = true,
             textStyle = TextStyle(color = INK, fontSize = NAME_SP.sp),
-            modifier = Modifier.fillMaxWidth().semantics { contentDescription = hint },
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        contentDescription = hint
+                        if (filterState != null) {
+                            stateDescription = filterState
+                        }
+                    },
         )
     }
 }

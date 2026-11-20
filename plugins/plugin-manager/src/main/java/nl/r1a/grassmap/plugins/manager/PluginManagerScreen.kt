@@ -85,7 +85,11 @@ fun PluginManagerScreen(
                     )
                 }
             }
-            SearchPill(query = query, onQueryChange = { query = it })
+            SearchPill(
+                query = query,
+                onQueryChange = { query = it },
+                filterState = pluginFilterState(query, sections),
+            )
         }
         opened?.let { row ->
             PluginSheet(
@@ -129,5 +133,19 @@ private fun subtitle(counts: PluginCounts): String {
         total
     } else {
         stringResource(R.string.plugin_manager_subtitle_off, total, counts.off)
+    }
+}
+
+/** What the filter field says it left, or null while the field holds no query. */
+@Composable
+private fun pluginFilterState(
+    query: String,
+    sections: List<PluginSection>,
+): String? {
+    val matches = pluginFilterMatches(query, sections) ?: return null
+    return if (matches == 0) {
+        stringResource(R.string.plugin_manager_no_match)
+    } else {
+        pluralStringResource(R.plurals.plugin_manager_count, matches, matches)
     }
 }

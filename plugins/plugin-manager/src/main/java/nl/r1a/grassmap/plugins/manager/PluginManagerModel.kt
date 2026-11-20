@@ -73,3 +73,12 @@ fun pluginSections(
             ?.let { PluginSection(group, it) }
     }
 }
+
+/**
+ * How many plugins the filter in [sections] leaves, or null while [query] is
+ * empty. This is the text the search field reports as its state.
+ */
+fun pluginFilterMatches(
+    query: String,
+    sections: List<PluginSection>,
+): Int? = if (query.isBlank()) null else sections.sumOf { section -> section.rows.size }

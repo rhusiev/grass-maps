@@ -16,7 +16,7 @@
     <string name="plugin_manager_no_match">Жоден плагін не підходить</string>
 
     <string name="plugin_manager_group_map">Мапа</string>
-    <string name="plugin_manager_group_routing">Маршрути</string>
+    <string name="plugin_manager_group_routing">Маршрутизація</string>
     <string name="plugin_manager_group_places">Місця</string>
     <string name="plugin_manager_group_widgets">Віджети</string>
 

@@ -23,7 +23,7 @@
     <string name="profiles_copy">Копіювати</string>
     <string name="profiles_reset_to_profile">Скинути до налаштувань профілю %1$s</string>
     <string name="profiles_reset_to_default">Скинути до типових налаштувань</string>
-    <string name="profiles_group_routing">Маршрути</string>
+    <string name="profiles_group_routing">Маршрутизація</string>
     <string name="profiles_group_alerts">Сповіщення</string>
     <string name="profiles_notice_created">Створено %1$s</string>
     <string name="profiles_notice_copied">Копія профілю %1$s</string>

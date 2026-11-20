@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="plugin.share.name">Поширення</string>
-    <string name="plugin.share.description">Координати в трьох записах, копіювання, поширення місця чи поточного розташування та відкриття точки в іншій програмі.</string>
+    <string name="plugin.share.description">Координати в трьох записах, копіювання, поширення місця чи поточного розташування та відкриття точки в іншому застосунку.</string>
 
     <string name="share.coordinate_decimal">Десяткові градуси</string>
     <string name="share.coordinate_dms">ГМС</string>
@@ -9,6 +9,6 @@
 
     <string name="share.copy_coordinates">Копіювати координати</string>
     <string name="share.share_place">Поширити місце</string>
-    <string name="share.open_in">Відкрити в іншій програмі</string>
+    <string name="share.open_in">Відкрити в іншому застосунку</string>
     <string name="share.share_location">Поширити поточне розташування</string>
 </resources>

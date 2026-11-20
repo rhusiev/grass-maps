@@ -36,7 +36,7 @@
     <string name="search_hint">Назва, вулиця або номер будинку</string>
     <string name="search_close">Закрити пошук</string>
     <string name="search_no_matches">Немає збігів</string>
-    <string name="search_not_ready">Для цих карт немає пошукового індексу</string>
+    <string name="search_not_ready">Для цих мап немає пошукового індексу</string>
     <string name="search_loading">Пошук</string>
     <string name="search_online_off_sends_position">Онлайн-пошук вимкнено. Його ввімкнення надсилає текст запиту, вашу IP-адресу та позицію на карті до photon.komoot.io.</string>
     <string name="search_online_off_no_position">Онлайн-пошук вимкнено. Його ввімкнення надсилає текст запиту та вашу IP-адресу до photon.komoot.io. Позиція на карті не надсилається.</string>
@@ -74,8 +74,8 @@
     <string name="nav_screen_speed_max">Макс.</string>
     <string name="nav_screen_trip_left">%1$s залишилось · прибуття %2$s</string>
     <string name="nav_screen_trip_left_no_arrival">%1$s залишилось</string>
-    <string name="nav_screen_next_stop">Наступна зупинка · %1$s</string>
-    <string name="nav_screen_next_stop_name">Наступна зупинка</string>
+    <string name="nav_screen_next_stop">Наступна проміжна точка · %1$s</string>
+    <string name="nav_screen_next_stop_name">Наступна проміжна точка</string>
     <string name="nav_screen_off_route">Поза маршрутом</string>
     <string name="nav_screen_finding_route">Шукаємо новий маршрут…</string>
     <string name="nav_screen_keep_going">Рухайтеся далі - новий маршрут почнеться там, де ви є</string>
@@ -84,7 +84,7 @@
     <string name="nav_screen_paused_strip">Без підказок, сповіщень і перерахунку до продовження</string>
     <string name="nav_screen_arrived">Прибули</string>
     <string name="nav_screen_last_turn">Останній відомий поворот - чекаємо GPS</string>
-    <string name="nav_screen_destination">Призначення</string>
+    <string name="nav_screen_destination">Пункт призначення</string>
     <string name="nav_screen_camera_summary_all_on">автомасштаб, автоцентрування і 3D увімкнено</string>
     <string name="nav_screen_camera_summary_custom">камера для цієї поїздки</string>
     <string name="nav_screen_alerts_summary_off">сповіщення вимкнено</string>

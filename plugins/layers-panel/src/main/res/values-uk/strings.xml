@@ -3,7 +3,7 @@
     <string name="plugin.layers_panel.name">Панель шарів</string>
     <string name="plugin.layers_panel.description">Кнопка шарів і перемикач стилю карти.</string>
     <string name="layers_panel_button">Шари</string>
-    <string name="layers_panel_style_title">Стиль карти</string>
+    <string name="layers_panel_style_title">Стиль мапи</string>
     <string name="layers_panel_style_meadow">Луг</string>
     <string name="layers_panel_style_meadow_hint">Щодня й у місті</string>
     <string name="layers_panel_style_trail">Стежка</string>

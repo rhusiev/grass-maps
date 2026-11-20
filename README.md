@@ -1935,7 +1935,10 @@ or `ui-maplibre`; the native core is the `uniffi.ferrostar.NavigationSession`
 created by `createNavigationSession`. Route conversion carries geometry,
 bounds, distance, waypoints and steps. Steps are split at the instruction
 distances because our `Route` has no per-step geometry. Elevation and typed way
-attributes stay in our model; Ferrostar's route has neither.
+attributes stay in our model; Ferrostar's route has neither. Ferrostar's own
+waypoint list holds only the route's two ends: nothing in the session reads its
+`remaining_waypoints`, so an intermediate stop is carried by `Route.segments`
+alone, and the guidance panel and the reroute request both read those legs.
 
 Guidance numbers come from the route's own model, not from a second
 calculation. `RouteProgress` in `plugin-api` builds spans from the route: the

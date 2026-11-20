@@ -32,7 +32,7 @@ plugins/proximity-alerts	22
 plugins/raster	51
 plugins/region-outlines	3
 plugins/route-layer	20
-plugins/route-relations	18
+plugins/route-relations	20
 plugins/route-warnings	12
 plugins/share	49
 plugins/style-standard	13

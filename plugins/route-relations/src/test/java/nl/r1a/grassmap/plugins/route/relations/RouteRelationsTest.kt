@@ -38,6 +38,7 @@ import nl.r1a.grassmap.plugin.api.model.StyleSpec
 import nl.r1a.grassmap.plugin.api.model.TrackingMode
 import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -205,7 +206,9 @@ class RouteRelationsTest {
 
         assertEquals(
             listOf(
+                "route.relations.casing",
                 "route.relations.band",
+                "route.relations.cycling.casing",
                 "route.relations.cycling.band",
                 "route.relations.symbol.bg.0",
                 "route.relations.symbol.fg.0",
@@ -216,19 +219,19 @@ class RouteRelationsTest {
             ),
             layers.map { it.spec.id.value },
         )
-        val hiking = layers.first().spec
+        val hiking = layers.first { it.spec.id.value == RouteRelationLayers.BAND_LAYER_ID }.spec
         val cycling = layers.first { it.spec.id.value == RouteRelationLayers.CYCLING_BAND_LAYER_ID }.spec
         assertEquals(9f, hiking.minZoom)
         assertEquals(11f, cycling.minZoom)
         assertEquals(
-            0.55f,
+            0.9f,
             hiking.paint
                 .getValue("line-opacity")
                 .jsonPrimitive.content
                 .toFloat(),
         )
         assertEquals(
-            0.45f,
+            0.85f,
             cycling.paint
                 .getValue("line-opacity")
                 .jsonPrimitive.content
@@ -251,6 +254,105 @@ class RouteRelationsTest {
         val symbol = layers.first { it.spec.id.value == "route.relations.symbol.bg.0" }.spec
         assertEquals("osmc_bg_square", firstProperty(symbol, "bgIcon"))
         assertEquals("osmc_fg_bar", firstProperty(symbol, "fgIcon"))
+    }
+
+    @Test
+    fun aWayDrawsOneRouteMarkerAtCityZoom() {
+        val layers = RouteRelationLayers.build(fixture)
+
+        val symbols =
+            layers
+                .map { it.spec }
+                .filter { it.id.value.startsWith("route.relations.symbol.") }
+        assertTrue(symbols.isNotEmpty())
+        for (symbol in symbols) {
+            assertEquals(
+                "${symbol.id}: a point feature is one marker, a line feature repeats",
+                "Point",
+                featureGeometryTypes(symbol).single(),
+            )
+            assertEquals(
+                "${symbol.id}: point placement honours a single position",
+                "point",
+                symbol.layout
+                    .getValue("symbol-placement")
+                    .jsonPrimitive.content,
+            )
+            assertTrue(
+                "${symbol.id}: markers start at city zoom",
+                symbol.minZoom >= 14f,
+            )
+            assertFalse(
+                "${symbol.id}: a colliding marker is hidden, not stacked",
+                symbol.layout
+                    .getValue("icon-allow-overlap")
+                    .jsonPrimitive.content
+                    .toBoolean(),
+            )
+            assertFalse(
+                "${symbol.id}: the placement engine may drop a marker",
+                symbol.layout
+                    .getValue("icon-ignore-placement")
+                    .jsonPrimitive.content
+                    .toBoolean(),
+            )
+            val keys = featureKeys(symbol)
+            assertEquals("one marker per relation and way per lane", keys.size, keys.toSet().size)
+        }
+    }
+
+    @Test
+    fun theBandsCarryACasingAndReadableOpacity() {
+        val layers = RouteRelationLayers.build(fixture)
+        val ids = layers.map { it.spec.id.value }
+
+        val hikingCasing = layers.first { it.spec.id.value == "route.relations.casing" }.spec
+        val hikingBand = layers.first { it.spec.id.value == RouteRelationLayers.BAND_LAYER_ID }.spec
+        val cyclingCasing = layers.first { it.spec.id.value == "route.relations.cycling.casing" }.spec
+        val cyclingBand = layers.first { it.spec.id.value == RouteRelationLayers.CYCLING_BAND_LAYER_ID }.spec
+
+        assertTrue("the casing is under its band", ids.indexOf(hikingCasing.id.value) < ids.indexOf(hikingBand.id.value))
+        assertTrue(ids.indexOf(cyclingCasing.id.value) < ids.indexOf(cyclingBand.id.value))
+        assertEquals(
+            0.55f,
+            hikingCasing.paint
+                .getValue("line-opacity")
+                .jsonPrimitive.content
+                .toFloat(),
+        )
+        assertEquals(
+            0.55f,
+            cyclingCasing.paint
+                .getValue("line-opacity")
+                .jsonPrimitive.content
+                .toFloat(),
+        )
+        assertEquals(
+            "the casing separates overlapping ribbons without hiding them",
+            0.9f,
+            hikingBand.paint
+                .getValue("line-opacity")
+                .jsonPrimitive.content
+                .toFloat(),
+        )
+        assertEquals(
+            0.85f,
+            cyclingBand.paint
+                .getValue("line-opacity")
+                .jsonPrimitive.content
+                .toFloat(),
+        )
+        assertEquals(
+            "a casing is two device pixels wider than its band",
+            "interpolate",
+            (hikingCasing.paint.getValue("line-width") as JsonArray)[0].jsonPrimitive.content,
+        )
+        assertTrue(
+            hikingCasing.paint
+                .getValue("line-width")
+                .toString()
+                .contains("+"),
+        )
     }
 
     @Test
@@ -313,6 +415,7 @@ class RouteRelationsTest {
         assertEquals(
             "no cycling band when the region carries no cycling route",
             listOf(
+                "route.relations.casing",
                 "route.relations.band",
                 "route.relations.symbol.bg.0",
                 "route.relations.symbol.fg.0",
@@ -326,6 +429,7 @@ class RouteRelationsTest {
             fixture.copy(relations = fixture.relations.filter { it.route == Route.Cycling })
         assertEquals(
             listOf(
+                "route.relations.cycling.casing",
                 "route.relations.cycling.band",
                 "route.relations.symbol.bg.0",
                 "route.relations.symbol.fg.0",
@@ -385,9 +489,9 @@ class RouteRelationsTest {
             val controller = RouteRelationsMapController(mapHost = host, load = { Outcome.Success(fixture) })
 
             assertEquals(Outcome.Success(Unit), controller.refresh())
-            assertEquals(8, host.layers.size)
+            assertEquals(10, host.layers.size)
             assertEquals(Outcome.Success(Unit), controller.refresh())
-            assertEquals("a refresh must not stack duplicates", 8, host.layers.size)
+            assertEquals("a refresh must not stack duplicates", 10, host.layers.size)
 
             val failing = RouteRelationsMapController(mapHost = host, load = { Outcome.Failure(AppError.CorruptData) })
             assertEquals(Outcome.Failure(AppError.CorruptData), failing.refresh())
@@ -413,6 +517,35 @@ class RouteRelationsTest {
             ?.jsonPrimitive
             ?.content
     }
+
+    private fun featureGeometryTypes(spec: LayerSpec): List<String> =
+        Json
+            .parseToJsonElement(spec.data!!)
+            .jsonObject
+            .getValue("features")
+            .jsonArray
+            .map { feature ->
+                feature
+                    .jsonObject
+                    .getValue("geometry")
+                    .jsonObject
+                    .getValue("type")
+                    .jsonPrimitive
+                    .content
+            }.distinct()
+
+    /** The relation, way and lane of every symbol feature. */
+    private fun featureKeys(spec: LayerSpec): List<String> =
+        Json
+            .parseToJsonElement(spec.data!!)
+            .jsonObject
+            .getValue("features")
+            .jsonArray
+            .map { feature ->
+                val properties = feature.jsonObject.getValue("properties").jsonObject
+                listOf("relationId", "wayId", "laneRank")
+                    .joinToString("/") { name -> properties.getValue(name).jsonPrimitive.content }
+            }
 }
 
 /** A MapHost that records route-slot layers and ignores everything else. */

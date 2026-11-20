@@ -18,22 +18,28 @@ import nl.r1a.grassmap.plugin.api.model.RouteNetworkNode
 import nl.r1a.grassmap.plugin.api.model.RouteRelations
 import nl.r1a.grassmap.plugin.api.model.SlottedLayer
 import java.util.Locale
+import kotlin.math.cos
 import kotlin.math.min
+import kotlin.math.sqrt
 
 /**
  * Builds the route-relation layers (T-0418, T-0419).
  *
- * Each route kind is one band line layer over an inline GeoJSON source. Every
- * member way is a feature carrying its relation, network, lane rank and lane
- * count, so a shared way draws one band per route, side by side. The width and
- * offset expressions read those properties, which keeps the whole plugin at two
- * band layers plus the symbol layers.
+ * Each route kind is one casing line layer under one band line layer over an
+ * inline GeoJSON source. Every member way is a feature carrying its relation,
+ * network, lane rank and lane count, so a shared way draws one band per route,
+ * side by side. The width and offset expressions read those properties, which
+ * keeps the whole plugin at four band layers plus the symbol layers. The
+ * casing is a neutral edge: the bands stay translucent, and the edge stops two
+ * crossing routes from mixing into one polygon.
  *
  * Hiking and cycling bands have their own palette, opacity and minimum zoom:
  * the design gives hiking z10 in Standard and z9 in Touring, and cycling z12
- * and z11, so one overlay serves both styles. The waymark symbols are two
- * symbol layers per lane: a background plate and the OSMC foreground shape,
- * both tinted per feature from the sprite's SDF glyphs. A route without
+ * and z11, so one overlay serves both styles. A waymark is one colored shield
+ * per member way per relation from z14: a plate tinted with the network colour
+ * and one OSMC foreground shape in white. Point placement makes one way one
+ * marker; the old line placement repeated a marker every 220 dp of every way.
+ * Colliding shields are dropped rather than stacked. A route without
  * `osmc:symbol`, or with a shape this layer does not carry, keeps its band and
  * draws no mark.
  *
@@ -43,7 +49,9 @@ import kotlin.math.min
  */
 object RouteRelationLayers {
     const val BAND_LAYER_ID: String = "route.relations.band"
+    const val HIKING_CASING_LAYER_ID: String = "route.relations.casing"
     const val CYCLING_BAND_LAYER_ID: String = "route.relations.cycling.band"
+    const val CYCLING_CASING_LAYER_ID: String = "route.relations.cycling.casing"
     const val NODE_LAYER_ID: String = "route.relations.node"
     const val NODE_TEXT_LAYER_ID: String = "route.relations.node.text"
 
@@ -71,9 +79,11 @@ object RouteRelationLayers {
         val hiking = assembled.filter { it.relation.route == Route.Hiking }
         val cycling = assembled.filter { it.relation.route == Route.Cycling }
         if (hiking.isNotEmpty()) {
+            layers += SlottedLayer(LayerSlot.Routes, casingLayer(hiking, Route.Hiking))
             layers += SlottedLayer(LayerSlot.Routes, bandLayer(hiking, Route.Hiking))
         }
         if (cycling.isNotEmpty()) {
+            layers += SlottedLayer(LayerSlot.Routes, casingLayer(cycling, Route.Cycling))
             layers += SlottedLayer(LayerSlot.Routes, bandLayer(cycling, Route.Cycling))
         }
         if (layers.isEmpty()) {
@@ -136,6 +146,38 @@ object RouteRelationLayers {
         )
     }
 
+    /**
+     * A neutral edge under one route kind's bands. The bands stay translucent
+     * for the map to read through, so the casing is what separates two routes
+     * that cross or share a way; without it their colours mix into a polygon.
+     * The pair is emitted per kind, so the upper kind's edge covers the lower
+     * band at a crossing instead of blending with it.
+     */
+    private fun casingLayer(
+        assembled: List<AssembledRoute>,
+        route: Route,
+    ): LayerSpec {
+        val cycling = route == Route.Cycling
+        return LayerSpec(
+            id = LayerId(if (cycling) CYCLING_CASING_LAYER_ID else HIKING_CASING_LAYER_ID),
+            type = LayerType.Line,
+            data = bandFeatureCollection(assembled),
+            minZoom = if (cycling) CYCLING_MIN_ZOOM else HIKING_MIN_ZOOM,
+            paint =
+                buildJsonObject {
+                    put("line-color", CASING_COLOR)
+                    put("line-opacity", CASING_OPACITY)
+                    put("line-width", scaledExpression("laneScale", CASING_EDGE_DP))
+                    put("line-offset", scaledExpression("laneOffsetUnits"))
+                },
+            layout =
+                buildJsonObject {
+                    put("line-cap", "round")
+                    put("line-join", "round")
+                },
+        )
+    }
+
     private fun nodeLayer(nodes: List<RouteNetworkNode>): LayerSpec =
         LayerSpec(
             id = LayerId(NODE_LAYER_ID),
@@ -187,19 +229,20 @@ object RouteRelationLayers {
                 buildJsonObject {
                     put("icon-color", property("${if (background) "bg" else "fg"}Color"))
                     put("icon-opacity", 1f)
-                    put("icon-halo-color", "#ffffff")
-                    put("icon-halo-width", if (background) 1f else 0.5f)
+                    if (background) {
+                        put("icon-halo-color", SYMBOL_HALO_COLOR)
+                        put("icon-halo-width", SYMBOL_HALO_WIDTH_DP)
+                    }
                 },
             layout =
                 buildJsonObject {
                     put("icon-image", property("${if (background) "bg" else "fg"}Icon"))
-                    put("icon-size", if (background) SYMBOL_BACKGROUND_SIZE else SYMBOL_FOREGROUND_SIZE)
+                    put("icon-size", SYMBOL_SIZE)
                     put("icon-rotation-alignment", "viewport")
-                    put("icon-allow-overlap", true)
-                    put("icon-ignore-placement", true)
+                    put("icon-allow-overlap", false)
+                    put("icon-ignore-placement", false)
                     put("icon-offset", iconOffset(rank))
-                    put("symbol-placement", "line")
-                    put("symbol-spacing", SYMBOL_SPACING_DP)
+                    put("symbol-placement", "point")
                     put("symbol-z-order", "source")
                 },
         )
@@ -248,7 +291,10 @@ object RouteRelationLayers {
      * carries the multiplication; a nested interpolate over zoom is rejected by
      * MapLibre Native.
      */
-    private fun scaledExpression(property: String): JsonArray =
+    private fun scaledExpression(
+        property: String,
+        extraDp: Float = 0f,
+    ): JsonArray =
         buildJsonArray {
             add("interpolate")
             add(
@@ -263,15 +309,31 @@ object RouteRelationLayers {
             )
             for ((zoom, width) in BAND_WIDTH_STOPS) {
                 add(zoom)
-                add(
-                    buildJsonArray {
-                        add("*")
-                        add(property(property))
-                        add(width)
-                    },
-                )
+                add(widthAt(property, width, extraDp))
             }
         }
+
+    /** `property * width`, with a fixed edge added outside the lane share. */
+    private fun widthAt(
+        property: String,
+        width: Float,
+        extraDp: Float,
+    ): JsonArray {
+        val product =
+            buildJsonArray {
+                add("*")
+                add(property(property))
+                add(width)
+            }
+        if (extraDp == 0f) {
+            return product
+        }
+        return buildJsonArray {
+            add("+")
+            add(product)
+            add(extraDp)
+        }
+    }
 
     private fun property(name: String): JsonArray =
         buildJsonArray {
@@ -311,23 +373,63 @@ object RouteRelationLayers {
             append("{\"type\":\"FeatureCollection\",\"features\":[")
             var first = true
             for ((route, symbol) in marked) {
+                val bandColor =
+                    (if (route.relation.route == Route.Cycling) CYCLING_COLORS else HIKING_COLORS)
+                        .getValue(route.relation.network.level)
                 for (segment in route.segments) {
                     if (segment.laneRank != rank) continue
+                    val center = midpoint(segment.points) ?: continue
                     if (!first) append(',')
                     first = false
                     append("{\"type\":\"Feature\",\"properties\":{")
-                    append("\"laneRank\":").append(segment.laneRank)
+                    append("\"relationId\":").append(route.relation.id)
+                    append(",\"wayId\":").append(segment.wayId)
+                    append(",\"laneRank\":").append(segment.laneRank)
                     append(",\"bgIcon\":\"").append(symbol.background.image).append('"')
-                    append(",\"bgColor\":\"").append(symbol.background.color).append('"')
+                    append(",\"bgColor\":\"").append(bandColor).append('"')
                     append(",\"fgIcon\":\"").append(symbol.foreground.image).append('"')
-                    append(",\"fgColor\":\"").append(symbol.foreground.color).append('"')
-                    append("},\"geometry\":{\"type\":\"LineString\",\"coordinates\":")
-                    appendCoordinates(segment.points)
+                    append(",\"fgColor\":\"").append(SYMBOL_FOREGROUND_COLOR).append('"')
+                    append("},\"geometry\":{\"type\":\"Point\",\"coordinates\":")
+                    appendPoint(center)
                     append("}}")
                 }
             }
             append("]}")
         }
+
+    /** The point halfway along a way, so one way draws one marker. */
+    private fun midpoint(points: List<GeoPoint>): GeoPoint? {
+        if (points.isEmpty()) {
+            return null
+        }
+        if (points.size == 1) {
+            return points.first()
+        }
+        // Longitude degrees shrink with latitude; use the first point's scale so
+        // the walk to the halfway point stays visually centred.
+        val longitudeScale = cos(Math.toRadians(points.first().latitude))
+        val lengths =
+            points.zipWithNext { from, to ->
+                val east = (to.longitude - from.longitude) * longitudeScale
+                val north = to.latitude - from.latitude
+                sqrt(east * east + north * north)
+            }
+        val half = lengths.sum() / 2.0
+        var walked = 0.0
+        for ((index, length) in lengths.withIndex()) {
+            if (length > 0.0 && walked + length >= half) {
+                val fraction = (half - walked) / length
+                val from = points[index]
+                val to = points[index + 1]
+                return GeoPoint(
+                    latitude = from.latitude + (to.latitude - from.latitude) * fraction,
+                    longitude = from.longitude + (to.longitude - from.longitude) * fraction,
+                )
+            }
+            walked += length
+        }
+        return points.last()
+    }
 
     private fun nodeFeatureCollection(nodes: List<RouteNetworkNode>): String =
         buildString {
@@ -391,23 +493,33 @@ object RouteRelationLayers {
     /** The design gives cycling z12 in Standard and z11 in Touring; one overlay serves both. */
     private const val CYCLING_MIN_ZOOM = 11f
 
-    private const val SYMBOL_MIN_ZOOM = 12f
+    /**
+     * Markers belong to the city zooms: a band is enough to follow a route at
+     * overview, and one symbol on every way at z12 covered the map.
+     */
+    private const val SYMBOL_MIN_ZOOM = 14f
+    private const val SYMBOL_LAYER_PREFIX = "route.relations.symbol."
+    private const val MAX_SYMBOL_LANES = 6
+    private const val SYMBOL_LANE_OFFSET_DP = 14
 
     /** The node-number marker is the r-relations screen's z15 city view. */
     private const val NODE_MIN_ZOOM = 15f
-    private const val SYMBOL_LAYER_PREFIX = "route.relations.symbol."
-    private const val MAX_SYMBOL_LANES = 6
-    private const val SYMBOL_SPACING_DP = 220
-    private const val SYMBOL_LANE_OFFSET_DP = 14
 
     /** The band width in dp at z9, z12 and z14; authored from the style's band idea. */
-    private val BAND_WIDTH_STOPS = listOf(9 to 5, 12 to 7, 14 to 9)
+    private val BAND_WIDTH_STOPS = listOf(9f to 5f, 12f to 7f, 14f to 9f)
 
-    private const val SYMBOL_BACKGROUND_SIZE = 1.0f
-    private const val SYMBOL_FOREGROUND_SIZE = 1.0f
+    private const val SYMBOL_SIZE = 0.8f
+    private const val SYMBOL_HALO_COLOR = "#ffffff"
+    private const val SYMBOL_HALO_WIDTH_DP = 0.5f
+    private const val SYMBOL_FOREGROUND_COLOR = "#ffffff"
 
-    private const val HIKING_OPACITY = 0.55f
-    private const val CYCLING_OPACITY = 0.45f
+    private const val HIKING_OPACITY = 0.9f
+    private const val CYCLING_OPACITY = 0.85f
+
+    /** A dark neutral edge; it reads under both the light and the dark style. */
+    private const val CASING_COLOR = "#20242b"
+    private const val CASING_OPACITY = 0.55f
+    private const val CASING_EDGE_DP = 2f
 
     private const val NODE_FILL_COLOR = "#ffffff"
     private const val NODE_RING_COLOR = "#2e9e44"

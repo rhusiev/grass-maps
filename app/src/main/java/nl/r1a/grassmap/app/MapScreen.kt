@@ -1,7 +1,11 @@
 package nl.r1a.grassmap.app
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -51,12 +55,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -144,6 +150,7 @@ import nl.r1a.grassmap.plugin.ui.api.ElevationChartStretch
 import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmap.plugin.ui.api.NavigationScreenState
 import nl.r1a.grassmap.plugin.ui.api.NavigationScreenStatus
+import nl.r1a.grassmap.plugin.ui.api.ShellColors
 import nl.r1a.grassmap.plugins.contours.ContoursLayerPanel
 import nl.r1a.grassmap.plugins.downloads.ui.DownloadsScreenContent
 import nl.r1a.grassmap.plugins.downloads.ui.DownloadsUiContract
@@ -406,6 +413,12 @@ private fun MapContent(
     val devToolsVisible by container.devToolsVisible.collectAsState()
     val windowColors = LocalShellColors.current
     val activity = context as? Activity
+    // A refused foreground start is one event, not a state: the session has
+    // already ended by the time this screen sees it.
+    var permissionNotice by remember { mutableStateOf(false) }
+    LaunchedEffect(container.navigationStartNotices) {
+        container.navigationStartNotices.notices.collect { permissionNotice = true }
+    }
     LaunchedEffect(activity, windowColors) {
         val window = activity?.window ?: return@LaunchedEffect
         window.statusBarColor = windowColors.map.toArgb()
@@ -2084,6 +2097,28 @@ private fun MapContent(
                 onCancel = { container.trackShare.cancel() },
             )
         }
+        if (permissionNotice) {
+            NavigationPermissionNotice(
+                colors = windowColors,
+                onOpenSettings = {
+                    val intent =
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                            .setData(Uri.parse(permissionSettingsData(context.packageName)))
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    try {
+                        context.startActivity(intent)
+                    } catch (error: ActivityNotFoundException) {
+                        Log.w(TAG, "permission settings unavailable: ${error.javaClass.simpleName}")
+                    }
+                    permissionNotice = false
+                },
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+            )
+        }
     }
     LaunchedEffect(surface.host, bundle) {
         launch(start = CoroutineStart.UNDISPATCHED) { harness.run(surface, bundle) }
@@ -2941,6 +2976,44 @@ internal fun isNavigationActive(
     fixture: NavigationScreenFixture?,
     state: NavigationState,
 ): Boolean = fixture != null || state.phase.isActiveNavigation()
+
+/**
+ * The permission-refused notice (T-0639). A small card over the map, not a
+ * dialog: it never blocks the screen and it has one action, the app-details
+ * settings screen. Tapping it clears the one-shot event.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun NavigationPermissionNotice(
+    colors: ShellColors,
+    onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(colors.surface, RoundedCornerShape(12.dp))
+                .border(1.dp, colors.muted.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                .padding(horizontal = 14.dp, vertical = 12.dp)
+                .semantics { liveRegion = LiveRegionMode.Polite },
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        BasicText(
+            text = stringResource(R.string.nav_permission_notice_title),
+            style = TextStyle(color = colors.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold),
+        )
+        BasicText(
+            text = stringResource(R.string.nav_permission_required_message),
+            style = TextStyle(color = colors.muted, fontSize = 13.sp),
+        )
+        BasicText(
+            text = stringResource(R.string.nav_permission_open_settings),
+            style = TextStyle(color = colors.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold),
+            modifier = Modifier.clickable(role = Role.Button, onClick = onOpenSettings),
+        )
+    }
+}
 
 /**
  * The message a refused guidance start shows. A denied location permission is

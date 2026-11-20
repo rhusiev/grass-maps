@@ -427,6 +427,13 @@ class AppContainer(
     val notificationPermission: NotificationPermissionPrompt = NotificationPermissionPrompt()
 
     /**
+     * One-shot notices the navigation service sends when a start is refused
+     * (T-0639). The activity binds here so the service can tell whether an
+     * in-app message is possible; without one it posts a notification.
+     */
+    internal val navigationStartNotices: NavigationNoticeHost = NavigationNoticeHost()
+
+    /**
      * The `routing.engine` provider behind a host seam (T-0302). The plugin is
      * activated here rather than at startup, and the pack directory reaches it
      * through the host's pack access, so no routing path is read on Main.

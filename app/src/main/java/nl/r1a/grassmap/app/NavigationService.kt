@@ -8,7 +8,9 @@ import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.drawable.Icon
+import android.net.Uri
 import android.os.IBinder
+import android.provider.Settings
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -108,6 +110,7 @@ class NavigationService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private lateinit var controller: NavigationController
     private lateinit var strings: Strings
+    private lateinit var notices: NavigationNoticeHost
     private var unitSystem: UnitSystem = UnitSystem.Metric
     private var foregroundStarted = false
     private var lastLoggedContent: String? = null
@@ -117,6 +120,7 @@ class NavigationService : Service() {
         val container = (application as GrassMapsApplication).container
         controller = container.navigation
         strings = container.strings
+        notices = container.navigationStartNotices
         createChannel()
         scope.launch {
             controller.state.collect { state -> showState(state) }
@@ -246,11 +250,59 @@ class NavigationService : Service() {
             Log.i(TAG, "navigation-service-start type=location")
             return true
         }
-        if (endsSessionOnRefusal(result, controller.locationPermissionRequired())) {
+        val permissionRequired = controller.locationPermissionRequired()
+        navigationRefusalNotice(result, permissionRequired)?.let { notice ->
+            // A backgrounded app has no activity to show the message, so post
+            // a notification with the same settings action instead.
+            if (!notices.publish(notice)) {
+                postPermissionNotice()
+            }
+        }
+        if (endsSessionOnRefusal(result, permissionRequired)) {
             controller.stop()
         }
         stopSelf()
         return false
+    }
+
+    /**
+     * The no-activity fallback (T-0639). One tap opens Android's app-details
+     * screen; the app never requests the permission again or changes its state.
+     */
+    private fun postPermissionNotice() {
+        val manager = notificationManager() ?: return
+        val pending = permissionSettingsPendingIntent()
+        val notification =
+            Notification
+                .Builder(this, CHANNEL_ID)
+                .setSmallIcon(navigationNotificationSmallIcon())
+                .setContentTitle(getString(R.string.nav_permission_notice_title))
+                .setContentText(getString(R.string.nav_permission_required_message))
+                .setContentIntent(pending)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setAutoCancel(true)
+                .addAction(
+                    Notification.Action
+                        .Builder(
+                            Icon.createWithResource(this, navigationNotificationSmallIcon()),
+                            getString(R.string.nav_permission_open_settings),
+                            pending,
+                        ).build(),
+                ).build()
+        manager.notify(PERMISSION_NOTICE_NOTIFICATION_ID, notification)
+    }
+
+    private fun permissionSettingsPendingIntent(): PendingIntent {
+        val intent =
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                .setData(Uri.parse(permissionSettingsData(packageName)))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return PendingIntent.getActivity(
+            this,
+            PERMISSION_NOTICE_REQUEST,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
     }
 
     private fun notificationFor(state: NavigationState): Notification {
@@ -389,6 +441,8 @@ class NavigationService : Service() {
         private const val PAUSE_ACTION_REQUEST = 1
         private const val STOP_ACTION_REQUEST = 2
         private const val OPEN_ACTION_REQUEST = 3
+        private const val PERMISSION_NOTICE_REQUEST = 4
+        private const val PERMISSION_NOTICE_NOTIFICATION_ID = 2
         private const val STRANDED_START_TIMEOUT_MILLIS = 5_000L
     }
 }

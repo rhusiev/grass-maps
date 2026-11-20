@@ -119,6 +119,21 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
+     * While the activity is started the navigation service can show the
+     * permission-refused message in the app (T-0639). Outside that window it
+     * posts a notification with the same settings action instead.
+     */
+    override fun onStart() {
+        super.onStart()
+        container.navigationStartNotices.bind(this)
+    }
+
+    override fun onStop() {
+        container.navigationStartNotices.unbind(this)
+        super.onStop()
+    }
+
+    /**
      * Parses a GPX another app shared to this one (T-0416), and answers
      * whether this intent was one. The URI is read through the grant the intent
      * carries, never a storage permission, and the parse runs off Main. A

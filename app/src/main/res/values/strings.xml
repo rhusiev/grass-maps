@@ -222,6 +222,9 @@
     <string name="nav_notification_pause">Pause</string>
     <string name="nav_notification_resume">Resume</string>
     <string name="nav_notification_stop">Stop</string>
+    <string name="nav_permission_notice_title">Guidance cannot start</string>
+    <string name="nav_permission_required_message">Guidance needs location permission. Allow location for Grass Maps in Android settings, then start again.</string>
+    <string name="nav_permission_open_settings">Open settings</string>
     <string name="track_library_action_failed">The track library change failed</string>
     <string name="track_export_saved">Track saved</string>
     <string name="track_export_failed">Track not saved: %1$s</string>

@@ -239,6 +239,9 @@
     <string name="nav_notification_pause">Призупинити</string>
     <string name="nav_notification_resume">Продовжити</string>
     <string name="nav_notification_stop">Зупинити</string>
+    <string name="nav_permission_notice_title">Не вдалося запустити навігацію</string>
+    <string name="nav_permission_required_message">Для навігації потрібен дозвіл на місцеположення. Дозвольте місцеположення для Grass Maps у налаштуваннях Android, а потім спробуйте знову.</string>
+    <string name="nav_permission_open_settings">Відкрити налаштування</string>
     <string name="track_library_action_failed">Не вдалося змінити бібліотеку треків</string>
     <string name="track_export_saved">Трек збережено</string>
     <string name="track_export_failed">Трек не збережено: %1$s</string>

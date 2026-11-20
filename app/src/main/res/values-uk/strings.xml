@@ -2,10 +2,10 @@
 <resources>
     <!-- The product name is a brand and stays the same in every language. -->
     <string name="app_name">Grass Maps</string>
-    <string name="plugin.style_standard.name">Стандартний стиль карти</string>
-    <string name="plugin.style_standard.description">Стандартний стиль карти (Луг).</string>
-    <string name="plugin.style_touring.name">Туристичний стиль карти</string>
-    <string name="plugin.style_touring.description">Туристичний стиль карти (Стежка).</string>
+    <string name="plugin.style_standard.name">Стиль мапи «Луг»</string>
+    <string name="plugin.style_standard.description">Стиль мапи для щоденного використання й міста.</string>
+    <string name="plugin.style_touring.name">Стиль мапи «Стежка»</string>
+    <string name="plugin.style_touring.description">Стиль мапи для велосипеда й походів.</string>
     <string name="plugin.data_synthetic.name">Синтетичне джерело даних</string>
     <string name="plugin.data_synthetic.description">Синтетичні атрибути висоти та справжній шар горизонталей для інтерфейсу DataSource.</string>
     <string name="plugin.file_gpx.name">Файли GPX</string>

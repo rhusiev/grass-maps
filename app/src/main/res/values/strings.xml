@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Grass Maps</string>
-    <string name="plugin.style_standard.name">Standard map style</string>
-    <string name="plugin.style_standard.description">The Standard map style (Meadow).</string>
-    <string name="plugin.style_touring.name">Touring map style</string>
-    <string name="plugin.style_touring.description">The Touring map style (Trail).</string>
+    <string name="plugin.style_standard.name">Meadow map style</string>
+    <string name="plugin.style_standard.description">The everyday and city map style.</string>
+    <string name="plugin.style_touring.name">Trail map style</string>
+    <string name="plugin.style_touring.description">The cycling and hiking map style.</string>
     <string name="plugin.data_synthetic.name">Synthetic data source</string>
     <string name="plugin.data_synthetic.description">Synthetic elevation attributes and a real contour layer for the DataSource seam.</string>
     <string name="plugin.file_gpx.name">GPX files</string>

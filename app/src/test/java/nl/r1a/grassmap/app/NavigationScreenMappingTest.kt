@@ -23,6 +23,7 @@ import nl.r1a.grassmap.plugin.ui.api.NavigationAlertTone
 import nl.r1a.grassmap.plugin.ui.api.NavigationScreenStatus
 import nl.r1a.grassmap.plugin.ui.api.NavigationTurnArrow
 import nl.r1a.grassmap.plugins.guidance.ui.GuidanceInput
+import nl.r1a.grassmap.plugins.guidance.ui.GuidanceStatus
 import nl.r1a.grassmap.plugins.guidance.ui.guidancePanel
 import nl.r1a.grassmap.routing.RouteJson
 import org.junit.Assert.assertEquals
@@ -116,6 +117,100 @@ class NavigationScreenMappingTest {
         assertEquals("450 m", screen.readout.stopDistance)
         assertEquals("6 min", screen.readout.stopTime)
         assertEquals("16 min", screen.trip.remainingTime)
+    }
+
+    @Test
+    fun theNextStopNameFollowsOneViaAndThenTheDestination() {
+        val route = routeWithVias(VIAS_ONE)
+
+        assertStopName(
+            route,
+            along = 200.0,
+            labels = listOf("Svit Kavy"),
+            expectedName = "Svit Kavy",
+            expectedDistance = "200 m",
+        )
+        assertStopName(
+            route,
+            along = 500.0,
+            labels = listOf("Svit Kavy"),
+            expectedName = "Lviv Opera",
+            expectedDistance = null,
+        )
+    }
+
+    @Test
+    fun theNextStopNameFollowsTwoViasAsTheFirstIsPassed() {
+        val route = routeWithVias(VIAS_TWO)
+        val labels = listOf("Svit Kavy", "Rynok Square")
+
+        assertStopName(
+            route,
+            along = 200.0,
+            labels = labels,
+            expectedName = "Svit Kavy",
+            expectedDistance = "200 m",
+        )
+        assertStopName(
+            route,
+            along = 500.0,
+            labels = labels,
+            expectedName = "Rynok Square",
+            expectedDistance = "200 m",
+        )
+        assertStopName(
+            route,
+            along = 800.0,
+            labels = labels,
+            expectedName = "Lviv Opera",
+            expectedDistance = null,
+        )
+    }
+
+    @Test
+    fun aRerouteNamesTheFirstRemainingVia() {
+        // The replacement starts where the driver is, so its two legs are the
+        // remaining suffix of the plan's three targets.
+        assertStopName(
+            routeWithVias(VIAS_ONE),
+            along = 0.0,
+            labels = listOf("Svit Kavy", "Rynok Square"),
+            expectedName = "Rynok Square",
+            expectedDistance = "400 m",
+        )
+    }
+
+    @Test
+    fun anUnlabeledViaKeepsTheGenericName() {
+        assertStopName(
+            routeWithVias(VIAS_ONE),
+            along = 0.0,
+            labels = emptyList(),
+            expectedName = "Next stop",
+            expectedDistance = "400 m",
+        )
+    }
+
+    @Test
+    fun theNextStopNameIsAbsentWithoutViasAndAfterArrival() {
+        val route = routeWithVias(VIAS_TWO)
+        val labels = listOf("Svit Kavy", "Rynok Square")
+
+        assertStopName(
+            routeWithVias(VIAS_NONE),
+            along = 500.0,
+            labels = emptyList(),
+            expectedName = null,
+            expectedDistance = null,
+        )
+        assertStopName(
+            route,
+            along = route.distanceMeters,
+            labels = labels,
+            expectedName = null,
+            expectedDistance = null,
+            phase = NavigationPhase.Arrived,
+        )
     }
 
     @Test
@@ -332,7 +427,7 @@ class NavigationScreenMappingTest {
             speedMaxMetersPerSecond = MAX_MPS,
             alerts = alerts,
             destination = "Lviv Opera",
-            nextStopName = "Svit Kavy",
+            viaLabels = listOf("Svit Kavy"),
             signalLost = signalLost,
             camera = camera,
             alertSettings = alertSettings,
@@ -362,6 +457,67 @@ class NavigationScreenMappingTest {
         along: Double,
         units: UnitSystem = UnitSystem.Metric,
     ) = requireNotNull(guidancePanel(GuidanceInput(ROUTE, along, units = units), TestStrings, Locale.US))
+
+    private fun assertStopName(
+        route: Route,
+        along: Double,
+        labels: List<String>,
+        expectedName: String?,
+        expectedDistance: String?,
+        phase: NavigationPhase = NavigationPhase.Following,
+    ) {
+        val state =
+            NavigationState(
+                phase = phase,
+                remainingDistanceMeters = (route.distanceMeters - along).coerceAtLeast(0.0),
+                remainingDurationSeconds = (route.durationSeconds - along).coerceAtLeast(0.0),
+                activeRoute = route,
+                profile = RouteProfile.Walk,
+            )
+        val status = if (phase == NavigationPhase.Arrived) GuidanceStatus.Arrived else GuidanceStatus.Following
+        val panel = requireNotNull(guidancePanel(GuidanceInput(route, along, status), TestStrings, Locale.US))
+
+        val screen =
+            navigationScreenState(
+                NavigationScreenInput(
+                    state = state,
+                    panel = panel,
+                    destination = "Lviv Opera",
+                    viaLabels = labels,
+                ),
+                TestStrings,
+                Locale.US,
+                ZoneId.of("UTC"),
+            )
+
+        assertEquals(expectedName, screen.readout.stopName)
+        assertEquals(expectedDistance, screen.readout.stopDistance)
+    }
+
+    /** A route with [count] intermediate stops and one leg per hop, in metres. */
+    private fun routeWithVias(count: Int): Route {
+        val legs =
+            when (count) {
+                VIAS_NONE -> listOf(1000.0)
+                VIAS_ONE -> listOf(400.0, 600.0)
+                else -> listOf(400.0, 300.0, 300.0)
+            }
+        val total = legs.sum()
+        return Route(
+            geometry = (0..count + 1).map { index -> GeoPoint(49.8400 + index * 0.0010, 24.0300) },
+            distanceMeters = total,
+            durationSeconds = total,
+            segments =
+                legs.mapIndexed { index, meters ->
+                    RouteSegment(
+                        startIndex = index,
+                        endIndex = index + 2,
+                        distanceMeters = meters,
+                        durationSeconds = meters,
+                    )
+                },
+        )
+    }
 
     private fun speedValue(metersPerSecond: Double?): String? =
         UnitText.speed(metersPerSecond, UnitSystem.Metric, TestStrings, Locale.US)?.value
@@ -447,6 +603,9 @@ class NavigationScreenMappingTest {
         const val CURRENT_MPS = 1.3333
         const val AVERAGE_MPS = 1.2778
         const val MAX_MPS = 1.6944
+        const val VIAS_NONE = 0
+        const val VIAS_ONE = 1
+        const val VIAS_TWO = 2
         val ETA_EPOCH_MILLIS: Long =
             java.time.Instant
                 .parse("2026-11-12T14:21:00Z")

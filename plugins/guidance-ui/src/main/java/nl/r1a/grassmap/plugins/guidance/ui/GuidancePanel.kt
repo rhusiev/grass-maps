@@ -165,7 +165,7 @@ fun guidancePanel(
     if (second != null) {
         entries += turnEntry(GuidancePanelField.SecondTurn, second, along, progress, input.units, strings, locale)
     }
-    val stop = legBoundaries(route, total).firstOrNull { it > along + PASSED_METERS }
+    val stop = routeLegEnds(route, total)?.firstOrNull { it > along + PASSED_METERS }
     if (stop != null) {
         val distance = (stop - along).coerceAtLeast(0.0)
         val seconds = progress.durationBetween(along, stop)
@@ -236,24 +236,29 @@ private fun arrivalTurn(
     )
 
 /**
- * The distance along the route at each intermediate stop, excluding the
- * destination. Segments are the route's legs, one per requested hop; a chain
- * that does not add up to the route total is not a leg model and yields none.
+ * The distance along [route] at each intermediate stop, excluding the
+ * destination.
+ *
+ * Segments are the route's legs, one per requested hop. A chain that does not
+ * add up to [totalDistanceMeters] is not a leg model and yields null rather
+ * than a guessed stop; a route with one leg yields an empty list. The guidance
+ * panel and the navigation screen's next-stop name both read this one list, so
+ * the name follows the leg the panel is counting down to.
  */
-private fun legBoundaries(
+fun routeLegEnds(
     route: Route,
-    total: Double,
-): List<Double> {
+    totalDistanceMeters: Double,
+): List<Double>? {
     if (route.segments.size < MIN_LEGS) {
         return emptyList()
     }
     val distances = route.segments.map { it.distanceMeters }
     if (distances.any { !it.isFinite() || it < 0.0 }) {
-        return emptyList()
+        return null
     }
-    val tolerance = maxOf(1.0, total * LEG_TOLERANCE)
-    if (abs(distances.sum() - total) > tolerance) {
-        return emptyList()
+    val tolerance = maxOf(1.0, totalDistanceMeters * LEG_TOLERANCE)
+    if (abs(distances.sum() - totalDistanceMeters) > tolerance) {
+        return null
     }
     var running = 0.0
     return distances.dropLast(1).map { distance ->
@@ -282,8 +287,9 @@ fun guidanceDurationText(
     }
 }
 
-/** A turn within one metre of the position is the one being made, not the next. */
-private const val PASSED_METERS = 1.0
+/** A turn or stop within one metre of the position is the one being made, not the next. */
+const val PASSED_METERS = 1.0
+
 private const val MIN_LEGS = 2
 private const val LEG_TOLERANCE = 0.005
 private const val SECONDS_PER_MINUTE = 60.0

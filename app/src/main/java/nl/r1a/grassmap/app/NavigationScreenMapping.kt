@@ -26,7 +26,9 @@ import nl.r1a.grassmap.plugin.ui.api.NavigationTurnCard
 import nl.r1a.grassmap.plugins.guidance.ui.GuidancePanel
 import nl.r1a.grassmap.plugins.guidance.ui.GuidancePanelEntry
 import nl.r1a.grassmap.plugins.guidance.ui.GuidancePanelField
+import nl.r1a.grassmap.plugins.guidance.ui.PASSED_METERS
 import nl.r1a.grassmap.plugins.guidance.ui.guidanceDurationText
+import nl.r1a.grassmap.plugins.guidance.ui.routeLegEnds
 import nl.r1a.grassmap.plugins.guidance.ui.turnArrow
 import nl.r1a.grassmap.ui.shell.NavigationScreenStrings
 import java.time.Instant
@@ -43,6 +45,9 @@ internal data class NavigationScreenInput(
     val speedMaxMetersPerSecond: Double? = null,
     val alerts: List<AlertBanner> = emptyList(),
     val destination: String? = null,
+    /** The plan's intermediate stop labels in visit order, used to name the next stop. */
+    val viaLabels: List<String> = emptyList(),
+    /** A fixed name for the debug fixture; the live path derives it from [viaLabels]. */
     val nextStopName: String? = null,
     val signalLost: Boolean = false,
     val camera: NavigationCameraSettings = NavigationCameraSettings(),
@@ -92,7 +97,7 @@ internal fun navigationScreenState(
     return NavigationScreenState(
         status = status,
         turn = turnCard(input, status, next, second, destination, strings, locale),
-        readout = readout(input, status, speed, strings, locale),
+        readout = readout(input, status, speed, destination, strings, locale),
         trip = trip(input, status, destination, speed, strings, locale, zone),
         alerts = input.alerts.mapNotNull { banner -> screenAlert(banner, strings, locale, input.units) },
         speedUnit = UnitText.speedUnit(input.units, strings),
@@ -188,6 +193,7 @@ private fun readout(
     input: NavigationScreenInput,
     status: NavigationScreenStatus,
     speed: Double?,
+    destination: String,
     strings: Strings,
     locale: Locale,
 ): NavigationReadout {
@@ -205,13 +211,60 @@ private fun readout(
             },
         stopTime = if (showStop) stopTime?.durationSeconds?.let { guidanceDurationText(it, strings) } else null,
         stopName =
-            if (showStop && (stopDistance != null || stopTime != null)) {
-                input.nextStopName ?: strings.resolve(NavigationScreenStrings.NEXT_STOP_NAME)
+            if (showStop) {
+                input.nextStopName
+                    ?: nextTargetName(
+                        state = input.state,
+                        viaLabels = input.viaLabels,
+                        destination = destination,
+                        hasStopRow = stopDistance != null || stopTime != null,
+                        strings = strings,
+                    )
             } else {
                 null
             },
         speed = UnitText.speed(speed, input.units, strings, locale)?.value,
     )
+}
+
+/**
+ * The name the stop chip shows: the next unpassed via, then the destination.
+ *
+ * The plan's labels and the route's legs are both in visit order. A rerouted
+ * route starts where the driver is, so its legs are the remaining suffix of the
+ * plan's targets; the suffix offset keeps the labels aligned after a reroute.
+ * A trip without vias has no next stop, and a route whose segments are not a
+ * leg model has no name rather than a guessed one.
+ */
+private fun nextTargetName(
+    state: NavigationState,
+    viaLabels: List<String>,
+    destination: String,
+    hasStopRow: Boolean,
+    strings: Strings,
+): String? {
+    if (viaLabels.isEmpty()) {
+        return if (hasStopRow) strings.resolve(NavigationScreenStrings.NEXT_STOP_NAME) else null
+    }
+    val route = state.activeRoute ?: return null
+    val total = route.distanceMeters
+    if (!total.isFinite() || total <= 0.0) {
+        return null
+    }
+    val ends = routeLegEnds(route, total) ?: return null
+    val targetCount = viaLabels.size + 1
+    val firstRemaining = targetCount - (ends.size + 1)
+    if (firstRemaining < 0) {
+        return null
+    }
+    val along = (total - state.remainingDistanceMeters).coerceIn(0.0, total)
+    val nextStop = ends.indexOfFirst { it > along + PASSED_METERS }
+    val targetIndex = if (nextStop < 0) targetCount - 1 else firstRemaining + nextStop
+    if (targetIndex !in 0 until targetCount) {
+        return null
+    }
+    val label = if (targetIndex == targetCount - 1) destination else viaLabels[targetIndex]
+    return label.takeIf { it.isNotBlank() } ?: strings.resolve(NavigationScreenStrings.NEXT_STOP_NAME)
 }
 
 private fun trip(

@@ -36,6 +36,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -720,7 +721,13 @@ private fun MapContent(
     var navigationSheet by remember { mutableStateOf(NavigationSheet.Collapsed) }
     var alertsPageVisible by rememberSaveable { mutableStateOf(false) }
     var navigationDestination by rememberSaveable { mutableStateOf<String?>(null) }
-    var navigationNextStop by rememberSaveable { mutableStateOf<String?>(null) }
+    var navigationVias by rememberSaveable(
+        stateSaver =
+            listSaver(
+                save = { labels -> labels },
+                restore = { labels -> labels },
+            ),
+    ) { mutableStateOf(emptyList<String>()) }
     var cameraPanned by remember { mutableStateOf(false) }
     var panSequence by remember { mutableIntStateOf(0) }
     LaunchedEffect(navigationActive, navigationFixture) {
@@ -729,7 +736,7 @@ private fun MapContent(
             alertsPageVisible = false
             cameraPanned = false
             navigationDestination = null
-            navigationNextStop = null
+            navigationVias = emptyList()
         } else {
             navigationFixture?.let { fixture -> navigationSheet = fixture.sheet }
         }
@@ -1362,11 +1369,7 @@ private fun MapContent(
 
                             is Outcome.Success -> {
                                 navigationDestination = plan.destination?.label?.takeIf { it.isNotBlank() }
-                                navigationNextStop =
-                                    plan.vias
-                                        .firstOrNull()
-                                        ?.label
-                                        ?.takeIf { it.isNotBlank() }
+                                navigationVias = plan.vias.map { it.label }
                                 navigationSheet = NavigationSheet.Collapsed
                                 invokePlannerCommand(container, RoutePlannerContract.clear, JsonObject(emptyMap()))
                             }
@@ -1581,7 +1584,7 @@ private fun MapContent(
 
                                 is Outcome.Success -> {
                                     navigationDestination = openFollowSheet.track.name?.takeIf { it.isNotBlank() }
-                                    navigationNextStop = null
+                                    navigationVias = emptyList()
                                     navigationSheet = NavigationSheet.Collapsed
                                     followSheet = null
                                     TrackAnalysisSession.hide()
@@ -1600,7 +1603,7 @@ private fun MapContent(
                 units = units,
                 sheet = navigationSheet,
                 destination = navigationDestination,
-                nextStop = navigationNextStop,
+                vias = navigationVias,
                 cameraPanned = cameraPanned,
                 panSequence = panSequence,
                 onCameraPanned = { panned -> cameraPanned = panned },
@@ -2107,7 +2110,7 @@ private fun NavigationOverlay(
     units: UnitSystem,
     sheet: NavigationSheet,
     destination: String?,
-    nextStop: String?,
+    vias: List<String>,
     cameraPanned: Boolean,
     panSequence: Int,
     onCameraPanned: (Boolean) -> Unit,
@@ -2201,7 +2204,7 @@ private fun NavigationOverlay(
             cameraSettings,
             alertSettings,
             destination,
-            nextStop,
+            vias,
         ) {
             navigationScreenState(
                 NavigationScreenInput(
@@ -2215,7 +2218,8 @@ private fun NavigationOverlay(
                         fixture?.speedMaxMetersPerSecond ?: speedMax.speedMetersPerSecond,
                     alerts = fixture?.alerts ?: navigationAlerts.banners.map { it.banner },
                     destination = fixture?.destination ?: destination,
-                    nextStopName = fixture?.nextStopName ?: nextStop,
+                    viaLabels = if (fixture == null) vias else emptyList(),
+                    nextStopName = fixture?.nextStopName,
                     signalLost = fixture?.signalLost ?: navigationAlerts.signalLost,
                     camera = cameraSettings,
                     alertSettings = alertSettings,

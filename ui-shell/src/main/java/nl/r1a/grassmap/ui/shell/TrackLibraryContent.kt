@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.ui.shell
 
 import nl.r1a.grassmap.plugin.api.model.RichText
+import nl.r1a.grassmap.plugin.api.model.RichTextStyle
 import nl.r1a.grassmap.plugin.api.model.TrackKind
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryAction
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryRow
@@ -33,6 +34,16 @@ data class TrackLibraryRowContent(
     val colour: Long?,
     val hidden: Boolean = false,
     val hiddenNotice: String? = null,
+    val linkActions: List<TrackLinkAction> = emptyList(),
+)
+
+/**
+ * One link a screen reader can activate from a row: [label] names the text the
+ * run draws, and [href] is the sanitised address the tap would open.
+ */
+data class TrackLinkAction(
+    val label: String,
+    val href: String,
 )
 
 /** One sort choice the screen offers, with its resolved label. */
@@ -356,7 +367,31 @@ private fun trackRowContent(
         colour = row.colour?.let(::favouriteColour),
         hidden = row.hidden,
         hiddenNotice = if (row.hidden) strings.resolve(TRACK_CARD_HIDDEN_KEY) else null,
+        linkActions = descriptionLinkActions(row.description, strings),
     )
+}
+
+/**
+ * The actions a row offers for the links in its description. TalkBack cannot
+ * reach a run inside a drawn text, so each link becomes one labelled action on
+ * the row node; the label names the run's visible text, because the address
+ * alone would read as a URL and a blank run would read as nothing.
+ */
+internal fun descriptionLinkActions(
+    description: RichText?,
+    strings: Strings,
+): List<TrackLinkAction> {
+    if (description == null) return emptyList()
+    return description.spans.mapNotNull { span ->
+        if (span.style != RichTextStyle.LINK) return@mapNotNull null
+        val href = span.href ?: return@mapNotNull null
+        val run =
+            description.text
+                .substring(span.start, span.end)
+                .trim()
+                .ifEmpty { href }
+        TrackLinkAction(label = strings.resolve(TRACK_LIBRARY_LINK_ACTION_KEY, listOf(run)), href = href)
+    }
 }
 
 private fun undoMessage(
@@ -431,6 +466,7 @@ internal const val TRACK_LIBRARY_SELECTION_TITLE_KEY = "track_library_selection_
 internal const val TRACK_LIBRARY_LEAVE_SELECTION_KEY = "track_library_leave_selection"
 internal const val TRACK_LIBRARY_LINK_TITLE_KEY = "track_library_link_title"
 internal const val TRACK_LIBRARY_LINK_OPEN_KEY = "track_library_link_open"
+internal const val TRACK_LIBRARY_LINK_ACTION_KEY = "track_library_link_action"
 internal const val TRACK_LIBRARY_NO_FOLDER_KEY = "track_library_no_folder"
 internal const val TRACK_LIBRARY_KIND_ROUTE_KEY = "track_library_kind_route"
 internal const val TRACK_LIBRARY_EDIT_TITLE_KEY = "track_library_edit_title"

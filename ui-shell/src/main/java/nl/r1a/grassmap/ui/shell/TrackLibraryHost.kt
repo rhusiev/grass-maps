@@ -40,9 +40,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -524,6 +526,13 @@ private fun TrackRow(
     onSelect: () -> Unit,
     onLink: (String) -> Unit,
 ) {
+    val linkActions =
+        row.linkActions.map { link ->
+            CustomAccessibilityAction(link.label) {
+                onLink(link.href)
+                true
+            }
+        }
     Row(
         modifier =
             Modifier
@@ -535,8 +544,12 @@ private fun TrackRow(
                     role = Role.Button,
                     onClick = onSelect,
                     onLongClick = onSelect,
-                ).semantics { this.selected = selected }
-                .padding(TILE_PADDING_DP.dp),
+                ).semantics {
+                    this.selected = selected
+                    if (linkActions.isNotEmpty()) {
+                        customActions = linkActions
+                    }
+                }.padding(TILE_PADDING_DP.dp),
         horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

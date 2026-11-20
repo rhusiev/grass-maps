@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.plugins.contours
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +10,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -17,10 +19,19 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
 
-private val PANEL_BACKGROUND = Color(0xCC000000)
-private val PANEL_FOREGROUND = Color.White
-private val PANEL_MUTED = Color(0xCCFFFFFF)
+private val PANEL_BACKGROUND: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.surface
+
+private val PANEL_FOREGROUND: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.ink
+
+private val PANEL_MUTED: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.muted
 private const val PANEL_CORNER_DP = 8
 private const val PANEL_HORIZONTAL_DP = 12
 private const val PANEL_VERTICAL_DP = 8
@@ -46,11 +57,13 @@ fun ContoursLayerPanel(
     modifier: Modifier = Modifier,
 ) {
     val toggle = contoursPanelToggle(pluginEnabled, enabled) ?: return
+    val shape = RoundedCornerShape(PANEL_CORNER_DP.dp)
     Column(
         modifier =
             modifier
-                .clip(RoundedCornerShape(PANEL_CORNER_DP.dp))
+                .clip(shape)
                 .background(PANEL_BACKGROUND)
+                .border(1.dp, LocalShellColors.current.ring, shape)
                 .padding(horizontal = PANEL_HORIZONTAL_DP.dp, vertical = PANEL_VERTICAL_DP.dp),
         verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
     ) {

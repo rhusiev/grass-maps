@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.plugins.layers.panel
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,15 +20,13 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmap.plugin.ui.api.ShellColors
 
-private val BUTTON_BACKGROUND = Color(0xCC000000)
 private const val BUTTON_CORNER_DP = 8
 private const val BUTTON_HORIZONTAL_DP = 12
 private const val BUTTON_VERTICAL_DP = 6
 private const val BUTTON_FONT_SP = 13
-private val PANEL_BACKGROUND = Color(0xCC000000)
-private val PANEL_FOREGROUND = Color.White
-private val PANEL_MUTED = Color(0xCCFFFFFF)
 private const val PANEL_CORNER_DP = 8
 private const val PANEL_HORIZONTAL_DP = 12
 private const val PANEL_VERTICAL_DP = 8
@@ -50,13 +49,16 @@ fun LayersButton(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = LocalShellColors.current
+    val shape = RoundedCornerShape(BUTTON_CORNER_DP.dp)
     BasicText(
         text = stringResource(R.string.layers_panel_button),
-        style = TextStyle(color = Color.White, fontSize = BUTTON_FONT_SP.sp),
+        style = TextStyle(color = colors.ink, fontSize = BUTTON_FONT_SP.sp),
         modifier =
             modifier
-                .clip(RoundedCornerShape(BUTTON_CORNER_DP.dp))
-                .background(BUTTON_BACKGROUND)
+                .clip(shape)
+                .background(colors.glass)
+                .border(1.dp, colors.ring, shape)
                 .toggleable(
                     value = open,
                     role = Role.Button,
@@ -80,17 +82,20 @@ fun MapStylePanel(
     onSelect: (MapStyleChoice) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = LocalShellColors.current
+    val shape = RoundedCornerShape(PANEL_CORNER_DP.dp)
     Column(
         modifier =
             modifier
-                .clip(RoundedCornerShape(PANEL_CORNER_DP.dp))
-                .background(PANEL_BACKGROUND)
+                .clip(shape)
+                .background(colors.surface)
+                .border(1.dp, colors.ring, shape)
                 .padding(horizontal = PANEL_HORIZONTAL_DP.dp, vertical = PANEL_VERTICAL_DP.dp),
         verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
     ) {
-        PanelText(stringResource(R.string.layers_panel_style_title), PANEL_MUTED)
+        PanelText(stringResource(R.string.layers_panel_style_title), colors.muted)
         for (choice in MapStyleChoice.entries) {
-            StyleRow(choice = choice, selected = choice == active, onSelect = onSelect)
+            StyleRow(choice = choice, colors = colors, selected = choice == active, onSelect = onSelect)
         }
     }
 }
@@ -99,6 +104,7 @@ fun MapStylePanel(
 @Composable
 private fun StyleRow(
     choice: MapStyleChoice,
+    colors: ShellColors,
     selected: Boolean,
     onSelect: (MapStyleChoice) -> Unit,
 ) {
@@ -117,13 +123,13 @@ private fun StyleRow(
     ) {
         PanelText(
             text = if (selected) SELECTED_MARK else UNSELECTED_MARK,
-            color = PANEL_FOREGROUND,
+            color = colors.ink,
             // The radio role already carries the selected state; the mark is
             // decoration and must not be read as a character.
             modifier = Modifier.clearAndSetSemantics {},
         )
-        PanelText(name, PANEL_FOREGROUND)
-        PanelText(hint, PANEL_MUTED)
+        PanelText(name, colors.ink)
+        PanelText(hint, colors.muted)
     }
 }
 

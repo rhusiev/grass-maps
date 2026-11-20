@@ -2,6 +2,7 @@ package nl.r1a.grassmap.plugins.raster
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.drag
@@ -18,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,12 +40,24 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
 import kotlin.math.roundToInt
 
-internal val PANEL_BACKGROUND = Color(0xCC000000)
-internal val PANEL_FOREGROUND = Color.White
-internal val PANEL_MUTED = Color(0xCCFFFFFF)
-internal val FIELD_BACKGROUND = Color(0x33FFFFFF)
+internal val PANEL_BACKGROUND: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.surface
+
+internal val PANEL_FOREGROUND: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.ink
+
+internal val PANEL_MUTED: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.muted
+
+internal val FIELD_BACKGROUND: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.soft
 internal const val PANEL_CORNER_DP = 8
 internal const val PANEL_HORIZONTAL_DP = 12
 internal const val PANEL_VERTICAL_DP = 8
@@ -88,11 +102,13 @@ fun RasterLayerPanel(
         } else {
             source.attributionHtml
         }
+    val shape = RoundedCornerShape(PANEL_CORNER_DP.dp)
     Column(
         modifier =
             modifier
-                .clip(RoundedCornerShape(PANEL_CORNER_DP.dp))
+                .clip(shape)
                 .background(PANEL_BACKGROUND)
+                .border(1.dp, LocalShellColors.current.ring, shape)
                 .padding(horizontal = PANEL_HORIZONTAL_DP.dp, vertical = PANEL_VERTICAL_DP.dp),
         verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
     ) {
@@ -239,6 +255,7 @@ private fun TransparencyControl(
     onTransparencyChange: (percent: Int, store: Boolean) -> Unit,
 ) {
     val label = stringResource(R.string.map_raster_transparency)
+    val colors = LocalShellColors.current
     val latest by rememberUpdatedState(onTransparencyChange)
     Column(verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp)) {
         PanelText("$label $percent %", PANEL_FOREGROUND)
@@ -269,9 +286,9 @@ private fun TransparencyControl(
         ) {
             val centerY = size.height / 2f
             val filled = size.width * percent / RasterTransparency.MAX_PERCENT
-            drawLine(PANEL_MUTED, Offset(0f, centerY), Offset(size.width, centerY), strokeWidth = TRACK_STROKE.toPx())
-            drawLine(PANEL_FOREGROUND, Offset(0f, centerY), Offset(filled, centerY), strokeWidth = TRACK_STROKE.toPx())
-            drawCircle(PANEL_FOREGROUND, radius = KNOB_RADIUS.toPx(), center = Offset(filled, centerY))
+            drawLine(colors.muted, Offset(0f, centerY), Offset(size.width, centerY), strokeWidth = TRACK_STROKE.toPx())
+            drawLine(colors.ink, Offset(0f, centerY), Offset(filled, centerY), strokeWidth = TRACK_STROKE.toPx())
+            drawCircle(colors.ink, radius = KNOB_RADIUS.toPx(), center = Offset(filled, centerY))
         }
     }
 }

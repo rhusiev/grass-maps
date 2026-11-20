@@ -134,7 +134,10 @@ class TrackShareWiringTest {
     private fun manifest(): Element = parse(File(MANIFEST)).documentElement
 
     private fun strings(path: String): Set<String> =
-        Regex("""<string name="([^"]+)">""").findAll(File(path).readText()).map { it.groupValues[1] }.toSet()
+        Regex("""<(?:string|plurals) name="([^"]+)">""")
+            .findAll(File(path).readText())
+            .map { it.groupValues[1] }
+            .toSet()
 
     private fun parse(file: File): org.w3c.dom.Document {
         val factory = DocumentBuilderFactory.newInstance()
@@ -171,8 +174,7 @@ class TrackShareWiringTest {
                 "track_import_one",
                 "track_import_one_unnamed",
                 "track_import_many",
-                "track_import_skipped_one",
-                "track_import_skipped_many",
+                "track_import_skipped",
                 "track_import_open",
                 "track_import_not_a_track",
                 "track_import_unreadable",

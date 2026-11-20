@@ -11,6 +11,10 @@ captures/
 .externalNativeBuild/
 .cxx/
 
+# Signing: the keystore and its passwords live outside the repository
+*.jks
+*.keystore
+
 # Python tooling
 __pycache__/
 *.pyc

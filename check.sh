@@ -152,6 +152,9 @@ step "Map style rules"
 step "Privacy guards"
 ./gradlew --console=plain checkPrivacyGuards || fail "privacy guards"
 
+step "Release signing"
+./gradlew --console=plain :app:checkReleaseSigning || fail "release signing"
+
 step "Build logic tests"
 ./gradlew --console=plain -p buildSrc test || fail "build logic tests"
 

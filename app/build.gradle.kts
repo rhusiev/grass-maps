@@ -1,12 +1,15 @@
 import buildlogic.CheckApkPluginsTask
 import buildlogic.CheckPrivacyManifestTask
 import buildlogic.CheckReleaseApkGuardsTask
+import buildlogic.CheckReleaseSigningTask
 import buildlogic.DebugToken
 import buildlogic.GeneratePluginRegistryTask
+import buildlogic.ReleaseSigning
 import buildlogic.RustNative
 import buildlogic.useGrassRegionsInTests
 import com.android.build.api.artifact.SingleArtifact
 import com.android.build.api.variant.BuildConfigField
+import org.gradle.api.GradleException
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.testing.Test
 
@@ -107,10 +110,42 @@ val buildTreeDirty: Provider<String> = gitOutput("status", "--porcelain", "--unt
 
 val releaseApkProperty: String? = providers.gradleProperty("releaseApk").orNull
 
+/**
+ * Release signing reads the environment only: no password or keystore path is
+ * in the repository and none has a default. With all four values set the
+ * release build type takes the release config; without them it stays unsigned,
+ * as CI and the reproducibility job expect. A partial set is a mistake, not a
+ * fallback.
+ */
+val releaseSigningValues: Map<String, String?> =
+    ReleaseSigning.variableNames.associateWith { providers.environmentVariable(it).orNull }
+
+val releaseSigningState: ReleaseSigning.State = ReleaseSigning.state(releaseSigningValues)
+val releaseSigningMissing: List<String> = ReleaseSigning.missing(releaseSigningValues)
+
+if (releaseSigningState == ReleaseSigning.State.PARTIAL) {
+    throw GradleException(
+        "Release signing is incomplete: ${releaseSigningMissing.joinToString(", ")} not set. " +
+            "Set all four of ${ReleaseSigning.variableNames.joinToString(", ")} or none.",
+    )
+}
+
 android {
     namespace = "nl.r1a.grassmap.app"
     compileSdk = 37
     ndkVersion = RustNative.NDK_VERSION
+
+    signingConfigs {
+        if (releaseSigningState == ReleaseSigning.State.COMPLETE) {
+            create(ReleaseSigning.CONFIG_NAME) {
+                storeFile = file(requireNotNull(releaseSigningValues[ReleaseSigning.KEYSTORE]))
+                storePassword =
+                    requireNotNull(releaseSigningValues[ReleaseSigning.KEYSTORE_PASSWORD])
+                keyAlias = requireNotNull(releaseSigningValues[ReleaseSigning.KEY_ALIAS])
+                keyPassword = requireNotNull(releaseSigningValues[ReleaseSigning.KEY_PASSWORD])
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "nl.r1a.grassmap"
@@ -126,6 +161,9 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (releaseSigningState == ReleaseSigning.State.COMPLETE) {
+                signingConfig = signingConfigs.getByName(ReleaseSigning.CONFIG_NAME)
+            }
         }
         // A measurement-only variant for the g32 gates (T-0020/T-0102): the
         // release manifest and optimisations with the debug key so it installs,
@@ -207,6 +245,27 @@ android {
     dependenciesInfo {
         includeInApk = false
         includeInBundle = false
+    }
+}
+
+val releaseSigningConfigName: String? =
+    android.buildTypes
+        .getByName("release")
+        .signingConfig
+        ?.name
+
+val releaseSigningLog: String =
+    if (releaseSigningState == ReleaseSigning.State.COMPLETE) {
+        "Release signing: the environment supplies the release key; :app:assembleRelease signs the APK."
+    } else {
+        "Release signing: no ${ReleaseSigning.variableNames.joinToString(", ")} in the " +
+            "environment; :app:assembleRelease produces an UNSIGNED APK " +
+            "(app-release-unsigned.apk) that cannot be installed."
+    }
+
+gradle.taskGraph.whenReady {
+    if (hasTask(":app:assembleRelease")) {
+        logger.lifecycle(releaseSigningLog)
     }
 }
 
@@ -302,6 +361,57 @@ val checkReleaseApkPlugins =
         }
     }
 
+// The release APK must be signed by the release key when the environment
+// supplies one, and it must stay unsigned otherwise. The same check fails on a
+// committed password, keystore file or key path: the passphrase this machine
+// keeps outside the repository is matched byte for byte and never named.
+val releaseSigningScan =
+    rootProject.fileTree(rootProject.rootDir) {
+        include(
+            "**/*.kt",
+            "**/*.kts",
+            "**/*.gradle",
+            "**/*.properties",
+            "**/*.sh",
+            "**/*.bash",
+            "**/*.md",
+            "**/*.txt",
+            "**/*.json",
+            "**/*.yml",
+            "**/*.yaml",
+            "**/*.xml",
+            "**/*.toml",
+            "**/*.csv",
+            "**/*.tsv",
+            "**/*.geojson",
+            "**/*.jks",
+            "**/*.keystore",
+            "**/*.p12",
+            "**/*.pfx",
+            "**/*.pass",
+            "**/*.env",
+            "**/*.gitignore",
+        )
+        exclude("**/build/**", "**/.gradle/**", "**/.git/**", "**/.kotlin/**")
+    }
+
+val checkReleaseSigning =
+    tasks.register<CheckReleaseSigningTask>("checkReleaseSigning") {
+        group = "verification"
+        description =
+            "Fails when release signing takes the debug config or a password or key path is committed."
+        signingState.set(releaseSigningState.name)
+        signingConfigName.set(releaseSigningConfigName)
+        missingVariables.set(releaseSigningMissing)
+        scanFiles.from(releaseSigningScan)
+        rootDirectory.set(rootProject.layout.projectDirectory)
+        val releasePassphraseFile =
+            ReleaseSigning.defaultPasswordFile(System.getProperty("user.home"))
+        if (releasePassphraseFile.isFile) {
+            passphraseFile.set(releasePassphraseFile)
+        }
+    }
+
 dependencies {
     implementation(project(":plugin-api"))
     implementation(project(":plugin-ui-api"))
@@ -375,6 +485,7 @@ dependencies {
 
 tasks.named("check") {
     dependsOn(":checkPluginManifests")
+    dependsOn(checkReleaseSigning)
 }
 
 // The route-warning wiring test reads the committed test region by path, so a

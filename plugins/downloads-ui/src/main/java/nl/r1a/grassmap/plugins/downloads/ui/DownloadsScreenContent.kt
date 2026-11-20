@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.plugins.downloads.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,6 +61,9 @@ private val SURFACE: Color
 private val CARD: Color
     @Composable get() = LocalShellColors.current.surface
 
+private val SOFT: Color
+    @Composable get() = LocalShellColors.current.soft
+
 private val INK: Color
     @Composable get() = LocalShellColors.current.ink
 
@@ -74,6 +78,9 @@ private val DANGER: Color
 
 private val BORDER: Color
     @Composable get() = LocalShellColors.current.line
+
+private val CONTROL_BORDER: Color
+    @Composable get() = LocalShellColors.current.controlBorder
 
 private const val CARD_CORNER_DP = 16
 private const val CARD_PADDING_DP = 14
@@ -396,6 +403,7 @@ private fun SearchField(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(CARD_CORNER_DP.dp))
                 .background(CARD)
+                .border(1.dp, CONTROL_BORDER, RoundedCornerShape(CARD_CORNER_DP.dp))
                 .padding(CARD_PADDING_DP.dp)
                 .semantics { contentDescription = hint },
         decorationBox = { innerTextField ->
@@ -749,9 +757,10 @@ private fun ActionButton(
     quiet: Boolean = false,
     destructive: Boolean = false,
 ) {
+    val shape = RoundedCornerShape(CARD_CORNER_DP.dp)
     val background =
         when {
-            quiet -> BORDER
+            quiet -> SOFT
             destructive -> CARD
             else -> ACCENT
         }
@@ -761,11 +770,18 @@ private fun ActionButton(
             quiet -> INK
             else -> LocalShellColors.current.onAccent
         }
+    val outline =
+        when {
+            quiet -> CONTROL_BORDER
+            destructive -> DANGER
+            else -> ACCENT
+        }
     Box(
         modifier =
             Modifier
-                .clip(RoundedCornerShape(CARD_CORNER_DP.dp))
-                .background(background)
+                .clip(shape)
+                .background(background, shape)
+                .border(1.dp, outline, shape)
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(horizontal = CARD_PADDING_DP.dp, vertical = GAP_DP.dp),
     ) {
@@ -837,6 +853,7 @@ private fun ServerForm(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(CARD_CORNER_DP.dp))
                     .background(SURFACE)
+                    .border(1.dp, CONTROL_BORDER, RoundedCornerShape(CARD_CORNER_DP.dp))
                     .padding(CARD_PADDING_DP.dp),
         )
         SectionLabel(stringResource(R.string.downloads_token_field))
@@ -850,6 +867,7 @@ private fun ServerForm(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(CARD_CORNER_DP.dp))
                     .background(SURFACE)
+                    .border(1.dp, CONTROL_BORDER, RoundedCornerShape(CARD_CORNER_DP.dp))
                     .padding(CARD_PADDING_DP.dp),
             decorationBox = { innerTextField ->
                 Box {

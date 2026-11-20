@@ -20,7 +20,7 @@ import org.junit.Test
 
 class DevToolsWiringTest {
     @Test
-    fun theReleaseRegistryShipsTheDevelopmentToolsPlugin() {
+    fun theDebugRegistryShipsTheDevelopmentToolsPlugin() {
         assertTrue(
             GeneratedPlugins.plugins.any { it.manifest.id == PluginId(DevToolsContract.PLUGIN_ID) },
         )

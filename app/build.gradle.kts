@@ -1,5 +1,6 @@
 import buildlogic.CheckApkPluginsTask
 import buildlogic.CheckPrivacyManifestTask
+import buildlogic.CheckReleaseApkGuardsTask
 import buildlogic.DebugToken
 import buildlogic.GeneratePluginRegistryTask
 import buildlogic.RustNative
@@ -70,6 +71,26 @@ val debugTokenValue: Provider<String> =
         .asText
         .map(DebugToken::parse)
         .orElse("")
+
+/**
+ * Every token file the release guard searches for. The default directory is
+ * the one the debug token lives in; `-Pgrassmaps.tokenDir` points the check at
+ * another directory, such as CI's empty one.
+ */
+val releaseTokenFiles: Provider<FileCollection> =
+    providers.provider {
+        val directory =
+            providers
+                .gradleProperty(DebugToken.DIRECTORY_PROPERTY)
+                .orNull
+                ?.let { File(it) }
+                ?: DebugToken.defaultDirectory(System.getProperty("user.home"))
+        if (directory.isDirectory) {
+            fileTree(directory) { include("*.token") }
+        } else {
+            files()
+        }
+    }
 
 fun gitOutput(vararg args: String): Provider<String> =
     providers
@@ -246,6 +267,24 @@ androidComponents {
     }
 }
 
+// The release APK must not carry the debug control channel, the development
+// tools or a region token. The markers come from the debug source set and its
+// debug-only dependencies; the token check reads every `*.token` file the build
+// already knows about. CI runs this over the reproducibility APK.
+val checkReleaseApkGuards =
+    tasks.register<CheckReleaseApkGuardsTask>("checkReleaseApkGuards") {
+        group = "verification"
+        description =
+            "Fails when the release APK carries debug control code, the development tools or a region token."
+        if (releaseApkProperty == null) {
+            apk.set(layout.buildDirectory.file("outputs/apk/release/app-release-unsigned.apk"))
+            dependsOn("assembleRelease")
+        } else {
+            apk.set(rootProject.file(requireNotNull(releaseApkProperty)))
+        }
+        tokenFiles.from(releaseTokenFiles)
+    }
+
 // The release APK must not package a development plugin. The ids and
 // implementation classes come from each plugin's own plugin.json, so adding a
 // plugin to developmentPluginProjects is enough to extend the check.
@@ -254,6 +293,7 @@ val checkReleaseApkPlugins =
         group = "verification"
         description = "Fails when the release APK packages a development plugin."
         manifests.from(developmentPluginManifestFiles)
+        dependsOn(checkReleaseApkGuards)
         if (releaseApkProperty == null) {
             apk.set(layout.buildDirectory.file("outputs/apk/release/app-release-unsigned.apk"))
             dependsOn("assembleRelease")

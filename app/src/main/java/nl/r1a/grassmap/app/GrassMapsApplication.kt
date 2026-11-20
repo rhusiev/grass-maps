@@ -194,7 +194,11 @@ open class GrassMapsApplication : Application() {
      */
     internal open fun dataSourcePluginId(): PluginId? = null
 
-    /** The AI-control switch. Release stays off until T-0610 wires the switch. */
+    /**
+     * The AI-control switch. Release stays off: the control channel and the
+     * development-tools plugin are debug-only, so a release build has no code
+     * that can turn this on.
+     */
     internal open fun aiControlEnabled(): Boolean = false
 
     /**

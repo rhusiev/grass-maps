@@ -58,10 +58,11 @@ for apk in "$apk_a" "$apk_b"; do
     fi
 done
 
-# The release APK must not package a development plugin. The task reads each
-# development plugin's own plugin.json for the ids and implementation classes
-# it forbids.
-echo "== Checking the release APK for development plugins =="
+# The release APK must not package a development plugin, the debug control
+# channel, the development tools or a region token. The plugin task reads each
+# development plugin's own plugin.json; the guard task searches every APK entry
+# for debug-only markers and for the token files the build uses.
+echo "== Checking the release APK for development plugins and debug control =="
 ./gradlew --console=plain :app:checkReleaseApkPlugins -PreleaseApk="$apk_a"
 
 sha_a="$(sha256sum "$apk_a" | cut -d' ' -f1)"

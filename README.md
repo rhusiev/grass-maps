@@ -43,8 +43,11 @@ A debug build embeds the region-server token so a phone can download without
 typing it. The build reads the token from `~/.local/share/grassmaps/debug-builds.token`
 (one line, kept out of the repository). Another file is chosen with
 `-Pgrassmaps.debugTokenFile=/path/to/file`. A missing file gives an empty token and
-the build still succeeds. The release build has no such field, and a unit test in the
-release variant fails if it appears. A token the user enters in the Maps settings
+the build still succeeds. The release build has no such field, and
+`checkReleaseApkGuards` searches every entry of the release APK for the field
+name and for each token in `~/.local/share/grassmaps/*.token`, so a leaked token
+fails the build without the log naming it. `-Pgrassmaps.tokenDir=/path` points
+the search at another directory. A token the user enters in the Maps settings
 wins over the embedded one, and the embedded one goes only to the default server
 `DownloadsDefaults.SERVER_URL`, never to a self-hosted URL.
 
@@ -201,9 +204,11 @@ the root, Android lint, `:app:assembleDebug`, the JVM unit tests,
 `checkTranslations`, `checkPluginBoundaries`, `checkPluginManifests`,
 `lintStyleRules`, `:plugins:example:check`, `checkPrivacyGuards`, and two
 unsigned release builds at different paths compared byte for byte. The
-reproducibility script also runs `checkReleaseApkPlugins` over the rebuilt
-release APK, so a development plugin in a release build fails the gate. Every
-module's executed test count is compared with `scripts/ci/test-count-baseline.txt`
+reproducibility script also runs `checkReleaseApkPlugins` and
+`checkReleaseApkGuards` over the rebuilt release APK, so a development plugin,
+the debug control channel, the development tools or a region token in a release
+build fails the gate. Every module's executed test count is compared with
+`scripts/ci/test-count-baseline.txt`
 and the gate fails when a module falls below its recorded floor, so a module
 that keeps three tests out of a hundred and twenty cannot stay green. The
 baseline is a floor: `--update` rewrites it from a full test run, and a change
@@ -1662,7 +1667,9 @@ and the peer must send the 256-bit bearer token from the app-private
 `files/control-token` file. Only commands whose generated
 registry entry has `allowlistedForControl` run. A release build does not contain
 `:control` or `:devtools` at all, because the app depends on them in the debug
-configuration only.
+configuration only. `checkReleaseApkGuards` searches the release APK for the
+control channel, the development tools and the `ai.control` switch id, so a
+dependency that moves out of the debug lane fails the build.
 
 `tools/control/grassctl.py` lists commands, invokes an allowlisted command,
 prints stream values and saves a screenshot. `tools/control/mcp_server.py`

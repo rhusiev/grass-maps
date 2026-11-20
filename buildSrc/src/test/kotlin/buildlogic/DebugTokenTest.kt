@@ -41,6 +41,14 @@ class DebugTokenTest {
     }
 
     @Test
+    fun theDefaultDirectoryHoldsEveryTokenFile() {
+        assertEquals(
+            File("/home/x/.local/share/grassmaps"),
+            DebugToken.defaultDirectory("/home/x"),
+        )
+    }
+
+    @Test
     fun aLiteralEscapesQuotesAndBackslashes() {
         assertEquals("\"a\\\"b\\\\c\"", DebugToken.javaLiteral("a\"b\\c"))
     }

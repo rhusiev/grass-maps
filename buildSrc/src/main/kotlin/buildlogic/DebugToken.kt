@@ -14,12 +14,19 @@ object DebugToken {
     /** The Gradle property that overrides [defaultFile]. */
     const val FILE_PROPERTY = "grassmaps.debugTokenFile"
 
+    /** The Gradle property that overrides [defaultDirectory] for a token search. */
+    const val DIRECTORY_PROPERTY = "grassmaps.tokenDir"
+
     /** The BuildConfig field the debug build type carries. */
     const val FIELD_NAME = "GRASSMAPS_DEBUG_TOKEN"
 
-    private const val DEFAULT_RELATIVE_PATH = ".local/share/grassmaps/debug-builds.token"
+    private const val DEFAULT_RELATIVE_PATH = ".local/share/grassmaps"
+    private const val DEBUG_TOKEN_FILE_NAME = "debug-builds.token"
 
-    fun defaultFile(home: String): File = File(home, DEFAULT_RELATIVE_PATH)
+    /** The directory that holds the token files, outside the repository. */
+    fun defaultDirectory(home: String): File = File(home, DEFAULT_RELATIVE_PATH)
+
+    fun defaultFile(home: String): File = File(defaultDirectory(home), DEBUG_TOKEN_FILE_NAME)
 
     /** The first non-blank line of [file], trimmed, or an empty string. */
     fun read(file: File): String =

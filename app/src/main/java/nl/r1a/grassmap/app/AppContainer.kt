@@ -1257,8 +1257,8 @@ class AppContainer(
 
     /**
      * Whether the development-tools panel and its commands are available. The
-     * architecture puts them behind the AI-control switch; until T-0610 wires
-     * that switch, this reads the predicate the build supplies.
+     * architecture puts them behind the AI-control switch, and both are
+     * debug-only: a release build supplies no panel and no command.
      */
     val devToolsVisible: Boolean = aiControlEnabled()
 

@@ -138,7 +138,7 @@ private const val DEX_HEADER_BYTES = 0x70
 private const val DEX_STRING_IDS_SIZE_OFFSET = 0x38
 private const val DEX_STRING_IDS_OFFSET_OFFSET = 0x3C
 
-private fun ByteArray.contains(marker: ByteArray): Boolean {
+internal fun ByteArray.contains(marker: ByteArray): Boolean {
     if (marker.isEmpty() || marker.size > size) {
         return false
     }

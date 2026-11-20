@@ -1,0 +1,133 @@
+{
+  "generated": "2026-11-20T09:07:05Z",
+  "key": "use_roads",
+  "profile": "bike",
+  "costing": "bicycle",
+  "tuned": 0.3,
+  "avoid": 0.0,
+  "dont_mind": 1.0,
+  "pairs": 100,
+  "routed": 100,
+  "errors": [],
+  "geometry_rule": "exact equality of the decoded polyline6 point list",
+  "comparisons": {
+    "avoid_vs_dont_mind": {
+      "geometry_changed": 99,
+      "geometry_identical": 1,
+      "distance_changed": 99,
+      "delta_meters": {
+        "count": 100,
+        "min": -13570.0,
+        "p50": 2535.0,
+        "p90": 10809.0,
+        "p95": 14121.0,
+        "p99": 19504.0,
+        "max": 20950.0,
+        "mean": 3410.25
+      },
+      "delta_percent": {
+        "count": 100,
+        "min": -21.55,
+        "p50": 4.3,
+        "p90": 14.73,
+        "p95": 16.72,
+        "p99": 19.11,
+        "max": 31.49,
+        "mean": 4.3747
+      },
+      "absolute_delta_meters": {
+        "count": 100,
+        "min": 0.0,
+        "p50": 3950.0,
+        "p90": 11250.0,
+        "p95": 14121.0,
+        "p99": 19504.0,
+        "max": 20950.0,
+        "mean": 5144.69
+      }
+    },
+    "avoid_vs_tuned": {
+      "geometry_changed": 95,
+      "geometry_identical": 5,
+      "distance_changed": 95,
+      "delta_meters": {
+        "count": 100,
+        "min": -8623.0,
+        "p50": 1005.0,
+        "p90": 6972.0,
+        "p95": 8746.0,
+        "p99": 12286.0,
+        "max": 13054.0,
+        "mean": 1932.39
+      },
+      "delta_percent": {
+        "count": 100,
+        "min": -21.06,
+        "p50": 1.62,
+        "p90": 7.25,
+        "p95": 13.65,
+        "p99": 15.86,
+        "max": 29.85,
+        "mean": 2.5603000000000002
+      },
+      "absolute_delta_meters": {
+        "count": 100,
+        "min": 0.0,
+        "p50": 1635.0,
+        "p90": 7176.0,
+        "p95": 8746.0,
+        "p99": 12286.0,
+        "max": 13054.0,
+        "mean": 2724.59
+      }
+    },
+    "dont_mind_vs_tuned": {
+      "geometry_changed": 96,
+      "geometry_identical": 4,
+      "distance_changed": 96,
+      "delta_meters": {
+        "count": 100,
+        "min": -20313.0,
+        "p50": -718.0,
+        "p90": 2618.0,
+        "p95": 5326.0,
+        "p99": 12275.0,
+        "max": 16206.0,
+        "mean": -1477.86
+      },
+      "delta_percent": {
+        "count": 100,
+        "min": -15.12,
+        "p50": -1.25,
+        "p90": 4.85,
+        "p95": 6.09,
+        "p99": 12.02,
+        "max": 34.65,
+        "mean": -1.4107999999999998
+      },
+      "absolute_delta_meters": {
+        "count": 100,
+        "min": 0.0,
+        "p50": 1890.0,
+        "p90": 8791.0,
+        "p95": 10667.0,
+        "p99": 18867.0,
+        "max": 20313.0,
+        "mean": 3467.3
+      }
+    }
+  },
+  "inputs": {
+    "pairs": "test-data/routing/lviv-oblast-pairs.json",
+    "pairs_sha256": "04d43efd2262ba33933e499ce13acc57ad4b1442d76a49938b89743e25485613",
+    "pairs_seed": 20261110,
+    "profiles": "test-data/routing/valhalla-profiles.json",
+    "profiles_sha256": "5975c696a96c497402ae44809a712bdd8d1783e1bbbabe0000b9a8912e6b79f3"
+  },
+  "engines": {
+    "valhalla": "ghcr.io/valhalla/valhalla:latest (3.9.1-52228c4e0), sha256 bf88b5c5c5131414c66a76ba77a8c5ce803a1c724c2a1f07c25961a874a419fb12",
+    "pack": "/hdd/t-0518-merged, mounted read-only at /data, valhalla_service with --network none",
+    "url": "http://127.0.0.1:8002",
+    "network": "docker exec into valhalla-keys"
+  }
+}

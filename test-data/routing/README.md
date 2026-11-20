@@ -14,6 +14,10 @@ Files:
 | `lviv-oblast-pairs.json` | the 100 seeded pairs, with the seed, the separation rule and the oblast polygon digest |
 | `lviv-routes.csv` | one row per pair and profile: both engines' status, distance, time and the segment attribute counts |
 | `lviv-summary.json` | per-profile counts, distance-delta distribution, the derived tolerance, attribute coverage, engine identities |
+| `lviv-use-roads.csv` | one row per seeded pair: distance, time and point count of the tuned, Avoid and Don't mind bike routes for `use_roads`, with their distance deltas |
+| `lviv-use-roads-summary.json` | geometry-identical counts and delta distributions for `use_roads` |
+| `lviv-avoid-bad-surfaces.csv` | the same rows for `avoid_bad_surfaces` |
+| `lviv-avoid-bad-surfaces-summary.json` | geometry-identical counts and delta distributions for `avoid_bad_surfaces` |
 | `planner-vectors.json` | one captured bicycle route pair for T-0302: the forward and reverse answer with two alternatives each, used by `routing`'s planner tests |
 | `via-vectors.json` | three captured intermediate-stop chains for T-0303: the same three stops on each profile, the bike chain reordered, and the bike chain with one stop removed |
 
@@ -78,8 +82,8 @@ Valhalla 3.9.1 silently ignores a key it does not know, so only a run that
 changes the route proves a key. Measured offline on `/hdd/t-0518-merged`
 (Lviv and Ternopil oblast tiles) with the `valhalla_service` container, one
 `route` per step and `trace_attributes` with `map_snap` for the edge counts.
-Each pair differs only in the one key. The avoid and don't-mind routes differ in
-every row except `max_hiking_difficulty`:
+Each pair differs only in the one key. The example avoid and don't-mind routes
+differ in every row except `max_hiking_difficulty`:
 
 | Key | Pair (Lviv) | Avoid | Don't mind |
 |---|---|---|---|
@@ -103,6 +107,71 @@ time, because the pack holds almost no edge above `sac_scale` 1 (one 0.609 km
 `sac_scale:1` segment in the scan). The key is documented in Valhalla's
 pedestrian costing and the app sends it, but the hike Avoid value 2 has no
 measured route. A pack with mountain trails is the next check.
+
+### The bike busy-roads and rough-surface keys on the 100 seeded pairs
+
+The 18-pair check above is a first look and keeps no per-pair record. The two
+bike steps travel on every request, so they were run again on the full seeded
+set: the same 100 pairs as T-0301 (`lviv-oblast-pairs.json`, seed 20261110),
+the same committed bike profile, and the same `/hdd/t-0518-merged` pack and
+container as the 18-pair check. Each pair is routed three times per key -
+tuned, Avoid and Don't mind - and two answers count as the same only when
+their decoded polyline6 lines match point for point.
+
+`preferences.py` makes the run and writes one row per pair and key:
+
+```sh
+python3 scripts/bench/route-validation/preferences.py \
+  --pairs test-data/routing/lviv-oblast-pairs.json \
+  --profiles test-data/routing/valhalla-profiles.json --key use_roads \
+  --out test-data/routing/lviv-use-roads.csv \
+  --summary test-data/routing/lviv-use-roads-summary.json \
+  --valhalla-container valhalla-keys
+```
+
+The second run uses `--key avoid_bad_surfaces` and the two
+`lviv-avoid-bad-surfaces` files.
+
+| Key | tuned | Avoid | Don't mind | geometry changed, Avoid vs Don't mind | delta p50 / p99 / max |
+|---|---|---|---|---|---|
+| `use_roads` | 0.3 | 0.0 | 1.0 | 99 / 100 | +2 535 / +19 504 / +20 950 m |
+| `avoid_bad_surfaces` | 0.5 | 1.0 | 0.0 | 91 / 100 | +1 507 / +23 652 / +31 846 m |
+
+The delta is Avoid minus Don't mind on the same pair, so a positive value is a
+longer Avoid route. Both keys changed almost every line, so the engine reads
+both and neither is a silent no-op. Against the tuned value, `use_roads`
+changed 95 lines at Avoid and 96 at Don't mind; `avoid_bad_surfaces` changed 75
+and 80. Pair 12 is the only pair where `use_roads` Avoid and Don't mind return
+the same line, and it is one of the nine pairs where `avoid_bad_surfaces` does
+the same. A pair with no alternative cannot prove a key either way.
+
+Pair 0 of the set:
+
+| `use_roads` | distance | time | points |
+|---|---|---|---|
+| tuned 0.3 | 108.127 km | 22 101 s | 1 830 |
+| Avoid 0.0 | 113.080 km | 24 270 s | 2 730 |
+| Don't mind 1.0 | 105.388 km | 21 165 s | 1 268 |
+
+The largest `avoid_bad_surfaces` detour is pair 36:
+
+| `avoid_bad_surfaces` | distance | time | points |
+|---|---|---|---|
+| tuned 0.5 | 54.365 km | 13 907 s | 1 381 |
+| Avoid 1.0 | 84.166 km | 18 750 s | 1 852 |
+| Don't mind 0.0 | 52.320 km | 14 313 s | 1 321 |
+
+The names are the engine's own. Valhalla 3.9.1 (commit `52228c4e0`, the build
+in the measured image) reads both in `src/sif/bicyclecost.cc`:
+`ParseBicycleCostOptions` parses `/use_roads` through `kUseRoadRange` and
+`/avoid_bad_surfaces` through `kAvoidBadSurfacesRange`, both ranged 0 to 1 with
+a 0.25 default. The same file gives `avoid_bad_surfaces` 1.0 a second effect:
+it caps the allowed surfaces at the bicycle type's worst surface (`dirt` for
+the hybrid), where 0.0 allows surfaces up to `path`. Avoid is therefore a cost
+and an access limit, and Don't mind removes both the extra cost and the tighter
+cap.
+
+The two CSVs are 13 and 14 KB; each summary is about 3.4 KB.
 
 The settings model is `RoutingOptionsSettings`, one entry per `ProfileId`,
 defaulting every unset profile to `RouteOptions()`. The planner reads it through

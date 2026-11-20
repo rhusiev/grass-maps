@@ -18,6 +18,7 @@ import nl.r1a.grassmap.plugin.api.model.BoundingBox
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
 import nl.r1a.grassmap.plugin.api.provider.PlaceHit
+import nl.r1a.grassmap.plugin.api.provider.PlaceSource
 
 private const val SETTLE_MS = 1_200L
 private const val SCENE_ZOOM = 14.0
@@ -136,12 +137,18 @@ internal class ScreenshotsStep(
             return
         }
         val region = context.region
-        val place = hits.firstOrNull { !it.isCoordinate }
-        val inside = insideBounds(region?.bounds, place?.position)
-        if (region != null && inside != true) {
+        val top = hits.firstOrNull { !it.isCoordinate }
+        val offline = hits.filter { hit -> !hit.isCoordinate && hit.source == PlaceSource.OFFLINE }
+        val opened =
+            offline.firstOrNull { hit -> insideBounds(region?.bounds, hit.position) == true }
+                ?: offline.firstOrNull()
+        val insideTop = insideBounds(region?.bounds, top?.position)
+        val insideOpened = insideBounds(region?.bounds, opened?.position)
+        if (region != null && insideOpened != true) {
             searchProblems +=
-                "the top hit ${place?.name ?: "none"} at " +
-                "${place?.position?.latitude}, ${place?.position?.longitude} is not inside ${region.id}'s bbox"
+                "no offline hit is inside ${region.id}'s bbox; " +
+                "top hit ${top?.name ?: "none"} at " +
+                "${top?.position?.latitude}, ${top?.position?.longitude}"
         }
         val bboxText = region?.bbox?.takeIf { it.isNotEmpty() }?.joinToString()
         MapChromeSession.requestSearch(true)
@@ -153,25 +160,28 @@ internal class ScreenshotsStep(
                 "hits" to JsonPrimitive(hits.size),
                 "search_query" to JsonPrimitive(query),
                 "search_query_source" to JsonPrimitive(source),
-                "search_index" to JsonPrimitive(region?.id ?: "active"),
-                "top_hit" to (place?.name?.let(::JsonPrimitive) ?: JsonNull),
-                "top_hit_lat" to (place?.position?.latitude?.let(::JsonPrimitive) ?: JsonNull),
-                "top_hit_lon" to (place?.position?.longitude?.let(::JsonPrimitive) ?: JsonNull),
-                "top_hit_inside_bbox" to JsonPrimitive(insideLabel(inside)),
+                "search_sections" to JsonPrimitive(context.container.searchIndexes.state.value.indexes.size),
+                "top_hit" to (top?.name?.let(::JsonPrimitive) ?: JsonNull),
+                "top_hit_lat" to (top?.position?.latitude?.let(::JsonPrimitive) ?: JsonNull),
+                "top_hit_lon" to (top?.position?.longitude?.let(::JsonPrimitive) ?: JsonNull),
+                "top_hit_inside_bbox" to JsonPrimitive(insideLabel(insideTop)),
+                "opened_hit" to (opened?.name?.let(::JsonPrimitive) ?: JsonNull),
+                "opened_hit_region" to (opened?.regionBuild?.let(::JsonPrimitive) ?: JsonNull),
+                "opened_hit_inside_bbox" to JsonPrimitive(insideLabel(insideOpened)),
                 "region_bbox" to (bboxText?.let(::JsonPrimitive) ?: JsonNull),
             ),
         )
         MapChromeSession.requestSearch(false)
-        if (place == null) {
-            skipScene("place_card", "every hit is a coordinate row")
+        if (opened == null) {
+            skipScene("place_card", "every hit is a coordinate or online row")
             return
         }
         val shown =
             context.command(
                 "core.place.card_show",
                 buildJsonObject {
-                    put("id", place.id)
-                    context.region?.id?.let { put("index", it) }
+                    put("id", opened.id)
+                    put("index", opened.regionBuild)
                 },
             )
         if (shown is Outcome.Failure) {
@@ -249,34 +259,32 @@ internal class ScreenshotsStep(
     }
 
     /**
-     * The section the query named and whether the mounted packs hold it. A
-     * download with no usable section is named here instead of blaming the
-     * query.
+     * What the query searched and whether the mounted packs hold the downloaded
+     * region's section. A download with no usable section is named here instead
+     * of blaming the query.
      */
     private suspend fun searchIndexNote(): String {
         context.container.startSearchIndexes()
         val set = context.container.searchIndexes.state.value
+        val names = set.indexes.joinToString { index -> index.name }.ifEmpty { "none" }
         val region = context.region
-        if (region != null) {
-            val section = set.indexes.firstOrNull { it.name == region.id }
-            val state =
-                when {
-                    section == null -> "missing from the mounted packs"
-                    section.directory.isDirectory -> "present"
-                    else -> "missing on disk"
-                }
-            return "the search path was asked for index \"${region.id}\" at " +
-                "${section?.directory?.path ?: "no directory"}: $state, ${searchPartNote()}"
-        }
-        val active = set.active
-        if (active != null) {
-            val state = if (active.directory.isDirectory) "present" else "missing"
-            return "no region was downloaded; the search path reads the active pack's section, " +
-                "index \"${active.name}\" at ${active.directory.path}: $state, ${searchPartNote()}"
-        }
-        val root = context.container.places.externalIndexRoot()
-        return "no mounted pack has a search section; the external search root is " +
-            "${root?.path ?: "absent"}, no index name is selected, ${searchPartNote()}"
+        val regionPart =
+            if (region != null) {
+                val section = set.indexes.firstOrNull { it.name == region.id }
+                val state =
+                    when {
+                        section == null -> "missing from the mounted packs"
+                        section.directory.isDirectory -> "present"
+                        else -> "missing on disk"
+                    }
+                "region \"${region.id}\" is $state at " +
+                    "${section?.directory?.path ?: "no directory"}"
+            } else {
+                val root = context.container.places.externalIndexRoot()
+                "no region was downloaded; the external search root is " +
+                    "${root?.path ?: "absent"}"
+            }
+        return "the query searched every mounted section [$names], $regionPart, ${searchPartNote()}"
     }
 
     private suspend fun plannerScene() {

@@ -229,8 +229,10 @@ import nl.r1a.grassmap.ui.shell.R as ShellStrings
 
 private val STANDARD_STYLE_PLUGIN = PluginId("style.standard")
 private val TOURING_STYLE_PLUGIN = PluginId("style.touring")
-private val STANDARD = StyleId("standard")
-private val TOURING = StyleId("touring")
+internal val STANDARD = StyleId("standard")
+internal val STANDARD_DARK = StyleId("standard-dark")
+internal val TOURING = StyleId("touring")
+internal val TOURING_DARK = StyleId("touring-dark")
 private const val TAG = "GrassMapsMap"
 private const val BAR_PADDING_DP = 16
 
@@ -267,11 +269,14 @@ private fun metresPerDp(
     zoom: Double,
 ): Double = WebMercator.EQUATOR_METERS_PER_PIXEL * cos(Math.toRadians(point.latitude)) / 2.0.pow(zoom)
 
-internal data class MapBundle(
-    val style: StyleSpec,
+/** One style variant and its layers, loaded once for the screen's lifetime. */
+internal data class MapStyle(
+    val spec: StyleSpec,
     val layers: List<SlottedLayer>,
-    val touring: StyleSpec,
-    val touringLayers: List<SlottedLayer>,
+)
+
+internal data class MapBundle(
+    val styles: Map<StyleId, MapStyle>,
     val sources: MapSources,
 )
 
@@ -285,7 +290,7 @@ internal fun MapScreen(
     // navigation fixture's own theme, or the system night mode (T-0612).
     val fixture by container.navigationScreenFixture.state.collectAsState()
     val themeOverride by container.darkTheme.collectAsState()
-    GrassMapsTheme(dark = fixture?.dark ?: themeOverride ?: isSystemInDarkTheme()) {
+    GrassMapsTheme(dark = isDarkTheme(fixture?.dark, themeOverride, isSystemInDarkTheme())) {
         MapScreenContent(container = container, harness = harness)
     }
 }
@@ -333,7 +338,7 @@ private fun MapScreenContent(
         }
     val surface =
         rememberMapSurface(
-            initialStyle = loaded.style,
+            initialStyle = loaded.styles.getValue(STANDARD).spec,
             initialCamera = loaded.sources.camera,
             sourceResolver = { loaded.sources.uri(it) },
             ageLabel = ageLabel,
@@ -521,8 +526,10 @@ private fun MapContent(
     val managerVisible by PluginManagerScreenSession.visible.collectAsState()
     val backupVisible by BackupScreenSession.visible.collectAsState()
     val styleChoice by container.mapStyleSettings.active.collectAsState()
-    val activeStyle = if (styleChoice == MapStyleChoice.TOURING) bundle.touring else bundle.style
-    val activeLayers = if (styleChoice == MapStyleChoice.TOURING) bundle.touringLayers else bundle.layers
+    val dark = LocalShellColors.current.dark
+    val active = bundle.styles.getValue(mapStyleId(styleChoice, dark))
+    val activeStyle = active.spec
+    val activeLayers = active.layers
     val switchStates by container.privacyStates.collectAsState(initial = container.privacySwitchStates())
     val onlineTilesEnabled = switchStates.firstOrNull { it.switch == NetworkSwitches.onlineTiles }?.enabled == true
     val rasterLayer by container.rasterSettings.active.collectAsState()
@@ -768,7 +775,6 @@ private fun MapContent(
             navigationFixture?.let { fixture -> navigationSheet = fixture.sheet }
         }
     }
-    val dark = LocalShellColors.current.dark
     val drawnRoute = remember(plan.selected) { plan.selectedRoute() }
     // The trip's route while navigating, the planned one otherwise. The state
     // stream is read inside the effect, so a fix does not recompose the screen;
@@ -782,7 +788,7 @@ private fun MapContent(
             }
         routes.distinctUntilChanged().collect { activeRoute ->
             container.routeLayer
-                .draw(mapRouteToDraw(navigationActive, activeRoute, drawnRoute), routeLineDrawing(navigationActive))
+                .draw(mapRouteToDraw(navigationActive, activeRoute, drawnRoute), routeLineDrawing(navigationActive, dark))
                 .onFailure { error -> Log.w(TAG, "route not drawn: $error") }
         }
     }
@@ -2769,13 +2775,19 @@ private suspend fun loadBundle(
     container.startSearchIndexes()
     val sources = MapSources.resolve(context, container.regionsRoot)
     val standard = loadStyle(container, STANDARD_STYLE_PLUGIN, STANDARD) ?: return null
-    // A missing Touring plugin leaves Trail drawing the Standard style.
+    // A missing Touring plugin leaves Trail drawing the Standard style, and a
+    // missing dark variant keeps its light variant rather than no map.
+    val standardDark = loadStyle(container, STANDARD_STYLE_PLUGIN, STANDARD_DARK) ?: standard
     val touring = loadStyle(container, TOURING_STYLE_PLUGIN, TOURING) ?: standard
+    val touringDark = loadStyle(container, TOURING_STYLE_PLUGIN, TOURING_DARK) ?: touring
     return MapBundle(
-        style = standard.first,
-        layers = standard.second,
-        touring = touring.first,
-        touringLayers = touring.second,
+        styles =
+            mapOf(
+                STANDARD to standard,
+                STANDARD_DARK to standardDark,
+                TOURING to touring,
+                TOURING_DARK to touringDark,
+            ),
         sources = sources,
     )
 }
@@ -2784,12 +2796,12 @@ private suspend fun loadStyle(
     container: AppContainer,
     plugin: PluginId,
     styleId: StyleId,
-): Pair<StyleSpec, List<SlottedLayer>>? {
+): MapStyle? {
     val result =
         container.providerRegistry.invoke(plugin, MapLayerContract.REFERENCE) { provider ->
             val mapLayers = provider as? MapLayerProvider ?: return@invoke null
             val style = mapLayers.styles().firstOrNull { it.id == styleId } ?: return@invoke null
-            style to mapLayers.layers(style.id)
+            MapStyle(style, mapLayers.layers(style.id))
         }
     return (result as? Outcome.Success)?.value
 }
@@ -2798,14 +2810,17 @@ private suspend fun loadStyle(
  * The line the map draws over the route. An active guidance session draws the
  * canon's one plain line (round 5's navigation screen); the slope and surface
  * read belongs to inspecting a planned route, so only that state carries it.
- * The map loads the light Standard style, so the read takes the light round-10
- * palette; a night map would pass its own theme here.
+ * The read takes the same theme as the map, so a night map gets the round-10
+ * dark palette.
  */
-internal fun routeLineDrawing(navigationActive: Boolean): RouteLineDrawing =
+internal fun routeLineDrawing(
+    navigationActive: Boolean,
+    dark: Boolean,
+): RouteLineDrawing =
     if (navigationActive) {
         RouteLineDrawing.Plain
     } else {
-        RouteLineDrawing.Coloured(mode = RouteColourMode.Slope, dark = false)
+        RouteLineDrawing.Coloured(mode = RouteColourMode.Slope, dark = dark)
     }
 
 /**

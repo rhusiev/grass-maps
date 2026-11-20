@@ -830,7 +830,11 @@ covers the map's centre on a phone. The button (`plugins/layers-panel`) is view
 state. The card it opens starts with the map
 styles card, two radio rows: Meadow (Standard, "Everyday and city") and Trail
 (Touring, "Cycling and hiking"). The choice is stored in `settings/style.json`
-(`{"style":"touring"}`) and a missing or unknown value means Standard. The
+(`{"style":"touring"}`) and a missing or unknown value means Standard. Night
+mode is not a third choice: the map loads the chosen style's dark variant when
+the shell is dark, so Meadow becomes Meadow dark and Trail becomes Trail dark.
+The system night mode decides by default. The debug-only `core.theme.set` pin,
+or a navigation screen fixture, takes precedence over it for captures. The
 switches inside the other cards are stored state too.
 
 The label language and size (T-0110) are two more host settings, stored in

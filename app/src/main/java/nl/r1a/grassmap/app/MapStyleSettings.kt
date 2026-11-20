@@ -8,10 +8,38 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmap.plugin.api.model.StyleId
 import nl.r1a.grassmap.plugins.layers.panel.ActiveStyleState
 import nl.r1a.grassmap.plugins.layers.panel.MapStyleChoice
 import java.io.File
 import java.io.IOException
+
+/**
+ * The theme the shell and the map share: a capture fixture first, then the
+ * debug pin (`core.theme.set`), then the system night mode. The default follows
+ * the system; only a debug build can pin it.
+ */
+internal fun isDarkTheme(
+    fixture: Boolean?,
+    override: Boolean?,
+    systemDark: Boolean,
+): Boolean = fixture ?: override ?: systemDark
+
+/**
+ * The style variant the map draws for [choice] in [dark]. Route preview, the
+ * Stops sheet and every other state share one map screen, so this one function
+ * decides the variant for all of them.
+ */
+internal fun mapStyleId(
+    choice: MapStyleChoice,
+    dark: Boolean,
+): StyleId =
+    StyleId(
+        when (choice) {
+            MapStyleChoice.STANDARD -> if (dark) "standard-dark" else "standard"
+            MapStyleChoice.TOURING -> if (dark) "touring-dark" else "touring"
+        },
+    )
 
 /**
  * The map style the user picked in the layers panel (T-0109). It lives in the

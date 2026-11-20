@@ -55,13 +55,12 @@ internal class DebugMapHarness(
                             Log.i(TAG, "switch-start")
                             repeat(styleSwitches) { index ->
                                 val touring = index % 2 == 0
-                                val style = if (touring) bundle.touring else bundle.style
-                                val layers = if (touring) bundle.touringLayers else bundle.layers
-                                surface.host.setStyle(style).onFailure { error ->
+                                val style = bundle.styles.getValue(if (touring) TOURING else STANDARD)
+                                surface.host.setStyle(style.spec).onFailure { error ->
                                     Log.w(TAG, "style rejected: $error")
                                 }
                                 surface.host
-                                    .applyStyleDiff(StyleDiff(style.id, layers))
+                                    .applyStyleDiff(StyleDiff(style.spec.id, style.layers))
                                     .onFailure { error ->
                                         Log.w(TAG, "style diff rejected: $error")
                                     }

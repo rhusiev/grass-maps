@@ -31,11 +31,11 @@ class RouteLineDrawingTest {
             val layer = RouteLayer(host = { host })
             val route = gradedRoute()
 
-            layer.draw(route, routeLineDrawing(navigationActive = true))
+            layer.draw(route, routeLineDrawing(navigationActive = true, dark = false))
 
             assertFalse("guidance draws one plain line", host.routeStyles.single().isColoured)
 
-            layer.draw(route, routeLineDrawing(navigationActive = false))
+            layer.draw(route, routeLineDrawing(navigationActive = false, dark = false))
 
             val planned = host.routeStyles.last()
             assertEquals(
@@ -51,11 +51,11 @@ class RouteLineDrawingTest {
             val layer = RouteLayer(host = { host })
             val route = gradedRoute()
 
-            layer.draw(route, routeLineDrawing(navigationActive = false))
+            layer.draw(route, routeLineDrawing(navigationActive = false, dark = false))
             assertEquals(route.geometry.size, layer.drawnPointCount)
             assertEquals(1, layer.acceptedDrawCount)
 
-            layer.draw(null, routeLineDrawing(navigationActive = false))
+            layer.draw(null, routeLineDrawing(navigationActive = false, dark = false))
             assertEquals(0, layer.drawnPointCount)
             assertEquals(2, layer.acceptedDrawCount)
         }
@@ -66,13 +66,28 @@ class RouteLineDrawingTest {
             val host = FakeMapHost(Camera(center = GeoPoint(49.84, 24.03), zoom = 14.0))
             val layer = RouteLayer(host = { host })
             val route = gradedRoute()
-            layer.draw(route, routeLineDrawing(navigationActive = false))
+            layer.draw(route, routeLineDrawing(navigationActive = false, dark = false))
             host.routeOutcome = Outcome.Failure(AppError.NotReady)
 
-            layer.draw(null, routeLineDrawing(navigationActive = false))
+            layer.draw(null, routeLineDrawing(navigationActive = false, dark = false))
 
             assertEquals(route.geometry.size, layer.drawnPointCount)
             assertEquals(1, layer.acceptedDrawCount)
+        }
+
+    @Test
+    fun aNightMapReadsTheRound10DarkPalette() =
+        runTest {
+            val host = FakeMapHost(Camera(center = GeoPoint(49.84, 24.03), zoom = 14.0))
+            val layer = RouteLayer(host = { host })
+
+            layer.draw(gradedRoute(), routeLineDrawing(navigationActive = false, dark = true))
+
+            val planned = host.routeStyles.last()
+            assertEquals(
+                RouteRound10Palette.slopeColours(dark = true)[RouteRound10Palette.slopeBin(GRADE_PERCENT)],
+                planned.runs.single().colour,
+            )
         }
 
     /** One run over the whole line, so the read would colour it if asked. */

@@ -52,6 +52,9 @@ class ButtonLayoutStore(
         if (!isValid(layout)) {
             return Outcome.Failure(AppError.InvalidInput)
         }
+        if (hasNewerSchema()) {
+            return failure("the file has a newer schema")
+        }
         val profiles = readProfiles() + (profileId.value to layout)
         return writeProfiles(profiles)
     }
@@ -73,7 +76,7 @@ class ButtonLayoutStore(
             return null
         }
         val root = Json.parseToJsonElement(target.readText()) as? JsonObject ?: return null
-        if ((root[VERSION] as? JsonPrimitive)?.content?.toIntOrNull()?.let { it > SCHEMA_VERSION } == true) {
+        if (isNewerSchema(root)) {
             return null
         }
         val profiles = root[PROFILES] as? JsonObject ?: return null
@@ -83,6 +86,26 @@ class ButtonLayoutStore(
                 if (!isValid(layout)) null else id to layout
             }.toMap()
     }
+
+    private fun hasNewerSchema(): Boolean {
+        val target = file ?: return false
+        if (!target.isFile) {
+            return false
+        }
+        return try {
+            val root = Json.parseToJsonElement(target.readText()) as? JsonObject ?: return false
+            isNewerSchema(root)
+        } catch (exception: IOException) {
+            false
+        } catch (exception: SerializationException) {
+            false
+        } catch (exception: SecurityException) {
+            false
+        }
+    }
+
+    private fun isNewerSchema(root: JsonObject): Boolean =
+        (root[VERSION] as? JsonPrimitive)?.content?.toIntOrNull()?.let { it > SCHEMA_VERSION } == true
 
     private fun readLayout(value: JsonElement): MapButtonLayout? =
         when (value) {

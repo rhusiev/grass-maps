@@ -127,13 +127,16 @@ class ButtonLayoutStoreTest {
     }
 
     @Test
-    fun aNewerSchemaReadsAsTheDefaultAndIsNotOverwrittenByALoad() {
+    fun aNewerSchemaReadsAsTheDefaultAndIsNotOverwrittenByASave() {
         directory.mkdirs()
         val document = """{"version":3,"profiles":{"default":{"slots":[]}}}"""
         file.writeText(document)
         val store = ButtonLayoutStore(file)
 
         assertEquals(MapButtonLayout.DEFAULT, store.load(ProfileId("default")))
+        val result = store.save(ProfileId("default"), MapButtonLayout.DEFAULT)
+
+        assertTrue(result is Outcome.Failure)
         assertEquals(document, file.readText())
     }
 

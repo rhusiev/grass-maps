@@ -9,6 +9,7 @@ import nl.r1a.grassmap.plugin.api.model.PlaceCard
 import nl.r1a.grassmap.plugin.api.provider.PlaceCardContract
 import nl.r1a.grassmap.plugin.api.provider.PlaceCardProvider
 import nl.r1a.grassmap.plugin.api.provider.PlaceDetails
+import nl.r1a.grassmap.plugin.api.provider.PlaceHit
 import nl.r1a.grassmap.plugins.share.ShareCard
 
 private val OSM_PLACES = PluginId("osm.places")
@@ -23,6 +24,8 @@ private const val MISSING_CARD_PROVIDER = "places.card"
  * it is, and the card provider is never asked. The provider maps tags; the
  * coordinate rows and the share, copy and open-in buttons need the point and
  * the identity the same details carry, so [ShareCard] adds them here (T-0210).
+ * An online hit has no details record, so [card] builds that card from the hit
+ * alone (T-0212).
  */
 class PlaceCardAccess(
     private val details: suspend (indexName: String, placeId: String, cancellation: CancellationHandle) -> Outcome<PlaceDetails>,
@@ -60,6 +63,13 @@ class PlaceCardAccess(
                 }
             }
         }
+
+    /**
+     * The card for an online search hit (T-0212). It is built from the hit
+     * alone, so this path never calls the injected details lookup, never asks
+     * the provider registry and makes no network request.
+     */
+    fun card(hit: PlaceHit): Outcome<PlaceCard> = Outcome.Success(onlinePlaceCard(hit))
 }
 
 /**
@@ -71,13 +81,26 @@ class PlaceCardAccess(
 internal suspend fun AppContainer.showPlaceCard(
     index: String,
     placeId: String,
-): Outcome<PlaceCard> {
-    val access =
-        PlaceCardAccess(
-            details = { indexName, id, cancellation -> places.details(indexName, id, cancellation) },
-            providers = { providerRegistry },
-        )
-    return when (val outcome = access.card(index, placeId, CancellationHandle.None)) {
+): Outcome<PlaceCard> =
+    showCard(
+        placeCardAccess().card(index, placeId, CancellationHandle.None),
+    )
+
+/**
+ * Resolves and shows the card for an online search hit (T-0212). The card is
+ * built from the hit itself, so opening it makes no details call and contacts
+ * no network.
+ */
+internal fun AppContainer.showPlaceCard(hit: PlaceHit): Outcome<PlaceCard> = showCard(placeCardAccess().card(hit))
+
+private fun AppContainer.placeCardAccess(): PlaceCardAccess =
+    PlaceCardAccess(
+        details = { indexName, id, cancellation -> places.details(indexName, id, cancellation) },
+        providers = { providerRegistry },
+    )
+
+private fun showCard(outcome: Outcome<PlaceCard>): Outcome<PlaceCard> =
+    when (outcome) {
         is Outcome.Failure -> {
             outcome
         }
@@ -87,4 +110,3 @@ internal suspend fun AppContainer.showPlaceCard(
             outcome
         }
     }
-}

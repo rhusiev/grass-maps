@@ -15,6 +15,8 @@ import nl.r1a.grassmap.plugin.api.model.PlaceCardValue
 import nl.r1a.grassmap.plugin.api.provider.Place
 import nl.r1a.grassmap.plugin.api.provider.PlaceCardContract
 import nl.r1a.grassmap.plugin.api.provider.PlaceDetails
+import nl.r1a.grassmap.plugin.api.provider.PlaceHit
+import nl.r1a.grassmap.plugin.api.provider.PlaceSource
 import nl.r1a.grassmap.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -82,6 +84,7 @@ class PlaceCardAccessTest {
                 ),
                 card.shortcuts.map { it.link.action },
             )
+            assertFalse("an offline card must not carry the online mark", card.online)
             assertTrue(
                 card.shortcuts
                     .first { it.link.action == PlaceCardAction.SHARE }
@@ -112,6 +115,38 @@ class PlaceCardAccessTest {
         }
 
     @Test
+    fun anOnlineCardIsBuiltWithoutADetailsCallOrTheProviderRegistry() =
+        runTest {
+            var detailsCalls = 0
+            var providersAsked = false
+            val access =
+                PlaceCardAccess(
+                    details = { _, _, _ ->
+                        detailsCalls += 1
+                        Outcome.Failure(AppError.NotFound)
+                    },
+                    providers = {
+                        providersAsked = true
+                        container(testScheduler).providerRegistry
+                    },
+                )
+
+            val card = (access.card(onlineHit()) as Outcome.Success).value
+
+            assertEquals(0, detailsCalls)
+            assertFalse(providersAsked)
+            assertTrue(card.online)
+            assertEquals(
+                listOf(
+                    PlaceCardAction.COPY_COORDINATES,
+                    PlaceCardAction.SHARE,
+                    PlaceCardAction.OPEN_IN,
+                ),
+                card.shortcuts.map { it.link.action },
+            )
+        }
+
+    @Test
     fun aPlaceWithNoTagsStillProducesACard() =
         runTest {
             val access =
@@ -135,6 +170,18 @@ class PlaceCardAccessTest {
             dispatchers = CommandDispatchers(main = dispatcher, default = dispatcher, io = dispatcher),
         )
     }
+
+    private fun onlineHit(): PlaceHit =
+        PlaceHit(
+            id = "photon:node/42",
+            name = "Кав'ярня Левада",
+            kind = "amenity=cafe",
+            position = GeoPoint(49.821740, 24.023910),
+            address = "вул. Стрийська 45",
+            regionBuild = "photon",
+            score = 1.0f,
+            source = PlaceSource.ONLINE,
+        )
 
     private fun details(tags: Map<String, String>): PlaceDetails =
         PlaceDetails(

@@ -30,12 +30,55 @@ object ShareCard {
      * `geo:` URI. An absent point means there is nothing to act on, so no
      * shortcut is drawn.
      */
-    fun shortcuts(details: PlaceDetails): List<PlaceCardShortcut> {
-        val point = details.place.position
+    fun shortcuts(details: PlaceDetails): List<PlaceCardShortcut> =
+        shortcutsFor(
+            name = details.place.name,
+            identity = ShareLinks.identityOf(details.osmType, details.osmId),
+            point = details.place.position,
+        )
+
+    /** [card] with the coordinate rows and the shortcuts for [details]. */
+    fun decorate(
+        card: PlaceCard,
+        details: PlaceDetails,
+    ): PlaceCard =
+        decorated(
+            card = card,
+            name = details.place.name,
+            identity = ShareLinks.identityOf(details.osmType, details.osmId),
+            point = details.place.position,
+        )
+
+    /**
+     * [card] with the coordinate rows and the point actions for an online hit
+     * (T-0212). The hit has no canonical OSM identity, so its share message
+     * carries the `geo:` URI for the point instead of an osm.org element.
+     */
+    fun decoratePoint(
+        card: PlaceCard,
+        name: String?,
+        point: GeoPoint,
+    ): PlaceCard = decorated(card, name, identity = null, point)
+
+    private fun decorated(
+        card: PlaceCard,
+        name: String?,
+        identity: PlaceIdentity?,
+        point: GeoPoint,
+    ): PlaceCard =
+        card.copy(
+            coordinates = coordinates(point),
+            shortcuts = shortcutsFor(name, identity, point),
+        )
+
+    private fun shortcutsFor(
+        name: String?,
+        identity: PlaceIdentity?,
+        point: GeoPoint,
+    ): List<PlaceCardShortcut> {
         if (!point.isFinite()) {
             return emptyList()
         }
-        val identity = ShareLinks.identityOf(details.osmType, details.osmId)
         return listOf(
             PlaceCardShortcut(
                 labelKey = COPY_COORDINATES_LABEL_KEY,
@@ -46,25 +89,15 @@ object ShareCard {
                 link =
                     PlaceCardLink(
                         PlaceCardAction.SHARE,
-                        placeMessage(details.place.name, identity, point),
+                        placeMessage(name, identity, point),
                     ),
             ),
             PlaceCardShortcut(
                 labelKey = OPEN_IN_LABEL_KEY,
-                link = PlaceCardLink(PlaceCardAction.OPEN_IN, ShareLinks.geoUri(point, details.place.name)),
+                link = PlaceCardLink(PlaceCardAction.OPEN_IN, ShareLinks.geoUri(point, name)),
             ),
         )
     }
-
-    /** [card] with the coordinate rows and the shortcuts for [details]. */
-    fun decorate(
-        card: PlaceCard,
-        details: PlaceDetails,
-    ): PlaceCard =
-        card.copy(
-            coordinates = coordinates(details.place.position),
-            shortcuts = shortcuts(details),
-        )
 
     /**
      * The message a place share carries: the name when there is one, the

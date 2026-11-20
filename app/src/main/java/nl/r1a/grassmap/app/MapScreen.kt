@@ -1176,11 +1176,18 @@ private fun MapContent(
                             }
                             // A coordinate row is a point, not a place: there is no card
                             // behind it, so the map moves and no card is opened (T-0206).
-                            // An online row has no offline record either, so it moves the
-                            // map and opens no card (T-0212). The card opens the section
-                            // that produced the hit, which may not be the active one.
-                            if (hit != null && !hit.isCoordinate && hit.source != PlaceSource.ONLINE) {
-                                container.showPlaceCard(hit.regionBuild, placeId).onFailure { error ->
+                            // An online row has no offline record either, so its card is
+                            // built from the hit itself and makes no details call (T-0212).
+                            // An offline card opens the section that produced the hit,
+                            // which may not be the active one.
+                            if (hit != null && !hit.isCoordinate) {
+                                val shown =
+                                    if (hit.source == PlaceSource.ONLINE) {
+                                        container.showPlaceCard(hit)
+                                    } else {
+                                        container.showPlaceCard(hit.regionBuild, placeId)
+                                    }
+                                shown.onFailure { error ->
                                     Log.w(TAG, "search result card failed: $error")
                                 }
                             }

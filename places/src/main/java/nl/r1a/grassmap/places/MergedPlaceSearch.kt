@@ -4,22 +4,19 @@ import kotlinx.coroutines.delay
 import nl.r1a.grassmap.plugin.api.error.AppError
 import nl.r1a.grassmap.plugin.api.error.Outcome
 import nl.r1a.grassmap.plugin.api.provider.PlaceHit
-import java.util.Locale
-import kotlin.math.cos
-import kotlin.math.sqrt
 
 /**
- * One search over the offline index and, when the user allowed it, the online
- * provider (T-0212).
+ * One search over the offline indexes and, when the user allowed it, the online
+ * provider (T-0212, T-0633).
  *
- * Ordering is a contract: offline rows keep the order the index produced and
- * online rows follow them. An online row that repeats an earlier row is
- * dropped. "Repeats" means the same normalized name within
+ * Ordering is a contract: offline rows keep the order the offline merge
+ * produced and online rows follow them. An online row that repeats an earlier
+ * row is dropped. "Repeats" means the same normalized name within
  * [DUPLICATE_RADIUS_METERS]; the first row wins, so the offline record and its
  * details stay the one the screen opens.
  *
  * When an online half will follow, the offline rows are published through
- * [SearchScreenRequest.onPartial] as soon as the index answers, so the
+ * [SearchScreenRequest.onPartial] as soon as the offline half answers, so the
  * debounce never gates the first paint. The online provider then waits
  * [debounceMillis], which coalesces a burst of keystrokes into one request.
  * With online search off there is no second half, so the one ordinary result
@@ -100,9 +97,6 @@ class MergedPlaceSearch(
          */
         const val DUPLICATE_RADIUS_METERS: Double = 75.0
 
-        private const val METERS_PER_DEGREE_LATITUDE = 111_320.0
-        private val SEPARATORS = Regex("[^\\p{L}\\p{N}]+")
-
         /**
          * The merge rule, exposed for the test and for callers that need to
          * explain it: offline order first, online rows appended unless an
@@ -126,30 +120,11 @@ class MergedPlaceSearch(
             existing: PlaceHit,
             candidate: PlaceHit,
         ): Boolean {
-            val name = normalizeName(existing.name)
-            if (name.isEmpty() || name != normalizeName(candidate.name)) {
+            val name = PlaceMatching.normalizedName(existing.name)
+            if (name.isEmpty() || name != PlaceMatching.normalizedName(candidate.name)) {
                 return false
             }
-            return distanceMeters(existing, candidate) <= DUPLICATE_RADIUS_METERS
-        }
-
-        private fun normalizeName(name: String): String =
-            name
-                .lowercase(Locale.ROOT)
-                .replace(SEPARATORS, " ")
-                .trim()
-
-        private fun distanceMeters(
-            first: PlaceHit,
-            second: PlaceHit,
-        ): Double {
-            val meanLatitude = Math.toRadians((first.position.latitude + second.position.latitude) / 2.0)
-            val latitude = (second.position.latitude - first.position.latitude) * METERS_PER_DEGREE_LATITUDE
-            val longitude =
-                (second.position.longitude - first.position.longitude) *
-                    METERS_PER_DEGREE_LATITUDE *
-                    cos(meanLatitude)
-            return sqrt(latitude * latitude + longitude * longitude)
+            return PlaceMatching.distanceMeters(existing.position, candidate.position) <= DUPLICATE_RADIUS_METERS
         }
     }
 }

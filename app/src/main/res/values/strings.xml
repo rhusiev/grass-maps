@@ -221,7 +221,7 @@
     </plurals>
     <string name="map_update_channel_name">Map updates</string>
     <string name="map_update_channel_description">Tells you when maps update in the background</string>
-    <string name="map_update_applies_at_next_start">The maps apply the next time you start the app</string>
+    <string name="map_update_applies_at_next_start">Elevation uses the new maps the next time you start the app</string>
     <plurals name="map_update_installed">
         <item quantity="one">%1$d map updated</item>
         <item quantity="other">%1$d maps updated</item>

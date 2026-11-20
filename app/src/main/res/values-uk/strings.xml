@@ -226,7 +226,7 @@
     </plurals>
     <string name="map_update_channel_name">Оновлення мап</string>
     <string name="map_update_channel_description">Повідомляє, коли мапи оновлюються у фоні</string>
-    <string name="map_update_applies_at_next_start">Мапи застосуються під час наступного запуску застосунку</string>
+    <string name="map_update_applies_at_next_start">Висоти використають нові мапи під час наступного запуску застосунку</string>
     <plurals name="map_update_installed">
         <item quantity="one">Оновлено %1$d мапу</item>
         <item quantity="few">Оновлено %1$d мапи</item>

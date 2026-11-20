@@ -12,9 +12,9 @@ import nl.r1a.grassmap.regions.AutoUpdateNotifier
 
 /**
  * Posts the notice for the monthly map update (T-0508). The text says whether
- * the new maps are installed or wait for Wi-Fi, and that they apply at the
- * next start. On Android 13 and later the post is silently dropped while the
- * user has not granted the notification permission.
+ * the new maps are installed or wait for Wi-Fi, and that elevation uses them
+ * at the next start. On Android 13 and later the post is silently dropped
+ * while the user has not granted the notification permission.
  */
 class AndroidAutoUpdateNotifier(
     private val context: Context,

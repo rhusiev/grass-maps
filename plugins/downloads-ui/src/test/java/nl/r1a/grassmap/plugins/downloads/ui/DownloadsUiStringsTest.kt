@@ -38,6 +38,18 @@ class DownloadsUiStringsTest {
         }
     }
 
+    /**
+     * The plugin name is the plural of the glossary's `мапа`, not `карта`
+     * (T-0634).
+     */
+    @Test
+    fun thePluginNameUsesTheGlossaryTerm() {
+        val value = resources(UKRAINIAN).getValue("plugin.downloads_ui.name")
+
+        assertTrue("plugin name: $value", "Мапи" in value)
+        assertFalse("plugin name: $value", "Карти" in value)
+    }
+
     @Test
     fun theServerSeesSentenceNamesWhatLeavesThePhone() {
         val english = resources(ENGLISH).getValue("downloads_server_sees")

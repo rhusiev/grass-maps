@@ -1,5 +1,5 @@
 alerts	67
-app	633
+app	634
 control	47
 core	51
 core-services	191
@@ -13,13 +13,13 @@ plugins/contours	18
 plugins/coordinates	11
 plugins/dev-tools	4
 plugins/direct-engine	25
-plugins/downloads-ui	57
+plugins/downloads-ui	58
 plugins/example	1
 plugins/favourites-ui	42
 plugins/gpx	33
-plugins/guidance-ui	17
+plugins/guidance-ui	18
 plugins/info-widgets	31
-plugins/layers-panel	5
+plugins/layers-panel	6
 plugins/links	63
 plugins/map-controls	20
 plugins/nav-simulator	12

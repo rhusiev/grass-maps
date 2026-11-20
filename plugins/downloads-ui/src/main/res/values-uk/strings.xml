@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="plugin.downloads_ui.name">Карти</string>
+    <string name="plugin.downloads_ui.name">Мапи</string>
     <string name="plugin.downloads_ui.description">Показує сервер карт, його регіони та їхні частини й завантажує їх.</string>
 
     <string name="downloads_title">Мапи</string>

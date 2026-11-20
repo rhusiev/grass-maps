@@ -111,7 +111,7 @@
     <string name="route_planner_missing_problem">Не вдалося завантажити. Перевірте з\'єднання й спробуйте ще раз</string>
     <string name="route_planner_missing_part_line">%1$s: %2$s</string>
     <string name="route_planner_missing_region_fallback">Регіон</string>
-    <string name="route_planner_missing_part_map">Карта</string>
+    <string name="route_planner_missing_part_map">Мапа</string>
     <string name="route_planner_missing_part_search">Пошук</string>
     <string name="route_planner_missing_part_elevation">Висоти</string>
     <string name="route_planner_missing_part_routing">Маршрутизація</string>

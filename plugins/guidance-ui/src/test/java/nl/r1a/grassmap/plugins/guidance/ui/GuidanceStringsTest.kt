@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.plugins.guidance.ui
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -30,6 +31,18 @@ class GuidanceStringsTest {
         for (key in KEYS) {
             assertTrue("$key is missing from the English bundle", key in english)
         }
+    }
+
+    /**
+     * The description names the via point with the glossary's family of
+     * `проміжна точка`, not the transit `зупинка` (T-0634).
+     */
+    @Test
+    fun theDescriptionUsesTheViaPointTerm() {
+        val value = resources(UKRAINIAN).getValue(GuidanceStrings.PLUGIN_DESCRIPTION)
+
+        assertTrue("plugin description: $value", "проміжну точку" in value)
+        assertFalse("plugin description: $value", "зупинку" in value)
     }
 
     private fun resources(path: String): Map<String, String> =

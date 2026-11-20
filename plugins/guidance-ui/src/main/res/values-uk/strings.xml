@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="plugin.guidance_ui.name">Панель підказок</string>
-    <string name="plugin.guidance_ui.description">Показує наступні повороти та наступну зупинку під час руху маршрутом.</string>
+    <string name="plugin.guidance_ui.description">Показує наступні повороти та наступну проміжну точку під час руху маршрутом.</string>
     <string name="guidance_panel_next_stop">Наступна проміжна точка</string>
     <string name="guidance_panel_arrive">Прибуття до пункту призначення</string>
     <string name="guidance_panel_arrived">Прибули</string>

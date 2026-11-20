@@ -43,10 +43,6 @@
     <string name="control_edit_done_label">Готово</string>
     <string name="control_edit_description">Змінити кнопки</string>
     <string name="control_edit_done_description">Завершити редагування кнопок</string>
-    <string name="control_move_left_label">&#8249;</string>
-    <string name="control_move_left_description">Перемістити ліворуч</string>
-    <string name="control_move_right_label">&#8250;</string>
-    <string name="control_move_right_description">Перемістити праворуч</string>
     <string name="map_region_needs_redownload">Дані мапи потребують повторного завантаження</string>
     <string name="dev_tools_title">Інструменти розробника</string>
     <string name="dev_tools_replay_active">Відтворення: увімкнено</string>

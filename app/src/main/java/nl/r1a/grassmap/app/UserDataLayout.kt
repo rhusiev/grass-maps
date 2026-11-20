@@ -22,6 +22,9 @@ internal object UserDataLayout {
     const val ALERT_SETTINGS_PATH = "$PROFILES_DIRECTORY/alerts.json"
     const val WIDGET_LAYOUT_PATH = "$PROFILES_DIRECTORY/widgets.json"
 
+    /** The map control layout of every profile (T-0606); still the pre-profile file location. */
+    const val BUTTON_LAYOUT_PATH = "controls/button-layout.json"
+
     /** The unversioned files the profile stores migrate from, removed once the new file is verified. */
     const val LEGACY_ROUTING_OPTIONS_PATH = "settings/routing-options.json"
     const val LEGACY_ALERT_SETTINGS_PATH = "settings/alerts.json"

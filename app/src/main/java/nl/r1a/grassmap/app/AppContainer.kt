@@ -33,6 +33,7 @@ import nl.r1a.grassmap.core.PluginHost
 import nl.r1a.grassmap.core.ProviderRegistry
 import nl.r1a.grassmap.core.SetPluginEnabledCommand
 import nl.r1a.grassmap.core.StreamRegistry
+import nl.r1a.grassmap.core.services.ButtonLayoutStore
 import nl.r1a.grassmap.core.services.DEFAULT_PROFILE
 import nl.r1a.grassmap.core.services.DeviceInfo
 import nl.r1a.grassmap.core.services.Diagnostics
@@ -540,6 +541,32 @@ class AppContainer(
                 scope = processScope,
                 ioDispatcher = Dispatchers.IO,
                 onFailure = { message -> Log.w(WIDGET_TAG, message) },
+            )
+        }
+
+    /**
+     * The map control layout of every profile (T-0606). It keeps the file the
+     * order-only editor used, so a saved layout and its location survive.
+     */
+    val buttonLayoutStore: ButtonLayoutStore by lazy {
+        ButtonLayoutStore(userDataRootProvider()?.let { root -> File(root, UserDataLayout.BUTTON_LAYOUT_PATH) })
+    }
+
+    private val buttonControllers = ConcurrentHashMap<ProfileId, ButtonLayoutController>()
+
+    /**
+     * The map control layout controller of [profile] (T-0606). It lives as long
+     * as the process, so a save the bar requested just before it left the
+     * composition still finishes.
+     */
+    internal fun buttonLayoutController(profile: ProfileId): ButtonLayoutController =
+        buttonControllers.getOrPut(profile) {
+            ButtonLayoutController(
+                store = buttonLayoutStore,
+                profile = profile,
+                scope = processScope,
+                ioDispatcher = Dispatchers.IO,
+                onFailure = { message -> Log.w(BUTTON_LAYOUT_TAG, message) },
             )
         }
 

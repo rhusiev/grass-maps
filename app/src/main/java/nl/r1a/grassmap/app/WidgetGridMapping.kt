@@ -16,7 +16,6 @@ import nl.r1a.grassmap.ui.shell.WidgetGridLabels
 import nl.r1a.grassmap.ui.shell.WidgetGridStrings
 import nl.r1a.grassmap.ui.shell.WidgetLayout
 import nl.r1a.grassmap.ui.shell.WidgetLine
-import nl.r1a.grassmap.ui.shell.WidgetOption
 import java.util.Locale
 
 /** The latest value of every stream the grid shows. A null stream value means no reading yet. */
@@ -49,22 +48,13 @@ internal fun widgetCells(
         .map { widget -> widgetCell(widget, readings, strings, locale, units) }
         .filter { cell -> isEditing || cell.lines.isNotEmpty() }
 
-/** The widgets that are not in [layout], as the picker lists them. */
-internal fun widgetOptions(
-    layout: WidgetLayout,
-    strings: Strings,
-): List<WidgetOption> = layout.hidden.map { widget -> WidgetOption(widget, widgetTitle(widget, strings)) }
-
 /** The chrome text of the grid in edit mode. */
 internal fun widgetGridLabels(strings: Strings): WidgetGridLabels =
     WidgetGridLabels(
-        add = strings.resolve(WidgetGridStrings.ADD),
         addDescription = strings.resolve(WidgetGridStrings.ADD_DESCRIPTION),
-        notShown = strings.resolve(WidgetGridStrings.NOT_SHOWN),
         remove = { title -> strings.resolve(WidgetGridStrings.REMOVE_DESCRIPTION, listOf(title)) },
         moveEarlier = { title -> strings.resolve(WidgetGridStrings.MOVE_EARLIER_DESCRIPTION, listOf(title)) },
         moveLater = { title -> strings.resolve(WidgetGridStrings.MOVE_LATER_DESCRIPTION, listOf(title)) },
-        pick = { title -> strings.resolve(WidgetGridStrings.PICK_DESCRIPTION, listOf(title)) },
     )
 
 private fun widgetCell(
@@ -121,7 +111,7 @@ private fun widgetLines(
         }
     }
 
-private fun widgetTitle(
+internal fun widgetTitle(
     widget: GridWidget,
     strings: Strings,
 ): String =

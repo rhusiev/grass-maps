@@ -82,9 +82,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nl.r1a.grassmap.alerts.AlertKind
-import nl.r1a.grassmap.core.services.ButtonLayoutStore
-import nl.r1a.grassmap.core.services.DEFAULT_PROFILE
 import nl.r1a.grassmap.core.services.MapControlCommands
+import nl.r1a.grassmap.core.services.QuickAccessButton
 import nl.r1a.grassmap.core.services.UnitSettings
 import nl.r1a.grassmap.map.DistanceReadout
 import nl.r1a.grassmap.map.DistanceUnit
@@ -188,8 +187,12 @@ import nl.r1a.grassmap.ui.shell.ControlButton
 import nl.r1a.grassmap.ui.shell.FavouritesListsHost
 import nl.r1a.grassmap.ui.shell.FollowTrackSheet
 import nl.r1a.grassmap.ui.shell.GrassMapsTheme
+import nl.r1a.grassmap.ui.shell.GridWidget
 import nl.r1a.grassmap.ui.shell.LocalBottomChrome
 import nl.r1a.grassmap.ui.shell.MapControlBar
+import nl.r1a.grassmap.ui.shell.MapLayoutSheet
+import nl.r1a.grassmap.ui.shell.MapLayoutTab
+import nl.r1a.grassmap.ui.shell.MapQuickAccessButton
 import nl.r1a.grassmap.ui.shell.MapScaleBar
 import nl.r1a.grassmap.ui.shell.NavigationAlertSwitch
 import nl.r1a.grassmap.ui.shell.NavigationAnnouncement
@@ -216,22 +219,24 @@ import nl.r1a.grassmap.ui.shell.routePlanTurns
 import nl.r1a.grassmap.ui.shell.routeTurnStep
 import nl.r1a.grassmap.ui.shell.trackImportConfirmContent
 import nl.r1a.grassmap.ui.shell.trackImportNotice
-import java.io.File
 import java.time.ZoneId
 import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import nl.r1a.grassmap.plugins.layers.panel.R as LayersStrings
+import nl.r1a.grassmap.ui.shell.R as ShellStrings
 
 private val STANDARD_STYLE_PLUGIN = PluginId("style.standard")
 private val TOURING_STYLE_PLUGIN = PluginId("style.touring")
 private val STANDARD = StyleId("standard")
 private val TOURING = StyleId("touring")
 private const val TAG = "GrassMapsMap"
-private const val LAYOUT_DIRECTORY = "controls"
-private const val LAYOUT_FILE = "button-layout.json"
 private const val BAR_PADDING_DP = 16
+
+/** Clearance above the map credit and the Layers button when the arc is on. */
+private const val QUICK_ACCESS_BOTTOM_CLEARANCE_DP = 72
+private const val ARC_BOTTOM_CLEARANCE_DP = 120
 private const val WIDGET_GRID_GAP_DP = 8
 private const val BANNER_CORNER_DP = 8
 private const val BANNER_HORIZONTAL_DP = 16
@@ -469,24 +474,25 @@ private fun MapContent(
             }
         }
     }
-    val store by
-        produceState<ButtonLayoutStore?>(null) {
-            value =
-                withContext(Dispatchers.IO) {
-                    ButtonLayoutStore(
-                        File(context.applicationContext.filesDir, "$LAYOUT_DIRECTORY/$LAYOUT_FILE"),
-                    )
-                }
-        }
-    var layout by remember { mutableStateOf(MapControlCommands.DEFAULT_ORDER) }
+    var profile by remember(container) { mutableStateOf(container.alertSettings.activeProfileId()) }
+    val layoutController = remember(container, profile) { container.buttonLayoutController(profile) }
+    LaunchedEffect(layoutController) { layoutController.load() }
+    val layoutState by layoutController.state.collectAsState()
+    val layout = layoutState.layout
     var isEditing by remember { mutableStateOf(false) }
+    var layoutSheetTab by remember { mutableStateOf<MapLayoutTab?>(null) }
+    // The widget controller is the same instance the grid draws, so an edit
+    // from the sheet and one from the grid see the same layout.
+    val widgetController = remember(container, profile) { container.widgetLayoutController(profile) }
+    val widgetState by widgetController.state.collectAsState()
     var searchCardHeightPx by remember { mutableIntStateOf(0) }
     var controlBarWidthPx by remember { mutableIntStateOf(0) }
     // The bar's buttons and labels are built from the layout, the mode and the
     // strings, so a camera frame, a fix or a banner does not rebuild them.
     val controlBarButtons =
-        remember(layout, context, cameraMode) { controlButtons(layout, context, cameraMode) }
+        remember(layout, context, cameraMode) { layoutControlButtons(layout.slots, context, cameraMode) }
     val controlBarTexts = remember(context) { controlBarLabels(context) }
+    val layoutSheetLabels = remember(container.strings) { layoutSheetLabels(container.strings) }
     var distance by remember { mutableStateOf<DistanceReadout?>(null) }
     val placeCard by PlaceCardSession.card.collectAsState()
     val listsVisible by FavouritesListsSession.visible.collectAsState()
@@ -703,19 +709,6 @@ private fun MapContent(
             value = withContext(Dispatchers.IO) { container.unitSettings }
         }
     val units = unitStore?.units?.collectAsState()?.value ?: UnitSystem.Metric
-    val writer =
-        remember(store) {
-            store?.let { store ->
-                LayoutWriter(
-                    currentLayout = { layout },
-                    save = { layout -> withContext(Dispatchers.IO) { store.save(DEFAULT_PROFILE, layout) } },
-                )
-            }
-        }
-    LaunchedEffect(store) {
-        val active = store ?: return@LaunchedEffect
-        layout = withContext(Dispatchers.IO) { active.load(DEFAULT_PROFILE) }
-    }
     // The navigation engine publishes on every fix. This screen reads the
     // coarse gate below and nothing else, so a fix re-runs the navigation
     // overlay alone, not the map, the search, the planner and the track panels
@@ -729,6 +722,13 @@ private fun MapContent(
                 ::isNavigationActive,
             ).collect { active -> value = active }
         }
+    // A trip activates its profile. When the map is back, the bar and the
+    // widget grid reload the layout of the profile that is now active.
+    LaunchedEffect(navigationActive) {
+        if (!navigationActive) {
+            profile = container.alertSettings.activeProfileId()
+        }
+    }
     // The guidance camera belongs to the process, not this composition, so a
     // re-created Activity keeps the switches the user set for this trip. The
     // container collects navigation state into it; a fresh trip applies the
@@ -898,6 +898,7 @@ private fun MapContent(
                 container = container,
                 units = units,
                 isEditing = isEditing,
+                onOpenPicker = { layoutSheetTab = MapLayoutTab.Widgets },
                 modifier =
                     Modifier
                         .align(Alignment.TopStart)
@@ -1066,41 +1067,104 @@ private fun MapContent(
             }
         }
         if (!navigationActive) {
-            MapControlBar(
-                layout = controlBarButtons,
-                labels = controlBarTexts,
-                isEditing = isEditing,
-                onInvoke = { id ->
-                    scope.launch {
-                        container.commandBus.invoke(id).onFailure { error ->
-                            Log.w(TAG, "control $id failed: $error")
-                            if (error == AppError.PermissionDenied) {
-                                Toast.makeText(context, R.string.location_permission_denied, Toast.LENGTH_LONG).show()
+            val dispatchMapButton: (CommandId, JsonObject) -> Unit = { id, params ->
+                dispatchLayoutButton(
+                    id = id,
+                    parameters = params,
+                    invokeCommand = { command, commandParams ->
+                        scope.launch {
+                            container.commandBus.invoke(command, commandParams).onFailure { error ->
+                                Log.w(TAG, "control $command failed: $error")
+                                if (error == AppError.PermissionDenied) {
+                                    Toast.makeText(context, R.string.location_permission_denied, Toast.LENGTH_LONG).show()
+                                }
                             }
                         }
+                    },
+                    openSaved = { FavouritesListsSession.show() },
+                    openTracks = { TrackLibraryScreen.show() },
+                )
+            }
+            MapControlBar(
+                slots = controlBarButtons,
+                labels = controlBarTexts,
+                isEditing = isEditing,
+                arc = layout.arc,
+                onInvoke = { id -> dispatchMapButton(id, JsonObject(emptyMap())) },
+                onAdd = { layoutSheetTab = MapLayoutTab.Buttons },
+                onEditingChange = { editing ->
+                    isEditing = editing
+                    if (!editing) {
+                        layoutSheetTab = null
                     }
                 },
-                onMove = onMove@{ id, delta ->
-                    val activeWriter = writer ?: return@onMove
-                    val moved = moveControl(layout, id, delta)
-                    if (moved == layout) {
-                        return@onMove
-                    }
-                    layout = moved
-                    scope.launch {
-                        activeWriter.saveLatest().onFailure { error ->
-                            Log.w(TAG, "layout not saved: $error")
+                modifier =
+                    (
+                        if (layout.arc) {
+                            Modifier
+                                .align(Alignment.BottomEnd)
+                                .aboveBottomSheet()
+                                .padding(end = BAR_PADDING_DP.dp, bottom = ARC_BOTTOM_CLEARANCE_DP.dp)
+                        } else {
+                            Modifier
+                                .align(Alignment.TopEnd)
+                                .statusBarsPadding()
+                                .padding(BAR_PADDING_DP.dp)
                         }
+                    ).onSizeChanged { controlBarWidthPx = it.width },
+            )
+            MapQuickAccessButton(
+                button = layout.quickAccess?.let { binding -> controlButton(binding.command, context, cameraMode) },
+                isEditing = isEditing,
+                emptyDescription = context.getString(ShellStrings.string.map_layout_quick_access_description),
+                onClick = {
+                    val binding = layout.quickAccess
+                    if (isEditing || binding == null) {
+                        layoutSheetTab = MapLayoutTab.Buttons
+                    } else {
+                        dispatchMapButton(binding.command, binding.parameters)
                     }
                 },
-                onEditingChange = { isEditing = it },
                 modifier =
                     Modifier
-                        .align(Alignment.TopEnd)
-                        .statusBarsPadding()
-                        .padding(BAR_PADDING_DP.dp)
-                        .onSizeChanged { controlBarWidthPx = it.width },
+                        .align(Alignment.BottomStart)
+                        .aboveBottomSheet()
+                        .padding(start = BAR_PADDING_DP.dp, bottom = QUICK_ACCESS_BOTTOM_CLEARANCE_DP.dp),
             )
+        }
+        if (!navigationActive) {
+            layoutSheetTab?.let { tab ->
+                MapLayoutSheet(
+                    content = layoutSheetContent(layout, widgetState.layout, container.strings),
+                    tab = tab,
+                    labels = layoutSheetLabels,
+                    quickAccessTitle = layoutQuickAccessTitle(layout, container.strings),
+                    arc = layout.arc,
+                    onTab = { selected -> layoutSheetTab = selected },
+                    onItem = { item ->
+                        if (tab == MapLayoutTab.Widgets) {
+                            GridWidget.fromStorageKey(item.key)?.let { widget ->
+                                widgetController.edit { current ->
+                                    if (item.shown) current.remove(widget) else current.add(widget)
+                                }
+                            }
+                        } else {
+                            val id = CommandId(item.key)
+                            layoutController.edit { current ->
+                                if (item.shown) current.remove(id) else current.place(id)
+                            }
+                        }
+                    },
+                    onQuickAccess = { key ->
+                        layoutController.edit { current ->
+                            current.copy(quickAccess = key?.let { QuickAccessButton(CommandId(it)) })
+                        }
+                    },
+                    onArc = { on -> layoutController.edit { current -> current.copy(arc = on) } },
+                    onClose = { layoutSheetTab = null },
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
+            }
         }
         Column(
             modifier =
@@ -2444,37 +2508,8 @@ private fun logRoutePreferences(
     )
 }
 
-/** Moves one control by [delta] positions; an out-of-range move keeps the order. */
-internal fun moveControl(
-    layout: List<CommandId>,
-    id: CommandId,
-    delta: Int,
-): List<CommandId> {
-    val from = layout.indexOf(id)
-    if (from < 0) {
-        return layout
-    }
-    val to = from + delta
-    if (to !in layout.indices) {
-        return layout
-    }
-    return layout.toMutableList().apply {
-        add(to, removeAt(from))
-    }
-}
-
-private fun controlButtons(
-    layout: List<CommandId>,
-    context: Context,
-    mode: CameraMode,
-): List<ControlButton> {
-    val buttons = layout.mapNotNull { id -> controlButton(id, context, mode) }
-    return buttons.ifEmpty {
-        MapControlCommands.DEFAULT_ORDER.mapNotNull { controlButton(it, context, mode) }
-    }
-}
-
-private fun controlButton(
+/** Runs one map button; the app keeps the command bus and the map host. */
+internal fun controlButton(
     id: CommandId,
     context: Context,
     mode: CameraMode,
@@ -2513,6 +2548,22 @@ private fun controlButton(
                 id = id,
                 label = context.getString(R.string.control_route_planner_label),
                 contentDescription = context.getString(R.string.control_route_planner_description),
+            )
+        }
+
+        MapControlCommands.SAVED -> {
+            ControlButton(
+                id = id,
+                label = context.getString(ShellStrings.string.map_layout_saved_label),
+                contentDescription = context.getString(ShellStrings.string.map_layout_saved_content),
+            )
+        }
+
+        MapControlCommands.TRACKS -> {
+            ControlButton(
+                id = id,
+                label = context.getString(ShellStrings.string.map_layout_tracks_label),
+                contentDescription = context.getString(ShellStrings.string.map_layout_tracks_content),
             )
         }
 
@@ -2640,10 +2691,9 @@ private fun controlBarLabels(context: Context): ControlBarLabels =
         editDone = context.getString(R.string.control_edit_done_label),
         editDescription = context.getString(R.string.control_edit_description),
         editDoneDescription = context.getString(R.string.control_edit_done_description),
-        moveLeft = context.getString(R.string.control_move_left_label),
-        moveLeftDescription = context.getString(R.string.control_move_left_description),
-        moveRight = context.getString(R.string.control_move_right_label),
-        moveRightDescription = context.getString(R.string.control_move_right_description),
+        add = context.getString(ShellStrings.string.map_layout_add),
+        addDescription = context.getString(ShellStrings.string.map_layout_add_description),
+        emptySlotDescription = context.getString(ShellStrings.string.map_layout_add_description),
     )
 
 /** Runs one downloads command and logs a typed failure; the screen keeps its state. */

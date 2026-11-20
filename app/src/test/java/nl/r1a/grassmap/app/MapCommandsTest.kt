@@ -233,33 +233,8 @@ class MapCommandsTest {
         }
 
     @Test
-    fun moveControlSwapsWithTheNeighbour() {
-        val layout = MapControlCommands.DEFAULT_ORDER
-
-        assertEquals(
-            listOf(
-                MapControlCommands.ZOOM_OUT,
-                MapControlCommands.ZOOM_IN,
-                MapControlCommands.NORTH_UP,
-                MapControlCommands.FOLLOW,
-                MapControlCommands.ROUTE_PLANNER,
-            ),
-            moveControl(layout, MapControlCommands.ZOOM_IN, 1),
-        )
-    }
-
-    @Test
     fun thePlannerButtonUsesThePluginsCommandId() {
         assertEquals(RoutePlannerContract.begin, MapControlCommands.ROUTE_PLANNER)
-    }
-
-    @Test
-    fun moveControlKeepsTheOrderAtTheEnds() {
-        val layout = MapControlCommands.DEFAULT_ORDER
-
-        assertEquals(layout, moveControl(layout, MapControlCommands.ZOOM_IN, -1))
-        assertEquals(layout, moveControl(layout, MapControlCommands.ROUTE_PLANNER, 1))
-        assertEquals(layout, moveControl(layout, CommandId("core.map.missing"), 1))
     }
 
     private fun TestScope.commands(session: MapSessionHolder): List<Command<*, *>> {

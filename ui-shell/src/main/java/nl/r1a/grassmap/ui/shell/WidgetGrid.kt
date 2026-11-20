@@ -4,24 +4,23 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.liveRegion
@@ -51,21 +50,12 @@ data class WidgetCell(
     val clearDescription: String? = null,
 )
 
-/** A widget the picker offers: one that is not shown. */
-data class WidgetOption(
-    val widget: GridWidget,
-    val title: String,
-)
-
 /** The chrome text of the grid in edit mode. The widget [title] is the argument of each description. */
 data class WidgetGridLabels(
-    val add: String,
     val addDescription: String,
-    val notShown: String,
     val remove: (title: String) -> String,
     val moveEarlier: (title: String) -> String,
     val moveLater: (title: String) -> String,
-    val pick: (title: String) -> String,
 )
 
 /**
@@ -92,25 +82,23 @@ fun widgetAnnouncesValueChanges(widget: GridWidget): Boolean = widget == GridWid
 /**
  * The read-only info widgets at the top of the map. Outside edit mode it draws
  * the cells and nothing else. In edit mode every cell gets move-earlier,
- * move-later and remove actions, and a plus opens the list of the widgets that
- * are not shown. The widgets never move by themselves: a press changes the
- * layout through the callbacks and the host stores it.
+ * move-later and remove actions, and the empty slot opens the shared layout
+ * sheet. The widgets never move by themselves: a press changes the layout
+ * through the callbacks and the host stores it.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Suppress("ktlint:standard:function-naming")
 @Composable
 fun WidgetGrid(
     cells: List<WidgetCell>,
-    hidden: List<WidgetOption>,
     isEditing: Boolean,
     labels: WidgetGridLabels,
-    onAdd: (GridWidget) -> Unit,
     onRemove: (GridWidget) -> Unit,
     onMove: (GridWidget, Int) -> Unit,
     onClear: (GridWidget) -> Unit,
+    onOpenPicker: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var isPickerOpen by rememberSaveable { mutableStateOf(false) }
     if (cells.isEmpty() && !isEditing) {
         return
     }
@@ -131,37 +119,35 @@ fun WidgetGrid(
                     onClear = { onClear(cell.widget) },
                 )
             }
-            if (isEditing && hidden.isNotEmpty()) {
-                GridAction(labels.add, labels.addDescription, enabled = true) { isPickerOpen = !isPickerOpen }
+            if (isEditing) {
+                EmptyWidgetSlot(labels.addDescription, onOpenPicker)
             }
-        }
-        if (isEditing && isPickerOpen && hidden.isNotEmpty()) {
-            WidgetPicker(hidden, labels) { widget -> onAdd(widget) }
         }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Suppress("ktlint:standard:function-naming")
 @Composable
-private fun WidgetPicker(
-    hidden: List<WidgetOption>,
-    labels: WidgetGridLabels,
-    onPick: (GridWidget) -> Unit,
+private fun EmptyWidgetSlot(
+    description: String,
+    onOpenPicker: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier.glass(LocalShellColors.current).padding(CELL_PADDING_DP.dp),
-        verticalArrangement = Arrangement.spacedBy(GRID_GAP_DP.dp),
+    val colors = LocalShellColors.current
+    Box(
+        modifier =
+            Modifier
+                .height(EMPTY_SLOT_HEIGHT_DP.dp)
+                .padding(horizontal = GLYPH_PADDING_DP.dp)
+                .dashedRing(colors.faint, GRID_CORNER_DP.dp)
+                .clickable(role = Role.Button, onClick = onOpenPicker)
+                .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
     ) {
-        BasicText(labels.notShown, style = TextStyle(color = LocalShellColors.current.muted, fontSize = LABEL_FONT_SP.sp))
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(GRID_GAP_DP.dp),
-            verticalArrangement = Arrangement.spacedBy(GRID_GAP_DP.dp),
-        ) {
-            hidden.forEach { option ->
-                GridAction(option.title, labels.pick(option.title), enabled = true) { onPick(option.widget) }
-            }
-        }
+        BasicText(
+            text = ADD_GLYPH,
+            style = TextStyle(color = colors.muted, fontSize = GLYPH_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
+            modifier = Modifier.clearAndSetSemantics {},
+        )
     }
 }
 
@@ -264,30 +250,6 @@ private fun GridGlyph(
     )
 }
 
-@Suppress("ktlint:standard:function-naming")
-@Composable
-private fun GridAction(
-    text: String,
-    description: String,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    val shape = RoundedCornerShape(GRID_CORNER_DP.dp)
-    val colors = LocalShellColors.current
-    BasicText(
-        text = text,
-        style = TextStyle(color = colors.ink, fontSize = VALUE_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
-        modifier =
-            Modifier
-                .background(colors.glass, shape)
-                .border(1.dp, colors.ring, shape)
-                .clip(shape)
-                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-                .semantics { contentDescription = description }
-                .padding(horizontal = CELL_PADDING_DP.dp, vertical = CELL_VERTICAL_PADDING_DP.dp),
-    )
-}
-
 private fun Modifier.glass(colors: ShellColors): Modifier =
     this
         .background(colors.glass, RoundedCornerShape(GRID_CORNER_DP.dp))
@@ -297,8 +259,10 @@ private const val MOVE_EARLIER_GLYPH = "‹"
 private const val MOVE_LATER_GLYPH = "›"
 private const val REMOVE_GLYPH = "−"
 private const val CLEAR_GLYPH = "×"
+private const val ADD_GLYPH = "+"
 private const val GRID_GAP_DP = 6
 private const val GRID_CORNER_DP = 10
+private const val EMPTY_SLOT_HEIGHT_DP = 38
 private const val CELL_PADDING_DP = 10
 private const val CELL_VERTICAL_PADDING_DP = 6
 private const val GLYPH_PADDING_DP = 6

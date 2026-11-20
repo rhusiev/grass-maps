@@ -31,10 +31,10 @@ import java.nio.file.StandardCopyOption
  * A file written by the superseded order-only editor (a profile mapped to an
  * array of five command ids) is read as the first five slots of the six-slot
  * layout. A newer schema version reads as the default instead of being
- * overwritten.
+ * overwritten. A null file keeps the layout in memory only.
  */
 class ButtonLayoutStore(
-    private val file: File,
+    private val file: File?,
 ) {
     @Synchronized
     fun load(profileId: ProfileId): MapButtonLayout = readProfiles()[profileId.value] ?: MapButtonLayout.DEFAULT
@@ -68,10 +68,11 @@ class ButtonLayoutStore(
         }
 
     private fun readProfilesOrNull(): Map<String, MapButtonLayout>? {
-        if (!file.isFile) {
+        val target = file ?: return null
+        if (!target.isFile) {
             return null
         }
-        val root = Json.parseToJsonElement(file.readText()) as? JsonObject ?: return null
+        val root = Json.parseToJsonElement(target.readText()) as? JsonObject ?: return null
         if ((root[VERSION] as? JsonPrimitive)?.content?.toIntOrNull()?.let { it > SCHEMA_VERSION } == true) {
             return null
         }
@@ -101,7 +102,9 @@ class ButtonLayoutStore(
                 )
             }
 
-            else -> null
+            else -> {
+                null
+            }
         }
 
     private fun readSlots(array: JsonArray): List<CommandId?>? {
@@ -140,7 +143,8 @@ class ButtonLayoutStore(
     }
 
     private fun writeProfiles(profiles: Map<String, MapButtonLayout>): Outcome<Unit> {
-        val parent = file.parentFile ?: return failure("no parent directory")
+        val target = file ?: return Outcome.Success(Unit)
+        val parent = target.parentFile ?: return failure("no parent directory")
         return try {
             if (!parent.isDirectory && !parent.mkdirs()) {
                 return failure("cannot create $parent")
@@ -157,14 +161,14 @@ class ButtonLayoutStore(
                         },
                     )
                 }
-            val temporary = File(parent, file.name + TEMPORARY_SUFFIX)
+            val temporary = File(parent, target.name + TEMPORARY_SUFFIX)
             FileOutputStream(temporary).use { stream ->
                 stream.write(document.toString().toByteArray())
                 stream.fd.sync()
             }
             Files.move(
                 temporary.toPath(),
-                file.toPath(),
+                target.toPath(),
                 StandardCopyOption.ATOMIC_MOVE,
                 StandardCopyOption.REPLACE_EXISTING,
             )

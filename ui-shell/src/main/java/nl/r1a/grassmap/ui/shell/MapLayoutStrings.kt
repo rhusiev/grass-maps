@@ -1,0 +1,33 @@
+package nl.r1a.grassmap.ui.shell
+
+/** The string keys the map layout sheet and its hosts resolve. */
+object MapLayoutStrings {
+    const val BUTTONS_TAB = "map_layout_buttons_tab"
+    const val WIDGETS_TAB = "map_layout_widgets_tab"
+    const val CLOSE = "map_layout_close"
+    const val HINT_BUTTONS = "map_layout_hint_buttons"
+    const val HINT_WIDGETS = "map_layout_hint_widgets"
+    const val NOT_SHOWN = "map_layout_not_shown"
+    const val ON_SCREEN = "map_layout_on_screen"
+    const val ON_SCREEN_NOTE = "map_layout_on_screen_note"
+    const val QUICK_ACCESS = "map_layout_quick_access"
+    const val NONE = "map_layout_none"
+    const val QUICK_ACCESS_DESCRIPTION = "map_layout_quick_access_description"
+    const val ARC = "map_layout_arc"
+    const val ARC_DESCRIPTION = "map_layout_arc_description"
+    const val ADD = "map_layout_add"
+    const val ADD_DESCRIPTION = "map_layout_add_description"
+    const val PLACE_DESCRIPTION = "map_layout_place_description"
+    const val REMOVE_DESCRIPTION = "map_layout_remove_description"
+    const val BUTTON_ZOOM_IN = "map_layout_button_zoom_in"
+    const val BUTTON_ZOOM_OUT = "map_layout_button_zoom_out"
+    const val BUTTON_COMPASS = "map_layout_button_compass"
+    const val BUTTON_FOLLOW = "map_layout_button_follow"
+    const val BUTTON_ROUTE_PLANNER = "map_layout_button_route_planner"
+    const val BUTTON_SAVED = "map_layout_button_saved"
+    const val BUTTON_TRACKS = "map_layout_button_tracks"
+    const val SAVED_LABEL = "map_layout_saved_label"
+    const val SAVED_CONTENT = "map_layout_saved_content"
+    const val TRACKS_LABEL = "map_layout_tracks_label"
+    const val TRACKS_CONTENT = "map_layout_tracks_content"
+}

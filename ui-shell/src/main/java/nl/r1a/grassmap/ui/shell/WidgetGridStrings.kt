@@ -17,12 +17,9 @@ object WidgetGridStrings {
     const val SPEED_MAX_LABEL = "widget_grid_speed_max_label"
     const val ACCURACY = "widget_grid_accuracy"
     const val COORDINATES_VALUE = "widget_grid_coordinates_value"
-    const val ADD = "widget_grid_add"
     const val ADD_DESCRIPTION = "widget_grid_add_description"
-    const val NOT_SHOWN = "widget_grid_not_shown"
     const val REMOVE_DESCRIPTION = "widget_grid_remove_description"
     const val MOVE_EARLIER_DESCRIPTION = "widget_grid_move_earlier_description"
     const val MOVE_LATER_DESCRIPTION = "widget_grid_move_later_description"
     const val CLEAR_DESCRIPTION = "widget_grid_clear_description"
-    const val PICK_DESCRIPTION = "widget_grid_pick_description"
 }

@@ -37,6 +37,7 @@ internal fun WidgetGridHost(
     container: AppContainer,
     units: UnitSystem,
     isEditing: Boolean,
+    onOpenPicker: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val profile = remember(container) { container.alertSettings.activeProfileId() }
@@ -51,16 +52,14 @@ internal fun WidgetGridHost(
         remember(layout, readings, showsEdit, strings, units) {
             widgetCells(layout, readings, showsEdit, strings, Locale.getDefault(), units)
         }
-    val hidden = remember(layout, strings) { widgetOptions(layout, strings) }
     WidgetGrid(
         cells = cells,
-        hidden = hidden,
         isEditing = showsEdit,
         labels = remember(strings) { widgetGridLabels(strings) },
-        onAdd = { widget -> controller.edit { it.add(widget) } },
         onRemove = { widget -> controller.edit { it.remove(widget) } },
         onMove = { widget, delta -> controller.edit { it.move(widget, delta) } },
         onClear = { widget -> if (widget == GridWidget.SelectedPoint) container.selectedPoint.clear() },
+        onOpenPicker = onOpenPicker,
         modifier = modifier,
     )
 }

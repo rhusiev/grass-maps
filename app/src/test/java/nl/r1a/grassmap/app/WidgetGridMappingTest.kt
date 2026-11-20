@@ -103,12 +103,6 @@ class WidgetGridMappingTest {
         assertEquals(listOf(GridWidget.Altitude, GridWidget.SelectedPoint), cells(layout, true, empty).map { it.widget })
     }
 
-    @Test
-    fun optionsListTheWidgetsThatAreNotShown() {
-        val layout = WidgetLayout(GridWidget.entries - GridWidget.SpeedMax)
-        assertEquals(listOf(GridWidget.SpeedMax), widgetOptions(layout, KeyStrings).map { it.widget })
-    }
-
     private object KeyStrings : Strings {
         private val values =
             mapOf(

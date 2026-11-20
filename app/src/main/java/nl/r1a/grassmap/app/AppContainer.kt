@@ -553,6 +553,9 @@ class AppContainer(
      * profile's stored values, and every change is written back to that
      * profile. Way alerts (T-0319) and proximity alerts (T-0413) are the
      * producers; a trip activates its profile in [NavigationController.start].
+     * The host is attached once for the process to the published navigation
+     * state and to [alertFixes], so reroute, off-route, arrival and the
+     * retrospective signal gap reach it without a screen.
      */
     val alerts: AlertHost by lazy {
         AlertHost(
@@ -566,6 +569,7 @@ class AppContainer(
                 alertSettings.setActive(alertSettings.current().copy(channels = value))
             },
         ).also { host ->
+            host.attach(processScope, navigation.state, alertFixes(navigation.state, sharedLocation.fixes))
             processScope.launch {
                 withContext(Dispatchers.IO) { alertSettings.ensureLoaded() }
                 alertSettings.active.collect { profile -> host.replaceSettings(profile.settings, profile.channels) }

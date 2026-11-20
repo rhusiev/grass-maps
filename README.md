@@ -120,6 +120,61 @@ in dark mode; a run with the phone in dark mode captures the same scenes with da
 and `ui_night_mode` true in every record. `report.json` states the same. Profiles create/copy/reset, the widget
 grid and the plugin manager are listed in the report as not in this build.
 
+### Release signing
+
+Release signing reads four environment variables and nothing else. No password,
+keystore path or default value exists in the repository.
+
+| Variable | Value |
+|---|---|
+| `GRASSMAPS_KEYSTORE` | path to the release keystore, outside the repository |
+| `GRASSMAPS_KEYSTORE_PASSWORD` | the keystore password |
+| `GRASSMAPS_KEY_ALIAS` | the key alias, `grassmaps` |
+| `GRASSMAPS_KEY_PASSWORD` | the key password |
+
+With all four set, `:app:assembleRelease` signs the APK with that key. Without
+them it produces `app-release-unsigned.apk`, as it does on CI and in the
+reproducibility job, and the build log says the APK is unsigned. A partial set
+fails the build.
+
+`scripts/release/build-signed-apk.sh` is the release path. It builds the
+unsigned APK, zipaligns it, signs it with `apksigner`, verifies the signature
+and prints the certificate SHA-256 and the APK path. It refuses to run when a
+variable or the keystore is missing, and it never prints a password.
+
+```sh
+export GRASSMAPS_KEYSTORE=/path/to/release.jks
+export GRASSMAPS_KEYSTORE_PASSWORD=...   # from the password manager
+export GRASSMAPS_KEY_ALIAS=grassmaps
+export GRASSMAPS_KEY_PASSWORD=...
+./scripts/release/build-signed-apk.sh [OUTPUT_APK]
+```
+
+Without `OUTPUT_APK` the script writes
+`app/build/outputs/apk/release/grassmaps-release-signed.apk`.
+
+`./gradlew :app:checkReleaseSigning` is part of `./check.sh`. It fails when the
+release build type signs with the debug config while the variables are present,
+when it signs at all while they are absent, or when a password, a keystore file
+or a key path is committed. It checks the passphrase copy on this machine byte
+for byte and names only the file that contains it.
+
+The release certificate SHA-256 is
+`3fc003c4efbfb379b9c67b593dd9f9ab797f395473a0a2b64fc2425431f51ff0`.
+
+Key custody: the app has one release key, a 4096-bit RSA key valid until 2054
+that stays for the life of the app. Keep two offline backups of the keystore,
+on different media. Keep the passphrase in a password manager, never in the
+repository and never in the Nextcloud sync root. Do not regenerate the key for
+an update: Android refuses an update signed with another key, so a lost key
+forces every user to uninstall. One key per app; do not sign another app with
+it.
+
+F-Droid can later ship this signed APK instead of rebuilding it with its own
+key. In the app's F-Droid metadata, point `Binaries:` at the published release
+APK and put the certificate SHA-256 above in `AllowedAPKSigningKeys:`. Updates
+then keep the same signature.
+
 ### Rust core
 
 `rust/grass-core` is the offline search reader behind `PlaceProvider`. Gradle
@@ -202,9 +257,11 @@ which is the next slowest step; lint runs at pre-push and in CI, so a `--micro`
 run is iteration evidence only. The gate runs Spotless with ktlint from
 the root, Android lint, `:app:assembleDebug`, the JVM unit tests,
 `checkTranslations`, `checkPluginBoundaries`, `checkPluginManifests`,
-`lintStyleRules`, `:plugins:example:check`, `checkPrivacyGuards`, and two
-unsigned release builds at different paths compared byte for byte. The
-reproducibility script also runs `checkReleaseApkPlugins` and
+`lintStyleRules`, `:plugins:example:check`, `checkPrivacyGuards`,
+`:app:checkReleaseSigning`, and two unsigned release builds at different paths
+compared byte for byte. The reproducibility script removes the release signing
+variables, so the comparison is always over unsigned APKs. It also runs
+`checkReleaseApkPlugins` and
 `checkReleaseApkGuards` over the rebuilt release APK, so a development plugin,
 the debug control channel, the development tools or a region token in a release
 build fails the gate. Every module's executed test count is compared with

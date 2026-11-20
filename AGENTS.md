@@ -80,8 +80,8 @@ document, section 3, plus the build and module rules of this repository.
   rebuild and belongs to the full gate
 - Run the full gate `./check.sh` before merging. It takes the `gm-build` slot
   itself and runs format, lint, the build, unit tests, the plugin boundary and
-  manifest checks, the example plugin, the privacy guards and the
-  reproducibility check
+  manifest checks, the example plugin, the privacy guards, the release signing
+  guard and the reproducibility check
 - CI tiers the same way: the checks job runs `./check.sh --fast`, while
   reproducibility, the API 29 smoke, the API 29 native follower replay and the
   benchmark are separate jobs. The replay runs
@@ -99,6 +99,10 @@ document, section 3, plus the build and module rules of this repository.
 - Check plugin manifests: `./gradlew checkPluginManifests`
 - Check the privacy guards (dependency denylist and merged manifests):
   `./gradlew checkPrivacyGuards`
+- Release signing reads `GRASSMAPS_KEYSTORE`, `GRASSMAPS_KEYSTORE_PASSWORD`,
+  `GRASSMAPS_KEY_ALIAS` and `GRASSMAPS_KEY_PASSWORD` from the environment only.
+  Never commit a keystore, a password or a key path; `:app:checkReleaseSigning`
+  fails on one. Without the variables the release APK stays unsigned
 - The build uses Gradle 9.3.1, AGP 9.1.0 with built-in Kotlin, compileSdk 37,
   targetSdk 36 and minSdk 29. Do not apply the standalone Kotlin Android
   plugin; AGP 9 compiles Kotlin itself. The root buildscript upgrades the

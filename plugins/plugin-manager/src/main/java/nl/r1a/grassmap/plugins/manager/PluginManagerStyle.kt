@@ -1,17 +1,55 @@
 package nl.r1a.grassmap.plugins.manager
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
 
-internal val SURFACE = Color(0xFFF5F4F1)
-internal val CARD = Color(0xFFFFFFFF)
-internal val INK = Color(0xFF1F2329)
-internal val MUTED = Color(0xFF5D6168)
-internal val ACCENT = Color(0xFF1F7A4D)
-internal val DANGER = Color(0xFFB3261E)
-internal val DANGER_TINT = Color(0xFFFBE9E7)
-internal val BORDER = Color(0xFFE3E1DC)
-internal val SWITCH_OFF = Color(0xFFB9BCC1)
-internal val SCRIM = Color(0x66000000)
+internal val SURFACE: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.map
+
+internal val CARD: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.surface
+
+internal val INK: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.ink
+
+internal val MUTED: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.muted
+
+internal val ACCENT: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.accent
+
+internal val DANGER: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.danger
+
+internal val DANGER_TINT: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.danger.copy(alpha = DANGER_TINT_ALPHA)
+
+internal val BORDER: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.line
+
+internal val SWITCH_OFF: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.soft
+
+internal val SWITCH_LINE: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.offSwitchBorder
+
+internal val SCRIM: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.scrim
+
+private const val DANGER_TINT_ALPHA = 0.14f
 
 internal const val MAX_WIDTH_DP = 640
 internal const val SCREEN_PADDING_DP = 16
@@ -31,5 +69,6 @@ internal const val SWITCH_WIDTH_DP = 48
 internal const val SWITCH_HEIGHT_DP = 28
 internal const val SWITCH_KNOB_DP = 22
 internal const val SWITCH_INSET_DP = 3
+internal const val SWITCH_BORDER_DP = 2
 internal const val PILL_CORNER_DP = 24
 internal const val SHEET_CORNER_DP = 24

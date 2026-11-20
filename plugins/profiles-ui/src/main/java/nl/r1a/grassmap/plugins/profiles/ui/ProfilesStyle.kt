@@ -1,23 +1,79 @@
 package nl.r1a.grassmap.plugins.profiles.ui
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
 
-internal val SURFACE = Color(0xFFFFFFFF)
-internal val INK = Color(0xFF1F2329)
-internal val MUTED = Color(0xFF5D6168)
-internal val ACCENT = Color(0xFF1F7A4D)
-internal val ACCENT_TINT = Color(0xFFECF4EF)
-internal val ON_ACCENT = Color(0xFFFFFFFF)
-internal val NEUTRAL_BUTTON = Color(0xFFF1F0ED)
-internal val FIELD = Color(0xFFF1F0ED)
-internal val SCRIM = Color(0x66000000)
+internal val SURFACE: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.surface
+
+internal val INK: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.ink
+
+internal val MUTED: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.muted
+
+internal val ACCENT: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.accent
+
+internal val ACCENT_TINT: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.accent.copy(alpha = ACCENT_TINT_ALPHA)
+
+internal val ON_ACCENT: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.onAccent
+
+internal val NEUTRAL_BUTTON: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.soft
+
+internal val FIELD: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.soft
+
+internal val SCRIM: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.scrim
+
+internal val RADIO_OFF: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.offSwitchBorder
+
+/** A snackbar is the inverse surface in both themes, so it keeps one fixed pair. */
 internal val SNACKBAR = Color(0xFF33363B)
 internal val SNACKBAR_TEXT = Color(0xFFFFFFFF)
 internal val SNACKBAR_ACTION = Color(0xFF8FD5A8)
-internal val RADIO_OFF = Color(0xFF8A8D93)
+
+internal val TITLE_STYLE: TextStyle
+    @Composable @ReadOnlyComposable
+    get() = TextStyle(color = INK, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+
+internal val ROW_TITLE_STYLE: TextStyle
+    @Composable @ReadOnlyComposable
+    get() = TextStyle(color = INK, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+
+internal val BODY_STYLE: TextStyle
+    @Composable @ReadOnlyComposable
+    get() = TextStyle(color = MUTED, fontSize = 14.sp)
+
+internal val LABEL_STYLE: TextStyle
+    @Composable @ReadOnlyComposable
+    get() = TextStyle(color = MUTED, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+
+internal val BUTTON_STYLE: TextStyle
+    @Composable @ReadOnlyComposable
+    get() = TextStyle(color = INK, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+
+private const val ACCENT_TINT_ALPHA = 0.14f
 
 internal const val SCREEN_PADDING_DP = 20
 internal const val GAP_DP = 12
@@ -36,9 +92,3 @@ internal const val NAME_MAX_LENGTH = 40
 internal const val CHEVRON = "›"
 internal const val BACK_GLYPH = "‹"
 internal const val CHECK_GLYPH = "✓"
-
-internal val TITLE_STYLE = TextStyle(color = INK, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-internal val ROW_TITLE_STYLE = TextStyle(color = INK, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-internal val BODY_STYLE = TextStyle(color = MUTED, fontSize = 14.sp)
-internal val LABEL_STYLE = TextStyle(color = MUTED, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-internal val BUTTON_STYLE = TextStyle(color = INK, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)

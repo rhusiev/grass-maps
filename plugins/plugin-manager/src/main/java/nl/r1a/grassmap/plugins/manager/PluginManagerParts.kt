@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.plugins.manager
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmap.plugin.api.contract.PluginId
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -149,6 +151,7 @@ internal fun PluginSwitch(
                 .height(SWITCH_HEIGHT_DP.dp)
                 .clip(CircleShape)
                 .background(if (checked) ACCENT else SWITCH_OFF)
+                .border(SWITCH_BORDER_DP.dp, if (checked) ACCENT else SWITCH_LINE, CircleShape)
                 .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
                 .semantics { contentDescription = label },
     ) {
@@ -159,7 +162,7 @@ internal fun PluginSwitch(
                     .offset(x = (SWITCH_INSET_DP + if (checked) travel else 0).dp)
                     .size(SWITCH_KNOB_DP.dp)
                     .clip(CircleShape)
-                    .background(CARD),
+                    .background(if (checked) LocalShellColors.current.onAccent else CARD),
         )
     }
 }

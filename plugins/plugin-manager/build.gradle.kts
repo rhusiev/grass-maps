@@ -23,6 +23,7 @@ android {
 
 dependencies {
     implementation(project(":plugin-api"))
+    implementation(project(":plugin-ui-api"))
 
     implementation("org.jetbrains.compose.ui:ui:1.12.1")
     implementation("org.jetbrains.compose.foundation:foundation:1.12.1")

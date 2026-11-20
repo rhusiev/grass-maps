@@ -51,15 +51,31 @@ import nl.r1a.grassmap.app.backup.BackupUiController
 import nl.r1a.grassmap.app.backup.BackupUiState
 import nl.r1a.grassmap.core.services.backup.BundleConflictChoice
 import nl.r1a.grassmap.plugin.api.error.AppError
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
 
-private val SURFACE = Color(0xFFF5F4F1)
-private val INK = Color(0xFF1F2329)
-private val MUTED = Color(0xFF5D6168)
-private val ACCENT = Color(0xFF1F7A4D)
-private val BORDER = Color(0xFFE3E1DC)
-private val DANGER = Color(0xFFB3261E)
-private val SCRIM = Color(0xB3000000)
-private val CARD = Color(0xFFFFFFFF)
+private val SURFACE: Color
+    @Composable get() = LocalShellColors.current.map
+
+private val INK: Color
+    @Composable get() = LocalShellColors.current.ink
+
+private val MUTED: Color
+    @Composable get() = LocalShellColors.current.muted
+
+private val ACCENT: Color
+    @Composable get() = LocalShellColors.current.accent
+
+private val BORDER: Color
+    @Composable get() = LocalShellColors.current.line
+
+private val DANGER: Color
+    @Composable get() = LocalShellColors.current.danger
+
+private val SCRIM: Color
+    @Composable get() = LocalShellColors.current.scrim
+
+private val CARD: Color
+    @Composable get() = LocalShellColors.current.surface
 
 private const val TITLE_SP = 22
 private const val BODY_SP = 15
@@ -443,7 +459,7 @@ private fun ActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     background: Color = ACCENT,
-    foreground: Color = Color.White,
+    foreground: Color = LocalShellColors.current.onAccent,
 ) {
     Box(
         modifier =

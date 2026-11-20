@@ -38,6 +38,7 @@ import nl.r1a.grassmap.plugin.api.model.ProfileAction
 import nl.r1a.grassmap.plugin.api.model.ProfileActionKind
 import nl.r1a.grassmap.plugin.api.model.ProfileSummary
 import nl.r1a.grassmap.plugin.api.model.ProfilesState
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
 
 /**
  * The profiles screen (T-0602), drawn from the published state.
@@ -68,7 +69,7 @@ fun ProfilesScreenContent(
         run()
         actions += 1
     }
-    Box(modifier = modifier.fillMaxSize().background(SURFACE)) {
+    Box(modifier = modifier.fillMaxSize().background(LocalShellColors.current.map)) {
         Page(state, page, onNavigate, onReset = { profile -> act { onReset(profile) } })
         Notice(state.undo, state, actions, onUndo = { act(onUndo) })
         when (page) {

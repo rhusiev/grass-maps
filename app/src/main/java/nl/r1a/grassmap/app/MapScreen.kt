@@ -1116,7 +1116,7 @@ private fun MapContent(
             MapQuickAccessButton(
                 button = layout.quickAccess?.let { binding -> controlButton(binding.command, context, cameraMode) },
                 isEditing = isEditing,
-                emptyDescription = context.getString(ShellStrings.string.map_layout_quick_access_description),
+                emptyDescription = stringResource(ShellStrings.string.map_layout_quick_access_description),
                 onClick = {
                     val binding = layout.quickAccess
                     if (isEditing || binding == null) {

@@ -24,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusTarget
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -39,6 +38,8 @@ import androidx.compose.ui.unit.sp
 import nl.r1a.grassmap.plugin.api.model.PlaceCard
 import nl.r1a.grassmap.plugin.api.model.PlaceCardLink
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmap.plugin.ui.api.ShellColors
 
 /**
  * The place card host entry point (T-0208).
@@ -59,6 +60,7 @@ fun PlaceCardHost(
     modifier: Modifier = Modifier,
     onAction: (PlaceCardLink) -> Unit = {},
 ) {
+    val colors = LocalShellColors.current
     val content = card?.let { placeCardContent(it, strings) } ?: return
     if (content.isEmpty) {
         return
@@ -67,7 +69,7 @@ fun PlaceCardHost(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(SCRIM_COLOR)
+                .background(colors.scrim)
                 // Tapping outside the card closes it, but the scrim is not a
                 // control: a screen reader user closes the card with its own
                 // close button instead of an unlabeled full-screen button.
@@ -81,7 +83,7 @@ fun PlaceCardHost(
                 Modifier
                     .padding(CARD_MARGIN_DP.dp)
                     .widthIn(max = CARD_MAX_WIDTH_DP.dp)
-                    .background(CARD_BACKGROUND, RoundedCornerShape(CARD_CORNER_DP.dp))
+                    .background(colors.surface, RoundedCornerShape(CARD_CORNER_DP.dp))
                     .pointerInput(Unit) { detectTapGestures(onTap = {}) }
                     .padding(CARD_PADDING_DP.dp)
                     .verticalScroll(rememberScrollState())
@@ -90,28 +92,30 @@ fun PlaceCardHost(
                     .semantics { paneTitle = strings.resolve(PANE_TITLE_KEY) },
             verticalArrangement = Arrangement.spacedBy(SECTION_GAP_DP.dp),
         ) {
-            CardHeader(content = content, strings = strings, onClose = onClose)
-            content.kind?.let { Line(text = it, style = secondaryStyle()) }
-            content.address?.let { Line(text = it, style = secondaryStyle()) }
+            CardHeader(content = content, strings = strings, colors = colors, onClose = onClose)
+            content.kind?.let { Line(text = it, style = secondaryStyle(colors)) }
+            content.address?.let { Line(text = it, style = secondaryStyle(colors)) }
             content.openingHours?.let { row ->
-                LabeledRow(label = row.label, value = row.value, onAction = onAction)
+                LabeledRow(label = row.label, value = row.value, colors = colors, onAction = onAction)
             }
             content.openingState?.let { row ->
-                LabeledRow(label = row.label, value = row.value, onAction = onAction)
+                LabeledRow(label = row.label, value = row.value, colors = colors, onAction = onAction)
             }
             Section(
                 title = strings.resolve(COORDINATES_TITLE),
                 rows = content.coordinates,
+                colors = colors,
                 onAction = onAction,
             )
-            Section(title = strings.resolve(CONTACT_TITLE), rows = content.contacts, onAction = onAction)
+            Section(title = strings.resolve(CONTACT_TITLE), rows = content.contacts, colors = colors, onAction = onAction)
             Section(
                 title = strings.resolve(ACCESSIBILITY_TITLE),
                 rows = content.accessibility,
+                colors = colors,
                 onAction = onAction,
             )
-            Section(title = strings.resolve(DETAILS_TITLE), rows = content.attributes, onAction = onAction)
-            Shortcuts(shortcuts = content.shortcuts, onAction = onAction)
+            Section(title = strings.resolve(DETAILS_TITLE), rows = content.attributes, colors = colors, onAction = onAction)
+            Shortcuts(shortcuts = content.shortcuts, colors = colors, onAction = onAction)
         }
     }
 }
@@ -121,6 +125,7 @@ fun PlaceCardHost(
 private fun CardHeader(
     content: PlaceCardContent,
     strings: Strings,
+    colors: ShellColors,
     onClose: () -> Unit,
 ) {
     Row(
@@ -133,7 +138,7 @@ private fun CardHeader(
                 text = name,
                 style =
                     TextStyle(
-                        color = TEXT_PRIMARY,
+                        color = colors.ink,
                         fontSize = TITLE_FONT_SP.sp,
                         fontWeight = FontWeight.SemiBold,
                     ),
@@ -149,7 +154,7 @@ private fun CardHeader(
         ) {
             BasicText(
                 text = CLOSE_GLYPH,
-                style = TextStyle(color = TEXT_PRIMARY, fontSize = CLOSE_FONT_SP.sp),
+                style = TextStyle(color = colors.ink, fontSize = CLOSE_FONT_SP.sp),
                 modifier = Modifier.clearAndSetSemantics {},
             )
         }
@@ -161,6 +166,7 @@ private fun CardHeader(
 private fun Section(
     title: String,
     rows: List<PlaceCardRow>,
+    colors: ShellColors,
     onAction: (PlaceCardLink) -> Unit,
 ) {
     if (rows.isEmpty()) {
@@ -168,10 +174,10 @@ private fun Section(
     }
     BasicText(
         text = title,
-        style = TextStyle(color = TEXT_SECONDARY, fontSize = SECTION_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
+        style = TextStyle(color = colors.muted, fontSize = SECTION_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
     )
     rows.forEach { row ->
-        LabeledRow(label = row.label, value = row.value, link = row.link, onAction = onAction)
+        LabeledRow(label = row.label, value = row.value, link = row.link, colors = colors, onAction = onAction)
     }
 }
 
@@ -180,6 +186,7 @@ private fun Section(
 private fun LabeledRow(
     label: String,
     value: String,
+    colors: ShellColors,
     link: PlaceCardLink? = null,
     onAction: (PlaceCardLink) -> Unit = {},
 ) {
@@ -192,11 +199,11 @@ private fun LabeledRow(
         BasicText(
             text = label,
             modifier = Modifier.width(ROW_LABEL_WIDTH_DP.dp),
-            style = secondaryStyle(),
+            style = secondaryStyle(colors),
         )
         BasicText(
             text = value,
-            style = TextStyle(color = TEXT_PRIMARY, fontSize = ROW_FONT_SP.sp),
+            style = TextStyle(color = colors.ink, fontSize = ROW_FONT_SP.sp),
         )
     }
 }
@@ -206,6 +213,7 @@ private fun LabeledRow(
 @Composable
 private fun Shortcuts(
     shortcuts: List<PlaceCardShortcutRow>,
+    colors: ShellColors,
     onAction: (PlaceCardLink) -> Unit,
 ) {
     shortcuts.forEach { shortcut ->
@@ -213,7 +221,7 @@ private fun Shortcuts(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .background(ACTION_BACKGROUND, RoundedCornerShape(ACTION_CORNER_DP.dp))
+                    .background(colors.soft, RoundedCornerShape(ACTION_CORNER_DP.dp))
                     .clickable(role = Role.Button) { onAction(shortcut.link) }
                     .padding(ACTION_PADDING_DP.dp),
         ) {
@@ -221,7 +229,7 @@ private fun Shortcuts(
                 text = shortcut.label,
                 style =
                     TextStyle(
-                        color = TEXT_PRIMARY,
+                        color = colors.ink,
                         fontSize = ROW_FONT_SP.sp,
                         fontWeight = FontWeight.Medium,
                     ),
@@ -239,7 +247,7 @@ private fun Line(
     BasicText(text = text, style = style)
 }
 
-private fun secondaryStyle(): TextStyle = TextStyle(color = TEXT_SECONDARY, fontSize = ROW_FONT_SP.sp)
+private fun secondaryStyle(colors: ShellColors): TextStyle = TextStyle(color = colors.muted, fontSize = ROW_FONT_SP.sp)
 
 private const val CONTACT_TITLE = "place_card_contact"
 private const val ACCESSIBILITY_TITLE = "place_card_accessibility"
@@ -261,9 +269,3 @@ private const val TITLE_FONT_SP = 20
 private const val SECTION_FONT_SP = 13
 private const val ROW_FONT_SP = 15
 private const val CLOSE_FONT_SP = 20
-
-private val SCRIM_COLOR = Color(0x66000000)
-private val CARD_BACKGROUND = Color(0xF21B1B1B)
-private val ACTION_BACKGROUND = Color(0xFF2A2A2A)
-private val TEXT_PRIMARY = Color.White
-private val TEXT_SECONDARY = Color(0xFFB8B8B8)

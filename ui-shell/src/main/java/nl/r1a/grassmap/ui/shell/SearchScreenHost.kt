@@ -27,7 +27,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -45,6 +44,8 @@ import androidx.compose.ui.unit.sp
 import nl.r1a.grassmap.plugin.api.model.Camera
 import nl.r1a.grassmap.plugin.api.model.ScreenOffset
 import nl.r1a.grassmap.plugin.api.provider.PlaceHit
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmap.plugin.ui.api.ShellColors
 
 /**
  * The search screen (T-0203): one field for everything, the result list, and
@@ -94,6 +95,7 @@ fun SearchScreenHost(
     onAllowPosition: (Boolean) -> Unit = {},
     onCollapsedCardSize: (IntSize) -> Unit = {},
 ) {
+    val colors = LocalShellColors.current
     val labels =
         SearchScreenLabels(
             title = stringResource(R.string.search_title),
@@ -132,11 +134,11 @@ fun SearchScreenHost(
         if (!expanded) {
             BasicText(
                 text = content.labels.title,
-                style = TextStyle(color = TEXT_PRIMARY, fontSize = FIELD_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
+                style = TextStyle(color = colors.ink, fontSize = FIELD_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
                 modifier =
                     cardModifier
                         .onSizeChanged(onCollapsedCardSize)
-                        .background(PANEL_BACKGROUND, RoundedCornerShape(PANEL_CORNER_DP.dp))
+                        .background(colors.glass, RoundedCornerShape(PANEL_CORNER_DP.dp))
                         .clickable(role = Role.Button) { onExpandedChange(true) }
                         .padding(FIELD_PADDING_DP.dp),
             )
@@ -146,7 +148,7 @@ fun SearchScreenHost(
                 modifier =
                     cardModifier
                         .widthIn(max = PANEL_MAX_WIDTH_DP.dp)
-                        .background(PANEL_BACKGROUND, RoundedCornerShape(PANEL_CORNER_DP.dp))
+                        .background(colors.glass, RoundedCornerShape(PANEL_CORNER_DP.dp))
                         .padding(PANEL_PADDING_DP.dp),
                 verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
             ) {
@@ -163,18 +165,18 @@ fun SearchScreenHost(
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(onSearch = { onSubmit(typed) }),
-                        textStyle = TextStyle(color = TEXT_PRIMARY, fontSize = FIELD_FONT_SP.sp),
+                        textStyle = TextStyle(color = colors.ink, fontSize = FIELD_FONT_SP.sp),
                         modifier =
                             Modifier
                                 .weight(WEIGHT_ONE)
                                 .focusRequester(focusRequester)
-                                .background(FIELD_BACKGROUND, RoundedCornerShape(FIELD_CORNER_DP.dp))
+                                .background(colors.soft, RoundedCornerShape(FIELD_CORNER_DP.dp))
                                 .padding(FIELD_PADDING_DP.dp)
                                 .semantics { contentDescription = content.labels.hint },
                     )
                     BasicText(
                         text = CLOSE_GLYPH,
-                        style = TextStyle(color = TEXT_PRIMARY, fontSize = CLOSE_FONT_SP.sp),
+                        style = TextStyle(color = colors.ink, fontSize = CLOSE_FONT_SP.sp),
                         modifier =
                             Modifier
                                 .clickable(role = Role.Button) {
@@ -190,19 +192,19 @@ fun SearchScreenHost(
                     // drawn copy must not be a second announcement.
                     BasicText(
                         text = content.labels.hint,
-                        style = secondaryStyle(),
+                        style = secondaryStyle(colors),
                         modifier = Modifier.clearAndSetSemantics {},
                     )
                 }
                 if (content.loading && content.rows.isEmpty()) {
-                    BasicText(text = content.labels.loading, style = secondaryStyle())
+                    BasicText(text = content.labels.loading, style = secondaryStyle(colors))
                 }
                 content.online?.let { notice ->
-                    BasicText(text = notice.text, style = secondaryStyle())
+                    BasicText(text = notice.text, style = secondaryStyle(colors))
                     notice.action?.let { action ->
                         BasicText(
                             text = action,
-                            style = TextStyle(color = TEXT_PRIMARY, fontSize = DETAIL_FONT_SP.sp),
+                            style = TextStyle(color = colors.ink, fontSize = DETAIL_FONT_SP.sp),
                             modifier =
                                 Modifier
                                     .clickable(role = Role.Button) {
@@ -225,7 +227,7 @@ fun SearchScreenHost(
                         },
                     )
                 }
-                content.message?.let { message -> BasicText(text = message, style = secondaryStyle()) }
+                content.message?.let { message -> BasicText(text = message, style = secondaryStyle(colors)) }
             }
         }
     }
@@ -259,6 +261,7 @@ private fun SearchMarkerDot(
     if (!offset.visible) {
         return
     }
+    val colors = LocalShellColors.current
     Box(
         modifier =
             Modifier
@@ -268,7 +271,7 @@ private fun SearchMarkerDot(
                         y = offset.yDp.dp.roundToPx(),
                     )
                 }.size(MARKER_SIZE_DP.dp)
-                .background(MARKER_COLOR, RoundedCornerShape(MARKER_CORNER_DP.dp)),
+                .background(colors.categories.pin, RoundedCornerShape(MARKER_CORNER_DP.dp)),
     )
 }
 
@@ -279,6 +282,7 @@ private fun SearchResultRowContent(
     onlineBadge: String,
     onSelect: () -> Unit,
 ) {
+    val colors = LocalShellColors.current
     Column(
         modifier =
             Modifier
@@ -289,20 +293,20 @@ private fun SearchResultRowContent(
         Row(verticalAlignment = Alignment.CenterVertically) {
             BasicText(
                 text = row.name,
-                style = TextStyle(color = TEXT_PRIMARY, fontSize = ROW_FONT_SP.sp),
+                style = TextStyle(color = colors.ink, fontSize = ROW_FONT_SP.sp),
             )
             if (row.online) {
                 BasicText(
                     text = ONLINE_BADGE_SEPARATOR + onlineBadge,
-                    style = secondaryStyle(),
+                    style = secondaryStyle(colors),
                 )
             }
         }
-        row.detail?.let { detail -> BasicText(text = detail, style = secondaryStyle()) }
+        row.detail?.let { detail -> BasicText(text = detail, style = secondaryStyle(colors)) }
     }
 }
 
-private fun secondaryStyle(): TextStyle = TextStyle(color = TEXT_SECONDARY, fontSize = DETAIL_FONT_SP.sp)
+private fun secondaryStyle(colors: ShellColors): TextStyle = TextStyle(color = colors.muted, fontSize = DETAIL_FONT_SP.sp)
 
 private const val CLOSE_GLYPH = "×"
 private const val ONLINE_BADGE_SEPARATOR = " · "
@@ -322,9 +326,3 @@ private const val FIELD_FONT_SP = 16
 private const val ROW_FONT_SP = 15
 private const val DETAIL_FONT_SP = 13
 private const val CLOSE_FONT_SP = 20
-
-private val PANEL_BACKGROUND = Color(0xF21B1B1B)
-private val FIELD_BACKGROUND = Color(0xFF2B2B2B)
-private val TEXT_PRIMARY = Color.White
-private val TEXT_SECONDARY = Color(0xFFB8B8B8)
-private val MARKER_COLOR = Color(0xFF4FC3F7)

@@ -69,8 +69,14 @@
     <string name="map_scale_description">Scale bar</string>
     <string name="map_scale_metres">%1$s m</string>
     <string name="map_scale_kilometres">%1$s km</string>
-    <string name="map_scale_feet">%1$s ft</string>
-    <string name="map_scale_miles">%1$s mi</string>
+    <plurals name="map_scale_feet">
+        <item quantity="one">%1$s ft</item>
+        <item quantity="other">%1$s ft</item>
+    </plurals>
+    <plurals name="map_scale_miles">
+        <item quantity="one">%1$s mi</item>
+        <item quantity="other">%1$s mi</item>
+    </plurals>
 
     <string name="plugin.route_planner.name">Route planner</string>
     <string name="plugin.route_planner.description">Plans a route between two points and shows its time, distance and arrival.</string>
@@ -128,8 +134,10 @@
     <string name="route_planner_arrive">Arrive at the destination</string>
     <string name="route_planner_recent">Recent routes</string>
     <string name="route_planner_reuse">Use the route from %1$s</string>
-    <string name="route_warnings_count_one">1 warning on this route</string>
-    <string name="route_warnings_count_many">%1$s warnings on this route</string>
+    <plurals name="route_warnings_count">
+        <item quantity="one">%1$s warning on this route</item>
+        <item quantity="other">%1$s warnings on this route</item>
+    </plurals>
     <string name="route_warnings_title">On this route</string>
     <string name="route_warnings_scope">%1$s profile · %2$s, %3$s · by distance</string>
     <string name="route_warnings_back">Back</string>
@@ -176,10 +184,16 @@
     <string name="route_preview_hours_minutes">%1$s h %2$s min</string>
     <string name="unit_distance_metres">%1$s m</string>
     <string name="unit_distance_kilometres">%1$s km</string>
-    <string name="unit_distance_feet">%1$s ft</string>
+    <plurals name="unit_distance_feet">
+        <item quantity="one">%1$s ft</item>
+        <item quantity="other">%1$s ft</item>
+    </plurals>
     <string name="unit_distance_miles">%1$s mi</string>
     <string name="unit_elevation_metres">%1$s m</string>
-    <string name="unit_elevation_feet">%1$s ft</string>
+    <plurals name="unit_elevation_feet">
+        <item quantity="one">%1$s ft</item>
+        <item quantity="other">%1$s ft</item>
+    </plurals>
     <string name="unit_speed_kilometres_per_hour">km/h</string>
     <string name="unit_speed_miles_per_hour">mph</string>
     <string name="time_model_tobler_walk">Tobler walk</string>
@@ -188,9 +202,14 @@
     <string name="time_model_flat">Flat speed</string>
     <string name="track_import_one">Imported %1$s</string>
     <string name="track_import_one_unnamed">Imported 1 track</string>
-    <string name="track_import_many">Imported %1$s tracks</string>
-    <string name="track_import_skipped_one">1 part skipped</string>
-    <string name="track_import_skipped_many">%1$s parts skipped</string>
+    <plurals name="track_import_many">
+        <item quantity="one">Imported %1$s track</item>
+        <item quantity="other">Imported %1$s tracks</item>
+    </plurals>
+    <plurals name="track_import_skipped">
+        <item quantity="one">%1$s part skipped</item>
+        <item quantity="other">%1$s parts skipped</item>
+    </plurals>
     <string name="track_import_open">Open</string>
     <string name="track_import_not_a_track">This file is not a track Grass Maps can read</string>
     <string name="track_import_unreadable">The file could not be opened</string>
@@ -242,7 +261,10 @@
     <string name="backup_close">Close</string>
     <string name="backup_working">Working…</string>
     <string name="backup_counts_title">In this bundle</string>
-    <string name="backup_ready">Bundle ready: %1$d kinds, %2$d bytes.</string>
+    <plurals name="backup_ready">
+        <item quantity="one">Bundle ready: %1$d kind, %2$d bytes.</item>
+        <item quantity="other">Bundle ready: %1$d kinds, %2$d bytes.</item>
+    </plurals>
     <string name="backup_import_done">Added %1$d, replaced %2$d, kept %3$d.</string>
     <string name="backup_unknown_kind">Skipped a kind this build does not know: %1$s</string>
     <string name="backup_kind_failed">%1$s was not imported.</string>

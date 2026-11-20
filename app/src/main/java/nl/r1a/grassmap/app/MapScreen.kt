@@ -221,6 +221,7 @@ import java.time.ZoneId
 import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import nl.r1a.grassmap.plugins.layers.panel.R as LayersStrings
 
 private val STANDARD_STYLE_PLUGIN = PluginId("style.standard")
@@ -2368,10 +2369,21 @@ private fun scaleBarLabel(
 ): String {
     val value = formatScaleBarValue(reading.value)
     return when (reading.unit) {
-        ScaleBarUnit.Metres -> context.getString(R.string.map_scale_metres, value)
-        ScaleBarUnit.Kilometres -> context.getString(R.string.map_scale_kilometres, value)
-        ScaleBarUnit.Feet -> context.getString(R.string.map_scale_feet, value)
-        ScaleBarUnit.Miles -> context.getString(R.string.map_scale_miles, value)
+        ScaleBarUnit.Metres -> {
+            context.getString(R.string.map_scale_metres, value)
+        }
+
+        ScaleBarUnit.Kilometres -> {
+            context.getString(R.string.map_scale_kilometres, value)
+        }
+
+        ScaleBarUnit.Feet -> {
+            context.resources.getQuantityString(R.plurals.map_scale_feet, reading.value.roundToInt(), value)
+        }
+
+        ScaleBarUnit.Miles -> {
+            context.resources.getQuantityString(R.plurals.map_scale_miles, reading.value.roundToInt(), value)
+        }
     }
 }
 

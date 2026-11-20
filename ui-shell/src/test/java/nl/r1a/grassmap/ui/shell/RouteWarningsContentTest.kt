@@ -12,7 +12,7 @@ import java.util.Locale
 class RouteWarningsContentTest {
     @Test
     fun theRowCountsTheWarningsAndSummarisesTheKindsInDistanceOrder() {
-        val content = routeWarningsEntryContent(ROWS, MapStrings(ENGLISH))
+        val content = routeWarningsEntryContent(ROWS, MapStrings(ENGLISH, ENGLISH_PLURALS))
 
         assertEquals("3 warnings on this route", content?.title)
         assertEquals("Ford, private way, steps", content?.summary)
@@ -20,7 +20,7 @@ class RouteWarningsContentTest {
 
     @Test
     fun aSingleWarningReadsInTheSingular() {
-        val content = routeWarningsEntryContent(listOf(row(RouteWarningGlyph.Ford, 1200.0)), MapStrings(ENGLISH))
+        val content = routeWarningsEntryContent(listOf(row(RouteWarningGlyph.Ford, 1200.0)), MapStrings(ENGLISH, ENGLISH_PLURALS))
 
         assertEquals("1 warning on this route", content?.title)
         assertEquals("Ford", content?.summary)
@@ -28,7 +28,7 @@ class RouteWarningsContentTest {
 
     @Test
     fun noWarningsMeanNoRow() {
-        assertNull(routeWarningsEntryContent(emptyList(), MapStrings(ENGLISH)))
+        assertNull(routeWarningsEntryContent(emptyList(), MapStrings(ENGLISH, ENGLISH_PLURALS)))
     }
 
     @Test
@@ -40,7 +40,7 @@ class RouteWarningsContentTest {
                 row(RouteWarningGlyph.Ford, 300.0),
             )
 
-        val content = routeWarningsEntryContent(repeated, MapStrings(ENGLISH))
+        val content = routeWarningsEntryContent(repeated, MapStrings(ENGLISH, ENGLISH_PLURALS))
 
         assertEquals("3 warnings on this route", content?.title)
         assertEquals("Ford, steps", content?.summary)
@@ -48,15 +48,15 @@ class RouteWarningsContentTest {
 
     @Test
     fun theRowReadsInUkrainianAndLowercasesTheLaterKinds() {
-        val content = routeWarningsEntryContent(ROWS, MapStrings(UKRAINIAN))
+        val content = routeWarningsEntryContent(ROWS, MapStrings(UKRAINIAN, UKRAINIAN_PLURALS, "uk"))
 
-        assertEquals("Попереджень на маршруті: 3", content?.title)
+        assertEquals("3 попередження на маршруті", content?.title)
         assertEquals("Брід, приватна дорога, сходи", content?.summary)
     }
 
     @Test
     fun theListKeepsTheScannerOrderAndReadsKindDetailAndDistance() {
-        val content = routeWarningsSheetContent(RouteProfile.Bike, 1140.0, 4600.0, ROWS, MapStrings(ENGLISH))
+        val content = routeWarningsSheetContent(RouteProfile.Bike, 1140.0, 4600.0, ROWS, MapStrings(ENGLISH, ENGLISH_PLURALS))
 
         assertEquals("On this route", content.title)
         assertEquals("Bike profile · 19 min, 4.6 km · by distance", content.scope)
@@ -78,7 +78,7 @@ class RouteWarningsContentTest {
                 1140.0,
                 4600.0,
                 ROWS,
-                MapStrings(ENGLISH),
+                MapStrings(ENGLISH, ENGLISH_PLURALS),
                 units = UnitSystem.Imperial,
             )
 
@@ -88,7 +88,7 @@ class RouteWarningsContentTest {
 
     @Test
     fun aWalkOnStepsGetsNoPushTheBikeDetail() {
-        val content = routeWarningsSheetContent(RouteProfile.Walk, 900.0, 850.0, ROWS, MapStrings(ENGLISH))
+        val content = routeWarningsSheetContent(RouteProfile.Walk, 900.0, 850.0, ROWS, MapStrings(ENGLISH, ENGLISH_PLURALS))
 
         assertEquals(
             listOf(null, "access=private", null),
@@ -109,7 +109,7 @@ class RouteWarningsContentTest {
             )
 
         for ((glyph, label) in expected) {
-            assertEquals(label, routeWarningKindText(glyph, MapStrings(ENGLISH)))
+            assertEquals(label, routeWarningKindText(glyph, MapStrings(ENGLISH, ENGLISH_PLURALS)))
         }
     }
 
@@ -125,7 +125,7 @@ class RouteWarningsContentTest {
             )
 
         for ((glyph, label) in expected) {
-            assertEquals(label, routeWarningKindText(glyph, MapStrings(UKRAINIAN)))
+            assertEquals(label, routeWarningKindText(glyph, MapStrings(UKRAINIAN, UKRAINIAN_PLURALS, "uk")))
         }
     }
 
@@ -136,16 +136,33 @@ class RouteWarningsContentTest {
 
     private class MapStrings(
         private val values: Map<String, String>,
+        private val plurals: Map<String, Map<String, String>> = emptyMap(),
+        private val language: String = "en",
     ) : Strings {
         override fun resolve(
             key: String,
             arguments: List<String>,
         ): String {
             val template = values[key] ?: key
-            return if (arguments.isEmpty()) template else String.format(Locale.ROOT, template, *arguments.toTypedArray())
+            return format(template, arguments)
         }
 
-        override fun contains(key: String): Boolean = key in values
+        override fun resolveQuantity(
+            key: String,
+            quantity: Int,
+            arguments: List<String>,
+        ): String {
+            val items = plurals[key] ?: return resolve(key, arguments)
+            val template = items[pluralCategory(language, quantity)] ?: items["other"] ?: return key
+            return format(template, arguments)
+        }
+
+        override fun contains(key: String): Boolean = key in values || key in plurals
+
+        private fun format(
+            template: String,
+            arguments: List<String>,
+        ): String = if (arguments.isEmpty()) template else String.format(Locale.ROOT, template, *arguments.toTypedArray())
     }
 
     private companion object {
@@ -158,8 +175,6 @@ class RouteWarningsContentTest {
 
         val ENGLISH =
             mapOf(
-                "route_warnings_count_one" to "1 warning on this route",
-                "route_warnings_count_many" to "%1\$s warnings on this route",
                 "route_warnings_title" to "On this route",
                 "route_warnings_scope" to "%1\$s profile · %2\$s, %3\$s · by distance",
                 "route_warnings_back" to "Back",
@@ -183,11 +198,18 @@ class RouteWarningsContentTest {
                 "unit_distance_miles" to "%1\$s mi",
             )
 
+        val ENGLISH_PLURALS =
+            mapOf(
+                "route_warnings_count" to
+                    mapOf(
+                        "one" to "%1\$s warning on this route",
+                        "other" to "%1\$s warnings on this route",
+                    ),
+            )
+
         val UKRAINIAN =
             ENGLISH +
                 mapOf(
-                    "route_warnings_count_one" to "1 попередження на маршруті",
-                    "route_warnings_count_many" to "Попереджень на маршруті: %1\$s",
                     "route_warnings_title" to "На цьому маршруті",
                     "route_warnings_scope" to "%1\$s · %2\$s, %3\$s · за відстанню",
                     "route_warnings_back" to "Назад",
@@ -199,5 +221,16 @@ class RouteWarningsContentTest {
                     "route_warnings_detail_private" to "access=private",
                     "route_warnings_detail_push_bike" to "пішки з велосипедом",
                 )
+
+        val UKRAINIAN_PLURALS =
+            mapOf(
+                "route_warnings_count" to
+                    mapOf(
+                        "one" to "%1\$s попередження на маршруті",
+                        "few" to "%1\$s попередження на маршруті",
+                        "many" to "%1\$s попереджень на маршруті",
+                        "other" to "%1\$s попередження на маршруті",
+                    ),
+            )
     }
 }

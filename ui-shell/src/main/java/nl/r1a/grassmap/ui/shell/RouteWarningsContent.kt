@@ -45,8 +45,7 @@ private const val TIGHT_GAP_DP = 2
 private const val CHEVRON_GLYPH = "\u203A"
 private const val SUMMARY_SEPARATOR = ", "
 
-private const val COUNT_ONE_KEY = "route_warnings_count_one"
-private const val COUNT_MANY_KEY = "route_warnings_count_many"
+private const val COUNT_KEY = "route_warnings_count"
 private const val SHEET_TITLE_KEY = "route_warnings_title"
 private const val SCOPE_KEY = "route_warnings_scope"
 private const val BACK_KEY = "route_warnings_back"
@@ -271,12 +270,7 @@ internal fun routeWarningsEntryContent(
         return null
     }
     val count = warnings.size
-    val title =
-        if (count == 1) {
-            strings.resolve(COUNT_ONE_KEY)
-        } else {
-            strings.resolve(COUNT_MANY_KEY, listOf(count.toString()))
-        }
+    val title = strings.resolveQuantity(COUNT_KEY, count, listOf(count.toString()))
     return RouteWarningsEntryContent(title = title, summary = routeWarningSummary(warnings, strings))
 }
 

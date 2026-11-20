@@ -120,7 +120,7 @@
     <string name="elevation_chart_colour_altitude">Висота</string>
     <string name="elevation_chart_legend_slope" formatted="false">вниз ... вгору % · шкала походів</string>
     <string name="elevation_chart_legend_altitude">%1$s м низько ... %2$s м високо</string>
-    <string name="elevation_chart_legend_altitude_feet">%1$s фут низько ... %2$s фут високо</string>
+    <string name="elevation_chart_legend_altitude_feet">%1$s футів низько ... %2$s футів високо</string>
     <string name="elevation_chart_details_show">Показати подробиці</string>
     <string name="elevation_chart_details_hide">Сховати подробиці</string>
     <string name="elevation_chart_minutes">%1$s хв</string>
@@ -129,11 +129,21 @@
     <string name="elevation_chart_range_kilometres">%1$s-%2$s км</string>
     <string name="elevation_chart_range_metres">%1$s-%2$s м</string>
     <string name="elevation_chart_range_miles">%1$s-%2$s милі</string>
-    <string name="elevation_chart_range_feet">%1$s-%2$s фут</string>
+    <string name="elevation_chart_range_feet">%1$s-%2$s футів</string>
     <string name="elevation_chart_range_ascent">\u2191%1$s м</string>
-    <string name="elevation_chart_range_ascent_feet">\u2191%1$s фут</string>
+    <plurals name="elevation_chart_range_ascent_feet">
+        <item quantity="one">\u2191%1$s фут</item>
+        <item quantity="few">\u2191%1$s фути</item>
+        <item quantity="many">\u2191%1$s футів</item>
+        <item quantity="other">\u2191%1$s фута</item>
+    </plurals>
     <string name="elevation_chart_range_descent">\u2193%1$s м</string>
-    <string name="elevation_chart_range_descent_feet">\u2193%1$s фут</string>
+    <plurals name="elevation_chart_range_descent_feet">
+        <item quantity="one">\u2193%1$s фут</item>
+        <item quantity="few">\u2193%1$s фути</item>
+        <item quantity="many">\u2193%1$s футів</item>
+        <item quantity="other">\u2193%1$s фута</item>
+    </plurals>
     <string name="elevation_chart_range_grade">%1$s%%</string>
     <string name="elevation_chart_range_clear">Очистити</string>
     <string name="elevation_chart_climbs_title">Підйоми · торкніться, щоб вибрати</string>
@@ -170,7 +180,12 @@
     <string name="track_analysis_stopped">зупинки %1$s</string>
     <string name="track_analysis_max_speed">макс. %1$s</string>
     <string name="track_analysis_descent">\u2193%1$s м</string>
-    <string name="track_analysis_descent_feet">\u2193%1$s фут</string>
+    <plurals name="track_analysis_descent_feet">
+        <item quantity="one">\u2193%1$s фут</item>
+        <item quantity="few">\u2193%1$s фути</item>
+        <item quantity="many">\u2193%1$s футів</item>
+        <item quantity="other">\u2193%1$s фута</item>
+    </plurals>
     <string name="track_analysis_untitled">Трек</string>
     <string name="track_analysis_close">Закрити аналіз</string>
     <string name="track_analysis_follow">Рухатися треком</string>
@@ -184,7 +199,12 @@
     <string name="follow_track_title">Рухатися треком %1$s</string>
     <string name="follow_track_untitled">без назви</string>
     <string name="follow_track_ascent">↑%1$s м</string>
-    <string name="follow_track_ascent_feet">↑%1$s фут</string>
+    <plurals name="follow_track_ascent_feet">
+        <item quantity="one">↑%1$s фут</item>
+        <item quantity="few">↑%1$s фути</item>
+        <item quantity="many">↑%1$s футів</item>
+        <item quantity="other">↑%1$s фута</item>
+    </plurals>
     <string name="follow_track_from_start">Від початку</string>
     <string name="follow_track_from_end_reversed">Від кінця, у зворотному напрямку</string>
     <string name="follow_track_from_nearest">Від найближчої точки</string>

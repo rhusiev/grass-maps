@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -246,7 +247,7 @@ internal fun BackupScreenContent(
                 if (state.exportCounts.isNotEmpty()) {
                     val kinds = state.exportCounts.size
                     BasicText(
-                        text = stringResource(R.string.backup_ready, kinds, state.exportBytes),
+                        text = pluralStringResource(R.plurals.backup_ready, kinds, kinds, state.exportBytes),
                         style = TextStyle(color = ACCENT, fontSize = SMALL_SP.sp),
                         modifier = Modifier.padding(top = 12.dp),
                     )

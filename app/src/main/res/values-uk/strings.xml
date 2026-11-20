@@ -70,8 +70,18 @@
     <string name="map_scale_description">Масштабна лінійка</string>
     <string name="map_scale_metres">%1$s м</string>
     <string name="map_scale_kilometres">%1$s км</string>
-    <string name="map_scale_feet">%1$s фут</string>
-    <string name="map_scale_miles">%1$s миля</string>
+    <plurals name="map_scale_feet">
+        <item quantity="one">%1$s фут</item>
+        <item quantity="few">%1$s фути</item>
+        <item quantity="many">%1$s футів</item>
+        <item quantity="other">%1$s фута</item>
+    </plurals>
+    <plurals name="map_scale_miles">
+        <item quantity="one">%1$s миля</item>
+        <item quantity="few">%1$s милі</item>
+        <item quantity="many">%1$s миль</item>
+        <item quantity="other">%1$s милі</item>
+    </plurals>
 
     <string name="plugin.route_planner.name">Планувальник маршруту</string>
     <string name="plugin.route_planner.description">Планує маршрут між двома точками та показує час, відстань і час прибуття.</string>
@@ -131,8 +141,12 @@
     <string name="route_planner_arrive">Прибуття до пункту призначення</string>
     <string name="route_planner_recent">Останні маршрути</string>
     <string name="route_planner_reuse">Використати маршрут з %1$s</string>
-    <string name="route_warnings_count_one">1 попередження на маршруті</string>
-    <string name="route_warnings_count_many">Попереджень на маршруті: %1$s</string>
+    <plurals name="route_warnings_count">
+        <item quantity="one">%1$s попередження на маршруті</item>
+        <item quantity="few">%1$s попередження на маршруті</item>
+        <item quantity="many">%1$s попереджень на маршруті</item>
+        <item quantity="other">%1$s попередження на маршруті</item>
+    </plurals>
     <string name="route_warnings_title">На цьому маршруті</string>
     <string name="route_warnings_scope">%1$s · %2$s, %3$s · за відстанню</string>
     <string name="route_warnings_back">Назад</string>
@@ -179,10 +193,20 @@
     <string name="route_preview_hours_minutes">%1$s год %2$s хв</string>
     <string name="unit_distance_metres">%1$s м</string>
     <string name="unit_distance_kilometres">%1$s км</string>
-    <string name="unit_distance_feet">%1$s фут</string>
-    <string name="unit_distance_miles">%1$s миля</string>
+    <plurals name="unit_distance_feet">
+        <item quantity="one">%1$s фут</item>
+        <item quantity="few">%1$s фути</item>
+        <item quantity="many">%1$s футів</item>
+        <item quantity="other">%1$s фута</item>
+    </plurals>
+    <string name="unit_distance_miles">%1$s милі</string>
     <string name="unit_elevation_metres">%1$s м</string>
-    <string name="unit_elevation_feet">%1$s фут</string>
+    <plurals name="unit_elevation_feet">
+        <item quantity="one">%1$s фут</item>
+        <item quantity="few">%1$s фути</item>
+        <item quantity="many">%1$s футів</item>
+        <item quantity="other">%1$s фута</item>
+    </plurals>
     <string name="unit_speed_kilometres_per_hour">км/год</string>
     <string name="unit_speed_miles_per_hour">миль/год</string>
     <string name="time_model_tobler_walk">Tobler пішки</string>
@@ -191,9 +215,18 @@
     <string name="time_model_flat">Рівна швидкість</string>
     <string name="track_import_one">Імпортовано %1$s</string>
     <string name="track_import_one_unnamed">Імпортовано 1 трек</string>
-    <string name="track_import_many">Імпортовано треків: %1$s</string>
-    <string name="track_import_skipped_one">Пропущено 1 частину</string>
-    <string name="track_import_skipped_many">Пропущено частин: %1$s</string>
+    <plurals name="track_import_many">
+        <item quantity="one">Імпортовано %1$s трек</item>
+        <item quantity="few">Імпортовано %1$s треки</item>
+        <item quantity="many">Імпортовано %1$s треків</item>
+        <item quantity="other">Імпортовано %1$s треку</item>
+    </plurals>
+    <plurals name="track_import_skipped">
+        <item quantity="one">Пропущено %1$s частину</item>
+        <item quantity="few">Пропущено %1$s частини</item>
+        <item quantity="many">Пропущено %1$s частин</item>
+        <item quantity="other">Пропущено %1$s частини</item>
+    </plurals>
     <string name="track_import_open">Відкрити</string>
     <string name="track_import_not_a_track">Цей файл не є треком, який Grass Maps може прочитати</string>
     <string name="track_import_unreadable">Не вдалося відкрити файл</string>
@@ -253,7 +286,12 @@
     <string name="backup_close">Закрити</string>
     <string name="backup_working">Працюю…</string>
     <string name="backup_counts_title">У цьому наборі</string>
-    <string name="backup_ready">Набір готовий: %1$d видів, %2$d байтів.</string>
+    <plurals name="backup_ready">
+        <item quantity="one">Набір готовий: %1$d вид, %2$d байтів.</item>
+        <item quantity="few">Набір готовий: %1$d види, %2$d байтів.</item>
+        <item quantity="many">Набір готовий: %1$d видів, %2$d байтів.</item>
+        <item quantity="other">Набір готовий: %1$d виду, %2$d байтів.</item>
+    </plurals>
     <string name="backup_import_done">Додано %1$d, замінено %2$d, залишено %3$d.</string>
     <string name="backup_unknown_kind">Пропущено вид, якого ця збірка не знає: %1$s</string>
     <string name="backup_kind_failed">%1$s не імпортовано.</string>

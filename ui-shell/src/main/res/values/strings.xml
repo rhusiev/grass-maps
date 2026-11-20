@@ -131,9 +131,15 @@
     <string name="elevation_chart_range_miles">%1$s-%2$s mi</string>
     <string name="elevation_chart_range_feet">%1$s-%2$s ft</string>
     <string name="elevation_chart_range_ascent">\u2191%1$s m</string>
-    <string name="elevation_chart_range_ascent_feet">\u2191%1$s ft</string>
+    <plurals name="elevation_chart_range_ascent_feet">
+        <item quantity="one">\u2191%1$s ft</item>
+        <item quantity="other">\u2191%1$s ft</item>
+    </plurals>
     <string name="elevation_chart_range_descent">\u2193%1$s m</string>
-    <string name="elevation_chart_range_descent_feet">\u2193%1$s ft</string>
+    <plurals name="elevation_chart_range_descent_feet">
+        <item quantity="one">\u2193%1$s ft</item>
+        <item quantity="other">\u2193%1$s ft</item>
+    </plurals>
     <string name="elevation_chart_range_grade">%1$s%%</string>
     <string name="elevation_chart_range_clear">Clear</string>
     <string name="elevation_chart_climbs_title">Climbs · tap one to select it</string>
@@ -170,7 +176,10 @@
     <string name="track_analysis_stopped">stopped %1$s</string>
     <string name="track_analysis_max_speed">max %1$s</string>
     <string name="track_analysis_descent">\u2193%1$s m</string>
-    <string name="track_analysis_descent_feet">\u2193%1$s ft</string>
+    <plurals name="track_analysis_descent_feet">
+        <item quantity="one">\u2193%1$s ft</item>
+        <item quantity="other">\u2193%1$s ft</item>
+    </plurals>
     <string name="track_analysis_untitled">Track</string>
     <string name="track_analysis_close">Close the analysis</string>
     <string name="track_analysis_follow">Follow track</string>
@@ -184,7 +193,10 @@
     <string name="follow_track_title">Follow %1$s</string>
     <string name="follow_track_untitled">this track</string>
     <string name="follow_track_ascent">↑%1$s m</string>
-    <string name="follow_track_ascent_feet">↑%1$s ft</string>
+    <plurals name="follow_track_ascent_feet">
+        <item quantity="one">↑%1$s ft</item>
+        <item quantity="other">↑%1$s ft</item>
+    </plurals>
     <string name="follow_track_from_start">From the start</string>
     <string name="follow_track_from_end_reversed">From the end, reversed</string>
     <string name="follow_track_from_nearest">From the nearest point</string>

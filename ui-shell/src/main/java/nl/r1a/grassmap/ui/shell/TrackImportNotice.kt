@@ -41,8 +41,7 @@ private const val CONTENT_GAP_DP = 12
 private const val ONE_KEY = "track_import_one"
 private const val ONE_UNNAMED_KEY = "track_import_one_unnamed"
 private const val MANY_KEY = "track_import_many"
-private const val SKIPPED_ONE_KEY = "track_import_skipped_one"
-private const val SKIPPED_MANY_KEY = "track_import_skipped_many"
+private const val SKIPPED_KEY = "track_import_skipped"
 private const val OPEN_KEY = "track_import_open"
 private const val NOT_A_TRACK_KEY = "track_import_not_a_track"
 private const val UNREADABLE_KEY = "track_import_unreadable"
@@ -159,17 +158,17 @@ private fun titleOf(
         val name = outcome.names.single()?.takeIf { it.isNotBlank() } ?: return strings.resolve(ONE_UNNAMED_KEY)
         return strings.resolve(ONE_KEY, listOf(name))
     }
-    return strings.resolve(MANY_KEY, listOf(outcome.trackCount.toString()))
+    return strings.resolveQuantity(MANY_KEY, outcome.trackCount, listOf(outcome.trackCount.toString()))
 }
 
 private fun skippedDetail(
     skipped: Int,
     strings: Strings,
 ): String? =
-    when (skipped) {
-        0 -> null
-        1 -> strings.resolve(SKIPPED_ONE_KEY)
-        else -> strings.resolve(SKIPPED_MANY_KEY, listOf(skipped.toString()))
+    if (skipped == 0) {
+        null
+    } else {
+        strings.resolveQuantity(SKIPPED_KEY, skipped, listOf(skipped.toString()))
     }
 
 private fun failureKey(failure: TrackImportFailure): String =

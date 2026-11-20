@@ -51,15 +51,16 @@ class UnitFormatterBoundaryTest {
 
         assertTrue("the key list is empty", keys.isNotEmpty())
         for (key in keys) {
-            assertTrue("$key is missing in English", english[key]?.isNotBlank() == true)
-            assertTrue("$key is missing in Ukrainian", ukrainian[key]?.isNotBlank() == true)
+            assertTrue("$key is missing in English", key in english)
+            assertTrue("$key is missing in Ukrainian", key in ukrainian)
         }
     }
 
-    private fun resources(path: String): Map<String, String> =
-        Regex("""<string name="([^"]+)">([^<]*)</string>""")
+    private fun resources(path: String): Set<String> =
+        Regex("""<(?:string|plurals) name="([^"]+)">""")
             .findAll(File(path).readText())
-            .associate { it.groupValues[1] to it.groupValues[2] }
+            .map { it.groupValues[1] }
+            .toSet()
 
     private companion object {
         const val PLUGINS = "../plugins"

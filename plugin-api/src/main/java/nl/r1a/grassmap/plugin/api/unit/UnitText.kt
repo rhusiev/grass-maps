@@ -94,9 +94,13 @@ object UnitText {
 
             UnitSystem.Imperial -> {
                 if (meters < METRES_PER_MILE) {
-                    strings.resolve(UnitStrings.DISTANCE_FEET, listOf(feetValue(meters)))
+                    val feet = feetValue(meters)
+                    strings.resolveQuantity(UnitStrings.DISTANCE_FEET, feet.toInt(), listOf(feet))
                 } else {
-                    strings.resolve(UnitStrings.DISTANCE_MILES, listOf(milesValue(meters, locale)))
+                    strings.resolve(
+                        UnitStrings.DISTANCE_MILES,
+                        listOf(milesValue(meters, locale)),
+                    )
                 }
             }
         }
@@ -116,16 +120,17 @@ object UnitText {
         elevationMeters: Double,
         units: UnitSystem,
         strings: Strings,
-    ): String =
-        strings.resolve(
-            if (units == UnitSystem.Imperial) UnitStrings.ELEVATION_FEET else UnitStrings.ELEVATION_METRES,
-            listOf(elevationValue(elevationMeters, units)),
-        )
+    ): String {
+        val value = elevationValue(elevationMeters, units)
+        val key = if (units == UnitSystem.Imperial) UnitStrings.ELEVATION_FEET else UnitStrings.ELEVATION_METRES
+        return strings.resolveQuantity(key, value.toInt(), listOf(value))
+    }
 
     /**
      * One elevation label around its unit: the caller supplies the metric and
      * imperial templates so a climb, a descent and an ascent keep their own
-     * arrow.
+     * arrow. The imperial templates are plurals: a whole number of feet picks
+     * its own form ("1 фут", "2 фути", "5 футів").
      */
     fun elevationLabel(
         elevationMeters: Double,
@@ -133,11 +138,14 @@ object UnitText {
         strings: Strings,
         metricKey: String,
         imperialKey: String,
-    ): String =
-        strings.resolve(
+    ): String {
+        val value = elevationValue(elevationMeters, units)
+        return strings.resolveQuantity(
             if (units == UnitSystem.Imperial) imperialKey else metricKey,
-            listOf(elevationValue(elevationMeters, units)),
+            value.toInt(),
+            listOf(value),
         )
+    }
 
     /**
      * One speed as a navigation readout shows it: whole km/h or mph from ten,

@@ -44,7 +44,13 @@ for variant in a b; do
     copy_tree "$WORK/$variant"
     (
         cd "$WORK/$variant"
-        ./gradlew --console=plain --no-build-cache :app:assembleRelease
+        # The comparison is over unsigned APKs. A caller that exports the
+        # release signing variables must not switch this build to a signed one.
+        env -u GRASSMAPS_KEYSTORE \
+            -u GRASSMAPS_KEYSTORE_PASSWORD \
+            -u GRASSMAPS_KEY_ALIAS \
+            -u GRASSMAPS_KEY_PASSWORD \
+            ./gradlew --console=plain --no-build-cache :app:assembleRelease
     )
 done
 

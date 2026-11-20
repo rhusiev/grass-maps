@@ -74,6 +74,15 @@ internal fun endsSessionOnRefusal(
     }
 
 /**
+ * The notification's small icon: the app's own monochrome navigation arrow.
+ * The platform `ic_menu_mylocation` stand-in is not monochrome-safe across
+ * OEMs, and a platform glyph looks foreign in the status bar. The id goes
+ * through this seam because a [Notification] cannot be built without the
+ * platform, so the JVM test asserts the id the service passes.
+ */
+internal fun navigationNotificationSmallIcon(): Int = R.drawable.ic_nav_notification
+
+/**
  * The location foreground service that keeps guidance alive while the app is
  * not in the foreground.
  *
@@ -248,7 +257,7 @@ class NavigationService : Service() {
         val builder =
             Notification
                 .Builder(this, CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+                .setSmallIcon(navigationNotificationSmallIcon())
                 .setContentTitle(content.title)
                 .setContentIntent(openIntent())
                 .setCategory(Notification.CATEGORY_NAVIGATION)

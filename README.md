@@ -2229,7 +2229,10 @@ without the service and the navigation screen stays up after Start
 (`endsSessionOnRefusal`).
 
 The notification shows the next turn's text as its title and the distance to it
-as its text. It offers Pause and Stop while guidance runs, Resume and Stop while
+as its text. Its small icon is the app's own monochrome navigation arrow,
+`ic_nav_notification`, converted from the Material Symbols Rounded glyph (see
+`ATTRIBUTION.md`), so the status bar does not show a platform stand-in. It
+offers Pause and Stop while guidance runs, Resume and Stop while
 paused, and only Stop after arrival. It is public and ongoing, so it survives
 the lock screen. Pausing publishes `NavigationPhase.Paused`; the session drops
 every fix before the follower and before the reroute gate, so guidance stops and

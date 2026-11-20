@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The navigation notification's small icon: one monochrome navigation arrow.
+  The path data is the Material Symbols Rounded `navigation` glyph (weight 400,
+  filled, 24 px), Apache-2.0, from google/material-design-icons at commit
+  10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7. It is the same glyph as the map
+  sprite's `arrow` (tools/sprites/icons/arrow.svg, sha256 56d76dae...); only
+  the glyph's 0..-960 viewport is shifted down by 960 here, and the path
+  commands and coordinates are unchanged. ATTRIBUTION.md lists the licence and
+  the source.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <group android:translateY="960">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M480,-240 L222,-130 q-13,5 -24.5,2.5 T178,-138 q-8,-8 -10.5,-20 t2.5,-25 l273,-615 q5,-12 15.5,-18 t21.5,-6 q11,0 21.5,6 t15.5,18 l273,615 q5,13 2.5,25 T782,-138 q-8,8 -19.5,10.5 T738,-130 L480,-240 Z" />
+    </group>
+</vector>

@@ -52,14 +52,28 @@ import nl.r1a.grassmap.plugin.api.model.DownloadsState
 import nl.r1a.grassmap.plugin.api.model.FirstRunOffer
 import nl.r1a.grassmap.plugin.api.model.FirstRunOfferKind
 import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
 
-private val SURFACE = Color(0xFFF5F4F1)
-private val CARD = Color(0xFFFFFFFF)
-private val INK = Color(0xFF1F2329)
-private val MUTED = Color(0xFF5D6168)
-private val ACCENT = Color(0xFF1F7A4D)
-private val DANGER = Color(0xFFB3261E)
-private val BORDER = Color(0xFFE3E1DC)
+private val SURFACE: Color
+    @Composable get() = LocalShellColors.current.map
+
+private val CARD: Color
+    @Composable get() = LocalShellColors.current.surface
+
+private val INK: Color
+    @Composable get() = LocalShellColors.current.ink
+
+private val MUTED: Color
+    @Composable get() = LocalShellColors.current.muted
+
+private val ACCENT: Color
+    @Composable get() = LocalShellColors.current.accent
+
+private val DANGER: Color
+    @Composable get() = LocalShellColors.current.danger
+
+private val BORDER: Color
+    @Composable get() = LocalShellColors.current.line
 
 private const val CARD_CORNER_DP = 16
 private const val CARD_PADDING_DP = 14
@@ -745,7 +759,7 @@ private fun ActionButton(
         when {
             destructive -> DANGER
             quiet -> INK
-            else -> Color.White
+            else -> LocalShellColors.current.onAccent
         }
     Box(
         modifier =

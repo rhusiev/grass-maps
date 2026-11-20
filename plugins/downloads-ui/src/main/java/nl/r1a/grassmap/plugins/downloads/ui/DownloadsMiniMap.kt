@@ -20,7 +20,8 @@ import androidx.compose.ui.unit.dp
 import nl.r1a.grassmap.plugin.api.model.DownloadRowStatus
 import nl.r1a.grassmap.plugin.api.model.GeoPoint
 import nl.r1a.grassmap.plugin.api.model.RegionOutline
-import nl.r1a.grassmap.plugin.ui.api.NavigationScreenColors
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmap.plugin.ui.api.ShellColors
 import kotlin.math.cos
 import kotlin.math.min
 
@@ -89,14 +90,9 @@ internal class MiniMapProjection(
     }
 }
 
-private val STATUS_GREEN = Color(NavigationScreenColors.GREEN)
-private val INSTALLED_FILL = STATUS_GREEN.copy(alpha = 0.55f)
-private val PENDING_FILL = STATUS_GREEN.copy(alpha = 0.30f)
-private val FAILED_FILL = Color(0x4DB3261E)
-private val OTHER_FILL = Color(0xFFE3E1DC)
-private val SELECTED_STROKE = Color(0xFF1F2329)
-private val BORDER_STROKE = Color(0xFFFFFFFF)
-private val MAP_BACKGROUND = Color(0xFFFFFFFF)
+private const val INSTALLED_ALPHA = 0.55f
+private const val PENDING_ALPHA = 0.3f
+private const val FAILED_ALPHA = 0.3f
 
 private const val MAP_HEIGHT_DP = 200
 private const val MAP_CORNER_DP = 16
@@ -118,13 +114,14 @@ internal fun RegionsMiniMap(
     onTapRegion: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = LocalShellColors.current
     Canvas(
         modifier =
             modifier
                 .fillMaxWidth()
                 .height(MAP_HEIGHT_DP.dp)
                 .clip(RoundedCornerShape(MAP_CORNER_DP.dp))
-                .background(MAP_BACKGROUND)
+                .background(colors.surface)
                 .semantics { contentDescription = description }
                 .pointerInput(outlines) {
                     detectTapGestures { position ->
@@ -136,11 +133,11 @@ internal fun RegionsMiniMap(
         val projection = MiniMapProjection(outlines, size.width, size.height)
         for (outline in outlines) {
             val path = outlinePath(outline, projection)
-            drawPath(path, fillFor(statuses[outline.region]))
-            drawPath(path, BORDER_STROKE, style = Stroke(width = BORDER_STROKE_PX))
+            drawPath(path, fillFor(statuses[outline.region], colors))
+            drawPath(path, colors.surface, style = Stroke(width = BORDER_STROKE_PX))
         }
         outlines.firstOrNull { it.region == selectedRegion }?.let { outline ->
-            drawPath(outlinePath(outline, projection), SELECTED_STROKE, style = Stroke(width = SELECTED_STROKE_PX))
+            drawPath(outlinePath(outline, projection), colors.ink, style = Stroke(width = SELECTED_STROKE_PX))
         }
     }
 }
@@ -159,10 +156,24 @@ private fun outlinePath(
         }
     }
 
-private fun fillFor(status: DownloadRowStatus?): Color =
+private fun fillFor(
+    status: DownloadRowStatus?,
+    colors: ShellColors,
+): Color =
     when (status) {
-        DownloadRowStatus.INSTALLED -> INSTALLED_FILL
-        DownloadRowStatus.UPDATE_AVAILABLE, DownloadRowStatus.DOWNLOADING -> PENDING_FILL
-        DownloadRowStatus.FAILED -> FAILED_FILL
-        DownloadRowStatus.AVAILABLE, null -> OTHER_FILL
+        DownloadRowStatus.INSTALLED -> {
+            colors.accent.copy(alpha = INSTALLED_ALPHA)
+        }
+
+        DownloadRowStatus.UPDATE_AVAILABLE, DownloadRowStatus.DOWNLOADING -> {
+            colors.accent.copy(alpha = PENDING_ALPHA)
+        }
+
+        DownloadRowStatus.FAILED -> {
+            colors.danger.copy(alpha = FAILED_ALPHA)
+        }
+
+        DownloadRowStatus.AVAILABLE, null -> {
+            colors.line
+        }
     }

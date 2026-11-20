@@ -102,6 +102,12 @@ data class ShellColors(
      * 4.76:1.
      */
     val amber: Color,
+    /**
+     * The icon variant of [amber], where the target is 3:1 rather than 4.5:1.
+     * Light is `#b87800` (3.28:1 on its 10 % tint); [amber] is the darker text
+     * value. Dark keeps `#c99a12`, which already reads on the tint.
+     */
+    val amberIcon: Color,
     val profiles: ProfileColors,
     val categories: CategoryColors,
     val dark: Boolean,
@@ -184,6 +190,7 @@ val LightShellColors: ShellColors =
         keySoft = Color(0xFFD5D9DF),
         keyLine = Color(0xFFDFE2E6),
         amber = Color(0xFF8A5A00),
+        amberIcon = Color(0xFFB87800),
         profiles =
             ProfileColors(
                 walk = Color(0xFF2A78D6),
@@ -234,6 +241,7 @@ val DarkShellColors: ShellColors =
         keySoft = Color(0xFF26292E),
         keyLine = Color(0xFF2F343A),
         amber = Color(0xFFC99A12),
+        amberIcon = Color(0xFFC99A12),
         profiles =
             ProfileColors(
                 walk = Color(0xFF5AA0EF),

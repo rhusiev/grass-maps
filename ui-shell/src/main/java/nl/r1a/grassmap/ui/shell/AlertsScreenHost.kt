@@ -258,7 +258,7 @@ private fun IconCircle(
     val glyph = row.switch?.glyph() ?: "\u25C9"
     val colour =
         when (row.switch) {
-            AlertsPageSwitch.Favourite -> colors.amber
+            AlertsPageSwitch.Favourite -> colors.amberIcon
             AlertsPageSwitch.TrackWaypoint -> colors.profiles.hike
             null -> colors.accent
             else -> colors.muted

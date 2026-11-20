@@ -118,7 +118,7 @@ class ShellContrastTest {
             ShellPair("chevron on a card", colors.faint, colors.surface, UI_COMPONENT),
             ShellPair("chevron on the map page", colors.faint, colors.map, UI_COMPONENT),
             ShellPair("chevron on glass", colors.faint, glassOnMap, UI_COMPONENT),
-            ShellPair("favourite icon on its 10% amber tint", colors.amber, tint(colors.amber, 0.10f), UI_COMPONENT),
+            ShellPair("favourite icon on its 10% amber tint", colors.amberIcon, tint(colors.amberIcon, 0.10f), UI_COMPONENT),
             ShellPair("neutral alert icon on its 10% muted tint", colors.muted, tint(colors.muted, 0.10f), UI_COMPONENT),
             ShellPair("progress fill on its track", colors.accent, colors.line, UI_COMPONENT),
             ShellPair("switch knob on the accent track", colors.onAccent, colors.accent, UI_COMPONENT),

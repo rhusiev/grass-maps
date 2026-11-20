@@ -32,6 +32,7 @@ class ShellColorsTest {
         assertEquals(Color(0xFFC99A12), dark.warning.border)
         assertEquals(Color(0xFFFFD970), dark.warning.title)
         assertEquals(Color(0xFF80868B), dark.controlBorder)
+        assertEquals(Color(0xFFC99A12), dark.amberIcon)
         assertEquals(Color(0xFF15181C), dark.keyboard)
         assertEquals(Color(0xFF31363C), dark.key)
     }
@@ -143,6 +144,7 @@ class ShellColorsTest {
         assertEquals(Color(0xFF857F77), light.controlBorder)
         assertEquals(Color(0xFF807A72), light.faint)
         assertEquals(Color(0xFF8A5A00), light.amber)
+        assertEquals(Color(0xFFB87800), light.amberIcon)
     }
 
     @Test

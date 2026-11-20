@@ -106,9 +106,9 @@ data class TrackImportConfirmContent(
 
 /**
  * The confirm's text: what arrived, how many tracks it holds, and the two
- * answers. The count uses the app's label form (`Tracks: 2` / `Треків: 2`)
- * because the app has no plural resources yet; the numeral carries the number
- * and the label stays the same for one track and for many.
+ * answers. The count keeps the design's label form (`Tracks: 2` /
+ * `Треків: 2`): the numeral carries the number and the label stays the same
+ * for one track and for many.
  */
 fun trackImportConfirmContent(
     fileName: String,

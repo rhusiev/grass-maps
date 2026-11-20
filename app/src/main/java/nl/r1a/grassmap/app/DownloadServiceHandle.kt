@@ -23,25 +23,47 @@ object NoDownloadServiceHandle : DownloadServiceHandle {
     override fun stop() = Unit
 }
 
-/** Starts and stops [DownloadService] in this app's process. */
-class AndroidDownloadServiceHandle(
-    private val context: Context,
+/**
+ * Starts and stops [DownloadService] in this app's process.
+ *
+ * A refused start is logged and the transfer continues without a
+ * notification. A stop that arrives while the start is pending is recorded,
+ * so it cannot destroy the service before its `startForeground` call.
+ */
+class AndroidDownloadServiceHandle internal constructor(
+    private val startService: () -> Unit,
+    private val stopService: () -> Unit,
+    private val gate: ForegroundStartGate,
     private val log: (String) -> Unit = {},
 ) : DownloadServiceHandle {
+    constructor(context: Context, log: (String) -> Unit = {}) : this(
+        startService = { context.startForegroundService(Intent(context, DownloadService::class.java)) },
+        stopService = { context.stopService(Intent(context, DownloadService::class.java)) },
+        gate = DownloadService.startGate,
+        log = log,
+    )
+
     override fun start() {
-        val intent = Intent(context, DownloadService::class.java)
+        gate.starting()
         try {
-            context.startForegroundService(intent)
+            startService()
         } catch (error: IllegalStateException) {
+            gate.reached()
             // Android 12+ refuses a start from the background. The transfer
             // still runs in the process, only without the notification.
             log("download-service-refused detail=${error.javaClass.simpleName}")
         } catch (error: SecurityException) {
+            gate.reached()
             log("download-service-refused reason=permission")
+        } catch (error: RuntimeException) {
+            gate.reached()
+            throw error
         }
     }
 
     override fun stop() {
-        context.stopService(Intent(context, DownloadService::class.java))
+        if (!gate.deferStopIfStarting()) {
+            stopService()
+        }
     }
 }

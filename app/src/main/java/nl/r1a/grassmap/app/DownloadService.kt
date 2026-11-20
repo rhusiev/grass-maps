@@ -30,6 +30,11 @@ import kotlinx.coroutines.launch
  * `START_NOT_STICKY`: after a process death the region store has no queue to
  * resume, and the partial archive resumes with a Range request when the user
  * starts the download again.
+ *
+ * The foreground call is the first work of [onCreate], before the store is
+ * read. A queue that empties or a stop that arrives while the service is
+ * starting must not leave a `startForegroundService` start without its
+ * `startForeground` call.
  */
 class DownloadService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -38,8 +43,14 @@ class DownloadService : Service() {
     override fun onCreate() {
         super.onCreate()
         createChannel()
+        startForegroundSafely(notificationFor(null))
+        if (!foregroundStarted) {
+            startGate.reached()
+            return
+        }
         val store = (application as GrassMapsApplication).container.regionStore
         if (store == null) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return
         }
@@ -58,7 +69,12 @@ class DownloadService : Service() {
             scope.launch { store?.useMobileDataNow() }
         }
         if (!foregroundStarted) {
-            startForegroundSafely(notificationFor(null))
+            startGate.reached()
+            return START_NOT_STICKY
+        }
+        if (startGate.reached()) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
         }
         return START_NOT_STICKY
     }
@@ -90,10 +106,12 @@ class DownloadService : Service() {
                 start = {
                     startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
                 },
-                log = { message -> Log.w(TAG, message.replace("navigation", "download")) },
+                log = { message -> Log.w(TAG, message) },
+                logPrefix = "download-service",
             )
         if (result == ForegroundStartResult.Started) {
             foregroundStarted = true
+            Log.i(TAG, "download-service-start type=dataSync")
         } else {
             stopSelf()
         }
@@ -179,6 +197,8 @@ class DownloadService : Service() {
     }
 
     companion object {
+        internal val startGate = ForegroundStartGate()
+
         const val ACTION_USE_MOBILE_DATA = "nl.r1a.grassmap.app.action.DOWNLOAD_USE_MOBILE_DATA"
         private const val TAG = "DownloadService"
         private const val CHANNEL_ID = "downloads"

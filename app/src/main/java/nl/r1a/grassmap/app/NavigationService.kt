@@ -45,15 +45,16 @@ internal enum class ForegroundStartResult {
 internal fun foregroundStartResult(
     start: () -> Unit,
     log: (String) -> Unit,
+    logPrefix: String = "navigation-service",
 ): ForegroundStartResult =
     try {
         start()
         ForegroundStartResult.Started
     } catch (error: SecurityException) {
-        log("navigation-service-refused reason=permission")
+        log("$logPrefix-refused reason=permission")
         ForegroundStartResult.PermissionRefused
     } catch (error: IllegalStateException) {
-        log("navigation-service-refused reason=not-allowed detail=${error.javaClass.simpleName}")
+        log("$logPrefix-refused reason=not-allowed detail=${error.javaClass.simpleName}")
         ForegroundStartResult.NotAllowedRefused
     }
 

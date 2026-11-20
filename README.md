@@ -4345,7 +4345,10 @@ Background and metered (T-0505). A transfer outlives the screen: `app` starts
 `DownloadService`, a `dataSync` foreground service, while the transfer list is
 not empty and stops it when the list is empty. It follows the navigation
 service pattern and needs no WorkManager or Google component, which F-Droid
-builds require. Its notification shows "Downloading N maps" with a progress bar.
+builds require. A stop that arrives while the service is starting is deferred
+until after its `startForeground` call, because destroying the service first
+makes Android kill the process with `ForegroundServiceDidNotStartInTimeException`.
+Its notification shows "Downloading N maps" with a progress bar.
 The transfer itself runs in the store's single worker, not in the service.
 `MobileDataPolicy` is `WIFI_ONLY` (default) or `ANY`, stored in
 `settings/downloads.json` by `DownloadsSettings` and set with

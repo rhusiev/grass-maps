@@ -81,7 +81,7 @@
     <string name="control_route_planner_description">Спланувати маршрут</string>
     <string name="route_planner_sheet_title">Планування маршруту</string>
     <string name="route_planner_swap">Поміняти початок і пункт призначення</string>
-    <string name="route_planner_close">Закрити маршрут</string>
+    <string name="route_planner_close">Закрити планування маршруту</string>
     <string name="route_planner_pick_start">Торкніться карти або результату пошуку, щоб задати початок</string>
     <string name="route_planner_pick_destination">Торкніться карти або результату пошуку, щоб задати пункт призначення</string>
     <string name="route_planner_planning">Планування маршруту</string>
@@ -101,7 +101,7 @@
     <string name="route_planner_missing_details">Докладніше</string>
     <string name="route_planner_missing_hide_details">Сховати</string>
     <string name="route_planner_missing_download">Завантажити й прокласти маршрут</string>
-    <string name="route_planner_missing_progress">Завантажено %1$s із %2$s (%3$s%%)</string>
+    <string name="route_planner_missing_progress">Завантаження %1$s із %2$s (%3$s%%)</string>
     <string name="route_planner_missing_problem">Не вдалося завантажити. Перевірте з\'єднання й спробуйте ще раз</string>
     <string name="route_planner_missing_part_line">%1$s: %2$s</string>
     <string name="route_planner_missing_region_fallback">Регіон</string>

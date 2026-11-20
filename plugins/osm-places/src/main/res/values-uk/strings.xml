@@ -14,9 +14,9 @@
     <string name="osm_places.social_viber">Viber</string>
     <string name="osm_places.social_whatsapp">WhatsApp</string>
 
-    <string name="osm_places.wheelchair_access">Доступність для візка</string>
-    <string name="osm_places.wheelchair_description">Примітки щодо візка</string>
-    <string name="osm_places.wheelchair_toilets">Туалет для візка</string>
+    <string name="osm_places.wheelchair_access">Доступність для людей у візках</string>
+    <string name="osm_places.wheelchair_description">Примітки щодо доступу для людей у візках</string>
+    <string name="osm_places.wheelchair_toilets">Туалет для людей у візках</string>
     <string name="osm_places.wheelchair_yes">Так</string>
     <string name="osm_places.wheelchair_no">Ні</string>
     <string name="osm_places.wheelchair_limited">Обмежено</string>

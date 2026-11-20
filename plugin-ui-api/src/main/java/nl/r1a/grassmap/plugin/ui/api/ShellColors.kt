@@ -255,7 +255,12 @@ private fun luminance(color: Color): Double {
     return LUMINANCE_RED * red + LUMINANCE_GREEN * green + LUMINANCE_BLUE * blue
 }
 
-private fun linear(channel: Double): Double = if (channel <= SRGB_KNEE) channel / SRGB_SLOPE else ((channel + SRGB_OFFSET) / SRGB_DIVISOR).pow(2.4)
+private fun linear(channel: Double): Double {
+    if (channel <= SRGB_KNEE) {
+        return channel / SRGB_SLOPE
+    }
+    return ((channel + SRGB_OFFSET) / SRGB_DIVISOR).pow(2.4)
+}
 
 private const val SRGB_KNEE = 0.04045
 private const val SRGB_SLOPE = 12.92

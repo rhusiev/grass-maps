@@ -64,7 +64,6 @@ import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
 import nl.r1a.grassmap.plugin.api.model.TrackSort
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
-import nl.r1a.grassmap.plugin.ui.api.NavigationScreenColors
 import nl.r1a.grassmap.plugin.ui.api.inkOn
 import nl.r1a.grassmap.plugin.ui.api.shellColors
 

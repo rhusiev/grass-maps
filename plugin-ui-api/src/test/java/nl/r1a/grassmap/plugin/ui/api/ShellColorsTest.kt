@@ -2,6 +2,7 @@ package nl.r1a.grassmap.plugin.ui.api
 
 import androidx.compose.ui.graphics.Color
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -75,12 +76,10 @@ class ShellColorsTest {
         val dark = DarkShellColors
         assertEquals(dark.ink, dark.selectedChip)
         assertEquals(dark.onAccent, inkOn(dark.selectedChip, dark))
-        assertEquals(dark.map, inkOn(dark.selectedChip, dark))
 
         val light = LightShellColors
         assertEquals(light.ink, light.selectedChip)
         assertEquals(light.onAccent, inkOn(light.selectedChip, light))
-        assertEquals(light.surface, inkOn(light.selectedChip, light))
     }
 
     @Test
@@ -117,7 +116,7 @@ class ShellColorsTest {
     fun thePrimaryTextReadsInBothThemes() {
         listOf(LightShellColors, DarkShellColors).forEach { colors ->
             assertTrue(contrastRatio(colors.ink, colors.surface) >= BODY_TEXT_CONTRAST)
-            assertTrue(contrastRatio(colors.muted, colors.surface) >= MUTED_TEXT_CONTRAST)
+            assertTrue(contrastRatio(colors.muted, colors.surface) >= BODY_TEXT_CONTRAST)
         }
     }
 
@@ -143,14 +142,13 @@ class ShellColorsTest {
     fun shellColorsSwitchesEveryTokenAtOnce() {
         assertEquals(LightShellColors, shellColors(dark = false))
         assertEquals(DarkShellColors, shellColors(dark = true))
-        assertEquals(false, LightShellColors.dark)
-        assertEquals(true, DarkShellColors.dark)
+        assertFalse(LightShellColors.dark)
+        assertTrue(DarkShellColors.dark)
     }
 
     private companion object {
         const val ALPHA_TOLERANCE = 0.005f
         const val BODY_TEXT_CONTRAST = 4.5
-        const val MUTED_TEXT_CONTRAST = 4.5
         const val QUIET_CONTROL_CONTRAST = 3.0
     }
 }

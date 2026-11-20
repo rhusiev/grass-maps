@@ -1289,6 +1289,19 @@ class AppContainer(
 
     private val devToolsShown = MutableStateFlow(aiControlEnabled())
 
+    private val darkThemeOverride = MutableStateFlow<Boolean?>(null)
+
+    /**
+     * A forced theme for the screenshots: null follows the system, true or
+     * false pins light or dark. Only a debug command sets it.
+     */
+    val darkTheme: StateFlow<Boolean?> = darkThemeOverride.asStateFlow()
+
+    /** Pins the theme for a screenshot, or returns to the system theme with null. */
+    fun setDarkTheme(dark: Boolean?) {
+        darkThemeOverride.value = dark
+    }
+
     /**
      * Whether the development-tools panel and its commands are available. The
      * architecture puts them behind the AI-control switch, and both are

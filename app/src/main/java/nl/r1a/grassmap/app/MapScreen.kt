@@ -274,10 +274,11 @@ internal fun MapScreen(
     container: AppContainer,
     harness: MapHarness,
 ) {
-    // The theme is decided once, above every screen: the system night mode, or
-    // the navigation fixture's own theme while a capture drives it (T-0612).
+    // The theme is decided once, above every screen: a capture's override, the
+    // navigation fixture's own theme, or the system night mode (T-0612).
     val fixture by container.navigationScreenFixture.state.collectAsState()
-    GrassMapsTheme(dark = fixture?.dark ?: isSystemInDarkTheme()) {
+    val themeOverride by container.darkTheme.collectAsState()
+    GrassMapsTheme(dark = fixture?.dark ?: themeOverride ?: isSystemInDarkTheme()) {
         MapScreenContent(container = container, harness = harness)
     }
 }
@@ -755,7 +756,7 @@ private fun MapContent(
             navigationFixture?.let { fixture -> navigationSheet = fixture.sheet }
         }
     }
-    val dark = navigationFixture?.dark ?: isSystemInDarkTheme()
+    val dark = LocalShellColors.current.dark
     val drawnRoute = remember(plan.selected) { plan.selectedRoute() }
     // The trip's route while navigating, the planned one otherwise. The state
     // stream is read inside the effect, so a fix does not recompose the screen;
@@ -1452,7 +1453,7 @@ private fun MapContent(
                 onChartAxis = { axis -> chartAxis = axis },
                 time = routePreviewTime,
                 units = units,
-                dark = isSystemInDarkTheme(),
+                dark = dark,
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
@@ -1535,7 +1536,7 @@ private fun MapContent(
                 chart = relationChart,
                 strings = container.strings,
                 units = units,
-                dark = isSystemInDarkTheme(),
+                dark = dark,
                 onClose = { selectedRelation = null },
                 modifier =
                     Modifier
@@ -1551,7 +1552,7 @@ private fun MapContent(
                 chart = analysisChart,
                 strings = container.strings,
                 units = units,
-                dark = isSystemInDarkTheme(),
+                dark = dark,
                 onAxis = { axis -> analysisAxis = axis },
                 onRange = { range -> analysisRange = range },
                 onClose = { TrackAnalysisSession.hide() },
@@ -1584,7 +1585,7 @@ private fun MapContent(
                         strings = container.strings,
                         units = units,
                     ),
-                dark = isSystemInDarkTheme(),
+                dark = dark,
                 onSelect = { start -> followSheet = openFollowSheet.copy(selected = start) },
                 onStart = {
                     scope.launch {
@@ -1726,7 +1727,7 @@ private fun MapContent(
             TrackLibraryHost(
                 state = libraryState,
                 strings = container.strings,
-                dark = isSystemInDarkTheme(),
+                dark = dark,
                 onClose = { TrackLibraryScreen.hide() },
                 onCreateFolder = { name ->
                     scope.launch {

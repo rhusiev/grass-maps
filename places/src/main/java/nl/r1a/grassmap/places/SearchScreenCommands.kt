@@ -66,9 +66,11 @@ private val REMEMBERED_STATUSES: Set<SearchScreenStatus> = setOf(SearchScreenSta
  * .., "north": .., "east": ..}` and restricts every result to the visible map
  * area, which is "search this area" (T-0206). `clear: true` empties the screen
  * without reaching the provider, and a blank query in any other event is
- * [AppError.InvalidInput]. An absent `index` uses [defaultIndex], which the app
- * sets to the mounted pack the map serves. The result is a one-line summary;
- * the screen itself reads [SearchScreenSession.state].
+ * [AppError.InvalidInput]. `index` is the section a history row records, and the
+ * fallback when no mounted pack has a search section; the query itself visits
+ * every mounted pack (T-0633). An absent `index` uses [defaultIndex], which the
+ * app sets to the pack the single-region readers treat as active. The result is
+ * a one-line summary; the screen itself reads [SearchScreenSession.state].
  *
  * History is written on two events only. `submit: true` runs the query and
  * remembers it, because the user confirmed the field. `pick: true` remembers
@@ -79,7 +81,7 @@ private val REMEMBERED_STATUSES: Set<SearchScreenStatus> = setOf(SearchScreenSta
 class SearchScreenCommand(
     private val session: SearchScreenSession,
     private val history: SearchHistoryStore? = null,
-    /** The index a request without one uses, or null when no pack has a section. */
+    /** The section a request without one records and falls back to; null when no pack has one. */
     private val defaultIndex: suspend () -> String? = { null },
     private val log: (String) -> Unit = {},
 ) : Command<JsonElement, String>(

@@ -56,6 +56,7 @@ import nl.r1a.grassmap.core.services.diagnosticsCommands
 import nl.r1a.grassmap.map.DistanceByTapSetting
 import nl.r1a.grassmap.navigation.NavigationCameraController
 import nl.r1a.grassmap.places.MergedPlaceSearch
+import nl.r1a.grassmap.places.MultiRegionSearch
 import nl.r1a.grassmap.places.PlacesAccess
 import nl.r1a.grassmap.places.SearchHistorySetting
 import nl.r1a.grassmap.places.SearchHistoryStore
@@ -862,15 +863,40 @@ class AppContainer(
     ): Outcome<Unit> = rasterSettings.setTransparencyPercent(percent, store)
 
     /**
-     * The one query path (T-0203, T-0212): offline rows first, then the opt-in
-     * online rows from the Photon provider, merged in [MergedPlaceSearch].
+     * Every mounted pack's offline search section (T-0633). The screen names no
+     * region: a query visits all of them and [MultiRegionSearch] merges, dedupes
+     * and caps the rows. The request's own index is the fallback for a device
+     * whose only section is the pushed external one, and the value a history
+     * row keeps.
+     */
+    private val multiRegionSearch: MultiRegionSearch by lazy {
+        MultiRegionSearch { section, query, context, limit, cancellation ->
+            places.search(
+                indexName = section,
+                query = query,
+                context = context,
+                limit = limit,
+                cancellation = cancellation,
+            )
+        }
+    }
+
+    /** The sections a query visits: every mounted pack, or the named fallback. */
+    private fun searchSections(fallback: String): List<String> =
+        searchIndexes.state.value.indexes
+            .map { index -> index.name }
+            .ifEmpty { listOf(fallback) }
+
+    /**
+     * The one query path (T-0203, T-0212, T-0633): offline rows from every
+     * mounted pack first, then the opt-in online rows from the Photon provider,
+     * merged in [MergedPlaceSearch].
      */
     private val mergedSearch: MergedPlaceSearch by lazy {
-        val indexes = places
         MergedPlaceSearch(
             offline = { request ->
-                indexes.search(
-                    indexName = request.index,
+                multiRegionSearch.search(
+                    sections = searchSections(request.index),
                     query = request.query,
                     context = request.context,
                     limit = request.limit,

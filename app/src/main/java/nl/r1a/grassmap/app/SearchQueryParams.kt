@@ -16,7 +16,7 @@ import nl.r1a.grassmap.plugin.api.model.GeoPoint
 internal fun searchKeystrokeParams(
     query: String,
     sequence: Long,
-    index: String?,
+    index: String? = null,
     limit: Int,
     position: GeoPoint?,
     positionAllowed: Boolean,
@@ -30,7 +30,7 @@ internal fun searchKeystrokeParams(
 internal fun searchSubmitParams(
     query: String,
     sequence: Long,
-    index: String?,
+    index: String? = null,
     limit: Int,
     position: GeoPoint?,
     positionAllowed: Boolean,
@@ -44,7 +44,7 @@ internal fun searchSubmitParams(
 /** A picked result row: its text is stored, and no new search runs. */
 internal fun searchPickParams(
     query: String,
-    index: String?,
+    index: String? = null,
     limit: Int,
     position: GeoPoint?,
     positionAllowed: Boolean,

@@ -32,9 +32,11 @@ internal data class SearchIndexSet(
     val indexes: List<SearchIndex> = emptyList(),
 ) {
     /**
-     * The index a query runs against: the first mounted pack in region-id
-     * order, the pack whose tiles the map serves a shared tile from and the one
-     * the single-region readers mount. A pack without a section is skipped.
+     * The pack the single-region readers treat as active: the first mounted
+     * pack in region-id order, whose tiles the map serves a shared tile from,
+     * and whose components the elevation, routing and proximity readers mount.
+     * Search visits every [indexes] entry instead (T-0633). A pack without a
+     * section is skipped.
      */
     val active: SearchIndex? get() = indexes.firstOrNull()
 }
@@ -49,7 +51,8 @@ internal fun searchIndexesOf(mounted: List<MountedRegion>): SearchIndexSet =
 
 /**
  * Keeps the search sections in step with the packs the region store publishes
- * (T-0620).
+ * (T-0620). The screen searches every section (T-0633); [SearchIndexSet.active]
+ * remains the pack the single-region readers use.
  *
  * [start] mounts the store once and then re-mounts it only when the published
  * installed list names a different set of region versions, so a keystroke or a
@@ -136,7 +139,10 @@ internal class SearchIndexes(
         if (active == null) {
             log("search index: no mounted pack has a section")
         } else {
-            log("search index active=${active.name} dir=${active.directory.absolutePath}")
+            log(
+                "search indexes: ${next.indexes.size} section(s), " +
+                    "first=${active.name} dir=${active.directory.absolutePath}",
+            )
         }
     }
 

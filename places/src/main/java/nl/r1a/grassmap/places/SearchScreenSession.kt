@@ -45,6 +45,11 @@ data class SearchScreenState(
 /** One search request: everything a provider needs that the field does not hold. */
 data class SearchScreenRequest(
     val query: String,
+    /**
+     * The section a history row records, and the fallback when no mounted pack
+     * has a search section (the pushed external index). The offline query
+     * itself visits every mounted section (T-0633).
+     */
     val index: String,
     val limit: Int,
     val context: SearchContext,
@@ -92,10 +97,11 @@ class SearchScreenSession(
      * Runs one keystroke. [sequence] orders keystrokes; 0 means "no ordering",
      * which only a one-off caller passes.
      *
-     * [index] is the section the query runs against. An empty name means the
-     * caller named none: the provider still answers a typed coordinate, and
-     * reports [AppError.NotReady] for every other query. The app sends the
-     * section of the mounted pack the map serves.
+     * [index] is the section a history row records, and the section the query
+     * falls back to when no mounted pack has one (the pushed external index).
+     * The app's offline query visits every mounted section (T-0633). An empty
+     * name means the caller named none: the provider still answers a typed
+     * coordinate, and reports [AppError.NotReady] for every other query.
      *
      * A blank query publishes [SearchScreenStatus.IDLE] with no hits and does
      * not reach the provider.

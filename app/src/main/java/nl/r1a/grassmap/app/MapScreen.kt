@@ -467,7 +467,6 @@ private fun MapContent(
     val libraryVisible by TrackLibraryScreen.visible.collectAsState()
     val libraryQuerySequence = remember { longArrayOf(0L) }
     val searchState by container.searchScreen.state.collectAsState()
-    val searchIndexes by container.searchIndexes.state.collectAsState()
     val searchSequence = remember { longArrayOf(0L) }
     var searchExpanded by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { MapChromeSession.search.collect { searchExpanded = it } }
@@ -1148,7 +1147,6 @@ private fun MapContent(
                                 searchKeystrokeParams(
                                     query = text,
                                     sequence = sequence,
-                                    index = searchIndexes.active?.name,
                                     limit = SearchScreenSession.DEFAULT_LIMIT,
                                     position = cameraNow().center,
                                     positionAllowed = positionAllowed,
@@ -1204,7 +1202,6 @@ private fun MapContent(
                                 searchSubmitParams(
                                     query = text,
                                     sequence = sequence,
-                                    index = searchIndexes.active?.name,
                                     limit = SearchScreenSession.DEFAULT_LIMIT,
                                     position = cameraNow().center,
                                     positionAllowed = positionAllowed,
@@ -1223,7 +1220,6 @@ private fun MapContent(
                                 SEARCH_SCREEN_COMMAND,
                                 searchPickParams(
                                     query = text,
-                                    index = searchIndexes.active?.name,
                                     limit = SearchScreenSession.DEFAULT_LIMIT,
                                     position = cameraNow().center,
                                     positionAllowed = positionAllowed,
@@ -2675,7 +2671,7 @@ private suspend fun loadBundle(
     container.rasterSettings.current()
     container.mapStyleSettings.current()
     container.mapLabelSettings.options
-    // The search field needs the mounted pack's section before the first
+    // The search field needs every mounted pack's section before the first
     // keystroke; this reads the store on the caller's IO dispatcher and then
     // follows it, so a pack installed later needs no restart.
     container.startSearchIndexes()

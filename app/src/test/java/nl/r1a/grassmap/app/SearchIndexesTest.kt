@@ -19,9 +19,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * The search index the app queries follows the mounted packs, not a fixed
- * name: the first pack in region-id order is the active index, the same pack
- * the map and the single-region readers treat as active.
+ * The search sections the app queries follow the mounted packs, not a fixed
+ * name (T-0620): every pack with a section is a query target, and the first in
+ * region-id order stays the active pack for the single-region readers (T-0633).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchIndexesTest {
@@ -88,6 +88,12 @@ class SearchIndexesTest {
                 "ua-65",
                 indexes.state.value.active
                     ?.name,
+            )
+            assertEquals(
+                "a pack without a search section is no query target",
+                listOf("ua-65"),
+                indexes.state.value.indexes
+                    .map { it.name },
             )
             assertNull("a pack without a section cannot be opened by name", indexes.directory("ua-46"))
         }

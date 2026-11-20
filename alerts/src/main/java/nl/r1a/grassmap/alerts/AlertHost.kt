@@ -58,6 +58,11 @@ import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
  * sound and vibration outputs an announced kind produces; all three off means
  * the host emits nothing at all. The stream is live: a consumer subscribes
  * before the session starts, or it misses the alerts already emitted.
+ *
+ * A state outside a live trip ([NavigationPhase.Idle], [NavigationPhase.Arrived]
+ * or [NavigationPhase.Stopped]) closes the episode. The next trip's first
+ * revision and first fix are baselines, so a revision that falls back to zero
+ * is not a reroute and a break between trips is not a lost signal.
  */
 class AlertHost(
     initialSettings: AlertSettings = AlertSettings.ALL_OFF,
@@ -186,6 +191,19 @@ class AlertHost(
             announce(AlertKind.Arrived, fixTimeMillis)
         }
         arrived = hasArrived
+
+        // No trip is live after this state. The next state starts a new trip, so
+        // its first revision and first fix are baselines: a revision that falls
+        // back to zero is not a reroute, and a fix that follows a long break is
+        // not a lost signal.
+        if (state.phase != NavigationPhase.Following &&
+            state.phase != NavigationPhase.Rerouting &&
+            state.phase != NavigationPhase.Paused
+        ) {
+            lastRouteRevision = null
+            lastFixTimeMillis = null
+            offRouteEpisode = false
+        }
     }
 
     /**

@@ -153,6 +153,71 @@ class AlertHostTest {
         }
 
     @Test
+    fun aRerouteFiresOnceForEachRevisionChange() =
+        runTest {
+            val host = AlertHost(AlertSettings(reroute = true))
+            val events = collectAlerts(host)
+            val fix = fix(0L)
+            val route =
+                Route(
+                    geometry = listOf(GeoPoint(0.0, 0.0), GeoPoint(0.0, 0.1)),
+                    distanceMeters = 1.0,
+                    durationSeconds = 1.0,
+                )
+
+            host.onFix(fix)
+            host.onState(state(fix = fix, revision = 4L, route = route))
+            host.onState(state(fix = fix, revision = 5L, route = route))
+            host.onState(state(fix = fix, revision = 5L, route = route))
+            host.onState(state(fix = fix, revision = 6L, route = route))
+
+            assertEquals(
+                "one notice for each changed revision, none for an unchanged or first state",
+                listOf(AlertKind.Rerouted, AlertKind.Rerouted),
+                events.map { it.kind },
+            )
+        }
+
+    @Test
+    fun aNewTripBaselinesItsRevisionInsteadOfAnnouncingTheOldTripsChange() =
+        runTest {
+            val host = AlertHost(AlertSettings(reroute = true))
+            val events = collectAlerts(host)
+            val fix = fix(0L)
+            val route =
+                Route(
+                    geometry = listOf(GeoPoint(0.0, 0.0), GeoPoint(0.0, 0.1)),
+                    distanceMeters = 1.0,
+                    durationSeconds = 1.0,
+                )
+
+            host.onFix(fix)
+            host.onState(state(fix = fix, revision = 4L, route = route))
+            host.onState(state(fix = fix, revision = 5L, route = route))
+            host.onState(state(phase = NavigationPhase.Arrived, fix = fix, revision = 5L, route = route))
+            host.onState(state(fix = fix, revision = 0L, route = route))
+
+            assertEquals(
+                "the new trip's first revision is a baseline, not a change from the old trip",
+                listOf(AlertKind.Rerouted),
+                events.map { it.kind },
+            )
+        }
+
+    @Test
+    fun aGapBetweenTwoTripsIsNotASignalLoss() =
+        runTest {
+            val host = AlertHost(AlertSettings(signal = true))
+            val events = collectAlerts(host)
+
+            host.onFix(fix(0L))
+            host.onState(state(phase = NavigationPhase.Stopped, fix = fix(0L)))
+            host.onFix(fix(60_000L))
+
+            assertTrue("the gap spans two trips, not one signal loss", events.isEmpty())
+        }
+
+    @Test
     fun anAlertEventRoundTripsThroughItsSerializer() {
         val event =
             AlertEvent(

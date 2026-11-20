@@ -10,6 +10,7 @@ import nl.r1a.grassmap.plugin.ui.api.shellColors
  * (T-0612). The app wraps the map screen once; a plugin panel and a sheet read
  * [LocalShellColors] and never keep a palette of their own.
  */
+@Suppress("ktlint:standard:function-naming")
 @Composable
 fun GrassMapsTheme(
     dark: Boolean,

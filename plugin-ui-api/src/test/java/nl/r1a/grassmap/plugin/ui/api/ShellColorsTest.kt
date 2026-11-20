@@ -122,8 +122,8 @@ class ShellColorsTest {
     }
 
     @Test
-    fun theFloatingRingStandsInForAShadowOnlyInDark() {
-        assertEquals(Color.Transparent, LightShellColors.ring)
+    fun theFloatingRingIsFaintInBothThemes() {
+        assertEquals(Color(0x12000000), LightShellColors.ring)
         assertEquals(Color(0x12FFFFFF), DarkShellColors.ring)
     }
 

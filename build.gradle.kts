@@ -158,13 +158,13 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         ":plugins:track-library" to setOf(":plugin-api"),
         ":plugins:contours" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:route-relations" to setOf(":plugin-api"),
-        ":plugins:raster" to setOf(":plugin-api"),
+        ":plugins:raster" to setOf(":plugin-api", ":plugin-ui-api"),
         // The downloads screen draws the catalogue the host stores; the store
         // itself is :regions, which the plugin reaches only through the
         // plugin-api host access.
         ":plugins:downloads-ui" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:profiles-ui" to setOf(":plugin-api", ":plugin-ui-api"),
-        ":plugins:plugin-manager" to setOf(":plugin-api"),
+        ":plugins:plugin-manager" to setOf(":plugin-api", ":plugin-ui-api"),
     )
 // Edges that ship in the debug APK and must never reach a release build
 // (architecture section 22). They are judged separately from the release

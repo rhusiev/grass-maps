@@ -636,7 +636,7 @@ application ID is `nl.r1a.grassmap`.
 | Module | Owns | Depends on |
 |---|---|---|
 | `plugin-api` | base types, domain value types, host interfaces, service contracts, capability contracts, the unit text formatter, manifest schema, contract versions | Kotlin stdlib, coroutines, serialization |
-| `plugin-ui-api` | Compose UI contracts for compiled-in UI plugins | `plugin-api` |
+| `plugin-ui-api` | Compose UI contracts for compiled-in UI plugins, and the light and dark shell colour tokens (`ShellColors`, T-0612) | `plugin-api` |
 | `core` | command bus, plugin host, stream registry, capability registry, lifecycle, undo/redo stacks | `plugin-api` |
 | `core-services` | settings and profiles, storage, location, network gate, i18n, clock, logging | `core`, `plugin-api` |
 | `map` | the `MapHost` implementation, style composer, layer slots, gestures, camera, location puck | `plugin-api` |
@@ -677,12 +677,12 @@ application ID is `nl.r1a.grassmap`.
 | `plugins/track-library` | the track library state, its folder definitions, the rename, describe, move and delete actions with one-step undo, and the four fixed orders and name search | `plugin-api` |
 | `plugins/contours` | the contour overlay for the Standard and Touring variants and the one-row card the layers button opens | `plugin-api`, `plugin-ui-api` |
 | `plugins/route-relations` | the hiking and cycling relation geometry assembler, the shared-way lane assignment, the OSMC waymark mapping, the cycling node-network numbers and the `MapHost` layers over an inline GeoJSON source | `plugin-api` |
-| `plugins/raster` | the online raster tile source: the OSM preset, the user URL template, the tile client behind the online-tiles switch, the underlay/overlay placement and the transparency, the EOX Sentinel-2 presets with their licence, the area plan, the area downloader and the card the layers button opens | `plugin-api` |
+| `plugins/raster` | the online raster tile source: the OSM preset, the user URL template, the tile client behind the online-tiles switch, the underlay/overlay placement and the transparency, the EOX Sentinel-2 presets with their licence, the area plan, the area downloader and the card the layers button opens | `plugin-api`, `plugin-ui-api` |
 | `plugins/route-warnings` | the warning list for fords, steps, barriers, railway crossings and private ways, with its profile filter and distance order | `plugin-api` |
 | `plugins/proximity-alerts` | the proximity schedule for favourites, track waypoints and chosen place kinds: the three chosen radii, the one-per-approach latch and its lookup refresh | `plugin-api` |
 | `plugins/downloads-ui` | the downloads screen: catalogue rows with their parts and data date, the first-run offer, the region sheet, the refresh, download, cancel, remove and server commands, and their state stream | `plugin-api` |
 | `plugins/profiles-ui` | the profiles screen: the list, the new-profile and copy-settings sheets, the editor's copy and reset rows, the undo notice, the create, copy settings, reset and undo commands, and their state stream | `plugin-api`, `plugin-ui-api` |
-| `plugins/plugin-manager` | the plugin manager screen (T-0607): the six switchable plugins in four sections with a switch each, a search pill and a sheet per plugin, and the id list the host treats as switchable | `plugin-api` |
+| `plugins/plugin-manager` | the plugin manager screen (T-0607): the six switchable plugins in four sections with a switch each, a search pill and a sheet per plugin, and the id list the host treats as switchable | `plugin-api`, `plugin-ui-api` |
 
 ## Online tiles
 

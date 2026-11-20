@@ -50,7 +50,11 @@ data class ShellColors(
     val offSwitchBorder: Color,
     /** The off switch's knob. */
     val offSwitchKnob: Color,
-    /** The faint light ring that stands in for a shadow on a dark map. */
+    /**
+     * The faint 1 px ring around a floating surface: light in dark, where a
+     * shadow vanishes; a faint dark ring in light, where this shell draws no
+     * shadow.
+     */
     val ring: Color,
     /** The dim layer behind a modal card. */
     val scrim: Color,
@@ -138,7 +142,7 @@ val LightShellColors: ShellColors =
         warning = LIGHT_WARNING,
         offSwitchBorder = Color(0xFFB9B4AC),
         offSwitchKnob = Color(0xFF8F8A82),
-        ring = Color.Transparent,
+        ring = Color(0x12000000),
         scrim = Color(0x66000000),
         selectedChip = Color(0xFF202124),
         grid = Color(0x14000000),

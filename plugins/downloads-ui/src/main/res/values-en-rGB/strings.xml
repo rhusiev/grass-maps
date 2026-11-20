@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="downloads_map_description">Map of the regions, coloured by download state. Use the region list to open one</string>
+</resources>

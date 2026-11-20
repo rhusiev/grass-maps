@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="map_raster_licence">Licence: %1$s</string>
+    <string name="map_raster_licence_nc">Non-commercial licence: do not use this imagery commercially.</string>
+    <string name="map_raster_area_refused_licence">This source states no licence, so it cannot be saved as an area.</string>
+    <string name="map_raster_area_cancelled">Download cancelled. Nothing was saved.</string>
+</resources>

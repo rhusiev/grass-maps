@@ -74,8 +74,6 @@ class MapControlLabelsTest {
                 "control_follow_label_heading" to "control_follow_description_heading",
                 "control_route_planner_label" to "control_route_planner_description",
                 "control_edit_label" to "control_edit_description",
-                "control_move_left_label" to "control_move_left_description",
-                "control_move_right_label" to "control_move_right_description",
             )
 
         val CHROME_KEYS =
@@ -89,8 +87,6 @@ class MapControlLabelsTest {
                 "control_route_planner_description",
                 "control_edit_description",
                 "control_edit_done_description",
-                "control_move_left_description",
-                "control_move_right_description",
                 "map_scale_description",
             )
     }

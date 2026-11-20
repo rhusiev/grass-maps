@@ -1,5 +1,6 @@
 package nl.r1a.grassmap.ui.shell
 
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -31,6 +32,22 @@ class MapLayoutStringsTest {
         Regex("""<string name="([^"]+)">([^<]*)</string>""")
             .findAll(File(path).readText())
             .associate { it.groupValues[1] to it.groupValues[2] }
+
+    @Test
+    fun theSavedAndTracksLabelsAreSpokenNames() {
+        val english = resources("src/main/res/values/strings.xml")
+        for ((labelKey, contentKey) in listOf(
+            "map_layout_saved_label" to "map_layout_saved_content",
+            "map_layout_tracks_label" to "map_layout_tracks_content",
+        )) {
+            val label = english[labelKey]
+            val content = english[contentKey]
+            assertTrue("$labelKey is missing", label != null)
+            assertTrue("$contentKey is missing", content != null)
+            assertTrue("$contentKey reads as a glyph: '$content'", content!!.any { it.isLetter() } && content.length > 1)
+            assertNotEquals("$contentKey repeats its drawn label", label, content)
+        }
+    }
 
     private companion object {
         const val ENGLISH = "src/main/res/values/strings.xml"

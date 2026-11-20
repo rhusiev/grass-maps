@@ -45,6 +45,10 @@ private fun isSafeIndexName(value: String): Boolean = INDEX_NAME.matches(value) 
  * A missing root or a missing index is [AppError.NotReady], so a device without
  * a pushed index reports a typed failure instead of crashing.
  *
+ * One section still serves one query. A screen with several mounted packs calls
+ * [search] once per section through [MultiRegionSearch], which merges the rows
+ * (T-0633).
+ *
  * A [CoordinateParser] runs before the index (T-0206): a coordinate the user
  * types is one row at that point on any device, with or without an installed
  * region. Nothing about such a row comes from the index, so a point outside

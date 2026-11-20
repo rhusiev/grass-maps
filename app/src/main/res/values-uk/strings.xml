@@ -91,7 +91,12 @@
     <string name="route_planner_pack_unusable">Навігація недоступна: не вдається прочитати набір карт для маршрутів</string>
     <string name="route_planner_engine_unavailable">Маршрутизація недоступна в цій збірці</string>
     <string name="route_planner_missing_title">%1$s немає на цьому телефоні</string>
-    <string name="route_planner_missing_title_many">%1$s та ще %2$s регіонів немає на цьому телефоні</string>
+    <plurals name="route_planner_missing_title_many">
+        <item quantity="one">%1$s та ще %2$s регіон відсутні на цьому телефоні</item>
+        <item quantity="few">%1$s та ще %2$s регіони відсутні на цьому телефоні</item>
+        <item quantity="many">%1$s та ще %2$s регіонів відсутні на цьому телефоні</item>
+        <item quantity="other">%1$s та ще %2$s регіону відсутні на цьому телефоні</item>
+    </plurals>
     <string name="route_planner_missing_summary">Для маршруту потрібні карта, пошук, висоти й маршрутизація: усього %1$s</string>
     <string name="route_planner_missing_details">Докладніше</string>
     <string name="route_planner_missing_hide_details">Сховати</string>

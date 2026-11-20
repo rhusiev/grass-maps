@@ -129,7 +129,7 @@ private fun RegionParts(
     }
 }
 
-private fun missingTitle(
+internal fun missingTitle(
     missing: MissingRegions,
     strings: Strings,
     preferUkrainian: Boolean,
@@ -137,7 +137,8 @@ private fun missingTitle(
     val first = missing.regions.firstOrNull()
     val name = first?.name(preferUkrainian) ?: strings.resolve(MISSING_FALLBACK_REGION_KEY)
     return if (missing.regions.size > 1) {
-        strings.resolve(MISSING_TITLE_MANY_KEY, listOf(name, (missing.regions.size - 1).toString()))
+        val remaining = missing.regions.size - 1
+        strings.resolveQuantity(MISSING_TITLE_MANY_KEY, remaining, listOf(name, remaining.toString()))
     } else {
         strings.resolve(MISSING_TITLE_KEY, listOf(name))
     }

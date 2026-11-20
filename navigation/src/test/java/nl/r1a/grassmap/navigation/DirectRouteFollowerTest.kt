@@ -70,9 +70,10 @@ class DirectRouteFollowerTest {
 
             // The mapper builds a BREAK waypoint from each end of the geometry
             // and nothing else, so Ferrostar's waypoint advance cannot see the
-            // via; the stop survives only in the line and in our segments. This
-            // is a finding about the mapper, not something the direct route can
-            // carry around it.
+            // via. Nothing in guidance reads Ferrostar's remaining waypoints:
+            // the stop survives in Route.segments, which the guidance panel and
+            // the reroute request both read. FerrostarReplayTest crosses the
+            // same stop with the real core and keeps counting to the destination.
             assertEquals(2, mapped.waypoints.size)
             assertEquals(2, route.segments.size)
             assertEquals(1, mapped.steps.size)

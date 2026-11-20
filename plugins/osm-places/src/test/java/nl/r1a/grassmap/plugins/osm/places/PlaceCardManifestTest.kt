@@ -64,7 +64,7 @@ class PlaceCardManifestTest {
 
     private fun assertProvider(provider: JsonObject) {
         assertEquals("places.card", provider.getValue("contract").jsonPrimitive.content)
-        assertEquals("1.2.0", provider.getValue("version").jsonPrimitive.content)
+        assertEquals("1.3.0", provider.getValue("version").jsonPrimitive.content)
     }
 
     private companion object {

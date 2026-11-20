@@ -26,9 +26,11 @@ object PlaceCardContract {
     /**
      * 1.2.0 adds the optional [PlaceCard.coordinates] rows and
      * [PlaceCard.shortcuts] actions (T-0210); a provider that leaves both empty
-     * is still valid.
+     * is still valid. 1.3.0 adds [PlaceCard.online] (T-0212): the host sets it
+     * for a card built from an online search hit, and a provider leaves it
+     * false.
      */
-    const val VERSION: String = "1.2.0"
+    const val VERSION: String = "1.3.0"
 
     val REFERENCE: ProviderContract = ProviderContract(NAME, VERSION)
 }

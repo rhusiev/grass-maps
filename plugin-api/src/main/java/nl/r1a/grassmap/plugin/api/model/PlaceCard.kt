@@ -19,6 +19,13 @@ data class PlaceCard(
     val attributes: List<PlaceCardEntry> = emptyList(),
     val coordinates: List<PlaceCardEntry> = emptyList(),
     val shortcuts: List<PlaceCardShortcut> = emptyList(),
+    /**
+     * True when the card was built from an online search hit (T-0212). Such a
+     * card has no region record behind it: it carries only what the hit itself
+     * returned, so tag-only rows and actions cannot appear and opening it makes
+     * no request. A provider leaves this false.
+     */
+    val online: Boolean = false,
 ) {
     /** True when the card has no field or action to draw at all. */
     val isEmpty: Boolean

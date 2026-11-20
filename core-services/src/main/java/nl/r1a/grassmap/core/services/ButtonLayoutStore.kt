@@ -3,8 +3,11 @@ package nl.r1a.grassmap.core.services
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -18,39 +21,42 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
 /**
- * Persists the button order of one profile in a JSON file.
+ * Persists the map control layout of every profile in one JSON file (T-0606).
  *
  * The file is written to a temporary sibling, flushed and moved over the target
- * atomically, so a crash or a failed move leaves the old order in place. A
- * missing, corrupt or unreadable file reads as
- * [MapControlCommands.DEFAULT_ORDER]; it never throws at the caller.
+ * atomically, so a crash or a failed move leaves the old layout in place. A
+ * missing, corrupt or unreadable file reads as [MapButtonLayout.DEFAULT]; it
+ * never throws at the caller.
+ *
+ * A file written by the superseded order-only editor (a profile mapped to an
+ * array of five command ids) is read as the first five slots of the six-slot
+ * layout. A newer schema version reads as the default instead of being
+ * overwritten.
  */
 class ButtonLayoutStore(
     private val file: File,
 ) {
     @Synchronized
-    fun load(profileId: ProfileId): List<CommandId> {
-        val stored = readProfiles()[profileId.value] ?: return MapControlCommands.DEFAULT_ORDER
-        return validated(stored) ?: MapControlCommands.DEFAULT_ORDER
-    }
+    fun load(profileId: ProfileId): MapButtonLayout = readProfiles()[profileId.value] ?: MapButtonLayout.DEFAULT
 
     /**
-     * Writes the order for [profileId], keeping every other profile untouched.
-     * Only a permutation of [MapControlCommands.DEFAULT_ORDER] is accepted.
+     * Writes the layout for [profileId], keeping every other profile untouched.
+     * Only the configured commands, each at most once, in [MapButtonLayout.SLOT_COUNT]
+     * slots are accepted.
      */
     @Synchronized
     fun save(
         profileId: ProfileId,
-        layout: List<CommandId>,
+        layout: MapButtonLayout,
     ): Outcome<Unit> {
-        if (!isPermutation(layout)) {
+        if (!isValid(layout)) {
             return Outcome.Failure(AppError.InvalidInput)
         }
-        val profiles = readProfiles() + (profileId.value to layout.map { it.value })
+        val profiles = readProfiles() + (profileId.value to layout)
         return writeProfiles(profiles)
     }
 
-    private fun readProfiles(): Map<String, List<String>> =
+    private fun readProfiles(): Map<String, MapButtonLayout> =
         try {
             readProfilesOrNull() ?: emptyMap()
         } catch (exception: IOException) {
@@ -61,21 +67,79 @@ class ButtonLayoutStore(
             emptyMap()
         }
 
-    private fun readProfilesOrNull(): Map<String, List<String>>? {
+    private fun readProfilesOrNull(): Map<String, MapButtonLayout>? {
         if (!file.isFile) {
             return null
         }
         val root = Json.parseToJsonElement(file.readText()) as? JsonObject ?: return null
+        if ((root[VERSION] as? JsonPrimitive)?.content?.toIntOrNull()?.let { it > SCHEMA_VERSION } == true) {
+            return null
+        }
         val profiles = root[PROFILES] as? JsonObject ?: return null
         return profiles
             .mapNotNull { (id, value) ->
-                val array = value as? JsonArray ?: return@mapNotNull null
-                val layout = array.mapNotNull { (it as? JsonPrimitive)?.takeIf { primitive -> primitive.isString }?.content }
-                if (layout.size != array.size) null else id to layout
+                val layout = readLayout(value) ?: return@mapNotNull null
+                if (!isValid(layout)) null else id to layout
             }.toMap()
     }
 
-    private fun writeProfiles(profiles: Map<String, List<String>>): Outcome<Unit> {
+    private fun readLayout(value: JsonElement): MapButtonLayout? =
+        when (value) {
+            is JsonArray -> {
+                val order =
+                    readCommands(value)?.takeIf { it.size == MapControlCommands.DEFAULT_ORDER.size }
+                        ?: return null
+                MapButtonLayout(order + List(MapButtonLayout.SLOT_COUNT - order.size) { null })
+            }
+
+            is JsonObject -> {
+                val slots = (value[SLOTS] as? JsonArray)?.let(::readSlots) ?: return null
+                MapButtonLayout(
+                    slots = slots,
+                    quickAccess = readQuickAccess(value[QUICK_ACCESS]),
+                    arc = (value[ARC] as? JsonPrimitive)?.booleanOrNull ?: false,
+                )
+            }
+
+            else -> null
+        }
+
+    private fun readSlots(array: JsonArray): List<CommandId?>? {
+        val slots =
+            array.map { element ->
+                when (element) {
+                    JsonNull -> null
+                    is JsonPrimitive -> element.contentOrNullString()?.let(::CommandId) ?: return null
+                    else -> return null
+                }
+            }
+        return slots.takeIf { it.size == MapButtonLayout.SLOT_COUNT }
+    }
+
+    private fun readCommands(array: JsonArray): List<CommandId>? =
+        array
+            .map { element ->
+                (element as? JsonPrimitive)?.contentOrNullString()?.let(::CommandId) ?: return null
+            }
+
+    private fun readQuickAccess(value: JsonElement?): QuickAccessButton? {
+        val objectValue = value as? JsonObject ?: return null
+        val command = (objectValue[COMMAND] as? JsonPrimitive)?.contentOrNullString() ?: return null
+        val parameters = objectValue[PARAMETERS] as? JsonObject ?: JsonObject(emptyMap())
+        return QuickAccessButton(CommandId(command), parameters)
+    }
+
+    private fun isValid(layout: MapButtonLayout): Boolean {
+        if (layout.slots.size != MapButtonLayout.SLOT_COUNT) {
+            return false
+        }
+        val commands = layout.commands
+        return commands.size == commands.toSet().size &&
+            commands.all { it in MapControlCommands.CONFIGURABLE } &&
+            (layout.quickAccess == null || layout.quickAccess.command in MapControlCommands.CONFIGURABLE)
+    }
+
+    private fun writeProfiles(profiles: Map<String, MapButtonLayout>): Outcome<Unit> {
         val parent = file.parentFile ?: return failure("no parent directory")
         return try {
             if (!parent.isDirectory && !parent.mkdirs()) {
@@ -83,16 +147,12 @@ class ButtonLayoutStore(
             }
             val document =
                 buildJsonObject {
+                    put(VERSION, SCHEMA_VERSION)
                     put(
                         PROFILES,
                         buildJsonObject {
                             profiles.forEach { (id, layout) ->
-                                put(
-                                    id,
-                                    buildJsonArray {
-                                        layout.forEach { add(JsonPrimitive(it)) }
-                                    },
-                                )
+                                put(id, layoutJson(layout))
                             }
                         },
                     )
@@ -116,19 +176,39 @@ class ButtonLayoutStore(
         }
     }
 
-    private fun validated(ids: List<String>): List<CommandId>? {
-        val layout = ids.map(::CommandId)
-        return layout.takeIf(::isPermutation)
-    }
+    private fun layoutJson(layout: MapButtonLayout): JsonObject =
+        buildJsonObject {
+            put(
+                SLOTS,
+                buildJsonArray {
+                    layout.slots.forEach { command -> add(command?.let { JsonPrimitive(it.value) } ?: JsonNull) }
+                },
+            )
+            layout.quickAccess?.let { quickAccess ->
+                put(
+                    QUICK_ACCESS,
+                    buildJsonObject {
+                        put(COMMAND, quickAccess.command.value)
+                        put(PARAMETERS, quickAccess.parameters)
+                    },
+                )
+            }
+            put(ARC, layout.arc)
+        }
 
-    private fun isPermutation(layout: List<CommandId>): Boolean =
-        layout.size == MapControlCommands.DEFAULT_ORDER.size &&
-            layout.toSet() == MapControlCommands.DEFAULT_ORDER.toSet()
+    private fun JsonPrimitive.contentOrNullString(): String? = if (isString) content else null
 
     private fun failure(detail: String?): Outcome.Failure = Outcome.Failure(AppError.Internal(ERROR_ID, detail))
 
     private companion object {
+        const val SCHEMA_VERSION = 2
+        const val VERSION = "version"
         const val PROFILES = "profiles"
+        const val SLOTS = "slots"
+        const val QUICK_ACCESS = "quickAccess"
+        const val COMMAND = "command"
+        const val PARAMETERS = "params"
+        const val ARC = "arc"
         const val TEMPORARY_SUFFIX = ".tmp"
         const val ERROR_ID = "core.services.button_layout"
     }

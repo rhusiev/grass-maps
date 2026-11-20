@@ -14,6 +14,11 @@ import kotlin.math.pow
  * main screens". A screen asks [shellColors] for its theme and never keeps its
  * own copy, so the next screen cannot reinvent a value.
  *
+ * T-0636 measured every text and boundary pair in both themes. Six values were
+ * below their WCAG target and moved the minimum that reached it; each one says
+ * its old value, new value and measured ratio in its own KDoc. A value that
+ * passes is left at the handoff's figure.
+ *
  * Floating surfaces take [ring] instead of a shadow, because a shadow vanishes
  * on the dark map. [selectedChip] is the inverted fill of a selected chip and
  * [inkOn] picks its text. [warning] is the amber card and its list.
@@ -29,15 +34,30 @@ data class ShellColors(
     val glass: Color,
     /** Primary text and icons: `#e8eaed` in dark. */
     val ink: Color,
-    /** Secondary text: `#9aa0a6` in dark. */
+    /**
+     * Secondary text: `#9aa0a6` in dark, `#5f6368` in light. The light canon's
+     * `#686c72` measured 4.24:1 on [map], below the 4.5:1 body-text target, and
+     * moved to `#5f6368` (4.86:1 on map, 6.05:1 on surface).
+     */
     val muted: Color,
     /** Borders and dividers: `#474d54` in dark. */
     val line: Color,
-    /** Quiet chevrons and dotted connectors. */
+    /**
+     * Quiet chevrons and dotted connectors. Light `#807a72`, not the canon
+     * `#b5b1aa`, which measured 2.14:1 on [surface] and 1.71:1 on [map],
+     * below the 3:1 icon target. The new value is 4.25:1 and 3.41:1. Dark moves
+     * from `#6f757c` to `#7a8087` for the same reason on [soft] (2.70:1 to
+     * 3.15:1); its surface and map pairs were already above 3:1.
+     */
     val faint: Color,
     /** A sheet's drag handle. */
     val handle: Color,
-    /** Accent text and switches: `#5fd39a` in dark. */
+    /**
+     * Accent text and switches: `#5fd39a` in dark, `#1a734b` in light. The
+     * light canon's `#1e7f53` measured 4.41:1 on [soft], 4.00:1 on [map] and
+     * 4.13:1 on a 14% accent tint, all below 4.5:1; `#1a734b` is 5.17:1,
+     * 4.69:1 and 4.78:1.
+     */
     val accent: Color,
     /** Text and switch knobs on an accent or ink fill. */
     val onAccent: Color,
@@ -46,8 +66,15 @@ data class ShellColors(
     /** The End button's fill. */
     val dangerSoft: Color,
     val warning: WarningColors,
-    /** The off switch's outline: `#80868b` in dark. */
-    val offSwitchBorder: Color,
+    /**
+     * The outline of a control whose fill alone is not its boundary: the off
+     * switch's track, a quiet button, a text field. `#80868b` in dark. It must
+     * reach 3:1 against [surface], [soft], [map] and [glass].
+     *
+     * Light is `#857f77`, not the light canon `#b9b4ac`: that value reached only
+     * 2.06:1 on [surface] and 1.66:1 on [map], below the 3:1 boundary target.
+     */
+    val controlBorder: Color,
     /** The off switch's knob. */
     val offSwitchKnob: Color,
     /**
@@ -67,7 +94,13 @@ data class ShellColors(
     val key: Color,
     val keySoft: Color,
     val keyLine: Color,
-    /** A warm score accent, used where a number is a rating rather than a warning. */
+    /**
+     * A warm score accent, used where a number is a rating rather than a
+     * warning. Light is `#8a5a00`, not the round 8 `#d08a00`: that value
+     * measured 2.87:1 on [surface] and 2.30:1 on [map], below the 4.5:1 text
+     * target used by the changed-value rows. The new value is 5.93:1 and
+     * 4.76:1.
+     */
     val amber: Color,
     val profiles: ProfileColors,
     val categories: CategoryColors,
@@ -131,16 +164,16 @@ val LightShellColors: ShellColors =
         soft = Color(0xFFF2F1EE),
         glass = Color(0xE0FFFFFF),
         ink = Color(0xFF202124),
-        muted = Color(0xFF686C72),
+        muted = Color(0xFF5F6368),
         line = Color(0xFFEBE8E3),
-        faint = Color(0xFFB5B1AA),
+        faint = Color(0xFF807A72),
         handle = Color(0xFFCFCCC6),
-        accent = Color(0xFF1E7F53),
+        accent = Color(0xFF1A734B),
         onAccent = Color(0xFFFFFFFF),
         danger = Color(0xFFB3261E),
         dangerSoft = Color(0xFFFDECEA),
         warning = LIGHT_WARNING,
-        offSwitchBorder = Color(0xFFB9B4AC),
+        controlBorder = Color(0xFF857F77),
         offSwitchKnob = Color(0xFF8F8A82),
         ring = Color(0x12000000),
         scrim = Color(0x66000000),
@@ -150,7 +183,7 @@ val LightShellColors: ShellColors =
         key = Color(0xFFFFFFFF),
         keySoft = Color(0xFFD5D9DF),
         keyLine = Color(0xFFDFE2E6),
-        amber = Color(0xFFD08A00),
+        amber = Color(0xFF8A5A00),
         profiles =
             ProfileColors(
                 walk = Color(0xFF2A78D6),
@@ -183,14 +216,14 @@ val DarkShellColors: ShellColors =
         ink = Color(0xFFE8EAED),
         muted = Color(0xFF9AA0A6),
         line = Color(0xFF474D54),
-        faint = Color(0xFF6F757C),
+        faint = Color(0xFF7A8087),
         handle = Color(0xFF55595E),
         accent = Color(0xFF5FD39A),
         onAccent = Color(0xFF1B1F24),
         danger = Color(0xFFF28B82),
         dangerSoft = Color(0xFF4A2524),
         warning = DARK_WARNING,
-        offSwitchBorder = Color(0xFF80868B),
+        controlBorder = Color(0xFF80868B),
         offSwitchKnob = Color(0xFF80868B),
         ring = Color(0x12FFFFFF),
         scrim = Color(0x66000000),

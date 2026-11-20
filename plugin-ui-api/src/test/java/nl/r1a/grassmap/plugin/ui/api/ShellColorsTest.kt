@@ -7,10 +7,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The round 9 token set of T-0612 against the design handoff's exact values.
+ * The round 9 token set of T-0612 against the design handoff's values.
  *
  * The colours are literals on purpose: the test is the handoff's copy, so a
- * changed token has to be changed here and in the handoff together.
+ * changed token has to be changed here and in the handoff together. T-0636 moved
+ * six values to their measured contrast floor; each deviation is recorded on
+ * the token in `ShellColors.kt` and asserted at its new value below.
  */
 class ShellColorsTest {
     @Test
@@ -29,7 +31,7 @@ class ShellColorsTest {
         assertEquals(Color(0xFF413B27), dark.warning.surface)
         assertEquals(Color(0xFFC99A12), dark.warning.border)
         assertEquals(Color(0xFFFFD970), dark.warning.title)
-        assertEquals(Color(0xFF80868B), dark.offSwitchBorder)
+        assertEquals(Color(0xFF80868B), dark.controlBorder)
         assertEquals(Color(0xFF15181C), dark.keyboard)
         assertEquals(Color(0xFF31363C), dark.key)
     }
@@ -89,10 +91,10 @@ class ShellColorsTest {
     }
 
     @Test
-    fun theOffSwitchUsesTheHandoffBorder() {
-        assertEquals(Color(0xFF80868B), DarkShellColors.offSwitchBorder)
+    fun theOffSwitchUsesTheControlBorder() {
+        assertEquals(Color(0xFF80868B), DarkShellColors.controlBorder)
         assertTrue(
-            contrastRatio(DarkShellColors.offSwitchBorder, DarkShellColors.soft) >= QUIET_CONTROL_CONTRAST,
+            contrastRatio(DarkShellColors.controlBorder, DarkShellColors.soft) >= QUIET_CONTROL_CONTRAST,
         )
     }
 
@@ -127,15 +129,20 @@ class ShellColorsTest {
     }
 
     @Test
-    fun theLightThemeStaysTheLightCanon() {
+    fun theLightThemeKeepsTheLightCanonExceptTheMeasuredDeviations() {
         val light = LightShellColors
         assertEquals(Color(0xFF202124), light.ink)
-        assertEquals(Color(0xFF686C72), light.muted)
+        // T-0636 moved five light values to reach their WCAG ratio; each is
+        // recorded on the token in ShellColors.kt.
+        assertEquals(Color(0xFF5F6368), light.muted)
         assertEquals(Color(0xFFEBE8E3), light.line)
-        assertEquals(Color(0xFF1E7F53), light.accent)
+        assertEquals(Color(0xFF1A734B), light.accent)
         assertEquals(Color(0xFFB3261E), light.danger)
         assertEquals(Color(0xFFF2F1EE), light.soft)
         assertEquals(Color(0xFFFFFFFF), light.surface)
+        assertEquals(Color(0xFF857F77), light.controlBorder)
+        assertEquals(Color(0xFF807A72), light.faint)
+        assertEquals(Color(0xFF8A5A00), light.amber)
     }
 
     @Test

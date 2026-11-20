@@ -6,6 +6,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -43,7 +44,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -141,6 +141,7 @@ import nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartStretch
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmap.plugin.ui.api.NavigationScreenState
 import nl.r1a.grassmap.plugin.ui.api.NavigationScreenStatus
 import nl.r1a.grassmap.plugins.contours.ContoursLayerPanel
@@ -248,8 +249,6 @@ private const val LAYERS_CARD_MAX_WIDTH_DP = 260
 private const val METRE_DECIMALS = 1
 private const val KILOMETRE_DECIMALS = 2
 private const val WHOLE_VALUE_MIN = 1.0
-private val NEEDS_REDOWNLOAD_BACKGROUND = Color(0xFFB3261E)
-private val DISTANCE_BADGE_BACKGROUND = Color(0xCC202020)
 
 /**
  * The ground metres one dp covers at [zoom] and [point]'s latitude. The map's
@@ -303,7 +302,7 @@ private fun MapScreenContent(
     }
     val loaded = bundle
     if (loaded == null) {
-        Box(Modifier.fillMaxSize().background(Color(0xFF202020)))
+        Box(Modifier.fillMaxSize().background(LocalShellColors.current.map))
         return
     }
     // A region installed or removed while this screen is open must draw
@@ -2534,11 +2533,13 @@ private fun DistanceBadge(
     text: String,
     modifier: Modifier,
 ) {
+    val colors = LocalShellColors.current
     Box(
         modifier =
             modifier
                 .clip(RoundedCornerShape(BANNER_CORNER_DP.dp))
-                .background(DISTANCE_BADGE_BACKGROUND)
+                .background(colors.glass)
+                .border(1.dp, colors.ring, RoundedCornerShape(BANNER_CORNER_DP.dp))
                 .padding(horizontal = BANNER_HORIZONTAL_DP.dp, vertical = BANNER_VERTICAL_DP.dp)
                 // The badge appears once per two-finger tap, so a polite
                 // announcement cannot repeat with a camera frame.
@@ -2549,7 +2550,7 @@ private fun DistanceBadge(
     ) {
         BasicText(
             text = text,
-            style = TextStyle(color = Color.White, fontSize = BANNER_FONT_SP.sp),
+            style = TextStyle(color = colors.ink, fontSize = BANNER_FONT_SP.sp),
             modifier = Modifier.clearAndSetSemantics {},
         )
     }
@@ -2587,11 +2588,12 @@ private fun RegionProblemBanner(
     text: String,
     modifier: Modifier = Modifier,
 ) {
+    val colors = LocalShellColors.current
     Box(
         modifier =
             modifier
                 .clip(RoundedCornerShape(BANNER_CORNER_DP.dp))
-                .background(NEEDS_REDOWNLOAD_BACKGROUND)
+                .background(colors.dangerSoft)
                 .padding(horizontal = BANNER_HORIZONTAL_DP.dp, vertical = BANNER_VERTICAL_DP.dp)
                 // The banner appears when a mounted pack breaks, not per frame.
                 .clearAndSetSemantics {
@@ -2601,7 +2603,7 @@ private fun RegionProblemBanner(
     ) {
         BasicText(
             text = text,
-            style = TextStyle(color = Color.White, fontSize = BANNER_FONT_SP.sp),
+            style = TextStyle(color = colors.danger, fontSize = BANNER_FONT_SP.sp),
             modifier = Modifier.clearAndSetSemantics {},
         )
     }

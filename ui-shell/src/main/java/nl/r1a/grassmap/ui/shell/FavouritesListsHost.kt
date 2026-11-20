@@ -37,6 +37,7 @@ import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
 import nl.r1a.grassmap.plugin.api.model.FavouriteSort
 import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
 
 /**
  * The lists sheet (T-0213). The plugin owns the state and the actions; this
@@ -74,7 +75,7 @@ fun FavouritesListsHost(
     var query by remember { mutableStateOf(state.browse.query) }
 
     Box(
-        modifier = modifier.fillMaxSize().background(SCRIM_COLOR).clickable(onClick = onClose),
+        modifier = modifier.fillMaxSize().background(LocalShellColors.current.scrim).clickable(onClick = onClose),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -82,7 +83,7 @@ fun FavouritesListsHost(
                 Modifier
                     .padding(SHEET_MARGIN_DP.dp)
                     .widthIn(max = SHEET_MAX_WIDTH_DP.dp)
-                    .background(SHEET_BACKGROUND, RoundedCornerShape(SHEET_CORNER_DP.dp))
+                    .background(LocalShellColors.current.surface, RoundedCornerShape(SHEET_CORNER_DP.dp))
                     .pointerInput(Unit) { detectTapGestures(onTap = {}) }
                     .padding(SHEET_PADDING_DP.dp)
                     .verticalScroll(rememberScrollState()),
@@ -158,19 +159,19 @@ private fun Header(
     ) {
         BasicText(
             text = content.title,
-            style = TextStyle(color = TEXT_PRIMARY, fontSize = TITLE_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
+            style = TextStyle(color = LocalShellColors.current.ink, fontSize = TITLE_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp)) {
             if (content.undoAvailable) {
                 BasicText(
                     text = content.undo,
-                    style = TextStyle(color = TEXT_SECONDARY, fontSize = ROW_FONT_SP.sp),
+                    style = TextStyle(color = LocalShellColors.current.muted, fontSize = ROW_FONT_SP.sp),
                     modifier = Modifier.clickable(onClick = onUndo).padding(CLOSE_PADDING_DP.dp),
                 )
             }
             BasicText(
                 text = CLOSE_GLYPH,
-                style = TextStyle(color = TEXT_PRIMARY, fontSize = TITLE_FONT_SP.sp),
+                style = TextStyle(color = LocalShellColors.current.ink, fontSize = TITLE_FONT_SP.sp),
                 modifier =
                     Modifier
                         .clickable(onClick = onClose)
@@ -194,11 +195,11 @@ private fun ListCreator(
         value = name,
         onValueChange = onNameChange,
         singleLine = true,
-        textStyle = TextStyle(color = TEXT_PRIMARY, fontSize = ROW_FONT_SP.sp),
+        textStyle = TextStyle(color = LocalShellColors.current.ink, fontSize = ROW_FONT_SP.sp),
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(FIELD_BACKGROUND, RoundedCornerShape(FIELD_CORNER_DP.dp))
+                .background(LocalShellColors.current.soft, RoundedCornerShape(FIELD_CORNER_DP.dp))
                 .padding(FIELD_PADDING_DP.dp),
     )
     ColourChooser(onChoose = onColorChange)
@@ -221,7 +222,7 @@ private fun ListRow(
     ) {
         Swatch(color = row.color)
         Column(modifier = Modifier.weight(WEIGHT_ONE)) {
-            Line(text = row.name, style = TextStyle(color = TEXT_PRIMARY, fontSize = ROW_FONT_SP.sp))
+            Line(text = row.name, style = TextStyle(color = LocalShellColors.current.ink, fontSize = ROW_FONT_SP.sp))
             Line(text = row.pointCount.toString(), style = secondaryStyle())
         }
         if (canMove) {
@@ -244,11 +245,11 @@ private fun SearchField(
         value = query,
         onValueChange = onQueryChange,
         singleLine = true,
-        textStyle = TextStyle(color = TEXT_PRIMARY, fontSize = ROW_FONT_SP.sp),
+        textStyle = TextStyle(color = LocalShellColors.current.ink, fontSize = ROW_FONT_SP.sp),
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(FIELD_BACKGROUND, RoundedCornerShape(FIELD_CORNER_DP.dp))
+                .background(LocalShellColors.current.soft, RoundedCornerShape(FIELD_CORNER_DP.dp))
                 .padding(FIELD_PADDING_DP.dp),
     )
     if (query.isEmpty()) {
@@ -273,14 +274,20 @@ private fun SortChooser(
                 text = row.label,
                 style =
                     TextStyle(
-                        color = if (row.selected) TEXT_PRIMARY else TEXT_SECONDARY,
+                        color = if (row.selected) LocalShellColors.current.ink else LocalShellColors.current.muted,
                         fontSize = ROW_FONT_SP.sp,
                         fontWeight = if (row.selected) FontWeight.SemiBold else FontWeight.Normal,
                     ),
                 modifier =
                     Modifier
                         .background(
-                            if (row.selected) SELECTED_BACKGROUND else FIELD_BACKGROUND,
+                            if (row.selected) {
+                                LocalShellColors.current.accent.copy(
+                                    alpha = SELECTED_ALPHA,
+                                )
+                            } else {
+                                LocalShellColors.current.soft
+                            },
                             RoundedCornerShape(FIELD_CORNER_DP.dp),
                         ).clickable { onChoose(row.sort) }
                         .padding(FIELD_PADDING_DP.dp),
@@ -302,14 +309,16 @@ private fun PointRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(if (selected) SELECTED_BACKGROUND else Color.Transparent, RoundedCornerShape(FIELD_CORNER_DP.dp))
-                .clickable(onClick = onSelect)
+                .background(
+                    if (selected) LocalShellColors.current.accent.copy(alpha = SELECTED_ALPHA) else Color.Transparent,
+                    RoundedCornerShape(FIELD_CORNER_DP.dp),
+                ).clickable(onClick = onSelect)
                 .padding(FIELD_PADDING_DP.dp),
         horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(WEIGHT_ONE)) {
-            Line(text = row.name, style = TextStyle(color = TEXT_PRIMARY, fontSize = ROW_FONT_SP.sp))
+            Line(text = row.name, style = TextStyle(color = LocalShellColors.current.ink, fontSize = ROW_FONT_SP.sp))
             Line(text = row.list, style = secondaryStyle())
             row.description?.let { description -> Line(text = description, style = secondaryStyle()) }
         }
@@ -324,7 +333,7 @@ private fun PointRow(
 private fun ColourChooser(onChoose: (String) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(CHIP_GAP_DP.dp)) {
         PRESET_COLOURS.forEach { preset ->
-            val swatch = favouriteColour(preset)?.let { argb -> Color(argb) } ?: SWATCH_UNKNOWN
+            val swatch = favouriteColour(preset)?.let { argb -> Color(argb) } ?: LocalShellColors.current.faint
             Box(
                 modifier =
                     Modifier
@@ -339,7 +348,7 @@ private fun ColourChooser(onChoose: (String) -> Unit) {
 @Suppress("ktlint:standard:function-naming")
 @Composable
 private fun Swatch(color: Long?) {
-    val swatch = if (color != null) Color(color) else SWATCH_UNKNOWN
+    val swatch = if (color != null) Color(color) else LocalShellColors.current.faint
     Box(
         modifier =
             Modifier
@@ -357,7 +366,7 @@ private fun GlyphButton(
 ) {
     BasicText(
         text = glyph,
-        style = TextStyle(color = TEXT_PRIMARY, fontSize = ACTION_FONT_SP.sp),
+        style = TextStyle(color = LocalShellColors.current.ink, fontSize = ACTION_FONT_SP.sp),
         modifier =
             Modifier
                 .clickable(onClick = onClick)
@@ -374,7 +383,7 @@ private fun ActionButton(
 ) {
     BasicText(
         text = text,
-        style = TextStyle(color = TEXT_PRIMARY, fontSize = ACTION_FONT_SP.sp),
+        style = TextStyle(color = LocalShellColors.current.ink, fontSize = ACTION_FONT_SP.sp),
         modifier = Modifier.clickable(onClick = onClick).padding(CLOSE_PADDING_DP.dp),
     )
 }
@@ -384,7 +393,7 @@ private fun ActionButton(
 private fun SectionTitle(text: String) {
     BasicText(
         text = text,
-        style = TextStyle(color = TEXT_SECONDARY, fontSize = SECTION_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
+        style = TextStyle(color = LocalShellColors.current.muted, fontSize = SECTION_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
     )
 }
 
@@ -397,7 +406,8 @@ private fun Line(
     BasicText(text = text, style = style)
 }
 
-private fun secondaryStyle(): TextStyle = TextStyle(color = TEXT_SECONDARY, fontSize = ROW_FONT_SP.sp)
+@Composable
+private fun secondaryStyle(): TextStyle = TextStyle(color = LocalShellColors.current.muted, fontSize = ROW_FONT_SP.sp)
 
 private const val MOVE_GLYPH = "→"
 private const val CLOSE_GLYPH = "×"
@@ -425,13 +435,7 @@ private const val ROW_FONT_SP = 15
 private const val ACTION_FONT_SP = 14
 private const val WEIGHT_ONE = 1f
 
-private val SCRIM_COLOR = Color(0x66000000)
-private val SHEET_BACKGROUND = Color(0xF21B1B1B)
-private val FIELD_BACKGROUND = Color(0xFF2B2B2B)
-private val SELECTED_BACKGROUND = Color(0xFF35424F)
-private val TEXT_PRIMARY = Color.White
-private val TEXT_SECONDARY = Color(0xFFB8B8B8)
-private val SWATCH_UNKNOWN = Color(0xFF555555)
+private const val SELECTED_ALPHA = 0.14f
 
 /** Colours the sheet offers; a custom hex picker is backlog B-053. */
 internal val PRESET_COLOURS: List<String> =

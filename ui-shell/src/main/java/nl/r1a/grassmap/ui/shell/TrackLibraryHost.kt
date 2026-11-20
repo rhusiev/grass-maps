@@ -63,7 +63,10 @@ import nl.r1a.grassmap.plugin.api.model.RichTextStyle
 import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
 import nl.r1a.grassmap.plugin.api.model.TrackSort
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmap.plugin.ui.api.NavigationScreenColors
+import nl.r1a.grassmap.plugin.ui.api.inkOn
+import nl.r1a.grassmap.plugin.ui.api.shellColors
 
 /**
  * The track library screen (T-0414). The plugin owns the state, the four fixed
@@ -668,7 +671,7 @@ private fun Scrim(onClose: () -> Unit) {
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(SCRIM)
+                .background(LocalShellColors.current.scrim)
                 .pointerInput(Unit) { detectTapGestures(onTap = { onClose() }) },
     )
 }
@@ -859,7 +862,7 @@ private fun VisibilitySwitch(
             modifier =
                 Modifier
                     .size(SWITCH_KNOB_DP.dp)
-                    .background(Color.White, RoundedCornerShape(SWITCH_KNOB_DP.dp)),
+                    .background(if (checked) colors.selectedText else colors.textSecondary, RoundedCornerShape(SWITCH_KNOB_DP.dp)),
         )
     }
 }
@@ -1075,38 +1078,29 @@ internal data class TrackLibraryPalette(
     val undoText: Color,
 )
 
-internal fun trackLibraryPalette(dark: Boolean): TrackLibraryPalette =
-    if (dark) {
-        TrackLibraryPalette(
-            background = Color(0xFF121416),
-            surface = Color(0xFF1E2124),
-            field = Color(0xFF2B2F33),
-            selectedSurface = Color(0xFF2E7D32),
-            selection = Color(0x335FD39A),
-            textPrimary = Color.White,
-            textSecondary = Color(0xFFB8B8B8),
-            selectedText = Color.White,
-            accent = Color(0xFF8FD6AE),
-            danger = Color(0xFFEF9A9A),
-            undoBackground = Color(0xFF323437),
-            undoText = Color.White,
-        )
-    } else {
-        TrackLibraryPalette(
-            background = Color(0xFFF4F2EE),
-            surface = Color.White,
-            field = Color(0xFFF2F1EE),
-            selectedSurface = Color(0xFF202124),
-            selection = Color(0x1F1E7F53),
-            textPrimary = Color(0xFF202124),
-            textSecondary = Color(0xFF686C72),
-            selectedText = Color.White,
-            accent = Color(0xFF1E7F53),
-            danger = Color(NavigationScreenColors.DANGER),
-            undoBackground = Color(0xFF323437),
-            undoText = Color.White,
-        )
-    }
+internal fun trackLibraryPalette(dark: Boolean): TrackLibraryPalette {
+    val tokens = shellColors(dark)
+    return TrackLibraryPalette(
+        background = tokens.map,
+        surface = tokens.surface,
+        field = tokens.soft,
+        selectedSurface = tokens.selectedChip,
+        selection = tokens.accent.copy(alpha = if (dark) SELECTION_DARK_ALPHA else SELECTION_LIGHT_ALPHA),
+        textPrimary = tokens.ink,
+        textSecondary = tokens.muted,
+        selectedText = inkOn(tokens.selectedChip, tokens),
+        accent = tokens.accent,
+        danger = tokens.danger,
+        undoBackground = UNDO_BACKGROUND,
+        undoText = Color.White,
+    )
+}
+
+private const val SELECTION_LIGHT_ALPHA = 0.12f
+private const val SELECTION_DARK_ALPHA = 0.2f
+
+/** A snackbar is the inverse surface in both themes, so it keeps one pair. */
+private val UNDO_BACKGROUND = Color(0xFF323437)
 
 private enum class LibrarySheet {
     NONE,
@@ -1180,5 +1174,3 @@ private const val SWITCH_HEIGHT_DP = 26
 private const val SWITCH_KNOB_DP = 20
 private const val SWITCH_INSET_DP = 3
 private const val SWITCH_OFF_ALPHA = 0.35f
-
-private val SCRIM = Color(0x66000000)

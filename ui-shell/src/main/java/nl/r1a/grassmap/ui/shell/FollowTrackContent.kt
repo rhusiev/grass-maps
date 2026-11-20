@@ -41,6 +41,7 @@ import nl.r1a.grassmap.plugin.api.model.TrackFollowStart
 import nl.r1a.grassmap.plugin.api.model.UnitSystem
 import nl.r1a.grassmap.plugin.api.service.Strings
 import nl.r1a.grassmap.plugin.api.unit.UnitText
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
 import java.util.Locale
 import kotlin.math.roundToLong
 
@@ -147,7 +148,7 @@ fun FollowTrackSheet(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(SCRIM_COLOR)
+                    .background(LocalShellColors.current.scrim)
                     .clickable(
                         interactionSource = scrimInteraction,
                         indication = null,
@@ -214,7 +215,7 @@ fun FollowTrackSheet(
                 text = display.startLabel,
                 style =
                     TextStyle(
-                        color = Color.White,
+                        color = colors.selectedText,
                         fontSize = START_FONT_SP.sp,
                         fontWeight = FontWeight.Bold,
                     ),
@@ -424,5 +425,3 @@ private const val ARROW_HEAD_RATIO = 0.18f
 private const val NEAREST_RADIUS_RATIO = 0.3f
 private const val NEAREST_DOT_RATIO = 0.1f
 private const val NEAREST_TICK_RATIO = 0.12f
-
-private val SCRIM_COLOR = Color(0x52202124)

@@ -39,6 +39,7 @@ import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartClimb
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
 import nl.r1a.grassmap.plugin.ui.api.ElevationChartState
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToLong
@@ -445,7 +446,7 @@ private fun TrackTile(
     Column(
         modifier =
             modifier
-                .background(TILE_BACKGROUND, RoundedCornerShape(TILE_CORNER_DP.dp))
+                .background(LocalShellColors.current.soft, RoundedCornerShape(TILE_CORNER_DP.dp))
                 .padding(horizontal = TILE_PADDING_HORIZONTAL_DP.dp, vertical = TILE_PADDING_VERTICAL_DP.dp),
         verticalArrangement = Arrangement.spacedBy(TILE_GAP_DP.dp),
     ) {
@@ -513,7 +514,7 @@ private fun ClimbRow(
             Modifier
                 .fillMaxWidth()
                 .background(
-                    if (row.selected) CLIMB_SELECTED_BACKGROUND else Color.Transparent,
+                    if (row.selected) LocalShellColors.current.selectedChip.copy(alpha = CLIMB_SELECTED_ALPHA) else Color.Transparent,
                     RoundedCornerShape(CLIMB_CORNER_DP.dp),
                 ).clickable(onClick = onClick)
                 .padding(horizontal = CLIMB_PADDING_HORIZONTAL_DP.dp, vertical = CLIMB_PADDING_VERTICAL_DP.dp),
@@ -567,10 +568,7 @@ private fun ClimbRow(
     }
 }
 
-private val TILE_BACKGROUND = Color(0xFF2E2E2E)
-
-/** The tone a selected climb row takes on the panel's dark card. */
-private val CLIMB_SELECTED_BACKGROUND = Color(0x1FFFFFFF)
+private const val CLIMB_SELECTED_ALPHA = 0.12f
 
 private const val PANEL_CORNER_DP = 12
 private const val PANEL_PADDING_DP = 12

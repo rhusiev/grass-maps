@@ -250,7 +250,11 @@ private fun GridGlyph(
 ) {
     BasicText(
         text = glyph,
-        style = TextStyle(color = if (enabled) LocalShellColors.current.ink else LocalShellColors.current.faint, fontSize = GLYPH_FONT_SP.sp),
+        style =
+            TextStyle(
+                color = if (enabled) LocalShellColors.current.ink else LocalShellColors.current.faint,
+                fontSize = GLYPH_FONT_SP.sp,
+            ),
         modifier =
             Modifier
                 .clip(RoundedCornerShape(GRID_CORNER_DP.dp))

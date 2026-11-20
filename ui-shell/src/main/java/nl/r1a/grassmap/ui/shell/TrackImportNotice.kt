@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
 
 private const val TITLE_FONT_SP = 15
 private const val DETAIL_FONT_SP = 13
@@ -55,8 +56,6 @@ private const val SHEET_PADDING_DP = 16
 private const val SHEET_ROW_GAP_DP = 8
 private const val BUTTON_PADDING_HORIZONTAL_DP = 12
 private const val BUTTON_PADDING_VERTICAL_DP = 6
-
-private val SCRIM_COLOR = Color(0x66000000)
 
 /** Why a shared document did not become a track (T-0416). */
 enum class TrackImportFailure {
@@ -201,7 +200,7 @@ fun TrackImportConfirmSheet(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(SCRIM_COLOR)
+                    .background(LocalShellColors.current.scrim)
                     .pointerInput(Unit) { detectTapGestures(onTap = { onCancel() }) },
         )
         Column(

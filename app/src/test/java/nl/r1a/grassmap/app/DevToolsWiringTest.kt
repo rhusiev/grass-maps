@@ -45,7 +45,7 @@ class DevToolsWiringTest {
                 )
             val container = testContainer(testScheduler, aiControlEnabled = true, devTools = devTools)
 
-            assertTrue(container.devToolsVisible)
+            assertTrue(container.devToolsVisible.value)
             assertFalse(state(container).replayActive)
             assertEquals(57.5, state(container).framesPerSecond, 0.0)
             assertEquals(90_000_000L, state(container).usedMemoryBytes)
@@ -65,7 +65,7 @@ class DevToolsWiringTest {
             val devTools = FakeDevToolsRuntime()
             val container = testContainer(testScheduler, aiControlEnabled = false, devTools = devTools)
 
-            assertFalse(container.devToolsVisible)
+            assertFalse(container.devToolsVisible.value)
             assertEquals(
                 Outcome.Failure(AppError.SwitchOff(DevToolsContract.aiControlSwitch)),
                 container.commandBus.invoke(DevToolsContract.startReplayCommand),

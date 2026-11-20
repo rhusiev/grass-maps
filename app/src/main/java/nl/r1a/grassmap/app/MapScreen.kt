@@ -390,6 +390,7 @@ private fun MapContent(
     harness: MapHarness,
 ) {
     val context = LocalContext.current
+    val devToolsVisible by container.devToolsVisible.collectAsState()
     val scope = rememberCoroutineScope()
     val cameraMode by container.locationController.mode.collectAsState()
     val density = LocalDensity.current
@@ -445,8 +446,8 @@ private fun MapContent(
             }
         }
     }
-    LaunchedEffect(surface.host, container.devToolsVisible) {
-        if (!container.devToolsVisible) {
+    LaunchedEffect(surface.host, devToolsVisible) {
+        if (!devToolsVisible) {
             return@LaunchedEffect
         }
         surface.host.events.collect { event ->
@@ -1135,7 +1136,7 @@ private fun MapContent(
             }
         }
         val devToolsPanel = container.devToolsPanel
-        if (container.devToolsVisible && !navigationActive && devToolsPanel != null) {
+        if (devToolsVisible && !navigationActive && devToolsPanel != null) {
             devToolsPanel(
                 Modifier
                     .align(Alignment.BottomStart)

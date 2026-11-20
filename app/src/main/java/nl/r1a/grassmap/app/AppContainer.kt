@@ -7,7 +7,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -1285,12 +1287,20 @@ class AppContainer(
     /** The catalog entries for the host commands; the debug channel lists these. */
     val controlCommands: List<GeneratedCommand> by lazy { generatedMapCommands(hostCommands) }
 
+    private val devToolsShown = MutableStateFlow(aiControlEnabled())
+
     /**
      * Whether the development-tools panel and its commands are available. The
      * architecture puts them behind the AI-control switch, and both are
-     * debug-only: a release build supplies no panel and no command.
+     * debug-only: a release build supplies no panel and no command. A debug
+     * command can hide the panel while a screenshot is taken.
      */
-    val devToolsVisible: Boolean = aiControlEnabled()
+    val devToolsVisible: StateFlow<Boolean> = devToolsShown.asStateFlow()
+
+    /** Shows or hides the development-tools panel; only a debug build has a caller. */
+    fun setDevToolsVisible(visible: Boolean) {
+        devToolsShown.value = visible
+    }
 
     /**
      * The log sink plugins report through (T-0409), so a plugin outcome lands

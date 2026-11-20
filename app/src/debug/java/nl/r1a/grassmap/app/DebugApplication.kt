@@ -113,7 +113,7 @@ class DebugApplication : GrassMapsApplication() {
                     backup = { container.backup },
                     ui = { container.backupUi },
                     captureRoot = { java.io.File(filesDir, "backup-captures") },
-                )
+                ) + devToolsVisibilityCommands { container }
         }
 
     /** Debug builds treat the developer as the AI-control switch holder. */

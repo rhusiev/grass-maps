@@ -828,7 +828,7 @@ z-order, never the network path.
 
 ## Place card
 
-The `places.card` contract (`PlaceCardContract`, version 1.2.0) maps one
+The `places.card` contract (`PlaceCardContract`, version 1.3.0) maps one
 place's already-loaded `PlaceDetails` onto a `PlaceCard`. The provider gets no
 index, file or network handle, so the tags it draws can only be the tags the
 `places.search` contract returned. `plugins/osm-places` is the first provider;
@@ -842,8 +842,19 @@ Version 1.2.0 adds two optional parts (T-0210): `PlaceCard.coordinates`, three
 copy, share and open-in actions. A provider that leaves both empty is still
 valid. `plugins/osm-places` maps the tags; `app` adds the two parts through
 `plugins/share`, which owns every format and link rule, so the provider stays a
-tag mapper and `ui-shell` draws rows it was given. A contact row that carries a
-`PlaceCardLink` is clickable: the shell hands the link to the platform seam,
+tag mapper and `ui-shell` draws rows it was given.
+
+Version 1.3.0 adds `PlaceCard.online` (T-0212). A provider leaves it false. The
+host sets it on a card built from an online search hit, which has no
+`places.details` record: the card carries only the hit's name, category,
+composed address and point. The tag-derived rows and actions (call, website,
+email, social) cannot be drawn because there are no tags. Copy coordinates,
+share and open-in need only the point and stay on the card. Opening it makes no
+details call and no network request; the search that produced the row was the
+only contact, under the online-search switch.
+
+A contact row that carries a `PlaceCardLink` is clickable: the shell hands the
+link to the platform seam,
 which opens `tel:`, `mailto:` or the web address (`https:` is added when the tag
 omits a scheme). A `website` or `contact:*` tag is untrusted region data, so a
 web target must be `http` or `https` in any letter case; any other scheme,
@@ -3101,9 +3112,12 @@ behind.
 The list and the markers are two views of one result set. `searchResultView`
 maps the hits once, and the screen draws its `rows` and its `markers` from that
 one value. Tapping a row moves the camera to the place and opens the place card
-through the same `PlaceCardAccess` path the debug command uses. A coordinate
-row is the exception: it has no card behind it, so `MapScreen` moves the camera
-and opens nothing when `PlaceHit.isCoordinate` is set (T-0206).
+through the same `PlaceCardAccess` path the debug command uses. An offline row
+opens the section that produced the hit. An online row has no `places.details`
+record, so the card is built from the hit itself and makes no details call
+(T-0212). A coordinate row is the exception: it has no card behind it, so
+`MapScreen` moves the camera and opens nothing when `PlaceHit.isCoordinate` is
+set (T-0206).
 
 A keystroke may also carry `viewport` as `{"south": .., "west": .., "north":
 .., "east": ..}`. That is "search this area": the provider keeps only results

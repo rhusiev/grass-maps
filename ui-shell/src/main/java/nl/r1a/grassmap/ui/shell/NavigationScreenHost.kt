@@ -67,6 +67,7 @@ private const val BAR_CORNER_DP = 32
 private const val CHIP_CORNER_DP = 18
 private const val CHIP_HEIGHT_DP = 36
 private const val CHIP_PADDING_HORIZONTAL_DP = 11
+private const val ALERT_CHIP_TINT_ALPHA = 0.16f
 private const val END_HEIGHT_DP = 40
 private const val END_CORNER_DP = 20
 private const val DONE_HEIGHT_DP = 52
@@ -402,6 +403,7 @@ private fun Bar(
                 glyph = "\u2713",
                 background = colors.accent,
                 ink = colors.onAccent,
+                outline = colors.accent,
                 onClick = onDone,
                 modifier = Modifier.fillMaxWidth().height(DONE_HEIGHT_DP.dp),
             )
@@ -425,6 +427,7 @@ private fun Bar(
                     glyph = "\u25B6",
                     background = colors.accent,
                     ink = colors.onAccent,
+                    outline = colors.accent,
                     onClick = onResume,
                     modifier = Modifier.weight(1f).height(END_HEIGHT_DP.dp),
                 )
@@ -566,6 +569,7 @@ private fun TripSheet(
                 glyph = if (NavigationControl.Resume in controls) "\u25B6" else "\u2016",
                 background = colors.soft,
                 ink = colors.ink,
+                outline = colors.controlBorder,
                 onClick = if (NavigationControl.Resume in controls) onResume else onPause,
                 modifier = Modifier.weight(1f).height(50.dp),
             )
@@ -713,6 +717,7 @@ private fun SettingsSheet(
                     glyph = "",
                     background = colors.soft,
                     ink = colors.ink,
+                    outline = colors.controlBorder,
                     onClick = onReset,
                     modifier = Modifier.weight(1f).height(50.dp),
                 )
@@ -820,14 +825,16 @@ private fun AlertChips(
                 return@forEach
             }
             val on = state.alertSwitchEnabled(switch)
+            val shape = RoundedCornerShape(CHIP_CORNER_DP.dp)
             Box(
                 modifier =
                     Modifier
                         .height(CHIP_HEIGHT_DP.dp)
                         .background(
-                            if (on) colors.accent.copy(alpha = 0.16f) else colors.soft,
-                            RoundedCornerShape(CHIP_CORNER_DP.dp),
-                        ).toggleable(value = on, role = Role.Switch) { onChange(switch, !on) }
+                            if (on) colors.accent.copy(alpha = ALERT_CHIP_TINT_ALPHA) else colors.soft,
+                            shape,
+                        ).border(1.dp, if (on) colors.accent else colors.controlBorder, shape)
+                        .toggleable(value = on, role = Role.Switch) { onChange(switch, !on) }
                         .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -882,14 +889,19 @@ private fun Switch(
     checked: Boolean,
     colors: ShellColors,
 ) {
+    val shape = RoundedCornerShape(SWITCH_HEIGHT_DP.dp)
     Box(
         modifier =
             Modifier
                 .width(SWITCH_WIDTH_DP.dp)
                 .height(SWITCH_HEIGHT_DP.dp)
                 .background(
-                    if (checked) colors.accent else colors.muted.copy(alpha = 0.35f),
-                    RoundedCornerShape(SWITCH_HEIGHT_DP.dp),
+                    if (checked) colors.accent else colors.soft,
+                    shape,
+                ).border(
+                    1.dp,
+                    if (checked) colors.accent else colors.controlBorder,
+                    shape,
                 ).padding(horizontal = 3.dp),
         contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart,
     ) {
@@ -938,11 +950,15 @@ private fun EndPill(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val shape = RoundedCornerShape(END_CORNER_DP.dp)
     Row(
         modifier =
             modifier
                 .height(END_HEIGHT_DP.dp)
-                .background(colors.dangerSoft, RoundedCornerShape(END_CORNER_DP.dp))
+                // The fill alone was 1.12:1 against the dark bar and 1.14:1 in
+                // light (T-0636); the danger outline makes the pill a control.
+                .background(colors.dangerSoft, shape)
+                .border(1.dp, colors.danger, shape)
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -962,13 +978,16 @@ private fun PrimaryPill(
     glyph: String,
     background: Color,
     ink: Color,
+    outline: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val shape = RoundedCornerShape(25.dp)
     Row(
         modifier =
             modifier
-                .background(background, RoundedCornerShape(25.dp))
+                .background(background, shape)
+                .border(1.dp, outline, shape)
                 .clickable(role = Role.Button, onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
@@ -997,6 +1016,7 @@ private fun RoundButton(
             Modifier
                 .size(size.dp)
                 .background(colors.soft, RoundedCornerShape((size / 2).dp))
+                .border(1.dp, colors.controlBorder, RoundedCornerShape((size / 2).dp))
                 .clickable(role = Role.Button, onClick = onClick)
                 .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,

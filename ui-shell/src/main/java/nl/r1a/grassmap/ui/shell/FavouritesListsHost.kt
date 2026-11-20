@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.ui.shell
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
@@ -200,7 +201,11 @@ private fun ListCreator(
             Modifier
                 .fillMaxWidth()
                 .background(LocalShellColors.current.soft, RoundedCornerShape(FIELD_CORNER_DP.dp))
-                .padding(FIELD_PADDING_DP.dp),
+                .border(
+                    1.dp,
+                    LocalShellColors.current.controlBorder,
+                    RoundedCornerShape(FIELD_CORNER_DP.dp),
+                ).padding(FIELD_PADDING_DP.dp),
     )
     ColourChooser(onChoose = onColorChange)
     ActionButton(text = strings.resolve(CREATE_KEY), onClick = onCreate)
@@ -250,7 +255,11 @@ private fun SearchField(
             Modifier
                 .fillMaxWidth()
                 .background(LocalShellColors.current.soft, RoundedCornerShape(FIELD_CORNER_DP.dp))
-                .padding(FIELD_PADDING_DP.dp),
+                .border(
+                    1.dp,
+                    LocalShellColors.current.controlBorder,
+                    RoundedCornerShape(FIELD_CORNER_DP.dp),
+                ).padding(FIELD_PADDING_DP.dp),
     )
     if (query.isEmpty()) {
         Line(text = hint, style = secondaryStyle())
@@ -288,6 +297,10 @@ private fun SortChooser(
                             } else {
                                 LocalShellColors.current.soft
                             },
+                            RoundedCornerShape(FIELD_CORNER_DP.dp),
+                        ).border(
+                            1.dp,
+                            if (row.selected) LocalShellColors.current.accent else LocalShellColors.current.controlBorder,
                             RoundedCornerShape(FIELD_CORNER_DP.dp),
                         ).clickable { onChoose(row.sort) }
                         .padding(FIELD_PADDING_DP.dp),

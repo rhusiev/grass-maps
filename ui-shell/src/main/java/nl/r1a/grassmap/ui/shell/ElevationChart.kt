@@ -184,7 +184,9 @@ private val LIGHT_PALETTE =
                 Color(0xFF8F1D1A),
             ),
         chip = Color(0xFFFFFFFF),
-        chipBorder = Color(0xFFDCD8D1),
+        // The shell's control border: the light chip outline is a control
+        // boundary and needs 3:1 on the white card (T-0636).
+        chipBorder = Color(0xFF857F77),
         chipText = Color(0xFF202124),
         chipSelected = Color(0xFF202124),
         chipSelectedText = Color(0xFFFFFFFF),
@@ -210,7 +212,7 @@ private val DARK_PALETTE =
                 Color(0xFFFFC4BC),
             ),
         chip = Color(0x00000000),
-        chipBorder = Color(0xFF4A4F55),
+        chipBorder = Color(0xFF80868B),
         chipText = Color(0xFFE8EAED),
         chipSelected = Color(0xFFFFFFFF),
         chipSelectedText = Color(0xFF202124),

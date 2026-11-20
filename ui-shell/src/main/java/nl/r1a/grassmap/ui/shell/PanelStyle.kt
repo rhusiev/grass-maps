@@ -42,6 +42,11 @@ internal val ROUTE_CHIP_COLOR: Color
     @Composable @ReadOnlyComposable
     get() = LocalShellColors.current.soft
 
+/** The outline of a quiet chip, field or button whose fill is only tonal. */
+internal val ROUTE_CONTROL_BORDER: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.controlBorder
+
 /** A selected chip inverts to the ink fill. */
 internal val ROUTE_CHIP_SELECTED_COLOR: Color
     @Composable @ReadOnlyComposable

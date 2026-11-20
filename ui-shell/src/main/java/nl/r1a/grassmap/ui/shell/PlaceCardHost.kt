@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.ui.shell
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -222,6 +223,7 @@ private fun Shortcuts(
                 Modifier
                     .fillMaxWidth()
                     .background(colors.soft, RoundedCornerShape(ACTION_CORNER_DP.dp))
+                    .border(1.dp, colors.controlBorder, RoundedCornerShape(ACTION_CORNER_DP.dp))
                     .clickable(role = Role.Button) { onAction(shortcut.link) }
                     .padding(ACTION_PADDING_DP.dp),
         ) {

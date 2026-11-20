@@ -427,7 +427,7 @@ fun TrackAnalysisPanel(
                     text = strings.resolve(FOLLOW_KEY),
                     style =
                         TextStyle(
-                            color = ROUTE_VALUE_COLOR,
+                            color = ROUTE_ACTION_INK,
                             fontSize = FOLLOW_FONT_SP.sp,
                             fontWeight = FontWeight.Bold,
                         ),

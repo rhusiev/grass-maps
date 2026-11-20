@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.ui.shell
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -272,7 +273,9 @@ private fun Segment(
         text = if (step.profileDefault) step.label + DEFAULT_DOT else step.label,
         style =
             TextStyle(
-                color = if (step.selected) ROUTE_VALUE_COLOR else ROUTE_STATUS_COLOR,
+                // A selected segment inverts to the ink fill, so it needs the
+                // selected-chip ink, not the page ink (T-0636).
+                color = if (step.selected) ROUTE_CHIP_SELECTED_INK else ROUTE_STATUS_COLOR,
                 fontSize = DETAIL_FONT_SP.sp,
                 fontWeight = if (step.selected) FontWeight.Bold else FontWeight.Normal,
                 textAlign = TextAlign.Center,
@@ -282,6 +285,10 @@ private fun Segment(
                 .semantics { contentDescription = step.description }
                 .background(
                     if (step.selected) ROUTE_CHIP_SELECTED_COLOR else ROUTE_CHIP_COLOR,
+                    RoundedCornerShape(SEGMENT_CORNER_DP.dp),
+                ).border(
+                    1.dp,
+                    if (step.selected) ROUTE_CHIP_SELECTED_COLOR else ROUTE_CONTROL_BORDER,
                     RoundedCornerShape(SEGMENT_CORNER_DP.dp),
                 ).selectable(
                     selected = step.selected,

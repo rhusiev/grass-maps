@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.ui.shell
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -245,7 +246,7 @@ private fun ConfirmButton(
         text = text,
         style =
             TextStyle(
-                color = if (primary) ROUTE_VALUE_COLOR else ROUTE_STATUS_COLOR,
+                color = if (primary) ROUTE_ACTION_INK else ROUTE_STATUS_COLOR,
                 fontSize = ACTION_FONT_SP.sp,
                 fontWeight = if (primary) FontWeight.Bold else FontWeight.Normal,
             ),
@@ -253,7 +254,11 @@ private fun ConfirmButton(
             Modifier
                 .clip(RoundedCornerShape(NOTICE_CORNER_DP.dp))
                 .background(colors, RoundedCornerShape(NOTICE_CORNER_DP.dp))
-                .clickable(onClick = onClick)
+                .border(
+                    1.dp,
+                    if (primary) ROUTE_ACTION_COLOR else ROUTE_CONTROL_BORDER,
+                    RoundedCornerShape(NOTICE_CORNER_DP.dp),
+                ).clickable(onClick = onClick)
                 .semantics { contentDescription = text }
                 .padding(
                     horizontal = BUTTON_PADDING_HORIZONTAL_DP.dp,

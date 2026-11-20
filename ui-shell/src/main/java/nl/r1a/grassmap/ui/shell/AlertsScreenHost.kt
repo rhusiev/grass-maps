@@ -46,7 +46,6 @@ import nl.r1a.grassmap.plugin.ui.api.AlertsPageChannel
 import nl.r1a.grassmap.plugin.ui.api.AlertsPageState
 import nl.r1a.grassmap.plugin.ui.api.AlertsPageSwitch
 import nl.r1a.grassmap.plugin.ui.api.ShellColors
-import nl.r1a.grassmap.plugin.ui.api.inkOn
 import nl.r1a.grassmap.plugin.ui.api.shellColors
 
 private const val PAGE_TITLE_SP = 21
@@ -68,6 +67,7 @@ private const val SWITCH_BORDER_DP = 2
 private const val SWITCH_KNOB_DP = 18
 private const val CHANNEL_HEIGHT_DP = 36
 private const val CHANNEL_CORNER_DP = 18
+private const val CHANNEL_TINT_ALPHA = 0.14f
 private const val DONE_HEIGHT_DP = 50
 private const val DONE_CORNER_DP = 25
 private const val BACK_BUTTON_DP = 40
@@ -290,7 +290,7 @@ private fun Switch(
                 .background(if (on) colors.accent else colors.soft, RoundedCornerShape(14.dp))
                 .border(
                     SWITCH_BORDER_DP.dp,
-                    if (on) colors.accent else colors.offSwitchBorder,
+                    if (on) colors.accent else colors.controlBorder,
                     RoundedCornerShape(14.dp),
                 ),
     ) {
@@ -338,11 +338,13 @@ private fun ChannelChip(
     modifier: Modifier = Modifier,
 ) {
     val ink = if (channel.on) colors.accent else colors.muted
+    val shape = RoundedCornerShape(CHANNEL_CORNER_DP.dp)
     Row(
         modifier =
             modifier
                 .height(CHANNEL_HEIGHT_DP.dp)
-                .background(if (channel.on) colors.accent.copy(alpha = 0.14f) else colors.soft, RoundedCornerShape(CHANNEL_CORNER_DP.dp))
+                .background(if (channel.on) colors.accent.copy(alpha = CHANNEL_TINT_ALPHA) else colors.soft, shape)
+                .border(1.dp, if (channel.on) colors.accent else colors.controlBorder, shape)
                 .semantics { contentDescription = channel.description }
                 .toggleable(value = channel.on, role = Role.Switch, onValueChange = { onClick() })
                 .padding(horizontal = 8.dp),
@@ -376,7 +378,10 @@ private fun DoneButton(
                 .navigationBarsPadding()
                 .padding(horizontal = CONTENT_HORIZONTAL_DP.dp, vertical = 10.dp)
                 .height(DONE_HEIGHT_DP.dp)
-                .background(colors.amber, RoundedCornerShape(DONE_CORNER_DP.dp))
+                // Round 8's primary button, not the amber rating accent: the
+                // handoff draws Done as `primary_button`, and the amber fill
+                // reached only 2.87:1 against the page in light (T-0636).
+                .background(colors.accent, RoundedCornerShape(DONE_CORNER_DP.dp))
                 .clickable(role = Role.Button, onClick = onDone),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
@@ -385,7 +390,7 @@ private fun DoneButton(
             text = CHECK_GLYPH,
             style =
                 TextStyle(
-                    color = inkOn(colors.amber, colors),
+                    color = colors.onAccent,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                 ),
@@ -395,7 +400,7 @@ private fun DoneButton(
             text = "  $label",
             style =
                 TextStyle(
-                    color = inkOn(colors.amber, colors),
+                    color = colors.onAccent,
                     fontSize = DONE_LABEL_SP.sp,
                     fontWeight = FontWeight.Bold,
                 ),

@@ -304,7 +304,7 @@ private fun ActionBox(
             size
                 .alpha(if (enabled) 1f else DISABLED_ALPHA)
                 .background(colors.surface, shape)
-                .border(1.dp, colors.ring, shape)
+                .border(1.dp, colors.controlBorder, shape)
                 .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
                 .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,

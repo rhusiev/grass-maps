@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.ui.shell
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -189,13 +190,23 @@ private fun CardButton(
     background: androidx.compose.ui.graphics.Color,
     onClick: () -> Unit,
 ) {
+    val primary = background == ROUTE_ACTION_COLOR
     BasicText(
         text = text,
-        style = TextStyle(color = ROUTE_VALUE_COLOR, fontSize = BODY_FONT_SP.sp, fontWeight = FontWeight.Bold),
+        style =
+            TextStyle(
+                color = if (primary) ROUTE_ACTION_INK else ROUTE_VALUE_COLOR,
+                fontSize = BODY_FONT_SP.sp,
+                fontWeight = FontWeight.Bold,
+            ),
         modifier =
             Modifier
                 .background(background, RoundedCornerShape(BUTTON_CORNER_DP.dp))
-                .clickable(onClick = onClick)
+                .border(
+                    1.dp,
+                    if (primary) ROUTE_ACTION_COLOR else ROUTE_CONTROL_BORDER,
+                    RoundedCornerShape(BUTTON_CORNER_DP.dp),
+                ).clickable(onClick = onClick)
                 .padding(horizontal = BUTTON_PADDING_HORIZONTAL_DP.dp, vertical = BUTTON_PADDING_VERTICAL_DP.dp),
     )
 }

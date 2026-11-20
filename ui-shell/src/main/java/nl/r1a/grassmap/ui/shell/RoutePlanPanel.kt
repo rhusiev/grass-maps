@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.ui.shell
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -386,6 +387,7 @@ private fun CoordinateEntry(
                 Modifier
                     .fillMaxWidth()
                     .background(ROUTE_CHIP_COLOR, RoundedCornerShape(CHIP_CORNER_DP.dp))
+                    .border(1.dp, ROUTE_CONTROL_BORDER, RoundedCornerShape(CHIP_CORNER_DP.dp))
                     .padding(FIELD_PADDING_DP.dp)
                     .widthIn(min = FIELD_MIN_WIDTH_DP.dp),
         ) {
@@ -591,12 +593,22 @@ internal fun ActionChip(
     onClick: () -> Unit,
     background: Color = ROUTE_CHIP_COLOR,
 ) {
+    val primary = background == ROUTE_ACTION_COLOR
+    val shape = RoundedCornerShape(CHIP_CORNER_DP.dp)
     BasicText(
         text = text,
-        style = TextStyle(color = ROUTE_VALUE_COLOR, fontSize = STATUS_FONT_SP.sp, fontWeight = FontWeight.Bold),
+        style =
+            TextStyle(
+                // The accent fill carries on-accent ink: palette ink measured
+                // 2.76:1 in light and 1.55:1 in dark (T-0636).
+                color = if (primary) ROUTE_ACTION_INK else ROUTE_VALUE_COLOR,
+                fontSize = STATUS_FONT_SP.sp,
+                fontWeight = FontWeight.Bold,
+            ),
         modifier =
             Modifier
-                .background(background, RoundedCornerShape(CHIP_CORNER_DP.dp))
+                .background(background, shape)
+                .border(1.dp, if (primary) ROUTE_ACTION_COLOR else ROUTE_CONTROL_BORDER, shape)
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(
                     horizontal = CHIP_PADDING_HORIZONTAL_DP.dp,
@@ -641,6 +653,10 @@ private fun AlternativeChips(
                         .semantics { contentDescription = description }
                         .background(
                             if (selected) ROUTE_CHIP_SELECTED_COLOR else ROUTE_CHIP_COLOR,
+                            RoundedCornerShape(CHIP_CORNER_DP.dp),
+                        ).border(
+                            1.dp,
+                            if (selected) ROUTE_CHIP_SELECTED_COLOR else ROUTE_CONTROL_BORDER,
                             RoundedCornerShape(CHIP_CORNER_DP.dp),
                         ).selectable(
                             selected = selected,

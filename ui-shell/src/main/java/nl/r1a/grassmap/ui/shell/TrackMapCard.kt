@@ -292,6 +292,10 @@ private fun ActionButton(
                 .background(
                     if (filled) ROUTE_ACTION_COLOR else ROUTE_CHIP_COLOR,
                     RoundedCornerShape(BUTTON_CORNER_DP.dp),
+                ).border(
+                    1.dp,
+                    if (filled) ROUTE_ACTION_COLOR else ROUTE_CONTROL_BORDER,
+                    RoundedCornerShape(BUTTON_CORNER_DP.dp),
                 ).clickable(onClick = onClick)
                 .padding(horizontal = BUTTON_HORIZONTAL_DP.dp, vertical = BUTTON_VERTICAL_DP.dp),
         contentAlignment = Alignment.Center,
@@ -300,7 +304,7 @@ private fun ActionButton(
             text = label,
             style =
                 TextStyle(
-                    color = ROUTE_VALUE_COLOR,
+                    color = if (filled) ROUTE_ACTION_INK else ROUTE_VALUE_COLOR,
                     fontSize = BUTTON_FONT_SP.sp,
                     fontWeight = FontWeight.Bold,
                 ),

@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.ui.shell
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -512,6 +513,7 @@ private fun SearchField(
             Modifier
                 .fillMaxWidth()
                 .background(colors.surface, RoundedCornerShape(FIELD_CORNER_DP.dp))
+                .border(1.dp, colors.border, RoundedCornerShape(FIELD_CORNER_DP.dp))
                 .padding(FIELD_PADDING_DP.dp),
     )
     if (query.isEmpty()) {
@@ -657,7 +659,7 @@ private fun UndoBar(
         Line(text = message, colors = colors, colour = colors.undoText)
         BasicText(
             text = undo,
-            style = TextStyle(color = colors.accent, fontSize = ROW_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
+            style = TextStyle(color = colors.undoAction, fontSize = ROW_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
             modifier = Modifier.clickable(role = Role.Button, onClick = onUndo).padding(ACTION_PADDING_DP.dp),
         )
     }
@@ -791,6 +793,7 @@ private fun EditSheet(
                     .fillMaxWidth()
                     .height(DESCRIPTION_HEIGHT_DP.dp)
                     .background(colors.surface, RoundedCornerShape(FIELD_CORNER_DP.dp))
+                    .border(1.dp, colors.border, RoundedCornerShape(FIELD_CORNER_DP.dp))
                     .padding(FIELD_PADDING_DP.dp),
         )
         Line(text = content.descriptionNote, colors = colors, secondary = true)
@@ -852,7 +855,11 @@ private fun VisibilitySwitch(
                 .width(SWITCH_WIDTH_DP.dp)
                 .height(SWITCH_HEIGHT_DP.dp)
                 .background(
-                    if (checked) colors.accent else colors.textSecondary.copy(alpha = SWITCH_OFF_ALPHA),
+                    if (checked) colors.accent else colors.field,
+                    RoundedCornerShape(SWITCH_HEIGHT_DP.dp),
+                ).border(
+                    1.dp,
+                    if (checked) colors.accent else colors.border,
                     RoundedCornerShape(SWITCH_HEIGHT_DP.dp),
                 ).padding(horizontal = SWITCH_INSET_DP.dp),
         contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart,
@@ -956,6 +963,7 @@ private fun SheetTextField(
             Modifier
                 .fillMaxWidth()
                 .background(colors.field, RoundedCornerShape(FIELD_CORNER_DP.dp))
+                .border(1.dp, colors.border, RoundedCornerShape(FIELD_CORNER_DP.dp))
                 .padding(FIELD_PADDING_DP.dp),
     )
 }
@@ -981,6 +989,12 @@ private fun Chip(
                 .background(
                     if (selected) colors.selectedSurface else colors.field,
                     RoundedCornerShape(CHIP_CORNER_DP.dp),
+                ).then(
+                    if (selected) {
+                        Modifier
+                    } else {
+                        Modifier.border(1.dp, colors.border, RoundedCornerShape(CHIP_CORNER_DP.dp))
+                    },
                 ).clickable(onClick = onClick)
                 .padding(CHIP_PADDING_DP.dp),
     )
@@ -1017,6 +1031,7 @@ private fun SecondaryButton(
         modifier =
             Modifier
                 .background(colors.field, RoundedCornerShape(BUTTON_CORNER_DP.dp))
+                .border(1.dp, colors.border, RoundedCornerShape(BUTTON_CORNER_DP.dp))
                 .clickable(onClick = onClick)
                 .padding(BUTTON_PADDING_DP.dp),
     )
@@ -1075,6 +1090,8 @@ internal data class TrackLibraryPalette(
     val danger: Color,
     val undoBackground: Color,
     val undoText: Color,
+    val undoAction: Color,
+    val border: Color,
 )
 
 internal fun trackLibraryPalette(dark: Boolean): TrackLibraryPalette {
@@ -1092,6 +1109,8 @@ internal fun trackLibraryPalette(dark: Boolean): TrackLibraryPalette {
         danger = tokens.danger,
         undoBackground = UNDO_BACKGROUND,
         undoText = Color.White,
+        undoAction = UNDO_ACTION,
+        border = tokens.controlBorder,
     )
 }
 
@@ -1100,6 +1119,9 @@ private const val SELECTION_DARK_ALPHA = 0.2f
 
 /** A snackbar is the inverse surface in both themes, so it keeps one pair. */
 private val UNDO_BACKGROUND = Color(0xFF323437)
+
+/** A light mint for an action on the inverse surface; the theme accent is dark in light. */
+private val UNDO_ACTION = Color(0xFF8FD5A8)
 
 private enum class LibrarySheet {
     NONE,
@@ -1172,4 +1194,3 @@ private const val SWITCH_WIDTH_DP = 44
 private const val SWITCH_HEIGHT_DP = 26
 private const val SWITCH_KNOB_DP = 20
 private const val SWITCH_INSET_DP = 3
-private const val SWITCH_OFF_ALPHA = 0.35f

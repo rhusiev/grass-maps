@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.ui.shell
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -171,6 +172,7 @@ fun SearchScreenHost(
                                 .weight(WEIGHT_ONE)
                                 .focusRequester(focusRequester)
                                 .background(colors.soft, RoundedCornerShape(FIELD_CORNER_DP.dp))
+                                .border(1.dp, colors.controlBorder, RoundedCornerShape(FIELD_CORNER_DP.dp))
                                 .padding(FIELD_PADDING_DP.dp)
                                 .semantics { contentDescription = content.labels.hint },
                     )

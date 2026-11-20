@@ -44,6 +44,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -392,6 +393,16 @@ private fun MapContent(
 ) {
     val context = LocalContext.current
     val devToolsVisible by container.devToolsVisible.collectAsState()
+    val windowColors = LocalShellColors.current
+    val activity = context as? Activity
+    LaunchedEffect(activity, windowColors) {
+        val window = activity?.window ?: return@LaunchedEffect
+        window.statusBarColor = windowColors.map.toArgb()
+        // The map runs under the status bar; its icons must follow the theme.
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility =
+            if (windowColors.dark) 0 else android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+    }
     val scope = rememberCoroutineScope()
     val cameraMode by container.locationController.mode.collectAsState()
     val density = LocalDensity.current

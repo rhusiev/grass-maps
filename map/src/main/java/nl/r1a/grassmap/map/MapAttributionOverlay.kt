@@ -1,6 +1,7 @@
 package nl.r1a.grassmap.map
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,7 +16,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmap.plugin.api.model.MapCredits
+import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmap.plugin.ui.api.ShellColors
 import org.maplibre.compose.map.MapStyleState
 import org.maplibre.compose.overlay.AttributionLinks
 import org.maplibre.compose.overlay.attributions
@@ -100,6 +102,7 @@ internal fun MapAttributionOverlay(
     val credits = mergeCredits(sourceCredits, style.attributions())
     if (credits.isEmpty()) return
     var expanded by rememberSaveable { mutableStateOf(false) }
+    val colors = LocalShellColors.current
     Box(modifier = modifier.fillMaxSize()) {
         Column(
             modifier =
@@ -114,28 +117,29 @@ internal fun MapAttributionOverlay(
             if (expanded) {
                 AttributionLinks(
                     attributions = credits,
-                    modifier = creditSurface(),
-                    textStyle = creditTextStyle(),
+                    modifier = creditSurface(colors),
+                    textStyle = creditTextStyle(colors),
                 )
             }
             BasicText(
                 text = collapsedLabel(credits),
-                style = creditTextStyle(),
+                style = creditTextStyle(colors),
                 maxLines = 1,
                 softWrap = false,
                 overflow = TextOverflow.Ellipsis,
                 modifier =
-                    creditSurface().clickable(role = Role.Button) { expanded = !expanded },
+                    creditSurface(colors).clickable(role = Role.Button) { expanded = !expanded },
             )
         }
     }
 }
 
-private fun creditTextStyle() = TextStyle(color = Color.White, fontSize = ATTRIBUTION_FONT_SP.sp)
+private fun creditTextStyle(colors: ShellColors) = TextStyle(color = colors.ink, fontSize = ATTRIBUTION_FONT_SP.sp)
 
-private fun creditSurface(): Modifier =
+private fun creditSurface(colors: ShellColors): Modifier =
     Modifier
-        .background(ATTRIBUTION_BACKGROUND, RoundedCornerShape(ATTRIBUTION_CORNER_DP.dp))
+        .background(colors.glass, RoundedCornerShape(ATTRIBUTION_CORNER_DP.dp))
+        .border(1.dp, colors.ring, RoundedCornerShape(ATTRIBUTION_CORNER_DP.dp))
         .padding(horizontal = ATTRIBUTION_HORIZONTAL_PADDING_DP.dp, vertical = ATTRIBUTION_VERTICAL_PADDING_DP.dp)
 
 private const val OPENSTREETMAP_NAME = "OpenStreetMap"
@@ -157,7 +161,6 @@ private const val ATTRIBUTION_END_CLEARANCE_DP = 100
 // The gap between the credit line and the bar or sheet it rises above.
 private const val ATTRIBUTION_CLEARANCE_DP = 4
 
-private val ATTRIBUTION_BACKGROUND = Color(0x99000000)
 private const val ATTRIBUTION_FONT_SP = 10
 private const val ATTRIBUTION_MARGIN_DP = 4
 private const val ATTRIBUTION_CORNER_DP = 4

@@ -557,7 +557,7 @@ private fun ShellSwitch(on: Boolean) {
                 .background(if (on) colors.accent else colors.soft, RoundedCornerShape(SWITCH_RADIUS_DP.dp))
                 .border(
                     SWITCH_BORDER_DP.dp,
-                    if (on) colors.accent else colors.offSwitchBorder,
+                    if (on) colors.accent else colors.controlBorder,
                     RoundedCornerShape(SWITCH_RADIUS_DP.dp),
                 ),
     ) {

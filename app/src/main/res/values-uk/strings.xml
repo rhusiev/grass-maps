@@ -196,7 +196,7 @@
     <string name="track_import_confirm_count">Треків: %1$s</string>
     <string name="track_import_confirm_import">Імпортувати</string>
     <string name="nav_notification_channel_name">Навігація</string>
-    <string name="nav_notification_channel_description">Показує наступний поворот під час навігації та не дає вимкнути місцеположення</string>
+    <string name="nav_notification_channel_description">Показує наступний поворот під час навігації та підтримує місцеположення активним</string>
     <string name="nav_notification_starting">Запуск навігації</string>
     <string name="nav_notification_following">Рух за маршрутом</string>
     <string name="nav_notification_arrived">Ви прибули</string>

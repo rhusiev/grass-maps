@@ -40,6 +40,8 @@ data class SearchScreenState(
     val status: SearchScreenStatus = SearchScreenStatus.IDLE,
     val hits: List<PlaceHit> = emptyList(),
     val error: AppError? = null,
+    /** The online half was stopped by this switch; [hits] stay on screen. */
+    val onlineStopped: AppError.SwitchOff? = null,
 )
 
 /** One search request: everything a provider needs that the field does not hold. */
@@ -60,6 +62,8 @@ data class SearchScreenRequest(
      * partial result from a superseded keystroke is dropped like a final one.
      */
     val onPartial: suspend (List<PlaceHit>) -> Unit = {},
+    /** Reports the typed refusal when the privacy switch stops the online half. */
+    val onOnlineStopped: suspend (AppError.SwitchOff) -> Unit = {},
 )
 
 /**

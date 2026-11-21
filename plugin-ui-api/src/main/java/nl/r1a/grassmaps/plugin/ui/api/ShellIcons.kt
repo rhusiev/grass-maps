@@ -27,6 +27,7 @@ object ShellIcons {
     val ChevronUp = icon("chev_up") { stroked { moveTo(6f, 14.5f); lineTo(12f, 8.5f); lineTo(18f, 14.5f) } }
     val ChevronDown = icon("chev_down") { stroked { moveTo(6f, 9.5f); lineTo(12f, 15.5f); lineTo(18f, 9.5f) } }
     val ChevronLeft = icon("chev_left") { stroked { moveTo(14.5f, 6f); lineTo(8.5f, 12f); lineTo(14.5f, 18f) } }
+    val ChevronRight = icon("chev_right") { stroked { moveTo(9.5f, 6f); lineTo(15.5f, 12f); lineTo(9.5f, 18f) } }
     val Check = icon("check") { stroked { moveTo(5f, 12.5f); lineTo(10f, 17f); lineTo(19f, 7.5f) } }
     val Play =
         icon("play") {

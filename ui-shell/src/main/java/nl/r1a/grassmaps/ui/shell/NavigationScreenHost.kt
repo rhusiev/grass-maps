@@ -34,6 +34,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -57,13 +58,15 @@ import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenState
 import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenStatus
 import nl.r1a.grassmaps.plugin.ui.api.NavigationTripSummary
 import nl.r1a.grassmaps.plugin.ui.api.ShellColors
+import nl.r1a.grassmaps.plugin.ui.api.ShellIcon
+import nl.r1a.grassmaps.plugin.ui.api.ShellIcons
 import nl.r1a.grassmaps.plugin.ui.api.shellColors
 
 private const val SCREEN_EDGE_DP = 10
 private const val BAR_EDGE_DP = 12
-private const val BAR_HEIGHT_DP = 64
+internal const val BAR_HEIGHT_DP = 58
 private const val BAR_BOTTOM_DP = 12
-private const val BAR_CORNER_DP = 32
+internal const val BAR_CORNER_DP = 29
 private const val CHIP_CORNER_DP = 18
 private const val CHIP_HEIGHT_DP = 36
 private const val CHIP_PADDING_HORIZONTAL_DP = 11
@@ -265,7 +268,7 @@ private fun ReadoutRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(7.dp),
             ) {
-                Glyph("\u25C6", 14, colors.accent)
+                ShellIcon(ShellIcons.Via, colors.accent, Modifier.size(14.dp))
                 BasicText(
                     text = stop,
                     style = TextStyle(color = colors.ink, fontSize = 13.sp, fontWeight = FontWeight.Bold),
@@ -281,7 +284,7 @@ private fun ReadoutRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(7.dp),
         ) {
-            Glyph("\u25D4", 14, colors.muted)
+            ShellIcon(ShellIcons.Speed, colors.muted, Modifier.size(14.dp))
             BasicText(
                 text = readout.speed ?: DASH,
                 style = TextStyle(color = colors.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold),
@@ -333,7 +336,7 @@ private fun Banner(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Glyph(alertGlyph(alert.glyph), 15, ink)
+            ShellIcon(alertIcon(alert.glyph), ink, Modifier.size(15.dp))
             BasicText(
                 text = alert.title,
                 style = TextStyle(color = ink, fontSize = 13.5.sp, fontWeight = FontWeight.Bold),
@@ -361,7 +364,7 @@ private fun Banner(
                     .background(line.copy(alpha = 0.2f), RoundedCornerShape(17.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Glyph(alertGlyph(alert.glyph), 18, ink)
+            ShellIcon(alertIcon(alert.glyph), ink, Modifier.size(18.dp))
         }
         Column {
             BasicText(
@@ -400,7 +403,7 @@ private fun Bar(
         if (NavigationControl.Done in controls) {
             PrimaryPill(
                 label = strings.resolve(NavigationScreenStrings.DONE),
-                glyph = "\u2713",
+                icon = ShellIcons.Check,
                 background = colors.accent,
                 ink = colors.onAccent,
                 outline = colors.accent,
@@ -424,7 +427,7 @@ private fun Bar(
             if (NavigationControl.Resume in controls) {
                 PrimaryPill(
                     label = strings.resolve(NavigationScreenStrings.RESUME),
-                    glyph = "\u25B6",
+                    icon = ShellIcons.Play,
                     background = colors.accent,
                     ink = colors.onAccent,
                     outline = colors.accent,
@@ -435,7 +438,7 @@ private fun Bar(
                 Eta(state, colors, Modifier.weight(1f))
             }
             RoundButton(
-                glyph = "\u2303",
+                icon = ShellIcons.ChevronUp,
                 description = strings.resolve(NavigationScreenStrings.EXPAND),
                 colors = colors,
                 onClick = onExpand,
@@ -503,7 +506,7 @@ private fun TripSheet(
     ) {
         SheetHandle(colors)
         TripRow(
-            glyph = "\u2691",
+            icon = ShellIcons.Flag,
             title = state.trip.destination,
             detail = TripDetail(state.trip, strings),
             trailing = state.trip.remainingTime,
@@ -511,7 +514,7 @@ private fun TripSheet(
         )
         state.readout.stopName?.let { name ->
             TripRow(
-                glyph = "\u25C6",
+                icon = ShellIcons.Via,
                 title = strings.resolve(NavigationScreenStrings.NEXT_STOP, listOf(name)),
                 detail = state.readout.stopDistance,
                 trailing = state.readout.stopTime,
@@ -527,7 +530,7 @@ private fun TripSheet(
         // profile alerts page and the camera row keeps the old sheet.
         if (NavigationControl.Camera in controls) {
             SheetEntryRow(
-                glyph = "\u2261",
+                icon = ShellIcons.Tune,
                 title = strings.resolve(NavigationScreenStrings.CAMERA),
                 detail = CameraTripDetail(state, strings),
                 colors = colors,
@@ -536,7 +539,7 @@ private fun TripSheet(
         }
         if (NavigationControl.Alerts in controls) {
             SheetEntryRow(
-                glyph = "\u25CF",
+                icon = ShellIcons.Bell,
                 title = strings.resolve(NavigationScreenStrings.ALERTS),
                 detail = AlertsTripDetail(state, strings),
                 colors = colors,
@@ -566,7 +569,7 @@ private fun TripSheet(
                             NavigationScreenStrings.PAUSE
                         },
                     ),
-                glyph = if (NavigationControl.Resume in controls) "\u25B6" else "\u2016",
+                icon = if (NavigationControl.Resume in controls) ShellIcons.Play else ShellIcons.Pause,
                 background = colors.soft,
                 ink = colors.ink,
                 outline = colors.controlBorder,
@@ -574,7 +577,7 @@ private fun TripSheet(
                 modifier = Modifier.weight(1f).height(50.dp),
             )
             RoundButton(
-                glyph = "\u2304",
+                icon = ShellIcons.ChevronDown,
                 description = strings.resolve(NavigationScreenStrings.COLLAPSE),
                 colors = colors,
                 onClick = onCollapse,
@@ -586,7 +589,7 @@ private fun TripSheet(
 
 @Composable
 private fun SheetEntryRow(
-    glyph: String,
+    icon: ImageVector,
     title: String,
     detail: String,
     colors: ShellColors,
@@ -597,7 +600,7 @@ private fun SheetEntryRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Glyph(glyph, 20, colors.muted)
+        ShellIcon(icon, colors.muted, Modifier.size(20.dp))
         Column(modifier = Modifier.weight(1f)) {
             BasicText(
                 text = title,
@@ -608,7 +611,7 @@ private fun SheetEntryRow(
                 style = TextStyle(color = colors.muted, fontSize = 12.sp),
             )
         }
-        Glyph("\u203A", 18, colors.muted)
+        ShellIcon(ShellIcons.ChevronRight, colors.muted, Modifier.size(18.dp))
     }
 }
 
@@ -661,7 +664,7 @@ private fun SettingsSheet(
         )
         SectionLabel(strings.resolve(NavigationScreenStrings.CAMERA), colors)
         SwitchRow(
-            glyph = "\u2315",
+            icon = ShellIcons.Search,
             label = strings.resolve(NavigationScreenStrings.AUTO_ZOOM),
             detail = strings.resolve(NavigationScreenStrings.AUTO_ZOOM_DETAIL),
             checked = state.camera.autoZoom,
@@ -671,7 +674,7 @@ private fun SettingsSheet(
             onChange = onCameraAutoZoom,
         )
         SwitchRow(
-            glyph = "\u25CE",
+            icon = ShellIcons.Locate,
             label = strings.resolve(NavigationScreenStrings.AUTO_CENTRE),
             detail = strings.resolve(NavigationScreenStrings.AUTO_CENTRE_DETAIL),
             checked = state.camera.autoCentre,
@@ -681,7 +684,7 @@ private fun SettingsSheet(
             onChange = onCameraAutoCentre,
         )
         SwitchRow(
-            glyph = "\u25B2",
+            icon = ShellIcons.Tilt3d,
             label = strings.resolve(NavigationScreenStrings.THREE_D),
             detail = strings.resolve(NavigationScreenStrings.THREE_D_DETAIL),
             checked = state.camera.tilt,
@@ -705,7 +708,7 @@ private fun SettingsSheet(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             RoundButton(
-                glyph = "\u2039",
+                icon = ShellIcons.ChevronLeft,
                 description = strings.resolve(NavigationScreenStrings.BACK),
                 colors = colors,
                 onClick = onBack,
@@ -714,7 +717,7 @@ private fun SettingsSheet(
             if (NavigationControl.ResetToProfile in controls) {
                 PrimaryPill(
                     label = strings.resolve(NavigationScreenStrings.RESET),
-                    glyph = "",
+                    icon = null,
                     background = colors.soft,
                     ink = colors.ink,
                     outline = colors.controlBorder,
@@ -728,7 +731,7 @@ private fun SettingsSheet(
 
 @Composable
 private fun TripRow(
-    glyph: String,
+    icon: ImageVector,
     title: String,
     detail: String?,
     trailing: String?,
@@ -739,7 +742,7 @@ private fun TripRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Glyph(glyph, 20, colors.accent)
+        ShellIcon(icon, colors.accent, Modifier.size(20.dp))
         Column(modifier = Modifier.weight(1f)) {
             BasicText(
                 text = title,
@@ -854,7 +857,7 @@ private fun AlertChips(
 
 @Composable
 private fun SwitchRow(
-    glyph: String,
+    icon: ImageVector,
     label: String,
     detail: String,
     checked: Boolean,
@@ -875,7 +878,7 @@ private fun SwitchRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Glyph(glyph, 20, colors.muted)
+        ShellIcon(icon, colors.muted, Modifier.size(20.dp))
         Column(modifier = Modifier.weight(1f)) {
             BasicText(text = label, style = TextStyle(color = colors.ink, fontSize = 14.5.sp))
             BasicText(text = detail, style = TextStyle(color = colors.muted, fontSize = 12.sp))
@@ -964,7 +967,7 @@ private fun EndPill(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Glyph("\u00D7", 18, colors.danger)
+        ShellIcon(ShellIcons.Close, colors.danger, Modifier.size(18.dp))
         BasicText(
             text = label,
             style = TextStyle(color = colors.danger, fontSize = 15.sp, fontWeight = FontWeight.Bold),
@@ -975,7 +978,7 @@ private fun EndPill(
 @Composable
 private fun PrimaryPill(
     label: String,
-    glyph: String,
+    icon: ImageVector?,
     background: Color,
     ink: Color,
     outline: Color,
@@ -992,8 +995,8 @@ private fun PrimaryPill(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        if (glyph.isNotEmpty()) {
-            Glyph(glyph, 18, ink)
+        if (icon != null) {
+            ShellIcon(icon, ink, Modifier.size(18.dp))
             Spacer(Modifier.width(7.dp))
         }
         BasicText(
@@ -1005,7 +1008,7 @@ private fun PrimaryPill(
 
 @Composable
 private fun RoundButton(
-    glyph: String,
+    icon: ImageVector,
     description: String,
     colors: ShellColors,
     onClick: () -> Unit,
@@ -1021,7 +1024,7 @@ private fun RoundButton(
                 .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
-        Glyph(glyph, if (size >= RECENTRE_DP) 24 else 22, colors.ink)
+        ShellIcon(icon, colors.ink, Modifier.size((if (size >= RECENTRE_DP) 24 else 22).dp))
     }
 }
 
@@ -1042,28 +1045,8 @@ private fun RecentreButton(
                 .semantics { contentDescription = buttonLabel },
         contentAlignment = Alignment.Center,
     ) {
-        Glyph("\u25CE", 24, colors.accent)
+        ShellIcon(ShellIcons.Locate, colors.accent, Modifier.size(24.dp))
     }
-}
-
-@Composable
-private fun Glyph(
-    glyph: String,
-    size: Int,
-    color: Color,
-) {
-    BasicText(
-        text = glyph,
-        style =
-            TextStyle(
-                color = color,
-                fontSize = size.sp,
-                fontWeight = FontWeight.SemiBold,
-            ),
-        // Every glyph is decoration beside a label or inside a described
-        // control; a bare arrow must never become its own spoken stop.
-        modifier = Modifier.clearAndSetSemantics {},
-    )
 }
 
 private fun glassChip(colors: ShellColors): Modifier =
@@ -1072,16 +1055,16 @@ private fun glassChip(colors: ShellColors): Modifier =
         .background(colors.glass, RoundedCornerShape(CHIP_CORNER_DP.dp))
         .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp)
 
-private fun alertGlyph(glyph: NavigationAlertGlyph): String =
+private fun alertIcon(glyph: NavigationAlertGlyph): ImageVector =
     when (glyph) {
-        NavigationAlertGlyph.Crossing -> "\u2715"
-        NavigationAlertGlyph.Tunnel -> "\u2229"
-        NavigationAlertGlyph.Hazard -> "!"
-        NavigationAlertGlyph.Ford -> "\u2248"
-        NavigationAlertGlyph.Reroute -> "\u27F3"
-        NavigationAlertGlyph.Signal -> "\u25D4"
-        NavigationAlertGlyph.Arrival -> "\u2691"
-        NavigationAlertGlyph.Place -> "\u25CF"
+        NavigationAlertGlyph.Crossing -> ShellIcons.Crossing
+        NavigationAlertGlyph.Tunnel -> ShellIcons.Tunnel
+        NavigationAlertGlyph.Hazard -> ShellIcons.Warning
+        NavigationAlertGlyph.Ford -> ShellIcons.Drop
+        NavigationAlertGlyph.Reroute -> ShellIcons.Reroute
+        NavigationAlertGlyph.Signal -> ShellIcons.SignalOff
+        NavigationAlertGlyph.Arrival -> ShellIcons.Flag
+        NavigationAlertGlyph.Place -> ShellIcons.Pin
     }
 
 private fun TripDetail(

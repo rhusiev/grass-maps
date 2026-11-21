@@ -2421,6 +2421,15 @@ private fun MapContent(
                         )
                     }
                 },
+                onSetDownloadsEnabled = { enabled ->
+                    scope.launch {
+                        invokeDownloadsCommand(
+                            container,
+                            DownloadsUiContract.setDownloadsEnabled,
+                            listParams("enabled" to enabled.toString()),
+                        )
+                    }
+                },
             )
         }
         val shareConfirmation = trackShareConfirmation

@@ -64,6 +64,10 @@
     <string name="downloads_part_other">Other data</string>
     <string name="downloads_waiting_for_wifi">Waiting for Wi-Fi</string>
     <string name="downloads_use_mobile_data_now">Download now on mobile data</string>
+    <string name="downloads_switch_title">Map downloads</string>
+    <string name="downloads_switch_on">On</string>
+    <string name="downloads_switch_off">Off</string>
+    <string name="downloads_switch_turn_on">Turn on downloads</string>
     <string name="downloads_mobile_data_title">Mobile data</string>
     <string name="downloads_mobile_data_wifi_only">Wi-Fi only</string>
     <string name="downloads_mobile_data_any">Wi-Fi and mobile data</string>

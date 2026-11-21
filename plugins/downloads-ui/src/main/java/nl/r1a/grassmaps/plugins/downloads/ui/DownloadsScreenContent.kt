@@ -13,9 +13,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
@@ -96,6 +99,12 @@ private const val ROW_TITLE_FONT_SP = 17
 private const val BODY_FONT_SP = 14
 private const val ACTION_FONT_SP = 15
 private const val PROGRESS_BAR_DP = 4
+private const val SWITCH_ROW_HEIGHT_DP = 48
+private const val SWITCH_TRACK_WIDTH_DP = 52
+private const val SWITCH_TRACK_HEIGHT_DP = 32
+private const val SWITCH_KNOB_DP = 24
+private const val SWITCH_INSET_DP = 4
+private const val SWITCH_BORDER_DP = 1
 
 /**
  * The downloads screen (T-0504), drawn from the published state.
@@ -132,9 +141,23 @@ fun DownloadsScreenContent(
     onSetMobileData: (Boolean) -> Unit = {},
     onUseMobileDataNow: () -> Unit = {},
     onSetAutoUpdate: (Boolean) -> Unit = {},
+    onSetDownloadsEnabled: (Boolean) -> Unit = {},
     onSearch: (String) -> Unit = {},
 ) {
     val close = stringResource(R.string.downloads_close)
+    val switchNotice =
+        downloadsSwitchNotice(
+            labels =
+                DownloadsSwitchLabels(
+                    title = stringResource(R.string.downloads_switch_title),
+                    onText = stringResource(R.string.downloads_switch_on),
+                    offText = stringResource(R.string.downloads_switch_off),
+                    privacyNote = stringResource(R.string.downloads_server_sees),
+                    offMessage = stringResource(R.string.downloads_failed_switch_off),
+                    turnOnAction = stringResource(R.string.downloads_switch_turn_on),
+                ),
+            enabled = state.downloadsEnabled,
+        )
     // The top scrolls and only reads, apart from a tap on the map. Everything
     // else you press sits in the bar below it, within reach of the thumb.
     Column(
@@ -193,6 +216,12 @@ fun DownloadsScreenContent(
                 }
             }
 
+            // The switch is the first control after the header, so the off
+            // state explains itself where a store user lands. Its alert card
+            // carries the same action for someone who taps Download first.
+            DownloadsSwitchRow(notice = switchNotice, onCheckedChange = onSetDownloadsEnabled)
+            switchNotice.alert?.let { alert -> DownloadsOffAlertCard(alert = alert, onEnable = { onSetDownloadsEnabled(true) }) }
+
             if (state.outlines.isNotEmpty()) {
                 RegionsMiniMap(
                     outlines = state.outlines,
@@ -221,7 +250,11 @@ fun DownloadsScreenContent(
                 onSetAutoUpdate = onSetAutoUpdate,
             )
 
-            state.catalogProblem?.let { problem -> ProblemLine(problem) }
+            // The switch's alert card carries the off message, so the plain red
+            // line stays only for problems the switch cannot explain.
+            state.catalogProblem
+                ?.takeIf { it.kind != DownloadProblemKind.SWITCH_OFF }
+                ?.let { problem -> ProblemLine(problem) }
 
             if (!state.catalogLoaded && state.catalogProblem == null && state.firstRun.isEmpty()) {
                 SectionLabel(stringResource(R.string.downloads_empty))
@@ -363,7 +396,9 @@ private fun NearMeCard(
                     style = TextStyle(color = MUTED, fontSize = BODY_FONT_SP.sp),
                 )
                 row.transfer?.let { transfer -> TransferLine(transfer) }
-                row.problem?.let { problem -> ProblemLine(problem) }
+                row.problem
+                    ?.takeIf { it.kind != DownloadProblemKind.SWITCH_OFF }
+                    ?.let { problem -> ProblemLine(problem) }
             }
             if (row.transfer != null) {
                 ActionButton(
@@ -512,7 +547,9 @@ private fun RegionRow(
                     style = TextStyle(color = MUTED, fontSize = BODY_FONT_SP.sp),
                 )
                 row.transfer?.let { transfer -> TransferLine(transfer) }
-                row.problem?.let { problem -> ProblemLine(problem) }
+                row.problem
+                    ?.takeIf { it.kind != DownloadProblemKind.SWITCH_OFF }
+                    ?.let { problem -> ProblemLine(problem) }
                 if (row.status == DownloadRowStatus.INSTALLED) {
                     BasicText(
                         text = stringResource(R.string.downloads_up_to_date),
@@ -789,6 +826,93 @@ private fun ActionButton(
             text = text,
             style = TextStyle(color = ink, fontSize = ACTION_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
         )
+    }
+}
+
+/**
+ * The on-screen on/off switch. The whole 48 dp row toggles it, so the touch
+ * target is not the small track, and the off state names "Off" in the danger
+ * token beside a visible off track.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun DownloadsSwitchRow(
+    notice: DownloadsSwitchNotice,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    val shape = RoundedCornerShape(CARD_CORNER_DP.dp)
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = SWITCH_ROW_HEIGHT_DP.dp)
+                .clip(shape)
+                .background(CARD)
+                .border(SWITCH_BORDER_DP.dp, if (notice.checked) ACCENT else CONTROL_BORDER, shape)
+                .toggleable(value = notice.checked, role = Role.Switch, onValueChange = onCheckedChange)
+                .semantics { contentDescription = "${notice.title}, ${notice.stateText}" }
+                .padding(CARD_PADDING_DP.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(GAP_DP.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(SPACED_DP.dp)) {
+            BasicText(
+                text = notice.title,
+                style = TextStyle(color = INK, fontSize = ROW_TITLE_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
+            )
+            BasicText(
+                text = notice.stateText,
+                style =
+                    TextStyle(
+                        color = if (notice.checked) ACCENT else DANGER,
+                        fontSize = BODY_FONT_SP.sp,
+                        fontWeight = FontWeight.Medium,
+                    ),
+            )
+            BasicText(text = notice.privacyNote, style = TextStyle(color = MUTED, fontSize = BODY_FONT_SP.sp))
+        }
+        DownloadsSwitchTrack(checked = notice.checked)
+    }
+}
+
+/** The round 9 switch track: accent when on, outlined soft when off. */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun DownloadsSwitchTrack(checked: Boolean) {
+    val shape = RoundedCornerShape((SWITCH_TRACK_HEIGHT_DP / 2).dp)
+    Box(
+        modifier =
+            Modifier
+                .size(SWITCH_TRACK_WIDTH_DP.dp, SWITCH_TRACK_HEIGHT_DP.dp)
+                .clip(shape)
+                .background(if (checked) ACCENT else SOFT, shape)
+                .border(SWITCH_BORDER_DP.dp, if (checked) ACCENT else CONTROL_BORDER, shape),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .align(if (checked) Alignment.CenterEnd else Alignment.CenterStart)
+                    .padding(SWITCH_INSET_DP.dp)
+                    .size(SWITCH_KNOB_DP.dp)
+                    .clip(CircleShape)
+                    .background(if (checked) LocalShellColors.current.onAccent else LocalShellColors.current.offSwitchKnob),
+        )
+    }
+}
+
+/** The card that replaces the plain red text while downloads are off. */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun DownloadsOffAlertCard(
+    alert: DownloadsSwitchNotice.Alert,
+    onEnable: () -> Unit,
+) {
+    Card {
+        BasicText(
+            text = alert.message,
+            style = TextStyle(color = DANGER, fontSize = BODY_FONT_SP.sp, fontWeight = FontWeight.Medium),
+        )
+        ActionButton(text = alert.action, onClick = onEnable)
     }
 }
 

@@ -1492,7 +1492,12 @@ class AppContainer(
             routeHistoryAccess = routeHistory,
             routingOptionsAccess = RoutingOptionsAccess { profile -> routingOptionsSettings.forProfile(profile) },
             profileSettingsAccess = LazyProfileSettings { profileSettings },
-            regionDownloadsAccess = regionStore ?: NoRegionDownloadsAccess,
+            regionDownloadsAccess =
+                GatedDownloadsAccess(
+                    store = regionStore ?: NoRegionDownloadsAccess,
+                    isEnabled = { regionDownloadsEnabled },
+                    setEnabled = { enabled -> setRegionDownloadsEnabled(enabled) },
+                ),
             elevationAccess = elevationAccess,
             logger = pluginLogger,
             enabledStore = pluginEnabledFileProvider()?.let(::FilePluginEnabledStore) ?: NoPluginEnabledStore,

@@ -24,6 +24,20 @@ interface RegionDownloadsAccess {
     val data: StateFlow<DownloadsData>
 
     /**
+     * Whether the region-download privacy switch is on. A host that does not
+     * publish the switch reads as off, so a build without it never lets a screen
+     * claim that downloads are allowed.
+     */
+    val downloadsEnabled: Boolean get() = false
+
+    /**
+     * Writes the region-download privacy switch. The host writes the same
+     * switch the network gate reads, so a screen cannot grant its own network
+     * access. A host that cannot write it answers a typed [AppError.NotReady].
+     */
+    suspend fun setDownloadsEnabled(enabled: Boolean): Outcome<Unit> = Outcome.Failure(AppError.NotReady)
+
+    /**
      * Sets the server base URL and, when [token] is not null or blank, the
      * bearer token the downloads carry. A null or blank token clears it, which
      * is what a tokenless server needs. The catalogue is fetched again, so a

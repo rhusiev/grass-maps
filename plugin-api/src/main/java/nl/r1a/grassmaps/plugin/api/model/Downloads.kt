@@ -560,6 +560,11 @@ data class FirstRunOffer(
 data class DownloadsState(
     val serverUrl: String = DownloadsDefaults.SERVER_URL,
     val tokenPresent: Boolean = false,
+    /**
+     * The region-download privacy switch the on-screen switch draws. Off by
+     * default, like every privacy switch, until the host publishes its value.
+     */
+    val downloadsEnabled: Boolean = false,
     val catalogLoaded: Boolean = false,
     val catalogProblem: DownloadProblem? = null,
     /** The region the sheet is open on, or null when it is closed. */

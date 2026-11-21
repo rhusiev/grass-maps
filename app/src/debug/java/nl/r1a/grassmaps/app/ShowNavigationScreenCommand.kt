@@ -26,10 +26,10 @@ import nl.r1a.grassmaps.plugin.api.error.Outcome
 import nl.r1a.grassmaps.plugin.api.model.WayAlertFeatureKind
 import nl.r1a.grassmaps.plugin.api.provider.Route
 import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.service.Clock
+import nl.r1a.grassmaps.plugin.api.service.SystemClock
 import nl.r1a.grassmaps.routing.RouteJson
 import nl.r1a.grassmaps.ui.shell.NavigationSheet
-import java.time.ZoneId
-import java.time.ZonedDateTime
 
 /** The debug-only seam that shows a deterministic navigation screen (T-0320). */
 internal val NAV_SHOW_SCREEN_COMMAND: CommandId = CommandId("core.nav.show_screen")
@@ -41,12 +41,15 @@ internal val NAV_SHOW_SCREEN_COMMAND: CommandId = CommandId("core.nav.show_scree
  * cannot be stopped at an exact turn: the fixture carries the same values a
  * published state does, so the real navigation screen renders it without a
  * static screenshot. The command draws no route: the map screen draws the
- * fixture's route from the same state, so one effect owns the route layer. It
- * exists in the debug source set only, and clearing it returns the screen to
- * the live navigation state.
+ * fixture's route from the same state, so one effect owns the route layer. Its
+ * ETA is the injected clock's time plus the remaining duration, so a review
+ * never shows a fixed epoch's arrival as if it were current. It exists in the
+ * debug source set only, and clearing it returns the screen to the live
+ * navigation state.
  */
 internal class ShowNavigationScreenCommand(
     private val fixtures: NavigationScreenFixtureStore,
+    private val clock: Clock = SystemClock,
     private val log: (String) -> Unit = { message -> Log.i(TAG, message) },
 ) : Command<JsonElement, String>(
         id = NAV_SHOW_SCREEN_COMMAND,
@@ -164,7 +167,7 @@ internal class ShowNavigationScreenCommand(
             relation = relation,
             remainingDistanceMeters = remainingMeters,
             remainingDurationSeconds = remainingSeconds,
-            etaEpochMillis = FIXTURE_EPOCH_MILLIS + (remainingSeconds * MILLIS_PER_SECOND).toLong(),
+            etaEpochMillis = clock.nowMillis() + (remainingSeconds * MILLIS_PER_SECOND).toLong(),
             nextInstruction =
                 ahead?.let { instruction ->
                     NavigationInstruction(
@@ -290,9 +293,5 @@ internal class ShowNavigationScreenCommand(
         const val TUNNEL_METERS = 320.0
         const val HAZARD_METERS = 100.0
         const val SIGNAL_GAP_MILLIS = 12_000L
-
-        /** 2026-11-12 14:05 in the device's own zone, the round 5 screen's clock. */
-        val FIXTURE_EPOCH_MILLIS: Long =
-            ZonedDateTime.of(2026, 11, 12, 14, 5, 0, 0, ZoneId.systemDefault()).toInstant().toEpochMilli()
     }
 }

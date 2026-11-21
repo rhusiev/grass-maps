@@ -69,7 +69,7 @@ class EtaModelTest {
             assertEquals(total - half / 2.0, atMidpoint.remainingDistanceMeters, METRES_TOLERANCE)
             assertEquals(LEG_SECONDS / 2.0 + SLOW_LEG_SECONDS, atMidpoint.remainingDurationSeconds, SECONDS_TOLERANCE)
             assertEquals(
-                BASE_MILLIS + 1_000L + ((LEG_SECONDS / 2.0 + SLOW_LEG_SECONDS) * 1_000.0).toLong(),
+                WALL_NOW_MILLIS + ((LEG_SECONDS / 2.0 + SLOW_LEG_SECONDS) * 1_000.0).toLong(),
                 atMidpoint.etaEpochMillis,
             )
             val atLegStart = states.getValue(BASE_MILLIS + 2_000L)
@@ -115,6 +115,44 @@ class EtaModelTest {
         }
 
     @Test
+    fun etaUsesTheWallClockNotTheTimestampOfAStaleFix() =
+        runTest {
+            val total = ReplayHarness.lineLengthMeters(LINE)
+            val route =
+                Route(
+                    geometry = LINE,
+                    distanceMeters = total,
+                    durationSeconds = LEG_SECONDS + SLOW_LEG_SECONDS,
+                )
+            val fix = LocationFix(position = LINE[0], accuracyMeters = 5.0, timeMillis = STALE_FIX_MILLIS)
+            val follower =
+                ScriptedFollower {
+                    FollowerSnapshot(
+                        snappedPosition = it.position,
+                        deviation = FollowerDeviation.None,
+                        remainingDistanceMeters = total,
+                        remainingDurationSeconds = LEG_SECONDS + SLOW_LEG_SECONDS,
+                    )
+                }
+            val states = mutableListOf<NavigationState>()
+            val session =
+                NavigationSession(
+                    follower = follower,
+                    routing = NoRoutingEngine,
+                    profile = RouteProfile.Walk,
+                    config = NavigationConfig(reroute = false),
+                    clockMillis = { 0L },
+                    wallClockMillis = { WALL_NOW_MILLIS },
+                )
+            val collector = launch(UnconfinedTestDispatcher(testScheduler)) { session.state.collect { states += it } }
+            session.run(route, flowOf(fix)).valueOrFail()
+            collector.cancel()
+            val state = states.first { it.fix?.timeMillis == STALE_FIX_MILLIS }
+
+            assertEquals(WALL_NOW_MILLIS + ((LEG_SECONDS + SLOW_LEG_SECONDS) * 1_000.0).toLong(), state.etaEpochMillis)
+        }
+
+    @Test
     fun theDistanceAndTimeAgreeWithTheRouteModelAtTheEnd() =
         runTest {
             val total = ReplayHarness.lineLengthMeters(LINE)
@@ -144,7 +182,7 @@ class EtaModelTest {
 
             assertTrue(state.remainingDistanceMeters < METRES_TOLERANCE)
             assertTrue(state.remainingDurationSeconds < SECONDS_TOLERANCE)
-            assertEquals(BASE_MILLIS, state.etaEpochMillis)
+            assertEquals(WALL_NOW_MILLIS, state.etaEpochMillis)
         }
 
     private suspend fun TestScope.statesByFix(
@@ -160,6 +198,7 @@ class EtaModelTest {
                 profile = RouteProfile.Walk,
                 config = NavigationConfig(reroute = false),
                 clockMillis = { 0L },
+                wallClockMillis = { WALL_NOW_MILLIS },
             )
         val collector = launch(UnconfinedTestDispatcher(testScheduler)) { session.state.collect { states += it } }
         session.run(route, flowOf(*fixes.toTypedArray())).valueOrFail()
@@ -178,6 +217,8 @@ class EtaModelTest {
 
     private companion object {
         const val BASE_MILLIS = 1_700_000_000_000L
+        const val STALE_FIX_MILLIS = 1_700_000_000_000L
+        const val WALL_NOW_MILLIS = 1_760_000_000_000L
         const val LEG_SECONDS = 400.0
         const val SLOW_LEG_SECONDS = 800.0
         const val AVERAGED_SECONDS = 300.0

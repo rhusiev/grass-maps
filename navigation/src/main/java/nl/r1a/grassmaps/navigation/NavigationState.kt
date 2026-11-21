@@ -49,9 +49,9 @@ data class NavigationInstruction(
  *
  * [remainingDistanceMeters], [remainingDurationSeconds] and [etaEpochMillis]
  * are counted from the route's own model, not from the follower's second
- * arithmetic. [etaEpochMillis] is the current fix's [LocationFix.timeMillis]
- * plus the remaining duration, so a stale fix carries a stale arrival time
- * instead of hiding it.
+ * arithmetic. [etaEpochMillis] is the wall-clock time at publication plus the
+ * remaining duration, so a stale or simulated [LocationFix.timeMillis] cannot
+ * make the arrival appear in the past.
  */
 data class NavigationState(
     val phase: NavigationPhase = NavigationPhase.Idle,

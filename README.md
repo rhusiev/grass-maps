@@ -2793,9 +2793,10 @@ only when nothing has read the store before. A read has then already returned
 them, and a profile reset to its defaults must stay reset.
 
 `ProfileSettingsService` (`core-services`) owns the actions. It reaches each
-per-profile store through `ProfileSettingsGroup` (`plugin-api`): `ROUTING`,
-`ALERTS`, `STYLE` and `UNITS` implement `read` and `replace` of one profile's
-values. The service builds every action from these two calls:
+per-profile store through `ProfileSettingsGroup` (`plugin-api`): `ROUTING` and
+`ALERTS` implement `read` and `replace` of one profile's values. `STYLE` and
+`UNITS` implement the same contract, but are not copy groups yet, so the profile
+UI is unchanged. The service builds every action from these two calls:
 
 1. Create a profile, or copy one, writes the new catalog entry and replaces the
    new profile's values in each group with the source's values.

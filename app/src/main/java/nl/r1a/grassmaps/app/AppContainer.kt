@@ -351,15 +351,15 @@ class AppContainer(
 
     /**
      * The profile list and the actions on it (T-0602). It copies and resets the
-     * settings groups that carry encoded values: routing, alerts, style and
-     * units. Widgets have their own layout editor and are read by profile at
-     * their call sites. An action that includes the alert settings reads them
-     * first, so the plugin calls it from an IO dispatcher.
+     * routing options and the alert settings. Style and units are per-profile
+     * stores but are not copy groups yet, so the profile UI is unchanged;
+     * offering them there is T-0604. An action that includes the alert settings
+     * reads them first, so the plugin calls it from an IO dispatcher.
      */
     val profileSettings: ProfileSettingsService by lazy {
         ProfileSettingsService(
             profileCatalog,
-            listOf(routingOptionsSettings, alertSettings, mapStyleSettings, unitSettings),
+            listOf(routingOptionsSettings, alertSettings),
             ensureReady = { group -> if (group === alertSettings) alertSettings.ensureLoaded() else Outcome.Success(Unit) },
         )
     }

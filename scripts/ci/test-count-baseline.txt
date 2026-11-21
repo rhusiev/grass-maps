@@ -1,11 +1,11 @@
 alerts	67
-app	681
+app	688
 control	47
 core	51
 core-services	213
 map	152
 navigation	84
-places	163
+places	165
 planner	22
 plugin-api	103
 plugin-ui-api	13
@@ -46,4 +46,4 @@ plugins/way-alerts	23
 regions	309
 routing	86
 tracks	177
-ui-shell	297
+ui-shell	300

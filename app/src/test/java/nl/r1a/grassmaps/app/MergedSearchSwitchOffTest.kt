@@ -78,7 +78,11 @@ class MergedSearchSwitchOffTest {
 
             assertEquals(AppError.SwitchOff(NetworkSwitches.onlineSearch), session.state.value.onlineStopped)
             assertEquals(SearchScreenStatus.RESULTS, session.state.value.status)
-            assertEquals(listOf("offline"), session.state.value.hits.map { it.id })
+            assertEquals(
+                listOf("offline"),
+                session.state.value.hits
+                    .map { it.id },
+            )
             val result = (outcome as Outcome.Success).value.value
             assertTrue("the control result must name the switch: $result", result.contains("switchOff=network.online_search"))
             assertTrue(
@@ -98,9 +102,7 @@ class MergedSearchSwitchOffTest {
             debounceMillis = 0,
         )
 
-    private fun request(
-        onOnlineStopped: suspend (AppError.SwitchOff) -> Unit = {},
-    ): SearchScreenRequest =
+    private fun request(onOnlineStopped: suspend (AppError.SwitchOff) -> Unit = {}): SearchScreenRequest =
         SearchScreenRequest(
             query = "львів",
             index = "lviv",

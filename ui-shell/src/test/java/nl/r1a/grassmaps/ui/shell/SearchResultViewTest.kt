@@ -112,6 +112,59 @@ class SearchResultViewTest {
     }
 
     @Test
+    fun aSwitchThatStoppedOnlineSearchSaysTheShownRowsAreOffline() {
+        val content =
+            searchScreenContent(
+                listOf(hit("off", "Площа Ринок", 49.8413, 24.0312)),
+                query = "льв",
+                loading = false,
+                failed = false,
+                labels = STOPPED_LABELS,
+                onlineStopped = true,
+            )
+
+        assertEquals("Online search was turned off. Showing offline results.", content.message)
+        assertEquals(listOf(false), content.rows.map { it.online })
+    }
+
+    @Test
+    fun anOnlineRowKeepsItsBadgeWhenTheSwitchStoppedTheRequest() {
+        val content =
+            searchScreenContent(
+                listOf(
+                    hit("off", "Площа Ринок", 49.8413, 24.0312),
+                    hit("on", "АТБ", 49.8419, 24.0316, source = PlaceSource.ONLINE),
+                ),
+                query = "льв",
+                loading = false,
+                failed = false,
+                labels = STOPPED_LABELS,
+                onlineStopped = true,
+            )
+
+        assertEquals(
+            "Online search was turned off. Rows marked Online arrived before it stopped; the rest are offline.",
+            content.message,
+        )
+        assertEquals(listOf(false, true), content.rows.map { it.online })
+    }
+
+    @Test
+    fun aSwitchStoppedOnlineSearchWithNoOfflineRowsDoesNotClaimAny() {
+        val content =
+            searchScreenContent(
+                emptyList(),
+                query = "льв",
+                loading = false,
+                failed = false,
+                labels = STOPPED_LABELS,
+                onlineStopped = true,
+            )
+
+        assertEquals("Online search was turned off. No offline results.", content.message)
+    }
+
+    @Test
     fun everyHitBecomesOneRowAndOneMarker() {
         val hits = (1..5).map { index -> hit("id-$index", "Place $index", 49.84 + index / 1000.0, 24.03) }
 
@@ -153,6 +206,14 @@ class SearchResultViewTest {
                 noMatches = "No matches",
                 notReady = "No search index for this map",
                 loading = "Searching",
+            )
+
+        val STOPPED_LABELS =
+            LABELS.copy(
+                onlineStopped = "Online search was turned off. Showing offline results.",
+                onlineStoppedWithOnline =
+                    "Online search was turned off. Rows marked Online arrived before it stopped; the rest are offline.",
+                onlineStoppedNoResults = "Online search was turned off. No offline results.",
             )
 
         val UKRAINIAN_LABELS =

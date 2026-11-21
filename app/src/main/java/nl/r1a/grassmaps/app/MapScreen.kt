@@ -18,12 +18,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -252,6 +255,14 @@ private const val BAR_PADDING_DP = 16
 
 /** The map switcher's own bottom-chrome key, so transient banners can clear it. */
 private val PROFILE_SWITCH_KEY: Any = Any()
+
+/**
+ * The bar sits 4 dp lower than the other bottom-start controls. A spacer above
+ * it reports 16 dp more chrome, so the map credit stays above the bar without
+ * moving any other control.
+ */
+private const val PROFILE_SWITCH_DROP_DP = 4
+private const val PROFILE_SWITCH_CREDIT_GAP_DP = 16
 
 /** Clearance above the map credit and the Layers button when the arc is on. */
 private const val QUICK_ACCESS_BOTTOM_CLEARANCE_DP = 72
@@ -1170,18 +1181,29 @@ private fun MapContent(
         // between the quick-access button at the start and Layers at the end.
         // It stays clear of an open sheet and of the full profiles screen.
         if (!navigationActive && profilesPage == null && (bottomChrome?.reachOf(BOTTOM_SHEET_KEY) ?: 0) == 0) {
-            ProfileSwitchBar(
-                active = profile,
-                order = profileOrder,
-                onNext = { container.quickProfileSwitch.next() },
-                onOpenAll = { ProfilesScreenSession.show() },
+            Column(
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
-                        .padding(BAR_PADDING_DP.dp)
+                        .padding(horizontal = BAR_PADDING_DP.dp)
+                        .offset(y = PROFILE_SWITCH_DROP_DP.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                // The credit reads the tallest bottom-chrome reach. Reporting
+                // this spacer lifts it clear without moving the bar again.
+                Spacer(
+                    Modifier
+                        .height(PROFILE_SWITCH_CREDIT_GAP_DP.dp)
                         .reportsBottomChrome(key = PROFILE_SWITCH_KEY),
-            )
+                )
+                ProfileSwitchBar(
+                    active = profile,
+                    order = profileOrder,
+                    onNext = { container.quickProfileSwitch.next() },
+                    onOpenAll = { ProfilesScreenSession.show() },
+                )
+            }
         }
         if (!navigationActive) {
             layoutSheetTab?.let { tab ->

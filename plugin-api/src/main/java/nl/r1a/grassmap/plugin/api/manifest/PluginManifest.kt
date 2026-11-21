@@ -1,16 +1,16 @@
-package nl.r1a.grassmap.plugin.api.manifest
+package nl.r1a.grassmaps.plugin.api.manifest
 
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
-import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
-import nl.r1a.grassmap.plugin.api.contract.CommandId
-import nl.r1a.grassmap.plugin.api.contract.Plugin
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.contract.StreamId
-import nl.r1a.grassmap.plugin.api.contract.SwitchId
-import nl.r1a.grassmap.plugin.api.contract.WidgetId
-import nl.r1a.grassmap.plugin.api.provider.ProviderContract
+import nl.r1a.grassmaps.plugin.api.command.CommandDispatcher
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.contract.Plugin
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.contract.StreamId
+import nl.r1a.grassmaps.plugin.api.contract.SwitchId
+import nl.r1a.grassmaps.plugin.api.contract.WidgetId
+import nl.r1a.grassmaps.plugin.api.provider.ProviderContract
 
 /**
  * The build-time declaration of a compiled-in plugin. The Gradle generator reads

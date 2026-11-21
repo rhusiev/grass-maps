@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

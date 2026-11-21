@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugin.api.model
+package nl.r1a.grassmaps.plugin.api.model
 
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

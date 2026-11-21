@@ -1,21 +1,21 @@
-package nl.r1a.grassmap.plugins.downloads.ui
+package nl.r1a.grassmaps.plugins.downloads.ui
 
-import nl.r1a.grassmap.plugin.api.model.CatalogAddon
-import nl.r1a.grassmap.plugin.api.model.CatalogPart
-import nl.r1a.grassmap.plugin.api.model.CatalogPartKind
-import nl.r1a.grassmap.plugin.api.model.CatalogRegion
-import nl.r1a.grassmap.plugin.api.model.DownloadPartRow
-import nl.r1a.grassmap.plugin.api.model.DownloadRow
-import nl.r1a.grassmap.plugin.api.model.DownloadRowStatus
-import nl.r1a.grassmap.plugin.api.model.DownloadTransferState
-import nl.r1a.grassmap.plugin.api.model.DownloadsData
-import nl.r1a.grassmap.plugin.api.model.DownloadsDefaults
-import nl.r1a.grassmap.plugin.api.model.DownloadsState
-import nl.r1a.grassmap.plugin.api.model.FirstRunOffer
-import nl.r1a.grassmap.plugin.api.model.FirstRunOfferKind
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.InstalledPack
-import nl.r1a.grassmap.plugin.api.model.RegionCatalog
+import nl.r1a.grassmaps.plugin.api.model.CatalogAddon
+import nl.r1a.grassmaps.plugin.api.model.CatalogPart
+import nl.r1a.grassmaps.plugin.api.model.CatalogPartKind
+import nl.r1a.grassmaps.plugin.api.model.CatalogRegion
+import nl.r1a.grassmaps.plugin.api.model.DownloadPartRow
+import nl.r1a.grassmaps.plugin.api.model.DownloadRow
+import nl.r1a.grassmaps.plugin.api.model.DownloadRowStatus
+import nl.r1a.grassmaps.plugin.api.model.DownloadTransferState
+import nl.r1a.grassmaps.plugin.api.model.DownloadsData
+import nl.r1a.grassmaps.plugin.api.model.DownloadsDefaults
+import nl.r1a.grassmaps.plugin.api.model.DownloadsState
+import nl.r1a.grassmaps.plugin.api.model.FirstRunOffer
+import nl.r1a.grassmaps.plugin.api.model.FirstRunOfferKind
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.InstalledPack
+import nl.r1a.grassmaps.plugin.api.model.RegionCatalog
 import java.util.Locale
 
 /**

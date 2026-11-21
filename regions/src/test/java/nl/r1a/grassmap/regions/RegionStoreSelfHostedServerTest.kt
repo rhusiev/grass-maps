@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -7,12 +7,12 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import nl.r1a.grassmap.plugin.api.contract.SwitchId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.DownloadProblemKind
-import nl.r1a.grassmap.plugin.api.testing.fixture.CatalogFixture
-import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
+import nl.r1a.grassmaps.plugin.api.contract.SwitchId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.DownloadProblemKind
+import nl.r1a.grassmaps.plugin.api.testing.fixture.CatalogFixture
+import nl.r1a.grassmaps.plugin.api.testing.fixture.TestRegions
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

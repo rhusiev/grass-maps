@@ -1,14 +1,14 @@
-package nl.r1a.grassmap.plugins.online.search
+package nl.r1a.grassmaps.plugins.online.search
 
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.BoundingBox
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.provider.SearchContext
-import nl.r1a.grassmap.plugin.api.service.NetworkGate
-import nl.r1a.grassmap.plugin.api.service.NetworkSwitches
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.BoundingBox
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.provider.SearchContext
+import nl.r1a.grassmaps.plugin.api.service.NetworkGate
+import nl.r1a.grassmaps.plugin.api.service.NetworkSwitches
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

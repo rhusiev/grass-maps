@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.plugin.api.host
+package nl.r1a.grassmaps.plugin.api.host
 
-import nl.r1a.grassmap.plugin.api.model.Camera
+import nl.r1a.grassmaps.plugin.api.model.Camera
 
 /**
  * One fact reported by the map engine. Values may grow; match with an else

@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.plugins.manager
+package nl.r1a.grassmaps.plugins.manager
 
-import nl.r1a.grassmap.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
 
 /** The sections of the plugin list, in the order the screen draws them. */
 enum class PluginGroup {

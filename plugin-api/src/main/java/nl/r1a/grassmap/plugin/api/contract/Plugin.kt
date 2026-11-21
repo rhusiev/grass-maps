@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.plugin.api.contract
+package nl.r1a.grassmaps.plugin.api.contract
 
-import nl.r1a.grassmap.plugin.api.command.Command
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.PluginServices
-import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
-import nl.r1a.grassmap.plugin.api.provider.Provider
-import nl.r1a.grassmap.plugin.api.widget.WidgetDescriptor
+import nl.r1a.grassmaps.plugin.api.command.Command
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.PluginServices
+import nl.r1a.grassmaps.plugin.api.host.StreamDescriptor
+import nl.r1a.grassmaps.plugin.api.provider.Provider
+import nl.r1a.grassmaps.plugin.api.widget.WidgetDescriptor
 
 /**
  * A compiled-in plugin. The host creates an instance on the first activation

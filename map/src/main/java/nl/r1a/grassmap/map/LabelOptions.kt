@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.map
+package nl.r1a.grassmaps.map
 
 /**
  * The language a map label shows (T-0110). [Default] keeps each style's own

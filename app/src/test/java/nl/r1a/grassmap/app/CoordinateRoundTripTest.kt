@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugins.coordinates.Coordinates
-import nl.r1a.grassmap.plugins.share.CoordinateFormat
-import nl.r1a.grassmap.plugins.share.CoordinateFormats
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugins.coordinates.Coordinates
+import nl.r1a.grassmaps.plugins.share.CoordinateFormat
+import nl.r1a.grassmaps.plugins.share.CoordinateFormats
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue

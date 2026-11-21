@@ -1,12 +1,12 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.ElevationAccess
-import nl.r1a.grassmap.plugins.route.relations.AssembledRoute
-import nl.r1a.grassmap.tracks.ElevationProfile
-import nl.r1a.grassmap.tracks.ElevationProfiler
-import nl.r1a.grassmap.tracks.ElevationSegments
-import nl.r1a.grassmap.ui.shell.RelationAnalysisSummary
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.ElevationAccess
+import nl.r1a.grassmaps.plugins.route.relations.AssembledRoute
+import nl.r1a.grassmaps.tracks.ElevationProfile
+import nl.r1a.grassmaps.tracks.ElevationProfiler
+import nl.r1a.grassmaps.tracks.ElevationSegments
+import nl.r1a.grassmaps.ui.shell.RelationAnalysisSummary
 import kotlin.math.ceil
 
 /**

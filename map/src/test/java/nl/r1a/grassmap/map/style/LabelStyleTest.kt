@@ -1,14 +1,14 @@
-package nl.r1a.grassmap.map.style
+package nl.r1a.grassmaps.map.style
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import nl.r1a.grassmap.map.LabelLanguage
-import nl.r1a.grassmap.map.LabelOptions
-import nl.r1a.grassmap.plugin.api.model.LayerId
-import nl.r1a.grassmap.plugin.api.model.LayerSpec
-import nl.r1a.grassmap.plugin.api.model.LayerType
+import nl.r1a.grassmaps.map.LabelLanguage
+import nl.r1a.grassmaps.map.LabelOptions
+import nl.r1a.grassmaps.plugin.api.model.LayerId
+import nl.r1a.grassmaps.plugin.api.model.LayerSpec
+import nl.r1a.grassmaps.plugin.api.model.LayerType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test

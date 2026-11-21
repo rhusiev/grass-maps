@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import nl.r1a.grassmap.plugin.api.model.PlaceCard
+import nl.r1a.grassmaps.plugin.api.model.PlaceCard
 
 /**
  * The card the map screen draws over itself (T-0208).

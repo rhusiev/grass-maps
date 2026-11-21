@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugins.point.info
+package nl.r1a.grassmaps.plugins.point.info
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.UnitSystem
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.UnitSystem
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

@@ -1,6 +1,6 @@
 @file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 
-package nl.r1a.grassmap.alerts
+package nl.r1a.grassmaps.alerts
 
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
@@ -8,18 +8,18 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import nl.r1a.grassmap.navigation.GeometryRouteFollower
-import nl.r1a.grassmap.navigation.NavigationRun
-import nl.r1a.grassmap.navigation.NavigationSession
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.provider.ProviderContract
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugin.api.provider.RouteRequest
-import nl.r1a.grassmap.plugin.api.provider.RoutingCapabilities
-import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
-import nl.r1a.grassmap.plugin.api.provider.RoutingEngineContract
+import nl.r1a.grassmaps.navigation.GeometryRouteFollower
+import nl.r1a.grassmaps.navigation.NavigationRun
+import nl.r1a.grassmaps.navigation.NavigationSession
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.provider.ProviderContract
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.provider.RouteRequest
+import nl.r1a.grassmaps.plugin.api.provider.RoutingCapabilities
+import nl.r1a.grassmaps.plugin.api.provider.RoutingEngine
+import nl.r1a.grassmaps.plugin.api.provider.RoutingEngineContract
 
 /** The effects a host sent, in order. */
 internal class RecordingEffectSink : AlertEffectSink {

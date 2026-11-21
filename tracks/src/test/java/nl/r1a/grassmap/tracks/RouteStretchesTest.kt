@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.tracks
+package nl.r1a.grassmaps.tracks
 
-import nl.r1a.grassmap.plugin.api.model.AttributeValue
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.provider.RouteAttributes
-import nl.r1a.grassmap.plugin.api.provider.RouteSegment
+import nl.r1a.grassmaps.plugin.api.model.AttributeValue
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.provider.RouteAttributes
+import nl.r1a.grassmaps.plugin.api.provider.RouteSegment
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

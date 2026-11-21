@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.model.StyleId
-import nl.r1a.grassmap.plugins.layers.panel.MapStyleChoice
+import nl.r1a.grassmaps.plugin.api.model.StyleId
+import nl.r1a.grassmaps.plugins.layers.panel.MapStyleChoice
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

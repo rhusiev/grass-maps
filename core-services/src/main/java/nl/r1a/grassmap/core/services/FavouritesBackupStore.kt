@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.core.services
+package nl.r1a.grassmaps.core.services
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.service.Clock
-import nl.r1a.grassmap.plugin.api.service.SystemClock
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.service.Clock
+import nl.r1a.grassmaps.plugin.api.service.SystemClock
 import java.io.File
 import java.io.IOException
 import java.security.MessageDigest

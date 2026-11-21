@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -6,10 +6,10 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.RegionOutline
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.RegionOutline
 
 /**
  * Reads one region's border file. The server publishes a bare GeoJSON

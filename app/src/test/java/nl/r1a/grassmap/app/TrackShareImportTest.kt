@@ -1,14 +1,14 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.app.generated.GeneratedPlugins
-import nl.r1a.grassmap.core.PluginHost
-import nl.r1a.grassmap.core.ProviderRegistry
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.ui.shell.TrackImportFailure
-import nl.r1a.grassmap.ui.shell.TrackImportOutcome
+import nl.r1a.grassmaps.app.generated.GeneratedPlugins
+import nl.r1a.grassmaps.core.PluginHost
+import nl.r1a.grassmaps.core.ProviderRegistry
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.ui.shell.TrackImportFailure
+import nl.r1a.grassmaps.ui.shell.TrackImportOutcome
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

@@ -1,22 +1,22 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import nl.r1a.grassmap.core.ProviderRegistry
-import nl.r1a.grassmap.map.TileNetworkPolicy
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.MapHost
-import nl.r1a.grassmap.plugin.api.model.StyleId
-import nl.r1a.grassmap.plugin.api.provider.MapLayerContract
-import nl.r1a.grassmap.plugin.api.service.NetworkGate
-import nl.r1a.grassmap.plugin.api.service.NetworkSwitches
-import nl.r1a.grassmap.plugins.raster.RasterAreaLayer
-import nl.r1a.grassmap.plugins.raster.RasterLayerProvider
-import nl.r1a.grassmap.plugins.raster.RasterSource
-import nl.r1a.grassmap.plugins.raster.RasterTileClient
-import nl.r1a.grassmap.plugins.raster.RasterTransparency
+import nl.r1a.grassmaps.core.ProviderRegistry
+import nl.r1a.grassmaps.map.TileNetworkPolicy
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.MapHost
+import nl.r1a.grassmaps.plugin.api.model.StyleId
+import nl.r1a.grassmaps.plugin.api.provider.MapLayerContract
+import nl.r1a.grassmaps.plugin.api.service.NetworkGate
+import nl.r1a.grassmaps.plugin.api.service.NetworkSwitches
+import nl.r1a.grassmaps.plugins.raster.RasterAreaLayer
+import nl.r1a.grassmaps.plugins.raster.RasterLayerProvider
+import nl.r1a.grassmaps.plugins.raster.RasterSource
+import nl.r1a.grassmaps.plugins.raster.RasterTileClient
+import nl.r1a.grassmaps.plugins.raster.RasterTransparency
 
 internal val RASTER_PLUGIN: PluginId = PluginId("map.raster")
 

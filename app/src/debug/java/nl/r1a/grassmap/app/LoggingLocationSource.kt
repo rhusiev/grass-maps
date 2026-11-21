@@ -1,10 +1,10 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.util.Log
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onEach
-import nl.r1a.grassmap.core.services.LocationSource
-import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.core.services.LocationSource
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
 
 /**
  * Debug-only log of the replay, so an emulator run can show that fixes keep

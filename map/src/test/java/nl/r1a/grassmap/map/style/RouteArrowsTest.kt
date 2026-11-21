@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.map.style
+package nl.r1a.grassmaps.map.style
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -6,10 +6,10 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.jsonObject
-import nl.r1a.grassmap.map.MapDistance
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteInstruction
+import nl.r1a.grassmaps.map.MapDistance
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteInstruction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

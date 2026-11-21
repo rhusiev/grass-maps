@@ -1,10 +1,10 @@
-package nl.r1a.grassmap.plugin.api.host
+package nl.r1a.grassmaps.plugin.api.host
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.TrackLibraryState
 
 /** The revision a build without a track library reports; it never changes. */
 private val NO_LIBRARY_REVISION = MutableStateFlow(0L)

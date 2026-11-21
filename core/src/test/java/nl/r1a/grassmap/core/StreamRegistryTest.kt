@@ -1,12 +1,12 @@
-package nl.r1a.grassmap.core
+package nl.r1a.grassmaps.core
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.contract.StreamId
-import nl.r1a.grassmap.plugin.api.model.PluginState
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.contract.StreamId
+import nl.r1a.grassmaps.plugin.api.model.PluginState
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

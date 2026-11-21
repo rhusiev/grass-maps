@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.raster
+package nl.r1a.grassmaps.plugins.raster
 
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer

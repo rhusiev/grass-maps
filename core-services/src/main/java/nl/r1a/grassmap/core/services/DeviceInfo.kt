@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.core.services
+package nl.r1a.grassmaps.core.services
 
 /**
  * The device facts a diagnostic bundle carries. It holds no identifier: no

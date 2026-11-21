@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.layers.panel
+package nl.r1a.grassmaps.plugins.layers.panel
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,8 +20,8 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
-import nl.r1a.grassmap.plugin.ui.api.ShellColors
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.ShellColors
 
 private const val BUTTON_CORNER_DP = 8
 private const val BUTTON_HORIZONTAL_DP = 12

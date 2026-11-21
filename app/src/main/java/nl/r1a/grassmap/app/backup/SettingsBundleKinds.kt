@@ -1,29 +1,29 @@
-package nl.r1a.grassmap.app.backup
+package nl.r1a.grassmaps.app.backup
 
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.alerts.AlertSettingsStore
-import nl.r1a.grassmap.app.MapStyleSettings
-import nl.r1a.grassmap.core.PluginHost
-import nl.r1a.grassmap.core.services.OnlineSearchSettings
-import nl.r1a.grassmap.core.services.ProfileCatalog
-import nl.r1a.grassmap.core.services.ProfileEntry
-import nl.r1a.grassmap.core.services.RoutingOptionsSettings
-import nl.r1a.grassmap.core.services.SearchHistorySettings
-import nl.r1a.grassmap.core.services.backup.BackupKinds
-import nl.r1a.grassmap.core.services.backup.BundleEntry
-import nl.r1a.grassmap.core.services.backup.BundleKindSource
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.BuiltInProfiles
-import nl.r1a.grassmap.plugin.api.model.ProfileId
-import nl.r1a.grassmap.plugin.api.provider.RouteOptions
-import nl.r1a.grassmap.plugin.api.provider.RoutePreference
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugins.layers.panel.MapStyleChoice
+import nl.r1a.grassmaps.alerts.AlertSettingsStore
+import nl.r1a.grassmaps.app.MapStyleSettings
+import nl.r1a.grassmaps.core.PluginHost
+import nl.r1a.grassmaps.core.services.OnlineSearchSettings
+import nl.r1a.grassmaps.core.services.ProfileCatalog
+import nl.r1a.grassmaps.core.services.ProfileEntry
+import nl.r1a.grassmaps.core.services.RoutingOptionsSettings
+import nl.r1a.grassmaps.core.services.SearchHistorySettings
+import nl.r1a.grassmaps.core.services.backup.BackupKinds
+import nl.r1a.grassmaps.core.services.backup.BundleEntry
+import nl.r1a.grassmaps.core.services.backup.BundleKindSource
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.BuiltInProfiles
+import nl.r1a.grassmaps.plugin.api.model.ProfileId
+import nl.r1a.grassmaps.plugin.api.provider.RouteOptions
+import nl.r1a.grassmaps.plugin.api.provider.RoutePreference
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugins.layers.panel.MapStyleChoice
 
 /** The profile catalog, one entry per profile id. */
 internal class ProfileBundleKind(

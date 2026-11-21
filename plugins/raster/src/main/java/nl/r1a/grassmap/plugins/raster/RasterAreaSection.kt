@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.raster
+package nl.r1a.grassmaps.plugins.raster
 
 import android.text.format.Formatter
 import androidx.compose.foundation.background
@@ -24,7 +24,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import nl.r1a.grassmap.plugin.api.model.BoundingBox
+import nl.r1a.grassmaps.plugin.api.model.BoundingBox
 
 private const val DEFAULT_FROM_ZOOM = 8
 private const val DEFAULT_TO_ZOOM = 12

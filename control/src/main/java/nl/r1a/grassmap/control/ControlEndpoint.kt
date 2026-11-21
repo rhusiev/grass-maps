@@ -1,21 +1,21 @@
-package nl.r1a.grassmap.control
+package nl.r1a.grassmaps.control
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
-import nl.r1a.grassmap.core.PluginHost
-import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
-import nl.r1a.grassmap.plugin.api.contract.CommandId
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.contract.StreamId
-import nl.r1a.grassmap.plugin.api.contract.SwitchId
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.CommandInvoker
-import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
-import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
-import nl.r1a.grassmap.plugin.api.manifest.PluginManifest
+import nl.r1a.grassmaps.core.PluginHost
+import nl.r1a.grassmaps.plugin.api.command.CommandDispatcher
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.contract.StreamId
+import nl.r1a.grassmaps.plugin.api.contract.SwitchId
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.CommandInvoker
+import nl.r1a.grassmaps.plugin.api.host.StreamDescriptor
+import nl.r1a.grassmaps.plugin.api.manifest.GeneratedCommand
+import nl.r1a.grassmaps.plugin.api.manifest.PluginManifest
 
 /** One command as the control channel lists and gates it. */
 data class ControlCommand(

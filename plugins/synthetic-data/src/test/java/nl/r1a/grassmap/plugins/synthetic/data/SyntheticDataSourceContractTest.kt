@@ -1,17 +1,17 @@
-package nl.r1a.grassmap.plugins.synthetic.data
+package nl.r1a.grassmaps.plugins.synthetic.data
 
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.contract.Page
-import nl.r1a.grassmap.plugin.api.contract.PageRequest
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.error.map
-import nl.r1a.grassmap.plugin.api.model.BoundingBox
-import nl.r1a.grassmap.plugin.api.provider.AttributeRequest
-import nl.r1a.grassmap.plugin.api.provider.DataSource
-import nl.r1a.grassmap.plugin.api.provider.ProviderContract
-import nl.r1a.grassmap.plugin.api.provider.WayAttribute
-import nl.r1a.grassmap.plugin.api.testing.PageSource
-import nl.r1a.grassmap.plugin.api.testing.PagedProviderContractSuite
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.contract.Page
+import nl.r1a.grassmaps.plugin.api.contract.PageRequest
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.error.map
+import nl.r1a.grassmaps.plugin.api.model.BoundingBox
+import nl.r1a.grassmaps.plugin.api.provider.AttributeRequest
+import nl.r1a.grassmaps.plugin.api.provider.DataSource
+import nl.r1a.grassmaps.plugin.api.provider.ProviderContract
+import nl.r1a.grassmaps.plugin.api.provider.WayAttribute
+import nl.r1a.grassmaps.plugin.api.testing.PageSource
+import nl.r1a.grassmaps.plugin.api.testing.PagedProviderContractSuite
 
 /**
  * Runs the shared T-0015 paging suite against the synthetic source. The suite

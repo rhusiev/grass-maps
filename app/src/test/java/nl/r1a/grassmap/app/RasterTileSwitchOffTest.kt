@@ -1,17 +1,17 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.core.services.PrivacyNetworkGate
-import nl.r1a.grassmap.core.services.PrivacySwitchSettings
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.service.NetworkSwitches
-import nl.r1a.grassmap.plugins.raster.RasterPresets
-import nl.r1a.grassmap.plugins.raster.RasterTileClient
-import nl.r1a.grassmap.plugins.raster.RasterTileTransport
-import nl.r1a.grassmap.plugins.raster.TileImage
+import nl.r1a.grassmaps.core.services.PrivacyNetworkGate
+import nl.r1a.grassmaps.core.services.PrivacySwitchSettings
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.service.NetworkSwitches
+import nl.r1a.grassmaps.plugins.raster.RasterPresets
+import nl.r1a.grassmaps.plugins.raster.RasterTileClient
+import nl.r1a.grassmaps.plugins.raster.RasterTileTransport
+import nl.r1a.grassmaps.plugins.raster.TileImage
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

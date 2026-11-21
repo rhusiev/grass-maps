@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugins.raster
+package nl.r1a.grassmaps.plugins.raster
 
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 
 /**
  * The offline bulk-download decision for a source (data-formats.md section 8).

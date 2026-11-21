@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.control
+package nl.r1a.grassmaps.control
 
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -11,8 +11,8 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 
 /** One JSON-RPC 2.0 request. A request without an `id` is a notification. */
 data class RpcRequest(

@@ -1,13 +1,13 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.CoroutineScope
-import nl.r1a.grassmap.core.services.FavouritesBackupCopy
-import nl.r1a.grassmap.core.services.FavouritesBackupRecorder
-import nl.r1a.grassmap.core.services.FavouritesBackupStore
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.service.Clock
-import nl.r1a.grassmap.plugin.api.service.SystemClock
+import nl.r1a.grassmaps.core.services.FavouritesBackupCopy
+import nl.r1a.grassmaps.core.services.FavouritesBackupRecorder
+import nl.r1a.grassmaps.core.services.FavouritesBackupStore
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.service.Clock
+import nl.r1a.grassmaps.plugin.api.service.SystemClock
 import java.io.File
 
 /**

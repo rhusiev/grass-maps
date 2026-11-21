@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.provider.RouteProgress
-import nl.r1a.grassmap.routing.RouteJson
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.provider.RouteProgress
+import nl.r1a.grassmaps.routing.RouteJson
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

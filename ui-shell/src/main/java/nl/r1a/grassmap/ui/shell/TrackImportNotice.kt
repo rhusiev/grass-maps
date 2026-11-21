@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,8 +26,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 
 private const val TITLE_FONT_SP = 15
 private const val DETAIL_FONT_SP = 13

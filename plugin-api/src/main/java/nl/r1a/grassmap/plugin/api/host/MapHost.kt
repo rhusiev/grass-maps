@@ -1,25 +1,25 @@
-package nl.r1a.grassmap.plugin.api.host
+package nl.r1a.grassmaps.plugin.api.host
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.BoundingBox
-import nl.r1a.grassmap.plugin.api.model.Camera
-import nl.r1a.grassmap.plugin.api.model.CameraUpdate
-import nl.r1a.grassmap.plugin.api.model.LayerId
-import nl.r1a.grassmap.plugin.api.model.LayerSlot
-import nl.r1a.grassmap.plugin.api.model.LayerSpec
-import nl.r1a.grassmap.plugin.api.model.LocationFix
-import nl.r1a.grassmap.plugin.api.model.MapTrack
-import nl.r1a.grassmap.plugin.api.model.RegionOutline
-import nl.r1a.grassmap.plugin.api.model.RouteLineStyle
-import nl.r1a.grassmap.plugin.api.model.ScreenOffset
-import nl.r1a.grassmap.plugin.api.model.StyleDiff
-import nl.r1a.grassmap.plugin.api.model.StyleSpec
-import nl.r1a.grassmap.plugin.api.model.TrackingMode
-import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.BoundingBox
+import nl.r1a.grassmaps.plugin.api.model.Camera
+import nl.r1a.grassmaps.plugin.api.model.CameraUpdate
+import nl.r1a.grassmaps.plugin.api.model.LayerId
+import nl.r1a.grassmaps.plugin.api.model.LayerSlot
+import nl.r1a.grassmaps.plugin.api.model.LayerSpec
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.plugin.api.model.MapTrack
+import nl.r1a.grassmaps.plugin.api.model.RegionOutline
+import nl.r1a.grassmaps.plugin.api.model.RouteLineStyle
+import nl.r1a.grassmaps.plugin.api.model.ScreenOffset
+import nl.r1a.grassmaps.plugin.api.model.StyleDiff
+import nl.r1a.grassmaps.plugin.api.model.StyleSpec
+import nl.r1a.grassmaps.plugin.api.model.TrackingMode
+import nl.r1a.grassmaps.plugin.api.provider.Route
 
 /**
  * The map seam. The engine binding lives in `map`; this contract has no map,

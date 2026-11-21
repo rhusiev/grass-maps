@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugin.api.host
+package nl.r1a.grassmaps.plugin.api.host
 
-import nl.r1a.grassmap.plugin.api.provider.RouteOptions
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.provider.RouteOptions
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
 
 /**
  * The routing options the host holds for each profile (T-0308).

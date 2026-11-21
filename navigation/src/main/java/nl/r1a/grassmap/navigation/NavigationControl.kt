@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.navigation
+package nl.r1a.grassmaps.navigation
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

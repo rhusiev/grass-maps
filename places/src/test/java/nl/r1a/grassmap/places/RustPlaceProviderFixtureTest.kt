@@ -1,13 +1,13 @@
-package nl.r1a.grassmap.places
+package nl.r1a.grassmaps.places
 
 import kotlinx.coroutines.runBlocking
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.OsmType
-import nl.r1a.grassmap.plugin.api.provider.PlaceDetails
-import nl.r1a.grassmap.plugin.api.provider.PlaceHit
-import nl.r1a.grassmap.plugin.api.provider.SearchContext
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.OsmType
+import nl.r1a.grassmaps.plugin.api.provider.PlaceDetails
+import nl.r1a.grassmaps.plugin.api.provider.PlaceHit
+import nl.r1a.grassmaps.plugin.api.provider.SearchContext
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

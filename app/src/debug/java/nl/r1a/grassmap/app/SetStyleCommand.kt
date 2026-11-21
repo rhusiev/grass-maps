@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.util.Log
 import kotlinx.coroutines.CoroutineStart
@@ -11,23 +11,23 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
-import nl.r1a.grassmap.core.ProviderRegistry
-import nl.r1a.grassmap.plugin.api.command.Command
-import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
-import nl.r1a.grassmap.plugin.api.command.CommandPolicy
-import nl.r1a.grassmap.plugin.api.command.CommandResult
-import nl.r1a.grassmap.plugin.api.contract.CommandId
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.MapEvent
-import nl.r1a.grassmap.plugin.api.host.MapHost
-import nl.r1a.grassmap.plugin.api.model.SlottedLayer
-import nl.r1a.grassmap.plugin.api.model.StyleDiff
-import nl.r1a.grassmap.plugin.api.model.StyleId
-import nl.r1a.grassmap.plugin.api.model.StyleSpec
-import nl.r1a.grassmap.plugin.api.provider.MapLayerContract
-import nl.r1a.grassmap.plugin.api.provider.MapLayerProvider
+import nl.r1a.grassmaps.core.ProviderRegistry
+import nl.r1a.grassmaps.plugin.api.command.Command
+import nl.r1a.grassmaps.plugin.api.command.CommandDispatcher
+import nl.r1a.grassmaps.plugin.api.command.CommandPolicy
+import nl.r1a.grassmaps.plugin.api.command.CommandResult
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.MapEvent
+import nl.r1a.grassmaps.plugin.api.host.MapHost
+import nl.r1a.grassmaps.plugin.api.model.SlottedLayer
+import nl.r1a.grassmaps.plugin.api.model.StyleDiff
+import nl.r1a.grassmaps.plugin.api.model.StyleId
+import nl.r1a.grassmaps.plugin.api.model.StyleSpec
+import nl.r1a.grassmaps.plugin.api.provider.MapLayerContract
+import nl.r1a.grassmaps.plugin.api.provider.MapLayerProvider
 
 /** The debug-only command that selects one style variant for the goldens. */
 internal val SET_STYLE_COMMAND: CommandId = CommandId("core.map.set_style")

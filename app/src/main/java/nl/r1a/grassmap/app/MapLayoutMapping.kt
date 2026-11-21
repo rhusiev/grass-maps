@@ -1,20 +1,20 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.content.Context
 import kotlinx.serialization.json.JsonObject
-import nl.r1a.grassmap.core.services.MapButtonLayout
-import nl.r1a.grassmap.core.services.MapControlCommands
-import nl.r1a.grassmap.plugin.api.contract.CommandId
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugins.map.controls.CameraMode
-import nl.r1a.grassmap.ui.shell.ControlBarLabels
-import nl.r1a.grassmap.ui.shell.ControlButton
-import nl.r1a.grassmap.ui.shell.GridWidget
-import nl.r1a.grassmap.ui.shell.MapLayoutSheetContent
-import nl.r1a.grassmap.ui.shell.MapLayoutSheetLabels
-import nl.r1a.grassmap.ui.shell.MapLayoutStrings
-import nl.r1a.grassmap.ui.shell.WidgetLayout
-import nl.r1a.grassmap.ui.shell.mapLayoutSheetContent
+import nl.r1a.grassmaps.core.services.MapButtonLayout
+import nl.r1a.grassmaps.core.services.MapControlCommands
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugins.map.controls.CameraMode
+import nl.r1a.grassmaps.ui.shell.ControlBarLabels
+import nl.r1a.grassmaps.ui.shell.ControlButton
+import nl.r1a.grassmaps.ui.shell.GridWidget
+import nl.r1a.grassmaps.ui.shell.MapLayoutSheetContent
+import nl.r1a.grassmaps.ui.shell.MapLayoutSheetLabels
+import nl.r1a.grassmaps.ui.shell.MapLayoutStrings
+import nl.r1a.grassmaps.ui.shell.WidgetLayout
+import nl.r1a.grassmaps.ui.shell.mapLayoutSheetContent
 
 /** What a map bar button does when it is pressed (T-0606). */
 internal enum class MapButtonKind {

@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.map
+package nl.r1a.grassmaps.map
 
-import nl.r1a.grassmap.plugin.api.model.SourceId
-import nl.r1a.grassmap.plugin.api.model.StyleSpec
+import nl.r1a.grassmaps.plugin.api.model.SourceId
+import nl.r1a.grassmaps.plugin.api.model.StyleSpec
 
 /**
  * The tiles of one logical map source, supplied by the app instead of loaded

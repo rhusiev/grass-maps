@@ -1,18 +1,18 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.content.Context
-import nl.r1a.grassmap.map.MapTileSource
-import nl.r1a.grassmap.plugin.api.model.Camera
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.InstalledPack
-import nl.r1a.grassmap.plugin.api.model.MapSourceIds
-import nl.r1a.grassmap.plugin.api.model.SourceId
-import nl.r1a.grassmap.regions.RegionIdentifiers
-import nl.r1a.grassmap.regions.RegionMountProblem
-import nl.r1a.grassmap.regions.RegionMountResolver
-import nl.r1a.grassmap.regions.RegionMounts
-import nl.r1a.grassmap.regions.RegionTileSources
-import nl.r1a.grassmap.regions.TileKind
+import nl.r1a.grassmaps.map.MapTileSource
+import nl.r1a.grassmaps.plugin.api.model.Camera
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.InstalledPack
+import nl.r1a.grassmaps.plugin.api.model.MapSourceIds
+import nl.r1a.grassmaps.plugin.api.model.SourceId
+import nl.r1a.grassmaps.regions.RegionIdentifiers
+import nl.r1a.grassmaps.regions.RegionMountProblem
+import nl.r1a.grassmaps.regions.RegionMountResolver
+import nl.r1a.grassmaps.regions.RegionMounts
+import nl.r1a.grassmaps.regions.RegionTileSources
+import nl.r1a.grassmaps.regions.TileKind
 import java.io.File
 
 /**

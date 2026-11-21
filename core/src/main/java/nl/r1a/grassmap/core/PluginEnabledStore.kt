@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.core
+package nl.r1a.grassmaps.core
 
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 
 /**
  * Persists which plugins the user turned off (T-0607). Both calls do file I/O,

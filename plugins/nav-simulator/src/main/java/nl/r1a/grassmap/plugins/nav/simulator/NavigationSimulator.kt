@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.nav.simulator
+package nl.r1a.grassmaps.plugins.nav.simulator
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -23,24 +23,24 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import nl.r1a.grassmap.navigation.GeometryRouteFollower
-import nl.r1a.grassmap.navigation.NavigationConfig
-import nl.r1a.grassmap.navigation.NavigationPhase
-import nl.r1a.grassmap.navigation.NavigationRun
-import nl.r1a.grassmap.navigation.NavigationSession
-import nl.r1a.grassmap.navigation.NavigationState
-import nl.r1a.grassmap.navigation.RouteFollowerEngine
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.LocationFix
-import nl.r1a.grassmap.plugin.api.provider.ProviderContract
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugin.api.provider.RouteRequest
-import nl.r1a.grassmap.plugin.api.provider.RoutingCapabilities
-import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
-import nl.r1a.grassmap.plugin.api.provider.RoutingEngineContract
+import nl.r1a.grassmaps.navigation.GeometryRouteFollower
+import nl.r1a.grassmaps.navigation.NavigationConfig
+import nl.r1a.grassmaps.navigation.NavigationPhase
+import nl.r1a.grassmaps.navigation.NavigationRun
+import nl.r1a.grassmaps.navigation.NavigationSession
+import nl.r1a.grassmaps.navigation.NavigationState
+import nl.r1a.grassmaps.navigation.RouteFollowerEngine
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.plugin.api.provider.ProviderContract
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.provider.RouteRequest
+import nl.r1a.grassmaps.plugin.api.provider.RoutingCapabilities
+import nl.r1a.grassmaps.plugin.api.provider.RoutingEngine
+import nl.r1a.grassmaps.plugin.api.provider.RoutingEngineContract
 import java.util.Locale
 
 /**

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.info.widgets
+package nl.r1a.grassmaps.plugins.info.widgets
 
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.toList

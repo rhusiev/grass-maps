@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -9,11 +9,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.error.onFailure
-import nl.r1a.grassmap.plugin.api.model.ProfileId
-import nl.r1a.grassmap.ui.shell.WidgetLayout
-import nl.r1a.grassmap.ui.shell.WidgetLayoutStore
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.error.onFailure
+import nl.r1a.grassmaps.plugin.api.model.ProfileId
+import nl.r1a.grassmaps.ui.shell.WidgetLayout
+import nl.r1a.grassmaps.ui.shell.WidgetLayoutStore
 
 internal const val WIDGET_TAG = "WidgetGrid"
 

@@ -1,22 +1,22 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.TrackLibraryAccess
-import nl.r1a.grassmap.plugin.api.host.TrackLibraryChange
-import nl.r1a.grassmap.plugin.api.host.TrackLibraryUndo
-import nl.r1a.grassmap.plugin.api.model.TrackFolderSummary
-import nl.r1a.grassmap.plugin.api.model.TrackLibraryAction
-import nl.r1a.grassmap.plugin.api.model.TrackLibraryEntry
-import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
-import nl.r1a.grassmap.plugins.track.library.TrackFolder
-import nl.r1a.grassmap.plugins.track.library.TrackFolderStore
-import nl.r1a.grassmap.tracks.TrackId
-import nl.r1a.grassmap.tracks.TrackMetadata
-import nl.r1a.grassmap.tracks.TrackRemoval
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.TrackLibraryAccess
+import nl.r1a.grassmaps.plugin.api.host.TrackLibraryChange
+import nl.r1a.grassmaps.plugin.api.host.TrackLibraryUndo
+import nl.r1a.grassmaps.plugin.api.model.TrackFolderSummary
+import nl.r1a.grassmaps.plugin.api.model.TrackLibraryAction
+import nl.r1a.grassmaps.plugin.api.model.TrackLibraryEntry
+import nl.r1a.grassmaps.plugin.api.model.TrackLibraryState
+import nl.r1a.grassmaps.plugins.track.library.TrackFolder
+import nl.r1a.grassmaps.plugins.track.library.TrackFolderStore
+import nl.r1a.grassmaps.tracks.TrackId
+import nl.r1a.grassmaps.tracks.TrackMetadata
+import nl.r1a.grassmaps.tracks.TrackRemoval
 
 /**
  * The host side of `plugins/track-library` (T-0414).

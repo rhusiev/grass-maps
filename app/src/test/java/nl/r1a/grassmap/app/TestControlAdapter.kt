@@ -1,10 +1,10 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
-import nl.r1a.grassmap.plugin.api.contract.CommandId
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.CommandInvoker
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.CommandInvoker
 
 /**
  * A test-only stand-in for the control channel. It invokes commands through the

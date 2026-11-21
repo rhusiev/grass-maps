@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.places
+package nl.r1a.grassmaps.places
 
 import kotlinx.coroutines.delay
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.provider.PlaceHit
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.provider.PlaceHit
 
 /**
  * One search over the offline indexes and, when the user allowed it, the online

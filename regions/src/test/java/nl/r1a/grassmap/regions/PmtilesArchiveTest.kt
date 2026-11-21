@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
-import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegion
-import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegionComponent
+import nl.r1a.grassmaps.plugin.api.testing.fixture.TestRegion
+import nl.r1a.grassmaps.plugin.api.testing.fixture.TestRegionComponent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

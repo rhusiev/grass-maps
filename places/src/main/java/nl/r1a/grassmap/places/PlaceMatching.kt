@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.places
+package nl.r1a.grassmaps.places
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
 import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.sqrt

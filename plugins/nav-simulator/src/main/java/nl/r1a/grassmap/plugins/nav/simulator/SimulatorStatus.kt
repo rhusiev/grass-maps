@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugins.nav.simulator
+package nl.r1a.grassmaps.plugins.nav.simulator
 
 import kotlinx.serialization.Serializable
-import nl.r1a.grassmap.navigation.NavigationPhase
+import nl.r1a.grassmaps.navigation.NavigationPhase
 
 /** The session phase as the simulator publishes it over the stream. */
 @Serializable

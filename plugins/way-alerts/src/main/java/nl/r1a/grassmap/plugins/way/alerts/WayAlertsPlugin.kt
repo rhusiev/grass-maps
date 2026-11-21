@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugins.way.alerts
+package nl.r1a.grassmaps.plugins.way.alerts
 
-import nl.r1a.grassmap.plugin.api.contract.Plugin
-import nl.r1a.grassmap.plugin.api.contract.PluginContext
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.contract.Plugin
+import nl.r1a.grassmaps.plugin.api.contract.PluginContext
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 
 /**
  * The way-alerts plugin (T-0319).

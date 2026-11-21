@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals

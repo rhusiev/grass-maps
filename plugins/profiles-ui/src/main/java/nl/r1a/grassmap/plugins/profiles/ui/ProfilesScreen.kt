@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugins.profiles.ui
+package nl.r1a.grassmaps.plugins.profiles.ui
 
-import nl.r1a.grassmap.plugin.api.model.ProfileSummary
-import nl.r1a.grassmap.plugin.api.model.ProfilesState
+import nl.r1a.grassmaps.plugin.api.model.ProfileSummary
+import nl.r1a.grassmaps.plugin.api.model.ProfilesState
 
 /** What the profiles screen derives from [ProfilesState] (T-0602). */
 object ProfilesScreen {

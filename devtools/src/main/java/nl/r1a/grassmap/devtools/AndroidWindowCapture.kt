@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.devtools
+package nl.r1a.grassmaps.devtools
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -9,10 +9,10 @@ import android.view.Window
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import nl.r1a.grassmap.control.ControlCapture
-import nl.r1a.grassmap.control.ControlScreenshot
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.control.ControlCapture
+import nl.r1a.grassmaps.control.ControlScreenshot
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.resume

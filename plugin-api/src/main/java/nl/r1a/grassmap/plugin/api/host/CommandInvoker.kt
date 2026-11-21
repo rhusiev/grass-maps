@@ -1,10 +1,10 @@
-package nl.r1a.grassmap.plugin.api.host
+package nl.r1a.grassmaps.plugin.api.host
 
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
-import nl.r1a.grassmap.plugin.api.command.CommandInvocation
-import nl.r1a.grassmap.plugin.api.contract.CommandId
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.command.CommandInvocation
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 
 /**
  * The only way UI and other plugins mutate state.

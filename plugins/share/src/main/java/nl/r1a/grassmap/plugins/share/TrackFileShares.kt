@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.share
+package nl.r1a.grassmaps.plugins.share
 
 /**
  * The names and MIME type a track export carries (T-0410).

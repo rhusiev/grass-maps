@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.plugin.api.provider
+package nl.r1a.grassmaps.plugin.api.provider
 
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.FileEntityKind
-import nl.r1a.grassmap.plugin.api.model.ImportResult
-import nl.r1a.grassmap.plugin.api.model.ImportedEntities
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.FileEntityKind
+import nl.r1a.grassmaps.plugin.api.model.ImportResult
+import nl.r1a.grassmaps.plugin.api.model.ImportedEntities
 
 /**
  * A file format behind the `file.format` contract. The static members let the

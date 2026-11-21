@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.share
+package nl.r1a.grassmaps.plugins.share
 
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.serialization.builtins.serializer
@@ -6,17 +6,17 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
-import nl.r1a.grassmap.plugin.api.command.Command
-import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
-import nl.r1a.grassmap.plugin.api.command.CommandPolicy
-import nl.r1a.grassmap.plugin.api.command.CommandResult
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.error.map
-import nl.r1a.grassmap.plugin.api.host.PlatformActions
-import nl.r1a.grassmap.plugin.api.host.PluginServices
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.OsmType
+import nl.r1a.grassmaps.plugin.api.command.Command
+import nl.r1a.grassmaps.plugin.api.command.CommandDispatcher
+import nl.r1a.grassmaps.plugin.api.command.CommandPolicy
+import nl.r1a.grassmaps.plugin.api.command.CommandResult
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.error.map
+import nl.r1a.grassmaps.plugin.api.host.PlatformActions
+import nl.r1a.grassmaps.plugin.api.host.PluginServices
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.OsmType
 import java.util.Locale
 
 /**

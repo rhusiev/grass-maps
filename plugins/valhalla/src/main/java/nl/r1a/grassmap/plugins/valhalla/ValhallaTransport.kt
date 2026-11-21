@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.valhalla
+package nl.r1a.grassmaps.plugins.valhalla
 
 import com.valhalla.valhalla.Valhalla
 import java.io.Closeable

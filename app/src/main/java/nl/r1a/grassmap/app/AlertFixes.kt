@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -7,9 +7,9 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
-import nl.r1a.grassmap.navigation.NavigationPhase
-import nl.r1a.grassmap.navigation.NavigationState
-import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.navigation.NavigationPhase
+import nl.r1a.grassmaps.navigation.NavigationState
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
 
 /**
  * The fixes one live trip produces, as the alert host reads them (T-0317).

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.app.job.JobInfo
 import android.app.job.JobParameters
@@ -14,7 +14,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import nl.r1a.grassmap.regions.AutoUpdater
+import nl.r1a.grassmaps.regions.AutoUpdater
 
 /**
  * What the app needs from the system to wake the monthly map update (T-0508).

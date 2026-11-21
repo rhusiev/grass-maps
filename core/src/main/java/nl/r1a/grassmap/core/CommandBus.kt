@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.core
+package nl.r1a.grassmaps.core
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -14,17 +14,17 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
-import nl.r1a.grassmap.plugin.api.command.CancellationKey
-import nl.r1a.grassmap.plugin.api.command.Command
-import nl.r1a.grassmap.plugin.api.command.CommandInvocation
-import nl.r1a.grassmap.plugin.api.command.CommandInvoked
-import nl.r1a.grassmap.plugin.api.contract.CommandId
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.contract.SwitchId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.CommandInvoker
-import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
+import nl.r1a.grassmaps.plugin.api.command.CancellationKey
+import nl.r1a.grassmaps.plugin.api.command.Command
+import nl.r1a.grassmaps.plugin.api.command.CommandInvocation
+import nl.r1a.grassmaps.plugin.api.command.CommandInvoked
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.contract.SwitchId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.CommandInvoker
+import nl.r1a.grassmaps.plugin.api.manifest.GeneratedCommand
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.TimeSource
 

@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.os.SystemClock
-import nl.r1a.grassmap.plugin.api.host.DevToolsMetrics
+import nl.r1a.grassmaps.plugin.api.host.DevToolsMetrics
 
 /**
  * The development-tools sample: frames drawn in the last second and the app's

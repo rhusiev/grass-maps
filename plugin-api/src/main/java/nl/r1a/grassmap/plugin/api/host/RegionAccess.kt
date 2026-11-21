@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.plugin.api.host
+package nl.r1a.grassmaps.plugin.api.host
 
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.RouteRelations
-import nl.r1a.grassmap.plugin.api.model.WayAlertHit
-import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.RouteRelations
+import nl.r1a.grassmaps.plugin.api.model.WayAlertHit
+import nl.r1a.grassmaps.plugin.api.provider.Route
 
 /**
  * The mounted region's way-alert features and hiking route relations.

@@ -1,12 +1,12 @@
-package nl.r1a.grassmap.plugin.api.pmtiles
+package nl.r1a.grassmaps.plugin.api.pmtiles
 
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.BoundingBox
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.BoundingBox
 import java.io.File
 import java.io.IOException
 import java.security.MessageDigest

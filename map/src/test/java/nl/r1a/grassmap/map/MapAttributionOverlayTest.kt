@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.map
+package nl.r1a.grassmaps.map
 
-import nl.r1a.grassmap.plugin.api.model.MapCredits
+import nl.r1a.grassmaps.plugin.api.model.MapCredits
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

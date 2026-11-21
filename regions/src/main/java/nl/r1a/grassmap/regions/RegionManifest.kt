@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
 /**
  * One file of a region package, as `manifest.json` declares it. [bytes] and

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.tracks
+package nl.r1a.grassmaps.tracks
 
 /**
  * The strengths that [TrackAnalyzer] applies when the fixes or the heights are

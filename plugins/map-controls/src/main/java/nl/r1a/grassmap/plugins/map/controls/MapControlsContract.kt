@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugins.map.controls
+package nl.r1a.grassmaps.plugins.map.controls
 
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.contract.StreamId
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.contract.StreamId
 
 /** The public names of the map-controls plugin's contributions. */
 object MapControlsContract {

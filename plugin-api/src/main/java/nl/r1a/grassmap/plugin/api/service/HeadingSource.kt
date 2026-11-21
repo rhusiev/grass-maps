@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugin.api.service
+package nl.r1a.grassmaps.plugin.api.service
 
 import kotlinx.coroutines.flow.StateFlow
 

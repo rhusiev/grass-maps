@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.plugins.proximity.alerts
+package nl.r1a.grassmaps.plugins.proximity.alerts
 
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.alerts.AlertKind
-import nl.r1a.grassmap.alerts.AlertSettings
-import nl.r1a.grassmap.navigation.NavigationPhase
-import nl.r1a.grassmap.plugin.api.model.ProximityPlaceKind
-import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmaps.alerts.AlertKind
+import nl.r1a.grassmaps.alerts.AlertSettings
+import nl.r1a.grassmaps.navigation.NavigationPhase
+import nl.r1a.grassmaps.plugin.api.model.ProximityPlaceKind
+import nl.r1a.grassmaps.plugin.api.provider.Route
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

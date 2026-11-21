@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.navigation
+package nl.r1a.grassmaps.navigation
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.LocationFix
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
 
 /**
  * Where the session is in its own lifecycle. Off-route is a relation, not a

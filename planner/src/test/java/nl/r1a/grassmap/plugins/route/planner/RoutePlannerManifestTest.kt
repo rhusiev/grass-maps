@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.route.planner
+package nl.r1a.grassmaps.plugins.route.planner
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray

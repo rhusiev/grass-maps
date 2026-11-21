@@ -1,13 +1,13 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.alerts.AlertSettings
-import nl.r1a.grassmap.alerts.AlertSettingsStore
-import nl.r1a.grassmap.alerts.ProfileAlertSettings
-import nl.r1a.grassmap.core.services.LegacyProfileFile
-import nl.r1a.grassmap.core.services.ProfileValueFile
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.alerts.AlertSettings
+import nl.r1a.grassmaps.alerts.AlertSettingsStore
+import nl.r1a.grassmaps.alerts.ProfileAlertSettings
+import nl.r1a.grassmaps.core.services.LegacyProfileFile
+import nl.r1a.grassmaps.core.services.ProfileValueFile
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

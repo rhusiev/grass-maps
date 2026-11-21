@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.RoutePlanState
-import nl.r1a.grassmap.tracks.TrackId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanState
+import nl.r1a.grassmaps.tracks.TrackId
 
 /**
  * What one Save tap on the route preview produced (T-0411).

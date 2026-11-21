@@ -1,21 +1,21 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.UnitSystem
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugin.api.unit.UnitText
-import nl.r1a.grassmap.plugin.api.widget.AltitudeWidgetValue
-import nl.r1a.grassmap.plugin.api.widget.CoordinatesWidgetValue
-import nl.r1a.grassmap.plugin.api.widget.GpsInfoWidgetValue
-import nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue
-import nl.r1a.grassmap.plugins.point.info.PointInfoLabel
-import nl.r1a.grassmap.plugins.point.info.SelectedPointValue
-import nl.r1a.grassmap.ui.shell.GridWidget
-import nl.r1a.grassmap.ui.shell.WidgetCell
-import nl.r1a.grassmap.ui.shell.WidgetGridLabels
-import nl.r1a.grassmap.ui.shell.WidgetGridStrings
-import nl.r1a.grassmap.ui.shell.WidgetLayout
-import nl.r1a.grassmap.ui.shell.WidgetLine
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.UnitSystem
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.api.unit.UnitText
+import nl.r1a.grassmaps.plugin.api.widget.AltitudeWidgetValue
+import nl.r1a.grassmaps.plugin.api.widget.CoordinatesWidgetValue
+import nl.r1a.grassmaps.plugin.api.widget.GpsInfoWidgetValue
+import nl.r1a.grassmaps.plugin.api.widget.SpeedWidgetValue
+import nl.r1a.grassmaps.plugins.point.info.PointInfoLabel
+import nl.r1a.grassmaps.plugins.point.info.SelectedPointValue
+import nl.r1a.grassmaps.ui.shell.GridWidget
+import nl.r1a.grassmaps.ui.shell.WidgetCell
+import nl.r1a.grassmaps.ui.shell.WidgetGridLabels
+import nl.r1a.grassmaps.ui.shell.WidgetGridStrings
+import nl.r1a.grassmaps.ui.shell.WidgetLayout
+import nl.r1a.grassmaps.ui.shell.WidgetLine
 import java.util.Locale
 
 /** The latest value of every stream the grid shows. A null stream value means no reading yet. */

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugin.ui.api
+package nl.r1a.grassmaps.plugin.ui.api
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver

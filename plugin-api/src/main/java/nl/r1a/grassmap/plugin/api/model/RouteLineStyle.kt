@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugin.api.model
+package nl.r1a.grassmaps.plugin.api.model
 
 /**
  * How the drawn route line is split into coloured, patterned runs (T-0408).

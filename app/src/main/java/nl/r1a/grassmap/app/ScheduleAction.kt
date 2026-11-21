@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 /** What to do with the system's wake-up job after a choice changed. */
 enum class ScheduleAction {

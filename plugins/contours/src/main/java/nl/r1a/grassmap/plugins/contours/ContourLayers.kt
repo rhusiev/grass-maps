@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.contours
+package nl.r1a.grassmaps.plugins.contours
 
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -6,13 +6,13 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.plugin.api.model.LayerId
-import nl.r1a.grassmap.plugin.api.model.LayerSlot
-import nl.r1a.grassmap.plugin.api.model.LayerSpec
-import nl.r1a.grassmap.plugin.api.model.LayerType
-import nl.r1a.grassmap.plugin.api.model.MapSourceIds
-import nl.r1a.grassmap.plugin.api.model.SlottedLayer
-import nl.r1a.grassmap.plugin.api.model.StyleId
+import nl.r1a.grassmaps.plugin.api.model.LayerId
+import nl.r1a.grassmaps.plugin.api.model.LayerSlot
+import nl.r1a.grassmaps.plugin.api.model.LayerSpec
+import nl.r1a.grassmaps.plugin.api.model.LayerType
+import nl.r1a.grassmaps.plugin.api.model.MapSourceIds
+import nl.r1a.grassmaps.plugin.api.model.SlottedLayer
+import nl.r1a.grassmaps.plugin.api.model.StyleId
 
 /**
  * The contour overlay for one style variant (design/map-style.md section 3 and

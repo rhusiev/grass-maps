@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,8 +29,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
-import nl.r1a.grassmap.plugin.ui.api.ShellColors
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.ShellColors
 
 /** One line of a widget: the value and the short label that names it, for example "296 m" and "alt". */
 data class WidgetLine(

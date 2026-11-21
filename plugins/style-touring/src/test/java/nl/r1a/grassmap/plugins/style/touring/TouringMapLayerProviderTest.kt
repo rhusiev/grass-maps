@@ -1,17 +1,17 @@
-package nl.r1a.grassmap.plugins.style.touring
+package nl.r1a.grassmaps.plugins.style.touring
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import nl.r1a.grassmap.plugin.api.model.LayerSlot
-import nl.r1a.grassmap.plugin.api.model.LayerType
-import nl.r1a.grassmap.plugin.api.model.MapCredits
-import nl.r1a.grassmap.plugin.api.model.MapSourceIds
-import nl.r1a.grassmap.plugin.api.model.PaletteStyleDocument
-import nl.r1a.grassmap.plugin.api.model.SlottedLayer
-import nl.r1a.grassmap.plugin.api.model.StyleId
+import nl.r1a.grassmaps.plugin.api.model.LayerSlot
+import nl.r1a.grassmaps.plugin.api.model.LayerType
+import nl.r1a.grassmaps.plugin.api.model.MapCredits
+import nl.r1a.grassmaps.plugin.api.model.MapSourceIds
+import nl.r1a.grassmaps.plugin.api.model.PaletteStyleDocument
+import nl.r1a.grassmaps.plugin.api.model.SlottedLayer
+import nl.r1a.grassmaps.plugin.api.model.StyleId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue

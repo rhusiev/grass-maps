@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.plugins.map.controls
+package nl.r1a.grassmaps.plugins.map.controls
 
-import nl.r1a.grassmap.plugin.api.contract.Plugin
-import nl.r1a.grassmap.plugin.api.contract.PluginContext
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
+import nl.r1a.grassmaps.plugin.api.contract.Plugin
+import nl.r1a.grassmaps.plugin.api.contract.PluginContext
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.StreamDescriptor
 
 /**
  * The first-party map-controls plugin (T-0106).

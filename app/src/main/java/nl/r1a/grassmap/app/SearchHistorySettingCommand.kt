@@ -1,18 +1,18 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
-import nl.r1a.grassmap.core.services.SearchHistorySettings
-import nl.r1a.grassmap.plugin.api.command.Command
-import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
-import nl.r1a.grassmap.plugin.api.command.CommandPolicy
-import nl.r1a.grassmap.plugin.api.command.CommandResult
-import nl.r1a.grassmap.plugin.api.contract.CommandId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.core.services.SearchHistorySettings
+import nl.r1a.grassmaps.plugin.api.command.Command
+import nl.r1a.grassmaps.plugin.api.command.CommandDispatcher
+import nl.r1a.grassmaps.plugin.api.command.CommandPolicy
+import nl.r1a.grassmaps.plugin.api.command.CommandResult
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 
 /** The control-channel trigger for the search history switch (T-0207). */
 internal val SEARCH_HISTORY_SETTING_COMMAND: CommandId = CommandId("core.settings.search_history")

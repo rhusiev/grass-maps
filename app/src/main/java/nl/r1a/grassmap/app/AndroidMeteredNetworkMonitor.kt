@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.net.ConnectivityManager
 import android.net.Network
@@ -6,7 +6,7 @@ import android.net.NetworkCapabilities
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import nl.r1a.grassmap.regions.MeteredNetworkMonitor
+import nl.r1a.grassmaps.regions.MeteredNetworkMonitor
 
 /**
  * Reads the default network's metered state from [ConnectivityManager]. A

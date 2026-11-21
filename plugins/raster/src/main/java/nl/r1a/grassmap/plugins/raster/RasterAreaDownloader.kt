@@ -1,14 +1,14 @@
-package nl.r1a.grassmap.plugins.raster
+package nl.r1a.grassmaps.plugins.raster
 
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.pmtiles.PmtilesSummary
-import nl.r1a.grassmap.plugin.api.pmtiles.RasterPackBuilder
-import nl.r1a.grassmap.plugin.api.pmtiles.RasterPackInfo
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.pmtiles.PmtilesSummary
+import nl.r1a.grassmaps.plugin.api.pmtiles.RasterPackBuilder
+import nl.r1a.grassmaps.plugin.api.pmtiles.RasterPackInfo
 import java.io.File
 
 /** How far an area download has come. */

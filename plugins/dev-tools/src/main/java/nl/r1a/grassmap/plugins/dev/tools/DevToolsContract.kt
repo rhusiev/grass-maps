@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugins.dev.tools
+package nl.r1a.grassmaps.plugins.dev.tools
 
-import nl.r1a.grassmap.plugin.api.contract.CommandId
-import nl.r1a.grassmap.plugin.api.contract.StreamId
-import nl.r1a.grassmap.plugin.api.contract.SwitchId
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.contract.StreamId
+import nl.r1a.grassmaps.plugin.api.contract.SwitchId
 
 /**
  * The ids the manifest declares. Activation, the app panel and the tests name

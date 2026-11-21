@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.share
+package nl.r1a.grassmaps.plugins.share
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

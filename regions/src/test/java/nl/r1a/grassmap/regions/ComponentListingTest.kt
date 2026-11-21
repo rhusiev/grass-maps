@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

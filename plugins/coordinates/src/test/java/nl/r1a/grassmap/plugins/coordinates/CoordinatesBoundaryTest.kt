@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.coordinates
+package nl.r1a.grassmaps.plugins.coordinates
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

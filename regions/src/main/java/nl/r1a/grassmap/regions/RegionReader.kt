@@ -1,36 +1,36 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.RegionAccess
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.RouteNetwork
-import nl.r1a.grassmap.plugin.api.model.RouteNetworkNode
-import nl.r1a.grassmap.plugin.api.model.RouteRelation
-import nl.r1a.grassmap.plugin.api.model.RouteRelationMember
-import nl.r1a.grassmap.plugin.api.model.RouteRelations
-import nl.r1a.grassmap.plugin.api.model.WayAlertElementType
-import nl.r1a.grassmap.plugin.api.model.WayAlertFeature
-import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
-import nl.r1a.grassmap.plugin.api.model.WayAlertHit
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.regions.core.AlertKind
-import nl.r1a.grassmap.regions.core.InternalException
-import nl.r1a.grassmap.regions.core.LatLon
-import nl.r1a.grassmap.regions.core.OsmElementType
-import nl.r1a.grassmap.regions.core.RegionReadException
-import nl.r1a.grassmap.regions.core.RegionRelations
-import nl.r1a.grassmap.regions.core.RouteKind
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.RegionAccess
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.RouteNetwork
+import nl.r1a.grassmaps.plugin.api.model.RouteNetworkNode
+import nl.r1a.grassmaps.plugin.api.model.RouteRelation
+import nl.r1a.grassmaps.plugin.api.model.RouteRelationMember
+import nl.r1a.grassmaps.plugin.api.model.RouteRelations
+import nl.r1a.grassmaps.plugin.api.model.WayAlertElementType
+import nl.r1a.grassmaps.plugin.api.model.WayAlertFeature
+import nl.r1a.grassmaps.plugin.api.model.WayAlertFeatureKind
+import nl.r1a.grassmaps.plugin.api.model.WayAlertHit
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.regions.core.AlertKind
+import nl.r1a.grassmaps.regions.core.InternalException
+import nl.r1a.grassmaps.regions.core.LatLon
+import nl.r1a.grassmaps.regions.core.OsmElementType
+import nl.r1a.grassmaps.regions.core.RegionReadException
+import nl.r1a.grassmaps.regions.core.RegionRelations
+import nl.r1a.grassmaps.regions.core.RouteKind
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
-import nl.r1a.grassmap.plugin.api.model.Route as RouteModel
-import nl.r1a.grassmap.regions.core.AlertHit as CoreAlertHit
-import nl.r1a.grassmap.regions.core.RegionReader as NativeRegionReader
+import nl.r1a.grassmaps.plugin.api.model.Route as RouteModel
+import nl.r1a.grassmaps.regions.core.AlertHit as CoreAlertHit
+import nl.r1a.grassmaps.regions.core.RegionReader as NativeRegionReader
 
 /**
  * Reads the mounted region's way-alert features and answers corridor queries

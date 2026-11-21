@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -42,11 +42,11 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import nl.r1a.grassmap.plugin.api.model.Camera
-import nl.r1a.grassmap.plugin.api.model.ScreenOffset
-import nl.r1a.grassmap.plugin.api.provider.PlaceHit
-import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
-import nl.r1a.grassmap.plugin.ui.api.ShellColors
+import nl.r1a.grassmaps.plugin.api.model.Camera
+import nl.r1a.grassmaps.plugin.api.model.ScreenOffset
+import nl.r1a.grassmaps.plugin.api.provider.PlaceHit
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.ShellColors
 
 /**
  * The search screen (T-0203): one field for everything, the result list, and

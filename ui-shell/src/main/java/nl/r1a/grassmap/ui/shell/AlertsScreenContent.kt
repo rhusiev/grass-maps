@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugin.ui.api.AlertsPageChannel
-import nl.r1a.grassmap.plugin.ui.api.AlertsPageState
-import nl.r1a.grassmap.plugin.ui.api.AlertsPageSwitch
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.ui.api.AlertsPageChannel
+import nl.r1a.grassmaps.plugin.ui.api.AlertsPageState
+import nl.r1a.grassmaps.plugin.ui.api.AlertsPageSwitch
 
 private const val ALERTS_TITLE_KEY = "alerts_page_title"
 private const val PROFILE_SUBTITLE_KEY = "alerts_page_profile_subtitle"

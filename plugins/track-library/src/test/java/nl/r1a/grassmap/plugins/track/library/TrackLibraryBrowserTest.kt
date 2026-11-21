@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.plugins.track.library
+package nl.r1a.grassmaps.plugins.track.library
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.RichTextStyle
-import nl.r1a.grassmap.plugin.api.model.TrackFolderSummary
-import nl.r1a.grassmap.plugin.api.model.TrackKind
-import nl.r1a.grassmap.plugin.api.model.TrackLibraryEntry
-import nl.r1a.grassmap.plugin.api.model.TrackSort
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.RichTextStyle
+import nl.r1a.grassmaps.plugin.api.model.TrackFolderSummary
+import nl.r1a.grassmaps.plugin.api.model.TrackKind
+import nl.r1a.grassmaps.plugin.api.model.TrackLibraryEntry
+import nl.r1a.grassmaps.plugin.api.model.TrackSort
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

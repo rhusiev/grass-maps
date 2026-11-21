@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugin.api.error
+package nl.r1a.grassmaps.plugin.api.error
 
 sealed interface Outcome<out T> {
     data class Success<T>(

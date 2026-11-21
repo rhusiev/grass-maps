@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -12,10 +12,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import nl.r1a.grassmap.plugin.api.model.InstalledPack
-import nl.r1a.grassmap.regions.MountedRegion
-import nl.r1a.grassmap.regions.RegionMountResolver
-import nl.r1a.grassmap.regions.RegionMounts
+import nl.r1a.grassmaps.plugin.api.model.InstalledPack
+import nl.r1a.grassmaps.regions.MountedRegion
+import nl.r1a.grassmaps.regions.RegionMountResolver
+import nl.r1a.grassmaps.regions.RegionMounts
 import java.io.File
 
 /**

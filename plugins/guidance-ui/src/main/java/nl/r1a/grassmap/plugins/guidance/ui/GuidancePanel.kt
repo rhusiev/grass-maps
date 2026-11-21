@@ -1,13 +1,13 @@
-package nl.r1a.grassmap.plugins.guidance.ui
+package nl.r1a.grassmaps.plugins.guidance.ui
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.UnitSystem
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteProgress
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugin.api.unit.UnitText
-import nl.r1a.grassmap.plugin.ui.api.RouteTurnStep
-import nl.r1a.grassmap.plugin.ui.api.routeTurns
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.UnitSystem
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteProgress
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.api.unit.UnitText
+import nl.r1a.grassmaps.plugin.ui.api.RouteTurnStep
+import nl.r1a.grassmaps.plugin.ui.api.routeTurns
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.ceil

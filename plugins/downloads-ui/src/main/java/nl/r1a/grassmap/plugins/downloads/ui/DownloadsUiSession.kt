@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.downloads.ui
+package nl.r1a.grassmaps.plugins.downloads.ui
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -10,12 +10,12 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.RegionDownloadsAccess
-import nl.r1a.grassmap.plugin.api.model.DownloadsState
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.LocationFix
-import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.RegionDownloadsAccess
+import nl.r1a.grassmaps.plugin.api.model.DownloadsState
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.plugin.api.model.MobileDataPolicy
 
 /**
  * The downloads screen's state and actions inside `plugins/downloads-ui`

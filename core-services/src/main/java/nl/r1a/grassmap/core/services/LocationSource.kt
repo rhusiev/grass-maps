@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.core.services
+package nl.r1a.grassmaps.core.services
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import nl.r1a.grassmap.plugin.api.model.LocationFix
-import nl.r1a.grassmap.plugin.api.service.LocationService
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.plugin.api.service.LocationService
 
 /**
  * The location source the app consumes. It is the plugin-api contract, so a

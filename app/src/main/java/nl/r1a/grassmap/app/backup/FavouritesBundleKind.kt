@@ -1,21 +1,21 @@
-package nl.r1a.grassmap.app.backup
+package nl.r1a.grassmaps.app.backup
 
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.app.FavouritesAccess
-import nl.r1a.grassmap.core.services.backup.BackupKinds
-import nl.r1a.grassmap.core.services.backup.BundleEntry
-import nl.r1a.grassmap.core.services.backup.BundleFile
-import nl.r1a.grassmap.core.services.backup.BundleKindSource
-import nl.r1a.grassmap.places.Favourite
-import nl.r1a.grassmap.places.FavouriteGroup
-import nl.r1a.grassmap.places.FavouriteId
-import nl.r1a.grassmap.places.FavouriteShape
-import nl.r1a.grassmap.places.FavouriteSpecial
-import nl.r1a.grassmap.places.FavouritesSnapshot
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.app.FavouritesAccess
+import nl.r1a.grassmaps.core.services.backup.BackupKinds
+import nl.r1a.grassmaps.core.services.backup.BundleEntry
+import nl.r1a.grassmaps.core.services.backup.BundleFile
+import nl.r1a.grassmaps.core.services.backup.BundleKindSource
+import nl.r1a.grassmaps.places.Favourite
+import nl.r1a.grassmaps.places.FavouriteGroup
+import nl.r1a.grassmaps.places.FavouriteId
+import nl.r1a.grassmaps.places.FavouriteShape
+import nl.r1a.grassmaps.places.FavouriteSpecial
+import nl.r1a.grassmaps.places.FavouritesSnapshot
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 
 /**
  * The favourites library as one bundle kind (T-0608). A point and a list are

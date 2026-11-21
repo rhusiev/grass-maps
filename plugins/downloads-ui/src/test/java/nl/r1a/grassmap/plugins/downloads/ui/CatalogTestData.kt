@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.plugins.downloads.ui
+package nl.r1a.grassmaps.plugins.downloads.ui
 
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.RegionCatalog
-import nl.r1a.grassmap.plugin.api.testing.fixture.CatalogFixture
-import nl.r1a.grassmap.regions.RegionCatalogParser
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.RegionCatalog
+import nl.r1a.grassmaps.plugin.api.testing.fixture.CatalogFixture
+import nl.r1a.grassmaps.regions.RegionCatalogParser
 
 /**
  * The catalogue the pipeline wrote, read through the real parser, so the screen

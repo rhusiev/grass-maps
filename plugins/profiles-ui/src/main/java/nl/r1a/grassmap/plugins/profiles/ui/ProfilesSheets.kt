@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.profiles.ui
+package nl.r1a.grassmaps.plugins.profiles.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,7 +29,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import nl.r1a.grassmap.plugin.api.model.ProfilesState
+import nl.r1a.grassmaps.plugin.api.model.ProfilesState
 
 @Suppress("ktlint:standard:function-naming")
 @Composable

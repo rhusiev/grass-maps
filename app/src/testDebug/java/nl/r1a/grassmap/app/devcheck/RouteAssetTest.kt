@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app.devcheck
+package nl.r1a.grassmaps.app.devcheck
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

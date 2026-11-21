@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugin.api.widget
+package nl.r1a.grassmaps.plugin.api.widget
 
 import kotlinx.serialization.json.Json
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

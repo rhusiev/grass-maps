@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.favourites.ui
+package nl.r1a.grassmaps.plugins.favourites.ui
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray

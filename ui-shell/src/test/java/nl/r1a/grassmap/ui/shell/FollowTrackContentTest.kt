@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.TrackFollowOption
-import nl.r1a.grassmap.plugin.api.model.TrackFollowPlan
-import nl.r1a.grassmap.plugin.api.model.TrackFollowStart
-import nl.r1a.grassmap.plugin.api.model.UnitSystem
-import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.TrackFollowOption
+import nl.r1a.grassmaps.plugin.api.model.TrackFollowPlan
+import nl.r1a.grassmaps.plugin.api.model.TrackFollowStart
+import nl.r1a.grassmaps.plugin.api.model.UnitSystem
+import nl.r1a.grassmaps.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.util.Locale

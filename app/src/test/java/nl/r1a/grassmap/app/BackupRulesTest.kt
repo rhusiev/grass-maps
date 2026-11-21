@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.tracks.TrackTrash
+import nl.r1a.grassmaps.tracks.TrackTrash
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

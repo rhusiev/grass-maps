@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.route.relations
+package nl.r1a.grassmaps.plugins.route.relations
 
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
@@ -6,17 +6,17 @@ import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.LayerId
-import nl.r1a.grassmap.plugin.api.model.LayerSlot
-import nl.r1a.grassmap.plugin.api.model.LayerSpec
-import nl.r1a.grassmap.plugin.api.model.LayerType
-import nl.r1a.grassmap.plugin.api.model.NetworkLevel
-import nl.r1a.grassmap.plugin.api.model.Route
-import nl.r1a.grassmap.plugin.api.model.RouteNetwork
-import nl.r1a.grassmap.plugin.api.model.RouteNetworkNode
-import nl.r1a.grassmap.plugin.api.model.RouteRelations
-import nl.r1a.grassmap.plugin.api.model.SlottedLayer
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.LayerId
+import nl.r1a.grassmaps.plugin.api.model.LayerSlot
+import nl.r1a.grassmaps.plugin.api.model.LayerSpec
+import nl.r1a.grassmaps.plugin.api.model.LayerType
+import nl.r1a.grassmaps.plugin.api.model.NetworkLevel
+import nl.r1a.grassmaps.plugin.api.model.Route
+import nl.r1a.grassmaps.plugin.api.model.RouteNetwork
+import nl.r1a.grassmaps.plugin.api.model.RouteNetworkNode
+import nl.r1a.grassmaps.plugin.api.model.RouteRelations
+import nl.r1a.grassmaps.plugin.api.model.SlottedLayer
 import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.min

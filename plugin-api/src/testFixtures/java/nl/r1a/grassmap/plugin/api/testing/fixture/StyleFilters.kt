@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugin.api.testing.fixture
+package nl.r1a.grassmaps.plugin.api.testing.fixture
 
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement

@@ -1,17 +1,17 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.CatalogPartKind
-import nl.r1a.grassmap.plugin.api.model.CatalogRegionKind
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.RegionCatalog
-import nl.r1a.grassmap.plugin.api.testing.fixture.CatalogFixture
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.CatalogPartKind
+import nl.r1a.grassmaps.plugin.api.model.CatalogRegionKind
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.RegionCatalog
+import nl.r1a.grassmaps.plugin.api.testing.fixture.CatalogFixture
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

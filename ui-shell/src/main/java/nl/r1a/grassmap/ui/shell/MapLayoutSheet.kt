@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,8 +41,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
-import nl.r1a.grassmap.plugin.ui.api.inkOn
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.inkOn
 
 /** The two tabs of the map layout sheet (T-0606). */
 enum class MapLayoutTab {

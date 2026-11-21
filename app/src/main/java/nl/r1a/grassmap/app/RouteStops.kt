@@ -1,12 +1,12 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.places.Favourite
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
-import nl.r1a.grassmap.plugin.api.provider.PlaceHit
+import nl.r1a.grassmaps.places.Favourite
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanPoint
+import nl.r1a.grassmaps.plugin.api.provider.PlaceHit
 
 /**
  * The two sources a stop can come from (T-0303): a stored favourite and a

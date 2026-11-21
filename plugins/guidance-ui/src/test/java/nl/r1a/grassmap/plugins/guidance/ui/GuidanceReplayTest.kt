@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.guidance.ui
+package nl.r1a.grassmaps.plugins.guidance.ui
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.drop
@@ -7,17 +7,17 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.navigation.GeometryRouteFollower
-import nl.r1a.grassmap.navigation.NavigationConfig
-import nl.r1a.grassmap.navigation.NavigationPhase
-import nl.r1a.grassmap.navigation.NavigationSession
-import nl.r1a.grassmap.navigation.NavigationState
-import nl.r1a.grassmap.navigation.RouteRelation
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.LocationFix
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteInstruction
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.navigation.GeometryRouteFollower
+import nl.r1a.grassmaps.navigation.NavigationConfig
+import nl.r1a.grassmaps.navigation.NavigationPhase
+import nl.r1a.grassmaps.navigation.NavigationSession
+import nl.r1a.grassmaps.navigation.NavigationState
+import nl.r1a.grassmaps.navigation.RouteRelation
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteInstruction
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "nl.r1a.grassmap.plugins.route.warnings"
+    namespace = "nl.r1a.grassmaps.plugins.route.warnings"
     compileSdk = 37
 
     defaultConfig {

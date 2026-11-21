@@ -131,7 +131,7 @@ if (releaseSigningState == ReleaseSigning.State.PARTIAL) {
 }
 
 android {
-    namespace = "nl.r1a.grassmap.app"
+    namespace = "nl.r1a.grassmaps.app"
     compileSdk = 37
     ndkVersion = RustNative.NDK_VERSION
 
@@ -148,7 +148,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "nl.r1a.grassmap"
+        applicationId = "nl.r1a.grassmaps"
         minSdk = 29
         targetSdk = 36
         versionCode = 1

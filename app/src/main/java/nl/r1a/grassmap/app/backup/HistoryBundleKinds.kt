@@ -1,23 +1,23 @@
-package nl.r1a.grassmap.app.backup
+package nl.r1a.grassmaps.app.backup
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.core.services.SearchHistorySettings
-import nl.r1a.grassmap.core.services.backup.BackupKinds
-import nl.r1a.grassmap.core.services.backup.BundleEntry
-import nl.r1a.grassmap.core.services.backup.BundleKindSource
-import nl.r1a.grassmap.core.services.backup.sha256Hex
-import nl.r1a.grassmap.places.SearchHistoryEntry
-import nl.r1a.grassmap.places.SearchHistoryStore
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.BoundingBox
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.RouteHistoryEntry
-import nl.r1a.grassmap.plugin.api.model.RouteHistoryRules
-import nl.r1a.grassmap.routing.RouteHistoryStore
+import nl.r1a.grassmaps.core.services.SearchHistorySettings
+import nl.r1a.grassmaps.core.services.backup.BackupKinds
+import nl.r1a.grassmaps.core.services.backup.BundleEntry
+import nl.r1a.grassmaps.core.services.backup.BundleKindSource
+import nl.r1a.grassmaps.core.services.backup.sha256Hex
+import nl.r1a.grassmaps.places.SearchHistoryEntry
+import nl.r1a.grassmaps.places.SearchHistoryStore
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.BoundingBox
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.RouteHistoryEntry
+import nl.r1a.grassmaps.plugin.api.model.RouteHistoryRules
+import nl.r1a.grassmaps.routing.RouteHistoryStore
 
 /** The last searches, one entry per query. */
 internal class SearchHistoryBundleKind(

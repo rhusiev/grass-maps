@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.alerts
+package nl.r1a.grassmaps.alerts
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -11,12 +11,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import nl.r1a.grassmap.navigation.NavigationPhase
-import nl.r1a.grassmap.navigation.NavigationState
-import nl.r1a.grassmap.navigation.RouteRelation
-import nl.r1a.grassmap.plugin.api.model.LocationFix
-import nl.r1a.grassmap.plugin.api.model.ProximityPlaceKind
-import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
+import nl.r1a.grassmaps.navigation.NavigationPhase
+import nl.r1a.grassmaps.navigation.NavigationState
+import nl.r1a.grassmaps.navigation.RouteRelation
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.plugin.api.model.ProximityPlaceKind
+import nl.r1a.grassmaps.plugin.api.model.WayAlertFeatureKind
 
 /**
  * The alert seam (T-0317): it reads the navigation state and the fix flow and

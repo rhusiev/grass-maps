@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugins.point.info
+package nl.r1a.grassmaps.plugins.point.info
 
-import nl.r1a.grassmap.plugin.api.model.UnitSystem
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugin.api.unit.UnitText
+import nl.r1a.grassmaps.plugin.api.model.UnitSystem
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.api.unit.UnitText
 import java.util.Locale
 
 /**

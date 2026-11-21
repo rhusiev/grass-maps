@@ -1,6 +1,6 @@
 @file:Suppress("ktlint:standard:function-naming")
 
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,12 +41,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugin.ui.api.AlertsPageChannel
-import nl.r1a.grassmap.plugin.ui.api.AlertsPageState
-import nl.r1a.grassmap.plugin.ui.api.AlertsPageSwitch
-import nl.r1a.grassmap.plugin.ui.api.ShellColors
-import nl.r1a.grassmap.plugin.ui.api.shellColors
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.ui.api.AlertsPageChannel
+import nl.r1a.grassmaps.plugin.ui.api.AlertsPageState
+import nl.r1a.grassmaps.plugin.ui.api.AlertsPageSwitch
+import nl.r1a.grassmaps.plugin.ui.api.ShellColors
+import nl.r1a.grassmaps.plugin.ui.api.shellColors
 
 private const val PAGE_TITLE_SP = 21
 private const val PAGE_SUBTITLE_SP = 12.5f

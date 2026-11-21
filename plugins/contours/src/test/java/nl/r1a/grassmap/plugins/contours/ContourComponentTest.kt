@@ -1,10 +1,10 @@
-package nl.r1a.grassmap.plugins.contours
+package nl.r1a.grassmaps.plugins.contours
 
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.regions.RegionComponent
-import nl.r1a.grassmap.regions.RegionManifest
-import nl.r1a.grassmap.regions.RegionManifestParser
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.regions.RegionComponent
+import nl.r1a.grassmaps.regions.RegionManifest
+import nl.r1a.grassmaps.regions.RegionManifestParser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugins.osm.places
+package nl.r1a.grassmaps.plugins.osm.places
 
-import nl.r1a.grassmap.plugin.api.contract.Plugin
-import nl.r1a.grassmap.plugin.api.contract.PluginContext
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.contract.Plugin
+import nl.r1a.grassmaps.plugin.api.contract.PluginContext
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 
 /**
  * The OSM place-card plugin: one `places.card` provider and no command or UI,

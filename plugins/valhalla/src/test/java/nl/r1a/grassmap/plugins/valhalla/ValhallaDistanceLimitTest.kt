@@ -1,14 +1,14 @@
-package nl.r1a.grassmap.plugins.valhalla
+package nl.r1a.grassmaps.plugins.valhalla
 
 import com.valhalla.valhalla.ErrorResponse
 import com.valhalla.valhalla.ValhallaException
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugin.api.provider.RouteRequest
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.provider.RouteRequest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

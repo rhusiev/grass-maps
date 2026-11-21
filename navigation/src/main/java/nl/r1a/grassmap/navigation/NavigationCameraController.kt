@@ -1,15 +1,15 @@
-package nl.r1a.grassmap.navigation
+package nl.r1a.grassmaps.navigation
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.error.onFailure
-import nl.r1a.grassmap.plugin.api.host.MapHost
-import nl.r1a.grassmap.plugin.api.model.CameraUpdate
-import nl.r1a.grassmap.plugin.api.model.LocationFix
-import nl.r1a.grassmap.plugin.api.model.TrackingMode
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.error.onFailure
+import nl.r1a.grassmaps.plugin.api.host.MapHost
+import nl.r1a.grassmaps.plugin.api.model.CameraUpdate
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.plugin.api.model.TrackingMode
 
 /**
  * The navigation camera (T-0313): auto zoom, auto-centre and tilt.

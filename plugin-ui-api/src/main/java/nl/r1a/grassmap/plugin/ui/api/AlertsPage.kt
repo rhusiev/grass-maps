@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugin.ui.api
+package nl.r1a.grassmaps.plugin.ui.api
 
 // The profile alerts page's visual vocabulary (T-0413).
 //

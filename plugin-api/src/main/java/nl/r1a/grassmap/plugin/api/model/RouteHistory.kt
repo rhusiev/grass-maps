@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugin.api.model
+package nl.r1a.grassmaps.plugin.api.model
 
 import kotlinx.serialization.Serializable
-import nl.r1a.grassmap.plugin.api.provider.RouteOptions
+import nl.r1a.grassmaps.plugin.api.provider.RouteOptions
 
 /**
  * One route the planner produced, kept for reuse (T-0304).

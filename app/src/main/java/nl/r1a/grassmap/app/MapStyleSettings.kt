@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.SerializationException
@@ -6,11 +6,11 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.StyleId
-import nl.r1a.grassmap.plugins.layers.panel.ActiveStyleState
-import nl.r1a.grassmap.plugins.layers.panel.MapStyleChoice
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.StyleId
+import nl.r1a.grassmaps.plugins.layers.panel.ActiveStyleState
+import nl.r1a.grassmaps.plugins.layers.panel.MapStyleChoice
 import java.io.File
 import java.io.IOException
 

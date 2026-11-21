@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.routing
+package nl.r1a.grassmaps.routing
 
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -8,18 +8,18 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.RoutePlanFailure
-import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
-import nl.r1a.grassmap.plugin.api.model.RoutePlanRole
-import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugin.api.provider.RouteRequest
-import nl.r1a.grassmap.plugin.api.service.Clock
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanFailure
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanPoint
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanRole
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanStatus
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.provider.RouteRequest
+import nl.r1a.grassmaps.plugin.api.service.Clock
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals

@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugins.track.layer
+package nl.r1a.grassmaps.plugins.track.layer
 
-import nl.r1a.grassmap.plugin.api.contract.Plugin
-import nl.r1a.grassmap.plugin.api.contract.PluginContext
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.contract.Plugin
+import nl.r1a.grassmaps.plugin.api.contract.PluginContext
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 
 /**
  * The track-layer plugin (T-0401).

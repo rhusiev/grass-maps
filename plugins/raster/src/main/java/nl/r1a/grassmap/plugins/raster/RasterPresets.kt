@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.plugins.raster
+package nl.r1a.grassmaps.plugins.raster
 
-import nl.r1a.grassmap.plugin.api.model.MapCredits
+import nl.r1a.grassmaps.plugin.api.model.MapCredits
 
 /**
  * The tile sources the app ships (data-formats.md section 8).

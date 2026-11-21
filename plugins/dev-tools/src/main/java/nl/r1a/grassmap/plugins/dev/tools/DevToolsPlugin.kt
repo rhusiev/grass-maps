@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.dev.tools
+package nl.r1a.grassmaps.plugins.dev.tools
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -9,11 +9,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import nl.r1a.grassmap.plugin.api.contract.Plugin
-import nl.r1a.grassmap.plugin.api.contract.PluginContext
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.DevToolsAccess
-import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
+import nl.r1a.grassmaps.plugin.api.contract.Plugin
+import nl.r1a.grassmaps.plugin.api.contract.PluginContext
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.DevToolsAccess
+import nl.r1a.grassmaps.plugin.api.host.StreamDescriptor
 
 /**
  * The user-facing development-tools plugin (T-0114).

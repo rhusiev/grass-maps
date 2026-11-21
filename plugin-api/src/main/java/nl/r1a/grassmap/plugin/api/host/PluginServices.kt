@@ -1,13 +1,13 @@
-package nl.r1a.grassmap.plugin.api.host
+package nl.r1a.grassmaps.plugin.api.host
 
 import kotlinx.coroutines.flow.Flow
-import nl.r1a.grassmap.plugin.api.model.Camera
-import nl.r1a.grassmap.plugin.api.service.Clock
-import nl.r1a.grassmap.plugin.api.service.LocationService
-import nl.r1a.grassmap.plugin.api.service.Logger
-import nl.r1a.grassmap.plugin.api.service.NetworkGate
-import nl.r1a.grassmap.plugin.api.service.NoLogger
-import nl.r1a.grassmap.plugin.api.service.NoNetworkGate
+import nl.r1a.grassmaps.plugin.api.model.Camera
+import nl.r1a.grassmaps.plugin.api.service.Clock
+import nl.r1a.grassmaps.plugin.api.service.LocationService
+import nl.r1a.grassmaps.plugin.api.service.Logger
+import nl.r1a.grassmaps.plugin.api.service.NetworkGate
+import nl.r1a.grassmaps.plugin.api.service.NoLogger
+import nl.r1a.grassmaps.plugin.api.service.NoNetworkGate
 
 /**
  * The host interfaces a plugin reads on activation.

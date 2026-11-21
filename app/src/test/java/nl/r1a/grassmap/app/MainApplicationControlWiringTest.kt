@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugins.dev.tools.DevToolsContract
+import nl.r1a.grassmaps.plugins.dev.tools.DevToolsContract
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test

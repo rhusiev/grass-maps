@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.app.devcheck
+package nl.r1a.grassmaps.app.devcheck
 
-import nl.r1a.grassmap.plugin.api.model.BoundingBox
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.BoundingBox
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

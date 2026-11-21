@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
-import nl.r1a.grassmap.plugin.api.model.MissingRegion
-import nl.r1a.grassmap.plugin.api.model.MissingRegions
+import nl.r1a.grassmaps.plugin.api.model.MissingRegion
+import nl.r1a.grassmaps.plugin.api.model.MissingRegions
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

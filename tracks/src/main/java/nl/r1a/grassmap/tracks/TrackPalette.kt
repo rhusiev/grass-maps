@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.tracks
+package nl.r1a.grassmaps.tracks
 
-import nl.r1a.grassmap.plugin.api.model.TrackStyle
+import nl.r1a.grassmaps.plugin.api.model.TrackStyle
 
 /**
  * The deterministic colour a new track gets. The palette index comes from the

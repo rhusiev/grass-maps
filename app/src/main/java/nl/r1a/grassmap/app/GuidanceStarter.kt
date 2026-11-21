@@ -1,12 +1,12 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.alerts.BeepHost
-import nl.r1a.grassmap.navigation.NavigationCameraController
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugins.proximity.alerts.ProximityAlertHost
-import nl.r1a.grassmap.plugins.way.alerts.WayAlertHost
+import nl.r1a.grassmaps.alerts.BeepHost
+import nl.r1a.grassmaps.navigation.NavigationCameraController
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugins.proximity.alerts.ProximityAlertHost
+import nl.r1a.grassmaps.plugins.way.alerts.WayAlertHost
 
 /**
  * The one app-level path that starts guidance (T-0413).

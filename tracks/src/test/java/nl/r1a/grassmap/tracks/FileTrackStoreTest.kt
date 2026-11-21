@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.tracks
+package nl.r1a.grassmaps.tracks
 
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -6,16 +6,16 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.ElevationAccess
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.ImportedEntities
-import nl.r1a.grassmap.plugin.api.model.MapTrack
-import nl.r1a.grassmap.plugin.api.model.Track
-import nl.r1a.grassmap.plugin.api.model.TrackPoint
-import nl.r1a.grassmap.plugin.api.model.TrackSegment
-import nl.r1a.grassmap.plugin.api.model.TrackStyle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.ElevationAccess
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.ImportedEntities
+import nl.r1a.grassmaps.plugin.api.model.MapTrack
+import nl.r1a.grassmaps.plugin.api.model.Track
+import nl.r1a.grassmaps.plugin.api.model.TrackPoint
+import nl.r1a.grassmaps.plugin.api.model.TrackSegment
+import nl.r1a.grassmaps.plugin.api.model.TrackStyle
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

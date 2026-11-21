@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.track.layer
+package nl.r1a.grassmaps.plugins.track.layer
 
 /**
  * What the track layer can colour a track by (T-0408).

@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.control
+package nl.r1a.grassmaps.control
 
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
-import nl.r1a.grassmap.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.AppError
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

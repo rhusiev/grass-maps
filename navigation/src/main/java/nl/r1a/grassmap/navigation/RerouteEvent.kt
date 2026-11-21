@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.navigation
+package nl.r1a.grassmaps.navigation
 
 /**
  * One reroute the session installed, with the fix indices that produced it.

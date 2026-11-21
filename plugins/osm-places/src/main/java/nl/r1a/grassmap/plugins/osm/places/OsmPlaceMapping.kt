@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.osm.places
+package nl.r1a.grassmaps.plugins.osm.places
 
 /**
  * The typed card field an OSM key feeds (T-0208).

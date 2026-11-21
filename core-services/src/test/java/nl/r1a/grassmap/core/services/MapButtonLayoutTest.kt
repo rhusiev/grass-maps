@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.core.services
+package nl.r1a.grassmaps.core.services
 
-import nl.r1a.grassmap.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test

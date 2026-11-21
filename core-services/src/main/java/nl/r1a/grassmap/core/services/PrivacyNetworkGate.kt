@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.core.services
+package nl.r1a.grassmaps.core.services
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
@@ -6,11 +6,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import nl.r1a.grassmap.plugin.api.contract.SwitchId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.service.NetworkGate
-import nl.r1a.grassmap.plugin.api.service.PrivacySwitches
+import nl.r1a.grassmaps.plugin.api.contract.SwitchId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.service.NetworkGate
+import nl.r1a.grassmaps.plugin.api.service.PrivacySwitches
 
 /**
  * The v1 [NetworkGate]. It refuses a request whose switch is off and counts

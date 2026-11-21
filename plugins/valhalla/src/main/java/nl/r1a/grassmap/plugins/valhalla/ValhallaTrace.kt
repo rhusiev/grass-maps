@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.valhalla
+package nl.r1a.grassmaps.plugins.valhalla
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -13,13 +13,13 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.AttributeValue
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteAttributes
-import nl.r1a.grassmap.plugin.api.provider.RouteSegment
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.AttributeValue
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteAttributes
+import nl.r1a.grassmaps.plugin.api.provider.RouteSegment
 
 /**
  * Turns a routed line into per-edge segments with the v1 attributes Valhalla

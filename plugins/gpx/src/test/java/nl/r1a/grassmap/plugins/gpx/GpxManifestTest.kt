@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.gpx
+package nl.r1a.grassmaps.plugins.gpx
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.boolean

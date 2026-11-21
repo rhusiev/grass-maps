@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.plugins.osm.places
+package nl.r1a.grassmaps.plugins.osm.places
 
-import nl.r1a.grassmap.plugin.api.model.PlaceOpeningState
-import nl.r1a.grassmap.plugin.api.model.PlaceOpeningState.CLOSED
-import nl.r1a.grassmap.plugin.api.model.PlaceOpeningState.OPEN
-import nl.r1a.grassmap.plugin.api.model.PlaceOpeningState.UNKNOWN
+import nl.r1a.grassmaps.plugin.api.model.PlaceOpeningState
+import nl.r1a.grassmaps.plugin.api.model.PlaceOpeningState.CLOSED
+import nl.r1a.grassmaps.plugin.api.model.PlaceOpeningState.OPEN
+import nl.r1a.grassmaps.plugin.api.model.PlaceOpeningState.UNKNOWN
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
 /**
  * Housekeeping for unfinished archives under `.incoming`. The bytes in one are

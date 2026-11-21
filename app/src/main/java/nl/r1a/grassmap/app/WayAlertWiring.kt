@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.navigation.NavigationPhase
-import nl.r1a.grassmap.navigation.NavigationState
-import nl.r1a.grassmap.plugins.way.alerts.WayAlertPhase
-import nl.r1a.grassmap.plugins.way.alerts.WayAlertState
+import nl.r1a.grassmaps.navigation.NavigationPhase
+import nl.r1a.grassmaps.navigation.NavigationState
+import nl.r1a.grassmaps.plugins.way.alerts.WayAlertPhase
+import nl.r1a.grassmaps.plugins.way.alerts.WayAlertState
 
 /**
  * Maps the published navigation state onto the way-alert schedule's own input

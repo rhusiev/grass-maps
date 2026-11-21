@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
-import nl.r1a.grassmap.plugin.ui.api.NavigationScreenState
-import nl.r1a.grassmap.plugin.ui.api.NavigationScreenStatus
+import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenState
+import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

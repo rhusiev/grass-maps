@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugins.share
+package nl.r1a.grassmaps.plugins.share
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.PlaceCardEntry
-import nl.r1a.grassmap.plugin.api.model.PlaceCardValue
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardEntry
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardValue
 import java.math.BigDecimal
 import java.util.Locale
 import kotlin.math.abs

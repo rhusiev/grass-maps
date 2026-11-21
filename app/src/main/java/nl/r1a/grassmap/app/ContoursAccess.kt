@@ -1,16 +1,16 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import nl.r1a.grassmap.core.ProviderRegistry
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.MapHost
-import nl.r1a.grassmap.plugin.api.model.SlottedLayer
-import nl.r1a.grassmap.plugin.api.model.StyleId
-import nl.r1a.grassmap.plugin.api.provider.MapLayerContract
-import nl.r1a.grassmap.plugin.api.provider.MapLayerProvider
+import nl.r1a.grassmaps.core.ProviderRegistry
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.MapHost
+import nl.r1a.grassmaps.plugin.api.model.SlottedLayer
+import nl.r1a.grassmaps.plugin.api.model.StyleId
+import nl.r1a.grassmaps.plugin.api.provider.MapLayerContract
+import nl.r1a.grassmaps.plugin.api.provider.MapLayerProvider
 
 internal val CONTOURS_PLUGIN: PluginId = PluginId("map.contours")
 

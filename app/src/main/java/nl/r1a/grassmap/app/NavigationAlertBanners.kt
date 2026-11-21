@@ -1,15 +1,15 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import nl.r1a.grassmap.alerts.AlertBanner
-import nl.r1a.grassmap.alerts.AlertEvent
-import nl.r1a.grassmap.alerts.AlertHost
-import nl.r1a.grassmap.alerts.AlertKind
-import nl.r1a.grassmap.alerts.AlertSeverity
-import nl.r1a.grassmap.navigation.NavigationPhase
-import nl.r1a.grassmap.navigation.NavigationState
+import nl.r1a.grassmaps.alerts.AlertBanner
+import nl.r1a.grassmaps.alerts.AlertEvent
+import nl.r1a.grassmaps.alerts.AlertHost
+import nl.r1a.grassmaps.alerts.AlertKind
+import nl.r1a.grassmaps.alerts.AlertSeverity
+import nl.r1a.grassmaps.navigation.NavigationPhase
+import nl.r1a.grassmaps.navigation.NavigationState
 
 /** One banner still on screen, with the values that decide when it clears. */
 internal data class ActiveNavigationAlert(

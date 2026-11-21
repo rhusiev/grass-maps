@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.util.Log
 import kotlinx.coroutines.delay
@@ -12,32 +12,32 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
-import nl.r1a.grassmap.alerts.AlertHost
-import nl.r1a.grassmap.alerts.AlertKind
-import nl.r1a.grassmap.alerts.BeepHost
-import nl.r1a.grassmap.core.services.MockGpxLocationSource
-import nl.r1a.grassmap.navigation.FerrostarRouteFollower
-import nl.r1a.grassmap.navigation.NavigationConfig
-import nl.r1a.grassmap.navigation.NavigationPhase
-import nl.r1a.grassmap.navigation.NavigationSession
-import nl.r1a.grassmap.navigation.RouteFollowerEngine
-import nl.r1a.grassmap.plugin.api.command.Command
-import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
-import nl.r1a.grassmap.plugin.api.command.CommandPolicy
-import nl.r1a.grassmap.plugin.api.command.CommandResult
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.contract.CommandId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.error.onFailure
-import nl.r1a.grassmap.plugin.api.host.MapHost
-import nl.r1a.grassmap.plugin.api.model.BoundingBox
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugin.api.provider.RouteRequest
-import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
-import nl.r1a.grassmap.routing.RouteJson
+import nl.r1a.grassmaps.alerts.AlertHost
+import nl.r1a.grassmaps.alerts.AlertKind
+import nl.r1a.grassmaps.alerts.BeepHost
+import nl.r1a.grassmaps.core.services.MockGpxLocationSource
+import nl.r1a.grassmaps.navigation.FerrostarRouteFollower
+import nl.r1a.grassmaps.navigation.NavigationConfig
+import nl.r1a.grassmaps.navigation.NavigationPhase
+import nl.r1a.grassmaps.navigation.NavigationSession
+import nl.r1a.grassmaps.navigation.RouteFollowerEngine
+import nl.r1a.grassmaps.plugin.api.command.Command
+import nl.r1a.grassmaps.plugin.api.command.CommandDispatcher
+import nl.r1a.grassmaps.plugin.api.command.CommandPolicy
+import nl.r1a.grassmaps.plugin.api.command.CommandResult
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.error.onFailure
+import nl.r1a.grassmaps.plugin.api.host.MapHost
+import nl.r1a.grassmaps.plugin.api.model.BoundingBox
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.provider.RouteRequest
+import nl.r1a.grassmaps.plugin.api.provider.RoutingEngine
+import nl.r1a.grassmaps.routing.RouteJson
 
 /** The debug trigger that proves the navigation seam on a replay. */
 internal val NAV_TEST_COMMAND: CommandId = CommandId("core.nav.test_follow")

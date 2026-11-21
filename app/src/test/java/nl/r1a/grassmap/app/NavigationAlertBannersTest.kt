@@ -1,22 +1,22 @@
 @file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.alerts.AlertBanner
-import nl.r1a.grassmap.alerts.AlertEvent
-import nl.r1a.grassmap.alerts.AlertHost
-import nl.r1a.grassmap.alerts.AlertKind
-import nl.r1a.grassmap.alerts.AlertSettings
-import nl.r1a.grassmap.alerts.AlertSeverity
-import nl.r1a.grassmap.navigation.NavigationPhase
-import nl.r1a.grassmap.navigation.NavigationState
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.LocationFix
-import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmaps.alerts.AlertBanner
+import nl.r1a.grassmaps.alerts.AlertEvent
+import nl.r1a.grassmaps.alerts.AlertHost
+import nl.r1a.grassmaps.alerts.AlertKind
+import nl.r1a.grassmaps.alerts.AlertSettings
+import nl.r1a.grassmaps.alerts.AlertSeverity
+import nl.r1a.grassmaps.navigation.NavigationPhase
+import nl.r1a.grassmaps.navigation.NavigationState
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.plugin.api.provider.Route
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "nl.r1a.grassmap.plugins.nav.simulator"
+    namespace = "nl.r1a.grassmaps.plugins.nav.simulator"
     compileSdk = 37
 
     defaultConfig {

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app.devcheck
+package nl.r1a.grassmaps.app.devcheck
 
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive

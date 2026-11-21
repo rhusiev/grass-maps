@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.plugins.track.layer
+package nl.r1a.grassmaps.plugins.track.layer
 
 import kotlinx.coroutines.flow.StateFlow
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.error.onFailure
-import nl.r1a.grassmap.plugin.api.host.MapHost
-import nl.r1a.grassmap.plugin.api.model.MapTrack
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.error.onFailure
+import nl.r1a.grassmaps.plugin.api.host.MapHost
+import nl.r1a.grassmaps.plugin.api.model.MapTrack
 
 /**
  * Draws the track library on the bound map (T-0401, T-0408).

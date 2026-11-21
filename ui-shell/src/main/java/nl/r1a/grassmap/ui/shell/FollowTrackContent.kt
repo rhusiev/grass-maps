@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -36,12 +36,12 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import nl.r1a.grassmap.plugin.api.model.TrackFollowPlan
-import nl.r1a.grassmap.plugin.api.model.TrackFollowStart
-import nl.r1a.grassmap.plugin.api.model.UnitSystem
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugin.api.unit.UnitText
-import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.api.model.TrackFollowPlan
+import nl.r1a.grassmaps.plugin.api.model.TrackFollowStart
+import nl.r1a.grassmaps.plugin.api.model.UnitSystem
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.api.unit.UnitText
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import java.util.Locale
 import kotlin.math.roundToLong
 

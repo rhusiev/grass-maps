@@ -1,10 +1,10 @@
-package nl.r1a.grassmap.plugins.osm.places
+package nl.r1a.grassmaps.plugins.osm.places
 
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.PlaceCard
-import nl.r1a.grassmap.plugin.api.model.PlaceCardEntry
-import nl.r1a.grassmap.plugin.api.model.PlaceCardValue
-import nl.r1a.grassmap.plugin.api.provider.PlaceDetails
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.PlaceCard
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardEntry
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardValue
+import nl.r1a.grassmaps.plugin.api.provider.PlaceDetails
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

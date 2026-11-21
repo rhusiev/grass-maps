@@ -1,14 +1,14 @@
-package nl.r1a.grassmap.core
+package nl.r1a.grassmaps.core
 
 import kotlinx.serialization.builtins.ListSerializer
-import nl.r1a.grassmap.plugin.api.command.Command
-import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
-import nl.r1a.grassmap.plugin.api.command.CommandPolicy
-import nl.r1a.grassmap.plugin.api.command.CommandResult
-import nl.r1a.grassmap.plugin.api.contract.PluginManagement
-import nl.r1a.grassmap.plugin.api.contract.SetEnabledParams
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.PluginStatus
+import nl.r1a.grassmaps.plugin.api.command.Command
+import nl.r1a.grassmaps.plugin.api.command.CommandDispatcher
+import nl.r1a.grassmaps.plugin.api.command.CommandPolicy
+import nl.r1a.grassmaps.plugin.api.command.CommandResult
+import nl.r1a.grassmaps.plugin.api.contract.PluginManagement
+import nl.r1a.grassmaps.plugin.api.contract.SetEnabledParams
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.PluginStatus
 
 /**
  * `core.plugins.set_enabled` (T-0607): turns one plugin on or off and returns

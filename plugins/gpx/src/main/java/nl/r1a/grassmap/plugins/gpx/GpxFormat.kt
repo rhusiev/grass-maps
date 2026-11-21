@@ -1,13 +1,13 @@
-package nl.r1a.grassmap.plugins.gpx
+package nl.r1a.grassmaps.plugins.gpx
 
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.FileEntityKind
-import nl.r1a.grassmap.plugin.api.model.ImportResult
-import nl.r1a.grassmap.plugin.api.model.ImportedEntities
-import nl.r1a.grassmap.plugin.api.provider.FileFormat
-import nl.r1a.grassmap.plugin.api.provider.FileFormatContract
-import nl.r1a.grassmap.plugin.api.provider.ProviderContract
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.FileEntityKind
+import nl.r1a.grassmaps.plugin.api.model.ImportResult
+import nl.r1a.grassmaps.plugin.api.model.ImportedEntities
+import nl.r1a.grassmaps.plugin.api.provider.FileFormat
+import nl.r1a.grassmaps.plugin.api.provider.FileFormatContract
+import nl.r1a.grassmaps.plugin.api.provider.ProviderContract
 
 /**
  * GPX 1.0 and 1.1 behind the `file.format` contract. Reading is lenient: a

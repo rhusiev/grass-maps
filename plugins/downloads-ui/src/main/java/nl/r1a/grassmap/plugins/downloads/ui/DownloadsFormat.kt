@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.downloads.ui
+package nl.r1a.grassmaps.plugins.downloads.ui
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter

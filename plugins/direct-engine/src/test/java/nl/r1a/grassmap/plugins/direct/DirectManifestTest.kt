@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.plugins.direct
+package nl.r1a.grassmaps.plugins.direct
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import nl.r1a.grassmap.plugin.api.provider.RoutingEngineContract
+import nl.r1a.grassmaps.plugin.api.provider.RoutingEngineContract
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

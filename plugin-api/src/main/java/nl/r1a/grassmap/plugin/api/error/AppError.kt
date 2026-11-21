@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugin.api.error
+package nl.r1a.grassmaps.plugin.api.error
 
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.contract.SwitchId
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.contract.SwitchId
 
 /**
  * A typed error at a module boundary. It carries data, never a user-facing string.

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.places
+package nl.r1a.grassmaps.places
 
 /**
  * A stored favourite's identity. The GPX dialect has no id field, so the id is

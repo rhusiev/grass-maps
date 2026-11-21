@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.tracks
+package nl.r1a.grassmaps.tracks
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.Track
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.Track
 
 /**
  * One sample of an elevation chart: how far along the line the sample sits, how

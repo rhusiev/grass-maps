@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugin.api.model
+package nl.r1a.grassmaps.plugin.api.model
 
 import kotlinx.serialization.json.Json
-import nl.r1a.grassmap.plugin.api.provider.RouteInstruction
-import nl.r1a.grassmap.plugin.api.provider.RouteSegment
+import nl.r1a.grassmaps.plugin.api.provider.RouteInstruction
+import nl.r1a.grassmaps.plugin.api.provider.RouteSegment
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

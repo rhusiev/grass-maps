@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.links
+package nl.r1a.grassmaps.plugins.links
 
 import java.util.Locale
 

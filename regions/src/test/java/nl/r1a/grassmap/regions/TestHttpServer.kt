@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer

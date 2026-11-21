@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "nl.r1a.grassmap.routing"
+    namespace = "nl.r1a.grassmaps.routing"
     compileSdk = 37
 
     sourceSets.getByName("test").resources.srcDir(rootProject.file("test-data"))

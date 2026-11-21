@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugins.share
+package nl.r1a.grassmaps.plugins.share
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.OsmType
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.OsmType
 import java.util.Locale
 
 /** The canonical OSM element a place stands for. */

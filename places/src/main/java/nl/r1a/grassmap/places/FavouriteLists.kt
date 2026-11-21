@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.places
+package nl.r1a.grassmaps.places
 
 /**
  * A scoped undo receipt for one lists action (T-0213).

@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugins.route.warnings
+package nl.r1a.grassmaps.plugins.route.warnings
 
-import nl.r1a.grassmap.plugin.api.contract.Plugin
-import nl.r1a.grassmap.plugin.api.contract.PluginContext
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.contract.Plugin
+import nl.r1a.grassmaps.plugin.api.contract.PluginContext
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 
 /**
  * The route-warnings plugin (T-0409).

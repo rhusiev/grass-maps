@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "nl.r1a.grassmap.plugins.manager"
+    namespace = "nl.r1a.grassmaps.plugins.manager"
     compileSdk = 37
 
     defaultConfig {

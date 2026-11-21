@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.util.Log
 import kotlinx.coroutines.Job
@@ -9,22 +9,22 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
-import nl.r1a.grassmap.plugin.api.command.Command
-import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
-import nl.r1a.grassmap.plugin.api.command.CommandPolicy
-import nl.r1a.grassmap.plugin.api.command.CommandResult
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.contract.CommandId
-import nl.r1a.grassmap.plugin.api.contract.SwitchId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.service.NetworkSwitches
-import nl.r1a.grassmap.regions.BearerToken
-import nl.r1a.grassmap.regions.DownloadPolicy
-import nl.r1a.grassmap.regions.InstalledRegion
-import nl.r1a.grassmap.regions.NetworkAccess
-import nl.r1a.grassmap.regions.RegionDownloader
-import nl.r1a.grassmap.regions.RegionRequest
+import nl.r1a.grassmaps.plugin.api.command.Command
+import nl.r1a.grassmaps.plugin.api.command.CommandDispatcher
+import nl.r1a.grassmaps.plugin.api.command.CommandPolicy
+import nl.r1a.grassmaps.plugin.api.command.CommandResult
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.contract.SwitchId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.service.NetworkSwitches
+import nl.r1a.grassmaps.regions.BearerToken
+import nl.r1a.grassmaps.regions.DownloadPolicy
+import nl.r1a.grassmaps.regions.InstalledRegion
+import nl.r1a.grassmaps.regions.NetworkAccess
+import nl.r1a.grassmaps.regions.RegionDownloader
+import nl.r1a.grassmaps.regions.RegionRequest
 
 /** The debug trigger that proves the regions seam. */
 internal val REGION_DOWNLOAD_COMMAND: CommandId = CommandId("core.region.download_test")

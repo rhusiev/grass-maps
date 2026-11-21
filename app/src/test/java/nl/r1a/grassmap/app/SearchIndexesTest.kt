@@ -1,14 +1,14 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.places.PlacesAccess
-import nl.r1a.grassmap.plugin.api.model.InstalledPack
-import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
-import nl.r1a.grassmap.regions.RegionMountResolver
+import nl.r1a.grassmaps.places.PlacesAccess
+import nl.r1a.grassmaps.plugin.api.model.InstalledPack
+import nl.r1a.grassmaps.plugin.api.testing.fixture.TestRegions
+import nl.r1a.grassmaps.regions.RegionMountResolver
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals

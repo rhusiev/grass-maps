@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.core.services
+package nl.r1a.grassmaps.core.services
 
 import kotlinx.serialization.json.JsonObject
-import nl.r1a.grassmap.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
 
 /**
  * The command and parameters the quick-access button runs (T-0606). The

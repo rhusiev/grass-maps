@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.navigation
+package nl.r1a.grassmaps.navigation
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -7,18 +7,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.provider.ProviderContract
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugin.api.provider.RouteRequest
-import nl.r1a.grassmap.plugin.api.provider.RouteSegment
-import nl.r1a.grassmap.plugin.api.provider.RoutingCapabilities
-import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
-import nl.r1a.grassmap.plugin.api.provider.RoutingEngineContract
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.provider.ProviderContract
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.provider.RouteRequest
+import nl.r1a.grassmaps.plugin.api.provider.RouteSegment
+import nl.r1a.grassmaps.plugin.api.provider.RoutingCapabilities
+import nl.r1a.grassmaps.plugin.api.provider.RoutingEngine
+import nl.r1a.grassmaps.plugin.api.provider.RoutingEngineContract
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue

@@ -1,12 +1,12 @@
-package nl.r1a.grassmap.plugins.downloads.ui
+package nl.r1a.grassmaps.plugins.downloads.ui
 
 import androidx.compose.ui.geometry.Offset
-import nl.r1a.grassmap.plugin.api.model.CatalogPartKind
-import nl.r1a.grassmap.plugin.api.model.DownloadsData
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.InstalledPack
-import nl.r1a.grassmap.plugin.api.model.RegionOutline
-import nl.r1a.grassmap.plugin.api.testing.fixture.CatalogFixture
+import nl.r1a.grassmaps.plugin.api.model.CatalogPartKind
+import nl.r1a.grassmaps.plugin.api.model.DownloadsData
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.InstalledPack
+import nl.r1a.grassmaps.plugin.api.model.RegionOutline
+import nl.r1a.grassmaps.plugin.api.testing.fixture.CatalogFixture
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

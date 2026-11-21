@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.core.services
+package nl.r1a.grassmaps.core.services
 
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -11,9 +11,9 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.plugin.api.contract.CommandId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException

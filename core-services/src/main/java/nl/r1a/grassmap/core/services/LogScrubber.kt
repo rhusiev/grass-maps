@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.core.services
+package nl.r1a.grassmaps.core.services
 
 /**
  * Removes coordinates, search queries and credentials from log text.

@@ -1,17 +1,17 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.DocumentSaveResult
-import nl.r1a.grassmap.plugin.api.host.PlatformActions
-import nl.r1a.grassmap.plugin.api.host.PlatformFile
-import nl.r1a.grassmap.plugin.api.model.ImportedEntities
-import nl.r1a.grassmap.plugin.api.model.TrackKind
-import nl.r1a.grassmap.plugin.api.model.TrackRoute
-import nl.r1a.grassmap.plugins.share.TrackFileShares
-import nl.r1a.grassmap.tracks.StoredTrack
-import nl.r1a.grassmap.tracks.TrackId
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.DocumentSaveResult
+import nl.r1a.grassmaps.plugin.api.host.PlatformActions
+import nl.r1a.grassmaps.plugin.api.host.PlatformFile
+import nl.r1a.grassmaps.plugin.api.model.ImportedEntities
+import nl.r1a.grassmaps.plugin.api.model.TrackKind
+import nl.r1a.grassmaps.plugin.api.model.TrackRoute
+import nl.r1a.grassmaps.plugins.share.TrackFileShares
+import nl.r1a.grassmaps.tracks.StoredTrack
+import nl.r1a.grassmaps.tracks.TrackId
 
 /**
  * Turns stored tracks into the one GPX document the save or share path hands to

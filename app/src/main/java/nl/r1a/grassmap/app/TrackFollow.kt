@@ -1,13 +1,13 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.navigation.trackFollowMeasuredSeconds
-import nl.r1a.grassmap.navigation.trackFollowPlan
-import nl.r1a.grassmap.navigation.trackFollowRoute
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.TrackFollowPlan
-import nl.r1a.grassmap.plugin.api.model.TrackFollowStart
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.tracks.StoredTrack
+import nl.r1a.grassmaps.navigation.trackFollowMeasuredSeconds
+import nl.r1a.grassmaps.navigation.trackFollowPlan
+import nl.r1a.grassmaps.navigation.trackFollowRoute
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.TrackFollowPlan
+import nl.r1a.grassmaps.plugin.api.model.TrackFollowStart
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.tracks.StoredTrack
 
 // The app's wiring for following a stored track (T-0412). It is the only place
 // that knows which numbers of a track feed the guidance seam: the geometry is

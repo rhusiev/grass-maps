@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

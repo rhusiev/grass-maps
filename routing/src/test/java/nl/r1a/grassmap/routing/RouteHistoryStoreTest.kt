@@ -1,15 +1,15 @@
-package nl.r1a.grassmap.routing
+package nl.r1a.grassmaps.routing
 
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.error.map
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.RouteHistoryEntry
-import nl.r1a.grassmap.plugin.api.model.RouteHistoryRules
-import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
-import nl.r1a.grassmap.plugin.api.provider.RouteOptions
-import nl.r1a.grassmap.plugin.api.service.Clock
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.error.map
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.RouteHistoryEntry
+import nl.r1a.grassmaps.plugin.api.model.RouteHistoryRules
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanPoint
+import nl.r1a.grassmaps.plugin.api.provider.RouteOptions
+import nl.r1a.grassmaps.plugin.api.service.Clock
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals

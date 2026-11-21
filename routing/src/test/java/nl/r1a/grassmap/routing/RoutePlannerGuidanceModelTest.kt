@@ -1,19 +1,19 @@
-package nl.r1a.grassmap.routing
+package nl.r1a.grassmaps.routing
 
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.AttributeValue
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
-import nl.r1a.grassmap.plugin.api.model.RoutePlanRole
-import nl.r1a.grassmap.plugin.api.model.RoutePlanState
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteInstruction
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugin.api.provider.RouteSegment
-import nl.r1a.grassmap.plugin.api.service.Clock
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.AttributeValue
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanPoint
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanRole
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanState
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteInstruction
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.provider.RouteSegment
+import nl.r1a.grassmaps.plugin.api.service.Clock
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

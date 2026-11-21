@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.unit.UnitStrings
+import nl.r1a.grassmaps.plugin.api.unit.UnitStrings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
-import nl.r1a.grassmap.plugin.ui.api.shellColors
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.shellColors
 
 /**
  * Provides the round 9 colour tokens of [dark] to every screen below it

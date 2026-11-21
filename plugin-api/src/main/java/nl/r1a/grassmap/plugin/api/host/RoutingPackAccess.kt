@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugin.api.host
+package nl.r1a.grassmaps.plugin.api.host
 
 /**
  * Where the mounted Valhalla routing pack lives. A routing engine plugin is

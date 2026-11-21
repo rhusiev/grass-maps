@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.core.services
+package nl.r1a.grassmaps.core.services
 
 import android.annotation.SuppressLint
 import android.content.Context
-import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.api.service.Strings
 import java.util.concurrent.ConcurrentHashMap
 
 /**

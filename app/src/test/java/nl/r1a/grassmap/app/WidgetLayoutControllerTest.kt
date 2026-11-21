@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -10,14 +10,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.ProfileId
-import nl.r1a.grassmap.plugin.api.service.ProfileValueStore
-import nl.r1a.grassmap.plugin.api.service.ProfileValues
-import nl.r1a.grassmap.ui.shell.GridWidget
-import nl.r1a.grassmap.ui.shell.WidgetLayout
-import nl.r1a.grassmap.ui.shell.WidgetLayoutStore
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.ProfileId
+import nl.r1a.grassmaps.plugin.api.service.ProfileValueStore
+import nl.r1a.grassmaps.plugin.api.service.ProfileValues
+import nl.r1a.grassmaps.ui.shell.GridWidget
+import nl.r1a.grassmaps.ui.shell.WidgetLayout
+import nl.r1a.grassmaps.ui.shell.WidgetLayoutStore
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

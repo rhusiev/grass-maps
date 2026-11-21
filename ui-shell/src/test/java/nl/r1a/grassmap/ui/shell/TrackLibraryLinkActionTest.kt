@@ -1,14 +1,14 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
-import nl.r1a.grassmap.plugin.api.model.RichText
-import nl.r1a.grassmap.plugin.api.model.RichTextSpan
-import nl.r1a.grassmap.plugin.api.model.RichTextStyle
-import nl.r1a.grassmap.plugin.api.model.TrackBrowseState
-import nl.r1a.grassmap.plugin.api.model.TrackKind
-import nl.r1a.grassmap.plugin.api.model.TrackLibraryEntry
-import nl.r1a.grassmap.plugin.api.model.TrackLibraryRow
-import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
-import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.api.model.RichText
+import nl.r1a.grassmaps.plugin.api.model.RichTextSpan
+import nl.r1a.grassmaps.plugin.api.model.RichTextStyle
+import nl.r1a.grassmaps.plugin.api.model.TrackBrowseState
+import nl.r1a.grassmaps.plugin.api.model.TrackKind
+import nl.r1a.grassmaps.plugin.api.model.TrackLibraryEntry
+import nl.r1a.grassmaps.plugin.api.model.TrackLibraryRow
+import nl.r1a.grassmaps.plugin.api.model.TrackLibraryState
+import nl.r1a.grassmaps.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue

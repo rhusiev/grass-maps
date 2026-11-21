@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.osm.places
+package nl.r1a.grassmaps.plugins.osm.places
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugin.api.widget
+package nl.r1a.grassmaps.plugin.api.widget
 
 import kotlinx.serialization.Serializable
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
 
 /**
  * One altitude reading for the altitude widget.

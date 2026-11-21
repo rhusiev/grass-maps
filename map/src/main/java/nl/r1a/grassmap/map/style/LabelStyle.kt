@@ -1,14 +1,14 @@
-package nl.r1a.grassmap.map.style
+package nl.r1a.grassmaps.map.style
 
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
-import nl.r1a.grassmap.map.LabelLanguage
-import nl.r1a.grassmap.map.LabelOptions
-import nl.r1a.grassmap.plugin.api.model.LayerSpec
-import nl.r1a.grassmap.plugin.api.model.LayerType
+import nl.r1a.grassmaps.map.LabelLanguage
+import nl.r1a.grassmaps.map.LabelOptions
+import nl.r1a.grassmaps.plugin.api.model.LayerSpec
+import nl.r1a.grassmaps.plugin.api.model.LayerType
 
 /**
  * Applies the label options to a symbol layer (T-0110). The style files stay

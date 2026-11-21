@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.serializer
@@ -8,19 +8,19 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
-import nl.r1a.grassmap.core.services.MapControlCommands
-import nl.r1a.grassmap.plugin.api.command.Command
-import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
-import nl.r1a.grassmap.plugin.api.command.CommandPolicy
-import nl.r1a.grassmap.plugin.api.command.CommandResult
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.MapHost
-import nl.r1a.grassmap.plugin.api.manifest.GeneratedCommand
-import nl.r1a.grassmap.plugin.api.model.CameraUpdate
-import nl.r1a.grassmap.plugins.map.controls.CameraMode
-import nl.r1a.grassmap.plugins.map.controls.CameraModeController
+import nl.r1a.grassmaps.core.services.MapControlCommands
+import nl.r1a.grassmaps.plugin.api.command.Command
+import nl.r1a.grassmaps.plugin.api.command.CommandDispatcher
+import nl.r1a.grassmaps.plugin.api.command.CommandPolicy
+import nl.r1a.grassmaps.plugin.api.command.CommandResult
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.MapHost
+import nl.r1a.grassmaps.plugin.api.manifest.GeneratedCommand
+import nl.r1a.grassmaps.plugin.api.model.CameraUpdate
+import nl.r1a.grassmaps.plugins.map.controls.CameraMode
+import nl.r1a.grassmaps.plugins.map.controls.CameraModeController
 
 /** The owner of host commands that have no plugin behind them. */
 internal val CORE_PLUGIN: PluginId = PluginId("core")

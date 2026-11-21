@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.model.PlaceCard
-import nl.r1a.grassmap.plugin.api.provider.PlaceHit
-import nl.r1a.grassmap.plugins.share.ShareCard
+import nl.r1a.grassmaps.plugin.api.model.PlaceCard
+import nl.r1a.grassmaps.plugin.api.provider.PlaceHit
+import nl.r1a.grassmaps.plugins.share.ShareCard
 
 /**
  * The card for an online search hit (T-0212).

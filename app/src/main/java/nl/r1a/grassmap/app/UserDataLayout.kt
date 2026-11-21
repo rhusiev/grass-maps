@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 /**
  * The app-private paths of the user-data stores, relative to `filesDir`.

@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.tracks
+package nl.r1a.grassmaps.tracks
 
-import nl.r1a.grassmap.plugin.api.model.TrackPoint
-import nl.r1a.grassmap.plugin.api.model.TrackSegment
+import nl.r1a.grassmaps.plugin.api.model.TrackPoint
+import nl.r1a.grassmaps.plugin.api.model.TrackSegment
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.hypot

@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.map.style
+package nl.r1a.grassmaps.map.style
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.RegionOutline
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.RegionOutline
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

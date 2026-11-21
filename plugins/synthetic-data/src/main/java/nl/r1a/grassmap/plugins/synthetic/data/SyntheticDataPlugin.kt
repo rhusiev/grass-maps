@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugins.synthetic.data
+package nl.r1a.grassmaps.plugins.synthetic.data
 
-import nl.r1a.grassmap.plugin.api.contract.Plugin
-import nl.r1a.grassmap.plugin.api.contract.PluginContext
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.contract.Plugin
+import nl.r1a.grassmaps.plugin.api.contract.PluginContext
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 
 /**
  * The first-party synthetic DataSource plugin. It proves the `data.source`

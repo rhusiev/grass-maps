@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugin.api.service
+package nl.r1a.grassmaps.plugin.api.service
 
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.ProfileId
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.ProfileId
 
 /**
  * One per-profile settings store seen as a set of encoded values, so profiles

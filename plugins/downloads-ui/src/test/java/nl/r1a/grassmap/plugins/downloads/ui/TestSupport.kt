@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.downloads.ui
+package nl.r1a.grassmaps.plugins.downloads.ui
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -6,32 +6,32 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.update
-import nl.r1a.grassmap.plugin.api.command.Command
-import nl.r1a.grassmap.plugin.api.contract.PluginContext
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.contract.StreamId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.ElevationAccess
-import nl.r1a.grassmap.plugin.api.host.PluginServices
-import nl.r1a.grassmap.plugin.api.host.RegionDownloadsAccess
-import nl.r1a.grassmap.plugin.api.host.StreamAccess
-import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
-import nl.r1a.grassmap.plugin.api.model.Camera
-import nl.r1a.grassmap.plugin.api.model.DownloadProblem
-import nl.r1a.grassmap.plugin.api.model.DownloadTransfer
-import nl.r1a.grassmap.plugin.api.model.DownloadTransferState
-import nl.r1a.grassmap.plugin.api.model.DownloadsData
-import nl.r1a.grassmap.plugin.api.model.DownloadsState
-import nl.r1a.grassmap.plugin.api.model.InstalledPack
-import nl.r1a.grassmap.plugin.api.model.LocationFix
-import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
-import nl.r1a.grassmap.plugin.api.model.RegionCatalog
-import nl.r1a.grassmap.plugin.api.model.RegionProblem
-import nl.r1a.grassmap.plugin.api.provider.Provider
-import nl.r1a.grassmap.plugin.api.service.Clock
-import nl.r1a.grassmap.plugin.api.service.LocationService
-import nl.r1a.grassmap.plugin.api.widget.WidgetDescriptor
+import nl.r1a.grassmaps.plugin.api.command.Command
+import nl.r1a.grassmaps.plugin.api.contract.PluginContext
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.contract.StreamId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.ElevationAccess
+import nl.r1a.grassmaps.plugin.api.host.PluginServices
+import nl.r1a.grassmaps.plugin.api.host.RegionDownloadsAccess
+import nl.r1a.grassmaps.plugin.api.host.StreamAccess
+import nl.r1a.grassmaps.plugin.api.host.StreamDescriptor
+import nl.r1a.grassmaps.plugin.api.model.Camera
+import nl.r1a.grassmaps.plugin.api.model.DownloadProblem
+import nl.r1a.grassmaps.plugin.api.model.DownloadTransfer
+import nl.r1a.grassmaps.plugin.api.model.DownloadTransferState
+import nl.r1a.grassmaps.plugin.api.model.DownloadsData
+import nl.r1a.grassmaps.plugin.api.model.DownloadsState
+import nl.r1a.grassmaps.plugin.api.model.InstalledPack
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.plugin.api.model.MobileDataPolicy
+import nl.r1a.grassmaps.plugin.api.model.RegionCatalog
+import nl.r1a.grassmaps.plugin.api.model.RegionProblem
+import nl.r1a.grassmaps.plugin.api.provider.Provider
+import nl.r1a.grassmaps.plugin.api.service.Clock
+import nl.r1a.grassmaps.plugin.api.service.LocationService
+import nl.r1a.grassmaps.plugin.api.widget.WidgetDescriptor
 
 internal class RecordingContext(
     override val services: PluginServices,

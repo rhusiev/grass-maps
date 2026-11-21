@@ -5,7 +5,7 @@ plugins {
 android {
     sourceSets.getByName("test").resources.srcDir(rootProject.file("test-data"))
 
-    namespace = "nl.r1a.grassmap.plugins.valhalla"
+    namespace = "nl.r1a.grassmaps.plugins.valhalla"
     compileSdk = 37
 
     defaultConfig {

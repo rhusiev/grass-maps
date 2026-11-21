@@ -1,13 +1,13 @@
-package nl.r1a.grassmap.routing
+package nl.r1a.grassmaps.routing
 
-import nl.r1a.grassmap.plugin.api.model.CatalogPartKind
-import nl.r1a.grassmap.plugin.api.model.CatalogRegion
-import nl.r1a.grassmap.plugin.api.model.CatalogRegionKind
-import nl.r1a.grassmap.plugin.api.model.DownloadsData
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.MissingRegion
-import nl.r1a.grassmap.plugin.api.model.MissingRegionPart
-import nl.r1a.grassmap.plugin.api.model.MissingRegions
+import nl.r1a.grassmaps.plugin.api.model.CatalogPartKind
+import nl.r1a.grassmaps.plugin.api.model.CatalogRegion
+import nl.r1a.grassmaps.plugin.api.model.CatalogRegionKind
+import nl.r1a.grassmaps.plugin.api.model.DownloadsData
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.MissingRegion
+import nl.r1a.grassmaps.plugin.api.model.MissingRegionPart
+import nl.r1a.grassmaps.plugin.api.model.MissingRegions
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.hypot

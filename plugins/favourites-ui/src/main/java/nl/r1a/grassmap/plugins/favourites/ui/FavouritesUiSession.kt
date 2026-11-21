@@ -1,16 +1,16 @@
-package nl.r1a.grassmap.plugins.favourites.ui
+package nl.r1a.grassmaps.plugins.favourites.ui
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.FavouriteListChange
-import nl.r1a.grassmap.plugin.api.host.FavouritesListsAccess
-import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
-import nl.r1a.grassmap.plugin.api.model.FavouriteSort
-import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.FavouriteListChange
+import nl.r1a.grassmaps.plugin.api.host.FavouritesListsAccess
+import nl.r1a.grassmaps.plugin.api.model.FavouriteListsState
+import nl.r1a.grassmaps.plugin.api.model.FavouriteSort
+import nl.r1a.grassmaps.plugin.api.model.FavouriteSpecial
 
 /**
  * The lists state and its actions inside `plugins/favourites-ui` (T-0213).

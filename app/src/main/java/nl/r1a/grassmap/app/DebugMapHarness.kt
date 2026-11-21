@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.content.Intent
 import android.os.Process
@@ -7,11 +7,11 @@ import android.util.Log
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import nl.r1a.grassmap.map.MapSurface
-import nl.r1a.grassmap.plugin.api.error.onFailure
-import nl.r1a.grassmap.plugin.api.host.MapEvent
-import nl.r1a.grassmap.plugin.api.model.CameraUpdate
-import nl.r1a.grassmap.plugin.api.model.StyleDiff
+import nl.r1a.grassmaps.map.MapSurface
+import nl.r1a.grassmaps.plugin.api.error.onFailure
+import nl.r1a.grassmaps.plugin.api.host.MapEvent
+import nl.r1a.grassmaps.plugin.api.model.CameraUpdate
+import nl.r1a.grassmaps.plugin.api.model.StyleDiff
 
 /**
  * The T-0020 measurement harness. Debug and benchmark install it through their

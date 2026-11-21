@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.plugin.api.provider
+package nl.r1a.grassmaps.plugin.api.provider
 
 import kotlinx.serialization.Serializable
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.AttributeValue
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.AttributeValue
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
 
 /**
  * A route engine behind the `routing.engine` contract. The contract carries no

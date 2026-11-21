@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -9,19 +9,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
-import nl.r1a.grassmap.plugin.api.contract.StreamId
-import nl.r1a.grassmap.plugin.api.host.StreamAccess
-import nl.r1a.grassmap.plugin.api.model.UnitSystem
-import nl.r1a.grassmap.plugin.api.widget.AltitudeWidgetValue
-import nl.r1a.grassmap.plugin.api.widget.CoordinatesWidgetValue
-import nl.r1a.grassmap.plugin.api.widget.GpsInfoWidgetValue
-import nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue
-import nl.r1a.grassmap.plugins.info.widgets.InfoWidgetsContract
-import nl.r1a.grassmap.plugins.point.info.PointInfoContract
-import nl.r1a.grassmap.plugins.point.info.SelectedPointValue
-import nl.r1a.grassmap.ui.shell.GridWidget
-import nl.r1a.grassmap.ui.shell.WidgetGrid
-import nl.r1a.grassmap.ui.shell.WidgetLayout
+import nl.r1a.grassmaps.plugin.api.contract.StreamId
+import nl.r1a.grassmaps.plugin.api.host.StreamAccess
+import nl.r1a.grassmaps.plugin.api.model.UnitSystem
+import nl.r1a.grassmaps.plugin.api.widget.AltitudeWidgetValue
+import nl.r1a.grassmaps.plugin.api.widget.CoordinatesWidgetValue
+import nl.r1a.grassmaps.plugin.api.widget.GpsInfoWidgetValue
+import nl.r1a.grassmaps.plugin.api.widget.SpeedWidgetValue
+import nl.r1a.grassmaps.plugins.info.widgets.InfoWidgetsContract
+import nl.r1a.grassmaps.plugins.point.info.PointInfoContract
+import nl.r1a.grassmaps.plugins.point.info.SelectedPointValue
+import nl.r1a.grassmaps.ui.shell.GridWidget
+import nl.r1a.grassmaps.ui.shell.WidgetGrid
+import nl.r1a.grassmaps.ui.shell.WidgetLayout
 import java.util.Locale
 
 /**

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.util.Log
 import androidx.activity.compose.BackHandler
@@ -15,12 +15,12 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.plugin.api.contract.CommandId
-import nl.r1a.grassmap.plugin.api.error.onFailure
-import nl.r1a.grassmap.plugin.api.model.ProfilesState
-import nl.r1a.grassmap.plugins.profiles.ui.ProfilesPage
-import nl.r1a.grassmap.plugins.profiles.ui.ProfilesScreenContent
-import nl.r1a.grassmap.plugins.profiles.ui.ProfilesUiContract
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.error.onFailure
+import nl.r1a.grassmaps.plugin.api.model.ProfilesState
+import nl.r1a.grassmaps.plugins.profiles.ui.ProfilesPage
+import nl.r1a.grassmaps.plugins.profiles.ui.ProfilesScreenContent
+import nl.r1a.grassmaps.plugins.profiles.ui.ProfilesUiContract
 
 private const val TAG = "ProfilesScreen"
 

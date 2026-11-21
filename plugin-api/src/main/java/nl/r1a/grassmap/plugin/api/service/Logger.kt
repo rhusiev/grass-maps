@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugin.api.service
+package nl.r1a.grassmaps.plugin.api.service
 
 /** Severity of one log record, in the order a reader filters it. */
 enum class LogLevel {

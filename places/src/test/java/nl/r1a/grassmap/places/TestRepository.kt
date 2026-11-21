@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.places
+package nl.r1a.grassmaps.places
 
 import java.nio.file.Files
 import java.nio.file.Path

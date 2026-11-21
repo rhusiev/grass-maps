@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugin.ui.api
+package nl.r1a.grassmaps.plugin.ui.api
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.provider.RouteInstruction
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.provider.RouteInstruction
 import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.sin

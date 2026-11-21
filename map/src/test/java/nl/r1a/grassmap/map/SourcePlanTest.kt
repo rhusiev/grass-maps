@@ -1,13 +1,13 @@
-package nl.r1a.grassmap.map
+package nl.r1a.grassmaps.map
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import nl.r1a.grassmap.plugin.api.model.MapSource
-import nl.r1a.grassmap.plugin.api.model.MapSourceIds
-import nl.r1a.grassmap.plugin.api.model.SourceId
-import nl.r1a.grassmap.plugin.api.model.StyleId
-import nl.r1a.grassmap.plugin.api.model.StyleSpec
+import nl.r1a.grassmaps.plugin.api.model.MapSource
+import nl.r1a.grassmaps.plugin.api.model.MapSourceIds
+import nl.r1a.grassmaps.plugin.api.model.SourceId
+import nl.r1a.grassmaps.plugin.api.model.StyleId
+import nl.r1a.grassmaps.plugin.api.model.StyleSpec
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

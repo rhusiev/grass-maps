@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.places.Favourite
-import nl.r1a.grassmap.places.FavouriteId
-import nl.r1a.grassmap.places.FavouritesSnapshot
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.places.Favourite
+import nl.r1a.grassmaps.places.FavouriteId
+import nl.r1a.grassmaps.places.FavouritesSnapshot
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.map
+package nl.r1a.grassmaps.map
 
-import nl.r1a.grassmap.plugin.api.contract.SwitchId
-import nl.r1a.grassmap.plugin.api.service.NetworkGate
+import nl.r1a.grassmaps.plugin.api.contract.SwitchId
+import nl.r1a.grassmaps.plugin.api.service.NetworkGate
 
 /**
  * The policy the map engine's tile interceptor applies, passed to

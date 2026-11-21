@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugins.profiles.ui
+package nl.r1a.grassmaps.plugins.profiles.ui
 
-import nl.r1a.grassmap.plugin.api.model.ProfileAction
-import nl.r1a.grassmap.plugin.api.model.ProfileActionKind
+import nl.r1a.grassmaps.plugin.api.model.ProfileAction
+import nl.r1a.grassmaps.plugin.api.model.ProfileActionKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

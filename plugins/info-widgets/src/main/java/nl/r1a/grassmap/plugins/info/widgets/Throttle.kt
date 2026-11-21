@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugins.info.widgets
+package nl.r1a.grassmaps.plugins.info.widgets
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import nl.r1a.grassmap.plugin.api.service.Clock
+import nl.r1a.grassmaps.plugin.api.service.Clock
 
 /**
  * Emits a value only when at least [intervalMillis] passed since the previous

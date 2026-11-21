@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.raster
+package nl.r1a.grassmaps.plugins.raster
 
 /**
  * One installed offline area as the sheet lists it (T-0513). The licence comes

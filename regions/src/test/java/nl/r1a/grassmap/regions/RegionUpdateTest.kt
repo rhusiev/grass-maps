@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
 import com.sun.net.httpserver.HttpExchange
 import kotlinx.coroutines.CoroutineScope
@@ -13,15 +13,15 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import nl.r1a.grassmap.plugin.api.contract.SwitchId
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.DownloadProblemKind
-import nl.r1a.grassmap.plugin.api.model.DownloadTransferState
-import nl.r1a.grassmap.plugin.api.model.DownloadsData
-import nl.r1a.grassmap.plugin.api.model.DownloadsDefaults
-import nl.r1a.grassmap.plugin.api.model.InstalledPack
-import nl.r1a.grassmap.plugin.api.testing.fixture.CatalogFixture
-import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
+import nl.r1a.grassmaps.plugin.api.contract.SwitchId
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.DownloadProblemKind
+import nl.r1a.grassmaps.plugin.api.model.DownloadTransferState
+import nl.r1a.grassmaps.plugin.api.model.DownloadsData
+import nl.r1a.grassmaps.plugin.api.model.DownloadsDefaults
+import nl.r1a.grassmaps.plugin.api.model.InstalledPack
+import nl.r1a.grassmaps.plugin.api.testing.fixture.CatalogFixture
+import nl.r1a.grassmaps.plugin.api.testing.fixture.TestRegions
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

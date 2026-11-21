@@ -1,10 +1,10 @@
-package nl.r1a.grassmap.navigation
+package nl.r1a.grassmaps.navigation
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.TrackFollowOption
-import nl.r1a.grassmap.plugin.api.model.TrackFollowPlan
-import nl.r1a.grassmap.plugin.api.model.TrackFollowStart
-import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.TrackFollowOption
+import nl.r1a.grassmaps.plugin.api.model.TrackFollowPlan
+import nl.r1a.grassmaps.plugin.api.model.TrackFollowStart
+import nl.r1a.grassmaps.plugin.api.provider.Route
 
 // Following a track (T-0412): the start choices and the route the existing
 // session then guides along.

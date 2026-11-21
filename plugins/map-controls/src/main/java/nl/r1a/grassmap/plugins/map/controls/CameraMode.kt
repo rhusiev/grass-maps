@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugins.map.controls
+package nl.r1a.grassmaps.plugins.map.controls
 
 import kotlinx.serialization.Serializable
-import nl.r1a.grassmap.plugin.api.model.TrackingMode
+import nl.r1a.grassmaps.plugin.api.model.TrackingMode
 
 /**
  * The camera mode the my-position button cycles through (T-0106).

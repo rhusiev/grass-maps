@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
-import nl.r1a.grassmap.plugin.ui.api.DarkShellColors
-import nl.r1a.grassmap.plugin.ui.api.LightShellColors
-import nl.r1a.grassmap.plugin.ui.api.contrastRatio
-import nl.r1a.grassmap.plugin.ui.api.inkOn
+import nl.r1a.grassmaps.plugin.ui.api.DarkShellColors
+import nl.r1a.grassmaps.plugin.ui.api.LightShellColors
+import nl.r1a.grassmaps.plugin.ui.api.contrastRatio
+import nl.r1a.grassmaps.plugin.ui.api.inkOn
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

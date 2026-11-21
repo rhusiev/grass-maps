@@ -1,13 +1,13 @@
-package nl.r1a.grassmap.plugin.api.host
+package nl.r1a.grassmaps.plugin.api.host
 
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.FavouriteListSummary
-import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
-import nl.r1a.grassmap.plugin.api.model.FavouritePointSummary
-import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.FavouriteListSummary
+import nl.r1a.grassmaps.plugin.api.model.FavouriteListsState
+import nl.r1a.grassmaps.plugin.api.model.FavouritePointSummary
+import nl.r1a.grassmaps.plugin.api.model.FavouriteSpecial
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

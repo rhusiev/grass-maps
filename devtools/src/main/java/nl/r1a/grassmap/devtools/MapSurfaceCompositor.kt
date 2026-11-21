@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.devtools
+package nl.r1a.grassmaps.devtools
 
 import android.graphics.Bitmap
 import android.graphics.Canvas

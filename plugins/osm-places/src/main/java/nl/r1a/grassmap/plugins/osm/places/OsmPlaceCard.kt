@@ -1,14 +1,14 @@
-package nl.r1a.grassmap.plugins.osm.places
+package nl.r1a.grassmaps.plugins.osm.places
 
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.PlaceCard
-import nl.r1a.grassmap.plugin.api.model.PlaceCardAction
-import nl.r1a.grassmap.plugin.api.model.PlaceCardEntry
-import nl.r1a.grassmap.plugin.api.model.PlaceCardLink
-import nl.r1a.grassmap.plugin.api.model.PlaceCardValue
-import nl.r1a.grassmap.plugin.api.provider.PlaceCardContract
-import nl.r1a.grassmap.plugin.api.provider.PlaceCardProvider
-import nl.r1a.grassmap.plugin.api.provider.PlaceDetails
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.PlaceCard
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardAction
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardEntry
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardLink
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardValue
+import nl.r1a.grassmaps.plugin.api.provider.PlaceCardContract
+import nl.r1a.grassmaps.plugin.api.provider.PlaceCardProvider
+import nl.r1a.grassmaps.plugin.api.provider.PlaceDetails
 import java.time.ZonedDateTime
 import java.util.Locale
 

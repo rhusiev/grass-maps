@@ -1,14 +1,14 @@
-package nl.r1a.grassmap.tracks
+package nl.r1a.grassmaps.tracks
 
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.ImportResult
-import nl.r1a.grassmap.plugin.api.model.ImportWarning
-import nl.r1a.grassmap.plugin.api.model.Track
-import nl.r1a.grassmap.plugin.api.model.TrackKind
-import nl.r1a.grassmap.plugin.api.model.TrackWaypoint
-import nl.r1a.grassmap.plugin.api.provider.FileFormat
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.ImportResult
+import nl.r1a.grassmaps.plugin.api.model.ImportWarning
+import nl.r1a.grassmaps.plugin.api.model.Track
+import nl.r1a.grassmaps.plugin.api.model.TrackKind
+import nl.r1a.grassmaps.plugin.api.model.TrackWaypoint
+import nl.r1a.grassmaps.plugin.api.provider.FileFormat
 
 /**
  * Finds the file format that reads an extension. The app implements this over

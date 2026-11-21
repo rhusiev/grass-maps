@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame

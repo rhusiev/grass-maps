@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.os.Build
 import kotlinx.serialization.json.JsonObject
@@ -7,7 +7,7 @@ import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
 import java.time.Instant
 
 /** One file the pack installer wrote, in bytes. */

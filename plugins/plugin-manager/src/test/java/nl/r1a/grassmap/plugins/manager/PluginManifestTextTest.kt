@@ -1,10 +1,10 @@
-package nl.r1a.grassmap.plugins.manager
+package nl.r1a.grassmaps.plugins.manager
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import nl.r1a.grassmap.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File

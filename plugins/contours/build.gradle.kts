@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "nl.r1a.grassmap.plugins.contours"
+    namespace = "nl.r1a.grassmaps.plugins.contours"
     compileSdk = 37
 
     defaultConfig {

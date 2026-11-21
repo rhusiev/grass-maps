@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.core.services.backup
+package nl.r1a.grassmaps.core.services.backup
 
 import kotlinx.serialization.json.JsonObject
 

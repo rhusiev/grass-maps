@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
-import nl.r1a.grassmap.plugin.api.host.RoutingPackAccess
+import nl.r1a.grassmaps.plugin.api.host.RoutingPackAccess
 import java.io.File
 
 /**

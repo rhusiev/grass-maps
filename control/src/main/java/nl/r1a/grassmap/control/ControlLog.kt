@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.control
+package nl.r1a.grassmaps.control
 
 /**
  * The control channel's one diagnostic sink. The app binds it to logcat; a test

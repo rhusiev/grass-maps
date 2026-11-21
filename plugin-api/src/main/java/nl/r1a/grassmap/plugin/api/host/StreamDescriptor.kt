@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugin.api.host
+package nl.r1a.grassmaps.plugin.api.host
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.KSerializer
-import nl.r1a.grassmap.plugin.api.contract.StreamId
+import nl.r1a.grassmaps.plugin.api.contract.StreamId
 
 /**
  * A named, typed state or event channel. The owner registers the flow; consumers

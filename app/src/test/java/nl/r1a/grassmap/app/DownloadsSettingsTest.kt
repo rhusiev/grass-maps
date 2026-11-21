@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
+import nl.r1a.grassmaps.plugin.api.model.MobileDataPolicy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

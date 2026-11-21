@@ -1,24 +1,24 @@
-package nl.r1a.grassmap.plugins.point.info
+package nl.r1a.grassmaps.plugins.point.info
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
-import nl.r1a.grassmap.plugin.api.command.Command
-import nl.r1a.grassmap.plugin.api.contract.PluginContext
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.contract.StreamId
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.ElevationAccess
-import nl.r1a.grassmap.plugin.api.host.PluginServices
-import nl.r1a.grassmap.plugin.api.host.StreamAccess
-import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
-import nl.r1a.grassmap.plugin.api.model.Camera
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.LocationFix
-import nl.r1a.grassmap.plugin.api.provider.Provider
-import nl.r1a.grassmap.plugin.api.service.Clock
-import nl.r1a.grassmap.plugin.api.service.LocationService
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugin.api.widget.WidgetDescriptor
+import nl.r1a.grassmaps.plugin.api.command.Command
+import nl.r1a.grassmaps.plugin.api.contract.PluginContext
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.contract.StreamId
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.ElevationAccess
+import nl.r1a.grassmaps.plugin.api.host.PluginServices
+import nl.r1a.grassmaps.plugin.api.host.StreamAccess
+import nl.r1a.grassmaps.plugin.api.host.StreamDescriptor
+import nl.r1a.grassmaps.plugin.api.model.Camera
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.plugin.api.provider.Provider
+import nl.r1a.grassmaps.plugin.api.service.Clock
+import nl.r1a.grassmaps.plugin.api.service.LocationService
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.api.widget.WidgetDescriptor
 
 /**
  * A clock that advances on every read, so every value passes the cadence

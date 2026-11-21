@@ -1,15 +1,15 @@
-package nl.r1a.grassmap.plugins.way.alerts
+package nl.r1a.grassmaps.plugins.way.alerts
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.RegionAccess
-import nl.r1a.grassmap.plugin.api.model.WayAlertElementType
-import nl.r1a.grassmap.plugin.api.model.WayAlertFeature
-import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
-import nl.r1a.grassmap.plugin.api.model.WayAlertHit
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.RegionAccess
+import nl.r1a.grassmaps.plugin.api.model.WayAlertElementType
+import nl.r1a.grassmaps.plugin.api.model.WayAlertFeature
+import nl.r1a.grassmaps.plugin.api.model.WayAlertFeatureKind
+import nl.r1a.grassmaps.plugin.api.model.WayAlertHit
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
 
 /**
  * Where the way alerts are placed, and how wide the route's corridor is

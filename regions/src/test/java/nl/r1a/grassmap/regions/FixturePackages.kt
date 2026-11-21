@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
-import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegion
-import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
+import nl.r1a.grassmaps.plugin.api.testing.fixture.TestRegion
+import nl.r1a.grassmaps.plugin.api.testing.fixture.TestRegions
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.util.zip.ZipEntry

@@ -1,10 +1,10 @@
-package nl.r1a.grassmap.plugins.proximity.alerts
+package nl.r1a.grassmaps.plugins.proximity.alerts
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import nl.r1a.grassmap.plugin.api.model.BoundingBox
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.ProximityPlaceKind
+import nl.r1a.grassmaps.plugin.api.model.BoundingBox
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.ProximityPlaceKind
 
 /**
  * One place a proximity alert can announce.

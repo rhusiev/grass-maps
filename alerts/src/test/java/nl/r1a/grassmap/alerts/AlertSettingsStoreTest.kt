@@ -1,17 +1,17 @@
-package nl.r1a.grassmap.alerts
+package nl.r1a.grassmaps.alerts
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.BuiltInProfiles
-import nl.r1a.grassmap.plugin.api.model.ProfileId
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugin.api.service.ProfileValueStore
-import nl.r1a.grassmap.plugin.api.service.ProfileValues
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.BuiltInProfiles
+import nl.r1a.grassmaps.plugin.api.model.ProfileId
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.service.ProfileValueStore
+import nl.r1a.grassmaps.plugin.api.service.ProfileValues
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.plugins.map.controls
+package nl.r1a.grassmaps.plugins.map.controls
 
-import nl.r1a.grassmap.plugin.api.model.ScreenOffset
+import nl.r1a.grassmaps.plugin.api.model.ScreenOffset
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugins.proximity.alerts
+package nl.r1a.grassmaps.plugins.proximity.alerts
 
-import nl.r1a.grassmap.plugin.api.model.BoundingBox
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.ProximityPlaceKind
+import nl.r1a.grassmaps.plugin.api.model.BoundingBox
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.ProximityPlaceKind
 import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.sin

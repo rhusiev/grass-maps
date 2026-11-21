@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.core.services
+package nl.r1a.grassmaps.core.services
 
 import android.content.Context
 import android.hardware.Sensor
@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.stateIn
-import nl.r1a.grassmap.plugin.api.service.HeadingSource
+import nl.r1a.grassmaps.plugin.api.service.HeadingSource
 
 private const val FULL_CIRCLE_DEGREES: Double = 360.0
 private const val STOP_TIMEOUT_MILLIS: Long = 5_000L

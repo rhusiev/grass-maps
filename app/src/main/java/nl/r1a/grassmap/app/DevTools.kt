@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.DevToolsAccess
-import nl.r1a.grassmap.plugin.api.host.DevToolsMetrics
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.DevToolsAccess
+import nl.r1a.grassmaps.plugin.api.host.DevToolsMetrics
 
 /**
  * Starts and stops the GPX replay the app's location source already runs. Both

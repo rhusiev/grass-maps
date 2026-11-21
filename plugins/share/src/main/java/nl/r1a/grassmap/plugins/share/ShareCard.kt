@@ -1,12 +1,12 @@
-package nl.r1a.grassmap.plugins.share
+package nl.r1a.grassmaps.plugins.share
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.PlaceCard
-import nl.r1a.grassmap.plugin.api.model.PlaceCardAction
-import nl.r1a.grassmap.plugin.api.model.PlaceCardEntry
-import nl.r1a.grassmap.plugin.api.model.PlaceCardLink
-import nl.r1a.grassmap.plugin.api.model.PlaceCardShortcut
-import nl.r1a.grassmap.plugin.api.provider.PlaceDetails
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.PlaceCard
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardAction
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardEntry
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardLink
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardShortcut
+import nl.r1a.grassmaps.plugin.api.provider.PlaceDetails
 
 /**
  * The coordinate rows and the share actions a place card carries (T-0210).

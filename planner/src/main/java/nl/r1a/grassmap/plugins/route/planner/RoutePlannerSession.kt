@@ -1,27 +1,27 @@
-package nl.r1a.grassmap.plugins.route.planner
+package nl.r1a.grassmaps.plugins.route.planner
 
 import kotlinx.coroutines.CoroutineScope
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.NoRegionDownloadsAccess
-import nl.r1a.grassmap.plugin.api.host.NoRoutingOptionsAccess
-import nl.r1a.grassmap.plugin.api.host.NoRoutingPacks
-import nl.r1a.grassmap.plugin.api.host.RegionDownloadsAccess
-import nl.r1a.grassmap.plugin.api.host.RouteHistoryAccess
-import nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess
-import nl.r1a.grassmap.plugin.api.host.RoutingOptionsAccess
-import nl.r1a.grassmap.plugin.api.host.RoutingPackAccess
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
-import nl.r1a.grassmap.plugin.api.model.RoutePlanRole
-import nl.r1a.grassmap.plugin.api.model.RoutePlanState
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteOptions
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugin.api.provider.RouteRequest
-import nl.r1a.grassmap.plugin.api.service.Clock
-import nl.r1a.grassmap.routing.RoutePlanner
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.NoRegionDownloadsAccess
+import nl.r1a.grassmaps.plugin.api.host.NoRoutingOptionsAccess
+import nl.r1a.grassmaps.plugin.api.host.NoRoutingPacks
+import nl.r1a.grassmaps.plugin.api.host.RegionDownloadsAccess
+import nl.r1a.grassmaps.plugin.api.host.RouteHistoryAccess
+import nl.r1a.grassmaps.plugin.api.host.RoutingEngineAccess
+import nl.r1a.grassmaps.plugin.api.host.RoutingOptionsAccess
+import nl.r1a.grassmaps.plugin.api.host.RoutingPackAccess
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanPoint
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanRole
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanState
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteOptions
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.provider.RouteRequest
+import nl.r1a.grassmaps.plugin.api.service.Clock
+import nl.r1a.grassmaps.routing.RoutePlanner
 
 /**
  * The plugin's handle on the planner (T-0302). The state machine lives in

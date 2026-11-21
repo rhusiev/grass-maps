@@ -1,17 +1,17 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import nl.r1a.grassmap.core.CommandDispatchers
-import nl.r1a.grassmap.places.PlacesAccess
-import nl.r1a.grassmap.places.SEARCH_REPLAY_COMMAND
-import nl.r1a.grassmap.places.SEARCH_SCREEN_COMMAND
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmaps.core.CommandDispatchers
+import nl.r1a.grassmaps.places.PlacesAccess
+import nl.r1a.grassmaps.places.SEARCH_REPLAY_COMMAND
+import nl.r1a.grassmaps.places.SEARCH_SCREEN_COMMAND
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

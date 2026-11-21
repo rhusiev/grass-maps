@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.navigation
+package nl.r1a.grassmaps.navigation
 
-import nl.r1a.grassmap.plugin.api.model.LocationFix
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
 
 /**
  * The 20 s of travel behind a reroute, as a distance budget.

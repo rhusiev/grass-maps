@@ -1,10 +1,10 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.core.CommandDispatchers
-import nl.r1a.grassmap.core.services.DiagnosticsCommands
-import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmaps.core.CommandDispatchers
+import nl.r1a.grassmaps.core.services.DiagnosticsCommands
+import nl.r1a.grassmaps.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test

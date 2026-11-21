@@ -1,17 +1,17 @@
-package nl.r1a.grassmap.core
+package nl.r1a.grassmaps.core
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.ProviderState
-import nl.r1a.grassmap.plugin.api.model.ProviderStatus
-import nl.r1a.grassmap.plugin.api.provider.Provider
-import nl.r1a.grassmap.plugin.api.provider.ProviderContract
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.ProviderState
+import nl.r1a.grassmaps.plugin.api.model.ProviderStatus
+import nl.r1a.grassmaps.plugin.api.provider.Provider
+import nl.r1a.grassmaps.plugin.api.provider.ProviderContract
 import java.util.concurrent.ConcurrentHashMap
 
 /**

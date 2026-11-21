@@ -1,15 +1,15 @@
-package nl.r1a.grassmap.navigation
+package nl.r1a.grassmaps.navigation
 
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.LocationFix
-import nl.r1a.grassmap.plugin.api.provider.ProviderContract
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugin.api.provider.RouteRequest
-import nl.r1a.grassmap.plugin.api.provider.RoutingCapabilities
-import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
-import nl.r1a.grassmap.plugin.api.provider.RoutingEngineContract
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.plugin.api.provider.ProviderContract
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.provider.RouteRequest
+import nl.r1a.grassmaps.plugin.api.provider.RoutingCapabilities
+import nl.r1a.grassmaps.plugin.api.provider.RoutingEngine
+import nl.r1a.grassmaps.plugin.api.provider.RoutingEngineContract
 
 /** A follower that reports exactly what a test tells it to. */
 internal class ScriptedFollower(

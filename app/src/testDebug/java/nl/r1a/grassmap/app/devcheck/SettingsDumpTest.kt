@@ -1,10 +1,10 @@
-package nl.r1a.grassmap.app.devcheck
+package nl.r1a.grassmaps.app.devcheck
 
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import nl.r1a.grassmap.plugin.api.model.CatalogRegion
+import nl.r1a.grassmaps.plugin.api.model.CatalogRegion
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

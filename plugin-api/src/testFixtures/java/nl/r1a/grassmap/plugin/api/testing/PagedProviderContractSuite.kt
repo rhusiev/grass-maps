@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugin.api.testing
+package nl.r1a.grassmaps.plugin.api.testing
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -6,12 +6,12 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.contract.CursorToken
-import nl.r1a.grassmap.plugin.api.contract.Page
-import nl.r1a.grassmap.plugin.api.contract.PageRequest
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.contract.CursorToken
+import nl.r1a.grassmaps.plugin.api.contract.Page
+import nl.r1a.grassmaps.plugin.api.contract.PageRequest
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue

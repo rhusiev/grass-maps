@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.route.layer
+package nl.r1a.grassmaps.plugins.route.layer
 
 import java.util.Locale
 

@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.plugins.point.info
+package nl.r1a.grassmaps.plugins.point.info
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.acos

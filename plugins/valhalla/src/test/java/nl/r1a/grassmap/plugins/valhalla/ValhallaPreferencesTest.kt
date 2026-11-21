@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.plugins.valhalla
+package nl.r1a.grassmaps.plugins.valhalla
 
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
-import nl.r1a.grassmap.plugin.api.provider.RouteOptions
-import nl.r1a.grassmap.plugin.api.provider.RoutePreference
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.provider.RouteOptions
+import nl.r1a.grassmaps.plugin.api.provider.RoutePreference
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

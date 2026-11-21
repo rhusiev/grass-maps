@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
+import nl.r1a.grassmaps.plugin.api.model.MobileDataPolicy
 import java.io.File
 import java.io.IOException
 

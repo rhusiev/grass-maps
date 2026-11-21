@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
@@ -7,15 +7,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.plugin.api.host.MapHost
-import nl.r1a.grassmap.plugin.api.model.Camera
-import nl.r1a.grassmap.plugin.api.model.CameraUpdate
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugins.links.LinkFailure
-import nl.r1a.grassmap.plugins.links.LinkResult
-import nl.r1a.grassmap.plugins.map.controls.CameraMode
-import nl.r1a.grassmap.plugins.map.controls.CameraModeController
-import nl.r1a.grassmap.plugins.map.controls.CameraModeStore
+import nl.r1a.grassmaps.plugin.api.host.MapHost
+import nl.r1a.grassmaps.plugin.api.model.Camera
+import nl.r1a.grassmaps.plugin.api.model.CameraUpdate
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugins.links.LinkFailure
+import nl.r1a.grassmaps.plugins.links.LinkResult
+import nl.r1a.grassmaps.plugins.map.controls.CameraMode
+import nl.r1a.grassmaps.plugins.map.controls.CameraModeController
+import nl.r1a.grassmaps.plugins.map.controls.CameraModeStore
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.places
+package nl.r1a.grassmaps.places
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -8,26 +8,26 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import nl.r1a.grassmap.places.core.CancelToken
-import nl.r1a.grassmap.places.core.CoreException
-import nl.r1a.grassmap.places.core.OsmElementType
-import nl.r1a.grassmap.places.core.PlaceDetail
-import nl.r1a.grassmap.places.core.SearchIndex
-import nl.r1a.grassmap.places.core.SearchSession
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.BoundingBox
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.OsmType
-import nl.r1a.grassmap.plugin.api.provider.Place
-import nl.r1a.grassmap.plugin.api.provider.PlaceDetails
-import nl.r1a.grassmap.plugin.api.provider.PlaceHit
-import nl.r1a.grassmap.plugin.api.provider.PlaceProvider
-import nl.r1a.grassmap.plugin.api.provider.PlaceProviderContract
-import nl.r1a.grassmap.plugin.api.provider.SearchContext
+import nl.r1a.grassmaps.places.core.CancelToken
+import nl.r1a.grassmaps.places.core.CoreException
+import nl.r1a.grassmaps.places.core.OsmElementType
+import nl.r1a.grassmaps.places.core.PlaceDetail
+import nl.r1a.grassmaps.places.core.SearchIndex
+import nl.r1a.grassmaps.places.core.SearchSession
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.BoundingBox
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.OsmType
+import nl.r1a.grassmaps.plugin.api.provider.Place
+import nl.r1a.grassmaps.plugin.api.provider.PlaceDetails
+import nl.r1a.grassmaps.plugin.api.provider.PlaceHit
+import nl.r1a.grassmaps.plugin.api.provider.PlaceProvider
+import nl.r1a.grassmaps.plugin.api.provider.PlaceProviderContract
+import nl.r1a.grassmaps.plugin.api.provider.SearchContext
 import java.io.File
-import nl.r1a.grassmap.places.core.PlaceHit as CorePlaceHit
+import nl.r1a.grassmaps.places.core.PlaceHit as CorePlaceHit
 
 /** The largest result count the contract and the Rust reader accept. */
 const val MAX_SEARCH_RESULTS: Int = 50

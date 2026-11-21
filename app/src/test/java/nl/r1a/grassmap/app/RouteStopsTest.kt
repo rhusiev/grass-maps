@@ -1,14 +1,14 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.jsonPrimitive
-import nl.r1a.grassmap.places.Favourite
-import nl.r1a.grassmap.places.FavouriteId
-import nl.r1a.grassmap.plugin.api.model.FavouritePointRow
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
-import nl.r1a.grassmap.plugin.api.model.toRouteStop
-import nl.r1a.grassmap.plugin.api.provider.PlaceHit
+import nl.r1a.grassmaps.places.Favourite
+import nl.r1a.grassmaps.places.FavouriteId
+import nl.r1a.grassmaps.plugin.api.model.FavouritePointRow
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanPoint
+import nl.r1a.grassmaps.plugin.api.model.toRouteStop
+import nl.r1a.grassmaps.plugin.api.provider.PlaceHit
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

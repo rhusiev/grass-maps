@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.style.standard
+package nl.r1a.grassmaps.plugins.style.standard
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray

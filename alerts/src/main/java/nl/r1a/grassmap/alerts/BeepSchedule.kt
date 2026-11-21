@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.alerts
+package nl.r1a.grassmaps.alerts
 
-import nl.r1a.grassmap.navigation.NavigationInstruction
-import nl.r1a.grassmap.navigation.NavigationPhase
-import nl.r1a.grassmap.navigation.NavigationState
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.navigation.NavigationInstruction
+import nl.r1a.grassmaps.navigation.NavigationPhase
+import nl.r1a.grassmaps.navigation.NavigationState
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
 import kotlin.math.abs
 import kotlin.math.roundToLong
 

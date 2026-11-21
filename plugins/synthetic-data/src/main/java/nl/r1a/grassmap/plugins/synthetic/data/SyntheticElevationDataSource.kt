@@ -1,29 +1,29 @@
-package nl.r1a.grassmap.plugins.synthetic.data
+package nl.r1a.grassmaps.plugins.synthetic.data
 
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.contract.CursorToken
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.LayerId
-import nl.r1a.grassmap.plugin.api.model.LayerSlot
-import nl.r1a.grassmap.plugin.api.model.LayerSpec
-import nl.r1a.grassmap.plugin.api.model.LayerType
-import nl.r1a.grassmap.plugin.api.model.MapSourceIds
-import nl.r1a.grassmap.plugin.api.model.SlottedLayer
-import nl.r1a.grassmap.plugin.api.provider.AttributePage
-import nl.r1a.grassmap.plugin.api.provider.AttributeRequest
-import nl.r1a.grassmap.plugin.api.provider.CostModifier
-import nl.r1a.grassmap.plugin.api.provider.CostModifierRequest
-import nl.r1a.grassmap.plugin.api.provider.CostModifierRules
-import nl.r1a.grassmap.plugin.api.provider.DataSource
-import nl.r1a.grassmap.plugin.api.provider.DataSourceContract
-import nl.r1a.grassmap.plugin.api.provider.DataSourceDescription
-import nl.r1a.grassmap.plugin.api.provider.ProviderContract
-import nl.r1a.grassmap.plugin.api.provider.WayAttribute
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.contract.CursorToken
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.LayerId
+import nl.r1a.grassmaps.plugin.api.model.LayerSlot
+import nl.r1a.grassmaps.plugin.api.model.LayerSpec
+import nl.r1a.grassmaps.plugin.api.model.LayerType
+import nl.r1a.grassmaps.plugin.api.model.MapSourceIds
+import nl.r1a.grassmaps.plugin.api.model.SlottedLayer
+import nl.r1a.grassmaps.plugin.api.provider.AttributePage
+import nl.r1a.grassmaps.plugin.api.provider.AttributeRequest
+import nl.r1a.grassmaps.plugin.api.provider.CostModifier
+import nl.r1a.grassmaps.plugin.api.provider.CostModifierRequest
+import nl.r1a.grassmaps.plugin.api.provider.CostModifierRules
+import nl.r1a.grassmaps.plugin.api.provider.DataSource
+import nl.r1a.grassmaps.plugin.api.provider.DataSourceContract
+import nl.r1a.grassmaps.plugin.api.provider.DataSourceDescription
+import nl.r1a.grassmaps.plugin.api.provider.ProviderContract
+import nl.r1a.grassmaps.plugin.api.provider.WayAttribute
 
 /**
  * A deterministic elevation source over the fixture-mini bbox.

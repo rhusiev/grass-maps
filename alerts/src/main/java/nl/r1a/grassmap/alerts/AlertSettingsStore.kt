@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.alerts
+package nl.r1a.grassmaps.alerts
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -17,15 +17,15 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.BuiltInProfiles
-import nl.r1a.grassmap.plugin.api.model.ProfileId
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugin.api.service.ProfileSettingsGroup
-import nl.r1a.grassmap.plugin.api.service.ProfileValueStore
-import nl.r1a.grassmap.plugin.api.service.ProfileValues
-import nl.r1a.grassmap.plugin.api.service.withKnownValues
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.BuiltInProfiles
+import nl.r1a.grassmaps.plugin.api.model.ProfileId
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.service.ProfileSettingsGroup
+import nl.r1a.grassmaps.plugin.api.service.ProfileValueStore
+import nl.r1a.grassmaps.plugin.api.service.ProfileValues
+import nl.r1a.grassmaps.plugin.api.service.withKnownValues
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean

@@ -1,15 +1,15 @@
-package nl.r1a.grassmap.map.style
+package nl.r1a.grassmaps.map.style
 
 import androidx.compose.ui.graphics.toArgb
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.RouteLinePattern
-import nl.r1a.grassmap.plugin.api.model.RouteLineRun
-import nl.r1a.grassmap.plugin.api.model.RouteLineStyle
-import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.RouteLinePattern
+import nl.r1a.grassmaps.plugin.api.model.RouteLineRun
+import nl.r1a.grassmaps.plugin.api.model.RouteLineStyle
+import nl.r1a.grassmaps.plugin.api.provider.Route
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

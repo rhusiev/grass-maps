@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.online.search
+package nl.r1a.grassmaps.plugins.online.search
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray

@@ -1,10 +1,10 @@
-package nl.r1a.grassmap.plugins.route.relations
+package nl.r1a.grassmaps.plugins.route.relations
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.Route
-import nl.r1a.grassmap.plugin.api.model.RouteNetwork
-import nl.r1a.grassmap.plugin.api.model.RouteRelation
-import nl.r1a.grassmap.plugin.api.model.RouteRelationMember
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.Route
+import nl.r1a.grassmaps.plugin.api.model.RouteNetwork
+import nl.r1a.grassmaps.plugin.api.model.RouteRelation
+import nl.r1a.grassmaps.plugin.api.model.RouteRelationMember
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

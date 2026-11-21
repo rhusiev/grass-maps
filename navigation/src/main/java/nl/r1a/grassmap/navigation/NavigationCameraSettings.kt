@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.navigation
+package nl.r1a.grassmaps.navigation
 
 /**
  * The navigation camera switches (T-0313).

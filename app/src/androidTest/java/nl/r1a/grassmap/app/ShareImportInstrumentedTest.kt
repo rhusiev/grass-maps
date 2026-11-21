@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.content.Intent
 import android.net.Uri
@@ -8,7 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import nl.r1a.grassmap.ui.shell.TrackImportFailure
+import nl.r1a.grassmaps.ui.shell.TrackImportFailure
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.plugins.share
+package nl.r1a.grassmaps.plugins.share
 
-import nl.r1a.grassmap.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
 
 /**
  * The ids and commands `plugins/share` declares (T-0210).

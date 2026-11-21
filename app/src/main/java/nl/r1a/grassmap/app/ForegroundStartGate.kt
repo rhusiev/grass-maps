@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 /**
  * Orders a stop after the foreground start that precedes it.

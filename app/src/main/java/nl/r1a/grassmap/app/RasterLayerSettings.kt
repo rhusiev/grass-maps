@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,13 +12,13 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugins.raster.RasterPlacement
-import nl.r1a.grassmap.plugins.raster.RasterPresets
-import nl.r1a.grassmap.plugins.raster.RasterSource
-import nl.r1a.grassmap.plugins.raster.RasterSources
-import nl.r1a.grassmap.plugins.raster.RasterTransparency
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugins.raster.RasterPlacement
+import nl.r1a.grassmaps.plugins.raster.RasterPresets
+import nl.r1a.grassmaps.plugins.raster.RasterSource
+import nl.r1a.grassmaps.plugins.raster.RasterSources
+import nl.r1a.grassmaps.plugins.raster.RasterTransparency
 import java.io.File
 import java.io.IOException
 

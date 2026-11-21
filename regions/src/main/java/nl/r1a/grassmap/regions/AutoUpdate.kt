@@ -1,13 +1,13 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.RegionDownloadsAccess
-import nl.r1a.grassmap.plugin.api.model.DownloadTransferState
-import nl.r1a.grassmap.plugin.api.model.DownloadsData
-import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.RegionDownloadsAccess
+import nl.r1a.grassmaps.plugin.api.model.DownloadTransferState
+import nl.r1a.grassmaps.plugin.api.model.DownloadsData
+import nl.r1a.grassmaps.plugin.api.model.MobileDataPolicy
 import java.time.Clock
 import java.time.Duration
 

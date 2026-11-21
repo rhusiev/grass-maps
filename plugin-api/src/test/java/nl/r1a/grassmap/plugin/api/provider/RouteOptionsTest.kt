@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugin.api.provider
+package nl.r1a.grassmaps.plugin.api.provider
 
 import kotlinx.serialization.json.Json
-import nl.r1a.grassmap.plugin.api.model.RoutePlanState
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.core.services
+package nl.r1a.grassmaps.core.services
 
-import nl.r1a.grassmap.plugin.api.contract.SwitchId
+import nl.r1a.grassmaps.plugin.api.contract.SwitchId
 
 /**
  * Backing storage for privacy switch state and its request counters. It keeps

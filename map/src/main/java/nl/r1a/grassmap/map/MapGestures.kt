@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.map
+package nl.r1a.grassmaps.map
 
 import org.maplibre.compose.interaction.MapInteractions
 import org.maplibre.compose.map.MapUiOptions

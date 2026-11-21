@@ -16,7 +16,7 @@ val generateStyleAsset =
     }
 
 android {
-    namespace = "nl.r1a.grassmap.plugins.style.touring"
+    namespace = "nl.r1a.grassmaps.plugins.style.touring"
     compileSdk = 37
 
     defaultConfig {

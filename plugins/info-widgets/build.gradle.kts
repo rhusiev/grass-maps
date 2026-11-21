@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "nl.r1a.grassmap.plugins.info.widgets"
+    namespace = "nl.r1a.grassmaps.plugins.info.widgets"
     compileSdk = 37
 
     defaultConfig {

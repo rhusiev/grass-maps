@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.profiles.ui
+package nl.r1a.grassmaps.plugins.profiles.ui
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

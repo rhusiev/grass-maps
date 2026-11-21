@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.manager
+package nl.r1a.grassmaps.plugins.manager
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,8 +36,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 
 @Suppress("ktlint:standard:function-naming")
 @Composable

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.raster
+package nl.r1a.grassmaps.plugins.raster
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

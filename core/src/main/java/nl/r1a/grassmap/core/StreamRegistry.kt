@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.core
+package nl.r1a.grassmaps.core
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
-import nl.r1a.grassmap.plugin.api.contract.StreamId
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.StreamAccess
+import nl.r1a.grassmaps.plugin.api.contract.StreamId
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.StreamAccess
 
 /**
  * Binds a declared stream id to the flow its owner registered on activation.

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
 /**
  * The search section a region package declares (T-0620). The files sit in the

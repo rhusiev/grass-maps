@@ -1,27 +1,27 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.MapEvent
-import nl.r1a.grassmap.plugin.api.host.MapHost
-import nl.r1a.grassmap.plugin.api.model.BoundingBox
-import nl.r1a.grassmap.plugin.api.model.Camera
-import nl.r1a.grassmap.plugin.api.model.CameraUpdate
-import nl.r1a.grassmap.plugin.api.model.LayerId
-import nl.r1a.grassmap.plugin.api.model.LayerSlot
-import nl.r1a.grassmap.plugin.api.model.LayerSpec
-import nl.r1a.grassmap.plugin.api.model.LocationFix
-import nl.r1a.grassmap.plugin.api.model.MapTrack
-import nl.r1a.grassmap.plugin.api.model.RouteLineStyle
-import nl.r1a.grassmap.plugin.api.model.ScreenOffset
-import nl.r1a.grassmap.plugin.api.model.StyleDiff
-import nl.r1a.grassmap.plugin.api.model.StyleSpec
-import nl.r1a.grassmap.plugin.api.model.TrackingMode
-import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.MapEvent
+import nl.r1a.grassmaps.plugin.api.host.MapHost
+import nl.r1a.grassmaps.plugin.api.model.BoundingBox
+import nl.r1a.grassmaps.plugin.api.model.Camera
+import nl.r1a.grassmaps.plugin.api.model.CameraUpdate
+import nl.r1a.grassmaps.plugin.api.model.LayerId
+import nl.r1a.grassmaps.plugin.api.model.LayerSlot
+import nl.r1a.grassmaps.plugin.api.model.LayerSpec
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.plugin.api.model.MapTrack
+import nl.r1a.grassmaps.plugin.api.model.RouteLineStyle
+import nl.r1a.grassmaps.plugin.api.model.ScreenOffset
+import nl.r1a.grassmaps.plugin.api.model.StyleDiff
+import nl.r1a.grassmaps.plugin.api.model.StyleSpec
+import nl.r1a.grassmaps.plugin.api.model.TrackingMode
+import nl.r1a.grassmaps.plugin.api.provider.Route
 
 /** One layer a [FakeMapHost] accepted, with the plugin that owns it. */
 internal data class AddedLayer(

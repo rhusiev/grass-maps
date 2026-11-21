@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.tracks
+package nl.r1a.grassmaps.tracks
 
-import nl.r1a.grassmap.plugin.api.model.Track
-import nl.r1a.grassmap.plugin.api.model.TrackPoint
-import nl.r1a.grassmap.plugin.api.model.TrackSegment
+import nl.r1a.grassmaps.plugin.api.model.Track
+import nl.r1a.grassmaps.plugin.api.model.TrackPoint
+import nl.r1a.grassmaps.plugin.api.model.TrackSegment
 
 /**
  * A pure statistics function over a track's points, with no I/O and no state.

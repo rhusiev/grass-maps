@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.profiles.ui
+package nl.r1a.grassmaps.plugins.profiles.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,9 +28,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import nl.r1a.grassmap.plugin.api.model.BuiltInProfiles
-import nl.r1a.grassmap.plugin.api.model.ProfileSummary
-import nl.r1a.grassmap.plugin.api.service.ProfileSettingsGroup
+import nl.r1a.grassmaps.plugin.api.model.BuiltInProfiles
+import nl.r1a.grassmaps.plugin.api.model.ProfileSummary
+import nl.r1a.grassmaps.plugin.api.service.ProfileSettingsGroup
 
 /** The name the screen shows: a user profile's own name, or a built-in's string. */
 @Suppress("ktlint:standard:function-naming")

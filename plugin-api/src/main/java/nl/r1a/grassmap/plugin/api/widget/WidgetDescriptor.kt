@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugin.api.widget
+package nl.r1a.grassmaps.plugin.api.widget
 
-import nl.r1a.grassmap.plugin.api.contract.StreamId
-import nl.r1a.grassmap.plugin.api.contract.WidgetId
+import nl.r1a.grassmaps.plugin.api.contract.StreamId
+import nl.r1a.grassmaps.plugin.api.contract.WidgetId
 
 /**
  * The declarative half of a widget (plugin-spec.md section 5): a title, a value

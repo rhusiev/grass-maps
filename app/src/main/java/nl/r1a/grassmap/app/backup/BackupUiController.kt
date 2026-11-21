@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app.backup
+package nl.r1a.grassmaps.app.backup
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -8,14 +8,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import nl.r1a.grassmap.core.services.backup.BackupWarning
-import nl.r1a.grassmap.core.services.backup.BundleConflict
-import nl.r1a.grassmap.core.services.backup.BundleConflictChoice
-import nl.r1a.grassmap.core.services.backup.BundleConflictDecisions
-import nl.r1a.grassmap.core.services.backup.BundleImportSummary
-import nl.r1a.grassmap.core.services.backup.PreparedBackup
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.core.services.backup.BackupWarning
+import nl.r1a.grassmaps.core.services.backup.BundleConflict
+import nl.r1a.grassmaps.core.services.backup.BundleConflictChoice
+import nl.r1a.grassmaps.core.services.backup.BundleConflictDecisions
+import nl.r1a.grassmaps.core.services.backup.BundleImportSummary
+import nl.r1a.grassmaps.core.services.backup.PreparedBackup
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 import java.io.InputStream
 
 /** What the backup screen is doing. */

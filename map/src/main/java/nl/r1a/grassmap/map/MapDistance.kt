@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.map
+package nl.r1a.grassmaps.map
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
 import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.round

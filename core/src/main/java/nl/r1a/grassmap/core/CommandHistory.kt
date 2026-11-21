@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.core
+package nl.r1a.grassmaps.core
 
-import nl.r1a.grassmap.plugin.api.command.CommandInvocation
+import nl.r1a.grassmaps.plugin.api.command.CommandInvocation
 
 /**
  * Undo and redo stacks of dynamically built inverse invocations.

@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
-import nl.r1a.grassmap.plugin.api.contract.SwitchId
+import nl.r1a.grassmaps.plugin.api.contract.SwitchId
 
 /**
  * The bounds one download runs under. The privacy switch is the T-0016 switch

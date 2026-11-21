@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.plugin.api.service
+package nl.r1a.grassmaps.plugin.api.service
 
-import nl.r1a.grassmap.plugin.api.contract.SwitchId
+import nl.r1a.grassmaps.plugin.api.contract.SwitchId
 
 /**
  * The v1 network switches. There is one switch per kind of contact that leaves

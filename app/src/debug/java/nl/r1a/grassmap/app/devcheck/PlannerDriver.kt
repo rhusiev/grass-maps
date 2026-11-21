@@ -1,14 +1,14 @@
-package nl.r1a.grassmap.app.devcheck
+package nl.r1a.grassmaps.app.devcheck
 
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.plugin.api.model.CatalogRegion
-import nl.r1a.grassmap.plugin.api.model.RoutePlanState
-import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
-import nl.r1a.grassmap.plugins.route.planner.RoutePlannerContract
+import nl.r1a.grassmaps.plugin.api.model.CatalogRegion
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanState
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanStatus
+import nl.r1a.grassmaps.plugins.route.planner.RoutePlannerContract
 
 private const val ROLE_START = "start"
 private const val ROLE_DESTINATION = "destination"

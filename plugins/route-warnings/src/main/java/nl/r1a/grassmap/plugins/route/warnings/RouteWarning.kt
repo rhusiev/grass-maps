@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugins.route.warnings
+package nl.r1a.grassmaps.plugins.route.warnings
 
-import nl.r1a.grassmap.plugin.api.model.WayAlertElementType
-import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.model.WayAlertElementType
+import nl.r1a.grassmaps.plugin.api.model.WayAlertFeatureKind
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
 
 /**
  * The five things a route warning names (T-0409).

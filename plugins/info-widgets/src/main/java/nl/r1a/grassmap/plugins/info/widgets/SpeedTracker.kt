@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugins.info.widgets
+package nl.r1a.grassmaps.plugins.info.widgets
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
 import kotlin.math.PI
 import kotlin.math.asin
 import kotlin.math.cos

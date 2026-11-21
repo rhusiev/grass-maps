@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.layers.panel
+package nl.r1a.grassmaps.plugins.layers.panel
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

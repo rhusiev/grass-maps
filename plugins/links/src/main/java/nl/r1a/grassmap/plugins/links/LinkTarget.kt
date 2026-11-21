@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugins.links
+package nl.r1a.grassmaps.plugins.links
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.OsmType
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.OsmType
 
 /**
  * Where an external link sends the map (T-0211).

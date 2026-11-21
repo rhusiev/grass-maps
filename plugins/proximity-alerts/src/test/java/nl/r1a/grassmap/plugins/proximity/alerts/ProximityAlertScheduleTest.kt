@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugins.proximity.alerts
+package nl.r1a.grassmaps.plugins.proximity.alerts
 
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.ProximityPlaceKind
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.ProximityPlaceKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

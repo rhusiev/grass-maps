@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.alerts
+package nl.r1a.grassmaps.alerts
 
 import java.io.Closeable
 

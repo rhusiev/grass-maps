@@ -1,12 +1,12 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
-import nl.r1a.grassmap.plugin.api.model.PlaceCard
-import nl.r1a.grassmap.plugin.api.model.PlaceCardEntry
-import nl.r1a.grassmap.plugin.api.model.PlaceCardLink
-import nl.r1a.grassmap.plugin.api.model.PlaceCardShortcut
-import nl.r1a.grassmap.plugin.api.model.PlaceCardValue
-import nl.r1a.grassmap.plugin.api.model.PlaceOpeningState
-import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.api.model.PlaceCard
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardEntry
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardLink
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardShortcut
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardValue
+import nl.r1a.grassmaps.plugin.api.model.PlaceOpeningState
+import nl.r1a.grassmaps.plugin.api.service.Strings
 
 /**
  * One drawn row: the label and the value the active language resolved, plus the

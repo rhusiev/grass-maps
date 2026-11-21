@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.plugins.manager
+package nl.r1a.grassmaps.plugins.manager
 
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.model.PluginInfo
-import nl.r1a.grassmap.plugin.api.model.PluginState
-import nl.r1a.grassmap.plugin.api.model.PluginStatus
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.model.PluginInfo
+import nl.r1a.grassmaps.plugin.api.model.PluginState
+import nl.r1a.grassmaps.plugin.api.model.PluginStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals

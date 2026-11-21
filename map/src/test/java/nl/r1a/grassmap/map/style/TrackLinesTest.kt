@@ -1,10 +1,10 @@
-package nl.r1a.grassmap.map.style
+package nl.r1a.grassmaps.map.style
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.MapTrack
-import nl.r1a.grassmap.plugin.api.model.TrackStyle
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.MapTrack
+import nl.r1a.grassmaps.plugin.api.model.TrackStyle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

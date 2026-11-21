@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.navigation
+package nl.r1a.grassmaps.navigation
 
 /**
  * One row of the navigation auto-zoom table (T-0313).

@@ -1,13 +1,13 @@
-package nl.r1a.grassmap.plugins.style.touring
+package nl.r1a.grassmaps.plugins.style.touring
 
-import nl.r1a.grassmap.plugin.api.model.PaletteStyleDocument
-import nl.r1a.grassmap.plugin.api.model.SlottedLayer
-import nl.r1a.grassmap.plugin.api.model.StyleId
-import nl.r1a.grassmap.plugin.api.model.StyleSpec
-import nl.r1a.grassmap.plugin.api.provider.MapLayerContract
-import nl.r1a.grassmap.plugin.api.provider.MapLayerProvider
-import nl.r1a.grassmap.plugin.api.provider.ProviderContract
-import nl.r1a.grassmap.plugins.style.touring.generated.TouringStyleAsset
+import nl.r1a.grassmaps.plugin.api.model.PaletteStyleDocument
+import nl.r1a.grassmaps.plugin.api.model.SlottedLayer
+import nl.r1a.grassmaps.plugin.api.model.StyleId
+import nl.r1a.grassmaps.plugin.api.model.StyleSpec
+import nl.r1a.grassmaps.plugin.api.provider.MapLayerContract
+import nl.r1a.grassmaps.plugin.api.provider.MapLayerProvider
+import nl.r1a.grassmaps.plugin.api.provider.ProviderContract
+import nl.r1a.grassmaps.plugins.style.touring.generated.TouringStyleAsset
 
 /**
  * Supplies the Touring base style and its layers in a light and a dark variant.

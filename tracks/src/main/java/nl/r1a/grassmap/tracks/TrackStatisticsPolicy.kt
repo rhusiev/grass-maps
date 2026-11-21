@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.tracks
+package nl.r1a.grassmaps.tracks
 
 /**
  * What [TrackAnalyzer] counts as moving time.

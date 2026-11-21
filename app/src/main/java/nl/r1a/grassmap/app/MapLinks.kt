@@ -1,15 +1,15 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.MapHost
-import nl.r1a.grassmap.plugin.api.model.CameraUpdate
-import nl.r1a.grassmap.plugins.links.LinkResult
-import nl.r1a.grassmap.plugins.links.LinkRouter
-import nl.r1a.grassmap.plugins.links.LinkTarget
-import nl.r1a.grassmap.plugins.map.controls.CameraModeController
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.MapHost
+import nl.r1a.grassmaps.plugin.api.model.CameraUpdate
+import nl.r1a.grassmaps.plugins.links.LinkResult
+import nl.r1a.grassmaps.plugins.links.LinkRouter
+import nl.r1a.grassmaps.plugins.links.LinkTarget
+import nl.r1a.grassmaps.plugins.map.controls.CameraModeController
 
 /**
  * Turns a link that another app sent into a camera move (T-0211).

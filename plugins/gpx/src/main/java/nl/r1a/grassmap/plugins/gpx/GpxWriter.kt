@@ -1,15 +1,15 @@
-package nl.r1a.grassmap.plugins.gpx
+package nl.r1a.grassmaps.plugins.gpx
 
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.ImportedEntities
-import nl.r1a.grassmap.plugin.api.model.Track
-import nl.r1a.grassmap.plugin.api.model.TrackPoint
-import nl.r1a.grassmap.plugin.api.model.TrackRoute
-import nl.r1a.grassmap.plugin.api.model.TrackStyle
-import nl.r1a.grassmap.plugin.api.model.TrackWaypoint
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.ImportedEntities
+import nl.r1a.grassmaps.plugin.api.model.Track
+import nl.r1a.grassmaps.plugin.api.model.TrackPoint
+import nl.r1a.grassmaps.plugin.api.model.TrackRoute
+import nl.r1a.grassmaps.plugin.api.model.TrackStyle
+import nl.r1a.grassmaps.plugin.api.model.TrackWaypoint
 import java.math.BigDecimal
 import java.time.Instant
 

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.route.planner
+package nl.r1a.grassmaps.plugins.route.planner
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -6,12 +6,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.serialization.builtins.ListSerializer
-import nl.r1a.grassmap.plugin.api.contract.Plugin
-import nl.r1a.grassmap.plugin.api.contract.PluginContext
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
-import nl.r1a.grassmap.plugin.api.model.RouteHistoryEntry
-import nl.r1a.grassmap.plugin.api.model.RoutePlanState
+import nl.r1a.grassmaps.plugin.api.contract.Plugin
+import nl.r1a.grassmaps.plugin.api.contract.PluginContext
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.StreamDescriptor
+import nl.r1a.grassmaps.plugin.api.model.RouteHistoryEntry
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanState
 
 /**
  * The first-party route planner (T-0302, vias in T-0303, edit history and

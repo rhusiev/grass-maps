@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugin.api.service
+package nl.r1a.grassmaps.plugin.api.service
 
 /**
  * Resolves user-facing text by a resource key.

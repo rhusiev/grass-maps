@@ -1,10 +1,10 @@
-package nl.r1a.grassmap.plugins.profiles.ui
+package nl.r1a.grassmaps.plugins.profiles.ui
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import nl.r1a.grassmap.plugin.api.model.ProfilesState
+import nl.r1a.grassmaps.plugin.api.model.ProfilesState
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.File

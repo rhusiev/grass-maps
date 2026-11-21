@@ -1,13 +1,13 @@
-package nl.r1a.grassmap.plugin.api.testing
+package nl.r1a.grassmaps.plugin.api.testing
 
 import kotlinx.coroutines.yield
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.contract.CursorToken
-import nl.r1a.grassmap.plugin.api.contract.Page
-import nl.r1a.grassmap.plugin.api.contract.PageRequest
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.provider.ProviderContract
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.contract.CursorToken
+import nl.r1a.grassmaps.plugin.api.contract.Page
+import nl.r1a.grassmaps.plugin.api.contract.PageRequest
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.provider.ProviderContract
 
 /**
  * An in-memory [PageSource] used to exercise the contract suite. It checks

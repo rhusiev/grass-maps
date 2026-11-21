@@ -1,12 +1,12 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
-import nl.r1a.grassmap.plugin.api.model.UnitSystem
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugin.api.unit.UnitStrings
-import nl.r1a.grassmap.plugin.api.unit.UnitText
-import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
-import nl.r1a.grassmap.plugin.ui.api.ElevationChartPoint
-import nl.r1a.grassmap.plugin.ui.api.ElevationChartState
+import nl.r1a.grassmaps.plugin.api.model.UnitSystem
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.api.unit.UnitStrings
+import nl.r1a.grassmaps.plugin.api.unit.UnitText
+import nl.r1a.grassmaps.plugin.ui.api.ElevationChartAxis
+import nl.r1a.grassmaps.plugin.ui.api.ElevationChartPoint
+import nl.r1a.grassmaps.plugin.ui.api.ElevationChartState
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

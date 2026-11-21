@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.app.Activity
 import android.app.Application
@@ -10,16 +10,16 @@ import androidx.compose.ui.Modifier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
-import nl.r1a.grassmap.core.services.AndroidLocationSource
-import nl.r1a.grassmap.core.services.MockGpxLocationSource
-import nl.r1a.grassmap.map.DistanceByTapSetting
-import nl.r1a.grassmap.plugin.api.command.Command
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.contract.SwitchId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.service.LocationService
-import nl.r1a.grassmap.plugins.dev.tools.DevToolsContract
+import nl.r1a.grassmaps.core.services.AndroidLocationSource
+import nl.r1a.grassmaps.core.services.MockGpxLocationSource
+import nl.r1a.grassmaps.map.DistanceByTapSetting
+import nl.r1a.grassmaps.plugin.api.command.Command
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.contract.SwitchId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.service.LocationService
+import nl.r1a.grassmaps.plugins.dev.tools.DevToolsContract
 import java.io.IOException
 
 /**

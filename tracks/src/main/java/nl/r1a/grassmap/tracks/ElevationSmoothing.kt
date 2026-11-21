@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.tracks
+package nl.r1a.grassmaps.tracks
 
 /**
  * The height average [TrackAnalyzer] applies before [ElevationFilter] runs.

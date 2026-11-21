@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.profiles.ui
+package nl.r1a.grassmaps.plugins.profiles.ui
 
 /**
  * The page the profiles screen shows (T-0602). The shell holds it, so system

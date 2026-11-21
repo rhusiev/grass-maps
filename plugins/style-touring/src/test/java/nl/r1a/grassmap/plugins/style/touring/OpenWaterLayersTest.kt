@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugins.style.touring
+package nl.r1a.grassmaps.plugins.style.touring
 
 import kotlinx.serialization.json.JsonElement
-import nl.r1a.grassmap.plugin.api.model.StyleId
-import nl.r1a.grassmap.plugin.api.testing.fixture.StyleFilters
+import nl.r1a.grassmaps.plugin.api.model.StyleId
+import nl.r1a.grassmaps.plugin.api.testing.fixture.StyleFilters
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

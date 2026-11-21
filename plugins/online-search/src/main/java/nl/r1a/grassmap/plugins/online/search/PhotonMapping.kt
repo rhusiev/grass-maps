@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.online.search
+package nl.r1a.grassmaps.plugins.online.search
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -7,11 +7,11 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.provider.PlaceHit
-import nl.r1a.grassmap.plugin.api.provider.PlaceSource
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.provider.PlaceHit
+import nl.r1a.grassmaps.plugin.api.provider.PlaceSource
 
 /**
  * Maps a Photon GeoJSON FeatureCollection into the shared [PlaceHit] shape.

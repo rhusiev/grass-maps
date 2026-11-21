@@ -1,17 +1,17 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.alerts.AlertChannel
-import nl.r1a.grassmap.alerts.AlertChannels
-import nl.r1a.grassmap.alerts.AlertKind
-import nl.r1a.grassmap.alerts.AlertSettings
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugin.ui.api.AlertsPageChannel
-import nl.r1a.grassmap.plugin.ui.api.AlertsPageChannels
-import nl.r1a.grassmap.plugin.ui.api.AlertsPageState
-import nl.r1a.grassmap.plugin.ui.api.AlertsPageSwitch
-import nl.r1a.grassmap.plugin.ui.api.AlertsPageSwitches
-import nl.r1a.grassmap.ui.shell.profileLabel
+import nl.r1a.grassmaps.alerts.AlertChannel
+import nl.r1a.grassmaps.alerts.AlertChannels
+import nl.r1a.grassmaps.alerts.AlertKind
+import nl.r1a.grassmaps.alerts.AlertSettings
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.ui.api.AlertsPageChannel
+import nl.r1a.grassmaps.plugin.ui.api.AlertsPageChannels
+import nl.r1a.grassmaps.plugin.ui.api.AlertsPageState
+import nl.r1a.grassmaps.plugin.ui.api.AlertsPageSwitch
+import nl.r1a.grassmaps.plugin.ui.api.AlertsPageSwitches
+import nl.r1a.grassmaps.ui.shell.profileLabel
 
 /**
  * Maps the active profile's stored alert values onto the page's vocabulary

@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "nl.r1a.grassmap.plugins.proximity.alerts"
+    namespace = "nl.r1a.grassmaps.plugins.proximity.alerts"
     compileSdk = 37
 
     defaultConfig {

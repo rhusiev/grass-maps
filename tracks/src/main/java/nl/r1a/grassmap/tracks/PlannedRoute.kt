@@ -1,22 +1,22 @@
-package nl.r1a.grassmap.tracks
+package nl.r1a.grassmaps.tracks
 
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.ImportedEntities
-import nl.r1a.grassmap.plugin.api.model.RoutePlanPoint
-import nl.r1a.grassmap.plugin.api.model.RoutePlanState
-import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
-import nl.r1a.grassmap.plugin.api.model.Track
-import nl.r1a.grassmap.plugin.api.model.TrackKind
-import nl.r1a.grassmap.plugin.api.model.TrackPoint
-import nl.r1a.grassmap.plugin.api.model.TrackRoute
-import nl.r1a.grassmap.plugin.api.model.TrackSegment
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteOptions
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugin.api.provider.RouteRequest
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.ImportedEntities
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanPoint
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanState
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanStatus
+import nl.r1a.grassmaps.plugin.api.model.Track
+import nl.r1a.grassmaps.plugin.api.model.TrackKind
+import nl.r1a.grassmaps.plugin.api.model.TrackPoint
+import nl.r1a.grassmaps.plugin.api.model.TrackRoute
+import nl.r1a.grassmaps.plugin.api.model.TrackSegment
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteOptions
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.provider.RouteRequest
 
 /**
  * A route the user planned and chose to keep (T-0411).

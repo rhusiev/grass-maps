@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugin.api.model
+package nl.r1a.grassmaps.plugin.api.model
 
 /**
  * Where following a track begins (T-0412, design round 6).

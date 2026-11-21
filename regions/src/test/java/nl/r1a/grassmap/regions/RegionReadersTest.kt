@@ -1,15 +1,15 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.NoRegionAccess
-import nl.r1a.grassmap.plugin.api.host.RegionAccess
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.RouteRelations
-import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
-import nl.r1a.grassmap.plugin.api.model.WayAlertHit
-import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.NoRegionAccess
+import nl.r1a.grassmaps.plugin.api.host.RegionAccess
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.RouteRelations
+import nl.r1a.grassmaps.plugin.api.model.WayAlertFeatureKind
+import nl.r1a.grassmaps.plugin.api.model.WayAlertHit
+import nl.r1a.grassmaps.plugin.api.provider.Route
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame

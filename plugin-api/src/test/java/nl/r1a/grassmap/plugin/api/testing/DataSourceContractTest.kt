@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.plugin.api.testing
+package nl.r1a.grassmaps.plugin.api.testing
 
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.provider.CostModifier
-import nl.r1a.grassmap.plugin.api.provider.CostModifierRules
-import nl.r1a.grassmap.plugin.api.provider.DataSourceContract
-import nl.r1a.grassmap.plugin.api.provider.TravelDirection
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.provider.CostModifier
+import nl.r1a.grassmaps.plugin.api.provider.CostModifierRules
+import nl.r1a.grassmaps.plugin.api.provider.DataSourceContract
+import nl.r1a.grassmaps.plugin.api.provider.TravelDirection
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

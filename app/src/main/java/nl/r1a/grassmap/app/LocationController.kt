@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
@@ -6,10 +6,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
-import nl.r1a.grassmap.core.services.LocationSource
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugins.map.controls.CameraMode
-import nl.r1a.grassmap.plugins.map.controls.CameraModeController
+import nl.r1a.grassmaps.core.services.LocationSource
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugins.map.controls.CameraMode
+import nl.r1a.grassmaps.plugins.map.controls.CameraModeController
 
 /**
  * The activity-scoped collector for the active [LocationSource].

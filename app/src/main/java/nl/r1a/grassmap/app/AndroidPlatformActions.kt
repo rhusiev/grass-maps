@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.content.ActivityNotFoundException
 import android.content.ClipData
@@ -10,11 +10,11 @@ import androidx.core.content.FileProvider
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.DocumentSaveResult
-import nl.r1a.grassmap.plugin.api.host.PlatformActions
-import nl.r1a.grassmap.plugin.api.host.PlatformFile
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.DocumentSaveResult
+import nl.r1a.grassmaps.plugin.api.host.PlatformActions
+import nl.r1a.grassmaps.plugin.api.host.PlatformFile
 import java.io.File
 import java.io.IOException
 import java.util.Locale

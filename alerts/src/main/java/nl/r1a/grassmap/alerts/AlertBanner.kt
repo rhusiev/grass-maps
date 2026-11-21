@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.alerts
+package nl.r1a.grassmaps.alerts
 
 import kotlinx.serialization.Serializable
-import nl.r1a.grassmap.plugin.api.model.WayAlertFeatureKind
+import nl.r1a.grassmaps.plugin.api.model.WayAlertFeatureKind
 
 /**
  * What a screen draws for one alert. It carries no text: the screen resolves

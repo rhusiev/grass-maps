@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.DocumentSaveResult
-import nl.r1a.grassmap.plugin.api.host.PlatformActions
-import nl.r1a.grassmap.plugin.api.host.PlatformFile
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.DocumentSaveResult
+import nl.r1a.grassmaps.plugin.api.host.PlatformActions
+import nl.r1a.grassmaps.plugin.api.host.PlatformFile
 
 /**
  * The `PlatformActions` fake the export tests record through, so no test starts

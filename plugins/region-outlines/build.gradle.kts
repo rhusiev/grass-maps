@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "nl.r1a.grassmap.plugins.region.outlines"
+    namespace = "nl.r1a.grassmaps.plugins.region.outlines"
     compileSdk = 37
 
     defaultConfig {

@@ -1,15 +1,15 @@
-package nl.r1a.grassmap.core.services
+package nl.r1a.grassmaps.core.services
 
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.error.flatMap
-import nl.r1a.grassmap.plugin.api.host.ProfileSettingsAccess
-import nl.r1a.grassmap.plugin.api.model.ProfileAction
-import nl.r1a.grassmap.plugin.api.model.ProfileActionKind
-import nl.r1a.grassmap.plugin.api.model.ProfileId
-import nl.r1a.grassmap.plugin.api.model.ProfileSummary
-import nl.r1a.grassmap.plugin.api.model.ProfilesState
-import nl.r1a.grassmap.plugin.api.service.ProfileSettingsGroup
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.error.flatMap
+import nl.r1a.grassmaps.plugin.api.host.ProfileSettingsAccess
+import nl.r1a.grassmaps.plugin.api.model.ProfileAction
+import nl.r1a.grassmaps.plugin.api.model.ProfileActionKind
+import nl.r1a.grassmaps.plugin.api.model.ProfileId
+import nl.r1a.grassmaps.plugin.api.model.ProfileSummary
+import nl.r1a.grassmaps.plugin.api.model.ProfilesState
+import nl.r1a.grassmaps.plugin.api.service.ProfileSettingsGroup
 
 /**
  * Creates, copies and resets profiles (T-0602) over the [ProfileCatalog] and

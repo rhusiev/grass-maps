@@ -1,13 +1,13 @@
-package nl.r1a.grassmap.core.services
+package nl.r1a.grassmaps.core.services
 
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.error.map
-import nl.r1a.grassmap.plugin.api.model.BuiltInProfiles
-import nl.r1a.grassmap.plugin.api.model.ProfileId
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugin.api.service.ProfileValueStore
-import nl.r1a.grassmap.plugin.api.service.ProfileValues
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.error.map
+import nl.r1a.grassmaps.plugin.api.model.BuiltInProfiles
+import nl.r1a.grassmaps.plugin.api.model.ProfileId
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.service.ProfileValueStore
+import nl.r1a.grassmaps.plugin.api.service.ProfileValues
 
 /**
  * One profile of the catalog. [routeProfile] is the route profile it carries

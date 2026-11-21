@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugins.manager
+package nl.r1a.grassmaps.plugins.manager
 
-import nl.r1a.grassmap.plugin.api.model.PluginState
-import nl.r1a.grassmap.plugin.api.model.PluginStatus
+import nl.r1a.grassmaps.plugin.api.model.PluginState
+import nl.r1a.grassmaps.plugin.api.model.PluginStatus
 
 /** What a row says about a plugin, from the user's side. */
 enum class PluginHealth {

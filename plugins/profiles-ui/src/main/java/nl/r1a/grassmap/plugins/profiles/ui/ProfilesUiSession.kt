@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.plugins.profiles.ui
+package nl.r1a.grassmaps.plugins.profiles.ui
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.ProfileSettingsAccess
-import nl.r1a.grassmap.plugin.api.model.ProfilesState
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.ProfileSettingsAccess
+import nl.r1a.grassmaps.plugin.api.model.ProfilesState
 
 /**
  * The profiles screen's state and actions inside `plugins/profiles-ui`

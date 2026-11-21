@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app.devcheck
+package nl.r1a.grassmaps.app.devcheck
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -6,11 +6,11 @@ import android.net.NetworkCapabilities
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonPrimitive
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.CatalogRegion
-import nl.r1a.grassmap.plugin.api.model.CatalogRegionKind
-import nl.r1a.grassmap.plugin.api.model.DownloadsData
-import nl.r1a.grassmap.regions.RegionStore
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.CatalogRegion
+import nl.r1a.grassmaps.plugin.api.model.CatalogRegionKind
+import nl.r1a.grassmaps.plugin.api.model.DownloadsData
+import nl.r1a.grassmaps.regions.RegionStore
 
 private const val DOWNLOAD_TIMEOUT_MS = 10 * 60 * 1000L
 private const val POLL_INTERVAL_MS = 500L

@@ -1,6 +1,6 @@
 @file:Suppress("ktlint:standard:function-naming")
 
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,19 +45,19 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugin.ui.api.NavigationAlertGlyph
-import nl.r1a.grassmap.plugin.ui.api.NavigationAlertSwitches
-import nl.r1a.grassmap.plugin.ui.api.NavigationAlertTone
-import nl.r1a.grassmap.plugin.ui.api.NavigationCameraSwitches
-import nl.r1a.grassmap.plugin.ui.api.NavigationReadout
-import nl.r1a.grassmap.plugin.ui.api.NavigationScreenAlert
-import nl.r1a.grassmap.plugin.ui.api.NavigationScreenColors
-import nl.r1a.grassmap.plugin.ui.api.NavigationScreenState
-import nl.r1a.grassmap.plugin.ui.api.NavigationScreenStatus
-import nl.r1a.grassmap.plugin.ui.api.NavigationTripSummary
-import nl.r1a.grassmap.plugin.ui.api.ShellColors
-import nl.r1a.grassmap.plugin.ui.api.shellColors
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.ui.api.NavigationAlertGlyph
+import nl.r1a.grassmaps.plugin.ui.api.NavigationAlertSwitches
+import nl.r1a.grassmaps.plugin.ui.api.NavigationAlertTone
+import nl.r1a.grassmaps.plugin.ui.api.NavigationCameraSwitches
+import nl.r1a.grassmaps.plugin.ui.api.NavigationReadout
+import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenAlert
+import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenColors
+import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenState
+import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenStatus
+import nl.r1a.grassmaps.plugin.ui.api.NavigationTripSummary
+import nl.r1a.grassmaps.plugin.ui.api.ShellColors
+import nl.r1a.grassmaps.plugin.ui.api.shellColors
 
 private const val SCREEN_EDGE_DP = 10
 private const val BAR_EDGE_DP = 12

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.core.services
+package nl.r1a.grassmaps.core.services
 
 /** The profile id type moved to `plugin-api` so a feature module can key by it; this name keeps old imports valid. */
 typealias ProfileId = nl.r1a.grassmap.plugin.api.model.ProfileId

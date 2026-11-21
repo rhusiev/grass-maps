@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugins.layers.panel
+package nl.r1a.grassmaps.plugins.layers.panel
 
-import nl.r1a.grassmap.plugin.api.contract.Plugin
-import nl.r1a.grassmap.plugin.api.contract.PluginContext
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.contract.Plugin
+import nl.r1a.grassmaps.plugin.api.contract.PluginContext
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 
 /**
  * The layers panel plugin (T-0109): the Layers button and the card that

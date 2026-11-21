@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugin.api.contract
+package nl.r1a.grassmaps.plugin.api.contract
 
 /**
  * An opaque continuation token returned by a paged query.

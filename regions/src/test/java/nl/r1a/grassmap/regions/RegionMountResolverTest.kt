@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray

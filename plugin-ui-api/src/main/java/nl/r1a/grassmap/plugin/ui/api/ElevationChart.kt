@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugin.ui.api
+package nl.r1a.grassmaps.plugin.ui.api
 
 /*
  * The elevation chart's vocabulary (T-0404).

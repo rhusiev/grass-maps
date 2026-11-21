@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "nl.r1a.grassmap.plugins.favourites.ui"
+    namespace = "nl.r1a.grassmaps.plugins.favourites.ui"
     compileSdk = 37
 
     defaultConfig {

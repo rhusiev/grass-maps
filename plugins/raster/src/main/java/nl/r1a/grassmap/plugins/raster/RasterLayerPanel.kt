@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.raster
+package nl.r1a.grassmaps.plugins.raster
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -40,7 +40,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import kotlin.math.roundToInt
 
 internal val PANEL_BACKGROUND: Color

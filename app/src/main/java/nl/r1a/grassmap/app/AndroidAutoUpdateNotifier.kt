@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -7,8 +7,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import nl.r1a.grassmap.regions.AutoUpdateNotice
-import nl.r1a.grassmap.regions.AutoUpdateNotifier
+import nl.r1a.grassmaps.regions.AutoUpdateNotice
+import nl.r1a.grassmaps.regions.AutoUpdateNotifier
 
 /**
  * Posts the notice for the monthly map update (T-0508). The text says whether

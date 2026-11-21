@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.tracks
+package nl.r1a.grassmaps.tracks
 
 /**
  * The statistics of one track: its elevation profile, distance and, when the

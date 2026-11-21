@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "nl.r1a.grassmap.plugins.osm.places"
+    namespace = "nl.r1a.grassmaps.plugins.osm.places"
     compileSdk = 37
 
     defaultConfig {

@@ -1,12 +1,12 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugins.route.warnings.RouteWarning
-import nl.r1a.grassmap.plugins.route.warnings.RouteWarningKind
-import nl.r1a.grassmap.ui.shell.RouteWarningGlyph
-import nl.r1a.grassmap.ui.shell.RouteWarningRow
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugins.route.warnings.RouteWarning
+import nl.r1a.grassmaps.plugins.route.warnings.RouteWarningKind
+import nl.r1a.grassmaps.ui.shell.RouteWarningGlyph
+import nl.r1a.grassmaps.ui.shell.RouteWarningRow
 
 /** The panel's pictogram for one scanner kind (T-0409). */
 internal fun RouteWarningKind.glyph(): RouteWarningGlyph =

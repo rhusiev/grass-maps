@@ -18,7 +18,7 @@ val rust =
     )
 
 android {
-    namespace = "nl.r1a.grassmap.regions"
+    namespace = "nl.r1a.grassmaps.regions"
     compileSdk = 37
     ndkVersion = RustNative.NDK_VERSION
 

@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "nl.r1a.grassmap.plugins.layers.panel"
+    namespace = "nl.r1a.grassmaps.plugins.layers.panel"
     compileSdk = 37
 
     defaultConfig {

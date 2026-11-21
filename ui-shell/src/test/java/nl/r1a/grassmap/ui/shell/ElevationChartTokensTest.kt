@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
-import nl.r1a.grassmap.plugin.ui.api.contrastRatio
+import nl.r1a.grassmaps.plugin.ui.api.contrastRatio
 import org.junit.Assert.assertTrue
 import org.junit.Test
 

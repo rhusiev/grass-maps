@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugin.api.contract
+package nl.r1a.grassmaps.plugin.api.contract
 
 import kotlinx.serialization.Serializable
 

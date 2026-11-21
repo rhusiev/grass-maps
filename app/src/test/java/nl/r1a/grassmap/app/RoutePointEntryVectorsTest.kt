@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.model.RoutePointEntry
-import nl.r1a.grassmap.plugin.api.model.routePointEntry
-import nl.r1a.grassmap.plugins.coordinates.Coordinates
+import nl.r1a.grassmaps.plugin.api.model.RoutePointEntry
+import nl.r1a.grassmaps.plugin.api.model.routePointEntry
+import nl.r1a.grassmaps.plugins.coordinates.Coordinates
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

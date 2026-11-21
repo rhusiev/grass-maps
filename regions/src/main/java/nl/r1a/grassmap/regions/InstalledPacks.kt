@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
-import nl.r1a.grassmap.plugin.api.model.CatalogPartKind
-import nl.r1a.grassmap.plugin.api.model.InstalledPack
+import nl.r1a.grassmaps.plugin.api.model.CatalogPartKind
+import nl.r1a.grassmaps.plugin.api.model.InstalledPack
 import java.io.File
 
 /** Describes mounted regions as the downloads screen's installed packs. */

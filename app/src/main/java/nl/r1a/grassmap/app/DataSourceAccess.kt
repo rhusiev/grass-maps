@@ -1,21 +1,21 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import nl.r1a.grassmap.core.ProviderRegistry
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.MapHost
-import nl.r1a.grassmap.plugin.api.model.SlottedLayer
-import nl.r1a.grassmap.plugin.api.provider.AttributePage
-import nl.r1a.grassmap.plugin.api.provider.AttributeRequest
-import nl.r1a.grassmap.plugin.api.provider.CostModifier
-import nl.r1a.grassmap.plugin.api.provider.CostModifierRequest
-import nl.r1a.grassmap.plugin.api.provider.DataSource
-import nl.r1a.grassmap.plugin.api.provider.DataSourceContract
-import nl.r1a.grassmap.plugin.api.provider.DataSourceDescription
+import nl.r1a.grassmaps.core.ProviderRegistry
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.MapHost
+import nl.r1a.grassmaps.plugin.api.model.SlottedLayer
+import nl.r1a.grassmaps.plugin.api.provider.AttributePage
+import nl.r1a.grassmaps.plugin.api.provider.AttributeRequest
+import nl.r1a.grassmaps.plugin.api.provider.CostModifier
+import nl.r1a.grassmaps.plugin.api.provider.CostModifierRequest
+import nl.r1a.grassmaps.plugin.api.provider.DataSource
+import nl.r1a.grassmaps.plugin.api.provider.DataSourceContract
+import nl.r1a.grassmaps.plugin.api.provider.DataSourceDescription
 
 /**
  * The app's handle on the synthetic DataSource. Routing will read cost

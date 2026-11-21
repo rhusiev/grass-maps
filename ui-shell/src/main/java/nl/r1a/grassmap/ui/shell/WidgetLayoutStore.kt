@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.ProfileId
-import nl.r1a.grassmap.plugin.api.service.ProfileValueStore
-import nl.r1a.grassmap.plugin.api.service.ProfileValues
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.ProfileId
+import nl.r1a.grassmaps.plugin.api.service.ProfileValueStore
+import nl.r1a.grassmaps.plugin.api.service.ProfileValues
 
 /**
  * The widget layout of every profile (T-0605), on the per-profile key contract

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -59,14 +59,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import nl.r1a.grassmap.plugin.api.model.RichText
-import nl.r1a.grassmap.plugin.api.model.RichTextStyle
-import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
-import nl.r1a.grassmap.plugin.api.model.TrackSort
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
-import nl.r1a.grassmap.plugin.ui.api.inkOn
-import nl.r1a.grassmap.plugin.ui.api.shellColors
+import nl.r1a.grassmaps.plugin.api.model.RichText
+import nl.r1a.grassmaps.plugin.api.model.RichTextStyle
+import nl.r1a.grassmaps.plugin.api.model.TrackLibraryState
+import nl.r1a.grassmaps.plugin.api.model.TrackSort
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.inkOn
+import nl.r1a.grassmaps.plugin.ui.api.shellColors
 
 /**
  * The track library screen (T-0414). The plugin owns the state, the four fixed

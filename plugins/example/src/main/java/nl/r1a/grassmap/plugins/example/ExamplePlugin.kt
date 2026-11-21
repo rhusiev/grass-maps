@@ -1,12 +1,12 @@
-package nl.r1a.grassmap.plugins.example
+package nl.r1a.grassmaps.plugins.example
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.builtins.serializer
-import nl.r1a.grassmap.plugin.api.contract.Plugin
-import nl.r1a.grassmap.plugin.api.contract.PluginContext
-import nl.r1a.grassmap.plugin.api.contract.StreamId
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
+import nl.r1a.grassmaps.plugin.api.contract.Plugin
+import nl.r1a.grassmaps.plugin.api.contract.PluginContext
+import nl.r1a.grassmaps.plugin.api.contract.StreamId
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.StreamDescriptor
 
 /**
  * The example plugin: one command, one stream and one provider. It depends only

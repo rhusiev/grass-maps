@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugin.api.pmtiles
+package nl.r1a.grassmaps.plugin.api.pmtiles
 
 /** The tile id of the PMTiles v3 Hilbert curve, shared by the writer and the reader. */
 object PmtilesTileId {

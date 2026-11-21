@@ -1,16 +1,16 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.core.ProviderRegistry
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.PlaceCard
-import nl.r1a.grassmap.plugin.api.provider.PlaceCardContract
-import nl.r1a.grassmap.plugin.api.provider.PlaceCardProvider
-import nl.r1a.grassmap.plugin.api.provider.PlaceDetails
-import nl.r1a.grassmap.plugin.api.provider.PlaceHit
-import nl.r1a.grassmap.plugins.share.ShareCard
+import nl.r1a.grassmaps.core.ProviderRegistry
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.PlaceCard
+import nl.r1a.grassmaps.plugin.api.provider.PlaceCardContract
+import nl.r1a.grassmaps.plugin.api.provider.PlaceCardProvider
+import nl.r1a.grassmaps.plugin.api.provider.PlaceDetails
+import nl.r1a.grassmaps.plugin.api.provider.PlaceHit
+import nl.r1a.grassmaps.plugins.share.ShareCard
 
 private val OSM_PLACES = PluginId("osm.places")
 private const val MISSING_CARD_PROVIDER = "places.card"

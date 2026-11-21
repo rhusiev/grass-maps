@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.plugin.api.model
+package nl.r1a.grassmaps.plugin.api.model
 
 import kotlinx.serialization.Serializable
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.manifest.LocationNeed
-import nl.r1a.grassmap.plugin.api.provider.ProviderContract
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.manifest.LocationNeed
+import nl.r1a.grassmaps.plugin.api.provider.ProviderContract
 
 enum class PluginState {
     DECLARED,

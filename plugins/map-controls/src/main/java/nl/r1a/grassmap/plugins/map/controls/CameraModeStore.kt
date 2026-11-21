@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.map.controls
+package nl.r1a.grassmaps.plugins.map.controls
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

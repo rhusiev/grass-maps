@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.osm.places
+package nl.r1a.grassmaps.plugins.osm.places
 
 /**
  * The i18n keys the card rows and typed values name.

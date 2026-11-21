@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.contours
+package nl.r1a.grassmaps.plugins.contours
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,7 +19,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 
 private val PANEL_BACKGROUND: Color
     @Composable @ReadOnlyComposable

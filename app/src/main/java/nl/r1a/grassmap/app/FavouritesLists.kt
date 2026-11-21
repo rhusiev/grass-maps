@@ -1,20 +1,20 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.places.FavouriteId
-import nl.r1a.grassmap.places.FavouriteMutation
-import nl.r1a.grassmap.places.FavouriteUndo
-import nl.r1a.grassmap.places.FavouriteUndoToken
-import nl.r1a.grassmap.places.FavouritesSnapshot
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.FavouriteListChange
-import nl.r1a.grassmap.plugin.api.host.FavouriteListUndo
-import nl.r1a.grassmap.plugin.api.host.FavouritesListsAccess
-import nl.r1a.grassmap.plugin.api.model.FavouriteListSummary
-import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
-import nl.r1a.grassmap.plugin.api.model.FavouritePointSummary
-import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.places.FavouriteSpecial as StoredSpecial
+import nl.r1a.grassmaps.places.FavouriteId
+import nl.r1a.grassmaps.places.FavouriteMutation
+import nl.r1a.grassmaps.places.FavouriteUndo
+import nl.r1a.grassmaps.places.FavouriteUndoToken
+import nl.r1a.grassmaps.places.FavouritesSnapshot
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.FavouriteListChange
+import nl.r1a.grassmaps.plugin.api.host.FavouriteListUndo
+import nl.r1a.grassmaps.plugin.api.host.FavouritesListsAccess
+import nl.r1a.grassmaps.plugin.api.model.FavouriteListSummary
+import nl.r1a.grassmaps.plugin.api.model.FavouriteListsState
+import nl.r1a.grassmaps.plugin.api.model.FavouritePointSummary
+import nl.r1a.grassmaps.plugin.api.model.FavouriteSpecial
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.places.FavouriteSpecial as StoredSpecial
 
 /**
  * The host side of `plugins/favourites-ui` (T-0213).

@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.plugins.point.info
+package nl.r1a.grassmaps.plugins.point.info
 
-import nl.r1a.grassmap.plugin.api.contract.StreamId
-import nl.r1a.grassmap.plugin.api.contract.WidgetId
-import nl.r1a.grassmap.plugin.api.widget.WidgetCadence
-import nl.r1a.grassmap.plugin.api.widget.WidgetDescriptor
+import nl.r1a.grassmaps.plugin.api.contract.StreamId
+import nl.r1a.grassmaps.plugin.api.contract.WidgetId
+import nl.r1a.grassmaps.plugin.api.widget.WidgetCadence
+import nl.r1a.grassmaps.plugin.api.widget.WidgetDescriptor
 
 /**
  * The ids, titles and value types the plugin declares in `plugin.json`.

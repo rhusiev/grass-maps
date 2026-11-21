@@ -1,19 +1,19 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.util.Log
 import kotlinx.coroutines.flow.filterNotNull
-import nl.r1a.grassmap.core.services.MockGpxLocationSource
-import nl.r1a.grassmap.navigation.FerrostarRouteFollower
-import nl.r1a.grassmap.navigation.NavigationConfig
-import nl.r1a.grassmap.navigation.NavigationSession
-import nl.r1a.grassmap.navigation.RerouteEvent
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugin.api.provider.RouteRequest
-import nl.r1a.grassmap.plugin.api.provider.RoutingEngine
+import nl.r1a.grassmaps.core.services.MockGpxLocationSource
+import nl.r1a.grassmaps.navigation.FerrostarRouteFollower
+import nl.r1a.grassmaps.navigation.NavigationConfig
+import nl.r1a.grassmaps.navigation.NavigationSession
+import nl.r1a.grassmaps.navigation.RerouteEvent
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.provider.RouteRequest
+import nl.r1a.grassmaps.plugin.api.provider.RoutingEngine
 
 /**
  * One profile's route-planning measurements. [coldMillis] is null for a profile

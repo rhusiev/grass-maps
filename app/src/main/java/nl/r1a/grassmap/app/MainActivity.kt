@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.Manifest
 import android.app.Activity
@@ -18,9 +18,9 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import nl.r1a.grassmap.navigation.NavigationPhase
-import nl.r1a.grassmap.plugins.links.LinkResult
-import nl.r1a.grassmap.plugins.links.LinkTarget
+import nl.r1a.grassmaps.navigation.NavigationPhase
+import nl.r1a.grassmaps.plugins.links.LinkResult
+import nl.r1a.grassmaps.plugins.links.LinkTarget
 
 /**
  * The single activity. It composes the map surface from the process-scoped

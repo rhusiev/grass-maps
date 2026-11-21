@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugins.coordinates
+package nl.r1a.grassmaps.plugins.coordinates
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.provider.CoordinateParser
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.provider.CoordinateParser
 import kotlin.math.abs
 import kotlin.math.floor
 

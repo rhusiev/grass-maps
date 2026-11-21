@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.downloads.ui
+package nl.r1a.grassmaps.plugins.downloads.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,19 +41,19 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import nl.r1a.grassmap.plugin.api.model.CatalogPartKind
-import nl.r1a.grassmap.plugin.api.model.DownloadPartRow
-import nl.r1a.grassmap.plugin.api.model.DownloadProblem
-import nl.r1a.grassmap.plugin.api.model.DownloadProblemKind
-import nl.r1a.grassmap.plugin.api.model.DownloadRow
-import nl.r1a.grassmap.plugin.api.model.DownloadRowStatus
-import nl.r1a.grassmap.plugin.api.model.DownloadTransfer
-import nl.r1a.grassmap.plugin.api.model.DownloadTransferState
-import nl.r1a.grassmap.plugin.api.model.DownloadsState
-import nl.r1a.grassmap.plugin.api.model.FirstRunOffer
-import nl.r1a.grassmap.plugin.api.model.FirstRunOfferKind
-import nl.r1a.grassmap.plugin.api.model.MobileDataPolicy
-import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.api.model.CatalogPartKind
+import nl.r1a.grassmaps.plugin.api.model.DownloadPartRow
+import nl.r1a.grassmaps.plugin.api.model.DownloadProblem
+import nl.r1a.grassmaps.plugin.api.model.DownloadProblemKind
+import nl.r1a.grassmaps.plugin.api.model.DownloadRow
+import nl.r1a.grassmaps.plugin.api.model.DownloadRowStatus
+import nl.r1a.grassmaps.plugin.api.model.DownloadTransfer
+import nl.r1a.grassmaps.plugin.api.model.DownloadTransferState
+import nl.r1a.grassmaps.plugin.api.model.DownloadsState
+import nl.r1a.grassmaps.plugin.api.model.FirstRunOffer
+import nl.r1a.grassmaps.plugin.api.model.FirstRunOfferKind
+import nl.r1a.grassmaps.plugin.api.model.MobileDataPolicy
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 
 private val SURFACE: Color
     @Composable get() = LocalShellColors.current.map

@@ -16,7 +16,7 @@ val generateStyleAsset =
     }
 
 android {
-    namespace = "nl.r1a.grassmap.plugins.style.standard"
+    namespace = "nl.r1a.grassmaps.plugins.style.standard"
     compileSdk = 37
 
     defaultConfig {

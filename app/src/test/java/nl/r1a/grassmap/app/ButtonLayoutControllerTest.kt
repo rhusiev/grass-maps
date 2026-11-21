@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -7,11 +7,11 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import nl.r1a.grassmap.core.services.ButtonLayoutStore
-import nl.r1a.grassmap.core.services.MapButtonLayout
-import nl.r1a.grassmap.core.services.MapControlCommands
-import nl.r1a.grassmap.core.services.QuickAccessButton
-import nl.r1a.grassmap.plugin.api.model.ProfileId
+import nl.r1a.grassmaps.core.services.ButtonLayoutStore
+import nl.r1a.grassmaps.core.services.MapButtonLayout
+import nl.r1a.grassmaps.core.services.MapControlCommands
+import nl.r1a.grassmaps.core.services.QuickAccessButton
+import nl.r1a.grassmaps.plugin.api.model.ProfileId
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

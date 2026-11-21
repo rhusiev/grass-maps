@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.routing
+package nl.r1a.grassmaps.routing
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -7,15 +7,15 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.RegionDownloadsAccess
-import nl.r1a.grassmap.plugin.api.host.RoutingPackAccess
-import nl.r1a.grassmap.plugin.api.model.DownloadProblem
-import nl.r1a.grassmap.plugin.api.model.DownloadProblemKind
-import nl.r1a.grassmap.plugin.api.model.DownloadsData
-import nl.r1a.grassmap.plugin.api.model.MissingRegions
-import nl.r1a.grassmap.plugin.api.model.MissingRegionsDownload
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.RegionDownloadsAccess
+import nl.r1a.grassmaps.plugin.api.host.RoutingPackAccess
+import nl.r1a.grassmaps.plugin.api.model.DownloadProblem
+import nl.r1a.grassmaps.plugin.api.model.DownloadProblemKind
+import nl.r1a.grassmaps.plugin.api.model.DownloadsData
+import nl.r1a.grassmaps.plugin.api.model.MissingRegions
+import nl.r1a.grassmaps.plugin.api.model.MissingRegionsDownload
 
 /** How "Download and route" ended before the route was asked for. */
 sealed interface MissingDownloadResult {

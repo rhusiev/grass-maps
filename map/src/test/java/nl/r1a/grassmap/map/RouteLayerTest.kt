@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.map
+package nl.r1a.grassmaps.map
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -6,15 +6,15 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.jsonObject
-import nl.r1a.grassmap.map.style.toFeatureCollection
-import nl.r1a.grassmap.map.style.toPointFeatureCollection
-import nl.r1a.grassmap.plugin.api.model.Camera
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.RouteLineRun
-import nl.r1a.grassmap.plugin.api.model.RouteLineStyle
-import nl.r1a.grassmap.plugin.api.model.StyleId
-import nl.r1a.grassmap.plugin.api.model.StyleSpec
-import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmaps.map.style.toFeatureCollection
+import nl.r1a.grassmaps.map.style.toPointFeatureCollection
+import nl.r1a.grassmaps.plugin.api.model.Camera
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.RouteLineRun
+import nl.r1a.grassmaps.plugin.api.model.RouteLineStyle
+import nl.r1a.grassmaps.plugin.api.model.StyleId
+import nl.r1a.grassmaps.plugin.api.model.StyleSpec
+import nl.r1a.grassmaps.plugin.api.provider.Route
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

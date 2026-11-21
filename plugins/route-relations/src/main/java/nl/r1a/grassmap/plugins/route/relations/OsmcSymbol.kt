@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.route.relations
+package nl.r1a.grassmaps.plugins.route.relations
 
 /** One sprite glyph and the colour its SDF sheet is tinted with. */
 data class OsmcIcon(

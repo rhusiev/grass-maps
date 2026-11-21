@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app.devcheck
+package nl.r1a.grassmaps.app.devcheck
 
 import android.app.Application
 import android.content.res.Configuration
@@ -8,14 +8,14 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import nl.r1a.grassmap.app.AppContainer
-import nl.r1a.grassmap.app.DebugControl
-import nl.r1a.grassmap.devtools.AndroidWindowCapture
-import nl.r1a.grassmap.map.MaplibreComposeMapHost
-import nl.r1a.grassmap.plugin.api.contract.CommandId
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.CatalogRegion
-import nl.r1a.grassmap.plugin.api.model.RoutePlanOption
+import nl.r1a.grassmaps.app.AppContainer
+import nl.r1a.grassmaps.app.DebugControl
+import nl.r1a.grassmaps.devtools.AndroidWindowCapture
+import nl.r1a.grassmaps.map.MaplibreComposeMapHost
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.CatalogRegion
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanOption
 
 private const val RELOAD_TIMEOUT_MS = 15_000L
 private const val RELOAD_POLL_MS = 100L

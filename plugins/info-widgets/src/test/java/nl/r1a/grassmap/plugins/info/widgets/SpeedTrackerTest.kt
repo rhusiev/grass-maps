@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.info.widgets
+package nl.r1a.grassmaps.plugins.info.widgets
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

@@ -1,12 +1,12 @@
-package nl.r1a.grassmap.plugins.route.layer
+package nl.r1a.grassmaps.plugins.route.layer
 
-import nl.r1a.grassmap.plugin.api.model.AttributeValue
-import nl.r1a.grassmap.plugin.api.model.RouteLinePattern
-import nl.r1a.grassmap.plugin.api.model.RouteLineRun
-import nl.r1a.grassmap.plugin.api.model.RouteLineStyle
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.provider.RouteAttributes
-import nl.r1a.grassmap.plugin.api.provider.RouteSegment
+import nl.r1a.grassmaps.plugin.api.model.AttributeValue
+import nl.r1a.grassmaps.plugin.api.model.RouteLinePattern
+import nl.r1a.grassmaps.plugin.api.model.RouteLineRun
+import nl.r1a.grassmaps.plugin.api.model.RouteLineStyle
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.provider.RouteAttributes
+import nl.r1a.grassmaps.plugin.api.provider.RouteSegment
 
 /**
  * The route line's colour and pattern decision (T-0408).

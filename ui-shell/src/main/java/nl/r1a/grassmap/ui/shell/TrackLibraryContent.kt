@@ -1,15 +1,15 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
-import nl.r1a.grassmap.plugin.api.model.RichText
-import nl.r1a.grassmap.plugin.api.model.RichTextStyle
-import nl.r1a.grassmap.plugin.api.model.TrackKind
-import nl.r1a.grassmap.plugin.api.model.TrackLibraryAction
-import nl.r1a.grassmap.plugin.api.model.TrackLibraryRow
-import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
-import nl.r1a.grassmap.plugin.api.model.TrackSort
-import nl.r1a.grassmap.plugin.api.model.UnitSystem
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugin.api.unit.UnitText
+import nl.r1a.grassmaps.plugin.api.model.RichText
+import nl.r1a.grassmaps.plugin.api.model.RichTextStyle
+import nl.r1a.grassmaps.plugin.api.model.TrackKind
+import nl.r1a.grassmaps.plugin.api.model.TrackLibraryAction
+import nl.r1a.grassmaps.plugin.api.model.TrackLibraryRow
+import nl.r1a.grassmaps.plugin.api.model.TrackLibraryState
+import nl.r1a.grassmaps.plugin.api.model.TrackSort
+import nl.r1a.grassmaps.plugin.api.model.UnitSystem
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.api.unit.UnitText
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

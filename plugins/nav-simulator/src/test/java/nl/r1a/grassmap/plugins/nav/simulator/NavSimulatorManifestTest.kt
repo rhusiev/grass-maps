@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.nav.simulator
+package nl.r1a.grassmaps.plugins.nav.simulator
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.boolean

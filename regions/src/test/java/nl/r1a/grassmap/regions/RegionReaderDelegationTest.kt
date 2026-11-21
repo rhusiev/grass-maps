@@ -1,17 +1,17 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.WayAlertHit
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
-import nl.r1a.grassmap.regions.core.LatLon
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.WayAlertHit
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.testing.fixture.TestRegions
+import nl.r1a.grassmaps.regions.core.LatLon
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.File
 import java.nio.file.Files
-import nl.r1a.grassmap.regions.core.RegionReader as NativeRegionReader
+import nl.r1a.grassmaps.regions.core.RegionReader as NativeRegionReader
 
 /**
  * The uniffi boundary itself (T-0321). The reader's own tests go through

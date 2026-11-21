@@ -1,15 +1,15 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
-import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
-import nl.r1a.grassmap.plugins.route.warnings.RouteWarning
-import nl.r1a.grassmap.plugins.route.warnings.RouteWarningScanner
-import nl.r1a.grassmap.regions.RegionReader
-import nl.r1a.grassmap.ui.shell.RouteWarningGlyph
-import nl.r1a.grassmap.ui.shell.RouteWarningRow
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.testing.fixture.TestRegions
+import nl.r1a.grassmaps.plugins.route.warnings.RouteWarning
+import nl.r1a.grassmaps.plugins.route.warnings.RouteWarningScanner
+import nl.r1a.grassmaps.regions.RegionReader
+import nl.r1a.grassmaps.ui.shell.RouteWarningGlyph
+import nl.r1a.grassmaps.ui.shell.RouteWarningRow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

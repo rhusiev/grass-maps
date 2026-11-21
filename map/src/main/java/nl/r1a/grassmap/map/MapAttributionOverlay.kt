@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.map
+package nl.r1a.grassmaps.map
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,9 +22,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import nl.r1a.grassmap.plugin.api.model.MapCredits
-import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
-import nl.r1a.grassmap.plugin.ui.api.ShellColors
+import nl.r1a.grassmaps.plugin.api.model.MapCredits
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.ShellColors
 import org.maplibre.compose.map.MapStyleState
 import org.maplibre.compose.overlay.AttributionLinks
 import org.maplibre.compose.overlay.attributions

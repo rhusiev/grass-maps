@@ -1,13 +1,13 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withTimeoutOrNull
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.error.map
-import nl.r1a.grassmap.plugin.api.host.DocumentSaveResult
-import nl.r1a.grassmap.plugin.api.host.PlatformFile
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.error.map
+import nl.r1a.grassmaps.plugin.api.host.DocumentSaveResult
+import nl.r1a.grassmaps.plugin.api.host.PlatformFile
 
 /** Writes [file] to the document URI the user chose. */
 fun interface DocumentWriter {

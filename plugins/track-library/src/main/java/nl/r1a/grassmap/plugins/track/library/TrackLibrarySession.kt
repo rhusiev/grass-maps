@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.track.library
+package nl.r1a.grassmaps.plugins.track.library
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -7,13 +7,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.TrackLibraryAccess
-import nl.r1a.grassmap.plugin.api.host.TrackLibraryChange
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.TrackLibraryAction
-import nl.r1a.grassmap.plugin.api.model.TrackLibraryState
-import nl.r1a.grassmap.plugin.api.model.TrackSort
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.TrackLibraryAccess
+import nl.r1a.grassmaps.plugin.api.host.TrackLibraryChange
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.TrackLibraryAction
+import nl.r1a.grassmaps.plugin.api.model.TrackLibraryState
+import nl.r1a.grassmaps.plugin.api.model.TrackSort
 
 /**
  * The library state and its actions inside `plugins/track-library` (T-0414).

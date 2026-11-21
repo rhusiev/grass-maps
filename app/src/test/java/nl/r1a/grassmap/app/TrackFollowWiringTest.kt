@@ -1,14 +1,14 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.Track
-import nl.r1a.grassmap.plugin.api.model.TrackFollowStart
-import nl.r1a.grassmap.plugin.api.model.TrackPoint
-import nl.r1a.grassmap.plugin.api.model.TrackSegment
-import nl.r1a.grassmap.tracks.StoredTrack
-import nl.r1a.grassmap.tracks.TrackAnalyzer
-import nl.r1a.grassmap.tracks.TrackId
-import nl.r1a.grassmap.tracks.distanceMeters
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.Track
+import nl.r1a.grassmaps.plugin.api.model.TrackFollowStart
+import nl.r1a.grassmaps.plugin.api.model.TrackPoint
+import nl.r1a.grassmaps.plugin.api.model.TrackSegment
+import nl.r1a.grassmaps.tracks.StoredTrack
+import nl.r1a.grassmaps.tracks.TrackAnalyzer
+import nl.r1a.grassmaps.tracks.TrackId
+import nl.r1a.grassmaps.tracks.distanceMeters
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull

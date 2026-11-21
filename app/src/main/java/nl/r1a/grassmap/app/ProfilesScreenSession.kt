@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import nl.r1a.grassmap.plugins.profiles.ui.ProfilesPage
+import nl.r1a.grassmaps.plugins.profiles.ui.ProfilesPage
 
 /**
  * The page of the profiles screen over the map, or null when it is closed

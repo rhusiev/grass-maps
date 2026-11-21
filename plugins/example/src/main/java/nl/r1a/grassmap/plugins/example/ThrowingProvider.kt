@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugins.example
+package nl.r1a.grassmaps.plugins.example
 
-import nl.r1a.grassmap.plugin.api.provider.Provider
-import nl.r1a.grassmap.plugin.api.provider.ProviderContract
+import nl.r1a.grassmaps.plugin.api.provider.Provider
+import nl.r1a.grassmaps.plugin.api.provider.ProviderContract
 
 /**
  * A provider that throws on demand. It exists to prove that the host isolates

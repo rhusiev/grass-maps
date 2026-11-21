@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app.devcheck
+package nl.r1a.grassmaps.app.devcheck
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -6,8 +6,8 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
-import nl.r1a.grassmap.app.RENDERED_LABELS_COMMAND
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.app.RENDERED_LABELS_COMMAND
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 
 /** One symbol feature the map draws, as the rendered-label command reports it. */
 internal data class LabelFeature(

@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.plugins.osm.places
+package nl.r1a.grassmaps.plugins.osm.places
 
-import nl.r1a.grassmap.plugin.api.model.PlaceOpeningState
+import nl.r1a.grassmaps.plugin.api.model.PlaceOpeningState
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.Month

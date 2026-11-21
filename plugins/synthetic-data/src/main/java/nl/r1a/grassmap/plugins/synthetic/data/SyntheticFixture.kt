@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.plugins.synthetic.data
+package nl.r1a.grassmaps.plugins.synthetic.data
 
-import nl.r1a.grassmap.plugin.api.model.AttributeValue
-import nl.r1a.grassmap.plugin.api.model.BoundingBox
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.provider.CostModifier
-import nl.r1a.grassmap.plugin.api.provider.TravelDirection
-import nl.r1a.grassmap.plugin.api.provider.WayAttribute
+import nl.r1a.grassmaps.plugin.api.model.AttributeValue
+import nl.r1a.grassmaps.plugin.api.model.BoundingBox
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.provider.CostModifier
+import nl.r1a.grassmaps.plugin.api.provider.TravelDirection
+import nl.r1a.grassmaps.plugin.api.provider.WayAttribute
 
 /**
  * The synthetic T-0023 data set. Every value is authored here, not read from a

@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugins.map.controls
+package nl.r1a.grassmaps.plugins.map.controls
 
-import nl.r1a.grassmap.plugin.api.model.UnitSystem
-import nl.r1a.grassmap.plugin.api.unit.UnitText
+import nl.r1a.grassmaps.plugin.api.model.UnitSystem
+import nl.r1a.grassmaps.plugin.api.unit.UnitText
 
 /** The unit one scale-bar reading is labelled in. */
 enum class ScaleBarUnit {

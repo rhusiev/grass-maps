@@ -1,19 +1,19 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.places.DeletedFavourite
-import nl.r1a.grassmap.places.Favourite
-import nl.r1a.grassmap.places.FavouriteDocument
-import nl.r1a.grassmap.places.FavouriteGroup
-import nl.r1a.grassmap.places.FavouriteId
-import nl.r1a.grassmap.places.FavouriteImport
-import nl.r1a.grassmap.places.FavouriteMutation
-import nl.r1a.grassmap.places.FavouriteSpecial
-import nl.r1a.grassmap.places.FavouriteUndo
-import nl.r1a.grassmap.places.FavouriteUndoToken
-import nl.r1a.grassmap.places.FavouritesSnapshot
-import nl.r1a.grassmap.places.FavouritesStore
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.places.DeletedFavourite
+import nl.r1a.grassmaps.places.Favourite
+import nl.r1a.grassmaps.places.FavouriteDocument
+import nl.r1a.grassmaps.places.FavouriteGroup
+import nl.r1a.grassmaps.places.FavouriteId
+import nl.r1a.grassmaps.places.FavouriteImport
+import nl.r1a.grassmaps.places.FavouriteMutation
+import nl.r1a.grassmaps.places.FavouriteSpecial
+import nl.r1a.grassmaps.places.FavouriteUndo
+import nl.r1a.grassmaps.places.FavouriteUndoToken
+import nl.r1a.grassmaps.places.FavouritesSnapshot
+import nl.r1a.grassmaps.places.FavouritesStore
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 import java.io.File
 
 /**

@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "nl.r1a.grassmap.ui.shell"
+    namespace = "nl.r1a.grassmaps.ui.shell"
     compileSdk = 37
 
     defaultConfig {

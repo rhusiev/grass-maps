@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import nl.r1a.grassmap.tracks.StoredTrack
+import nl.r1a.grassmaps.tracks.StoredTrack
 
 /**
  * The track the analysis panel draws (T-0404).

@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.ProfileSettingsAccess
-import nl.r1a.grassmap.plugin.api.model.ProfilesState
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.ProfileSettingsAccess
+import nl.r1a.grassmaps.plugin.api.model.ProfilesState
 
 /**
  * The profile actions of `plugins/profiles-ui` (T-0602), resolved on first

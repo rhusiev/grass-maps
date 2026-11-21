@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.plugins.links
+package nl.r1a.grassmaps.plugins.links
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

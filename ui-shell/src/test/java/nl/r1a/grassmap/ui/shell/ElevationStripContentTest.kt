@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.ui.graphics.Color
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
-import nl.r1a.grassmap.plugin.ui.api.ElevationChartPoint
-import nl.r1a.grassmap.plugin.ui.api.ElevationChartState
-import nl.r1a.grassmap.plugin.ui.api.ElevationChartStretch
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.ui.api.ElevationChartAxis
+import nl.r1a.grassmaps.plugin.ui.api.ElevationChartPoint
+import nl.r1a.grassmaps.plugin.ui.api.ElevationChartState
+import nl.r1a.grassmaps.plugin.ui.api.ElevationChartStretch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

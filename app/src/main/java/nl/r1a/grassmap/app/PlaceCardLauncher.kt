@@ -1,10 +1,10 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.PlatformActions
-import nl.r1a.grassmap.plugin.api.model.PlaceCardAction
-import nl.r1a.grassmap.plugin.api.model.PlaceCardLink
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.PlatformActions
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardAction
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardLink
 import java.util.Locale
 
 /**

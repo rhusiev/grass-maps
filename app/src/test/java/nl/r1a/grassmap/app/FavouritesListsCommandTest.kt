@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
@@ -9,13 +9,13 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.core.CommandDispatchers
-import nl.r1a.grassmap.plugin.api.contract.CommandId
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
-import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugins.favourites.ui.FavouritesUiContract
+import nl.r1a.grassmaps.core.CommandDispatchers
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.FavouriteListsState
+import nl.r1a.grassmaps.plugin.api.model.FavouriteSpecial
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugins.favourites.ui.FavouritesUiContract
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

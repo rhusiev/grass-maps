@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "nl.r1a.grassmap.plugins.route.planner"
+    namespace = "nl.r1a.grassmaps.plugins.route.planner"
     compileSdk = 37
 
     defaultConfig {

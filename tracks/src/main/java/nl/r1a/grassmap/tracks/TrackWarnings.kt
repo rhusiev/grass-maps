@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.tracks
+package nl.r1a.grassmaps.tracks
 
-import nl.r1a.grassmap.plugin.api.model.ImportWarning
-import nl.r1a.grassmap.plugin.api.model.ImportWarningCode
+import nl.r1a.grassmaps.plugin.api.model.ImportWarning
+import nl.r1a.grassmaps.plugin.api.model.ImportWarningCode
 
 /**
  * A stable English diagnostic for one skipped part of a document, in the form

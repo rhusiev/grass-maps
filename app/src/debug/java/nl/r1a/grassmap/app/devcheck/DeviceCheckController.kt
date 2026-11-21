@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app.devcheck
+package nl.r1a.grassmaps.app.devcheck
 
 import android.app.Application
 import android.content.Intent
@@ -13,9 +13,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import nl.r1a.grassmap.app.AppContainer
-import nl.r1a.grassmap.app.BuildConfig
-import nl.r1a.grassmap.devtools.AndroidWindowCapture
+import nl.r1a.grassmaps.app.AppContainer
+import nl.r1a.grassmaps.app.BuildConfig
+import nl.r1a.grassmaps.devtools.AndroidWindowCapture
 import java.io.File
 import java.time.Instant
 

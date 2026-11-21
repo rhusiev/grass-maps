@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import nl.r1a.grassmap.alerts.AlertBanner
-import nl.r1a.grassmap.navigation.NavigationState
-import nl.r1a.grassmap.ui.shell.NavigationSheet
+import nl.r1a.grassmaps.alerts.AlertBanner
+import nl.r1a.grassmaps.navigation.NavigationState
+import nl.r1a.grassmaps.ui.shell.NavigationSheet
 
 /**
  * One deterministic navigation screen fixture (T-0320).

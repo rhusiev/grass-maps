@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.plugin.api.model
+package nl.r1a.grassmaps.plugin.api.model
 
-import nl.r1a.grassmap.plugin.api.provider.CoordinateParser
+import nl.r1a.grassmaps.plugin.api.provider.CoordinateParser
 
 /**
  * What a coordinate typed into the planner means (T-0304).

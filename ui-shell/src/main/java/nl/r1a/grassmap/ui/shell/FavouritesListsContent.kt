@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
-import nl.r1a.grassmap.plugin.api.model.FavouriteListsState
-import nl.r1a.grassmap.plugin.api.model.FavouriteSort
-import nl.r1a.grassmap.plugin.api.model.FavouriteSpecial
-import nl.r1a.grassmap.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.api.model.FavouriteListsState
+import nl.r1a.grassmaps.plugin.api.model.FavouriteSort
+import nl.r1a.grassmaps.plugin.api.model.FavouriteSpecial
+import nl.r1a.grassmaps.plugin.api.service.Strings
 
 /** One list row: its name, swatch colour, icon and member count. */
 data class FavouritesListRow(

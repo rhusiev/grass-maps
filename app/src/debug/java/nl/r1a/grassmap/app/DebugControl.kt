@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.app.Activity
 import android.app.Application
@@ -9,18 +9,18 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import nl.r1a.grassmap.app.generated.GeneratedPlugins
-import nl.r1a.grassmap.control.ControlEndpoint
-import nl.r1a.grassmap.control.ControlLog
-import nl.r1a.grassmap.control.ControlPeerGate
-import nl.r1a.grassmap.control.ControlServer
-import nl.r1a.grassmap.control.ControlSettings
-import nl.r1a.grassmap.control.ControlTokenFile
-import nl.r1a.grassmap.control.ControlTokens
-import nl.r1a.grassmap.control.GeneratedControlCatalog
-import nl.r1a.grassmap.control.PluginHostControlStreams
-import nl.r1a.grassmap.devtools.AndroidWindowCapture
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.app.generated.GeneratedPlugins
+import nl.r1a.grassmaps.control.ControlEndpoint
+import nl.r1a.grassmaps.control.ControlLog
+import nl.r1a.grassmaps.control.ControlPeerGate
+import nl.r1a.grassmaps.control.ControlServer
+import nl.r1a.grassmaps.control.ControlSettings
+import nl.r1a.grassmaps.control.ControlTokenFile
+import nl.r1a.grassmaps.control.ControlTokens
+import nl.r1a.grassmaps.control.GeneratedControlCatalog
+import nl.r1a.grassmaps.control.PluginHostControlStreams
+import nl.r1a.grassmaps.devtools.AndroidWindowCapture
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 
 /**
  * Starts the debug-only control channel.

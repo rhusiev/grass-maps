@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugins.direct
+package nl.r1a.grassmaps.plugins.direct
 
-import nl.r1a.grassmap.plugin.api.contract.Plugin
-import nl.r1a.grassmap.plugin.api.contract.PluginContext
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.contract.Plugin
+import nl.r1a.grassmaps.plugin.api.contract.PluginContext
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 
 /**
  * The direct routing plugin: a second `routing.engine` provider (T-0305).

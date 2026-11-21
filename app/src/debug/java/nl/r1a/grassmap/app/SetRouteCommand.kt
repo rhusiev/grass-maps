@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonElement
@@ -7,18 +7,18 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
-import nl.r1a.grassmap.plugin.api.command.Command
-import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
-import nl.r1a.grassmap.plugin.api.command.CommandPolicy
-import nl.r1a.grassmap.plugin.api.command.CommandResult
-import nl.r1a.grassmap.plugin.api.contract.CommandId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.provider.Route
-import nl.r1a.grassmap.plugins.route.layer.RouteColourMode
-import nl.r1a.grassmap.plugins.route.layer.RouteLayer
-import nl.r1a.grassmap.plugins.route.layer.RouteLineDrawing
-import nl.r1a.grassmap.routing.RouteJson
+import nl.r1a.grassmaps.plugin.api.command.Command
+import nl.r1a.grassmaps.plugin.api.command.CommandDispatcher
+import nl.r1a.grassmaps.plugin.api.command.CommandPolicy
+import nl.r1a.grassmaps.plugin.api.command.CommandResult
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugins.route.layer.RouteColourMode
+import nl.r1a.grassmaps.plugins.route.layer.RouteLayer
+import nl.r1a.grassmaps.plugins.route.layer.RouteLineDrawing
+import nl.r1a.grassmaps.routing.RouteJson
 
 /** The debug-only command the map goldens use to put a fixed route on the map. */
 internal val SET_ROUTE_COMMAND: CommandId = CommandId("core.map.set_route")

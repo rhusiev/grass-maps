@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.plugin.api.model
+package nl.r1a.grassmaps.plugin.api.model
 
-import nl.r1a.grassmap.plugin.api.provider.RouteProfile
+import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
 
 /**
  * Identifies one settings profile. It is the outer key of every per-profile

@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "nl.r1a.grassmap.plugins.track.layer"
+    namespace = "nl.r1a.grassmaps.plugins.track.layer"
     compileSdk = 37
 
     defaultConfig {

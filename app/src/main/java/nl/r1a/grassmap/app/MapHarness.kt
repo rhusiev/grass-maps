@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.map.MapSurface
+import nl.r1a.grassmaps.map.MapSurface
 
 /**
  * Optional observation of a composed map surface. Production installs

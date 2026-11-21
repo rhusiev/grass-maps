@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.places
+package nl.r1a.grassmaps.places
 
-import nl.r1a.grassmap.places.core.canonicalWords
-import nl.r1a.grassmap.places.core.normaliseText
+import nl.r1a.grassmaps.places.core.canonicalWords
+import nl.r1a.grassmaps.places.core.normaliseText
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

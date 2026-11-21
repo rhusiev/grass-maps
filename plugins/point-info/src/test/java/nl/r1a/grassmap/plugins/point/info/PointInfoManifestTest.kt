@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.point.info
+package nl.r1a.grassmaps.plugins.point.info
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject

@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugins.route.relations
+package nl.r1a.grassmaps.plugins.route.relations
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.RouteRelation
-import nl.r1a.grassmap.plugin.api.model.RouteRelations
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.RouteRelation
+import nl.r1a.grassmaps.plugin.api.model.RouteRelations
 import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.sin

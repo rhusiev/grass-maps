@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.dev.tools
+package nl.r1a.grassmaps.plugins.dev.tools
 
 import kotlinx.serialization.Serializable
 

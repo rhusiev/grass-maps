@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.contours
+package nl.r1a.grassmaps.plugins.contours
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

@@ -1,12 +1,12 @@
-package nl.r1a.grassmap.plugins.track.library
+package nl.r1a.grassmaps.plugins.track.library
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.HtmlText
-import nl.r1a.grassmap.plugin.api.model.TrackBrowseState
-import nl.r1a.grassmap.plugin.api.model.TrackFolderSummary
-import nl.r1a.grassmap.plugin.api.model.TrackLibraryEntry
-import nl.r1a.grassmap.plugin.api.model.TrackLibraryRow
-import nl.r1a.grassmap.plugin.api.model.TrackSort
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.HtmlText
+import nl.r1a.grassmaps.plugin.api.model.TrackBrowseState
+import nl.r1a.grassmaps.plugin.api.model.TrackFolderSummary
+import nl.r1a.grassmaps.plugin.api.model.TrackLibraryEntry
+import nl.r1a.grassmaps.plugin.api.model.TrackLibraryRow
+import nl.r1a.grassmaps.plugin.api.model.TrackSort
 import java.text.Normalizer
 import java.util.Locale
 import kotlin.math.asin

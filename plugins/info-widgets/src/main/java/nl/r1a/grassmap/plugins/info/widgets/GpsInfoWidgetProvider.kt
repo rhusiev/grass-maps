@@ -1,13 +1,13 @@
-package nl.r1a.grassmap.plugins.info.widgets
+package nl.r1a.grassmaps.plugins.info.widgets
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import nl.r1a.grassmap.plugin.api.model.LocationFix
-import nl.r1a.grassmap.plugin.api.service.Clock
-import nl.r1a.grassmap.plugin.api.widget.GpsInfoWidgetValue
-import nl.r1a.grassmap.plugin.api.widget.WidgetCadence
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.plugin.api.service.Clock
+import nl.r1a.grassmaps.plugin.api.widget.GpsInfoWidgetValue
+import nl.r1a.grassmaps.plugin.api.widget.WidgetCadence
 
 /**
  * The fix's GPS fields: horizontal accuracy, speed, bearing and fix time.

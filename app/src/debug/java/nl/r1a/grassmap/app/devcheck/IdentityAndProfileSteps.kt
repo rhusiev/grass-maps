@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app.devcheck
+package nl.r1a.grassmaps.app.devcheck
 
 import android.Manifest
 import android.content.Context
@@ -10,7 +10,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
-import nl.r1a.grassmap.app.BuildConfig
+import nl.r1a.grassmaps.app.BuildConfig
 import java.io.File
 
 /** The device-check steps that only read state: build identity and the profile files. */

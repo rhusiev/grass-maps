@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugins.raster.RasterPlacement
-import nl.r1a.grassmap.plugins.raster.RasterPresets
-import nl.r1a.grassmap.plugins.raster.RasterSource
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugins.raster.RasterPlacement
+import nl.r1a.grassmaps.plugins.raster.RasterPresets
+import nl.r1a.grassmaps.plugins.raster.RasterSource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

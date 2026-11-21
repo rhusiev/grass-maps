@@ -1,19 +1,19 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.alerts.AlertSettings
-import nl.r1a.grassmap.navigation.NavigationPhase
-import nl.r1a.grassmap.navigation.NavigationState
-import nl.r1a.grassmap.places.FavouritesSnapshot
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.BoundingBox
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.ProximityPlaceKind
-import nl.r1a.grassmap.plugin.api.provider.Place
-import nl.r1a.grassmap.plugins.proximity.alerts.ProximityPlace
-import nl.r1a.grassmap.plugins.proximity.alerts.ProximityPlaceSource
-import nl.r1a.grassmap.plugins.proximity.alerts.ProximityPlaces
-import nl.r1a.grassmap.plugins.proximity.alerts.ProximityState
-import nl.r1a.grassmap.tracks.StoredTrack
+import nl.r1a.grassmaps.alerts.AlertSettings
+import nl.r1a.grassmaps.navigation.NavigationPhase
+import nl.r1a.grassmaps.navigation.NavigationState
+import nl.r1a.grassmaps.places.FavouritesSnapshot
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.BoundingBox
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.ProximityPlaceKind
+import nl.r1a.grassmaps.plugin.api.provider.Place
+import nl.r1a.grassmaps.plugins.proximity.alerts.ProximityPlace
+import nl.r1a.grassmaps.plugins.proximity.alerts.ProximityPlaceSource
+import nl.r1a.grassmaps.plugins.proximity.alerts.ProximityPlaces
+import nl.r1a.grassmaps.plugins.proximity.alerts.ProximityState
+import nl.r1a.grassmaps.tracks.StoredTrack
 
 /**
  * Maps the published navigation state onto the proximity schedule's own input

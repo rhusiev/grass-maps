@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.info.widgets
+package nl.r1a.grassmaps.plugins.info.widgets
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -10,15 +10,15 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
-import nl.r1a.grassmap.plugin.api.contract.Plugin
-import nl.r1a.grassmap.plugin.api.contract.PluginContext
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.host.StreamDescriptor
-import nl.r1a.grassmap.plugin.api.model.Camera
-import nl.r1a.grassmap.plugin.api.widget.AltitudeWidgetValue
-import nl.r1a.grassmap.plugin.api.widget.CoordinatesWidgetValue
-import nl.r1a.grassmap.plugin.api.widget.GpsInfoWidgetValue
-import nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue
+import nl.r1a.grassmaps.plugin.api.contract.Plugin
+import nl.r1a.grassmaps.plugin.api.contract.PluginContext
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.host.StreamDescriptor
+import nl.r1a.grassmaps.plugin.api.model.Camera
+import nl.r1a.grassmaps.plugin.api.widget.AltitudeWidgetValue
+import nl.r1a.grassmaps.plugin.api.widget.CoordinatesWidgetValue
+import nl.r1a.grassmaps.plugin.api.widget.GpsInfoWidgetValue
+import nl.r1a.grassmaps.plugin.api.widget.SpeedWidgetValue
 
 /**
  * The top information widgets: altitude, coordinates, GPS info and the current,

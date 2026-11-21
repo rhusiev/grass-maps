@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.plugins.contours
+package nl.r1a.grassmaps.plugins.contours
 
-import nl.r1a.grassmap.plugin.api.model.SlottedLayer
-import nl.r1a.grassmap.plugin.api.model.StyleId
-import nl.r1a.grassmap.plugin.api.model.StyleSpec
-import nl.r1a.grassmap.plugin.api.provider.MapLayerContract
-import nl.r1a.grassmap.plugin.api.provider.MapLayerProvider
-import nl.r1a.grassmap.plugin.api.provider.ProviderContract
+import nl.r1a.grassmaps.plugin.api.model.SlottedLayer
+import nl.r1a.grassmaps.plugin.api.model.StyleId
+import nl.r1a.grassmaps.plugin.api.model.StyleSpec
+import nl.r1a.grassmaps.plugin.api.provider.MapLayerContract
+import nl.r1a.grassmaps.plugin.api.provider.MapLayerProvider
+import nl.r1a.grassmaps.plugin.api.provider.ProviderContract
 
 /**
  * Supplies the contour overlays for the Standard and Touring variants.

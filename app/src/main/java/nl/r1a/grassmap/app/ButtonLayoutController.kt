@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -9,10 +9,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import nl.r1a.grassmap.core.services.ButtonLayoutStore
-import nl.r1a.grassmap.core.services.MapButtonLayout
-import nl.r1a.grassmap.plugin.api.error.onFailure
-import nl.r1a.grassmap.plugin.api.model.ProfileId
+import nl.r1a.grassmaps.core.services.ButtonLayoutStore
+import nl.r1a.grassmaps.core.services.MapButtonLayout
+import nl.r1a.grassmaps.plugin.api.error.onFailure
+import nl.r1a.grassmaps.plugin.api.model.ProfileId
 
 internal const val BUTTON_LAYOUT_TAG = "ButtonLayout"
 

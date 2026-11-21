@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.control
+package nl.r1a.grassmaps.control
 
 import android.net.LocalServerSocket
 import android.net.LocalSocket

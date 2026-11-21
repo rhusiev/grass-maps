@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
+import nl.r1a.grassmaps.plugin.api.testing.fixture.TestRegions
 import java.nio.file.Files
 import java.nio.file.Path
 

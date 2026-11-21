@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.plugins.favourites.ui
+package nl.r1a.grassmaps.plugins.favourites.ui
 
-import nl.r1a.grassmap.plugin.api.model.FavouriteBrowseState
-import nl.r1a.grassmap.plugin.api.model.FavouriteMatch
-import nl.r1a.grassmap.plugin.api.model.FavouritePointRow
-import nl.r1a.grassmap.plugin.api.model.FavouritePointSummary
-import nl.r1a.grassmap.plugin.api.model.FavouriteSort
-import nl.r1a.grassmap.plugin.api.model.HtmlText
+import nl.r1a.grassmaps.plugin.api.model.FavouriteBrowseState
+import nl.r1a.grassmaps.plugin.api.model.FavouriteMatch
+import nl.r1a.grassmaps.plugin.api.model.FavouritePointRow
+import nl.r1a.grassmaps.plugin.api.model.FavouritePointSummary
+import nl.r1a.grassmaps.plugin.api.model.FavouriteSort
+import nl.r1a.grassmaps.plugin.api.model.HtmlText
 import java.text.Normalizer
 import java.util.Locale
 

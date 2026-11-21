@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
 /**
  * A parsed `Content-Range` header of the `bytes` unit. [first] and [last] are

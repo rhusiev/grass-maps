@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.map.style
+package nl.r1a.grassmaps.map.style
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
@@ -8,9 +8,9 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.RegionOutline
-import nl.r1a.grassmap.plugin.ui.api.NavigationScreenColors
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.RegionOutline
+import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenColors
 
 /** The one layer pair the map draws for the installed regions. */
 internal object RegionHighlightStyle {

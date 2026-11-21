@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.map
+package nl.r1a.grassmaps.map
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

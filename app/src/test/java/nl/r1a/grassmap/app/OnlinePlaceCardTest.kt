@@ -1,12 +1,12 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.PlaceCardAction
-import nl.r1a.grassmap.plugin.api.model.PlaceCardValue
-import nl.r1a.grassmap.plugin.api.provider.PlaceHit
-import nl.r1a.grassmap.plugin.api.provider.PlaceSource
-import nl.r1a.grassmap.plugins.share.CoordinateFormats
-import nl.r1a.grassmap.plugins.share.ShareCard
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardAction
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardValue
+import nl.r1a.grassmaps.plugin.api.provider.PlaceHit
+import nl.r1a.grassmaps.plugin.api.provider.PlaceSource
+import nl.r1a.grassmaps.plugins.share.CoordinateFormats
+import nl.r1a.grassmaps.plugins.share.ShareCard
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

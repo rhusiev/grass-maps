@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.routing
+package nl.r1a.grassmaps.routing
 
-import nl.r1a.grassmap.plugin.api.model.RoutePlanOption
-import nl.r1a.grassmap.plugin.api.model.RoutePlanState
-import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanOption
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanState
+import nl.r1a.grassmaps.plugin.api.provider.Route
 
 /**
  * The route the map draws for a plan. The app passes this to `MapHost.setRoute`

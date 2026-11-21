@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.plugins.downloads.ui
+package nl.r1a.grassmaps.plugins.downloads.ui
 
-import nl.r1a.grassmap.plugin.api.model.DownloadProblemKind
+import nl.r1a.grassmaps.plugin.api.model.DownloadProblemKind
 
 /**
  * The sentence one typed problem shows (T-0504).

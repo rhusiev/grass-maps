@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.routing
+package nl.r1a.grassmaps.routing
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
 
 /**
  * Distances from a stop to a returned route line, for the three-via acceptance

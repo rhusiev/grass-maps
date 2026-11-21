@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.links
+package nl.r1a.grassmaps.plugins.links
 
 /** The strict parsing helpers the link parsers share (T-0211). */
 internal object LinkParsing {

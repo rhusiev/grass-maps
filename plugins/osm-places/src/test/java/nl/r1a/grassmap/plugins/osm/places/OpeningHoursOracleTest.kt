@@ -1,6 +1,6 @@
-package nl.r1a.grassmap.plugins.osm.places
+package nl.r1a.grassmaps.plugins.osm.places
 
-import nl.r1a.grassmap.plugin.api.model.PlaceOpeningState
+import nl.r1a.grassmaps.plugin.api.model.PlaceOpeningState
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.Instant

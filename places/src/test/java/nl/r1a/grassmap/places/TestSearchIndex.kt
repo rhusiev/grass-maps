@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.places
+package nl.r1a.grassmaps.places
 
 import kotlinx.coroutines.runBlocking
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption

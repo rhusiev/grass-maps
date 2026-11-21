@@ -1,17 +1,17 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.test.runTest
-import nl.r1a.grassmap.core.services.PrivacyNetworkGate
-import nl.r1a.grassmap.core.services.PrivacySwitchSettings
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.provider.SearchContext
-import nl.r1a.grassmap.plugin.api.service.NetworkSwitches
-import nl.r1a.grassmap.plugins.online.search.PhotonPlaceProvider
-import nl.r1a.grassmap.plugins.online.search.PhotonTransport
+import nl.r1a.grassmaps.core.services.PrivacyNetworkGate
+import nl.r1a.grassmaps.core.services.PrivacySwitchSettings
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.provider.SearchContext
+import nl.r1a.grassmaps.plugin.api.service.NetworkSwitches
+import nl.r1a.grassmaps.plugins.online.search.PhotonPlaceProvider
+import nl.r1a.grassmaps.plugins.online.search.PhotonTransport
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

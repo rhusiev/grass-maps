@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.regions
+package nl.r1a.grassmaps.regions
 
 /**
  * The component kind a logical map source reads from. The source ids of

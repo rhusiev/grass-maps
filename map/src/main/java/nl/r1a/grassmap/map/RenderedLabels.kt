@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.map
+package nl.r1a.grassmaps.map
 
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
@@ -6,10 +6,10 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import nl.r1a.grassmap.map.style.LabelStyle
-import nl.r1a.grassmap.map.style.StyleExpression
-import nl.r1a.grassmap.plugin.api.model.LayerSpec
-import nl.r1a.grassmap.plugin.api.model.LayerType
+import nl.r1a.grassmaps.map.style.LabelStyle
+import nl.r1a.grassmaps.map.style.StyleExpression
+import nl.r1a.grassmaps.plugin.api.model.LayerSpec
+import nl.r1a.grassmaps.plugin.api.model.LayerType
 import org.maplibre.compose.map.MapState
 
 /** One rendered symbol feature, and the text its layer draws for it. */

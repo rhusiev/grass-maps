@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.util.Log
 import kotlinx.serialization.builtins.serializer
@@ -9,22 +9,22 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
-import nl.r1a.grassmap.plugin.api.command.Command
-import nl.r1a.grassmap.plugin.api.command.CommandDispatcher
-import nl.r1a.grassmap.plugin.api.command.CommandPolicy
-import nl.r1a.grassmap.plugin.api.command.CommandResult
-import nl.r1a.grassmap.plugin.api.contract.CommandId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.model.BoundingBox
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugins.raster.RasterAreaDownloadState
-import nl.r1a.grassmap.plugins.raster.RasterAreaPlan
-import nl.r1a.grassmap.plugins.raster.RasterPlacement
-import nl.r1a.grassmap.plugins.raster.RasterPresets
-import nl.r1a.grassmap.plugins.raster.RasterSource
-import nl.r1a.grassmap.plugins.raster.RasterSources
-import nl.r1a.grassmap.plugins.raster.RasterTransparency
+import nl.r1a.grassmaps.plugin.api.command.Command
+import nl.r1a.grassmaps.plugin.api.command.CommandDispatcher
+import nl.r1a.grassmaps.plugin.api.command.CommandPolicy
+import nl.r1a.grassmaps.plugin.api.command.CommandResult
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.model.BoundingBox
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugins.raster.RasterAreaDownloadState
+import nl.r1a.grassmaps.plugins.raster.RasterAreaPlan
+import nl.r1a.grassmaps.plugins.raster.RasterPlacement
+import nl.r1a.grassmaps.plugins.raster.RasterPresets
+import nl.r1a.grassmaps.plugins.raster.RasterSource
+import nl.r1a.grassmaps.plugins.raster.RasterSources
+import nl.r1a.grassmaps.plugins.raster.RasterTransparency
 
 /** The debug trigger the T-0514 goldens use to draw a tile source. */
 internal val RASTER_SHOW_COMMAND: CommandId = CommandId("core.map.show_raster")

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugin.api.provider
+package nl.r1a.grassmaps.plugin.api.provider
 
 /**
  * A capability contract reference. Every capability contract has its own semver.

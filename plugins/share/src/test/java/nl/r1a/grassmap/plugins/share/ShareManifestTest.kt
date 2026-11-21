@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.share
+package nl.r1a.grassmaps.plugins.share
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray

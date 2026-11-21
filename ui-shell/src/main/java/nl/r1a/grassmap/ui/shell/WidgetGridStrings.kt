@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
 /** The string keys the widget grid and its app mapping resolve. */
 object WidgetGridStrings {

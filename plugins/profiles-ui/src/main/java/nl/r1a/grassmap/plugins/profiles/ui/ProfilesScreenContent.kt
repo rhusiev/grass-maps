@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.profiles.ui
+package nl.r1a.grassmaps.plugins.profiles.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -34,11 +34,11 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
-import nl.r1a.grassmap.plugin.api.model.ProfileAction
-import nl.r1a.grassmap.plugin.api.model.ProfileActionKind
-import nl.r1a.grassmap.plugin.api.model.ProfileSummary
-import nl.r1a.grassmap.plugin.api.model.ProfilesState
-import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.api.model.ProfileAction
+import nl.r1a.grassmaps.plugin.api.model.ProfileActionKind
+import nl.r1a.grassmaps.plugin.api.model.ProfileSummary
+import nl.r1a.grassmaps.plugin.api.model.ProfilesState
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 
 /**
  * The profiles screen (T-0602), drawn from the published state.

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.app.Application
 import androidx.compose.foundation.background
@@ -23,10 +23,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-import nl.r1a.grassmap.app.devcheck.DeviceCheckSession
-import nl.r1a.grassmap.app.devcheck.DeviceCheckUi
-import nl.r1a.grassmap.plugins.dev.tools.DevToolsContract
-import nl.r1a.grassmap.plugins.dev.tools.DevToolsPanelState
+import nl.r1a.grassmaps.app.devcheck.DeviceCheckSession
+import nl.r1a.grassmaps.app.devcheck.DeviceCheckUi
+import nl.r1a.grassmaps.plugins.dev.tools.DevToolsContract
+import nl.r1a.grassmaps.plugins.dev.tools.DevToolsPanelState
 
 private val PANEL_BACKGROUND = Color(0xCC000000)
 private val PANEL_FOREGROUND = Color.White

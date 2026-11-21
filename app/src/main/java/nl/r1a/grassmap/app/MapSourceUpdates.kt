@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import nl.r1a.grassmap.plugin.api.model.InstalledPack
+import nl.r1a.grassmaps.plugin.api.model.InstalledPack
 
 /**
  * The map's sources kept in step with the packs the region store publishes.

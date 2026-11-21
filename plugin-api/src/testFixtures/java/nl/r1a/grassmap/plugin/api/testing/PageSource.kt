@@ -1,10 +1,10 @@
-package nl.r1a.grassmap.plugin.api.testing
+package nl.r1a.grassmaps.plugin.api.testing
 
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.contract.Page
-import nl.r1a.grassmap.plugin.api.contract.PageRequest
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.provider.Provider
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.contract.Page
+import nl.r1a.grassmaps.plugin.api.contract.PageRequest
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.provider.Provider
 
 /**
  * The paged-query shape exercised by [PagedProviderContractSuite].

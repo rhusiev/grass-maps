@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -7,12 +7,12 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import nl.r1a.grassmap.plugin.api.model.MapSourceIds
-import nl.r1a.grassmap.plugin.api.testing.fixture.TestRegions
-import nl.r1a.grassmap.regions.InstalledPacks
-import nl.r1a.grassmap.regions.RegionIdentifiers
-import nl.r1a.grassmap.regions.RegionMountProblem
-import nl.r1a.grassmap.regions.RegionMountResolver
+import nl.r1a.grassmaps.plugin.api.model.MapSourceIds
+import nl.r1a.grassmaps.plugin.api.testing.fixture.TestRegions
+import nl.r1a.grassmaps.regions.InstalledPacks
+import nl.r1a.grassmaps.regions.RegionIdentifiers
+import nl.r1a.grassmaps.regions.RegionMountProblem
+import nl.r1a.grassmaps.regions.RegionMountResolver
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals

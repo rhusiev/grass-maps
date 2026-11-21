@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.map.style
+package nl.r1a.grassmaps.map.style
 
 import androidx.compose.ui.graphics.Color
 import kotlinx.serialization.json.JsonArray
@@ -10,9 +10,9 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
-import nl.r1a.grassmap.plugin.api.model.RouteLinePattern
-import nl.r1a.grassmap.plugin.api.model.RouteLineStyle
-import nl.r1a.grassmap.plugin.api.provider.Route
+import nl.r1a.grassmaps.plugin.api.model.RouteLinePattern
+import nl.r1a.grassmaps.plugin.api.model.RouteLineStyle
+import nl.r1a.grassmaps.plugin.api.provider.Route
 import org.maplibre.compose.expressions.ast.Expression
 import org.maplibre.compose.expressions.value.ColorValue
 import org.maplibre.compose.expressions.value.NumberValue

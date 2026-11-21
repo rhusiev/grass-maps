@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.coordinates
+package nl.r1a.grassmaps.plugins.coordinates
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray

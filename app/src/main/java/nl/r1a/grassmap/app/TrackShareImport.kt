@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
@@ -6,12 +6,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
-import nl.r1a.grassmap.plugin.api.contract.CancellationHandle
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.tracks.StoredTrack
-import nl.r1a.grassmap.ui.shell.TrackImportFailure
-import nl.r1a.grassmap.ui.shell.TrackImportOutcome
+import nl.r1a.grassmaps.plugin.api.contract.CancellationHandle
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.tracks.StoredTrack
+import nl.r1a.grassmaps.ui.shell.TrackImportFailure
+import nl.r1a.grassmaps.ui.shell.TrackImportOutcome
 import java.util.concurrent.atomic.AtomicLong
 
 /** The share-sheet import's log tag. */

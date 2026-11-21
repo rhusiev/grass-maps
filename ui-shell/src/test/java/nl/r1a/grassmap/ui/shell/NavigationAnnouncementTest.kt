@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
-import nl.r1a.grassmap.plugin.ui.api.NavigationScreenState
-import nl.r1a.grassmap.plugin.ui.api.NavigationScreenStatus
-import nl.r1a.grassmap.plugin.ui.api.NavigationTurnArrow
-import nl.r1a.grassmap.plugin.ui.api.NavigationTurnCard
+import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenState
+import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenStatus
+import nl.r1a.grassmaps.plugin.ui.api.NavigationTurnArrow
+import nl.r1a.grassmaps.plugin.ui.api.NavigationTurnCard
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

@@ -1,9 +1,9 @@
-package nl.r1a.grassmap.plugins.osm.places
+package nl.r1a.grassmaps.plugins.osm.places
 
-import nl.r1a.grassmap.plugin.api.model.GeoPoint
-import nl.r1a.grassmap.plugin.api.model.OsmType
-import nl.r1a.grassmap.plugin.api.provider.Place
-import nl.r1a.grassmap.plugin.api.provider.PlaceDetails
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.OsmType
+import nl.r1a.grassmaps.plugin.api.provider.Place
+import nl.r1a.grassmaps.plugin.api.provider.PlaceDetails
 import java.io.File
 
 /**

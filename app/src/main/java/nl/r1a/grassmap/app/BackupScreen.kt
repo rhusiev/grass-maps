@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app
+package nl.r1a.grassmaps.app
 
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -46,13 +46,13 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import nl.r1a.grassmap.app.backup.BackupExport
-import nl.r1a.grassmap.app.backup.BackupPhase
-import nl.r1a.grassmap.app.backup.BackupUiController
-import nl.r1a.grassmap.app.backup.BackupUiState
-import nl.r1a.grassmap.core.services.backup.BundleConflictChoice
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.app.backup.BackupExport
+import nl.r1a.grassmaps.app.backup.BackupPhase
+import nl.r1a.grassmaps.app.backup.BackupUiController
+import nl.r1a.grassmaps.app.backup.BackupUiState
+import nl.r1a.grassmaps.core.services.backup.BundleConflictChoice
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 
 private val SURFACE: Color
     @Composable get() = LocalShellColors.current.map

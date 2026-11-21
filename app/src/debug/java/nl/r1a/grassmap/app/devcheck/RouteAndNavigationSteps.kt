@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app.devcheck
+package nl.r1a.grassmaps.app.devcheck
 
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -8,10 +8,10 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.navigation.NavigationPhase
-import nl.r1a.grassmap.plugin.api.model.RoutePlanStatus
-import nl.r1a.grassmap.routing.RouteJson
-import nl.r1a.grassmap.routing.toRoute
+import nl.r1a.grassmaps.navigation.NavigationPhase
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanStatus
+import nl.r1a.grassmaps.routing.RouteJson
+import nl.r1a.grassmaps.routing.toRoute
 
 const val PLAN_TIMEOUT_MS = 90_000L
 const val NAV_START_TIMEOUT_MS = 15_000L

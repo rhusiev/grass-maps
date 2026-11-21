@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.control
+package nl.r1a.grassmaps.control
 
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException

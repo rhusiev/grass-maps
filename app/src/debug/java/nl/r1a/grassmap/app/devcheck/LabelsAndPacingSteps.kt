@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.app.devcheck
+package nl.r1a.grassmaps.app.devcheck
 
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -12,10 +12,10 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import nl.r1a.grassmap.map.LabelOptions
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugins.dev.tools.DevToolsContract
-import nl.r1a.grassmap.plugins.dev.tools.DevToolsPanelState
+import nl.r1a.grassmaps.map.LabelOptions
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugins.dev.tools.DevToolsContract
+import nl.r1a.grassmaps.plugins.dev.tools.DevToolsPanelState
 
 internal const val LVIV_LAT = 49.8397
 internal const val LVIV_LON = 24.0297

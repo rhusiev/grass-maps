@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -50,11 +50,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import nl.r1a.grassmap.plugin.api.model.UnitSystem
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugin.ui.api.ElevationChartAxis
-import nl.r1a.grassmap.plugin.ui.api.ElevationChartRange
-import nl.r1a.grassmap.plugin.ui.api.ElevationChartState
+import nl.r1a.grassmaps.plugin.api.model.UnitSystem
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.ui.api.ElevationChartAxis
+import nl.r1a.grassmaps.plugin.ui.api.ElevationChartRange
+import nl.r1a.grassmaps.plugin.ui.api.ElevationChartState
 import java.time.ZoneId
 import java.util.Locale
 import kotlin.math.max

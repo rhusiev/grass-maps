@@ -1,11 +1,11 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugin.ui.api.AlertsPageChannel
-import nl.r1a.grassmap.plugin.ui.api.AlertsPageChannels
-import nl.r1a.grassmap.plugin.ui.api.AlertsPageState
-import nl.r1a.grassmap.plugin.ui.api.AlertsPageSwitch
-import nl.r1a.grassmap.plugin.ui.api.AlertsPageSwitches
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.ui.api.AlertsPageChannel
+import nl.r1a.grassmaps.plugin.ui.api.AlertsPageChannels
+import nl.r1a.grassmaps.plugin.ui.api.AlertsPageState
+import nl.r1a.grassmaps.plugin.ui.api.AlertsPageSwitch
+import nl.r1a.grassmaps.plugin.ui.api.AlertsPageSwitches
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals

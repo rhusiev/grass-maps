@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.core.services
+package nl.r1a.grassmaps.core.services
 
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

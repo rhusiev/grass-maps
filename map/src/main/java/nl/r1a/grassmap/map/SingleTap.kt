@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.map
+package nl.r1a.grassmaps.map
 
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -7,7 +7,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
-import nl.r1a.grassmap.plugin.api.model.ScreenOffset
+import nl.r1a.grassmaps.plugin.api.model.ScreenOffset
 import kotlin.math.hypot
 import kotlin.math.max
 

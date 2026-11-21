@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.track.library
+package nl.r1a.grassmaps.plugins.track.library
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

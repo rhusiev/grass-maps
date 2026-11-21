@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "nl.r1a.grassmap.alerts"
+    namespace = "nl.r1a.grassmaps.alerts"
     compileSdk = 37
 
     defaultConfig {

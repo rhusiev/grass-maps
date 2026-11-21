@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "nl.r1a.grassmap.plugins.point.info"
+    namespace = "nl.r1a.grassmaps.plugins.point.info"
     compileSdk = 37
 
     defaultConfig {

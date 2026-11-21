@@ -1,14 +1,14 @@
-package nl.r1a.grassmap.core.services
+package nl.r1a.grassmaps.core.services
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import nl.r1a.grassmap.plugin.api.contract.SwitchId
-import nl.r1a.grassmap.plugin.api.error.AppError
-import nl.r1a.grassmap.plugin.api.error.Outcome
-import nl.r1a.grassmap.plugin.api.service.NetworkSwitches
-import nl.r1a.grassmap.plugin.api.service.PrivacySwitches
-import nl.r1a.grassmap.plugin.api.service.SwitchState
+import nl.r1a.grassmaps.plugin.api.contract.SwitchId
+import nl.r1a.grassmaps.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.error.Outcome
+import nl.r1a.grassmaps.plugin.api.service.NetworkSwitches
+import nl.r1a.grassmaps.plugin.api.service.PrivacySwitches
+import nl.r1a.grassmaps.plugin.api.service.SwitchState
 
 /**
  * The v1 [PrivacySwitches]: a fixed registry of switches over a

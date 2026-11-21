@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.plugin.api.command
+package nl.r1a.grassmaps.plugin.api.command
 
-import nl.r1a.grassmap.plugin.api.contract.CommandId
-import nl.r1a.grassmap.plugin.api.contract.PluginId
-import nl.r1a.grassmap.plugin.api.error.AppError
+import nl.r1a.grassmaps.plugin.api.contract.CommandId
+import nl.r1a.grassmaps.plugin.api.contract.PluginId
+import nl.r1a.grassmaps.plugin.api.error.AppError
 
 /**
  * Emitted on a best-effort basis for every command dispatch, including failed and

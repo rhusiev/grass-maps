@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
-import nl.r1a.grassmap.plugin.api.model.UnitSystem
-import nl.r1a.grassmap.plugin.api.unit.UnitText
+import nl.r1a.grassmaps.plugin.api.model.UnitSystem
+import nl.r1a.grassmaps.plugin.api.unit.UnitText
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.util.Locale

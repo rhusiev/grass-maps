@@ -1,8 +1,8 @@
-package nl.r1a.grassmap.app.devcheck
+package nl.r1a.grassmaps.app.devcheck
 
 import android.app.Application
-import nl.r1a.grassmap.app.AppContainer
-import nl.r1a.grassmap.app.DebugControl
+import nl.r1a.grassmaps.app.AppContainer
+import nl.r1a.grassmaps.app.DebugControl
 
 /** The one controller of the process, so a recomposed panel does not lose a running check. */
 internal object DeviceCheckSession {

@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.route.layer
+package nl.r1a.grassmaps.plugins.route.layer
 
 /**
  * How the map draws the line over the route (T-0408).

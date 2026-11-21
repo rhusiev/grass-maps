@@ -1,7 +1,7 @@
-package nl.r1a.grassmap.plugin.api.service
+package nl.r1a.grassmaps.plugin.api.service
 
 import kotlinx.coroutines.flow.Flow
-import nl.r1a.grassmap.plugin.api.model.LocationFix
+import nl.r1a.grassmaps.plugin.api.model.LocationFix
 
 /**
  * The platform location source (architecture.md section 4.3).

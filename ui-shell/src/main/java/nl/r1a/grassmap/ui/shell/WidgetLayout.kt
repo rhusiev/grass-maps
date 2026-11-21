@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.ui.shell
+package nl.r1a.grassmaps.ui.shell
 
 /**
  * The on-map info widgets a profile can show (design handoff, round 8). The

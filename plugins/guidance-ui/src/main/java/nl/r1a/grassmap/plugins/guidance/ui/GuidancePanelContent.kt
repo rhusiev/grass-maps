@@ -1,4 +1,4 @@
-package nl.r1a.grassmap.plugins.guidance.ui
+package nl.r1a.grassmaps.plugins.guidance.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -18,11 +18,11 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import nl.r1a.grassmap.plugin.api.service.Strings
-import nl.r1a.grassmap.plugin.ui.api.NavigationScreenColors
-import nl.r1a.grassmap.plugin.ui.api.NavigationScreenStatus
-import nl.r1a.grassmap.plugin.ui.api.NavigationTurnArrow
-import nl.r1a.grassmap.plugin.ui.api.NavigationTurnCard
+import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenColors
+import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenStatus
+import nl.r1a.grassmaps.plugin.ui.api.NavigationTurnArrow
+import nl.r1a.grassmaps.plugin.ui.api.NavigationTurnCard
 
 private const val CARD_CORNER_DP = 18
 private const val CARD_MAX_WIDTH_DP = 520

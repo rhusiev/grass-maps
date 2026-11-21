@@ -58,14 +58,21 @@ internal data class NavigationScreenInput(
 /** The card state one navigation state maps onto, without the rest of the screen. */
 internal fun navigationStatus(state: NavigationState): NavigationScreenStatus =
     when {
-        state.phase == NavigationPhase.Arrived -> NavigationScreenStatus.Arrived
+        state.phase == NavigationPhase.Arrived -> {
+            NavigationScreenStatus.Arrived
+        }
 
-        state.phase == NavigationPhase.Paused -> NavigationScreenStatus.Paused
+        state.phase == NavigationPhase.Paused -> {
+            NavigationScreenStatus.Paused
+        }
 
-        state.relation == RouteRelation.OffRoute || state.phase == NavigationPhase.Rerouting ->
+        state.relation == RouteRelation.OffRoute || state.phase == NavigationPhase.Rerouting -> {
             NavigationScreenStatus.OffRoute
+        }
 
-        else -> NavigationScreenStatus.Following
+        else -> {
+            NavigationScreenStatus.Following
+        }
     }
 
 /**

@@ -3393,11 +3393,13 @@ private fun MapStatusBarOwner(
     navigationActive: Boolean,
     fixture: NavigationScreenFixture?,
 ) {
-    val activity = LocalContext.current as? Activity
+    val activity = LocalActivity.current
     val colors = LocalShellColors.current
     val liveStatus by
         remember(container) {
-            container.navigation.state.map(::navigationStatus).distinctUntilChanged()
+            container.navigation.state
+                .map(::navigationStatus)
+                .distinctUntilChanged()
         }.collectAsState(initial = null)
     val status =
         if (!navigationActive) {

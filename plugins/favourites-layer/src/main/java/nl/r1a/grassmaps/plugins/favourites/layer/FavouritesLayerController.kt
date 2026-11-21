@@ -39,7 +39,9 @@ class FavouritesLayerController(
                     return loaded
                 }
 
-                is Outcome.Success -> loaded.value
+                is Outcome.Success -> {
+                    loaded.value
+                }
             }
         val layers = FavouriteLayerLayers.build(snapshot, settings.value)
         map.removeLayers(owner).onFailure { error -> log("saved place layers not cleared: $error") }
@@ -51,7 +53,9 @@ class FavouritesLayerController(
                     return added
                 }
 
-                is Outcome.Success -> Unit
+                is Outcome.Success -> {
+                    Unit
+                }
             }
         }
         return Outcome.Success(Unit)

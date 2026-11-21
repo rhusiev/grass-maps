@@ -87,8 +87,7 @@ fun FavouritesLayerPanel(
                             .clip(RoundedCornerShape(CORNER_DP.dp))
                             .selectable(selected = choice == settings.markerShape, role = Role.RadioButton) {
                                 onMarkerShapeChange(choice)
-                            }
-                            .padding(vertical = GAP_DP.dp),
+                            }.padding(vertical = GAP_DP.dp),
                 )
             }
         }
@@ -105,7 +104,15 @@ fun FavouritesLayerPanel(
                 SwitchRow(
                     label =
                         stringResource(
-                            if (isGroupShown(settings, group)) R.string.favourites_layer_group_hide else R.string.favourites_layer_group_show,
+                            if (isGroupShown(
+                                    settings,
+                                    group,
+                                )
+                            ) {
+                                R.string.favourites_layer_group_hide
+                            } else {
+                                R.string.favourites_layer_group_show
+                            },
                             group,
                         ),
                     value = isGroupShown(settings, group),

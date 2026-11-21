@@ -261,7 +261,9 @@ class FavouriteLayerTest {
             val data = added.firstOrNull { it.id.value == FavouriteLayerLayers.ICON_LAYER_ID }?.data ?: return emptyList()
             val collection = Json.parseToJsonElement(data).jsonObject
             return collection["features"]!!.jsonArray.map {
-                it.jsonObject["properties"]!!.jsonObject["name"]!!.jsonPrimitive.content
+                it.jsonObject["properties"]!!
+                    .jsonObject["name"]!!
+                    .jsonPrimitive.content
             }
         }
     }

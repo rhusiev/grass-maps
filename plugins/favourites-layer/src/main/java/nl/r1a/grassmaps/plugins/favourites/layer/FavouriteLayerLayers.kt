@@ -121,8 +121,7 @@ object FavouriteLayerLayers {
 
     private fun get(property: String) = JsonArray(listOf(JsonPrimitive("get"), JsonPrimitive(property)))
 
-    private fun toColor(property: String) =
-        JsonArray(listOf(JsonPrimitive("to-color"), get(property)))
+    private fun toColor(property: String) = JsonArray(listOf(JsonPrimitive("to-color"), get(property)))
 
     private const val ROUND_9_INK = "#e8eaed"
     private const val ROUND_9_MAP = "#1b1f24"

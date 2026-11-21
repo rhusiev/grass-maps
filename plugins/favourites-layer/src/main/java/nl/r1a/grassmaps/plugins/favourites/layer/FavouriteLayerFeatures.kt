@@ -34,8 +34,8 @@ object FavouriteLayerFeatures {
     fun featureCollection(
         markers: List<FavouriteLayerMarker>,
         settings: FavouriteLayerSettings,
-    ): String {
-        return buildJsonObject {
+    ): String =
+        buildJsonObject {
             put("type", "FeatureCollection")
             putJsonArray("features") {
                 for (marker in markers) {
@@ -43,7 +43,6 @@ object FavouriteLayerFeatures {
                 }
             }
         }.toString()
-    }
 
     private fun feature(
         marker: FavouriteLayerMarker,
@@ -78,11 +77,45 @@ object FavouriteLayerFeatures {
 
     private val SPRITE_ICONS =
         setOf(
-            "aerodrome", "animal", "arrow", "artwork", "attraction", "bar", "beach", "beauty", "bench", "books",
-            "building", "bus_stop", "cafe", "capital", "clothes", "convenience", "drinking_water", "electronics",
-            "fast_food", "ferry_terminal", "forest", "garden", "library", "marina", "museum", "park", "peak",
-            "post_office", "restaurant", "school", "stadium", "supermarket", "theatre", "toilets", "townhall",
-            "townspot", "train_station", "university", "zoo",
+            "aerodrome",
+            "animal",
+            "arrow",
+            "artwork",
+            "attraction",
+            "bar",
+            "beach",
+            "beauty",
+            "bench",
+            "books",
+            "building",
+            "bus_stop",
+            "cafe",
+            "capital",
+            "clothes",
+            "convenience",
+            "drinking_water",
+            "electronics",
+            "fast_food",
+            "ferry_terminal",
+            "forest",
+            "garden",
+            "library",
+            "marina",
+            "museum",
+            "park",
+            "peak",
+            "post_office",
+            "restaurant",
+            "school",
+            "stadium",
+            "supermarket",
+            "theatre",
+            "toilets",
+            "townhall",
+            "townspot",
+            "train_station",
+            "university",
+            "zoo",
         )
 
     private const val FALLBACK_ICON = "osmc_fg_dot"

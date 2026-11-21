@@ -43,10 +43,11 @@ class FavouritesLayerStringsTest {
     }
 
     private companion object {
+        // English (UK) has no overrides here: none of the copy differs from the
+        // US default, and checkTranslations refuses an identical override.
         val LOCALES =
             listOf(
                 "src/main/res/values/strings.xml",
-                "src/main/res/values-en-rGB/strings.xml",
                 "src/main/res/values-uk/strings.xml",
             )
         const val UKRAINIAN = "src/main/res/values-uk/strings.xml"

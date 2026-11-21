@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
             }
         }
         setContent {
-            MapScreen(container = container, harness = harness)
+            MapScreen(container = container, harness = harness, activity = this@MainActivity)
         }
     }
 

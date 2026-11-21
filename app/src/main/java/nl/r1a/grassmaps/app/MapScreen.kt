@@ -14,7 +14,6 @@ import android.util.Log
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -362,12 +361,12 @@ internal data class MapBundle(
 internal fun MapScreen(
     container: AppContainer,
     harness: MapHarness,
+    activity: Activity,
 ) {
     // The shell and the map take their dark flag from one decision (T-0111).
     // A capture fixture or the debug pin still wins over every stored choice.
     val fixture by container.navigationScreenFixture.state.collectAsState()
     val themeOverride by container.darkTheme.collectAsState()
-    val activity = LocalActivity.current
     val screenSettings by
         produceState(initialValue = ScreenSettingsValues()) {
             withContext(Dispatchers.IO) { container.screenSettings.active.collect { value = it } }
@@ -440,7 +439,7 @@ internal fun MapScreen(
 private fun MapScreenContent(
     container: AppContainer,
     harness: MapHarness,
-    activity: Activity?,
+    activity: Activity,
     mapDark: Boolean,
     systemDark: Boolean,
     screenSettings: ScreenSettingsValues,
@@ -456,7 +455,7 @@ private fun MapScreenContent(
                 object : WindowEffects {
                     override fun setKeepScreenOn(enabled: Boolean) {
                         val flags = WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
-                        if (enabled) activity?.window?.addFlags(flags) else activity?.window?.clearFlags(flags)
+                        if (enabled) activity.window.addFlags(flags) else activity.window.clearFlags(flags)
                     }
 
                     override fun durationScale(): Float =
@@ -539,7 +538,7 @@ private fun MapScreenContent(
     val shown = remember(loaded, sources) { loaded.copy(sources = sources) }
     BindMapSession(container, container.mapSession, surface)
     CompositionLocalProvider(LocalBottomChrome provides remember { BottomChrome() }) {
-        MapContent(container, surface, shown, harness, mapDark, systemDark, screenSettings, sunTimes)
+        MapContent(container, surface, shown, harness, activity, mapDark, systemDark, screenSettings, sunTimes)
     }
 }
 
@@ -582,6 +581,7 @@ private fun MapContent(
     surface: MapSurface,
     bundle: MapBundle,
     harness: MapHarness,
+    activity: Activity,
     mapDark: Boolean,
     systemDark: Boolean,
     screenSettings: ScreenSettingsValues,
@@ -590,7 +590,6 @@ private fun MapContent(
     val context = LocalContext.current
     val devToolsVisible by container.devToolsVisible.collectAsState()
     val windowColors = LocalShellColors.current
-    val activity = context as? Activity
     // A refused foreground start is one event, not a state: the session has
     // already ended by the time this screen sees it.
     var permissionNotice by remember { mutableStateOf(false) }
@@ -944,7 +943,7 @@ private fun MapContent(
                 ::isNavigationActive,
             ).collect { active -> value = active }
         }
-    MapStatusBarOwner(container, navigationActive, navigationFixture)
+    MapStatusBarOwner(container, activity, navigationActive, navigationFixture)
     // The bar and the widget grid follow the one published profile state, so a
     // trip that activates its profile changes both when the map is back.
     // The guidance camera belongs to the process, not this composition, so a
@@ -3385,15 +3384,20 @@ private fun NavigationAlertSwitch.toAlertKind(): AlertKind =
  * navigation screen is open cannot overwrite the card colour. The live status
  * is a distinct flow: a fix that leaves the card state unchanged does not
  * recompose this owner.
+ *
+ * MainActivity passes its own instance down (T-0642). A composition local
+ * resolved to null here on the capture path, so the old owner took the empty
+ * dispose branch and never wrote a colour. The applied spec is logged so a
+ * fixture capture can assert the write without reading pixels.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 private fun MapStatusBarOwner(
     container: AppContainer,
+    activity: Activity,
     navigationActive: Boolean,
     fixture: NavigationScreenFixture?,
 ) {
-    val activity = LocalActivity.current
     val colors = LocalShellColors.current
     val liveStatus by
         remember(container) {
@@ -3409,12 +3413,9 @@ private fun MapStatusBarOwner(
         }
     val spec = statusBarSpec(status, colors)
     DisposableEffect(activity, spec) {
-        if (activity != null) {
-            activity.applyStatusBar(spec)
-            onDispose { activity.restoreStatusBar() }
-        } else {
-            onDispose { }
-        }
+        Log.i(TAG, "status-bar applied argb=${spec.argb} lightIcons=${spec.lightIcons}")
+        activity.applyStatusBar(spec)
+        onDispose { activity.restoreStatusBar() }
     }
 }
 

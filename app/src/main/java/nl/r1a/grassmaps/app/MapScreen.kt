@@ -225,6 +225,7 @@ import nl.r1a.grassmaps.ui.shell.BOTTOM_SHEET_KEY
 import nl.r1a.grassmaps.ui.shell.BottomChrome
 import nl.r1a.grassmaps.ui.shell.ControlBarLabels
 import nl.r1a.grassmaps.ui.shell.ControlButton
+import nl.r1a.grassmaps.ui.shell.ControlIcon
 import nl.r1a.grassmaps.ui.shell.FavouritesListsHost
 import nl.r1a.grassmaps.ui.shell.FollowTrackSheet
 import nl.r1a.grassmaps.ui.shell.GrassMapsTheme
@@ -2910,6 +2911,7 @@ internal fun controlButton(
                 id = id,
                 label = context.getString(R.string.control_zoom_in_label),
                 contentDescription = context.getString(R.string.control_zoom_in_description),
+                icon = ControlIcon.Plus,
             )
         }
 
@@ -2918,6 +2920,7 @@ internal fun controlButton(
                 id = id,
                 label = context.getString(R.string.control_zoom_out_label),
                 contentDescription = context.getString(R.string.control_zoom_out_description),
+                icon = ControlIcon.Minus,
             )
         }
 
@@ -2926,6 +2929,7 @@ internal fun controlButton(
                 id = id,
                 label = context.getString(R.string.control_compass_label),
                 contentDescription = context.getString(R.string.control_compass_description),
+                icon = ControlIcon.Compass,
             )
         }
 
@@ -2938,6 +2942,7 @@ internal fun controlButton(
                 id = id,
                 label = context.getString(R.string.control_route_planner_label),
                 contentDescription = context.getString(R.string.control_route_planner_description),
+                icon = ControlIcon.Route,
             )
         }
 
@@ -2946,6 +2951,7 @@ internal fun controlButton(
                 id = id,
                 label = context.getString(ShellStrings.string.map_layout_saved_label),
                 contentDescription = context.getString(ShellStrings.string.map_layout_saved_content),
+                icon = ControlIcon.Saved,
             )
         }
 
@@ -2954,6 +2960,7 @@ internal fun controlButton(
                 id = id,
                 label = context.getString(ShellStrings.string.map_layout_tracks_label),
                 contentDescription = context.getString(ShellStrings.string.map_layout_tracks_content),
+                icon = ControlIcon.Tracks,
             )
         }
 
@@ -2973,6 +2980,7 @@ private fun followButton(
                 id = id,
                 label = context.getString(R.string.control_follow_label_free),
                 contentDescription = context.getString(R.string.control_follow_description_free),
+                icon = ControlIcon.Locate,
             )
         }
 
@@ -2981,6 +2989,7 @@ private fun followButton(
                 id = id,
                 label = context.getString(R.string.control_follow_label_follow),
                 contentDescription = context.getString(R.string.control_follow_description_follow),
+                icon = ControlIcon.Locate,
             )
         }
 
@@ -2989,6 +2998,7 @@ private fun followButton(
                 id = id,
                 label = context.getString(R.string.control_follow_label_heading),
                 contentDescription = context.getString(R.string.control_follow_description_heading),
+                icon = ControlIcon.Locate,
             )
         }
     }

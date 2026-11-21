@@ -19,6 +19,7 @@ import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -31,12 +32,31 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.api.contract.CommandId
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.ShellIcon
+import nl.r1a.grassmaps.plugin.ui.api.ShellIcons
 
-/** One configurable button: the command it runs and its visible text. */
+/**
+ * The drawn icon of one control. [Text] means the control has no drawn
+ * pictogram in the design, so its visible label is drawn as text; every other
+ * value draws a vector and keeps the label as its spoken name.
+ */
+enum class ControlIcon {
+    Text,
+    Plus,
+    Minus,
+    Compass,
+    Locate,
+    Saved,
+    Tracks,
+    Route,
+}
+
+/** One configurable button: the command it runs, its icon and its spoken name. */
 data class ControlButton(
     val id: CommandId,
     val label: String,
     val contentDescription: String,
+    val icon: ControlIcon = ControlIcon.Text,
 )
 
 /** The chrome text the shell needs but cannot resolve without app resources. */
@@ -114,6 +134,7 @@ fun MapControlBar(
                     } else {
                         ActionBox(
                             label = button.label,
+                            icon = button.icon,
                             description = button.contentDescription,
                             enabled = false,
                             onClick = {},
@@ -127,6 +148,7 @@ fun MapControlBar(
             slots.filterNotNull().forEach { button ->
                 ActionBox(
                     label = button.label,
+                    icon = button.icon,
                     description = button.contentDescription,
                     enabled = true,
                     onClick = { onInvoke(button.id) },
@@ -154,6 +176,7 @@ private fun ArcRow(
                 key(button.id.value) {
                     ActionBox(
                         label = button.label,
+                        icon = button.icon,
                         description = button.contentDescription,
                         enabled = enabled,
                         onClick = { onInvoke(button.id) },
@@ -190,6 +213,7 @@ private fun EditBox(
 ) {
     ActionBox(
         label = if (editing) labels.editDone else labels.edit,
+        icon = ControlIcon.Text,
         description = if (editing) labels.editDoneDescription else labels.editDescription,
         enabled = true,
         onClick = { onEditingChange(!editing) },
@@ -206,6 +230,7 @@ private fun AddBox(
 ) {
     ActionBox(
         label = labels.add,
+        icon = ControlIcon.Plus,
         description = labels.addDescription,
         enabled = true,
         onClick = onAdd,
@@ -230,11 +255,7 @@ private fun EmptySlot(
                 .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
-        BasicText(
-            text = ADD_GLYPH,
-            style = TextStyle(color = colors.muted, fontSize = BUTTON_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
-            modifier = Modifier.clearAndSetSemantics {},
-        )
+        ShellIcon(ShellIcons.Plus, colors.muted, Modifier.size(ICON_SIZE_DP.dp))
     }
 }
 
@@ -269,16 +290,25 @@ fun MapQuickAccessButton(
                 .semantics { contentDescription = button?.contentDescription ?: emptyDescription },
         contentAlignment = Alignment.Center,
     ) {
-        BasicText(
-            text = button?.label ?: ADD_GLYPH,
-            style =
-                TextStyle(
-                    color = if (button == null) colors.muted else colors.ink,
-                    fontSize = QUICK_ACCESS_FONT_SP.sp,
-                    fontWeight = FontWeight.SemiBold,
-                ),
-            modifier = Modifier.clearAndSetSemantics {},
-        )
+        val icon = button?.icon ?: ControlIcon.Plus
+        if (icon == ControlIcon.Text) {
+            BasicText(
+                text = button?.label.orEmpty(),
+                style =
+                    TextStyle(
+                        color = colors.ink,
+                        fontSize = QUICK_ACCESS_FONT_SP.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    ),
+                modifier = Modifier.clearAndSetSemantics {},
+            )
+        } else {
+            ShellIcon(
+                icon.imageVector(),
+                if (button == null) colors.muted else colors.ink,
+                Modifier.size(ICON_SIZE_DP.dp),
+            )
+        }
     }
 }
 
@@ -286,6 +316,7 @@ fun MapQuickAccessButton(
 @Composable
 private fun ActionBox(
     label: String,
+    icon: ControlIcon,
     description: String,
     enabled: Boolean,
     onClick: () -> Unit,
@@ -309,20 +340,36 @@ private fun ActionBox(
                 .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
-        BasicText(
-            text = label,
-            style =
-                TextStyle(
-                    color = colors.ink,
-                    fontSize = BUTTON_FONT_SP.sp,
-                    fontWeight = FontWeight.SemiBold,
-                ),
-            // The description names the control; the drawn glyph is decoration
-            // and would otherwise be read as its own character.
-            modifier = Modifier.clearAndSetSemantics {},
-        )
+        if (icon == ControlIcon.Text) {
+            BasicText(
+                text = label,
+                style =
+                    TextStyle(
+                        color = colors.ink,
+                        fontSize = BUTTON_FONT_SP.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    ),
+                // The description names the control; the drawn glyph is
+                // decoration and would otherwise be read as its own character.
+                modifier = Modifier.clearAndSetSemantics {},
+            )
+        } else {
+            ShellIcon(icon.imageVector(), colors.ink, Modifier.size(ICON_SIZE_DP.dp))
+        }
     }
 }
+
+private fun ControlIcon.imageVector(): ImageVector =
+    when (this) {
+        ControlIcon.Text -> error("a text control has no drawn icon")
+        ControlIcon.Plus -> ShellIcons.Plus
+        ControlIcon.Minus -> ShellIcons.Minus
+        ControlIcon.Compass -> ShellIcons.Compass
+        ControlIcon.Locate -> ShellIcons.Locate
+        ControlIcon.Saved -> ShellIcons.Star
+        ControlIcon.Tracks -> ShellIcons.Track
+        ControlIcon.Route -> ShellIcons.Route
+    }
 
 private const val BUTTON_SIZE_DP = 44
 private const val BUTTON_CORNER_DP = 8
@@ -333,4 +380,4 @@ private const val QUICK_ACCESS_SIZE_DP = 46
 private const val QUICK_ACCESS_FONT_SP = 16
 private const val DISABLED_ALPHA = 0.4f
 private const val WIDE_BUTTON_WIDTH_DP = 80
-private const val ADD_GLYPH = "+"
+private const val ICON_SIZE_DP = 24

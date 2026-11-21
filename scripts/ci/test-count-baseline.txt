@@ -28,7 +28,7 @@ plugins/online-search	23
 plugins/osm-places	50
 plugins/plugin-manager	19
 plugins/point-info	26
-plugins/profiles-ui	21
+plugins/profiles-ui	22
 plugins/proximity-alerts	22
 plugins/raster	51
 plugins/region-outlines	3

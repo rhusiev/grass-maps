@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The pinned walk pictogram: the runner drawn in round9/k-browse.html's bottom
+  bar. Paths are the "walk" icon from round9/_build/ui.py, on its 24 px grid.
+  The head is filled, the limbs stroked; both take the tint the bar applies.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M13.6,4m-1.9,0a1.9,1.9 0,1 0,3.8 0a1.9,1.9 0,1 0,-3.8 0"
+        android:fillColor="#FFFFFFFF" />
+    <path
+        android:pathData="M12.6,7.6L11,13.6M11,13.6L9,17.2L7.2,21M11,13.6L13.6,16.6L15,21M12.6,8.6L9.6,10.6L8.5,13.2M12.6,8.6L15,11.2L17.6,12.2"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The fourth "all profiles" pictogram: the 2x2 grid drawn in
+  round9/k-browse.html's bar and handed off in section 4 of
+  design-handoff-2026-11-13.md. Paths are the "grid" icon from
+  round9/_build/ui.py: three cells and a plus in the fourth.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M5.5,4L9,4A1.5,1.5 0,0 1,10.5 5.5L10.5,9A1.5,1.5 0,0 1,9 10.5L5.5,10.5A1.5,1.5 0,0 1,4 9L4,5.5A1.5,1.5 0,0 1,5.5 4Z"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M15,4L18.5,4A1.5,1.5 0,0 1,20 5.5L20,9A1.5,1.5 0,0 1,18.5 10.5L15,10.5A1.5,1.5 0,0 1,13.5 9L13.5,5.5A1.5,1.5 0,0 1,15 4Z"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M5.5,13.5L9,13.5A1.5,1.5 0,0 1,10.5 15L10.5,18.5A1.5,1.5 0,0 1,9 20L5.5,20A1.5,1.5 0,0 1,4 18.5L4,15A1.5,1.5 0,0 1,5.5 13.5Z"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M16.75,14L16.75,19.5M14,16.75L19.5,16.75"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

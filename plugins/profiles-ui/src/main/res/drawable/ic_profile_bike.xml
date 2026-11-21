@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The pinned bike pictogram: the bicycle drawn in round9/k-browse.html's bottom
+  bar. Paths are the "bike" icon from round9/_build/ui.py, on its 24 px grid.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M5.5,16.5m-3.6,0a3.6,3.6 0,1 0,7.2 0a3.6,3.6 0,1 0,-7.2 0M18.5,16.5m-3.6,0a3.6,3.6 0,1 0,7.2 0a3.6,3.6 0,1 0,-7.2 0"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M5.5,16.5L9.5,10L11.5,16.5ZM9.5,10L16,10L11.5,16.5M16,10L18.5,16.5M8,7.6L11,7.6M9.5,7.6L9.5,10M16,10L15.2,7.4L17.6,7.4"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

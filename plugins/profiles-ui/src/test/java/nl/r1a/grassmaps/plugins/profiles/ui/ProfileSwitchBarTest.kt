@@ -7,6 +7,7 @@ import nl.r1a.grassmaps.plugin.ui.api.LightShellColors
 import nl.r1a.grassmaps.plugin.ui.api.contrastRatio
 import nl.r1a.grassmaps.plugin.ui.api.inkOn
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -59,6 +60,26 @@ class ProfileSwitchBarTest {
                 contrastRatio(items[1].content, colors.soft) >= UI_ICON_CONTRAST,
             )
         }
+    }
+
+    @Test
+    fun theBarDrawsTheRoundNineVectorPictogramsInsteadOfLetters() {
+        val bar = File("src/main/java/nl/r1a/grassmaps/plugins/profiles/ui/ProfileSwitchBar.kt").readText()
+        val pictograms =
+            mapOf(
+                "ic_profile_walk" to "M12.6,7.6L11,13.6",
+                "ic_profile_bike" to "M5.5,16.5L9.5,10",
+                "ic_profile_hike" to "M2.5,20L9.5,8",
+                "ic_profiles_grid" to "M16.75,14L16.75,19.5",
+            )
+        pictograms.forEach { (name, path) ->
+            val drawable = File("src/main/res/drawable/$name.xml")
+            assertTrue("$drawable is missing", drawable.exists())
+            assertTrue("$drawable misses the round 9 path", drawable.readText().contains(path))
+            assertTrue("$drawable is not drawn by the bar", bar.contains("R.drawable.$name"))
+        }
+        assertFalse("the bar still draws letter initials", bar.contains("switchGlyph") || bar.contains("GRID_GLYPH"))
+        assertFalse("the bar still draws text glyphs", bar.contains("BasicText"))
     }
 
     @Test

@@ -1,5 +1,6 @@
 package nl.r1a.grassmaps.plugins.profiles.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,20 +13,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.api.model.BuiltInProfiles
 import nl.r1a.grassmaps.plugin.api.model.ProfileId
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
@@ -86,11 +86,7 @@ fun ProfileSwitchBar(
                         },
                 contentAlignment = Alignment.Center,
             ) {
-                BasicText(
-                    text = switchGlyph(item.id),
-                    style = TextStyle(color = item.content, fontSize = DOT_FONT_SP.sp, fontWeight = FontWeight.Bold),
-                    modifier = Modifier.clearAndSetSemantics {},
-                )
+                ProfilePictogram(id = item.id, content = item.content)
             }
         }
         Box(
@@ -110,37 +106,49 @@ fun ProfileSwitchBar(
                     .semantics { contentDescription = labels.all },
             contentAlignment = Alignment.Center,
         ) {
-            BasicText(
-                text = GRID_GLYPH,
-                style =
-                    TextStyle(
-                        color = if (allSelected) palette.onAccent else palette.ink,
-                        fontSize = GRID_FONT_SP.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
-                modifier = Modifier.clearAndSetSemantics {},
+            ProfilePictogram(
+                id = null,
+                content = if (allSelected) palette.onAccent else palette.ink,
             )
         }
     }
 }
 
-/** A stable initial for each dot, so a locale change never redraws the bar's shape. */
-private fun switchGlyph(id: ProfileId): String =
-    when (id) {
-        BuiltInProfiles.WALK -> "W"
-        BuiltInProfiles.BIKE -> "B"
-        BuiltInProfiles.HIKE -> "H"
-        else -> "•"
-    }
+/**
+ * The round 9 vector pictogram of a pinned control. [id] is null for the fourth
+ * button, which opens all profiles. The dot's semantics carry the accessibility
+ * label, so the drawing itself has none. All four pictograms are sourced from
+ * round9/k-browse.html's bottom bar; no letter fallback is needed.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun ProfilePictogram(
+    id: ProfileId?,
+    content: Color,
+) {
+    val painter =
+        when (id) {
+            BuiltInProfiles.WALK -> painterResource(R.drawable.ic_profile_walk)
+            BuiltInProfiles.BIKE -> painterResource(R.drawable.ic_profile_bike)
+            BuiltInProfiles.HIKE -> painterResource(R.drawable.ic_profile_hike)
+            else -> painterResource(R.drawable.ic_profiles_grid)
+        }
+    Image(
+        painter = painter,
+        contentDescription = null,
+        colorFilter = ColorFilter.tint(content),
+        modifier = Modifier.size(PICTOGRAM_DP.dp),
+    )
+}
 
-private const val BAR_HEIGHT_DP = 52
-private const val BAR_CORNER_DP = 26
+// The canon bottom bar is 58 dp high and fully round (radius 29): round 5's
+// BAR_H = 58 and border-radius BAR_H / 2 in r3.py.
+private const val BAR_HEIGHT_DP = 58
+private const val BAR_CORNER_DP = 29
 private const val BAR_INSET_DP = 8
 private const val DOT_INSET_DP = 6
 private const val DOT_SIZE_DP = 36
 private const val DOT_GAP_DP = 4
-private const val DOT_FONT_SP = 16
 private const val DIVIDER_WIDTH_DP = 1
 private const val DIVIDER_HEIGHT_DP = 28
-private const val GRID_FONT_SP = 18
-private const val GRID_GLYPH = "▦"
+private const val PICTOGRAM_DP = 21

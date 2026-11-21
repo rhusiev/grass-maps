@@ -492,7 +492,8 @@ private fun MapContent(
             }
         }
     }
-    var profile by remember(container) { mutableStateOf(container.alertSettings.activeProfileId()) }
+    val activeProfile by container.activeProfile.active.collectAsState()
+    val profile = activeProfile.profileId
     val layoutController = remember(container, profile) { container.buttonLayoutController(profile) }
     LaunchedEffect(layoutController) { layoutController.load() }
     val layoutState by layoutController.state.collectAsState()
@@ -742,13 +743,8 @@ private fun MapContent(
                 ::isNavigationActive,
             ).collect { active -> value = active }
         }
-    // A trip activates its profile. When the map is back, the bar and the
-    // widget grid reload the layout of the profile that is now active.
-    LaunchedEffect(navigationActive) {
-        if (!navigationActive) {
-            profile = container.alertSettings.activeProfileId()
-        }
-    }
+    // The bar and the widget grid follow the one published profile state, so a
+    // trip that activates its profile changes both when the map is back.
     // The guidance camera belongs to the process, not this composition, so a
     // re-created Activity keeps the switches the user set for this trip. The
     // container collects navigation state into it; a fresh trip applies the

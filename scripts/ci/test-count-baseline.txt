@@ -1,9 +1,9 @@
 alerts	67
-app	641
+app	647
 control	47
 core	51
-core-services	191
-map	148
+core-services	196
+map	152
 navigation	83
 places	149
 planner	22

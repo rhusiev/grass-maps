@@ -82,6 +82,7 @@ import nl.r1a.grassmaps.plugin.api.host.RoutingEngineAccess
 import nl.r1a.grassmaps.plugin.api.host.RoutingOptionsAccess
 import nl.r1a.grassmaps.plugin.api.host.StreamAccess
 import nl.r1a.grassmaps.plugin.api.manifest.GeneratedCommand
+import nl.r1a.grassmaps.plugin.api.model.BuiltInProfiles
 import nl.r1a.grassmaps.plugin.api.model.InstalledPack
 import nl.r1a.grassmaps.plugin.api.model.MobileDataPolicy
 import nl.r1a.grassmaps.plugin.api.model.ProfileId
@@ -255,11 +256,18 @@ class AppContainer(
         get() = positionOffsetProvider.offsetForProfile(DEFAULT_PROFILE.value)
 
     /**
-     * The global length unit setting. Resolving it reads the settings file, so
-     * the first access is always from an IO-dispatched command or the map's
-     * IO-loaded state, never Main.
+     * The per-profile length unit setting (T-0603). Resolving it reads the
+     * store, and migrates the old app-wide file once, so the first access is
+     * always from an IO-dispatched command or the map's IO-loaded state.
      */
-    val unitSettings: UnitSettings by lazy { UnitSettings(unitSettingsFileProvider()) }
+    val unitSettings: UnitSettings by lazy {
+        userDataRootProvider()?.let { root ->
+            UnitSettings.open(
+                file = File(root, UserDataLayout.UNIT_SETTINGS_PATH),
+                legacyFile = unitSettingsFileProvider() ?: File(root, UserDataLayout.LEGACY_UNIT_SETTINGS_PATH),
+            )
+        } ?: UnitSettings()
+    }
 
     /**
      * The search history switch (T-0207). Resolving it reads the settings file,
@@ -284,11 +292,17 @@ class AppContainer(
     var contoursOverride: Boolean? = null
 
     /**
-     * The map style the layers panel switches (T-0109). Construction reads the
-     * settings file, so the map bundle resolves it off Main.
+     * The per-profile map style the layers panel switches (T-0603). Resolving
+     * it reads the store and migrates the old app-wide file once, so the map
+     * bundle resolves it off Main.
      */
     val mapStyleSettings: MapStyleSettings by lazy {
-        MapStyleSettings(mapStyleSettingsFileProvider())
+        userDataRootProvider()?.let { root ->
+            MapStyleSettings.open(
+                file = File(root, UserDataLayout.MAP_STYLE_SETTINGS_PATH),
+                legacyFile = mapStyleSettingsFileProvider() ?: File(root, UserDataLayout.LEGACY_MAP_STYLE_SETTINGS_PATH),
+            )
+        } ?: MapStyleSettings()
     }
 
     /**
@@ -337,15 +351,22 @@ class AppContainer(
 
     /**
      * The profile list and the actions on it (T-0602). It copies and resets the
-     * routing options and the alert settings. An action that includes the alert
-     * settings reads them first, so the plugin calls it from an IO dispatcher.
+     * settings groups that carry encoded values: routing, alerts, style and
+     * units. Widgets have their own layout editor and are read by profile at
+     * their call sites. An action that includes the alert settings reads them
+     * first, so the plugin calls it from an IO dispatcher.
      */
     val profileSettings: ProfileSettingsService by lazy {
         ProfileSettingsService(
             profileCatalog,
-            listOf(routingOptionsSettings, alertSettings),
+            listOf(routingOptionsSettings, alertSettings, mapStyleSettings, unitSettings),
             ensureReady = { group -> if (group === alertSettings) alertSettings.ensureLoaded() else Outcome.Success(Unit) },
         )
+    }
+
+    /** The one published state of the active profile, switched as a whole (T-0603). */
+    val activeProfile: ActiveProfileController by lazy {
+        ActiveProfileController(mapStyleSettings, unitSettings, routingOptionsSettings, alertSettings, widgetLayoutStore)
     }
 
     /**
@@ -472,7 +493,7 @@ class AppContainer(
             requiresLocationPermission = { sharedLocation.requiresPermission() },
             routing = routingEngine,
             service = navigationService,
-            onProfileStarted = { profile -> alertSettings.activate(profile) },
+            onProfileStarted = { profile -> activeProfile.activate(BuiltInProfiles.idOf(profile)) },
             log = { message -> Log.i(NAVIGATION_TAG, message) },
         )
     }

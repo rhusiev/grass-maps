@@ -829,8 +829,10 @@ analysis or follow sheet uses the bottom centre. A card that is always open
 covers the map's centre on a phone. The button (`plugins/layers-panel`) is view
 state. The card it opens starts with the map
 styles card, two radio rows: Meadow (Standard, "Everyday and city") and Trail
-(Touring, "Cycling and hiking"). The choice is stored in `settings/style.json`
-(`{"style":"touring"}`) and a missing or unknown value means Standard. Night
+(Touring, "Cycling and hiking"). The choice is stored per profile in
+`profiles/map-style.json` under the `style` key (`"touring"` for Trail); the old
+app-wide `settings/style.json` migrates once to the walk profile. A profile with
+no value means Standard (Meadow). Night
 mode is not a third choice: the map loads the chosen style's dark variant when
 the shell is dark, so Meadow becomes Meadow dark and Trail becomes Trail dark.
 The system night mode decides by default. The debug-only `core.theme.set` pin,
@@ -1125,8 +1127,10 @@ from Compose. The track layer (T-0401) is its caller and the route layer
 (T-0408) writes only the route line; the puck and markers stay on their own
 host calls.
 
-The Standard light and dark variants share one `BaseStyle.Json` document, so a
-variant switch updates layers in place instead of reloading the style. A base
+The Meadow and Trail light and dark variants share one `BaseStyle.Json`
+document, so a variant switch updates layers in place instead of reloading the
+style. A profile switch between styles that share the base is a no-op for the
+loader (`needsStyleReload` in `map`); a base-style change loads once. A base
 style carries sources and glyphs but no layers; the consumer applies the
 provider's layers with `applyStyleDiff`, and only `setStyle` may reload.
 `plugins/style-standard/src/main/styles/standard.json` holds one layer list and
@@ -1494,9 +1498,12 @@ circle, the deadband and the scale bar share one definition. The bar collects
 the camera itself, so a pan or zoom recomposes the bar alone.
 
 The unit system is `UnitSystem` in `plugin-api`, and `core-services`
-`UnitSettings` stores it as `filesDir/settings/units.json` with metric as the
-default; a missing or corrupt file reads as metric. `MapScreen` resolves the
-settings object off Main and collects its flow, so a change redraws the bar.
+`UnitSettings` stores it per profile as `filesDir/profiles/units.json` under the
+`units` key, with metric as the default; the old app-wide
+`settings/units.json` migrates once to the walk profile. A missing or corrupt
+file reads as metric. `MapScreen` resolves the settings object off Main and
+collects its flow, so a change redraws the bar. A profile switch publishes units
+with the other four categories from one state.
 The one display formatter is `UnitText` in `plugin-api`: it converts and
 formats distances, elevations and speeds, and resolves the `unit_*` labels
 from the app bundle. Every surface calls it, so none keeps a second
@@ -2760,6 +2767,8 @@ unreadable old file stays and reads as empty.
 | `RoutingOptionsSettings` | `profiles/routing-options.json` | `settings/routing-options.json` | 1 |
 | `AlertSettingsStore` | `profiles/alerts.json` | `settings/alerts.json` | 1 |
 | `WidgetLayoutStore` | `profiles/widgets.json` | none | 1 |
+| `MapStyleSettings` | `profiles/map-style.json` | `settings/style.json` | 1 |
+| `UnitSettings` | `profiles/units.json` | `settings/units.json` | 1 |
 
 ### Create, copy, reset and undo
 
@@ -2784,9 +2793,9 @@ only when nothing has read the store before. A read has then already returned
 them, and a profile reset to its defaults must stay reset.
 
 `ProfileSettingsService` (`core-services`) owns the actions. It reaches each
-per-profile store through `ProfileSettingsGroup` (`plugin-api`): `ROUTING` and
-`ALERTS` implement `read` and `replace` of one profile's values. The service
-builds every action from these two calls:
+per-profile store through `ProfileSettingsGroup` (`plugin-api`): `ROUTING`,
+`ALERTS`, `STYLE` and `UNITS` implement `read` and `replace` of one profile's
+values. The service builds every action from these two calls:
 
 1. Create a profile, or copy one, writes the new catalog entry and replaces the
    new profile's values in each group with the source's values.
@@ -2827,8 +2836,10 @@ every group. `app` hosts the screen over the map. The map has no profiles entry
 point yet, so the debug build opens it with `core.profiles.show` and closes it
 with `core.profiles.hide`. Every change still goes through the `profiles.ui`
 commands. The screen colours are fixed light colours, as on the downloads
-screen. Map style, buttons and navigation settings are not per-profile stores
-yet, so the screen does not offer them.
+screen. Map style, units, routing options and alerts are per-profile stores;
+button layout is keyed by profile too. `ActiveProfileController` publishes all
+five categories as one state, so a switch changes them together. The screen does
+not offer style or units yet; T-0604 owns the quick switch.
 
 ## Profile alert settings
 
@@ -3292,7 +3303,7 @@ storage as the other user data. The rejected options:
 - A key in the future global `settings.json` does not fit either. History is a
   list with its own clear action and its own privacy switch, not a scalar
   preference. It moves into the versioned settings file when that file exists,
-  as `settings/units.json` and `settings/search-history.json` will.
+  as `settings/search-history.json` will; units are now per profile instead.
 
 The file is app-private and is never backed up.
 

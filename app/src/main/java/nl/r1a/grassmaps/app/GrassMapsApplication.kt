@@ -111,7 +111,14 @@ open class GrassMapsApplication : Application() {
         // host is built for it, and the IO dispatcher keeps the first screen
         // from waiting on it.
         maintenanceScope.launch { container.applyAutoUpdateSchedule() }
-        maintenanceScope.launch { container.profileCatalog.load() }
+        maintenanceScope.launch {
+            container.profileCatalog.load()
+            container.widgetLayoutStore.load()
+            container.alertSettings.ensureLoaded()
+            // Publish a full snapshot once every store has read its file, so the
+            // first composition does not see a default widget layout.
+            container.activeProfile.activate(container.activeProfile.activeProfileId())
+        }
         maintenanceScope.launch {
             TrackTrash.purge(
                 File(filesDir, UserDataLayout.TRACKS_DIRECTORY),

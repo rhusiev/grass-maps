@@ -40,8 +40,8 @@ internal fun WidgetGridHost(
     onOpenPicker: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val profile = remember(container) { container.alertSettings.activeProfileId() }
-    val controller = remember(container, profile) { container.widgetLayoutController(profile) }
+    val profile by container.activeProfile.active.collectAsState()
+    val controller = remember(container, profile.profileId) { container.widgetLayoutController(profile.profileId) }
     LaunchedEffect(controller) { controller.load() }
     val state by controller.state.collectAsState()
     val layout = state.layout

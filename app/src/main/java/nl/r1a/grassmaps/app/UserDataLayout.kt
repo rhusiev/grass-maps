@@ -23,6 +23,7 @@ internal object UserDataLayout {
     const val WIDGET_LAYOUT_PATH = "$PROFILES_DIRECTORY/widgets.json"
     const val UNIT_SETTINGS_PATH = "$PROFILES_DIRECTORY/units.json"
     const val MAP_STYLE_SETTINGS_PATH = "$PROFILES_DIRECTORY/map-style.json"
+    const val SCREEN_SETTINGS_PATH = "$PROFILES_DIRECTORY/screens.json"
 
     /** The map control layout of every profile (T-0606); still the pre-profile file location. */
     const val BUTTON_LAYOUT_PATH = "controls/button-layout.json"

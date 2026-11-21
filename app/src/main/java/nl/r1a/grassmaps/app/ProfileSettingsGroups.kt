@@ -2,6 +2,7 @@ package nl.r1a.grassmaps.app
 
 import nl.r1a.grassmaps.alerts.AlertSettingsStore
 import nl.r1a.grassmaps.core.services.RoutingOptionsSettings
+import nl.r1a.grassmaps.core.services.ScreenSettings
 import nl.r1a.grassmaps.core.services.UnitSettings
 import nl.r1a.grassmaps.plugin.api.service.ProfileSettingsGroup
 
@@ -15,4 +16,5 @@ internal fun profileSettingsGroups(
     units: UnitSettings,
     routing: RoutingOptionsSettings,
     alerts: AlertSettingsStore,
-): List<ProfileSettingsGroup> = listOf(routing, alerts, style, units)
+    screens: ScreenSettings = ScreenSettings(),
+): List<ProfileSettingsGroup> = listOf(routing, alerts, style, units, screens)

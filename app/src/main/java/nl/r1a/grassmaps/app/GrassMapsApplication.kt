@@ -45,11 +45,14 @@ open class GrassMapsApplication : Application() {
     /** Application-lifetime work that must not hold the Main thread. */
     private val maintenanceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    /** The string source the in-app language swaps without a restart (T-0111). */
+    internal val mutableStrings by lazy { MutableStrings(AndroidStrings(this)) }
+
     val container: AppContainer by lazy {
         val location = locationSource()
         val documentSaver = DocumentSaveCoordinator(ContentResolverDocumentWriter(this))
         AppContainer(
-            strings = AndroidStrings(this),
+            strings = mutableStrings,
             locationSource = location,
             locationPermissionStore =
                 FileLocationPermissionStore {

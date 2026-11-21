@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import nl.r1a.grassmaps.alerts.AlertSettingsStore
 import nl.r1a.grassmaps.alerts.ProfileAlertSettings
 import nl.r1a.grassmaps.core.services.RoutingOptionsSettings
+import nl.r1a.grassmaps.core.services.ScreenSettings
+import nl.r1a.grassmaps.core.services.ScreenSettingsValues
 import nl.r1a.grassmaps.core.services.UnitSettings
 import nl.r1a.grassmaps.plugin.api.model.BuiltInProfiles
 import nl.r1a.grassmaps.plugin.api.model.ProfileId
@@ -32,6 +34,7 @@ class ActiveProfileController(
     private val routing: RoutingOptionsSettings,
     private val alerts: AlertSettingsStore,
     private val widgets: WidgetLayoutStore,
+    private val screens: ScreenSettings = ScreenSettings(),
     initialProfile: ProfileId = BuiltInProfiles.WALK,
 ) {
     /** The five per-profile values of the active profile, published together. */
@@ -42,6 +45,7 @@ class ActiveProfileController(
         val units: UnitSystem,
         val routing: RouteOptions,
         val alerts: ProfileAlertSettings,
+        val screens: ScreenSettingsValues,
     )
 
     private val state = MutableStateFlow(snapshot(initialProfile))
@@ -59,6 +63,7 @@ class ActiveProfileController(
         style.activate(profile)
         units.activate(profile)
         alerts.activate(profile)
+        screens.activate(profile)
         state.value = snapshot(profile)
     }
 
@@ -70,5 +75,6 @@ class ActiveProfileController(
             units = units.forProfile(profile),
             routing = routing.forProfile(profile),
             alerts = alerts.forProfile(profile),
+            screens = screens.forProfile(profile),
         )
 }

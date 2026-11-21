@@ -53,6 +53,7 @@ import nl.r1a.grassmaps.core.services.ProfileCatalog
 import nl.r1a.grassmaps.core.services.ProfileSettingsService
 import nl.r1a.grassmaps.core.services.ProfileValueFile
 import nl.r1a.grassmaps.core.services.RoutingOptionsSettings
+import nl.r1a.grassmaps.core.services.ScreenSettings
 import nl.r1a.grassmaps.core.services.SearchHistorySettings
 import nl.r1a.grassmaps.core.services.SharedLocationSource
 import nl.r1a.grassmaps.core.services.UnitSettings
@@ -310,6 +311,17 @@ class AppContainer(
     }
 
     /**
+     * The six screen settings of T-0111. One per-profile file, so copy, reset
+     * and undo cover them with the other stores. Construction reads the file,
+     * so the screen resolves it off Main.
+     */
+    val screenSettings: ScreenSettings by lazy {
+        userDataRootProvider()?.let { root ->
+            ScreenSettings.open(File(root, UserDataLayout.SCREEN_SETTINGS_PATH))
+        } ?: ScreenSettings()
+    }
+
+    /**
      * The map label language and size (T-0110). Construction reads the settings
      * file, so the first access is an IO-dispatched command or the application's
      * start-up publisher, never Main.
@@ -381,14 +393,14 @@ class AppContainer(
     val profileSettings: ProfileSettingsService by lazy {
         ProfileSettingsService(
             profileCatalog,
-            profileSettingsGroups(mapStyleSettings, unitSettings, routingOptionsSettings, alertSettings),
+            profileSettingsGroups(mapStyleSettings, unitSettings, routingOptionsSettings, alertSettings, screenSettings),
             ensureReady = { group -> if (group === alertSettings) alertSettings.ensureLoaded() else Outcome.Success(Unit) },
         )
     }
 
     /** The one published state of the active profile, switched as a whole (T-0603). */
     val activeProfile: ActiveProfileController by lazy {
-        ActiveProfileController(mapStyleSettings, unitSettings, routingOptionsSettings, alertSettings, widgetLayoutStore)
+        ActiveProfileController(mapStyleSettings, unitSettings, routingOptionsSettings, alertSettings, widgetLayoutStore, screenSettings)
     }
 
     /** One tap of the map switcher activates the next catalog profile (T-0604). */
@@ -453,6 +465,9 @@ class AppContainer(
      * for location outside navigation.
      */
     private val sharedLocation: LocationSource by lazy { SharedLocationSource(locationSource, processScope) }
+
+    /** The fixes the by-sun theme reads; null while no fix exists (T-0111). */
+    val locationFixes: Flow<nl.r1a.grassmaps.plugin.api.model.LocationFix?> get() = sharedLocation.fixes
 
     /**
      * The activity-scoped location collector; the activity starts it at
@@ -1391,6 +1406,7 @@ class AppContainer(
                 debuggable = debuggable,
             ) +
             UnitsCommand({ unitSettings }) +
+            ScreenSettingsCommand({ screenSettings }) +
             MapLabelsCommand({ mapLabelSettings }) +
             SearchHistorySettingCommand({ searchHistorySettings }) +
             SetPluginEnabledCommand({ pluginHost }) +

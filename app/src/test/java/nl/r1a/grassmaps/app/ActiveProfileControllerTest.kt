@@ -3,7 +3,9 @@ package nl.r1a.grassmaps.app
 import nl.r1a.grassmaps.alerts.AlertSettings
 import nl.r1a.grassmaps.alerts.AlertSettingsStore
 import nl.r1a.grassmaps.alerts.ProfileAlertSettings
+import nl.r1a.grassmaps.core.services.AppThemeChoice
 import nl.r1a.grassmaps.core.services.RoutingOptionsSettings
+import nl.r1a.grassmaps.core.services.ScreenSettings
 import nl.r1a.grassmaps.core.services.UnitSettings
 import nl.r1a.grassmaps.plugin.api.error.Outcome
 import nl.r1a.grassmaps.plugin.api.model.BuiltInProfiles
@@ -79,6 +81,20 @@ class ActiveProfileControllerTest {
         assertEquals("no screen keeps a stale style", MapStyleChoice.TOURING, style.active.value)
         assertEquals("no screen keeps a stale unit", UnitSystem.Imperial, units.units.value)
         assertEquals(bike, alerts.activeProfileId())
+    }
+
+    @Test
+    fun switchingTheProfilePublishesTheScreenRows() {
+        val screens = ScreenSettings(InMemoryProfileStore())
+        screens.set(bike, ScreenSettings.APP_THEME_KEY, AppThemeChoice.DARK.wire)
+        val controller = ActiveProfileController(style, units, routing, alerts, widgets, screens)
+
+        controller.activate(bike)
+
+        assertEquals(AppThemeChoice.DARK, screens.active.value.appTheme)
+        assertEquals(AppThemeChoice.DARK, controller.active.value.screens.appTheme)
+        controller.activate(walk)
+        assertEquals(AppThemeChoice.SYSTEM, screens.active.value.appTheme)
     }
 
     @Test

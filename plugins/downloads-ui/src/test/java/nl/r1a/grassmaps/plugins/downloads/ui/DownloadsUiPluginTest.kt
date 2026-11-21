@@ -384,6 +384,7 @@ class DownloadsUiPluginTest {
                 DownloadsUiContract.removeRegion,
                 DownloadsUiContract.setServer,
                 DownloadsUiContract.setMobileData,
+                DownloadsUiContract.setDownloadsEnabled,
                 DownloadsUiContract.setAutoUpdate,
                 DownloadsUiContract.useMobileDataNow,
             )

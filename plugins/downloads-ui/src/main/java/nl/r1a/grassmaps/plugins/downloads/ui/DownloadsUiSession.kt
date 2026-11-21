@@ -80,6 +80,21 @@ class DownloadsUiSession(
 
     suspend fun setMobileData(policy: MobileDataPolicy): Outcome<DownloadsState> = result(access.setMobileDataPolicy(policy))
 
+    /**
+     * Writes the privacy switch through the host; the gate reads the same
+     * switch. Turning it on retries the gated catalogue read, so the screen
+     * heals in place instead of staying empty until the next open. A failure
+     * to fetch is a typed problem in the state, never a failed switch write.
+     */
+    suspend fun setDownloadsEnabled(enabled: Boolean): Outcome<DownloadsState> {
+        val written = result(access.setDownloadsEnabled(enabled))
+        if (written is Outcome.Success && enabled) {
+            access.refresh()
+            return result(Outcome.Success(Unit))
+        }
+        return written
+    }
+
     suspend fun setAutoUpdate(enabled: Boolean): Outcome<DownloadsState> = result(access.setAutoUpdate(enabled))
 
     suspend fun useMobileDataNow(): Outcome<DownloadsState> = result(access.useMobileDataNow())
@@ -131,7 +146,7 @@ class DownloadsUiSession(
     private fun publishLocked() {
         val data = access.data.value
         val detected = DownloadsScreen.detectRegion(data.catalog, lastFix)
-        val state = DownloadsScreen.state(data, selectedRegion, detected, query)
+        val state = DownloadsScreen.state(data, selectedRegion, detected, query, access.downloadsEnabled)
         if (state.selectedRegion == null) {
             selectedRegion = null
         }

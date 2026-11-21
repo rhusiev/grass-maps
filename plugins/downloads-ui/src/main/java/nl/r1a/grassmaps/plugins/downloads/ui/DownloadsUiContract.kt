@@ -24,6 +24,7 @@ object DownloadsUiContract {
     const val SEARCH: String = "downloads.ui.search"
     const val SET_SERVER: String = "downloads.ui.set_server"
     const val SET_MOBILE_DATA: String = "downloads.ui.set_mobile_data"
+    const val SET_DOWNLOADS_ENABLED: String = "downloads.ui.set_downloads_enabled"
     const val SET_AUTO_UPDATE: String = "downloads.ui.set_auto_update"
     const val USE_MOBILE_DATA_NOW: String = "downloads.ui.use_mobile_data_now"
 
@@ -38,6 +39,7 @@ object DownloadsUiContract {
     val search: CommandId = CommandId(SEARCH)
     val setServer: CommandId = CommandId(SET_SERVER)
     val setMobileData: CommandId = CommandId(SET_MOBILE_DATA)
+    val setDownloadsEnabled: CommandId = CommandId(SET_DOWNLOADS_ENABLED)
     val setAutoUpdate: CommandId = CommandId(SET_AUTO_UPDATE)
     val useMobileDataNow: CommandId = CommandId(USE_MOBILE_DATA_NOW)
 
@@ -52,6 +54,7 @@ object DownloadsUiContract {
             search,
             setServer,
             setMobileData,
+            setDownloadsEnabled,
             setAutoUpdate,
             useMobileDataNow,
         )

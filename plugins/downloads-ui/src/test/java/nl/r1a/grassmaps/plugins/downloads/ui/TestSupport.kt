@@ -99,6 +99,12 @@ internal class FakeDownloadsAccess(
     private val mutable = MutableStateFlow(initial)
     override val data: StateFlow<DownloadsData> = mutable.asStateFlow()
 
+    /** The privacy switch the gate reads, kept beside the store it gates. */
+    override var downloadsEnabled: Boolean = false
+
+    /** A typed write failure, for the "switch cannot be written" path. */
+    var switchWriteFails: Boolean = false
+
     val calls = mutableListOf<String>()
     var catalog: RegionCatalog? = null
     var refreshProblem: DownloadProblem? = null
@@ -160,6 +166,15 @@ internal class FakeDownloadsAccess(
     override suspend fun setMobileDataPolicy(policy: MobileDataPolicy): Outcome<Unit> {
         calls += "mobile:${policy.name}"
         mutable.update { it.copy(mobileDataPolicy = policy) }
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun setDownloadsEnabled(enabled: Boolean): Outcome<Unit> {
+        calls += "switch:$enabled"
+        if (switchWriteFails) {
+            return Outcome.Failure(AppError.NotFound)
+        }
+        downloadsEnabled = enabled
         return Outcome.Success(Unit)
     }
 

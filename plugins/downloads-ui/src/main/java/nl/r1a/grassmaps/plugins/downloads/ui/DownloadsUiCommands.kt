@@ -195,6 +195,26 @@ class SetMobileDataPolicyCommand(
     }
 }
 
+/**
+ * Turns the on-screen downloads switch on or off. The host writes the privacy
+ * switch the network gate reads, so this command grants no access on its own.
+ * Parameter: enabled, a boolean.
+ */
+class SetDownloadsEnabledCommand(
+    private val session: DownloadsUiSession,
+) : Command<JsonElement, DownloadsState>(
+        id = DownloadsUiContract.setDownloadsEnabled,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = DownloadsState.serializer(),
+        doc = "Turns map downloads on or off through the privacy switch. Parameter: enabled, true or false.",
+        policy = TRANSFER_POLICY,
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<DownloadsState>> {
+        val enabled = params.bool(PARAM_ENABLED) ?: return Outcome.Failure(AppError.InvalidInput)
+        return session.result(session.setDownloadsEnabled(enabled))
+    }
+}
+
 /** Turns the monthly automatic update on or off. Parameter: enabled, a boolean. */
 class SetAutoUpdateCommand(
     private val session: DownloadsUiSession,
@@ -206,9 +226,7 @@ class SetAutoUpdateCommand(
         policy = TRANSFER_POLICY,
     ) {
     override suspend fun execute(params: JsonElement): Outcome<CommandResult<DownloadsState>> {
-        val enabled =
-            ((params as? JsonObject)?.get(PARAM_ENABLED) as? JsonPrimitive)?.booleanOrNull
-                ?: return Outcome.Failure(AppError.InvalidInput)
+        val enabled = params.bool(PARAM_ENABLED) ?: return Outcome.Failure(AppError.InvalidInput)
         return session.result(session.setAutoUpdate(enabled))
     }
 }
@@ -239,6 +257,12 @@ private fun JsonElement.text(key: String): String? {
         ?.contentOrNull
         ?.trim()
         ?.takeIf { value -> value.isNotEmpty() }
+}
+
+/** A boolean parameter such as `enabled`. */
+private fun JsonElement.bool(key: String): Boolean? {
+    val json = this as? JsonObject ?: return null
+    return (json[key] as? JsonPrimitive)?.booleanOrNull
 }
 
 /** A string parameter that may be empty, such as a cleared token. */

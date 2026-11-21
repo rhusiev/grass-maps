@@ -98,6 +98,16 @@
         "implementation": "nl.r1a.grassmaps.plugins.downloads.ui.SetMobileDataPolicyCommand"
       },
       {
+        "id": "downloads.ui.set_downloads_enabled",
+        "params": "kotlinx.serialization.json.JsonElement",
+        "result": "nl.r1a.grassmaps.plugin.api.model.DownloadsState",
+        "doc": "Turns map downloads on or off through the privacy switch. Parameter: enabled, true or false.",
+        "undoable": false,
+        "allowlistedForControl": true,
+        "dispatcher": "io",
+        "implementation": "nl.r1a.grassmaps.plugins.downloads.ui.SetDownloadsEnabledCommand"
+      },
+      {
         "id": "downloads.ui.set_auto_update",
         "params": "kotlinx.serialization.json.JsonElement",
         "result": "nl.r1a.grassmaps.plugin.api.model.DownloadsState",

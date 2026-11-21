@@ -47,12 +47,15 @@ object DownloadsScreen {
      * The whole screen for [data]. [selectedRegion] is the sheet the user opened
      * and [detectedRegion] the oblast the last fix fell in; both are matched
      * against the catalogue, so a stale id draws nothing instead of a blank row.
+     * [downloadsEnabled] is the host's privacy switch, not a fact the store
+     * keeps, so the screen never infers permission from a catalogue or a token.
      */
     fun state(
         data: DownloadsData,
         selectedRegion: String? = null,
         detectedRegion: String? = null,
         query: String = "",
+        downloadsEnabled: Boolean = false,
     ): DownloadsState {
         val catalog = data.catalog
         val rows = catalog?.regions.orEmpty().map { entry -> row(data, entry) }
@@ -70,6 +73,7 @@ object DownloadsScreen {
         return DownloadsState(
             serverUrl = data.serverUrl.ifBlank { DownloadsDefaults.SERVER_URL },
             tokenPresent = data.tokenPresent,
+            downloadsEnabled = downloadsEnabled,
             catalogLoaded = catalog != null,
             catalogProblem = data.catalogProblem,
             selectedRegion = selected?.region,

@@ -2,6 +2,7 @@ package nl.r1a.grassmaps.core.services
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.res.Resources
 import nl.r1a.grassmaps.plugin.api.service.Strings
 import java.util.concurrent.ConcurrentHashMap
 
@@ -16,8 +17,10 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class AndroidStrings(
     context: Context,
+    resources: Resources? = null,
 ) : Strings {
-    private val resources = context.applicationContext.resources
+    /** A locale-specific Resources overrides the application's default. */
+    private val resources = resources ?: context.applicationContext.resources
     private val packageName = context.applicationContext.packageName
     private val resourceIds = ConcurrentHashMap<String, Int>()
     private val pluralResourceIds = ConcurrentHashMap<String, Int>()

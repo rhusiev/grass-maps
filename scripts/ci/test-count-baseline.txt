@@ -1,10 +1,10 @@
 alerts	67
-app	679
+app	681
 control	47
 core	51
 core-services	213
 map	152
-navigation	83
+navigation	84
 places	163
 planner	22
 plugin-api	103
@@ -28,7 +28,7 @@ plugins/online-search	23
 plugins/osm-places	50
 plugins/plugin-manager	19
 plugins/point-info	26
-plugins/profiles-ui	22
+plugins/profiles-ui	23
 plugins/proximity-alerts	22
 plugins/raster	51
 plugins/region-outlines	3

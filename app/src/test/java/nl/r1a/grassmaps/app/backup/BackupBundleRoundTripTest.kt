@@ -405,7 +405,7 @@ class BackupBundleRoundTripTest {
                 setting = RouteHistorySetting { searchHistorySettings.isEnabled() },
                 clock = clock,
             )
-        val style = MapStyleSettings(File(root, "settings/style.json"))
+        val style = MapStyleSettings.open(File(root, "profiles/map-style.json"), File(root, "settings/style.json"))
         val favouritesAccess = FavouritesAccess(root)
         val host =
             PluginHost(

@@ -9,7 +9,7 @@ enum class MarkerShape(
 ) {
     Circle("circle", "osmc_bg_circle"),
     Square("square", "osmc_bg_square"),
-    Octagon("octagon", "osmc_bg_round"),
+    Octagon("octagon", "favourite_octagon"),
     ;
 
     companion object {

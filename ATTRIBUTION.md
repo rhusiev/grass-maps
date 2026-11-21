@@ -24,7 +24,7 @@ first product asset lands.
 | `test-data/map-goldens/world` screenshots | ODbL-1.0 / public domain (Natural Earth) | Rendered captures of the world overview pack at longitude 179.9 and -179.9 (T-0502) |
 | Noto fonts | SIL OFL 1.1 | map labels and UI text; `app/src/main/assets/fonts` uses the Protomaps basemaps-assets Noto Sans glyph PBFs |
 | `app/src/main/res/drawable/ic_nav_notification.xml` | Apache-2.0 | the navigation notification's small icon: the Material Symbols Rounded `navigation` glyph (weight 400, filled, 24 px) from google/material-design-icons at commit `10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7`, sha256 `56d76dae9410898a4a7cd03db02138884c76253211a4e897b5c8df0a8a6eb3ac`. Converted to an Android vector drawable with the glyph's 0..-960 viewport shifted down by 960 and the path commands and coordinates unchanged; the same glyph is the map sprite's `arrow` |
-| `app/src/main/assets/sprites` Standard sprite | Apache-2.0 | one single-colour SDF sheet shared by the light and dark Standard variants; of its 57 glyphs, 37 are Google Material Symbols Rounded, 2 are Osmic, and 18 are route-relation OSMC plates and shapes authored here; the vendored glyphs are unmodified, and the 15 shield frames are authored here. The per-icon source, licence, commit and sha256 are listed below |
+| `app/src/main/assets/sprites` Standard sprite | Apache-2.0 | one single-colour SDF sheet shared by the light and dark Standard variants; of its 58 glyphs, 37 are Google Material Symbols Rounded, 2 are Osmic, 18 are route-relation OSMC plates and shapes authored here, and one is the octagon marker background authored for saved places (T-0215); the vendored glyphs are unmodified, and the 15 shield frames are authored here. The per-icon source, licence, commit and sha256 are listed below |
 | valhalla-mobile | MIT | Android/iOS wrapper around the Valhalla engine, used by `plugins/valhalla` |
 | Ferrostar core | BSD-3-Clause | Rust route-following core with UniFFI Kotlin bindings, used by `navigation`; the `core` artifact only, no UI or map binding |
 | Valhalla routing engine | MIT | C++ engine packaged inside valhalla-mobile; routing tiles are OSM-derived data (ODbL-1.0) |
@@ -50,7 +50,7 @@ sheet. `tools/sprites/build_sdf_sprite.py` builds the sheet from the SVGs under
 `tools/sprites/`; `tools/sprites/sources.json` is the machine-readable copy of
 this table.
 
-Thirty-seven of the 57 glyphs are Google Material Symbols Rounded,
+Thirty-seven of the 58 glyphs are Google Material Symbols Rounded,
 Apache-2.0, taken from commit `10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7`
 (2026-10-23) of
 <https://github.com/google/material-design-icons>. Each file is the weight-400
@@ -62,7 +62,9 @@ CC0-1.0, listed after the table. The 18 `osmc_*` plates and shapes are authored
 in this repository for the hiking route-relation layer (T-0418) from the
 documented `osmc:symbol` grammar; no third-party OSMC symbol asset is copied,
 and they are Apache-2.0 like the rest of it. The 15 road-shield frames are
-authored here too.
+authored here too. The remaining glyph, `favourite_octagon`, is the filled
+octagon a saved place draws when its marker shape is octagonal (T-0215). It is
+plain geometry written here, Apache-2.0 like the rest of the repository.
 
 | Icon | Material symbol | Source path | Licence | Commit | sha256 |
 |---|---|---|---|---|---|
@@ -124,6 +126,12 @@ files stay traceable to their upstream.
 `stadium` used the Material `stadium` glyph at `476a666` and now uses the
 Material `sports_soccer` glyph. The same review chose it, because the `stadium`
 glyph reads as an empty bowl at 13 px.
+
+### Saved-place marker glyph
+
+| Icon | Source path | Licence |
+|---|---|---|
+| `favourite_octagon` | `tools/sprites/icons/favourite_octagon.svg` | Apache-2.0 (this repository) |
 
 ### Route-relation OSMC glyphs
 

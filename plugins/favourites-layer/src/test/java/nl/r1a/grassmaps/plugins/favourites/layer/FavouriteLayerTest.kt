@@ -46,7 +46,7 @@ class FavouriteLayerTest {
         assertEquals(listOf("Rynok", "Kava", "Park"), features.map { it.name })
         assertEquals(listOf("cafe", "bar", "park"), features.map { it.icon })
         assertEquals(
-            listOf("osmc_bg_circle", "osmc_bg_square", "osmc_bg_round"),
+            listOf("osmc_bg_circle", "osmc_bg_square", "favourite_octagon"),
             features.map { it.shape.sprite },
         )
 

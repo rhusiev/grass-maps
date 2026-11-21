@@ -1,5 +1,7 @@
 package nl.r1a.grassmaps.plugins.favourites.layer
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -35,6 +37,17 @@ class FavouritesLayerStringsTest {
     }
 
     @Test
+    fun everyShapeSpriteIsInTheShippedSheet() {
+        val sprite = File(SPRITE).readText()
+        val entries = Json.parseToJsonElement(sprite).jsonObject
+
+        for (shape in MarkerShape.entries) {
+            assertTrue("$shape sprite ${shape.sprite} is missing", shape.sprite in entries)
+        }
+        assertTrue("the neutral dot is missing", "osmc_fg_dot" in entries)
+    }
+
+    @Test
     fun aHiddenGroupIsNotShownAndAGroupWithNoSettingIsShown() {
         val settings = FavouriteLayerSettings(hiddenGroups = setOf("Home"))
 
@@ -51,6 +64,7 @@ class FavouritesLayerStringsTest {
                 "src/main/res/values-uk/strings.xml",
             )
         const val UKRAINIAN = "src/main/res/values-uk/strings.xml"
+        const val SPRITE = "../../app/src/main/assets/sprites/standard.json"
         val KEYS =
             listOf(
                 "plugin.favourites_layer.name",

@@ -1,5 +1,5 @@
 {
-  "comment": "Source SVGs for app/src/main/assets/sprites. \"icons\" are vendored unmodified from the named upstream repository at the named commit: 37 of them are Google Material Symbols Rounded (Apache-2.0), `animal` and `bench` are Osmic (CC0-1.0), and the 18 `osmc_*` route-relation plates and shapes are authored here (Apache-2.0), kept because the 13 px icon review chose them over the Material replacements. \"shields\" are authored in this repository (Apache-2.0). Build with build_sdf_sprite.py.",
+  "comment": "Source SVGs for app/src/main/assets/sprites. \"icons\" are vendored unmodified from the named upstream repository at the named commit: 37 of them are Google Material Symbols Rounded (Apache-2.0), `animal` and `bench` are Osmic (CC0-1.0), the 18 `osmc_*` route-relation plates and shapes are authored here (Apache-2.0), kept because the 13 px icon review chose them over the Material replacements, and `favourite_octagon` is authored here for the saved-place marker (Apache-2.0). \"shields\" are authored in this repository (Apache-2.0). Build with build_sdf_sprite.py.",
   "icons": {
     "aerodrome": {
       "commit": "10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7",
@@ -188,6 +188,14 @@
       "sha256": "f944c4bc358c657ef92d7c7eac12274214a54a6b67db2be99e16b13e37afd240",
       "size": 19,
       "url": "https://raw.githubusercontent.com/google/material-design-icons/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/symbols/web/fastfood/materialsymbolsrounded/fastfood_fill1_24px.svg"
+    },
+    "favourite_octagon": {
+      "licence": "Apache-2.0",
+      "note": "Authored for T-0215 as the octagon marker background for saved places; no third-party symbol asset is copied",
+      "path": "tools/sprites/icons/favourite_octagon.svg",
+      "repository": "this repository",
+      "sha256": "360a5a3a7b621c610130f59698000b6d9024587e8d75666766c10cef36bfada0",
+      "size": 24
     },
     "ferry_terminal": {
       "commit": "10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7",

@@ -17,7 +17,8 @@ Material replacements did not.
 
 The eighteen `osmc_*` glyphs are the background plates and foreground shapes an
 `osmc:symbol` value names.  They are authored here for the hiking route layer
-(T-0418), Apache-2.0, and no third-party OSMC symbol asset is copied.
+(T-0418), Apache-2.0, and no third-party OSMC symbol asset is copied.  The
+`favourite_octagon` plate is authored here for the saved-place marker (T-0215).
 
 The 15 road-shield frames (`US:I-<n>char`, `NL:S-road-<n>char`,
 `generic_shield-<n>char`) are authored in this repository under `shields/`,

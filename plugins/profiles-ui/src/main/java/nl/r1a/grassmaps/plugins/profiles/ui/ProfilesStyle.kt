@@ -7,6 +7,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.inkOn
 
 internal val SURFACE: Color
     @Composable @ReadOnlyComposable
@@ -52,10 +53,20 @@ internal val CONTROL_LINE: Color
     @Composable @ReadOnlyComposable
     get() = LocalShellColors.current.controlBorder
 
-/** A snackbar is the inverse surface in both themes, so it keeps one fixed pair. */
-internal val SNACKBAR = Color(0xFF33363B)
-internal val SNACKBAR_TEXT = Color(0xFFFFFFFF)
-internal val SNACKBAR_ACTION = Color(0xFF8FD5A8)
+/** The snackbar's inverse-surface fill, shared by both themes. */
+internal val SNACKBAR: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.snackbarBackground
+
+/** The snackbar label: the token ink or on-accent, whichever reads on the fill. */
+internal val SNACKBAR_TEXT: Color
+    @Composable @ReadOnlyComposable
+    get() = inkOn(LocalShellColors.current.snackbarBackground, LocalShellColors.current)
+
+/** The light-mint action on the snackbar's inverse surface. */
+internal val SNACKBAR_ACTION: Color
+    @Composable @ReadOnlyComposable
+    get() = LocalShellColors.current.snackbarAction
 
 internal val TITLE_STYLE: TextStyle
     @Composable @ReadOnlyComposable

@@ -1107,21 +1107,15 @@ internal fun trackLibraryPalette(dark: Boolean): TrackLibraryPalette {
         selectedText = inkOn(tokens.selectedChip, tokens),
         accent = tokens.accent,
         danger = tokens.danger,
-        undoBackground = UNDO_BACKGROUND,
-        undoText = Color.White,
-        undoAction = UNDO_ACTION,
+        undoBackground = tokens.snackbarBackground,
+        undoText = inkOn(tokens.snackbarBackground, tokens),
+        undoAction = tokens.snackbarAction,
         border = tokens.controlBorder,
     )
 }
 
 private const val SELECTION_LIGHT_ALPHA = 0.12f
 private const val SELECTION_DARK_ALPHA = 0.2f
-
-/** A snackbar is the inverse surface in both themes, so it keeps one pair. */
-private val UNDO_BACKGROUND = Color(0xFF323437)
-
-/** A light mint for an action on the inverse surface; the theme accent is dark in light. */
-private val UNDO_ACTION = Color(0xFF8FD5A8)
 
 private enum class LibrarySheet {
     NONE,

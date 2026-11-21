@@ -106,6 +106,18 @@ class ShellContrastTest {
             ShellPair("navigation alert chip label on the 16% accent tint", colors.accent, tint(colors.accent, 0.16f), BODY_TEXT),
             ShellPair("selected folder label on the 12% accent tint", colors.accent, tint(colors.accent, 0.12f), BODY_TEXT),
             ShellPair("ink over the modal scrim", colors.ink, colors.scrim.compositeOver(colors.map), BODY_TEXT),
+            ShellPair(
+                "undo snackbar label on the inverse surface",
+                inkOn(colors.snackbarBackground, colors),
+                colors.snackbarBackground,
+                BODY_TEXT,
+            ),
+            ShellPair(
+                "undo snackbar action on the inverse surface",
+                colors.snackbarAction,
+                colors.snackbarBackground,
+                BODY_TEXT,
+            ),
             // Boundaries and icons.
             ShellPair("End pill outline on the bar", colors.danger, colors.surface, UI_COMPONENT),
             ShellPair("primary fill on the card", colors.accent, colors.surface, UI_COMPONENT),

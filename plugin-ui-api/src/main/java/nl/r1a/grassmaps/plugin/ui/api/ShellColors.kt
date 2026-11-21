@@ -85,6 +85,21 @@ data class ShellColors(
     val ring: Color,
     /** The dim layer behind a modal card. */
     val scrim: Color,
+    /**
+     * The inverse-surface fill of an undo snackbar: `#323437` in both themes.
+     * It is a neutral just above the round 9 soft `#2f343a`, so it reads as a
+     * dark surface on the light page and stays lifted from the `#24282d` bar in
+     * dark. Its label is [inkOn] of this fill and its action uses
+     * [snackbarAction].
+     */
+    val snackbarBackground: Color,
+    /**
+     * The action label on [snackbarBackground]: `#8fd5a8` in both themes. The
+     * theme accent is a dark green in light and would not read on the inverse
+     * surface. This light mint measures 7.28:1 on [snackbarBackground], above
+     * the 4.5:1 body-text target.
+     */
+    val snackbarAction: Color,
     /** The fill of a selected chip; its text is [inkOn] of this fill. */
     val selectedChip: Color,
     /** A chart's hairline grid. */
@@ -183,6 +198,8 @@ val LightShellColors: ShellColors =
         offSwitchKnob = Color(0xFF8F8A82),
         ring = Color(0x12000000),
         scrim = Color(0x66000000),
+        snackbarBackground = Color(0xFF323437),
+        snackbarAction = Color(0xFF8FD5A8),
         selectedChip = Color(0xFF202124),
         grid = Color(0x14000000),
         keyboard = Color(0xFFECEEF1),
@@ -234,6 +251,8 @@ val DarkShellColors: ShellColors =
         offSwitchKnob = Color(0xFF80868B),
         ring = Color(0x12FFFFFF),
         scrim = Color(0x66000000),
+        snackbarBackground = Color(0xFF323437),
+        snackbarAction = Color(0xFF8FD5A8),
         selectedChip = Color(0xFFE8EAED),
         grid = Color(0x1AFFFFFF),
         keyboard = Color(0xFF15181C),

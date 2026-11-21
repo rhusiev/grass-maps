@@ -149,18 +149,18 @@ class TrackShareWiringTest {
         const val ANDROID_NAMESPACE = "http://schemas.android.com/apk/res/android"
         const val MANIFEST = "src/main/AndroidManifest.xml"
         const val DEBUG_MANIFEST = "src/debug/AndroidManifest.xml"
-        const val MAIN_ACTIVITY = "nl.r1a.grassmap.app.MainActivity"
-        const val MAIN_ACTIVITY_SOURCE = "src/main/java/nl/r1a/grassmap/app/MainActivity.kt"
-        const val MAP_SCREEN = "src/main/java/nl/r1a/grassmap/app/MapScreen.kt"
-        const val APP_CONTAINER = "src/main/java/nl/r1a/grassmap/app/AppContainer.kt"
-        const val TRACK_COMMANDS = "src/main/java/nl/r1a/grassmap/app/TrackCommands.kt"
+        const val MAIN_ACTIVITY = "nl.r1a.grassmaps.app.MainActivity"
+        const val MAIN_ACTIVITY_SOURCE = "src/main/java/nl/r1a/grassmaps/app/MainActivity.kt"
+        const val MAP_SCREEN = "src/main/java/nl/r1a/grassmaps/app/MapScreen.kt"
+        const val APP_CONTAINER = "src/main/java/nl/r1a/grassmaps/app/AppContainer.kt"
+        const val TRACK_COMMANDS = "src/main/java/nl/r1a/grassmaps/app/TrackCommands.kt"
         const val ENGLISH = "src/main/res/values/strings.xml"
         const val UKRAINIAN = "src/main/res/values-uk/strings.xml"
 
         const val SEND = "android.intent.action.SEND"
         const val DEFAULT = "android.intent.category.DEFAULT"
-        const val TEST_PROVIDER = "nl.r1a.grassmap.app.SharedTrackTestProvider"
-        const val TEST_AUTHORITY = "nl.r1a.grassmap.share-test"
+        const val TEST_PROVIDER = "nl.r1a.grassmaps.app.SharedTrackTestProvider"
+        const val TEST_AUTHORITY = "nl.r1a.grassmaps.share-test"
 
         val MIME_TYPES =
             setOf(

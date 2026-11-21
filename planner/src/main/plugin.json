@@ -4,175 +4,175 @@
   "description": "plugin.route_planner.description",
   "version": "0.3.0",
   "api": "0.1.0",
-  "implementation": "nl.r1a.grassmap.plugins.route.planner.RoutePlannerPlugin",
+  "implementation": "nl.r1a.grassmaps.plugins.route.planner.RoutePlannerPlugin",
   "contributes": {
     "commands": [
       {
         "id": "route.planner.begin",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.RoutePlanState",
         "doc": "Opens the route planner and starts picking the start point.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.route.planner.BeginRoutePlanCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.route.planner.BeginRoutePlanCommand"
       },
       {
         "id": "route.planner.set_point",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.RoutePlanState",
         "doc": "Sets one end of the route. Parameters: role (start or destination), lat, lon, and optionally label.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.route.planner.SetRoutePlanPointCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.route.planner.SetRoutePlanPointCommand"
       },
       {
         "id": "route.planner.add_via",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.RoutePlanState",
         "doc": "Adds an intermediate stop. Parameters: lat, lon, and optionally label.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.route.planner.AddRoutePlanViaCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.route.planner.AddRoutePlanViaCommand"
       },
       {
         "id": "route.planner.remove_via",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.RoutePlanState",
         "doc": "Removes the intermediate stop at a zero-based position. Parameter: index.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.route.planner.RemoveRoutePlanViaCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.route.planner.RemoveRoutePlanViaCommand"
       },
       {
         "id": "route.planner.move_via",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.RoutePlanState",
         "doc": "Moves the intermediate stop at from to position to. Parameters: from, to.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.route.planner.MoveRoutePlanViaCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.route.planner.MoveRoutePlanViaCommand"
       },
       {
         "id": "route.planner.plan",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.RoutePlanState",
         "doc": "Requests the current start and destination again.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.route.planner.PlanRouteCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.route.planner.PlanRouteCommand"
       },
       {
         "id": "route.planner.set_preferences",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.RoutePlanState",
         "doc": "Applies one-route preferences. Parameters: hills, busy_roads and rough_surfaces, each avoid, normal or dont_mind, plus the optional steps and trail_difficulty, normal when absent.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.route.planner.SetRoutePlanPreferencesCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.route.planner.SetRoutePlanPreferencesCommand"
       },
       {
         "id": "route.planner.reset_preferences",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.RoutePlanState",
         "doc": "Returns the route to the profile's routing preferences.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.route.planner.ResetRoutePlanPreferencesCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.route.planner.ResetRoutePlanPreferencesCommand"
       },
       {
         "id": "route.planner.swap",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.RoutePlanState",
         "doc": "Swaps the start and destination and routes the reversed pair.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.route.planner.SwapRoutePlanCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.route.planner.SwapRoutePlanCommand"
       },
       {
         "id": "route.planner.select",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.RoutePlanState",
         "doc": "Selects a returned route by its zero-based index. Parameter: index.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.route.planner.SelectRoutePlanOptionCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.route.planner.SelectRoutePlanOptionCommand"
       },
       {
         "id": "route.planner.start",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.RoutePlanState",
         "doc": "Starts guidance on the selected route; guidance lands in T-0309.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.route.planner.StartRoutePlanCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.route.planner.StartRoutePlanCommand"
       },
       {
         "id": "route.planner.clear",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.RoutePlanState",
         "doc": "Closes the plan and removes its route.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.route.planner.ClearRoutePlanCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.route.planner.ClearRoutePlanCommand"
       },
       {
         "id": "route.planner.undo",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.RoutePlanState",
         "doc": "Undoes one planning edit and returns the restored state.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.route.planner.UndoRoutePlanCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.route.planner.UndoRoutePlanCommand"
       },
       {
         "id": "route.planner.redo",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.RoutePlanState",
         "doc": "Redoes one planning edit and returns the restored state.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.route.planner.RedoRoutePlanCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.route.planner.RedoRoutePlanCommand"
       },
       {
         "id": "route.planner.reuse_history",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.RoutePlanState",
         "doc": "Reopens the stored route at a zero-based history index. Parameter: index.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.route.planner.ReuseRouteHistoryCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.route.planner.ReuseRouteHistoryCommand"
       },
       {
         "id": "route.planner.download_missing",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.RoutePlanState",
         "doc": "Downloads the regions the failed route is missing and routes again once they are installed. Returns at once with the download state; progress arrives on the state stream.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.route.planner.DownloadMissingRegionsCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.route.planner.DownloadMissingRegionsCommand"
       }
     ],
     "streams": [
       {
         "id": "route.planner.state",
-        "valueType": "nl.r1a.grassmap.plugin.api.model.RoutePlanState",
-        "serializer": "nl.r1a.grassmap.plugin.api.model.RoutePlanState.serializer"
+        "valueType": "nl.r1a.grassmaps.plugin.api.model.RoutePlanState",
+        "serializer": "nl.r1a.grassmaps.plugin.api.model.RoutePlanState.serializer"
       },
       {
         "id": "route.planner.history",

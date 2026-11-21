@@ -69,7 +69,7 @@ class TrackExportManifestTest {
 
     private companion object {
         const val ANDROID_NAMESPACE = "http://schemas.android.com/apk/res/android"
-        const val FILE_PROVIDER = "nl.r1a.grassmap.app.TrackFileProvider"
+        const val FILE_PROVIDER = "nl.r1a.grassmaps.app.TrackFileProvider"
         const val FILE_PROVIDER_PATHS = "android.support.FILE_PROVIDER_PATHS"
         const val MANIFEST = "src/main/AndroidManifest.xml"
         const val PATHS = "src/main/res/xml/track_file_paths.xml"

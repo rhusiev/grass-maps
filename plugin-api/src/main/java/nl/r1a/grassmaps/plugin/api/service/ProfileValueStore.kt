@@ -11,7 +11,7 @@ typealias ProfileValues = Map<ProfileId, Map<String, String>>
  *
  * [read] gives an empty map when nothing was stored, or when the stored data
  * is unreadable, because a setting must not stop the app. It fails with
- * [nl.r1a.grassmap.plugin.api.error.AppError.NewerSchema] when the data was
+ * [nl.r1a.grassmaps.plugin.api.error.AppError.NewerSchema] when the data was
  * written by a newer build, and [write] refuses in the same case, so a newer
  * file is never overwritten.
  */

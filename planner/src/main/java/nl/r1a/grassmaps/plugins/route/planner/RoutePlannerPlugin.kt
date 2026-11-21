@@ -20,16 +20,16 @@ import nl.r1a.grassmaps.plugin.api.model.RoutePlanState
  * It owns the start/end plan, its intermediate stops, the edit history behind
  * undo and redo, and the commands the map and the control channel drive. The
  * state machine is `routing.RoutePlanner`; the engine is resolved through
- * [nl.r1a.grassmap.plugin.api.host.RoutingEngineAccess], so the plugin names no
+ * [nl.r1a.grassmaps.plugin.api.host.RoutingEngineAccess], so the plugin names no
  * provider, and the reuse history through
- * [nl.r1a.grassmap.plugin.api.host.RouteHistoryAccess], so it names no path.
+ * [nl.r1a.grassmaps.plugin.api.host.RouteHistoryAccess], so it names no path.
  * The shell draws the preview from the published state and never recomputes a
  * route.
  *
  * The plugin also owns the scope of the annotate pass (T-0409): a produced
  * route is annotated after it is published, on this scope, so the preview never
  * waits for the engine and a deactivated plugin stops asking. The outcome is
- * logged through [nl.r1a.grassmap.plugin.api.host.PluginServices.logger].
+ * logged through [nl.r1a.grassmaps.plugin.api.host.PluginServices.logger].
  */
 class RoutePlannerPlugin(
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,

@@ -4,7 +4,7 @@
   "description": "plugin.route_relations.description",
   "version": "0.1.0",
   "api": "0.1.0",
-  "implementation": "nl.r1a.grassmap.plugins.route.relations.RouteRelationsPlugin",
+  "implementation": "nl.r1a.grassmaps.plugins.route.relations.RouteRelationsPlugin",
   "contributes": {},
   "needs": {
     "network": [],

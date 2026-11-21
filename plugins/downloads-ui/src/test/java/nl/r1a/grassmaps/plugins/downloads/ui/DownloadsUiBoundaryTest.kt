@@ -52,11 +52,11 @@ class DownloadsUiBoundaryTest {
 
     private companion object {
         const val BUILD_FILE = "build.gradle.kts"
-        const val SOURCE_ROOT = "src/main/java/nl/r1a/grassmap/plugins/downloads/ui"
+        const val SOURCE_ROOT = "src/main/java/nl/r1a/grassmaps/plugins/downloads/ui"
 
         val FORBIDDEN =
             listOf(
-                "nl.r1a.grassmap.regions",
+                "nl.r1a.grassmaps.regions",
                 "RegionStore",
                 "RegionDownloader",
                 "java.io.",

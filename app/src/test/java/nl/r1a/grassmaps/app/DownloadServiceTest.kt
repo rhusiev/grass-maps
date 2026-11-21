@@ -72,6 +72,6 @@ class DownloadServiceTest {
     }
 
     private companion object {
-        const val SERVICE = "src/main/java/nl/r1a/grassmap/app/DownloadService.kt"
+        const val SERVICE = "src/main/java/nl/r1a/grassmaps/app/DownloadService.kt"
     }
 }

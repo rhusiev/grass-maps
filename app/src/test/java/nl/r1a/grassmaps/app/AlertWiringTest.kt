@@ -31,6 +31,6 @@ class AlertWiringTest {
     }
 
     private companion object {
-        const val APP_CONTAINER_SOURCE = "src/main/java/nl/r1a/grassmap/app/AppContainer.kt"
+        const val APP_CONTAINER_SOURCE = "src/main/java/nl/r1a/grassmaps/app/AppContainer.kt"
     }
 }

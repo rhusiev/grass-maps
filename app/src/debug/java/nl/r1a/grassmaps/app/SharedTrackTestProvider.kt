@@ -18,11 +18,11 @@ import java.io.FileNotFoundException
  * type, its display name and its size. This provider serves the committed
  * `mock-walk.gpx` asset at three addresses:
  *
- * - `content://nl.r1a.grassmap.share-test/walk` - a GPX document with no
+ * - `content://nl.r1a.grassmaps.share-test/walk` - a GPX document with no
  *   extension in its display name, so the type is what names the format;
- * - `content://nl.r1a.grassmap.share-test/notes` - a document that is not a
+ * - `content://nl.r1a.grassmaps.share-test/notes` - a document that is not a
  *   track;
- * - `content://nl.r1a.grassmap.share-test/unreadable` - a document whose read
+ * - `content://nl.r1a.grassmaps.share-test/unreadable` - a document whose read
  *   throws `SecurityException`, the refusal a revoked grant produces.
  *
  * The provider is debug-only: `src/debug/AndroidManifest.xml` declares it and
@@ -109,7 +109,7 @@ class SharedTrackTestProvider : ContentProvider() {
     ): Int = 0
 
     companion object {
-        const val AUTHORITY = "nl.r1a.grassmap.share-test"
+        const val AUTHORITY = "nl.r1a.grassmaps.share-test"
         const val WALK = "walk"
         const val NOTES = "notes"
         const val UNREADABLE = "unreadable"

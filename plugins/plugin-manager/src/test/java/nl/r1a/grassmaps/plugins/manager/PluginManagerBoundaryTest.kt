@@ -33,12 +33,12 @@ class PluginManagerBoundaryTest {
 
     private companion object {
         const val BUILD_FILE = "build.gradle.kts"
-        const val SOURCE_ROOT = "src/main/java/nl/r1a/grassmap/plugins/manager"
+        const val SOURCE_ROOT = "src/main/java/nl/r1a/grassmaps/plugins/manager"
 
         val FORBIDDEN =
             listOf(
-                "import nl.r1a.grassmap.core",
-                "import nl.r1a.grassmap.app",
+                "import nl.r1a.grassmaps.core",
+                "import nl.r1a.grassmaps.app",
                 "import java.net.",
                 "okhttp",
             )

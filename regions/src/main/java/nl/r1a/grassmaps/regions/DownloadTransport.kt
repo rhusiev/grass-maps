@@ -63,7 +63,7 @@ fun interface BodySink {
  * The seam between the package pipeline and HTTP. The real implementation is
  * [HttpDownloadTransport]; tests substitute a fake. A transport never throws
  * across this boundary: a socket, timeout or policy failure is an
- * [nl.r1a.grassmap.plugin.api.error.AppError] value.
+ * [nl.r1a.grassmaps.plugin.api.error.AppError] value.
  */
 interface DownloadTransport {
     suspend fun get(

@@ -64,8 +64,8 @@ sys.path.insert(0, str(CONTROL_DIR))
 import control_client  # noqa: E402
 
 SCHEMA = "grass-maps-map-goldens/1"
-PACKAGE = "nl.r1a.grassmap"
-ACTIVITY = "nl.r1a.grassmap.app.MainActivity"
+PACKAGE = "nl.r1a.grassmaps"
+ACTIVITY = "nl.r1a.grassmaps.app.MainActivity"
 SCREENSHOT_SETTLE_S = 0.8
 # A partial or mid-flight frame can be composited after MapLibre reports idle.
 # Two frames must agree before the capture is accepted, up to three frames.

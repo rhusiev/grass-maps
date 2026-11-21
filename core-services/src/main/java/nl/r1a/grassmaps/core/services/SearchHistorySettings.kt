@@ -16,7 +16,7 @@ import java.io.IOException
  * The search history switch (T-0207): on by default, and off stops the history
  * store from writing or reading anything.
  *
- * It is a local setting, not a [nl.r1a.grassmap.plugin.api.service.PrivacySwitches]
+ * It is a local setting, not a [nl.r1a.grassmaps.plugin.api.service.PrivacySwitches]
  * entry: that registry and its request counters describe contact leaving the
  * device, while this switch gates a local file. The value lives in
  * `settings/search-history.json`, beside the unit setting, until the versioned

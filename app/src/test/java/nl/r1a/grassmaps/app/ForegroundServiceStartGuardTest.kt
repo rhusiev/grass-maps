@@ -83,7 +83,7 @@ class ForegroundServiceStartGuardTest {
     private companion object {
         const val START_SERVICE = "startForegroundService("
         const val SOURCE_ROOT = "src/main/java"
-        const val SERVICE_ROOT = "src/main/java/nl/r1a/grassmap/app"
+        const val SERVICE_ROOT = "src/main/java/nl/r1a/grassmaps/app"
         const val MANIFEST = "src/main/AndroidManifest.xml"
         const val ANDROID_NAMESPACE = "http://schemas.android.com/apk/res/android"
         val INTENT = Regex("""Intent\([^)]*?,\s*([A-Za-z0-9_]+)::class\.java\)""")

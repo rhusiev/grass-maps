@@ -75,7 +75,7 @@ if command == "shell":
         print("package:/system/framework/framework-res.apk")
         sys.exit(0)
     if args[1:4] == ["pm", "list", "packages"]:
-        print("package:nl.r1a.grassmap")
+        print("package:nl.r1a.grassmaps")
         sys.exit(0)
     if args[1:2] == ["pidof"]:
         state["pidof"] += 1

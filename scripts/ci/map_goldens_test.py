@@ -21,7 +21,7 @@ FOREIGN_FOCUS = (
 
 # One `dumpsys window windows` entry for the map activity after it has drawn.
 APP_WINDOW = """
-  Window #4 Window{9f2c1a u0 nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity}:
+  Window #4 Window{9f2c1a u0 nl.r1a.grassmaps/nl.r1a.grassmaps.app.MainActivity}:
     mDisplayId=0 stackId=0
     mHasSurface=true isReadyForDisplay()=true
     isOnScreen=true isVisible=true
@@ -636,7 +636,7 @@ class CapturePositionTest(unittest.TestCase):
         adb = mock.Mock()
         adb.screencap.return_value = map_goldens.PNG_SIGNATURE + b"frame"
         adb.shell.return_value = (
-            "mCurrentFocus=Window{1 u0 nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity}"
+            "mCurrentFocus=Window{1 u0 nl.r1a.grassmaps/nl.r1a.grassmaps.app.MainActivity}"
         )
         client = FakeClient([answer])
         with tempfile.TemporaryDirectory() as directory:
@@ -684,18 +684,18 @@ class PrepareDeviceTest(unittest.TestCase):
 
 class AppFocusTest(unittest.TestCase):
     APP_FOCUS = (
-        "mCurrentFocus=Window{2 u0 nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity}"
+        "mCurrentFocus=Window{2 u0 nl.r1a.grassmaps/nl.r1a.grassmaps.app.MainActivity}"
     )
 
     def test_app_focus_passes_and_returns_the_window(self) -> None:
         adb = mock.Mock()
         adb.shell.return_value = (
-            "mCurrentFocus=Window{1 u0 nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity}"
+            "mCurrentFocus=Window{1 u0 nl.r1a.grassmaps/nl.r1a.grassmaps.app.MainActivity}"
         )
 
         focus = map_goldens.require_app_focused(adb, "fixture-center-z12")
 
-        self.assertIn("nl.r1a.grassmap", focus)
+        self.assertIn("nl.r1a.grassmaps", focus)
 
     def test_null_focus_brings_the_app_front_then_passes(self) -> None:
         adb = FakeAdb(["", self.APP_FOCUS])
@@ -703,7 +703,7 @@ class AppFocusTest(unittest.TestCase):
         with mock.patch.object(map_goldens.time, "sleep"):
             focus = map_goldens.require_app_focused(adb, "fixture-center-z12")
 
-        self.assertIn("nl.r1a.grassmap", focus)
+        self.assertIn("nl.r1a.grassmaps", focus)
         self.assertEqual(adb.fronted, 1)
 
     def test_persistent_null_focus_fails_with_focus_error(self) -> None:
@@ -731,7 +731,7 @@ class AppFocusTest(unittest.TestCase):
         ):
             map_goldens.require_app_focused(adb, "fixture-center-z12")
 
-        self.assertIn("nl.r1a.grassmap", str(raised.exception))
+        self.assertIn("nl.r1a.grassmaps", str(raised.exception))
         self.assertIn("com.android.systemui", str(raised.exception))
 
 
@@ -776,7 +776,7 @@ class FakeAdb:
 class ResumedActivityTest(unittest.TestCase):
     APP_RESUMED = (
         "  mResumedActivity: ActivityRecord{123 u0 "
-        "nl.r1a.grassmap/.app.MainActivity t42}"
+        "nl.r1a.grassmaps/.app.MainActivity t42}"
     )
     FOREIGN_RESUMED = (
         "  mResumedActivity: ActivityRecord{124 u0 "
@@ -785,7 +785,7 @@ class ResumedActivityTest(unittest.TestCase):
 
     def test_parses_the_app_component(self) -> None:
         self.assertEqual(
-            "nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity",
+            "nl.r1a.grassmaps/nl.r1a.grassmaps.app.MainActivity",
             map_goldens.parse_resumed_activity(self.APP_RESUMED),
         )
 
@@ -813,7 +813,7 @@ class ResumedActivityTest(unittest.TestCase):
             focus = map_goldens.require_app_focused(adb, "place-a-z12")
 
         self.assertIn("mResumedActivity=", focus)
-        self.assertIn("nl.r1a.grassmap.app.MainActivity", focus)
+        self.assertIn("nl.r1a.grassmaps.app.MainActivity", focus)
         self.assertEqual(adb.fronted, 1)
 
     def test_null_focus_with_a_foreign_resumed_activity_fails(self) -> None:
@@ -873,8 +873,8 @@ class WindowDrawingTest(unittest.TestCase):
         self.assertTrue(
             map_goldens.parse_window_drawing(
                 APP_WINDOW,
-                "nl.r1a.grassmap",
-                "nl.r1a.grassmap.app.MainActivity",
+                "nl.r1a.grassmaps",
+                "nl.r1a.grassmaps.app.MainActivity",
             )
         )
 
@@ -882,8 +882,8 @@ class WindowDrawingTest(unittest.TestCase):
         self.assertFalse(
             map_goldens.parse_window_drawing(
                 APP_WINDOW.replace("mHasSurface=true", "mHasSurface=false"),
-                "nl.r1a.grassmap",
-                "nl.r1a.grassmap.app.MainActivity",
+                "nl.r1a.grassmaps",
+                "nl.r1a.grassmaps.app.MainActivity",
             )
         )
 
@@ -891,22 +891,22 @@ class WindowDrawingTest(unittest.TestCase):
         self.assertFalse(
             map_goldens.parse_window_drawing(
                 APP_WINDOW.replace("isVisible=true", "isVisible=false"),
-                "nl.r1a.grassmap",
-                "nl.r1a.grassmap.app.MainActivity",
+                "nl.r1a.grassmaps",
+                "nl.r1a.grassmaps.app.MainActivity",
             )
         )
 
     def test_another_window_with_a_surface_does_not_count(self) -> None:
         other = APP_WINDOW.replace(
-            "nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity",
+            "nl.r1a.grassmaps/nl.r1a.grassmaps.app.MainActivity",
             "com.android.launcher3/com.android.launcher3.Launcher",
         )
 
         self.assertFalse(
             map_goldens.parse_window_drawing(
                 other,
-                "nl.r1a.grassmap",
-                "nl.r1a.grassmap.app.MainActivity",
+                "nl.r1a.grassmaps",
+                "nl.r1a.grassmaps.app.MainActivity",
             )
         )
 
@@ -914,8 +914,8 @@ class WindowDrawingTest(unittest.TestCase):
         self.assertFalse(
             map_goldens.parse_window_drawing(
                 "mCurrentFocus=null",
-                "nl.r1a.grassmap",
-                "nl.r1a.grassmap.app.MainActivity",
+                "nl.r1a.grassmaps",
+                "nl.r1a.grassmaps.app.MainActivity",
             )
         )
 
@@ -1243,7 +1243,7 @@ class RecaptureSerialTest(unittest.TestCase):
                 self.assertTrue(call.startswith(f"-s {self.EMULATOR} "), call)
             self.assertTrue(
                 any(
-                    "localabstract:nl.r1a.grassmap.control" in call
+                    "localabstract:nl.r1a.grassmaps.control" in call
                     for call in forwarded
                 )
             )
@@ -1271,7 +1271,7 @@ class RecaptureSerialTest(unittest.TestCase):
 class AnrDialogTest(unittest.TestCase):
     ANR_FOCUS = "mCurrentFocus=Window{1 u0 Application Not Responding: com.android.systemui}"
     APP_FOCUS = (
-        "mCurrentFocus=Window{2 u0 nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity}"
+        "mCurrentFocus=Window{2 u0 nl.r1a.grassmaps/nl.r1a.grassmaps.app.MainActivity}"
     )
     WAIT_XML = '<hierarchy><node text="Wait" bounds="[10,20][110,220]" /></hierarchy>'
 

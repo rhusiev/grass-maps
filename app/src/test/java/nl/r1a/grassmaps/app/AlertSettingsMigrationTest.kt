@@ -83,7 +83,7 @@ class AlertSettingsMigrationTest {
 
     private fun profileFile(
         files: StorePaths,
-        checkpoint: (nl.r1a.grassmap.core.services.MigrationStep) -> Unit = {},
+        checkpoint: (nl.r1a.grassmaps.core.services.MigrationStep) -> Unit = {},
     ): ProfileValueFile =
         ProfileValueFile(
             files.file,

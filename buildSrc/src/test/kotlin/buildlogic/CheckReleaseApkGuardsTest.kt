@@ -17,7 +17,7 @@ class CheckReleaseApkGuardsTest {
     @Test
     fun aDebugControlClassDescriptorInTheApkFails() {
         val apk = temporary.newFile("app-release.apk")
-        writeApk(apk, mapOf("classes.dex" to "Lnl/r1a/grassmap/control/ControlServer;"))
+        writeApk(apk, mapOf("classes.dex" to "Lnl/r1a/grassmaps/control/ControlServer;"))
 
         val findings = apkMarkerFindings(apk, debugOnlyApkMarkers)
 
@@ -29,7 +29,7 @@ class CheckReleaseApkGuardsTest {
     @Test
     fun anApkWithoutDebugControlMarkersHasNoFindings() {
         val apk = temporary.newFile("app-release.apk")
-        writeApk(apk, mapOf("classes.dex" to "Lnl/r1a/grassmap/app/GrassMapsApplication;"))
+        writeApk(apk, mapOf("classes.dex" to "Lnl/r1a/grassmaps/app/GrassMapsApplication;"))
 
         assertTrue(apkMarkerFindings(apk, debugOnlyApkMarkers).isEmpty())
     }

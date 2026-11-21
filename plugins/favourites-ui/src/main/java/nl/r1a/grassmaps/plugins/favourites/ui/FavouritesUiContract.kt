@@ -12,8 +12,8 @@ import nl.r1a.grassmaps.plugin.api.contract.StreamId
 object FavouritesUiContract {
     const val PLUGIN_ID: String = "favourites.ui"
     const val LISTS_STREAM_ID: String = "favourites.ui.lists"
-    const val LISTS_VALUE_TYPE: String = "nl.r1a.grassmap.plugin.api.model.FavouriteListsState"
-    const val LISTS_SERIALIZER: String = "nl.r1a.grassmap.plugin.api.model.FavouriteListsState.serializer"
+    const val LISTS_VALUE_TYPE: String = "nl.r1a.grassmaps.plugin.api.model.FavouriteListsState"
+    const val LISTS_SERIALIZER: String = "nl.r1a.grassmaps.plugin.api.model.FavouriteListsState.serializer"
 
     const val CREATE_LIST: String = "favourites.ui.create_list"
     const val MOVE_POINT: String = "favourites.ui.move_point"

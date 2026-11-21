@@ -12,8 +12,8 @@ import nl.r1a.grassmaps.plugin.api.contract.StreamId
 object ProfilesUiContract {
     const val PLUGIN_ID: String = "profiles.ui"
     const val STATE_STREAM_ID: String = "profiles.ui.state"
-    const val STATE_VALUE_TYPE: String = "nl.r1a.grassmap.plugin.api.model.ProfilesState"
-    const val STATE_SERIALIZER: String = "nl.r1a.grassmap.plugin.api.model.ProfilesState.serializer"
+    const val STATE_VALUE_TYPE: String = "nl.r1a.grassmaps.plugin.api.model.ProfilesState"
+    const val STATE_SERIALIZER: String = "nl.r1a.grassmaps.plugin.api.model.ProfilesState.serializer"
 
     const val CREATE: String = "profiles.ui.create"
     const val COPY_SETTINGS: String = "profiles.ui.copy_settings"

@@ -51,12 +51,12 @@ class PlaceCardBoundaryTest {
 
     private companion object {
         const val BUILD_FILE = "build.gradle.kts"
-        const val SOURCE_ROOT = "src/main/java/nl/r1a/grassmap/plugins/osm/places"
+        const val SOURCE_ROOT = "src/main/java/nl/r1a/grassmaps/plugins/osm/places"
 
         /** Readers, native bindings and platform APIs the contract does not allow. */
         val FORBIDDEN =
             listOf(
-                "nl.r1a.grassmap.places",
+                "nl.r1a.grassmaps.places",
                 "grass_core",
                 "uniffi",
                 "SearchIndex",

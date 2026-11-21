@@ -12,8 +12,8 @@ import nl.r1a.grassmaps.plugin.api.contract.StreamId
 object DownloadsUiContract {
     const val PLUGIN_ID: String = "downloads.ui"
     const val STATE_STREAM_ID: String = "downloads.ui.state"
-    const val STATE_VALUE_TYPE: String = "nl.r1a.grassmap.plugin.api.model.DownloadsState"
-    const val STATE_SERIALIZER: String = "nl.r1a.grassmap.plugin.api.model.DownloadsState.serializer"
+    const val STATE_VALUE_TYPE: String = "nl.r1a.grassmaps.plugin.api.model.DownloadsState"
+    const val STATE_SERIALIZER: String = "nl.r1a.grassmaps.plugin.api.model.DownloadsState.serializer"
 
     const val REFRESH: String = "downloads.ui.refresh"
     const val UPDATE_ALL: String = "downloads.ui.update_all"

@@ -18,7 +18,7 @@ class OnlineSearchManifestTest {
 
         assertEquals("online.search", manifest.getValue("id").jsonPrimitive.content)
         assertEquals(
-            "nl.r1a.grassmap.plugins.online.search.OnlineSearchPlugin",
+            "nl.r1a.grassmaps.plugins.online.search.OnlineSearchPlugin",
             manifest.getValue("implementation").jsonPrimitive.content,
         )
         val provider =

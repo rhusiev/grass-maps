@@ -88,7 +88,7 @@ internal class FakeServices(
 
 /**
  * A typed fake of the store. It records what the plugin asked for and mutates
- * its own data the way [nl.r1a.grassmap.regions.RegionStore] does, so the
+ * its own data the way [nl.r1a.grassmaps.regions.RegionStore] does, so the
  * plugin's published stream is testable without a socket or a file.
  *
  * The token is recorded as present or absent and never as a value.

@@ -88,7 +88,7 @@ private const val RECENT_LIMIT = 5
  *
  * The design also draws a warning marker on the route line. That marker is not
  * built: the map host has no marker set, and the composed-layers compiler
- * rejects [nl.r1a.grassmap.plugin.api.model.LayerType.Circle] as not rendered,
+ * rejects [nl.r1a.grassmaps.plugin.api.model.LayerType.Circle] as not rendered,
  * so no drawable layer type carries one point per warning. The row and the
  * list are the whole warning surface (T-0409).
  */

@@ -63,6 +63,6 @@ class PluginManagerStringsTest {
     private companion object {
         const val ENGLISH = "src/main/res/values/strings.xml"
         const val UKRAINIAN = "src/main/res/values-uk/strings.xml"
-        const val SOURCE_ROOT = "src/main/java/nl/r1a/grassmap/plugins/manager"
+        const val SOURCE_ROOT = "src/main/java/nl/r1a/grassmaps/plugins/manager"
     }
 }

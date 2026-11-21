@@ -21,7 +21,7 @@ class ProfilesUiManifestTest {
 
         assertEquals(ProfilesUiContract.PLUGIN_ID, manifest.getValue("id").jsonPrimitive.content)
         assertEquals(
-            "nl.r1a.grassmap.plugins.profiles.ui.ProfilesUiPlugin",
+            "nl.r1a.grassmaps.plugins.profiles.ui.ProfilesUiPlugin",
             manifest.getValue("implementation").jsonPrimitive.content,
         )
         val commands = contributes.getValue("commands").jsonArray.map { it.jsonObject }

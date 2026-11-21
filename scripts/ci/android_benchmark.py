@@ -32,8 +32,8 @@ from pathlib import Path
 
 SCHEMA = "grass-maps-benchmark/1"
 KIND = "emulator-cold-start-frame-pacing"
-PACKAGE = "nl.r1a.grassmap"
-ACTIVITY = "nl.r1a.grassmap.app.MainActivity"
+PACKAGE = "nl.r1a.grassmaps"
+ACTIVITY = "nl.r1a.grassmaps.app.MainActivity"
 DEFAULT_RUNS = 5
 INSTALL_TIMEOUT_S = 300
 SETTLE_BETWEEN_RUNS_S = 1.0

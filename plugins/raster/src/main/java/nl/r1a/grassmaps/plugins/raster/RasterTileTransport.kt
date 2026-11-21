@@ -31,7 +31,7 @@ fun interface RasterTileTransport {
 
 /**
  * The production tile transport. It is reached only inside a request the
- * [nl.r1a.grassmap.plugin.api.service.NetworkGate] allowed.
+ * [nl.r1a.grassmaps.plugin.api.service.NetworkGate] allowed.
  *
  * The OSM tile policy asks for an identifying User-Agent, so every request
  * carries one. There is no retry, no prefetch and no cache here: the engine

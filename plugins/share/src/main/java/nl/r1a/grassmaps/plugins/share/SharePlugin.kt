@@ -9,7 +9,7 @@ import nl.r1a.grassmaps.plugin.api.error.Outcome
  *
  * It turns a point, a place and the current location into the text, the
  * osm.org link and the `geo:` URI a share carries, and hands the effect to the
- * host's [nl.r1a.grassmap.plugin.api.host.PlatformActions]. The plugin never
+ * host's [nl.r1a.grassmaps.plugin.api.host.PlatformActions]. The plugin never
  * touches a `ClipboardManager` or an `Intent`, so it depends only on
  * `:plugin-api`. The card's coordinate rows and buttons come from [ShareCard]
  * and are composed by `app`.

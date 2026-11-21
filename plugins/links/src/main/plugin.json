@@ -4,7 +4,7 @@
   "description": "plugin.links.description",
   "version": "0.1.0",
   "api": "0.1.0",
-  "implementation": "nl.r1a.grassmap.plugins.links.LinksPlugin",
+  "implementation": "nl.r1a.grassmaps.plugins.links.LinksPlugin",
   "contributes": {},
   "needs": {
     "network": [],

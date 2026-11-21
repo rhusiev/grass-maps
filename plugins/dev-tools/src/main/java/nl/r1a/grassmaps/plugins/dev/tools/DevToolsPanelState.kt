@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * One sample of the development-tools panel. [framesPerSecond] and
- * [usedMemoryBytes] come from the host's [nl.r1a.grassmap.plugin.api.host.DevToolsAccess],
+ * [usedMemoryBytes] come from the host's [nl.r1a.grassmaps.plugin.api.host.DevToolsAccess],
  * so the plugin reads state instead of measuring anything itself.
  */
 @Serializable

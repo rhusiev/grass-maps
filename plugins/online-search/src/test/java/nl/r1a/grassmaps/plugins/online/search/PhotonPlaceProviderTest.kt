@@ -270,14 +270,14 @@ class PhotonPlaceProviderTest {
 
     private class AllowGate : NetworkGate {
         override suspend fun <T> request(
-            switch: nl.r1a.grassmap.plugin.api.contract.SwitchId,
+            switch: nl.r1a.grassmaps.plugin.api.contract.SwitchId,
             block: suspend () -> Outcome<T>,
         ): Outcome<T> = block()
     }
 
     private class RefusingGate : NetworkGate {
         override suspend fun <T> request(
-            switch: nl.r1a.grassmap.plugin.api.contract.SwitchId,
+            switch: nl.r1a.grassmaps.plugin.api.contract.SwitchId,
             block: suspend () -> Outcome<T>,
         ): Outcome<T> = Outcome.Failure(AppError.SwitchOff(switch))
     }

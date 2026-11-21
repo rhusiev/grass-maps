@@ -64,7 +64,7 @@ data class ProfileAlertSettings(
  * into the profile store. A missing, unreadable or corrupt store reads as every
  * profile at its defaults, because an alert setting must never stop
  * navigation. A store written by a newer build makes [load] fail with
- * [nl.r1a.grassmap.plugin.api.error.AppError.NewerSchema], every profile reads
+ * [nl.r1a.grassmaps.plugin.api.error.AppError.NewerSchema], every profile reads
  * as its defaults, and every write fails, so the newer data is never
  * overwritten. A write keeps every key of the file that this build does not
  * know, so a newer build's keys in the same schema survive. A store that

@@ -21,7 +21,7 @@ Two gates run before the channel serves one frame:
 
 The token is generated when the channel starts and written to the app-private
 file `files/control-token` with mode 0600. The host reads it with
-`adb exec-out run-as nl.r1a.grassmap cat files/control-token`, or from
+`adb exec-out run-as nl.r1a.grassmaps cat files/control-token`, or from
 `--token-file`.
 
 After authentication, a command runs only when its generated registry entry has

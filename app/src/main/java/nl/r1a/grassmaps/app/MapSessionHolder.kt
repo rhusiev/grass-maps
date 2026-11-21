@@ -17,7 +17,7 @@ import java.util.concurrent.CopyOnWriteArrayList
  * starts a second one - and each composes its own surface, so the holder keeps
  * every bound host and reports the newest. When the newer instance finishes,
  * its unbind leaves the older host in place and commands keep working instead
- * of failing with [nl.r1a.grassmap.plugin.api.error.AppError.NotReady].
+ * of failing with [nl.r1a.grassmaps.plugin.api.error.AppError.NotReady].
  *
  * Commands return NotReady only before the first bind and after the last
  * unbind.

@@ -35,11 +35,11 @@ class FavouritesUiBoundaryTest {
 
     private companion object {
         const val BUILD_FILE = "build.gradle.kts"
-        const val SOURCE_ROOT = "src/main/java/nl/r1a/grassmap/plugins/favourites/ui"
+        const val SOURCE_ROOT = "src/main/java/nl/r1a/grassmaps/plugins/favourites/ui"
 
         val FORBIDDEN =
             listOf(
-                "nl.r1a.grassmap.places",
+                "nl.r1a.grassmaps.places",
                 "FavouritesStore",
                 "FavouritesGpx",
                 "java.io.",

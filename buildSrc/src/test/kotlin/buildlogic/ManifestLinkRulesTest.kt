@@ -83,9 +83,9 @@ class ManifestLinkRulesTest {
 
     @Test
     fun aMissingActivityFails() {
-        val findings = ManifestLinkRules.check(manifest(), "nl.r1a.grassmap.app.Missing")
+        val findings = ManifestLinkRules.check(manifest(), "nl.r1a.grassmaps.app.Missing")
 
-        assertEquals(listOf("activity android:name=\"nl.r1a.grassmap.app.Missing\" is missing from the merged manifest"), findings)
+        assertEquals(listOf("activity android:name=\"nl.r1a.grassmaps.app.Missing\" is missing from the merged manifest"), findings)
     }
 
     @Test
@@ -162,7 +162,7 @@ class ManifestLinkRulesTest {
     private fun manifest(extraFilters: String = geoFilter() + webFilters()): String =
         buildString {
             appendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
-            appendLine("<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\" package=\"nl.r1a.grassmap\">")
+            appendLine("<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\" package=\"nl.r1a.grassmaps\">")
             appendLine("    <application android:allowBackup=\"true\">")
             appendLine("        <activity android:name=\"$MAIN_ACTIVITY\" android:exported=\"true\" android:screenOrientation=\"portrait\">")
             appendLine(extraFilters.prependIndent("            "))
@@ -172,7 +172,7 @@ class ManifestLinkRulesTest {
         }
 
     private companion object {
-        const val MAIN_ACTIVITY = "nl.r1a.grassmap.app.MainActivity"
+        const val MAIN_ACTIVITY = "nl.r1a.grassmaps.app.MainActivity"
 
         val SCHEMES = listOf("http", "https")
         val OSM_HOSTS = listOf("www.openstreetmap.org", "openstreetmap.org", "osm.org", "www.osm.org")

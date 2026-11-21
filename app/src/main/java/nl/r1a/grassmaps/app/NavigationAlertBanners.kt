@@ -44,7 +44,7 @@ internal data class NavigationAlertState(
  * test drive the same rules. It reads the published navigation state for the
  * distance along the route, not the camera or a draw frame. [clockMillis] is
  * the elapsed time that ages banners; [fixClockMillis] is epoch time, the same
- * base as [nl.r1a.grassmap.plugin.api.model.LocationFix.timeMillis].
+ * base as [nl.r1a.grassmaps.plugin.api.model.LocationFix.timeMillis].
  */
 internal class NavigationAlertBanners(
     private val clockMillis: () -> Long = { System.nanoTime() / MILLIS_PER_NANOSECOND },

@@ -114,8 +114,8 @@ class TrackShareIntentTest {
         const val SEND = "android.intent.action.SEND"
         const val VIEW = "android.intent.action.VIEW"
         const val CONTENT_URI = "content://com.example.share/1"
-        const val FILE_URI = "file:///sdcard/Android/data/nl.r1a.grassmap/files/share/track.gpx"
-        const val OWN_AUTHORITY = "nl.r1a.grassmap.track.files"
+        const val FILE_URI = "file:///sdcard/Android/data/nl.r1a.grassmaps/files/share/track.gpx"
+        const val OWN_AUTHORITY = "nl.r1a.grassmaps.track.files"
         const val OWN_PROVIDER_URI = "content://$OWN_AUTHORITY/shared-tracks/track.gpx"
         const val OWN_PROVIDER_TRASH_URI = "content://$OWN_AUTHORITY/.trash/track-1/track.gpx"
     }

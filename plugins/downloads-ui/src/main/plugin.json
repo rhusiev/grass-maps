@@ -4,125 +4,125 @@
   "description": "plugin.downloads_ui.description",
   "version": "0.1.0",
   "api": "0.1.0",
-  "implementation": "nl.r1a.grassmap.plugins.downloads.ui.DownloadsUiPlugin",
+  "implementation": "nl.r1a.grassmaps.plugins.downloads.ui.DownloadsUiPlugin",
   "contributes": {
     "commands": [
       {
         "id": "downloads.ui.refresh",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.DownloadsState",
         "doc": "Fetches the map catalogue again and re-reads the installed packages.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.DownloadsRefreshCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.downloads.ui.DownloadsRefreshCommand"
       },
       {
         "id": "downloads.ui.update_all",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.DownloadsState",
         "doc": "Fetches the map catalogue again and queues every installed region that has a newer version.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.UpdateAllRegionsCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.downloads.ui.UpdateAllRegionsCommand"
       },
       {
         "id": "downloads.ui.download_region",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.DownloadsState",
         "doc": "Queues one region's package and returns the screen state. Parameter: region.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.DownloadRegionCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.downloads.ui.DownloadRegionCommand"
       },
       {
         "id": "downloads.ui.cancel_region",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.DownloadsState",
         "doc": "Cancels a region's download and returns the state once its work directory is gone. Parameter: region.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.CancelRegionDownloadCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.downloads.ui.CancelRegionDownloadCommand"
       },
       {
         "id": "downloads.ui.remove_region",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.DownloadsState",
         "doc": "Removes an installed region from the phone. Parameter: region.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.RemoveRegionCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.downloads.ui.RemoveRegionCommand"
       },
       {
         "id": "downloads.ui.select_region",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.DownloadsState",
         "doc": "Opens the sheet of one region, or closes it with an empty region. Parameter: region.",
         "undoable": false,
         "allowlistedForControl": false,
         "dispatcher": "default",
-        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.SelectRegionCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.downloads.ui.SelectRegionCommand"
       },
       {
         "id": "downloads.ui.search",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.DownloadsState",
         "doc": "Filters the regions by Ukrainian or English name, or clears the filter with an empty query. Parameter: query.",
         "undoable": false,
         "allowlistedForControl": false,
         "dispatcher": "default",
-        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.SearchRegionsCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.downloads.ui.SearchRegionsCommand"
       },
       {
         "id": "downloads.ui.set_server",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.DownloadsState",
         "doc": "Sets the map server and its optional download token, then fetches the catalogue. Parameters: url, and optionally token; an empty token clears it.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.SetMapServerCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.downloads.ui.SetMapServerCommand"
       },
       {
         "id": "downloads.ui.set_mobile_data",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.DownloadsState",
         "doc": "Sets the mobile-data download policy. Parameter: policy, wifi_only or any.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.SetMobileDataPolicyCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.downloads.ui.SetMobileDataPolicyCommand"
       },
       {
         "id": "downloads.ui.set_auto_update",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.DownloadsState",
         "doc": "Turns the monthly automatic map update on or off. Parameter: enabled, true or false.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.SetAutoUpdateCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.downloads.ui.SetAutoUpdateCommand"
       },
       {
         "id": "downloads.ui.use_mobile_data_now",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.DownloadsState",
         "doc": "Lets the downloads that wait for Wi-Fi continue on mobile data until the queue is empty.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.downloads.ui.UseMobileDataNowCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.downloads.ui.UseMobileDataNowCommand"
       }
     ],
     "streams": [
       {
         "id": "downloads.ui.state",
-        "valueType": "nl.r1a.grassmap.plugin.api.model.DownloadsState",
-        "serializer": "nl.r1a.grassmap.plugin.api.model.DownloadsState.serializer"
+        "valueType": "nl.r1a.grassmaps.plugin.api.model.DownloadsState",
+        "serializer": "nl.r1a.grassmaps.plugin.api.model.DownloadsState.serializer"
       }
     ]
   },

@@ -22,7 +22,7 @@ class DownloadsUiManifestTest {
 
         assertEquals(DownloadsUiContract.PLUGIN_ID, manifest.getValue("id").jsonPrimitive.content)
         assertEquals(
-            "nl.r1a.grassmap.plugins.downloads.ui.DownloadsUiPlugin",
+            "nl.r1a.grassmaps.plugins.downloads.ui.DownloadsUiPlugin",
             manifest.getValue("implementation").jsonPrimitive.content,
         )
         val commands = contributes.getValue("commands").jsonArray.map { it.jsonObject }

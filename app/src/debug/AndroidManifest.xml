@@ -6,7 +6,7 @@
          exception is loopback only, for the local region-download server; a
          release build has no such config and targetSdk 36 refuses cleartext. -->
     <application
-        android:name="nl.r1a.grassmap.app.DebugApplication"
+        android:name="nl.r1a.grassmaps.app.DebugApplication"
         android:networkSecurityConfig="@xml/network_security_config"
         tools:replace="android:name">
 
@@ -14,14 +14,14 @@
              and instrumented test. Debug only, not exported: another app's share
              is a content:// URI, and a plain file cannot exercise the resolver. -->
         <provider
-            android:name="nl.r1a.grassmap.app.SharedTrackTestProvider"
-            android:authorities="nl.r1a.grassmap.share-test"
+            android:name="nl.r1a.grassmaps.app.SharedTrackTestProvider"
+            android:authorities="nl.r1a.grassmaps.share-test"
             android:exported="false" />
 
         <!-- The device check shares its archive through this provider. Debug
              only, not exported: the share sheet gets one read grant. -->
         <provider
-            android:name="nl.r1a.grassmap.app.devcheck.DeviceCheckFileProvider"
+            android:name="nl.r1a.grassmaps.app.devcheck.DeviceCheckFileProvider"
             android:authorities="${applicationId}.devcheck.files"
             android:exported="false"
             android:grantUriPermissions="true">

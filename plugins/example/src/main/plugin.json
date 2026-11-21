@@ -4,7 +4,7 @@
   "description": "plugin.example.description",
   "version": "0.1.0",
   "api": "0.1.0",
-  "implementation": "nl.r1a.grassmap.plugins.example.ExamplePlugin",
+  "implementation": "nl.r1a.grassmaps.plugins.example.ExamplePlugin",
   "contributes": {
     "commands": [
       {
@@ -14,7 +14,7 @@
         "doc": "Sets the example counter and returns the new value.",
         "undoable": true,
         "allowlistedForControl": true,
-        "implementation": "nl.r1a.grassmap.plugins.example.SetValueCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.example.SetValueCommand"
       }
     ],
     "providers": [

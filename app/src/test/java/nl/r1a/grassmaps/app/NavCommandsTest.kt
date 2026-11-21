@@ -167,9 +167,9 @@ class NavCommandsTest {
                 durationSeconds = 190.0,
                 instructions =
                     listOf(
-                        nl.r1a.grassmap.plugin.api.provider
+                        nl.r1a.grassmaps.plugin.api.provider
                             .RouteInstruction("Walk south", null, 0.0, 60.0),
-                        nl.r1a.grassmap.plugin.api.provider
+                        nl.r1a.grassmaps.plugin.api.provider
                             .RouteInstruction("Arrive", null, 260.0, 0.0),
                     ),
             )

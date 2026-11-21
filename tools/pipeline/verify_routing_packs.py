@@ -49,9 +49,9 @@ TILE_SUFFIX = ".gph"
 EXPECTED_PACKAGES = 25
 RUNTIME_DATABASES = ("admins.sqlite", "timezones.sqlite")
 PACK_PLUGIN = Path(
-    "plugins/valhalla/src/main/java/nl/r1a/grassmap/plugins/valhalla/ValhallaPack.kt"
+    "plugins/valhalla/src/main/java/nl/r1a/grassmaps/plugins/valhalla/ValhallaPack.kt"
 )
-PACK_INSTALLER = Path("app/src/measure/java/nl/r1a/grassmap/app/PackInstaller.kt")
+PACK_INSTALLER = Path("app/src/measure/java/nl/r1a/grassmaps/app/PackInstaller.kt")
 
 # midgard::Tiles over {-180,-90}..{180,90}: tileid = row * columns + column,
 # row-major from the south-west corner (valhalla/baldr/tilehierarchy.cc).

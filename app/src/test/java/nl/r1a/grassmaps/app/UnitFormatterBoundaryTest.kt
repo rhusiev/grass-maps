@@ -67,11 +67,11 @@ class UnitFormatterBoundaryTest {
 
         val SURFACES =
             listOf(
-                "src/main/java/nl/r1a/grassmap/app/NavigationNotification.kt",
-                "src/main/java/nl/r1a/grassmap/app/NavigationScreenMapping.kt",
-                "src/main/java/nl/r1a/grassmap/app/WidgetGridMapping.kt",
-                "../plugins/guidance-ui/src/main/java/nl/r1a/grassmap/plugins/guidance/ui/GuidancePanel.kt",
-                "../plugins/point-info/src/main/java/nl/r1a/grassmap/plugins/point/info/PointInfoLabel.kt",
+                "src/main/java/nl/r1a/grassmaps/app/NavigationNotification.kt",
+                "src/main/java/nl/r1a/grassmaps/app/NavigationScreenMapping.kt",
+                "src/main/java/nl/r1a/grassmaps/app/WidgetGridMapping.kt",
+                "../plugins/guidance-ui/src/main/java/nl/r1a/grassmaps/plugins/guidance/ui/GuidancePanel.kt",
+                "../plugins/point-info/src/main/java/nl/r1a/grassmaps/plugins/point/info/PointInfoLabel.kt",
             )
 
         val ALLOWED_CONVERSIONS =

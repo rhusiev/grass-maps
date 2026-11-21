@@ -1151,7 +1151,7 @@ class AppContainer(
 
     /**
      * The v1 privacy switches. Region downloads name
-     * [nl.r1a.grassmap.core.services.NetworkSwitches.regionUpdates]; the real
+     * [nl.r1a.grassmaps.core.services.NetworkSwitches.regionUpdates]; the real
      * gate refuses the request while the switch is off.
      */
     private val privacySwitches: PrivacySwitches = PrivacySwitchSettings()

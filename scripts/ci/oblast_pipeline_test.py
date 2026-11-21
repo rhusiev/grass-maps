@@ -621,7 +621,7 @@ class ElevationGuardTest(unittest.TestCase):
             elevation = load_elevation()
         except ImportError as error:
             self.skipTest(f"build-elevation.py needs {error.name}")
-        reader = (REPO_ROOT / "regions/src/main/java/nl/r1a/grassmap/regions/RegionElevation.kt").read_text()
+        reader = (REPO_ROOT / "regions/src/main/java/nl/r1a/grassmaps/regions/RegionElevation.kt").read_text()
         match = re.search(r"MAX_COMPONENT_BYTES = (\d+)L \* 1024L \* 1024L", reader)
         self.assertIsNotNone(match)
         self.assertEqual(int(match.group(1)) * 1024 * 1024, elevation.GRID_MAX_BYTES)

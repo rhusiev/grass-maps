@@ -13,7 +13,7 @@ import nl.r1a.grassmaps.plugin.api.model.ProfilesState
  *
  * It owns the profiles screen state, its four commands and its stream, and
  * reads everything from the host's
- * [nl.r1a.grassmap.plugin.api.host.ProfileSettingsAccess]. The host owns the
+ * [nl.r1a.grassmaps.plugin.api.host.ProfileSettingsAccess]. The host owns the
  * profile files, the settings groups and the undo history. A host without
  * profile stores answers NotReady, so activation still succeeds and the stream
  * shows an empty list.

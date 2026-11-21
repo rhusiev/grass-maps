@@ -59,7 +59,7 @@ enum class MigrationStep {
  * every profile it is given, even with no string value left. A profile it is
  * not given loses all its values. The string values are the writer's own, so a
  * group that must keep keys it does not know passes them back, see
- * [nl.r1a.grassmap.plugin.api.service.withKnownValues].
+ * [nl.r1a.grassmaps.plugin.api.service.withKnownValues].
  */
 class ProfileValueFile(
     private val file: File,

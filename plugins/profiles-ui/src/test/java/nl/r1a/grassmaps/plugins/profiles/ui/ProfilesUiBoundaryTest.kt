@@ -38,11 +38,11 @@ class ProfilesUiBoundaryTest {
 
     private companion object {
         const val BUILD_FILE = "build.gradle.kts"
-        const val SOURCE_ROOT = "src/main/java/nl/r1a/grassmap/plugins/profiles/ui"
+        const val SOURCE_ROOT = "src/main/java/nl/r1a/grassmaps/plugins/profiles/ui"
 
         val FORBIDDEN =
             listOf(
-                "nl.r1a.grassmap.core",
+                "nl.r1a.grassmaps.core",
                 "ProfileCatalog",
                 "ProfileValueStore",
                 "java.io.",

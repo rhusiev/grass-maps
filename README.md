@@ -192,7 +192,7 @@ pinned NDK fails with a message naming the required revision and the one it
 found.
 
 `rust/grass-regions` is the region reader behind `RegionAccess` (T-0321). It is
-wired the same way and from its own package, `nl.r1a.grassmap.regions.core`:
+wired the same way and from its own package, `nl.r1a.grassmaps.regions.core`:
 `:regions` builds a host library for the JVM tests and one per ABI, generates
 the bindings from the host library, and packages `libgrass_regions.so`, so the
 two crates do not collide at APK merge. `./gradlew :regions:test` needs no
@@ -684,11 +684,11 @@ tolerance or loses an attribute.
 
 ## Module map
 
-Each namespace is `nl.r1a.grassmap.<module>`, with dots in place of hyphens in
+Each namespace is `nl.r1a.grassmaps.<module>`, with dots in place of hyphens in
 the module name. The `planner` module keeps its historical
-`nl.r1a.grassmap.plugins.route.planner` namespace so the plugin id and
+`nl.r1a.grassmaps.plugins.route.planner` namespace so the plugin id and
 implementation class do not change. Only `app` is an application module; its
-application ID is `nl.r1a.grassmap`.
+application ID is `nl.r1a.grassmaps`.
 
 | Module | Owns | Depends on |
 |---|---|---|
@@ -1733,7 +1733,7 @@ replay.
 ## Debug control channel
 
 A debug build starts a JSON-RPC 2.0 control channel on the Linux abstract
-socket `nl.r1a.grassmap.control`. Two gates protect it: the peer UID from
+socket `nl.r1a.grassmaps.control`. Two gates protect it: the peer UID from
 `SO_PEERCRED` must be the app's or the adb daemon's that carries `adb forward`,
 and the peer must send the 256-bit bearer token from the app-private
 `files/control-token` file. Only commands whose generated
@@ -3011,7 +3011,7 @@ node placement and map layers through the debug
 `search(query, context, limit, cancel)`, `pois(bbox, categories, limit, cancel)`
 and `details(placeId, cancel)`. `places` implements it over `rust/grass-core`
 through uniffi. The generated Kotlin and every Rust type stay inside `places`
-(package `nl.r1a.grassmap.places.core`); no plugin imports them.
+(package `nl.r1a.grassmaps.places.core`); no plugin imports them.
 
 Version 2.1.0 makes `SearchContext.viewport` a filter rather than a ranking
 bias and adds `PlaceHit.isCoordinate`. No shipped provider implemented the
@@ -3757,7 +3757,7 @@ region banner and the three stack, so a share that arrives over a banner draws
 below it. The strings are English and Ukrainian.
 
 A share arrives as a URI, not a path, so the debug build declares its own
-provider (`nl.r1a.grassmap.share-test` in `src/debug/`, not exported and absent
+provider (`nl.r1a.grassmaps.share-test` in `src/debug/`, not exported and absent
 from release). It serves the committed `mock-walk.gpx` at three addresses:
 `walk` (a GPX document whose display name has no extension, so the provider's
 type names the format), `notes` (a document that is not a track) and
@@ -3771,10 +3771,10 @@ the sheet, and the import log line and the stored document appear after Import:
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb shell cmd package query-activities -a android.intent.action.SEND \
     -c android.intent.category.DEFAULT -t application/gpx+xml
-adb shell am start -W -n nl.r1a.grassmap/nl.r1a.grassmap.app.MainActivity \
+adb shell am start -W -n nl.r1a.grassmaps/nl.r1a.grassmaps.app.MainActivity \
     -a android.intent.action.SEND -c android.intent.category.DEFAULT \
     -t application/gpx+xml \
-    --eu android.intent.extra.STREAM content://nl.r1a.grassmap.share-test/walk
+    --eu android.intent.extra.STREAM content://nl.r1a.grassmaps.share-test/walk
 adb logcat -d | grep GrassMapsTracks
 ```
 
@@ -3788,7 +3788,7 @@ receives. The import logged
 I GrassMapsTracks: share import name="walk.gpx" tracks=1 skipped=0 ids=20ab81f65815
 ```
 
-and `run-as nl.r1a.grassmap ls files/tracks` then held one
+and `run-as nl.r1a.grassmaps ls files/tracks` then held one
 `20ab81f65815...gpx` document and its `.json` sidecar. A second send logged the
 same id and the directory still held one document. No StrictMode violation was
 logged. The notice is at `/hdd/t-0416-evidence/share-notice.png` (local
@@ -3802,8 +3802,8 @@ asserts the notice, the stored track, the duplicate update, the non-track
 document and the provider that refuses the read. Run it with
 
 ```sh
-adb shell am instrument -w -e class nl.r1a.grassmap.app.ShareImportInstrumentedTest \
-    nl.r1a.grassmap.test/androidx.test.runner.AndroidJUnitRunner
+adb shell am instrument -w -e class nl.r1a.grassmaps.app.ShareImportInstrumentedTest \
+    nl.r1a.grassmaps.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
 The four tests passed on the same API 29 emulator. `TrackShareImportTest` and

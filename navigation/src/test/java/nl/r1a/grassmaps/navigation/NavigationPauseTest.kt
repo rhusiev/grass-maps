@@ -195,7 +195,7 @@ class NavigationPauseTest {
             cancellation: CancellationHandle,
         ): Outcome<List<Route>> {
             requests += 1
-            return Outcome.Failure(nl.r1a.grassmap.plugin.api.error.AppError.NotReady)
+            return Outcome.Failure(nl.r1a.grassmaps.plugin.api.error.AppError.NotReady)
         }
     }
 

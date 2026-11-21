@@ -108,7 +108,7 @@ interface MapHost {
     /**
      * Draws [tracks] in the overlays slot, replacing every track the map drew
      * before, or clears them when the list is empty. A host that cannot draw
-     * tracks reports [nl.r1a.grassmap.plugin.api.error.AppError.Unsupported]
+     * tracks reports [nl.r1a.grassmaps.plugin.api.error.AppError.Unsupported]
      * and leaves the map unchanged.
      */
     suspend fun setTracks(tracks: List<MapTrack>): Outcome<Unit>
@@ -118,7 +118,7 @@ interface MapHost {
      * border the map drew before, or clears them when the list is empty. The
      * caller passes only the regions to highlight, which is the installed ones
      * (T-0506). A host that cannot draw them reports
-     * [nl.r1a.grassmap.plugin.api.error.AppError.Unsupported].
+     * [nl.r1a.grassmaps.plugin.api.error.AppError.Unsupported].
      */
     suspend fun setRegionHighlights(regions: List<RegionOutline>): Outcome<Unit> = Outcome.Failure(AppError.Unsupported)
 

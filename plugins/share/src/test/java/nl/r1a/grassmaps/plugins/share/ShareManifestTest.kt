@@ -21,7 +21,7 @@ class ShareManifestTest {
 
         assertEquals(ShareContract.PLUGIN_ID, manifest.getValue("id").jsonPrimitive.content)
         assertEquals(
-            "nl.r1a.grassmap.plugins.share.SharePlugin",
+            "nl.r1a.grassmaps.plugins.share.SharePlugin",
             manifest.getValue("implementation").jsonPrimitive.content,
         )
         val commands = contributes.getValue("commands").jsonArray.map { it.jsonObject }

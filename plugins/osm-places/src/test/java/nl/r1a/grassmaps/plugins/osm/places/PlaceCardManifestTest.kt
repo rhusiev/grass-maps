@@ -20,7 +20,7 @@ class PlaceCardManifestTest {
 
         assertEquals("osm.places", manifest.getValue("id").jsonPrimitive.content)
         assertEquals(
-            "nl.r1a.grassmap.plugins.osm.places.OsmPlacesPlugin",
+            "nl.r1a.grassmaps.plugins.osm.places.OsmPlacesPlugin",
             manifest.getValue("implementation").jsonPrimitive.content,
         )
         assertProvider(

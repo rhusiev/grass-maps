@@ -17,7 +17,7 @@ class PluginManagerManifestTest {
     fun theManifestNamesThePluginImplementation() {
         assertEquals("plugin.manager", manifest.getValue("id").jsonPrimitive.content)
         assertEquals(
-            "nl.r1a.grassmap.plugins.manager.PluginManagerPlugin",
+            "nl.r1a.grassmaps.plugins.manager.PluginManagerPlugin",
             manifest.getValue("implementation").jsonPrimitive.content,
         )
         assertEquals("plugin.manager.name", manifest.getValue("name").jsonPrimitive.content)

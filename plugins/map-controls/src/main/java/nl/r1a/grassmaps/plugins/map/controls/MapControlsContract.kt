@@ -9,9 +9,9 @@ object MapControlsContract {
     val MODE_STREAM_ID: StreamId = StreamId("map.controls.mode")
 
     const val MODE_VALUE_TYPE: String =
-        "nl.r1a.grassmap.plugins.map.controls.CameraMode"
+        "nl.r1a.grassmaps.plugins.map.controls.CameraMode"
     const val MODE_SERIALIZER: String =
-        "nl.r1a.grassmap.plugins.map.controls.CameraMode.serializer"
+        "nl.r1a.grassmaps.plugins.map.controls.CameraMode.serializer"
 
     const val POSITION_OFFSET_SETTING: String = "map.controls.position_offset_y"
 }

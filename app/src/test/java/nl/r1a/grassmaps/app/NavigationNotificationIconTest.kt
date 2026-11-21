@@ -65,7 +65,7 @@ class NavigationNotificationIconTest {
     private companion object {
         const val ANDROID_NAMESPACE = "http://schemas.android.com/apk/res/android"
         const val DRAWABLE = "src/main/res/drawable/ic_nav_notification.xml"
-        const val SERVICE = "src/main/java/nl/r1a/grassmap/app/NavigationService.kt"
+        const val SERVICE = "src/main/java/nl/r1a/grassmaps/app/NavigationService.kt"
         const val SMALL_ICON_CALL = "setSmallIcon(navigationNotificationSmallIcon())"
         const val PLATFORM_SMALL_ICON = "setSmallIcon(android.R.drawable"
 

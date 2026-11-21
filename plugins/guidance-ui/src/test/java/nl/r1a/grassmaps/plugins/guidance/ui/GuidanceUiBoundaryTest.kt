@@ -48,7 +48,7 @@ class GuidanceUiBoundaryTest {
         val manifest = File(MANIFEST).readText()
 
         assertTrue(manifest.contains("\"id\": \"guidance.ui\""))
-        assertTrue(manifest.contains("nl.r1a.grassmap.plugins.guidance.ui.GuidanceUiPlugin"))
+        assertTrue(manifest.contains("nl.r1a.grassmaps.plugins.guidance.ui.GuidanceUiPlugin"))
         assertTrue(manifest.contains("\"contributes\": {}"))
         assertTrue(manifest.contains("\"ui\""))
     }
@@ -56,14 +56,14 @@ class GuidanceUiBoundaryTest {
     private companion object {
         const val BUILD_FILE = "build.gradle.kts"
         const val MANIFEST = "src/main/plugin.json"
-        const val SOURCE_ROOT = "src/main/java/nl/r1a/grassmap/plugins/guidance/ui"
+        const val SOURCE_ROOT = "src/main/java/nl/r1a/grassmaps/plugins/guidance/ui"
 
         val FORBIDDEN =
             listOf(
-                "nl.r1a.grassmap.navigation.",
+                "nl.r1a.grassmaps.navigation.",
                 "android.content.Context",
                 "kotlinx.coroutines",
-                "nl.r1a.grassmap.map.",
+                "nl.r1a.grassmaps.map.",
             )
     }
 }

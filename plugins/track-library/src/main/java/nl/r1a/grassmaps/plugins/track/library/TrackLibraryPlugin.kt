@@ -17,7 +17,7 @@ import nl.r1a.grassmaps.plugin.api.model.TrackLibraryState
  * It owns the library screen state, its actions and its one-step scoped undo,
  * and publishes the state as one stream so the shell and the control channel
  * bind the same id. Every mutation goes through the host's
- * [nl.r1a.grassmap.plugin.api.host.TrackLibraryAccess], which writes the track
+ * [nl.r1a.grassmaps.plugin.api.host.TrackLibraryAccess], which writes the track
  * sidecars and the folder index; the plugin keeps no second store.
  *
  * The state also follows the host's revision, so a track the share-sheet

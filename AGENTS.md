@@ -128,9 +128,9 @@ document, section 3, plus the build and module rules of this repository.
   drives the production session with synthetic fixes and reads a passed route
   through the shared JSON form. It reaches no core internals and changes no
   navigation policy; `README.md` records the edge
-- Package layout: `nl.r1a.grassmap.<module>`, with dots in place of hyphens:
-  `core-services` is `nl.r1a.grassmap.core.services`. The `planner` module keeps
-  its historical `nl.r1a.grassmap.plugins.route.planner` package so the plugin
+- Package layout: `nl.r1a.grassmaps.<module>`, with dots in place of hyphens:
+  `core-services` is `nl.r1a.grassmaps.core.services`. The `planner` module keeps
+  its historical `nl.r1a.grassmaps.plugins.route.planner` package so the plugin
   id and implementation class do not change
 - `plugin-api` and `plugin-ui-api` are ordinary Android libraries until they
   move to Kotlin Multiplatform source sets. Keep Android types out of their

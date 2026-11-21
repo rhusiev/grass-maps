@@ -5,6 +5,6 @@
     <!-- Measurement-only: release code with the T-0020 harness so the g32
          gates can read the first full frame. Not shipped. -->
     <application
-        android:name="nl.r1a.grassmap.app.BenchmarkApplication"
+        android:name="nl.r1a.grassmaps.app.BenchmarkApplication"
         tools:replace="android:name" />
 </manifest>

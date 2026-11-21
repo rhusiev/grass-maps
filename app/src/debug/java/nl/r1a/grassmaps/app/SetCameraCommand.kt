@@ -124,7 +124,7 @@ internal class SetCameraCommand(
         val bearing: Double,
         val tilt: Double,
     ) {
-        fun matches(camera: nl.r1a.grassmap.plugin.api.model.Camera): Boolean =
+        fun matches(camera: nl.r1a.grassmaps.plugin.api.model.Camera): Boolean =
             kotlin.math.abs(camera.center.latitude - latitude) < POSITION_EPSILON &&
                 kotlin.math.abs(camera.center.longitude - longitude) < POSITION_EPSILON &&
                 kotlin.math.abs(camera.zoom - zoom) < ZOOM_EPSILON &&

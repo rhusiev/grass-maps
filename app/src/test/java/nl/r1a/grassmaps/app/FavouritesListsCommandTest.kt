@@ -249,7 +249,7 @@ class FavouritesListsCommandTest {
     private suspend fun AppContainer.lists(): FavouriteListsState =
         streamAccess.subscribe<FavouriteListsState>(FavouritesUiContract.listsStream).first()
 
-    private suspend fun AppContainer.point(name: String): nl.r1a.grassmap.plugin.api.model.FavouritePointSummary =
+    private suspend fun AppContainer.point(name: String): nl.r1a.grassmaps.plugin.api.model.FavouritePointSummary =
         lists().points.single { it.name == name }
 
     private suspend fun AppContainer.idOf(name: String): String = point(name).id

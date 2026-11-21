@@ -189,7 +189,7 @@ internal class SpeedTracker(
          * The IUGG mean radius, the same one the puck's ground distance uses.
          * The map's copy is not reachable from a plugin, which depends on
          * `plugin-api` alone. The map scale uses
-         * [nl.r1a.grassmap.plugin.api.model.WebMercator], a different sphere on
+         * [nl.r1a.grassmaps.plugin.api.model.WebMercator], a different sphere on
          * purpose.
          */
         private const val EARTH_RADIUS_METERS: Double = 6_371_008.8

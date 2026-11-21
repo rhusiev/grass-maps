@@ -22,7 +22,7 @@ fun interface PhotonTransport {
 
 /**
  * The production transport. It is only reached inside a request the
- * [nl.r1a.grassmap.plugin.api.service.NetworkGate] allowed.
+ * [nl.r1a.grassmaps.plugin.api.service.NetworkGate] allowed.
  *
  * The public Photon instance asks clients to identify themselves, so the
  * request carries a product User-Agent. Timeouts bound a blocking socket that

@@ -296,7 +296,7 @@ androidComponents {
             ) {
                 group = "verification"
                 description = "Checks the merged ${variant.name} app manifest for the privacy guards."
-                this.mainActivity.set("nl.r1a.grassmap.app.MainActivity")
+                this.mainActivity.set("nl.r1a.grassmaps.app.MainActivity")
                 mergedManifest.set(variant.artifacts.get(SingleArtifact.MERGED_MANIFEST))
             }
         checkPrivacyManifest.configure { dependsOn(manifestCheck) }

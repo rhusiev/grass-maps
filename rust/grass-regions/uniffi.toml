@@ -1,4 +1,4 @@
 [bindings.kotlin]
-package_name = "nl.r1a.grassmap.regions.core"
+package_name = "nl.r1a.grassmaps.regions.core"
 cdylib_name = "grass_regions"
 android_cleaner = true

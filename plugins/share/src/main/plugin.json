@@ -4,7 +4,7 @@
   "description": "plugin.share.description",
   "version": "0.1.0",
   "api": "0.1.0",
-  "implementation": "nl.r1a.grassmap.plugins.share.SharePlugin",
+  "implementation": "nl.r1a.grassmaps.plugins.share.SharePlugin",
   "contributes": {
     "commands": [
       {
@@ -15,7 +15,7 @@
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "default",
-        "implementation": "nl.r1a.grassmap.plugins.share.CopyCoordinatesCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.share.CopyCoordinatesCommand"
       },
       {
         "id": "share.share_place",
@@ -25,7 +25,7 @@
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "default",
-        "implementation": "nl.r1a.grassmap.plugins.share.SharePlaceCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.share.SharePlaceCommand"
       },
       {
         "id": "share.share_location",
@@ -35,7 +35,7 @@
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "default",
-        "implementation": "nl.r1a.grassmap.plugins.share.ShareLocationCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.share.ShareLocationCommand"
       },
       {
         "id": "share.open_point",
@@ -45,7 +45,7 @@
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "default",
-        "implementation": "nl.r1a.grassmap.plugins.share.OpenPointCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.share.OpenPointCommand"
       }
     ]
   },

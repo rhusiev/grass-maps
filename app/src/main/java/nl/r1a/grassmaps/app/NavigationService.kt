@@ -430,10 +430,10 @@ class NavigationService : Service() {
     companion object {
         internal val startGate = ForegroundStartGate()
 
-        const val ACTION_START: String = "nl.r1a.grassmap.action.NAVIGATION_START"
-        const val ACTION_PAUSE: String = "nl.r1a.grassmap.action.NAVIGATION_PAUSE"
-        const val ACTION_RESUME: String = "nl.r1a.grassmap.action.NAVIGATION_RESUME"
-        const val ACTION_STOP: String = "nl.r1a.grassmap.action.NAVIGATION_STOP"
+        const val ACTION_START: String = "nl.r1a.grassmaps.action.NAVIGATION_START"
+        const val ACTION_PAUSE: String = "nl.r1a.grassmaps.action.NAVIGATION_PAUSE"
+        const val ACTION_RESUME: String = "nl.r1a.grassmaps.action.NAVIGATION_RESUME"
+        const val ACTION_STOP: String = "nl.r1a.grassmaps.action.NAVIGATION_STOP"
 
         private const val TAG = "GrassMapsNavService"
         private const val CHANNEL_ID = "navigation"

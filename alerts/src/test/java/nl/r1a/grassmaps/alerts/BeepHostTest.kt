@@ -122,7 +122,7 @@ class BeepHostTest {
     private fun instruction(
         text: String,
         distance: Double,
-    ) = nl.r1a.grassmap.plugin.api.provider.RouteInstruction(
+    ) = nl.r1a.grassmaps.plugin.api.provider.RouteInstruction(
         text = text,
         distanceAlongRouteMeters = distance,
         durationSeconds = 10.0,

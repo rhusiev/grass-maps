@@ -35,7 +35,7 @@ class PlaceCardAccessTest {
             GeneratedPlugins.plugins.firstOrNull { it.manifest.id == PluginId(OSM_PLACES) }
                 ?: throw AssertionError("osm.places is not in the generated registry")
 
-        assertEquals("nl.r1a.grassmap.plugins.osm.places.OsmPlacesPlugin", plugin.manifest.implementation)
+        assertEquals("nl.r1a.grassmaps.plugins.osm.places.OsmPlacesPlugin", plugin.manifest.implementation)
         val provider =
             plugin.manifest.contributes.providers
                 .singleOrNull()

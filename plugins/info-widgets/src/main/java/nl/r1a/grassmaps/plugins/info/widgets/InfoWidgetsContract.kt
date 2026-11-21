@@ -29,10 +29,10 @@ object InfoWidgetsContract {
     const val SPEED_AVERAGE_TITLE: String = "plugin.info_widgets.speed_average"
     const val SPEED_MAX_TITLE: String = "plugin.info_widgets.speed_max"
 
-    const val ALTITUDE_VALUE_TYPE: String = "nl.r1a.grassmap.plugin.api.widget.AltitudeWidgetValue"
-    const val COORDINATES_VALUE_TYPE: String = "nl.r1a.grassmap.plugin.api.widget.CoordinatesWidgetValue"
-    const val GPS_VALUE_TYPE: String = "nl.r1a.grassmap.plugin.api.widget.GpsInfoWidgetValue"
-    const val SPEED_VALUE_TYPE: String = "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue"
+    const val ALTITUDE_VALUE_TYPE: String = "nl.r1a.grassmaps.plugin.api.widget.AltitudeWidgetValue"
+    const val COORDINATES_VALUE_TYPE: String = "nl.r1a.grassmaps.plugin.api.widget.CoordinatesWidgetValue"
+    const val GPS_VALUE_TYPE: String = "nl.r1a.grassmaps.plugin.api.widget.GpsInfoWidgetValue"
+    const val SPEED_VALUE_TYPE: String = "nl.r1a.grassmaps.plugin.api.widget.SpeedWidgetValue"
 
     const val UPDATE_INTERVAL_MILLIS: Long = WidgetCadence.DEFAULT_INTERVAL_MILLIS
 

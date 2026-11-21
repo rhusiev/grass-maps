@@ -188,19 +188,19 @@ class BackupBundleRoundTripTest {
                 createdAtMillis = 1L,
                 kinds =
                     listOf(
-                        nl.r1a.grassmap.core.services.backup.BundleKind(
-                            nl.r1a.grassmap.core.services.backup.BackupKinds.MAP_STYLE,
+                        nl.r1a.grassmaps.core.services.backup.BundleKind(
+                            nl.r1a.grassmaps.core.services.backup.BackupKinds.MAP_STYLE,
                             listOf(
-                                nl.r1a.grassmap.core.services.backup.BundleEntry(
+                                nl.r1a.grassmaps.core.services.backup.BundleEntry(
                                     "style",
                                     kotlinx.serialization.json.buildJsonObject { put("style", "touring") },
                                 ),
                             ),
                         ),
-                        nl.r1a.grassmap.core.services.backup.BundleKind(
+                        nl.r1a.grassmaps.core.services.backup.BundleKind(
                             "future-kind",
                             listOf(
-                                nl.r1a.grassmap.core.services.backup.BundleEntry(
+                                nl.r1a.grassmaps.core.services.backup.BundleEntry(
                                     "future",
                                     kotlinx.serialization.json.buildJsonObject { put("value", "x") },
                                 ),
@@ -291,7 +291,7 @@ class BackupBundleRoundTripTest {
 
     private suspend fun applied(
         stores: Stores,
-        prepared: nl.r1a.grassmap.core.services.backup.PreparedBackup,
+        prepared: nl.r1a.grassmaps.core.services.backup.PreparedBackup,
         decisions: BundleConflictDecisions,
     ) = when (val summary = stores.coordinator.apply(prepared, decisions)) {
         is Outcome.Success -> summary.value

@@ -18,7 +18,7 @@ import nl.r1a.grassmaps.plugin.api.provider.RouteOptions
  * [preferences] are the route preferences the entry was produced with
  * (T-0421), so a reuse restores what the user chose rather than the current
  * profile defaults. An entry written before this field decodes as all
- * [nl.r1a.grassmap.plugin.api.provider.RoutePreference.Normal].
+ * [nl.r1a.grassmaps.plugin.api.provider.RoutePreference.Normal].
  */
 @Serializable
 data class RouteHistoryEntry(

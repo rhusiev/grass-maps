@@ -31,7 +31,7 @@ ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 # shellcheck source=../ci/lib/device.sh
 source "$SCRIPT_DIR/../ci/lib/device.sh"
 
-PACKAGE="nl.r1a.grassmap"
+PACKAGE="nl.r1a.grassmaps"
 ACTIVITY="$PACKAGE.app.MainActivity"
 DEVICE_SEARCH_DIR="/sdcard/Android/data/$PACKAGE/files/search"
 APK="${1:-$ROOT/app/build/outputs/apk/debug/app-debug.apk}"

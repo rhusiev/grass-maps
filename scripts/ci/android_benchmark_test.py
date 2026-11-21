@@ -10,10 +10,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import android_benchmark
 
 
-TIMEOUT_OUTPUT = """Starting: Intent { cmp=nl.r1a.grassmap/.app.MainActivity }
+TIMEOUT_OUTPUT = """Starting: Intent { cmp=nl.r1a.grassmaps/.app.MainActivity }
 Status: timeout
 LaunchState: UNKNOWN (-1)
-Activity: nl.r1a.grassmap/.app.MainActivity
+Activity: nl.r1a.grassmaps/.app.MainActivity
 WaitTime: 24927
 """
 

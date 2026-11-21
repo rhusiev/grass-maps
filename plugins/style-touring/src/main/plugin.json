@@ -4,7 +4,7 @@
   "description": "plugin.style_touring.description",
   "version": "0.1.0",
   "api": "0.1.0",
-  "implementation": "nl.r1a.grassmap.plugins.style.touring.TouringStylePlugin",
+  "implementation": "nl.r1a.grassmaps.plugins.style.touring.TouringStylePlugin",
   "contributes": {
     "providers": [
       {

@@ -4,7 +4,7 @@
   "description": "plugin.route_layer.description",
   "version": "0.1.0",
   "api": "0.1.0",
-  "implementation": "nl.r1a.grassmap.plugins.route.layer.RouteLayerPlugin",
+  "implementation": "nl.r1a.grassmaps.plugins.route.layer.RouteLayerPlugin",
   "contributes": {},
   "needs": {
     "network": [],

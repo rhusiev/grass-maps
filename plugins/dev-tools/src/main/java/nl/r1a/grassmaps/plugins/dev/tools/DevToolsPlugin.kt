@@ -20,7 +20,7 @@ import nl.r1a.grassmaps.plugin.api.host.StreamDescriptor
  *
  * It owns no location code and no measurement code: the host passes the GPX
  * replay seam, the frame rate and the memory figure through
- * [nl.r1a.grassmap.plugin.api.host.PluginServices.devTools]. Activation
+ * [nl.r1a.grassmaps.plugin.api.host.PluginServices.devTools]. Activation
  * registers one start command, one stop command and one state stream that the
  * panel and the control channel both bind by id.
  */

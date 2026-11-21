@@ -17,7 +17,7 @@ class LinksManifestTest {
 
         assertEquals("links", manifest.getValue("id").jsonPrimitive.content)
         assertEquals(
-            "nl.r1a.grassmap.plugins.links.LinksPlugin",
+            "nl.r1a.grassmaps.plugins.links.LinksPlugin",
             manifest.getValue("implementation").jsonPrimitive.content,
         )
         assertEquals("plugin.links.name", manifest.getValue("name").jsonPrimitive.content)

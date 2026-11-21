@@ -68,7 +68,7 @@ class ControlServerTest {
     private fun start(factory: FakeSocketFactory): ControlServer {
         val created =
             ControlServer(
-                socketName = "nl.r1a.grassmap.control.test",
+                socketName = "nl.r1a.grassmaps.control.test",
                 token = ControlTokens.generate(),
                 endpoint =
                     ControlEndpoint(

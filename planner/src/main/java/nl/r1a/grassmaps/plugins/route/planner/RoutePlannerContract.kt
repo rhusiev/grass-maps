@@ -14,8 +14,8 @@ object RoutePlannerContract {
     const val PLUGIN_ID: String = "route.planner"
     const val STATE_STREAM_ID: String = "route.planner.state"
     const val HISTORY_STREAM_ID: String = "route.planner.history"
-    const val STATE_VALUE_TYPE: String = "nl.r1a.grassmap.plugin.api.model.RoutePlanState"
-    const val STATE_SERIALIZER: String = "nl.r1a.grassmap.plugin.api.model.RoutePlanState.serializer"
+    const val STATE_VALUE_TYPE: String = "nl.r1a.grassmaps.plugin.api.model.RoutePlanState"
+    const val STATE_SERIALIZER: String = "nl.r1a.grassmaps.plugin.api.model.RoutePlanState.serializer"
     const val HISTORY_VALUE_TYPE: String = "kotlin.collections.ArrayList"
     const val HISTORY_SERIALIZER: String = "kotlinx.serialization.builtins.ListSerializer"
 

@@ -26,11 +26,11 @@ internal data class ForbiddenApkMarker(
  */
 internal val debugOnlyApkMarkers: List<ForbiddenApkMarker> =
     listOf(
-        "the debug control channel" to "nl/r1a/grassmap/control/",
-        "the debug control package" to "nl.r1a.grassmap.control",
-        "the development-tools harness" to "nl/r1a/grassmap/devtools/",
-        "the development-tools package" to "nl.r1a.grassmap.devtools",
-        "the development-tools plugin" to "nl/r1a/grassmap/plugins/dev/tools/",
+        "the debug control channel" to "nl/r1a/grassmaps/control/",
+        "the debug control package" to "nl.r1a.grassmaps.control",
+        "the development-tools harness" to "nl/r1a/grassmaps/devtools/",
+        "the development-tools package" to "nl.r1a.grassmaps.devtools",
+        "the development-tools plugin" to "nl/r1a/grassmaps/plugins/dev/tools/",
         "the development-tools plugin id" to "dev.tools",
         "the AI-control switch" to "ai.control",
         "the debug application" to "DebugApplication",

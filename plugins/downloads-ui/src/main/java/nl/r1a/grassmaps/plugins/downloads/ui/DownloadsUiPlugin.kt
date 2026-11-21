@@ -16,7 +16,7 @@ import nl.r1a.grassmaps.plugin.api.model.DownloadsState
  *
  * It owns the downloads screen state, its actions and its stream, and reads
  * everything it draws from the host's
- * [nl.r1a.grassmap.plugin.api.host.RegionDownloadsAccess]. The store owns the
+ * [nl.r1a.grassmaps.plugin.api.host.RegionDownloadsAccess]. The store owns the
  * catalogue, the packages and the transfers; this plugin owns no second copy of
  * any of them, so the map's installed packs and the screen cannot disagree.
  *

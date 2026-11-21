@@ -17,7 +17,7 @@ object PointInfoContract {
     const val SELECTION_STREAM_ID: String = "point.info.selection"
     const val SELECTION_WIDGET_ID: String = "point.info.selection"
     const val SELECTION_TITLE: String = "plugin.point_info.selection"
-    const val SELECTION_VALUE_TYPE: String = "nl.r1a.grassmap.plugins.point.info.SelectedPointValue"
+    const val SELECTION_VALUE_TYPE: String = "nl.r1a.grassmaps.plugins.point.info.SelectedPointValue"
     const val UPDATE_INTERVAL_MILLIS: Long = WidgetCadence.DEFAULT_INTERVAL_MILLIS
 
     val selectionStream: StreamId = StreamId(SELECTION_STREAM_ID)

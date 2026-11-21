@@ -71,7 +71,7 @@ internal class NavigationStep(
             val numbers =
                 mapOf("start_result" to JsonPrimitive(started.toString().take(RESULT_CHARS)), "phase" to JsonPrimitive(phase.name))
             return when {
-                started is nl.r1a.grassmap.plugin.api.error.Outcome.Failure -> {
+                started is nl.r1a.grassmaps.plugin.api.error.Outcome.Failure -> {
                     StepOutcome.fail(
                         "core.nav.start failed: ${started.error}",
                         numbers,

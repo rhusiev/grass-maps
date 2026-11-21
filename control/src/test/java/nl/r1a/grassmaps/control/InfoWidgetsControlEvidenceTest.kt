@@ -173,7 +173,7 @@ class InfoWidgetsControlEvidenceTest {
             description = "plugin.info_widgets.description",
             version = "0.1.0",
             api = "0.1.0",
-            implementation = "nl.r1a.grassmap.plugins.info.widgets.InfoWidgetsPlugin",
+            implementation = "nl.r1a.grassmaps.plugins.info.widgets.InfoWidgetsPlugin",
             contributes =
                 PluginContributions(
                     streams =

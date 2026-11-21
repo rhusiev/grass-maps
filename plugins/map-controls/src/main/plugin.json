@@ -4,13 +4,13 @@
   "description": "plugin.map_controls.description",
   "version": "0.1.0",
   "api": "0.1.0",
-  "implementation": "nl.r1a.grassmap.plugins.map.controls.MapControlsPlugin",
+  "implementation": "nl.r1a.grassmaps.plugins.map.controls.MapControlsPlugin",
   "contributes": {
     "streams": [
       {
         "id": "map.controls.mode",
-        "valueType": "nl.r1a.grassmap.plugins.map.controls.CameraMode",
-        "serializer": "nl.r1a.grassmap.plugins.map.controls.CameraMode.serializer"
+        "valueType": "nl.r1a.grassmaps.plugins.map.controls.CameraMode",
+        "serializer": "nl.r1a.grassmaps.plugins.map.controls.CameraMode.serializer"
       }
     ],
     "settings": [

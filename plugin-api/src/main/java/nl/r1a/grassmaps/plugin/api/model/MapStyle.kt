@@ -86,7 +86,7 @@ data class MapSource(
 /**
  * A base style document and the logical sources it needs. The document holds
  * version, glyphs, sprite and an empty layer list; layers arrive through
- * [nl.r1a.grassmap.plugin.api.provider.MapLayerProvider].
+ * [nl.r1a.grassmaps.plugin.api.provider.MapLayerProvider].
  */
 data class StyleSpec(
     val id: StyleId,

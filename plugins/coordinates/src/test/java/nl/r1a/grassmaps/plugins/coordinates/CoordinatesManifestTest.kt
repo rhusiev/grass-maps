@@ -17,7 +17,7 @@ class CoordinatesManifestTest {
 
         assertEquals("coordinates", manifest.getValue("id").jsonPrimitive.content)
         assertEquals(
-            "nl.r1a.grassmap.plugins.coordinates.CoordinatesPlugin",
+            "nl.r1a.grassmaps.plugins.coordinates.CoordinatesPlugin",
             manifest.getValue("implementation").jsonPrimitive.content,
         )
         assertEquals("plugin.coordinates.name", manifest.getValue("name").jsonPrimitive.content)

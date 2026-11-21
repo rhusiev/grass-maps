@@ -4,7 +4,7 @@
   "description": "plugin.data_synthetic.description",
   "version": "0.1.0",
   "api": "0.1.0",
-  "implementation": "nl.r1a.grassmap.plugins.synthetic.data.SyntheticDataPlugin",
+  "implementation": "nl.r1a.grassmaps.plugins.synthetic.data.SyntheticDataPlugin",
   "contributes": {
     "providers": [
       {

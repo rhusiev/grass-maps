@@ -8,7 +8,7 @@ package nl.r1a.grassmaps.plugin.api.contract
  * boundary, which has no coroutine context. The handle is not a thread-wide
  * flag: it belongs to one call. A provider checks it before starting work and
  * between chunks, and returns
- * [nl.r1a.grassmap.plugin.api.error.AppError.Cancelled] once it is set; a call
+ * [nl.r1a.grassmaps.plugin.api.error.AppError.Cancelled] once it is set; a call
  * that arrives already cancelled does no work at all.
  */
 fun interface CancellationHandle {

@@ -35,14 +35,14 @@ class ShareBoundaryTest {
 
     private companion object {
         const val BUILD_FILE = "build.gradle.kts"
-        const val SOURCE_ROOT = "src/main/java/nl/r1a/grassmap/plugins/share"
+        const val SOURCE_ROOT = "src/main/java/nl/r1a/grassmaps/plugins/share"
 
         val FORBIDDEN =
             listOf(
                 "import android.",
                 "import java.io.",
                 "import java.nio.",
-                "import nl.r1a.grassmap.app",
+                "import nl.r1a.grassmaps.app",
             )
     }
 }

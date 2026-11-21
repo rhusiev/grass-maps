@@ -11,7 +11,7 @@ package nl.r1a.grassmaps.plugin.api.host
  * pointed at them (T-0515). It is null before a pack is mounted. A path says
  * only where to look: the engine inspects it and reports an absent, incomplete
  * or unreadable pack as
- * [nl.r1a.grassmap.plugin.api.error.AppError.RoutingPackUnavailable].
+ * [nl.r1a.grassmaps.plugin.api.error.AppError.RoutingPackUnavailable].
  */
 fun interface RoutingPackAccess {
     fun packDirectory(): String?

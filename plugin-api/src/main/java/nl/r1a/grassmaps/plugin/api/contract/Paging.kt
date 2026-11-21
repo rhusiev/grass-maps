@@ -6,7 +6,7 @@ package nl.r1a.grassmaps.plugin.api.contract
  * A caller passes the token back unchanged and never parses it: only the
  * provider that issued it knows what it means. A token is valid only for the
  * query owner that received it; an unknown or stale token is answered with
- * [nl.r1a.grassmap.plugin.api.error.AppError.InvalidInput].
+ * [nl.r1a.grassmaps.plugin.api.error.AppError.InvalidInput].
  */
 @JvmInline
 value class CursorToken(
@@ -18,7 +18,7 @@ value class CursorToken(
  *
  * [limit] must be at least 1 and no more than the provider's declared maximum.
  * A provider answers a request outside that range with
- * [nl.r1a.grassmap.plugin.api.error.AppError.InvalidInput] instead of clamping
+ * [nl.r1a.grassmaps.plugin.api.error.AppError.InvalidInput] instead of clamping
  * it, so a caller cannot silently receive less work than it asked for. A null
  * [cursor] starts the query from the first page.
  */

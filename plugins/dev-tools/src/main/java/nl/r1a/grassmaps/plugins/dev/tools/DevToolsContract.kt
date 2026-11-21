@@ -14,7 +14,7 @@ object DevToolsContract {
     const val START_REPLAY_COMMAND_ID: String = "dev.tools.start_replay"
     const val STOP_REPLAY_COMMAND_ID: String = "dev.tools.stop_replay"
 
-    const val STATE_VALUE_TYPE: String = "nl.r1a.grassmap.plugins.dev.tools.DevToolsPanelState"
+    const val STATE_VALUE_TYPE: String = "nl.r1a.grassmaps.plugins.dev.tools.DevToolsPanelState"
     const val STATE_SERIALIZER: String = "$STATE_VALUE_TYPE.serializer"
 
     val stateStream: StreamId = StreamId(STATE_STREAM_ID)

@@ -14,15 +14,15 @@ Probe log (adb logcat -s GrassMapsBeep:I):
 
 dumpsys audio, captured while the second beep's focus window was held:
   Audio Focus stack entries (last is top of stack):
-    source:android.os.BinderProxy@d81f176 -- pack: nl.r1a.grassmap -- client: android.media.AudioManager@1da8908nl.r1a.grassmap.alerts.AndroidAudioFocus$$ExternalSyntheticLambda0@3fcf8a1 -- gain: GAIN_TRANSIENT_MAY_DUCK -- flags:  -- loss: none -- notified: true -- limbofalse -- uid: 10307 -- attr: AudioAttributes: usage=USAGE_ASSISTANCE_NAVIGATION_GUIDANCE content=CONTENT_TYPE_SONIFICATION flags=0x800(FLAG_MUTE_HAPTIC)  tags= bundle=null -- sdk:36
+    source:android.os.BinderProxy@d81f176 -- pack: nl.r1a.grassmaps -- client: android.media.AudioManager@1da8908nl.r1a.grassmaps.alerts.AndroidAudioFocus$$ExternalSyntheticLambda0@3fcf8a1 -- gain: GAIN_TRANSIENT_MAY_DUCK -- flags:  -- loss: none -- notified: true -- limbofalse -- uid: 10307 -- attr: AudioAttributes: usage=USAGE_ASSISTANCE_NAVIGATION_GUIDANCE content=CONTENT_TYPE_SONIFICATION flags=0x800(FLAG_MUTE_HAPTIC)  tags= bundle=null -- sdk:36
 
 The focus entry is the ducking request and the navigation-guidance usage. The
 stream is not a field of the focus stack; the probe line names it as `music`,
 which is `AudioManager.STREAM_MUSIC` from AndroidBeepAudio.kt. `dumpsys audio`
 also records the two focus requests and their abandonment:
-  23:29:59:000 requestAudioFocus() from uid/pid 10307/10771 AA=USAGE_ASSISTANCE_NAVIGATION_GUIDANCE/CONTENT_TYPE_SONIFICATION callingPack=nl.r1a.grassmap req=3
-  23:30:00:621 abandonAudioFocus() from uid/pid 10307/10771 callingPack=nl.r1a.grassmap
-  23:30:02:108 requestAudioFocus() from uid/pid 10307/10771 AA=USAGE_ASSISTANCE_NAVIGATION_GUIDANCE/CONTENT_TYPE_SONIFICATION callingPack=nl.r1a.grassmap req=3
+  23:29:59:000 requestAudioFocus() from uid/pid 10307/10771 AA=USAGE_ASSISTANCE_NAVIGATION_GUIDANCE/CONTENT_TYPE_SONIFICATION callingPack=nl.r1a.grassmaps req=3
+  23:30:00:621 abandonAudioFocus() from uid/pid 10307/10771 callingPack=nl.r1a.grassmaps
+  23:30:02:108 requestAudioFocus() from uid/pid 10307/10771 AA=USAGE_ASSISTANCE_NAVIGATION_GUIDANCE/CONTENT_TYPE_SONIFICATION callingPack=nl.r1a.grassmaps req=3
 
 No other media player was running, so `dumpsys audio` had no `ducked players`
 entry; the gain above is the request the system applies when a player is

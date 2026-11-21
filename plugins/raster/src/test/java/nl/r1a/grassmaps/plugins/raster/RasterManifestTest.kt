@@ -18,7 +18,7 @@ class RasterManifestTest {
 
         assertEquals("map.raster", manifest.getValue("id").jsonPrimitive.content)
         assertEquals(
-            "nl.r1a.grassmap.plugins.raster.RasterPlugin",
+            "nl.r1a.grassmaps.plugins.raster.RasterPlugin",
             manifest.getValue("implementation").jsonPrimitive.content,
         )
         val provider =

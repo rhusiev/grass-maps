@@ -24,7 +24,7 @@ class DirectManifestTest {
 
         assertEquals("direct", manifest.getValue("id").jsonPrimitive.content)
         assertEquals(
-            "nl.r1a.grassmap.plugins.direct.DirectPlugin",
+            "nl.r1a.grassmaps.plugins.direct.DirectPlugin",
             manifest.getValue("implementation").jsonPrimitive.content,
         )
         assertEquals(listOf("provider"), manifest.getValue("activation").jsonArray.map { it.jsonPrimitive.content })

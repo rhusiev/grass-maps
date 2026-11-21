@@ -73,7 +73,7 @@ private val HOST_POLICY: CommandPolicy =
  */
 private object UnitParamsSerializer : KSerializer<Unit> {
     override val descriptor: SerialDescriptor =
-        PrimitiveSerialDescriptor("nl.r1a.grassmap.app.NoParams", PrimitiveKind.STRING)
+        PrimitiveSerialDescriptor("nl.r1a.grassmaps.app.NoParams", PrimitiveKind.STRING)
 
     override fun serialize(
         encoder: Encoder,

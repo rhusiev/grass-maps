@@ -45,7 +45,7 @@ class CrashGuardTest {
         assertTrue(text.contains("# Grass Maps crash report"))
         assertTrue(text.contains("java.lang.IllegalStateException"))
         assertTrue(text.contains("boom"))
-        assertTrue(text.contains("at nl.r1a.grassmap.core.services.CrashGuardTest."))
+        assertTrue(text.contains("at nl.r1a.grassmaps.core.services.CrashGuardTest."))
         assertTrue(text.contains("Pixel 7"))
         assertTrue(text.contains("Android 14"))
         assertTrue(text.contains("last thing before the crash"))
@@ -63,7 +63,7 @@ class CrashGuardTest {
         val text = (outcome as Outcome.Success).value.readText()
         assertTrue(text.contains("exception=java.lang.StackOverflowError"))
         assertTrue(text.contains("# stack skipped: stack overflow"))
-        assertFalse(text.contains("at nl.r1a.grassmap.core.services.CrashGuardTest."))
+        assertFalse(text.contains("at nl.r1a.grassmaps.core.services.CrashGuardTest."))
         assertFalse(text.contains("\tat "))
     }
 
@@ -81,7 +81,7 @@ class CrashGuardTest {
         assertTrue(text.contains("exception="))
         assertTrue(text.contains("boom"))
         assertTrue(text.contains("# stack skipped: the stack could not be formatted"))
-        assertFalse(text.contains("at nl.r1a.grassmap.core.services.CrashGuardTest."))
+        assertFalse(text.contains("at nl.r1a.grassmaps.core.services.CrashGuardTest."))
     }
 
     @Test

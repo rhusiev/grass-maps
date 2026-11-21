@@ -271,7 +271,7 @@ internal fun BackupScreenContent(
                         style = TextStyle(color = ACCENT, fontSize = SMALL_SP.sp),
                         modifier = Modifier.padding(top = 12.dp),
                     )
-                    val warningKind = state.warnings.filterIsInstance<nl.r1a.grassmap.core.services.backup.BackupWarning.UnknownKind>()
+                    val warningKind = state.warnings.filterIsInstance<nl.r1a.grassmaps.core.services.backup.BackupWarning.UnknownKind>()
                     warningKind.forEach { warning ->
                         BasicText(
                             text = stringResource(R.string.backup_unknown_kind, warning.kind),
@@ -501,16 +501,16 @@ private fun ErrorText(error: AppError) {
 private fun kindLabel(kind: String): String =
     stringResource(
         when (kind) {
-            nl.r1a.grassmap.core.services.backup.BackupKinds.TRACKS -> R.string.backup_kind_tracks
-            nl.r1a.grassmap.core.services.backup.BackupKinds.FAVOURITES -> R.string.backup_kind_favourites
-            nl.r1a.grassmap.core.services.backup.BackupKinds.PROFILES -> R.string.backup_kind_profiles
-            nl.r1a.grassmap.core.services.backup.BackupKinds.ROUTING -> R.string.backup_kind_routing
-            nl.r1a.grassmap.core.services.backup.BackupKinds.ALERTS -> R.string.backup_kind_alerts
-            nl.r1a.grassmap.core.services.backup.BackupKinds.PRIVACY -> R.string.backup_kind_privacy
-            nl.r1a.grassmap.core.services.backup.BackupKinds.SEARCH_HISTORY -> R.string.backup_kind_search_history
-            nl.r1a.grassmap.core.services.backup.BackupKinds.ROUTE_HISTORY -> R.string.backup_kind_route_history
-            nl.r1a.grassmap.core.services.backup.BackupKinds.MAP_STYLE -> R.string.backup_kind_map_style
-            nl.r1a.grassmap.core.services.backup.BackupKinds.PLUGINS -> R.string.backup_kind_plugins
+            nl.r1a.grassmaps.core.services.backup.BackupKinds.TRACKS -> R.string.backup_kind_tracks
+            nl.r1a.grassmaps.core.services.backup.BackupKinds.FAVOURITES -> R.string.backup_kind_favourites
+            nl.r1a.grassmaps.core.services.backup.BackupKinds.PROFILES -> R.string.backup_kind_profiles
+            nl.r1a.grassmaps.core.services.backup.BackupKinds.ROUTING -> R.string.backup_kind_routing
+            nl.r1a.grassmaps.core.services.backup.BackupKinds.ALERTS -> R.string.backup_kind_alerts
+            nl.r1a.grassmaps.core.services.backup.BackupKinds.PRIVACY -> R.string.backup_kind_privacy
+            nl.r1a.grassmaps.core.services.backup.BackupKinds.SEARCH_HISTORY -> R.string.backup_kind_search_history
+            nl.r1a.grassmaps.core.services.backup.BackupKinds.ROUTE_HISTORY -> R.string.backup_kind_route_history
+            nl.r1a.grassmaps.core.services.backup.BackupKinds.MAP_STYLE -> R.string.backup_kind_map_style
+            nl.r1a.grassmaps.core.services.backup.BackupKinds.PLUGINS -> R.string.backup_kind_plugins
             else -> R.string.backup_kind_unknown
         },
     )

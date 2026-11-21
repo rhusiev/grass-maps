@@ -21,14 +21,14 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
-        android:name="nl.r1a.grassmap.app.GrassMapsApplication"
+        android:name="nl.r1a.grassmaps.app.GrassMapsApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:label="@string/app_name"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity
-            android:name="nl.r1a.grassmap.app.MainActivity"
+            android:name="nl.r1a.grassmaps.app.MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:screenOrientation="portrait">
@@ -88,7 +88,7 @@
              with a read grant on the send intent. No storage permission is
              declared and no other directory is reachable. -->
         <provider
-            android:name="nl.r1a.grassmap.app.TrackFileProvider"
+            android:name="nl.r1a.grassmaps.app.TrackFileProvider"
             android:authorities="${applicationId}.track.files"
             android:exported="false"
             android:grantUriPermissions="true">
@@ -102,7 +102,7 @@
              its own; stopWithTask stays false so navigation survives a task
              swipe and stopWithTask cannot release location early. -->
         <service
-            android:name="nl.r1a.grassmap.app.NavigationService"
+            android:name="nl.r1a.grassmaps.app.NavigationService"
             android:exported="false"
             android:foregroundServiceType="location"
             android:stopWithTask="false" />
@@ -112,14 +112,14 @@
              when the last one ends. dataSync has a time cap on Android 15; the
              transfer resumes with a Range request if the system ends it. -->
         <service
-            android:name="nl.r1a.grassmap.app.DownloadService"
+            android:name="nl.r1a.grassmaps.app.DownloadService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
         <!-- T-0508: the system wakes this about once a day to run the monthly
              map update. It starts no activity and exports nothing. -->
         <service
-            android:name="nl.r1a.grassmap.app.AutoUpdateJobService"
+            android:name="nl.r1a.grassmaps.app.AutoUpdateJobService"
             android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>

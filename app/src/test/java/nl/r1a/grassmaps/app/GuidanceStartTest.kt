@@ -357,9 +357,9 @@ class GuidanceStartTest {
     private companion object {
         const val FIX_BUFFER = 8
 
-        const val MAP_SCREEN_SOURCE = "src/main/java/nl/r1a/grassmap/app/MapScreen.kt"
-        const val NAV_COMMANDS_SOURCE = "src/main/java/nl/r1a/grassmap/app/NavCommands.kt"
-        const val APP_CONTAINER_SOURCE = "src/main/java/nl/r1a/grassmap/app/AppContainer.kt"
+        const val MAP_SCREEN_SOURCE = "src/main/java/nl/r1a/grassmaps/app/MapScreen.kt"
+        const val NAV_COMMANDS_SOURCE = "src/main/java/nl/r1a/grassmaps/app/NavCommands.kt"
+        const val APP_CONTAINER_SOURCE = "src/main/java/nl/r1a/grassmaps/app/AppContainer.kt"
 
         val ROUTE =
             Route(

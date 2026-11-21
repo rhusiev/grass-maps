@@ -4,7 +4,7 @@
   "description": "plugin.online_search.description",
   "version": "0.1.0",
   "api": "0.1.0",
-  "implementation": "nl.r1a.grassmap.plugins.online.search.OnlineSearchPlugin",
+  "implementation": "nl.r1a.grassmaps.plugins.online.search.OnlineSearchPlugin",
   "contributes": {
     "providers": [
       {

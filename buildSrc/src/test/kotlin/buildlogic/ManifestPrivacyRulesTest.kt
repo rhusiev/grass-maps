@@ -71,7 +71,7 @@ class ManifestPrivacyRulesTest {
                 manifest(
                     applicationBody =
                         """
-                        <service android:name="nl.r1a.grassmap.app.AuthenticatorService">
+                        <service android:name="nl.r1a.grassmaps.app.AuthenticatorService">
                             <intent-filter>
                                 <action android:name="android.accounts.AccountAuthenticator" />
                             </intent-filter>
@@ -108,7 +108,7 @@ class ManifestPrivacyRulesTest {
 
     @Test
     fun missingMainActivityFails() {
-        val findings = ManifestPrivacyRules.check(manifest(), "nl.r1a.grassmap.app.Missing")
+        val findings = ManifestPrivacyRules.check(manifest(), "nl.r1a.grassmaps.app.Missing")
 
         assertTrue(findings.any { it.contains("Missing") && it.contains("missing") })
     }
@@ -149,7 +149,7 @@ class ManifestPrivacyRulesTest {
         val backupAttribute = allowBackup?.let { " android:allowBackup=\"$it\"" }.orEmpty()
         return buildString {
             appendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
-            appendLine("<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\" package=\"nl.r1a.grassmap\">")
+            appendLine("<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\" package=\"nl.r1a.grassmaps\">")
             if (permissions.isNotEmpty()) appendLine("    $permissions")
             appendLine("    <application$backupAttribute>")
             if (applicationBody.isNotEmpty()) appendLine(applicationBody.prependIndent("        "))
@@ -160,6 +160,6 @@ class ManifestPrivacyRulesTest {
     }
 
     private companion object {
-        const val MAIN_ACTIVITY = "nl.r1a.grassmap.app.MainActivity"
+        const val MAIN_ACTIVITY = "nl.r1a.grassmaps.app.MainActivity"
     }
 }

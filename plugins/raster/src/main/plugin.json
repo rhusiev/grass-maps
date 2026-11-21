@@ -4,7 +4,7 @@
   "description": "plugin.map_raster.description",
   "version": "0.1.0",
   "api": "0.1.0",
-  "implementation": "nl.r1a.grassmap.plugins.raster.RasterPlugin",
+  "implementation": "nl.r1a.grassmaps.plugins.raster.RasterPlugin",
   "contributes": {
     "providers": [
       {

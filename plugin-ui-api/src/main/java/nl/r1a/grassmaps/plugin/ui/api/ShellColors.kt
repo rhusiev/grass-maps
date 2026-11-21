@@ -316,7 +316,7 @@ private const val LUMINANCE_GREEN = 0.7152
 private const val LUMINANCE_BLUE = 0.0722
 
 /**
- * The token set of the composition. [nl.r1a.grassmap.ui.shell.GrassMapsTheme]
+ * The token set of the composition. [nl.r1a.grassmaps.ui.shell.GrassMapsTheme]
  * provides it; a screen outside the theme draws in light, so a preview or a
  * component test needs no provider.
  */

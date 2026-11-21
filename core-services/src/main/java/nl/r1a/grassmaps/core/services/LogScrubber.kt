@@ -5,7 +5,7 @@ package nl.r1a.grassmaps.core.services
  *
  * The ring logs every call site, including ones added later, so the guarantee
  * that a diagnostic bundle never holds a position, a query or a token cannot
- * rest on each caller remembering [nl.r1a.grassmap.plugin.api.service.Logger]'s
+ * rest on each caller remembering [nl.r1a.grassmaps.plugin.api.service.Logger]'s
  * contract. Redaction happens once, before the record enters the ring: the raw
  * text is never stored, and the bundle writer copies only stored records.
  */

@@ -16,8 +16,8 @@ import subprocess
 import time
 
 DEFAULT_PORT = 4599
-DEFAULT_ABSTRACT = "nl.r1a.grassmap.control"
-PACKAGE = "nl.r1a.grassmap"
+DEFAULT_ABSTRACT = "nl.r1a.grassmaps.control"
+PACKAGE = "nl.r1a.grassmaps"
 TOKEN_FILE_IN_APP = "files/control-token"
 MAX_FRAME_BYTES = 1 << 20
 ADB_TIMEOUT_S = 30

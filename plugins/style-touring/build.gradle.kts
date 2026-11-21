@@ -10,7 +10,7 @@ plugins {
 val generateStyleAsset =
     tasks.register<GenerateTextAssetTask>("generateStyleAsset") {
         source.set(layout.projectDirectory.file("src/main/styles/touring.json"))
-        packageName.set("nl.r1a.grassmap.plugins.style.touring.generated")
+        packageName.set("nl.r1a.grassmaps.plugins.style.touring.generated")
         objectName.set("TouringStyleAsset")
         outputDirectory.set(layout.buildDirectory.dir("generated/style-asset"))
     }

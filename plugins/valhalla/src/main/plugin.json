@@ -4,7 +4,7 @@
   "description": "plugin.valhalla.description",
   "version": "0.1.0",
   "api": "0.1.0",
-  "implementation": "nl.r1a.grassmap.plugins.valhalla.ValhallaPlugin",
+  "implementation": "nl.r1a.grassmaps.plugins.valhalla.ValhallaPlugin",
   "contributes": {
     "providers": [
       {

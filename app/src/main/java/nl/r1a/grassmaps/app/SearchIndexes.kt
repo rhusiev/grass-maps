@@ -58,7 +58,7 @@ internal fun searchIndexesOf(mounted: List<MountedRegion>): SearchIndexSet =
  * installed list names a different set of region versions, so a keystroke or a
  * frame never reads the disk. The mount reads manifests and file sizes only:
  * no index is opened here. The reader opens a section when a query first
- * reaches [nl.r1a.grassmap.places.PlacesAccess], so the privacy and plugin
+ * reaches [nl.r1a.grassmaps.places.PlacesAccess], so the privacy and plugin
  * switches see the same call path as before.
  */
 internal class SearchIndexes(

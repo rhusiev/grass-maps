@@ -20,7 +20,7 @@ import nl.r1a.grassmaps.plugin.api.model.TrackSort
  *
  * Each action returns a state plus a scoped undo receipt, which this session
  * keeps on a small stack. [undo] consumes the latest receipt; an action that no
- * longer applies is [nl.r1a.grassmap.plugin.api.host.TrackLibraryUndo.NOT_APPLICABLE],
+ * longer applies is [nl.r1a.grassmaps.plugin.api.host.TrackLibraryUndo.NOT_APPLICABLE],
  * not an error. This is not the global T-0304 undo history.
  *
  * Actions are serialised: one library mutation is in flight at a time, so the

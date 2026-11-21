@@ -293,9 +293,9 @@ class NavigationSessionTest {
                 durationSeconds = 800.0,
                 instructions =
                     listOf(
-                        nl.r1a.grassmap.plugin.api.provider
+                        nl.r1a.grassmaps.plugin.api.provider
                             .RouteInstruction("Start", null, 0.0, 10.0),
-                        nl.r1a.grassmap.plugin.api.provider
+                        nl.r1a.grassmaps.plugin.api.provider
                             .RouteInstruction("Arrive", null, 1_000.0, 10.0),
                     ),
             )

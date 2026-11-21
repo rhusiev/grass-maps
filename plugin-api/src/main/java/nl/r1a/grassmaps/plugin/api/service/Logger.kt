@@ -58,7 +58,7 @@ interface Logger {
 
 /**
  * The sink a host without diagnostics uses: it drops every record. A plugin
- * reads [nl.r1a.grassmap.plugin.api.host.PluginServices.logger] without
+ * reads [nl.r1a.grassmaps.plugin.api.host.PluginServices.logger] without
  * knowing whether the host wired one.
  */
 object NoLogger : Logger {

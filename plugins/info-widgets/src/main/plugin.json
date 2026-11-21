@@ -4,80 +4,80 @@
   "description": "plugin.info_widgets.description",
   "version": "0.1.0",
   "api": "0.1.0",
-  "implementation": "nl.r1a.grassmap.plugins.info.widgets.InfoWidgetsPlugin",
+  "implementation": "nl.r1a.grassmaps.plugins.info.widgets.InfoWidgetsPlugin",
   "contributes": {
     "streams": [
       {
         "id": "info.widgets.altitude",
-        "valueType": "nl.r1a.grassmap.plugin.api.widget.AltitudeWidgetValue",
-        "serializer": "nl.r1a.grassmap.plugin.api.widget.AltitudeWidgetValue.serializer"
+        "valueType": "nl.r1a.grassmaps.plugin.api.widget.AltitudeWidgetValue",
+        "serializer": "nl.r1a.grassmaps.plugin.api.widget.AltitudeWidgetValue.serializer"
       },
       {
         "id": "info.widgets.coordinates",
-        "valueType": "nl.r1a.grassmap.plugin.api.widget.CoordinatesWidgetValue",
-        "serializer": "nl.r1a.grassmap.plugin.api.widget.CoordinatesWidgetValue.serializer"
+        "valueType": "nl.r1a.grassmaps.plugin.api.widget.CoordinatesWidgetValue",
+        "serializer": "nl.r1a.grassmaps.plugin.api.widget.CoordinatesWidgetValue.serializer"
       },
       {
         "id": "info.widgets.gps",
-        "valueType": "nl.r1a.grassmap.plugin.api.widget.GpsInfoWidgetValue",
-        "serializer": "nl.r1a.grassmap.plugin.api.widget.GpsInfoWidgetValue.serializer"
+        "valueType": "nl.r1a.grassmaps.plugin.api.widget.GpsInfoWidgetValue",
+        "serializer": "nl.r1a.grassmaps.plugin.api.widget.GpsInfoWidgetValue.serializer"
       },
       {
         "id": "info.widgets.speed.current",
-        "valueType": "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue",
-        "serializer": "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue.serializer"
+        "valueType": "nl.r1a.grassmaps.plugin.api.widget.SpeedWidgetValue",
+        "serializer": "nl.r1a.grassmaps.plugin.api.widget.SpeedWidgetValue.serializer"
       },
       {
         "id": "info.widgets.speed.average",
-        "valueType": "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue",
-        "serializer": "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue.serializer"
+        "valueType": "nl.r1a.grassmaps.plugin.api.widget.SpeedWidgetValue",
+        "serializer": "nl.r1a.grassmaps.plugin.api.widget.SpeedWidgetValue.serializer"
       },
       {
         "id": "info.widgets.speed.max",
-        "valueType": "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue",
-        "serializer": "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue.serializer"
+        "valueType": "nl.r1a.grassmaps.plugin.api.widget.SpeedWidgetValue",
+        "serializer": "nl.r1a.grassmaps.plugin.api.widget.SpeedWidgetValue.serializer"
       }
     ],
     "widgets": [
       {
         "id": "info.widgets.altitude",
         "title": "plugin.info_widgets.altitude",
-        "valueType": "nl.r1a.grassmap.plugin.api.widget.AltitudeWidgetValue",
+        "valueType": "nl.r1a.grassmaps.plugin.api.widget.AltitudeWidgetValue",
         "streamId": "info.widgets.altitude",
         "updateIntervalMillis": 200
       },
       {
         "id": "info.widgets.coordinates",
         "title": "plugin.info_widgets.coordinates",
-        "valueType": "nl.r1a.grassmap.plugin.api.widget.CoordinatesWidgetValue",
+        "valueType": "nl.r1a.grassmaps.plugin.api.widget.CoordinatesWidgetValue",
         "streamId": "info.widgets.coordinates",
         "updateIntervalMillis": 200
       },
       {
         "id": "info.widgets.gps",
         "title": "plugin.info_widgets.gps",
-        "valueType": "nl.r1a.grassmap.plugin.api.widget.GpsInfoWidgetValue",
+        "valueType": "nl.r1a.grassmaps.plugin.api.widget.GpsInfoWidgetValue",
         "streamId": "info.widgets.gps",
         "updateIntervalMillis": 200
       },
       {
         "id": "info.widgets.speed.current",
         "title": "plugin.info_widgets.speed_current",
-        "valueType": "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue",
+        "valueType": "nl.r1a.grassmaps.plugin.api.widget.SpeedWidgetValue",
         "streamId": "info.widgets.speed.current",
         "updateIntervalMillis": 200
       },
       {
         "id": "info.widgets.speed.average",
         "title": "plugin.info_widgets.speed_average",
-        "valueType": "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue",
+        "valueType": "nl.r1a.grassmaps.plugin.api.widget.SpeedWidgetValue",
         "streamId": "info.widgets.speed.average",
         "updateIntervalMillis": 200
       },
       {
         "id": "info.widgets.speed.max",
         "title": "plugin.info_widgets.speed_max",
-        "valueType": "nl.r1a.grassmap.plugin.api.widget.SpeedWidgetValue",
+        "valueType": "nl.r1a.grassmaps.plugin.api.widget.SpeedWidgetValue",
         "streamId": "info.widgets.speed.max",
         "updateIntervalMillis": 200
       }

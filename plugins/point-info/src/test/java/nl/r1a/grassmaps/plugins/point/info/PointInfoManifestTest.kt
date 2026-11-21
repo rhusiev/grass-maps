@@ -22,7 +22,7 @@ class PointInfoManifestTest {
 
         assertEquals(PointInfoContract.PLUGIN_ID, manifest.getValue("id").jsonPrimitive.content)
         assertEquals(
-            "nl.r1a.grassmap.plugins.point.info.PointInfoPlugin",
+            "nl.r1a.grassmaps.plugins.point.info.PointInfoPlugin",
             manifest.getValue("implementation").jsonPrimitive.content,
         )
         assertStream(
@@ -45,7 +45,7 @@ class PointInfoManifestTest {
         assertEquals(PointInfoContract.SELECTION_STREAM_ID, stream.getValue("id").jsonPrimitive.content)
         assertEquals(PointInfoContract.SELECTION_VALUE_TYPE, stream.getValue("valueType").jsonPrimitive.content)
         assertEquals(
-            "nl.r1a.grassmap.plugins.point.info.SelectedPointValue.serializer",
+            "nl.r1a.grassmaps.plugins.point.info.SelectedPointValue.serializer",
             stream.getValue("serializer").jsonPrimitive.content,
         )
     }

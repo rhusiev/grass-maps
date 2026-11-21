@@ -199,7 +199,7 @@ class DownloadService : Service() {
     companion object {
         internal val startGate = ForegroundStartGate()
 
-        const val ACTION_USE_MOBILE_DATA = "nl.r1a.grassmap.app.action.DOWNLOAD_USE_MOBILE_DATA"
+        const val ACTION_USE_MOBILE_DATA = "nl.r1a.grassmaps.app.action.DOWNLOAD_USE_MOBILE_DATA"
         private const val TAG = "DownloadService"
         private const val CHANNEL_ID = "downloads"
         private const val NOTIFICATION_ID = 4505

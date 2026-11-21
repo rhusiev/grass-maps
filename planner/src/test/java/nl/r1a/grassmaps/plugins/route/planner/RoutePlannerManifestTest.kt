@@ -18,7 +18,7 @@ class RoutePlannerManifestTest {
 
         assertEquals(RoutePlannerContract.PLUGIN_ID, manifest.getValue("id").jsonPrimitive.content)
         assertEquals(
-            "nl.r1a.grassmap.plugins.route.planner.RoutePlannerPlugin",
+            "nl.r1a.grassmaps.plugins.route.planner.RoutePlannerPlugin",
             manifest.getValue("implementation").jsonPrimitive.content,
         )
         val commands = contributes.getValue("commands").jsonArray.map { it.jsonObject }

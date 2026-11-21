@@ -31,7 +31,7 @@ import nl.r1a.grassmaps.plugin.api.error.Outcome
  * written there and only off the UI thread, and the socket is bound there.
  */
 internal object DebugControl {
-    const val SOCKET_NAME: String = "nl.r1a.grassmap.control"
+    const val SOCKET_NAME: String = "nl.r1a.grassmaps.control"
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var server: ControlServer? = null

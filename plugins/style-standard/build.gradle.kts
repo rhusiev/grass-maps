@@ -10,7 +10,7 @@ plugins {
 val generateStyleAsset =
     tasks.register<GenerateTextAssetTask>("generateStyleAsset") {
         source.set(layout.projectDirectory.file("src/main/styles/standard.json"))
-        packageName.set("nl.r1a.grassmap.plugins.style.standard.generated")
+        packageName.set("nl.r1a.grassmaps.plugins.style.standard.generated")
         objectName.set("StandardStyleAsset")
         outputDirectory.set(layout.buildDirectory.dir("generated/style-asset"))
     }

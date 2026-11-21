@@ -65,7 +65,7 @@ class SearchScreenSessionTest {
     @Test
     fun `a newer keystroke cancels the older provider call`() =
         runBlocking {
-            val handles = mutableListOf<nl.r1a.grassmap.plugin.api.contract.CancellationHandle>()
+            val handles = mutableListOf<nl.r1a.grassmaps.plugin.api.contract.CancellationHandle>()
             val firstStarted = CompletableDeferred<Unit>()
             val hold = CompletableDeferred<Unit>()
             val session =
@@ -170,7 +170,7 @@ class SearchScreenSessionTest {
         runBlocking {
             val started = CompletableDeferred<Unit>()
             val hold = CompletableDeferred<Unit>()
-            var handle: nl.r1a.grassmap.plugin.api.contract.CancellationHandle? = null
+            var handle: nl.r1a.grassmaps.plugin.api.contract.CancellationHandle? = null
             val session =
                 SearchScreenSession { request ->
                     handle = request.cancellation

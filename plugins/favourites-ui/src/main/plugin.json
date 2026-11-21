@@ -4,95 +4,95 @@
   "description": "plugin.favourites_ui.description",
   "version": "0.1.0",
   "api": "0.1.0",
-  "implementation": "nl.r1a.grassmap.plugins.favourites.ui.FavouritesUiPlugin",
+  "implementation": "nl.r1a.grassmaps.plugins.favourites.ui.FavouritesUiPlugin",
   "contributes": {
     "commands": [
       {
         "id": "favourites.ui.create_list",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.FavouriteListsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.FavouriteListsState",
         "doc": "Creates a favourites list. Parameters: name, color, and optionally icon.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.favourites.ui.CreateFavouriteListCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.favourites.ui.CreateFavouriteListCommand"
       },
       {
         "id": "favourites.ui.move_point",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.FavouriteListsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.FavouriteListsState",
         "doc": "Moves a favourite to another list. Parameters: pointId, list.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.favourites.ui.MoveFavouritePointCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.favourites.ui.MoveFavouritePointCommand"
       },
       {
         "id": "favourites.ui.recolour_list",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.FavouriteListsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.FavouriteListsState",
         "doc": "Recolours a list and all its points. Parameters: list, color.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.favourites.ui.RecolourFavouriteListCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.favourites.ui.RecolourFavouriteListCommand"
       },
       {
         "id": "favourites.ui.set_home",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.FavouriteListsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.FavouriteListsState",
         "doc": "Sets a favourite as Home. Parameter: pointId.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.favourites.ui.SetHomeFavouriteCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.favourites.ui.SetHomeFavouriteCommand"
       },
       {
         "id": "favourites.ui.set_work",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.FavouriteListsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.FavouriteListsState",
         "doc": "Sets a favourite as Work. Parameter: pointId.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.favourites.ui.SetWorkFavouriteCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.favourites.ui.SetWorkFavouriteCommand"
       },
       {
         "id": "favourites.ui.undo",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.FavouriteListsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.FavouriteListsState",
         "doc": "Undoes the latest lists action and returns the state.",
         "undoable": false,
         "allowlistedForControl": true,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.favourites.ui.UndoFavouriteListCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.favourites.ui.UndoFavouriteListCommand"
       },
       {
         "id": "favourites.ui.set_query",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.FavouriteListsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.FavouriteListsState",
         "doc": "Filters the favourites screen by name and description. Parameters: query, and optionally sequence.",
         "undoable": false,
         "allowlistedForControl": false,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.favourites.ui.SearchFavouritesCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.favourites.ui.SearchFavouritesCommand"
       },
       {
         "id": "favourites.ui.set_sort",
         "params": "kotlinx.serialization.json.JsonElement",
-        "result": "nl.r1a.grassmap.plugin.api.model.FavouriteListsState",
+        "result": "nl.r1a.grassmaps.plugin.api.model.FavouriteListsState",
         "doc": "Sorts the favourites screen. Parameter: sort, one of insertion, name_ascending, name_descending or list_then_name.",
         "undoable": false,
         "allowlistedForControl": false,
         "dispatcher": "io",
-        "implementation": "nl.r1a.grassmap.plugins.favourites.ui.SortFavouritesCommand"
+        "implementation": "nl.r1a.grassmaps.plugins.favourites.ui.SortFavouritesCommand"
       }
     ],
     "streams": [
       {
         "id": "favourites.ui.lists",
-        "valueType": "nl.r1a.grassmap.plugin.api.model.FavouriteListsState",
-        "serializer": "nl.r1a.grassmap.plugin.api.model.FavouriteListsState.serializer"
+        "valueType": "nl.r1a.grassmaps.plugin.api.model.FavouriteListsState",
+        "serializer": "nl.r1a.grassmaps.plugin.api.model.FavouriteListsState.serializer"
       }
     ]
   },

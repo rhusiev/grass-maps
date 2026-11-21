@@ -15,7 +15,7 @@ object NavSimulatorContract {
     const val START_COMMAND_ID: String = "nav.simulator.start"
     const val STOP_COMMAND_ID: String = "nav.simulator.stop"
 
-    const val STATUS_VALUE_TYPE: String = "nl.r1a.grassmap.plugins.nav.simulator.SimulatorStatus"
+    const val STATUS_VALUE_TYPE: String = "nl.r1a.grassmaps.plugins.nav.simulator.SimulatorStatus"
     const val STATUS_SERIALIZER: String = "$STATUS_VALUE_TYPE.serializer"
 
     /** The planner's published state, the simulator's route when none is passed. */

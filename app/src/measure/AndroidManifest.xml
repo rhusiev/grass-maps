@@ -7,7 +7,7 @@
          measure build type. -->
     <application>
         <activity
-            android:name="nl.r1a.grassmap.app.MeasureActivity"
+            android:name="nl.r1a.grassmaps.app.MeasureActivity"
             android:exported="true"
             android:label="Grass Maps Measure"
             android:screenOrientation="portrait"

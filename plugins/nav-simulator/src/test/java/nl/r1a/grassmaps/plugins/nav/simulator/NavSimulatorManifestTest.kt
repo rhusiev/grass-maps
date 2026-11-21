@@ -19,7 +19,7 @@ class NavSimulatorManifestTest {
 
         assertEquals(NavSimulatorContract.PLUGIN_ID, manifest.getValue("id").jsonPrimitive.content)
         assertEquals(
-            "nl.r1a.grassmap.plugins.nav.simulator.NavSimulatorPlugin",
+            "nl.r1a.grassmaps.plugins.nav.simulator.NavSimulatorPlugin",
             manifest.getValue("implementation").jsonPrimitive.content,
         )
         val commands = contributions.getValue("commands").jsonArray.map { it.jsonObject }

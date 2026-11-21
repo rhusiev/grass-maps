@@ -41,7 +41,7 @@ class NavigationRefusalNoticeTest {
 
     @Test
     fun theSettingsIntentUsesThePackageScheme() {
-        assertEquals("package:nl.r1a.grassmap", permissionSettingsData("nl.r1a.grassmap"))
+        assertEquals("package:nl.r1a.grassmaps", permissionSettingsData("nl.r1a.grassmaps"))
     }
 
     @Test

@@ -412,7 +412,7 @@ class NavigationScreenMappingTest {
 
     private fun screen(
         state: NavigationState,
-        panel: nl.r1a.grassmap.plugins.guidance.ui.GuidancePanel?,
+        panel: nl.r1a.grassmaps.plugins.guidance.ui.GuidancePanel?,
         signalLost: Boolean = false,
         alerts: List<AlertBanner> = emptyList(),
         camera: NavigationCameraSettings = NavigationCameraSettings(),

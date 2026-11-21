@@ -21,7 +21,7 @@ internal enum class CameraSpeedBand(
  * Chooses the auto-zoom band for a measured speed, with hysteresis.
  *
  * The speed is the ground distance between two consecutive fixes over the time
- * between them, not [nl.r1a.grassmap.plugin.api.model.LocationFix.speedMetersPerSecond]
+ * between them, not [nl.r1a.grassmaps.plugin.api.model.LocationFix.speedMetersPerSecond]
  * (the T-0316 rule). A source that reports no speed therefore works the same
  * way, and a replay with known positions and times is deterministic.
  *

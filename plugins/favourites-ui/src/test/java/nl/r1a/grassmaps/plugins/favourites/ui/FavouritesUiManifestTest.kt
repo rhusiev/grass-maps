@@ -22,7 +22,7 @@ class FavouritesUiManifestTest {
 
         assertEquals(FavouritesUiContract.PLUGIN_ID, manifest.getValue("id").jsonPrimitive.content)
         assertEquals(
-            "nl.r1a.grassmap.plugins.favourites.ui.FavouritesUiPlugin",
+            "nl.r1a.grassmaps.plugins.favourites.ui.FavouritesUiPlugin",
             manifest.getValue("implementation").jsonPrimitive.content,
         )
         val commands = contributes.getValue("commands").jsonArray.map { it.jsonObject }

@@ -12,8 +12,8 @@ import nl.r1a.grassmaps.plugin.api.contract.StreamId
 object TrackLibraryContract {
     const val PLUGIN_ID: String = "track.library"
     const val STATE_STREAM_ID: String = "track.library.state"
-    const val STATE_VALUE_TYPE: String = "nl.r1a.grassmap.plugin.api.model.TrackLibraryState"
-    const val STATE_SERIALIZER: String = "nl.r1a.grassmap.plugin.api.model.TrackLibraryState.serializer"
+    const val STATE_VALUE_TYPE: String = "nl.r1a.grassmaps.plugin.api.model.TrackLibraryState"
+    const val STATE_SERIALIZER: String = "nl.r1a.grassmaps.plugin.api.model.TrackLibraryState.serializer"
 
     const val CREATE_FOLDER: String = "track.library.create_folder"
     const val RENAME_FOLDER: String = "track.library.rename_folder"

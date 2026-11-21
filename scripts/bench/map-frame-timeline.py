@@ -34,7 +34,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 SCHEMA = "grass-maps-map-pacing/1"
-PACKAGE = "nl.r1a.grassmap"
+PACKAGE = "nl.r1a.grassmaps"
 # A gap longer than this is the map idling between gestures, not a slow frame.
 DEFAULT_MAX_GAP_MS = 250.0
 # An interval over 1.5 periods means at least one vsync passed without a frame.

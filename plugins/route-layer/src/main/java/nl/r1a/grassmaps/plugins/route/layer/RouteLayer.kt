@@ -12,7 +12,7 @@ import nl.r1a.grassmaps.plugin.api.provider.Route
  * decision (T-0408), or the canon's plain line when guidance is active.
  *
  * The controller owns no state: [host] is the newest bound map surface. It hands
- * the map one complete [nl.r1a.grassmap.plugin.api.model.RouteLineStyle] with
+ * the map one complete [nl.r1a.grassmaps.plugin.api.model.RouteLineStyle] with
  * every draw, so a redraw never mixes the new route with the previous style. A
  * surface that is gone is [AppError.NotReady] and never an exception.
  */

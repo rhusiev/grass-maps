@@ -18,9 +18,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -114,6 +116,7 @@ import nl.r1a.grassmaps.plugin.api.error.AppError
 import nl.r1a.grassmaps.plugin.api.error.Outcome
 import nl.r1a.grassmaps.plugin.api.error.onFailure
 import nl.r1a.grassmaps.plugin.api.host.MapEvent
+import nl.r1a.grassmaps.plugin.api.model.BuiltInProfiles
 import nl.r1a.grassmaps.plugin.api.model.Camera
 import nl.r1a.grassmaps.plugin.api.model.CameraUpdate
 import nl.r1a.grassmaps.plugin.api.model.DownloadsState
@@ -121,6 +124,8 @@ import nl.r1a.grassmaps.plugin.api.model.FavouriteListsState
 import nl.r1a.grassmaps.plugin.api.model.FavouriteSort
 import nl.r1a.grassmaps.plugin.api.model.FavouriteSpecial
 import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.ProfileId
+import nl.r1a.grassmaps.plugin.api.model.ProfilesState
 import nl.r1a.grassmaps.plugin.api.model.RouteHistoryEntry
 import nl.r1a.grassmaps.plugin.api.model.RoutePlanPoint
 import nl.r1a.grassmaps.plugin.api.model.RoutePlanRole
@@ -168,6 +173,8 @@ import nl.r1a.grassmaps.plugins.map.controls.CameraMode
 import nl.r1a.grassmaps.plugins.map.controls.ScaleBar
 import nl.r1a.grassmaps.plugins.map.controls.ScaleBarReading
 import nl.r1a.grassmaps.plugins.map.controls.ScaleBarUnit
+import nl.r1a.grassmaps.plugins.profiles.ui.ProfileSwitchBar
+import nl.r1a.grassmaps.plugins.profiles.ui.ProfilesUiContract
 import nl.r1a.grassmaps.plugins.raster.RasterAreaSectionActions
 import nl.r1a.grassmaps.plugins.raster.RasterAreaSectionModel
 import nl.r1a.grassmaps.plugins.raster.RasterLayerPanel
@@ -242,6 +249,9 @@ internal val TOURING = StyleId("touring")
 internal val TOURING_DARK = StyleId("touring-dark")
 private const val TAG = "GrassMapsMap"
 private const val BAR_PADDING_DP = 16
+
+/** The map switcher's own bottom-chrome key, so transient banners can clear it. */
+private val PROFILE_SWITCH_KEY: Any = Any()
 
 /** Clearance above the map credit and the Layers button when the arc is on. */
 private const val QUICK_ACCESS_BOTTOM_CLEARANCE_DP = 72
@@ -494,6 +504,15 @@ private fun MapContent(
     }
     val activeProfile by container.activeProfile.active.collectAsState()
     val profile = activeProfile.profileId
+    // The plugin's stream is the catalog order the switcher cycles. It keeps a
+    // profile created on another screen in the cycle without a file read here.
+    val profilesFlow = remember(container) { container.streamAccess.subscribe<ProfilesState>(ProfilesUiContract.stateStream) }
+    val profilesState by profilesFlow.collectAsState(initial = ProfilesState())
+    val profileOrder =
+        remember(profilesState.profiles) {
+            profilesState.profiles.map { ProfileId(it.id) }.ifEmpty { BuiltInProfiles.ALL }
+        }
+    val profilesPage by ProfilesScreenSession.page.collectAsState()
     val layoutController = remember(container, profile) { container.buttonLayoutController(profile) }
     LaunchedEffect(layoutController) { layoutController.load() }
     val layoutState by layoutController.state.collectAsState()
@@ -1147,6 +1166,23 @@ private fun MapContent(
                         .padding(start = BAR_PADDING_DP.dp, bottom = QUICK_ACCESS_BOTTOM_CLEARANCE_DP.dp),
             )
         }
+        // The prototype's profile bar sits in the bottom control area, centred
+        // between the quick-access button at the start and Layers at the end.
+        // It stays clear of an open sheet and of the full profiles screen.
+        if (!navigationActive && profilesPage == null && (bottomChrome?.reachOf(BOTTOM_SHEET_KEY) ?: 0) == 0) {
+            ProfileSwitchBar(
+                active = profile,
+                order = profileOrder,
+                onNext = { container.quickProfileSwitch.next() },
+                onOpenAll = { ProfilesScreenSession.show() },
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(BAR_PADDING_DP.dp)
+                        .reportsBottomChrome(key = PROFILE_SWITCH_KEY),
+            )
+        }
         if (!navigationActive) {
             layoutSheetTab?.let { tab ->
                 MapLayoutSheet(
@@ -1181,12 +1217,21 @@ private fun MapContent(
                 )
             }
         }
+        // The switcher reports its own reach, which includes the navigation bar.
+        // Banners keep their navigation padding and add only what the switcher
+        // occupies above it, so a notice never lands on top of the bar.
+        val switcherLift =
+            with(density) {
+                ((bottomChrome?.reachOf(PROFILE_SWITCH_KEY) ?: 0) - WindowInsets.navigationBars.getBottom(density))
+                    .toDp()
+                    .coerceAtLeast(0.dp)
+            }
         Column(
             modifier =
                 Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(BAR_PADDING_DP.dp),
+                    .padding(bottom = BAR_PADDING_DP.dp + switcherLift + BANNER_STACK_GAP_DP.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(BANNER_STACK_GAP_DP.dp),
         ) {

@@ -350,16 +350,15 @@ class AppContainer(
     }
 
     /**
-     * The profile list and the actions on it (T-0602). It copies and resets the
-     * routing options and the alert settings. Style and units are per-profile
-     * stores but are not copy groups yet, so the profile UI is unchanged;
-     * offering them there is T-0604. An action that includes the alert settings
-     * reads them first, so the plugin calls it from an IO dispatcher.
+     * The profile list and the actions on it (T-0602). It copies and resets
+     * routing, alerts, map style and units, all stored per profile (T-0604).
+     * An action that includes the alert settings reads them first, so the plugin
+     * calls it from an IO dispatcher.
      */
     val profileSettings: ProfileSettingsService by lazy {
         ProfileSettingsService(
             profileCatalog,
-            listOf(routingOptionsSettings, alertSettings),
+            profileSettingsGroups(mapStyleSettings, unitSettings, routingOptionsSettings, alertSettings),
             ensureReady = { group -> if (group === alertSettings) alertSettings.ensureLoaded() else Outcome.Success(Unit) },
         )
     }
@@ -367,6 +366,11 @@ class AppContainer(
     /** The one published state of the active profile, switched as a whole (T-0603). */
     val activeProfile: ActiveProfileController by lazy {
         ActiveProfileController(mapStyleSettings, unitSettings, routingOptionsSettings, alertSettings, widgetLayoutStore)
+    }
+
+    /** One tap of the map switcher activates the next catalog profile (T-0604). */
+    val quickProfileSwitch: QuickProfileSwitch by lazy {
+        QuickProfileSwitch(activeProfile) { profileCatalog.load().map { it.id } }
     }
 
     /**

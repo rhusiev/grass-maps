@@ -55,6 +55,7 @@ import nl.r1a.grassmaps.plugin.api.service.Strings
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartRange
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartState
+import nl.r1a.grassmaps.plugin.ui.api.LightShellColors
 import java.time.ZoneId
 import java.util.Locale
 import kotlin.math.max
@@ -156,7 +157,7 @@ private val STRIPE_DARK = Color(0xFFE8EAED)
 private val LIGHT_SUMMARY =
     ElevationStripSummaryPalette(
         surface = Color(0xFFF2F1EE),
-        label = Color(0xFF686C72),
+        label = LightShellColors.muted,
         value = Color(0xFF202124),
     )
 
@@ -172,7 +173,7 @@ private val LIGHT_PALETTE =
         surface = Color(0xFFFFFFFF),
         line = Color(0xFF202124),
         grid = Color(0x14000000),
-        label = Color(0xFF686C72),
+        label = LightShellColors.muted,
         slope =
             listOf(
                 Color(0xFF0D366B),

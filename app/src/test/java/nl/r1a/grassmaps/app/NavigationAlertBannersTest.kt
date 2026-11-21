@@ -229,6 +229,49 @@ class NavigationAlertBannersTest {
         }
 
     @Test
+    fun aHistoricalReplayFixIsNotALiveGapUntilTenSecondsPass() {
+        val clock = Clock(BASE_MILLIS)
+        val banners = NavigationAlertBanners(clockMillis = clock::millis, fixClockMillis = clock::millis)
+        // The mock-walk GPX stamps every point 2026-11-07, so a replay fix's
+        // timeMillis is days behind the wall clock even though it just arrived.
+        val replayStamp = BASE_MILLIS - REPLAY_STAMP_AGE_MILLIS
+
+        banners.onState(state(remaining = 700.0, fix = fix(replayStamp)))
+        assertFalse("a replay fix stamps an old time but arrived now", banners.state.value.signalLost)
+
+        clock.time = BASE_MILLIS + AlertHost.SIGNAL_GAP_MILLIS - 1L
+        banners.onTick()
+        assertFalse("9.999 s without a new fix is still a live fix", banners.state.value.signalLost)
+
+        clock.time = BASE_MILLIS + AlertHost.SIGNAL_GAP_MILLIS
+        banners.onTick()
+        assertTrue("10 s without an arriving fix is a real gap", banners.state.value.signalLost)
+
+        clock.time += BANNER_TICK_MILLIS
+        banners.onTick()
+        assertTrue("one live relation stays up until a fresh fix", banners.state.value.signalLost)
+
+        banners.onState(state(remaining = 700.0, fix = fix(replayStamp + BANNER_TICK_MILLIS)))
+        assertFalse("the next arriving fix clears the live relation", banners.state.value.signalLost)
+    }
+
+    @Test
+    fun aCopiedFixOnPauseDoesNotRefreshTheLiveAge() {
+        val clock = Clock(BASE_MILLIS)
+        val banners = NavigationAlertBanners(clockMillis = clock::millis, fixClockMillis = clock::millis)
+        val liveFix = fix(BASE_MILLIS)
+        banners.onState(state(remaining = 700.0, fix = liveFix))
+
+        clock.time = BASE_MILLIS + AlertHost.SIGNAL_GAP_MILLIS - 1L
+        banners.onState(state(remaining = 700.0, phase = NavigationPhase.Paused, fix = liveFix))
+        assertFalse("a pause copies the same fix, not a new arrival", banners.state.value.signalLost)
+
+        clock.time = BASE_MILLIS + AlertHost.SIGNAL_GAP_MILLIS
+        banners.onTick()
+        assertTrue("the age keeps running through the pause", banners.state.value.signalLost)
+    }
+
+    @Test
     fun anEventWithTheBannerChannelOffDrawsNothing() {
         val banners = NavigationAlertBanners(clockMillis = { 0L })
 
@@ -312,6 +355,8 @@ class NavigationAlertBannersTest {
 
     private companion object {
         const val BASE_MILLIS: Long = 1_700_000_000_000L
+        const val BANNER_TICK_MILLIS: Long = 1_000L
+        const val REPLAY_STAMP_AGE_MILLIS: Long = 14L * 24L * 60L * 60L * 1_000L
 
         val ROUTE =
             Route(

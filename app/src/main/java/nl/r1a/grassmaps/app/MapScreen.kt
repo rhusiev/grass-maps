@@ -1,14 +1,20 @@
 package nl.r1a.grassmaps.app
 
+import android.animation.ValueAnimator
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -41,6 +47,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -93,9 +100,22 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nl.r1a.grassmaps.alerts.AlertKind
+import nl.r1a.grassmaps.core.services.AndroidStrings
+import nl.r1a.grassmaps.core.services.AppThemeChoice
 import nl.r1a.grassmaps.core.services.MapControlCommands
+import nl.r1a.grassmaps.core.services.NightMapMode
 import nl.r1a.grassmaps.core.services.QuickAccessButton
+import nl.r1a.grassmaps.core.services.ScreenEffectsController
+import nl.r1a.grassmaps.core.services.ScreenSettings
+import nl.r1a.grassmaps.core.services.ScreenSettingsPageState
+import nl.r1a.grassmaps.core.services.ScreenSettingsValues
+import nl.r1a.grassmaps.core.services.SunTimes
+import nl.r1a.grassmaps.core.services.UiLanguage
 import nl.r1a.grassmaps.core.services.UnitSettings
+import nl.r1a.grassmaps.core.services.WindowEffects
+import nl.r1a.grassmaps.core.services.resolveTheme
+import nl.r1a.grassmaps.core.services.sunTimesForLocation
+import nl.r1a.grassmaps.core.services.uiLocale
 import nl.r1a.grassmaps.map.DistanceReadout
 import nl.r1a.grassmaps.map.DistanceUnit
 import nl.r1a.grassmaps.map.MapDistance
@@ -240,7 +260,9 @@ import nl.r1a.grassmaps.ui.shell.routePlanTurns
 import nl.r1a.grassmaps.ui.shell.routeTurnStep
 import nl.r1a.grassmaps.ui.shell.trackImportConfirmContent
 import nl.r1a.grassmaps.ui.shell.trackImportNotice
+import java.time.Clock
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.pow
@@ -256,6 +278,30 @@ internal val TOURING = StyleId("touring")
 internal val TOURING_DARK = StyleId("touring-dark")
 private const val TAG = "GrassMapsMap"
 private const val BAR_PADDING_DP = 16
+
+/** How often a by-sun theme recomputes the day boundary (T-0111). */
+private const val SUN_REFRESH_MILLIS = 30_000L
+
+/** The platform's default animator scale, used where getDurationScale is unavailable. */
+private const val DEFAULT_ANIMATOR_SCALE = 1f
+
+/**
+ * `ValueAnimator.setDurationScale` is the platform's hidden counterpart of
+ * `getDurationScale`. A scale of zero makes camera moves jump (T-0111). The
+ * call is reflected so the app needs no system permission; a platform that
+ * hides it leaves the current scale in place.
+ */
+@SuppressLint("PrivateApi")
+private fun setAnimatorDurationScale(scale: Float) {
+    try {
+        val setter =
+            ValueAnimator::class.java.getDeclaredMethod("setDurationScale", java.lang.Float.TYPE)
+        setter.isAccessible = true
+        setter.invoke(null, scale)
+    } catch (error: ReflectiveOperationException) {
+        Log.w(TAG, "animator duration scale not set: ${error.javaClass.simpleName}")
+    }
+}
 
 /** The map switcher's own bottom-chrome key, so transient banners can clear it. */
 private val PROFILE_SWITCH_KEY: Any = Any()
@@ -318,12 +364,75 @@ internal fun MapScreen(
     container: AppContainer,
     harness: MapHarness,
 ) {
-    // The theme is decided once, above every screen: a capture's override, the
-    // navigation fixture's own theme, or the system night mode (T-0612).
+    // The shell and the map take their dark flag from one decision (T-0111).
+    // A capture fixture or the debug pin still wins over every stored choice.
     val fixture by container.navigationScreenFixture.state.collectAsState()
     val themeOverride by container.darkTheme.collectAsState()
-    GrassMapsTheme(dark = isDarkTheme(fixture?.dark, themeOverride, isSystemInDarkTheme())) {
-        MapScreenContent(container = container, harness = harness)
+    val activity = LocalActivity.current
+    val screenSettings by
+        produceState(initialValue = ScreenSettingsValues()) {
+            withContext(Dispatchers.IO) { container.screenSettings.active.collect { value = it } }
+        }
+    val systemDark = isSystemInDarkTheme()
+    val fixPoint = remember { mutableStateOf<GeoPoint?>(null) }
+    var sunTick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(container) { container.locationFixes.collect { fix -> fixPoint.value = fix?.position } }
+    LaunchedEffect(screenSettings.nightMap) {
+        while (screenSettings.nightMap == NightMapMode.BY_SUN) {
+            delay(SUN_REFRESH_MILLIS)
+            sunTick++
+        }
+    }
+    val sunTimes =
+        remember(fixPoint.value, sunTick, screenSettings.nightMap) {
+            if (screenSettings.nightMap == NightMapMode.BY_SUN && fixPoint.value != null) {
+                sunTimesForLocation(Clock.systemUTC(), fixPoint.value!!.latitude, fixPoint.value!!.longitude)
+            } else {
+                null
+            }
+        }
+    val decision =
+        resolveTheme(
+            values = screenSettings,
+            systemDark = systemDark,
+            pin = fixture?.dark ?: themeOverride,
+            sunTimes = sunTimes,
+            clock = Clock.systemUTC(),
+        )
+    // The in-app language changes only the composition's context and the
+    // key-based strings. No configuration is sent to the activity, so the map
+    // surface survives the change (T-0111).
+    val baseContext = LocalContext.current
+    val currentConfiguration = LocalConfiguration.current
+    val locale = remember(screenSettings.language) { uiLocale(screenSettings.language, Locale.getDefault()) }
+    val localizedContext =
+        remember(baseContext, currentConfiguration, locale) {
+            val configuration = Configuration(currentConfiguration)
+            configuration.setLocale(locale)
+            baseContext.createConfigurationContext(configuration)
+        }
+    val mutableStrings = remember(baseContext) { (baseContext.applicationContext as GrassMapsApplication).mutableStrings }
+    // Swap before the content composes, so key-based strings use the new locale
+    // in the same frame as the composable ones. No activity configuration changes.
+    remember(localizedContext, mutableStrings) {
+        mutableStrings.use(AndroidStrings(localizedContext, localizedContext.resources))
+        localizedContext
+    }
+    CompositionLocalProvider(
+        LocalContext provides localizedContext,
+        LocalConfiguration provides localizedContext.resources.configuration,
+    ) {
+        GrassMapsTheme(dark = decision.shellDark) {
+            MapScreenContent(
+                container = container,
+                harness = harness,
+                activity = activity,
+                mapDark = decision.mapDark,
+                systemDark = systemDark,
+                screenSettings = screenSettings,
+                sunTimes = sunTimes,
+            )
+        }
     }
 }
 
@@ -332,8 +441,44 @@ internal fun MapScreen(
 private fun MapScreenContent(
     container: AppContainer,
     harness: MapHarness,
+    activity: Activity?,
+    mapDark: Boolean,
+    systemDark: Boolean,
+    screenSettings: ScreenSettingsValues,
+    sunTimes: SunTimes?,
 ) {
     val context = LocalContext.current
+    // The keep-awake flag and the animator scale belong to this screen, not to
+    // the settings store: a leak would leave the window lit or animations off
+    // after the map is gone (T-0111).
+    val screenEffects =
+        remember(activity) {
+            ScreenEffectsController(
+                object : WindowEffects {
+                    override fun setKeepScreenOn(enabled: Boolean) {
+                        val flags = WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                        if (enabled) activity?.window?.addFlags(flags) else activity?.window?.clearFlags(flags)
+                    }
+
+                    override fun durationScale(): Float =
+                        if (Build.VERSION.SDK_INT >=
+                            Build.VERSION_CODES.TIRAMISU
+                        ) {
+                            ValueAnimator.getDurationScale()
+                        } else {
+                            DEFAULT_ANIMATOR_SCALE
+                        }
+
+                    override fun setDurationScale(scale: Float) {
+                        setAnimatorDurationScale(scale)
+                    }
+                },
+            )
+        }
+    DisposableEffect(screenEffects) { onDispose { screenEffects.restore() } }
+    LaunchedEffect(screenEffects, screenSettings.keepScreenOn, screenSettings.animationsEnabled) {
+        screenEffects.apply(screenSettings.keepScreenOn, screenSettings.animationsEnabled)
+    }
     var bundle by remember { mutableStateOf<MapBundle?>(null) }
     LaunchedEffect(container) {
         bundle =
@@ -368,15 +513,20 @@ private fun MapScreenContent(
         remember(context) {
             PuckAgeFormatter { ageMillis -> formatPuckAge(context, ageMillis) }
         }
+    val initialStyle = loaded.styles.getValue(STANDARD).spec
+    // Only the base style owns the surface. A language change recomposes the
+    // screen but keeps this key, so the map is never rebuilt (T-0111).
     val surface =
-        rememberMapSurface(
-            initialStyle = loaded.styles.getValue(STANDARD).spec,
-            initialCamera = loaded.sources.camera,
-            sourceResolver = { loaded.sources.uri(it) },
-            ageLabel = ageLabel,
-            appTiles = loaded.sources.tileSources,
-            labels = container.mapLabelSettings.options,
-        )
+        key(mapSurfaceIdentity(initialStyle.id, screenSettings.language)) {
+            rememberMapSurface(
+                initialStyle = initialStyle,
+                initialCamera = loaded.sources.camera,
+                sourceResolver = { loaded.sources.uri(it) },
+                ageLabel = ageLabel,
+                appTiles = loaded.sources.tileSources,
+                labels = container.mapLabelSettings.options,
+            )
+        }
     LaunchedEffect(surface.host, sources) {
         // The surface was built with the first resolution; only a later one is
         // a change, and an unchanged one would rebuild the plan for nothing.
@@ -390,7 +540,7 @@ private fun MapScreenContent(
     val shown = remember(loaded, sources) { loaded.copy(sources = sources) }
     BindMapSession(container, container.mapSession, surface)
     CompositionLocalProvider(LocalBottomChrome provides remember { BottomChrome() }) {
-        MapContent(container, surface, shown, harness)
+        MapContent(container, surface, shown, harness, mapDark, systemDark, screenSettings, sunTimes)
     }
 }
 
@@ -433,6 +583,10 @@ private fun MapContent(
     surface: MapSurface,
     bundle: MapBundle,
     harness: MapHarness,
+    mapDark: Boolean,
+    systemDark: Boolean,
+    screenSettings: ScreenSettingsValues,
+    sunTimes: SunTimes?,
 ) {
     val context = LocalContext.current
     val devToolsVisible by container.devToolsVisible.collectAsState()
@@ -594,9 +748,10 @@ private fun MapContent(
     }
     val managerVisible by PluginManagerScreenSession.visible.collectAsState()
     val backupVisible by BackupScreenSession.visible.collectAsState()
+    val settingsVisible by ScreenSettingsSession.visible.collectAsState()
     val styleChoice by container.mapStyleSettings.active.collectAsState()
     val dark = LocalShellColors.current.dark
-    val active = bundle.styles.getValue(mapStyleId(styleChoice, dark))
+    val active = bundle.styles.getValue(mapStyleId(styleChoice, mapDark))
     val activeStyle = active.spec
     val activeLayers = active.layers
     val switchStates by container.privacyStates.collectAsState(initial = container.privacySwitchStates())
@@ -2092,6 +2247,70 @@ private fun MapContent(
         }
         if (!navigationActive) {
             ProfilesScreenHost(container)
+        }
+        if (settingsVisible && !navigationActive) {
+            BackHandler { ScreenSettingsSession.hide() }
+            val sunSummary =
+                remember(sunTimes) {
+                    sunTimes?.let {
+                        DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()).format(it.sunset)
+                    } ?: "—"
+                }
+            val pageState =
+                remember(screenSettings, systemDark, sunSummary) {
+                    ScreenSettingsPageState(
+                        values = screenSettings,
+                        systemDark = systemDark,
+                        profileLabel = profile.value,
+                        sunSummary = sunSummary,
+                    )
+                }
+            ScreenSettingsHost(
+                content = screenSettingsContent(pageState, container.strings),
+                dark = dark,
+                onBack = { ScreenSettingsSession.hide() },
+                onChoice = { key, index ->
+                    scope.launch(Dispatchers.IO) {
+                        when (key) {
+                            SCREEN_ROW_APP_THEME -> {
+                                container.screenSettings.set(ScreenSettings.APP_THEME_KEY, AppThemeChoice.entries[index].wire)
+                            }
+
+                            SCREEN_ROW_LANGUAGE -> {
+                                container.screenSettings.set(ScreenSettings.LANGUAGE_KEY, UiLanguage.entries[index].wire)
+                            }
+                        }
+                    }
+                },
+                onSwitch = { key, checked ->
+                    scope.launch(Dispatchers.IO) {
+                        when (key) {
+                            SCREEN_ROW_NIGHT_FOLLOW -> {
+                                container.screenSettings.set(
+                                    ScreenSettings.NIGHT_MAP_KEY,
+                                    if (checked) NightMapMode.FOLLOW_SYSTEM.wire else NightMapMode.BY_SUN.wire,
+                                )
+                            }
+
+                            SCREEN_ROW_NIGHT_SUN -> {
+                                container.screenSettings.set(
+                                    ScreenSettings.NIGHT_MAP_KEY,
+                                    if (checked) NightMapMode.BY_SUN.wire else NightMapMode.FOLLOW_SYSTEM.wire,
+                                )
+                            }
+
+                            SCREEN_ROW_KEEP_SCREEN_ON -> {
+                                container.screenSettings.set(ScreenSettings.KEEP_SCREEN_ON_KEY, checked.toString())
+                            }
+
+                            SCREEN_ROW_DISABLE_ANIMATIONS -> {
+                                container.screenSettings.set(ScreenSettings.ANIMATIONS_KEY, (!checked).toString())
+                            }
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
         }
         if (backupVisible && !navigationActive) {
             BackupScreenHost(container)

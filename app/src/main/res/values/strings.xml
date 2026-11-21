@@ -290,4 +290,30 @@
     <string name="backup_kind_map_style">Map style</string>
     <string name="backup_kind_plugins">Plugin switches</string>
     <string name="backup_kind_unknown">Other data</string>
+
+    <!-- T-0111: themes and screen settings -->
+    <string name="settings.screen_title">Settings</string>
+    <string name="settings.screen_subtitle">Screen and appearance · %1$s</string>
+    <string name="settings.screen_back">Back</string>
+    <string name="settings.screen_read_only">Current display</string>
+    <string name="settings.screen_summary">App: %1$s · Map: %2$s</string>
+    <string name="settings.row.app_theme">App theme</string>
+    <string name="settings.row.app_theme_detail">Colors of panels and controls</string>
+    <string name="settings.row.night_follow">Night map follows system</string>
+    <string name="settings.row.night_follow_detail">Use the phone\&apos;s dark mode</string>
+    <string name="settings.row.night_sun">Night map by sunrise and sunset</string>
+    <string name="settings.row.night_sun_detail">Follows the sun near your position · %1$s</string>
+    <string name="settings.row.keep_screen_on">Keep screen on</string>
+    <string name="settings.row.keep_screen_on_detail">The map stays lit while the app is open</string>
+    <string name="settings.row.disable_animations">Disable map animations</string>
+    <string name="settings.row.disable_animations_detail">Camera moves jump instead of sliding</string>
+    <string name="settings.row.language">In-app language</string>
+    <string name="settings.row.language_detail">Changes at once, without a restart</string>
+    <string name="settings.choice.system">System</string>
+    <string name="settings.choice.light">Light</string>
+    <string name="settings.choice.dark">Dark</string>
+    <string name="settings.language.system">System</string>
+    <string name="settings.language.en">English (US)</string>
+    <string name="settings.language.en_gb">English (UK)</string>
+    <string name="settings.language.uk">Українська</string>
 </resources>

@@ -840,6 +840,26 @@ The system night mode decides by default. The debug-only `core.theme.set` pin,
 or a navigation screen fixture, takes precedence over it for captures. The
 switches inside the other cards are stored state too.
 
+T-0111 adds a settings screen over the map with the six scorecard rows: app theme
+(System, Light, Dark), night map follows system, night map by sunrise and sunset,
+keep screen on, disable map animations and in-app language (System, English US,
+English UK, Ukrainian). The two night-map rows are two views of one stored mode,
+and the animations row is the inverse of the stored `animations` value. All six
+live in `profiles/screens.json` under `profiles/<id>` as one `ProfileSettingsGroup`,
+so profile copy, reset and undo carry them. `resolveTheme` in `core-services`
+turns the choices into two dark flags: the app theme drives the shell, the night
+map mode drives the map style variant. A capture fixture or the debug pin still
+wins for both. "By sun" uses `sunTimesForLocation`, a closed-form NOAA calculation
+with no network call; it recomputes from the current fix every 30 s and flips
+within a minute of the published sunset. Keep-screen-on adds the window flag and
+disable-animations sets the platform animator scale to zero; a `DisposableEffect`
+clears the flag and restores the original scale when the screen leaves. The
+language changes the composition's context and the key-based strings through
+`MutableStrings`, without sending a configuration change to the activity, so the
+map surface survives it. There is no map-button entry point yet: debug builds
+open the page with `core.settings.show` and close it with `core.settings.hide`;
+`core.settings.screen` sets any row by `key` and `value`.
+
 The label language and size (T-0110) are two more host settings, stored in
 `settings/map-labels.json` (`{"language":"en","sizePercent":150}`) by
 `MapLabelSettings`. A missing or corrupt file, an unknown language or a size

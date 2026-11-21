@@ -317,4 +317,30 @@
     <string name="backup_kind_map_style">Стиль мапи</string>
     <string name="backup_kind_plugins">Перемикачі плагінів</string>
     <string name="backup_kind_unknown">Інші дані</string>
+
+    <!-- T-0111: теми та налаштування екрана -->
+    <string name="settings.screen_title">Налаштування</string>
+    <string name="settings.screen_subtitle">Екран і вигляд · %1$s</string>
+    <string name="settings.screen_back">Назад</string>
+    <string name="settings.screen_read_only">Поточний вигляд</string>
+    <string name="settings.screen_summary">Застосунок: %1$s · Мапа: %2$s</string>
+    <string name="settings.row.app_theme">Тема застосунку</string>
+    <string name="settings.row.app_theme_detail">Кольори панелей і елементів керування</string>
+    <string name="settings.row.night_follow">Нічна мапа за системою</string>
+    <string name="settings.row.night_follow_detail">Використовувати темний режим телефону</string>
+    <string name="settings.row.night_sun">Нічна мапа за сходом і заходом сонця</string>
+    <string name="settings.row.night_sun_detail">Залежить від сонця біля вашого місця · %1$s</string>
+    <string name="settings.row.keep_screen_on">Не вимикати екран</string>
+    <string name="settings.row.keep_screen_on_detail">Екран не гасне, поки застосунок відкрито</string>
+    <string name="settings.row.disable_animations">Вимкнути анімацію мапи</string>
+    <string name="settings.row.disable_animations_detail">Камера переміщується стрибками</string>
+    <string name="settings.row.language">Мова застосунку</string>
+    <string name="settings.row.language_detail">Змінюється одразу без перезапуску</string>
+    <string name="settings.choice.system">Системна</string>
+    <string name="settings.choice.light">Світла</string>
+    <string name="settings.choice.dark">Темна</string>
+    <string name="settings.language.system">Системна</string>
+    <string name="settings.language.en">Англійська (США)</string>
+    <string name="settings.language.en_gb">Англійська (Велика Британія)</string>
+    <string name="settings.language.uk">Українська</string>
 </resources>

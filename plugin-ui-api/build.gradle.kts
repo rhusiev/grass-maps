@@ -23,6 +23,8 @@ dependencies {
     // every UI plugin and the shell read the same values (T-0612).
     api("org.jetbrains.compose.ui:ui:1.12.1")
     api("org.jetbrains.compose.runtime:runtime:1.12.1")
+    // ShellIcons draws each vector with Image, so every consumer needs foundation.
+    api("org.jetbrains.compose.foundation:foundation:1.12.1")
 
     testImplementation(libs.junit)
 }

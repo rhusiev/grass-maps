@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -23,6 +24,8 @@ import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenColors
 import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenStatus
 import nl.r1a.grassmaps.plugin.ui.api.NavigationTurnArrow
 import nl.r1a.grassmaps.plugin.ui.api.NavigationTurnCard
+import nl.r1a.grassmaps.plugin.ui.api.ShellIcon
+import nl.r1a.grassmaps.plugin.ui.api.turnArrowIcon
 
 private const val CARD_CORNER_DP = 18
 private const val CARD_MAX_WIDTH_DP = 520
@@ -32,12 +35,12 @@ private const val MAIN_GAP_DP = 14
 private const val STRIP_PADDING_HORIZONTAL_DP = 16
 private const val STRIP_PADDING_VERTICAL_DP = 8
 private const val STRIP_GAP_DP = 8
-private const val ARROW_FONT_SP = 46
+private const val ARROW_SIZE_DP = 46
 private const val TITLE_FONT_SP = 30
 private const val STREET_FONT_SP = 19
 private const val DETAIL_FONT_SP = 18
 private const val STRIP_FONT_SP = 14
-private const val STRIP_ARROW_FONT_SP = 18
+private const val STRIP_ARROW_SIZE_DP = 18
 private const val DIM_ALPHA = 0.55f
 
 /**
@@ -84,15 +87,10 @@ fun GuidancePanelContent(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val dim = if (card.dimmed) DIM_ALPHA else 1f
-            BasicText(
-                text = arrowGlyph(card.arrow),
-                modifier = Modifier.alpha(dim),
-                style =
-                    TextStyle(
-                        color = content,
-                        fontSize = ARROW_FONT_SP.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    ),
+            ShellIcon(
+                icon = turnArrowIcon(card.arrow),
+                tint = content,
+                modifier = Modifier.size(ARROW_SIZE_DP.dp).alpha(dim),
             )
             Column(modifier = Modifier.alpha(dim)) {
                 BasicText(
@@ -160,13 +158,10 @@ fun GuidancePanelContent(
                     text = strings.resolve(GuidanceStrings.SCREEN_THEN),
                     style = TextStyle(color = stripInk, fontSize = STRIP_FONT_SP.sp),
                 )
-                BasicText(
-                    text = arrowGlyph(card.thenArrow ?: NavigationTurnArrow.Straight),
-                    style =
-                        TextStyle(
-                            color = stripInk,
-                            fontSize = STRIP_ARROW_FONT_SP.sp,
-                        ),
+                ShellIcon(
+                    icon = turnArrowIcon(card.thenArrow ?: NavigationTurnArrow.Straight),
+                    tint = stripInk,
+                    modifier = Modifier.size(STRIP_ARROW_SIZE_DP.dp),
                 )
                 BasicText(
                     text = thenStreet,
@@ -194,23 +189,6 @@ private fun cardColors(status: NavigationScreenStatus): Pair<Color, Color> =
         NavigationScreenStatus.Arrived -> {
             Color(NavigationScreenColors.GREEN) to Color(NavigationScreenColors.GREEN_STRIP)
         }
-    }
-
-/** The plain glyph a turn arrow draws; the card has no icon font. */
-internal fun arrowGlyph(arrow: NavigationTurnArrow): String =
-    when (arrow) {
-        NavigationTurnArrow.Straight -> "\u2191"
-        NavigationTurnArrow.SlightLeft -> "\u2196"
-        NavigationTurnArrow.Left -> "\u21B0"
-        NavigationTurnArrow.SharpLeft -> "\u21B6"
-        NavigationTurnArrow.Uturn -> "\u21BA"
-        NavigationTurnArrow.SlightRight -> "\u2197"
-        NavigationTurnArrow.Right -> "\u21B1"
-        NavigationTurnArrow.SharpRight -> "\u21B7"
-        NavigationTurnArrow.Roundabout -> "\u21BB"
-        NavigationTurnArrow.Arrive -> "\u2691"
-        NavigationTurnArrow.Reroute -> "\u27F3"
-        NavigationTurnArrow.Pause -> "\u2016"
     }
 
 /**

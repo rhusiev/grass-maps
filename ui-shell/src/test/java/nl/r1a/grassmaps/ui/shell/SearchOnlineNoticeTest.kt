@@ -46,6 +46,23 @@ class SearchOnlineNoticeTest {
     }
 
     @Test
+    fun withTheSwitchOnThePromptAlsoOffersToTurnTheOnlineFeatureOff() {
+        val off = searchOnlineNotice(LABELS, onlineEnabled = true, positionAllowed = false)
+        val on = searchOnlineNotice(LABELS, onlineEnabled = true, positionAllowed = true)
+
+        assertEquals("Turn off online feature", off.offAction)
+        assertEquals("Turn off online feature", on.offAction)
+    }
+
+    @Test
+    fun withTheSwitchOffTheOneTimePromptStillOnlyOffersToEnableIt() {
+        val notice = searchOnlineNotice(LABELS, onlineEnabled = false, positionAllowed = false)
+
+        assertEquals(null, notice.offAction)
+        assertEquals(SearchOnlineAction.ENABLE, notice.actionKind)
+    }
+
+    @Test
     fun theUkrainianPromptCarriesTheSamePrivacyClaim() {
         val notice = searchOnlineNotice(UKRAINIAN_LABELS, onlineEnabled = false, positionAllowed = false)
 
@@ -54,6 +71,14 @@ class SearchOnlineNoticeTest {
             notice.text,
         )
         assertEquals("Увімкнути онлайн-пошук", notice.action)
+        assertEquals(null, notice.offAction)
+    }
+
+    @Test
+    fun theUkrainianOffActionUsesTheGlossaryTermForAPrivacySwitch() {
+        val notice = searchOnlineNotice(UKRAINIAN_LABELS, onlineEnabled = true, positionAllowed = false)
+
+        assertEquals("Вимкнути онлайн-функцію", notice.offAction)
     }
 
     @Test
@@ -76,6 +101,7 @@ class SearchOnlineNoticeTest {
             "search_online_on_sends_position" -> ENGLISH_ON_SENDS_POSITION
             "search_online_on_no_position" -> ENGLISH_ON_NO_POSITION
             "search_online_enable" -> "Enable online search"
+            "search_online_disable" -> "Turn off online feature"
             "search_online_badge" -> "Online"
             "search_position_allow" -> "Send my position"
             "search_position_stop" -> "Stop sending my position"
@@ -107,6 +133,7 @@ class SearchOnlineNoticeTest {
                 "search_online_on_sends_position",
                 "search_online_on_no_position",
                 "search_online_enable",
+                "search_online_disable",
                 "search_online_badge",
                 "search_position_allow",
                 "search_position_stop",
@@ -125,6 +152,7 @@ class SearchOnlineNoticeTest {
                 onlineOnSendsPosition = ENGLISH_ON_SENDS_POSITION,
                 onlineOnNoPosition = ENGLISH_ON_NO_POSITION,
                 onlineEnable = "Enable online search",
+                onlineDisable = "Turn off online feature",
                 onlineBadge = "Online",
                 positionAllow = "Send my position",
                 positionStop = "Stop sending my position",
@@ -147,6 +175,7 @@ class SearchOnlineNoticeTest {
                 onlineOnNoPosition =
                     "Онлайн-результати надходять від Photon (photon.komoot.io) та учасників OpenStreetMap. Ваша позиція на карті не надсилається.",
                 onlineEnable = "Увімкнути онлайн-пошук",
+                onlineDisable = "Вимкнути онлайн-функцію",
                 onlineBadge = "Онлайн",
                 positionAllow = "Надсилати мою позицію",
                 positionStop = "Припинити надсилати мою позицію",

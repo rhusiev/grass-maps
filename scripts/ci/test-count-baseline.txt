@@ -1,8 +1,8 @@
 alerts	67
-app	662
+app	669
 control	47
 core	51
-core-services	196
+core-services	213
 map	152
 navigation	83
 places	163

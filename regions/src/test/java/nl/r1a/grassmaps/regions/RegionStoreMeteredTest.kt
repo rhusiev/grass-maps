@@ -436,7 +436,11 @@ class RegionStoreMeteredTest {
     private companion object {
         val SWITCH: SwitchId = SwitchId("network.region_updates")
         const val PARTIAL = "partial"
-        const val WAIT_MS = 60_000L
+
+        // The loopback server sleeps 30 ms per 4 KiB chunk. Under parallel CI load
+        // :regions:testDebugUnitTest once ran 119.5 s and this test failed at its
+        // 60 s bound, though the same tree passed locally and alone in 58 s.
+        const val WAIT_MS = 180_000L
         const val SETTLE_MS = 500L
         const val CHUNK_BYTES = 4096
         const val CHUNK_DELAY_MS = 30L

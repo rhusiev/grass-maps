@@ -25,8 +25,12 @@
     <string name="profiles_reset_to_default">Скинути до типових налаштувань</string>
     <string name="profiles_group_routing">Маршрутизація</string>
     <string name="profiles_group_alerts">Сповіщення</string>
+    <string name="profiles_group_style">Стиль карти</string>
+    <string name="profiles_group_units">Одиниці виміру</string>
     <string name="profiles_notice_created">Створено %1$s</string>
     <string name="profiles_notice_copied">Копія профілю %1$s</string>
     <string name="profiles_notice_reset">Налаштування скинуто</string>
     <string name="profiles_undo">Скасувати</string>
+    <string name="profiles_switch_all">Усі профілі</string>
+    <string name="profiles_switch_description">Профіль %1$s. Торкніться для %2$s</string>
 </resources>

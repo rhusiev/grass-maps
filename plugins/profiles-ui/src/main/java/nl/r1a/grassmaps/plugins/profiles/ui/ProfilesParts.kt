@@ -65,6 +65,8 @@ internal fun groupLabel(group: String): String =
     when (group) {
         ProfileSettingsGroup.ROUTING -> stringResource(R.string.profiles_group_routing)
         ProfileSettingsGroup.ALERTS -> stringResource(R.string.profiles_group_alerts)
+        ProfileSettingsGroup.STYLE -> stringResource(R.string.profiles_group_style)
+        ProfileSettingsGroup.UNITS -> stringResource(R.string.profiles_group_units)
         else -> group
     }
 

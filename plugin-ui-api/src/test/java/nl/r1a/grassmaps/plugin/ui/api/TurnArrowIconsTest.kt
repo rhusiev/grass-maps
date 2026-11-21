@@ -17,7 +17,7 @@ class TurnArrowIconsTest {
         val names =
             NavigationTurnArrow.entries.map { arrow ->
                 val icon = turnArrowIcon(arrow)
-                assertTrue("$arrow has no vector path", icon.paths.isNotEmpty())
+                assertTrue("$arrow has no vector path", icon.root.size > 0)
                 icon.name
             }
         assertEquals("two manoeuvres share an icon", names.toSet().size, names.size)

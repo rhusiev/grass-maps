@@ -64,9 +64,9 @@ import nl.r1a.grassmaps.plugin.ui.api.shellColors
 
 private const val SCREEN_EDGE_DP = 10
 private const val BAR_EDGE_DP = 12
-internal const val BAR_HEIGHT_DP = 58
+internal const val NAV_BAR_HEIGHT_DP = 58
 private const val BAR_BOTTOM_DP = 12
-internal const val BAR_CORNER_DP = 29
+internal const val NAV_BAR_CORNER_DP = 29
 private const val CHIP_CORNER_DP = 18
 private const val CHIP_HEIGHT_DP = 36
 private const val CHIP_PADDING_HORIZONTAL_DP = 11
@@ -156,7 +156,7 @@ fun NavigationScreenHost(
                     Modifier
                         .align(Alignment.BottomEnd)
                         .navigationBarsPadding()
-                        .padding(end = 14.dp, bottom = (BAR_HEIGHT_DP + BAR_BOTTOM_DP * 2 + 12).dp),
+                        .padding(end = 14.dp, bottom = (NAV_BAR_HEIGHT_DP + BAR_BOTTOM_DP * 2 + 12).dp),
             )
         }
         if (sheet == NavigationSheet.Collapsed || state.status == NavigationScreenStatus.Arrived) {
@@ -394,9 +394,9 @@ private fun Bar(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(BAR_HEIGHT_DP.dp)
-                .border(1.dp, colors.muted.copy(alpha = 0.18f), RoundedCornerShape(BAR_CORNER_DP.dp))
-                .background(colors.surface, RoundedCornerShape(BAR_CORNER_DP.dp))
+                .height(NAV_BAR_HEIGHT_DP.dp)
+                .border(1.dp, colors.muted.copy(alpha = 0.18f), RoundedCornerShape(NAV_BAR_CORNER_DP.dp))
+                .background(colors.surface, RoundedCornerShape(NAV_BAR_CORNER_DP.dp))
                 .padding(horizontal = 7.dp),
         contentAlignment = Alignment.Center,
     ) {

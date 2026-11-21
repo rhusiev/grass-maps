@@ -13,8 +13,8 @@ import org.junit.Test
 class NavigationBarMetricsTest {
     @Test
     fun theBarIsRoundFiveHeightAndFullyRound() {
-        assertEquals(58, BAR_HEIGHT_DP)
-        assertEquals(29, BAR_CORNER_DP)
-        assertEquals("the bar must be fully round", BAR_HEIGHT_DP / 2, BAR_CORNER_DP)
+        assertEquals(58, NAV_BAR_HEIGHT_DP)
+        assertEquals(29, NAV_BAR_CORNER_DP)
+        assertEquals("the bar must be fully round", NAV_BAR_HEIGHT_DP / 2, NAV_BAR_CORNER_DP)
     }
 }

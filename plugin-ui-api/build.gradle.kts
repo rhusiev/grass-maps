@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.compose)
 }
 
 android {
@@ -13,6 +14,12 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    // ShellIcons.kt declares @Composable functions, so this module needs the
+    // Compose compiler plugin like every other module with UI declarations.
+    buildFeatures {
+        compose = true
     }
 }
 

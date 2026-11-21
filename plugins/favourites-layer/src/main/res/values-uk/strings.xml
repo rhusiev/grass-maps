@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.favourites_layer.name">Шар збереженого</string>
+    <string name="plugin.favourites_layer.description">Малює збережені місця на мапі з їхніми іконками та формами маркерів.</string>
+    <string name="favourites_layer_title">Збережене</string>
+    <string name="favourites_layer_icons">Іконки на точках</string>
+    <string name="favourites_layer_names">Показувати назви на мапі</string>
+    <string name="favourites_layer_shape_title">Форма маркера</string>
+    <string name="favourites_layer_shape_stored">З місця</string>
+    <string name="favourites_layer_shape_circle">Коло</string>
+    <string name="favourites_layer_shape_square">Квадрат</string>
+    <string name="favourites_layer_shape_octagon">Восьмикутник</string>
+    <string name="favourites_layer_group_show">Показати %1$s</string>
+    <string name="favourites_layer_group_hide">Приховати %1$s</string>
+    <string name="favourites_layer_no_groups">Ще немає списків збереженого</string>
+    <string name="favourites_layer_on">Увімкнено</string>
+    <string name="favourites_layer_off">Вимкнено</string>
+</resources>

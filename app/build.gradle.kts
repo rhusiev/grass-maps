@@ -436,6 +436,7 @@ dependencies {
     implementation(project(":plugins:osm-places"))
     implementation(project(":plugins:online-search"))
     implementation(project(":plugins:favourites-ui"))
+    implementation(project(":plugins:favourites-layer"))
     implementation(project(":plugins:guidance-ui"))
     implementation(project(":plugins:links"))
     implementation(project(":plugins:share"))

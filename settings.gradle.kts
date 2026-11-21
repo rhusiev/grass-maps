@@ -46,6 +46,7 @@ include(
     ":plugins:osm-places",
     ":plugins:online-search",
     ":plugins:favourites-ui",
+    ":plugins:favourites-layer",
     ":plugins:links",
     ":plugins:share",
     ":plugins:coordinates",

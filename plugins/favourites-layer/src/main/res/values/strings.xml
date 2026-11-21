@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin.favourites_layer.name">Saved places layer</string>
+    <string name="plugin.favourites_layer.description">Draws saved places on the map with their icons and marker shapes.</string>
+    <string name="favourites_layer_title">Saved places</string>
+    <string name="favourites_layer_icons">Icons on points</string>
+    <string name="favourites_layer_names">Show names on the map</string>
+    <string name="favourites_layer_shape_title">Marker shape</string>
+    <string name="favourites_layer_shape_stored">From place</string>
+    <string name="favourites_layer_shape_circle">Circle</string>
+    <string name="favourites_layer_shape_square">Square</string>
+    <string name="favourites_layer_shape_octagon">Octagon</string>
+    <string name="favourites_layer_group_show">Show %1$s</string>
+    <string name="favourites_layer_group_hide">Hide %1$s</string>
+    <string name="favourites_layer_no_groups">No saved lists yet</string>
+    <string name="favourites_layer_on">On</string>
+    <string name="favourites_layer_off">Off</string>
+</resources>

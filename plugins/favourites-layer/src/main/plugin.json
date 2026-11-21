@@ -1,0 +1,15 @@
+{
+  "id": "favourites.layer",
+  "name": "plugin.favourites_layer.name",
+  "description": "plugin.favourites_layer.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmaps.plugins.favourites.layer.FavouritesLayerPlugin",
+  "contributes": {},
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": []
+  },
+  "activation": []
+}

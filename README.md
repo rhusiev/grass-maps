@@ -2264,9 +2264,11 @@ The screen state is derived once per published `NavigationState` by
 streams, the active alert banners and the live camera and alert settings, and
 never reads the map camera or an alert stream itself. The speed readout is whole
 km/h from 10 km/h and one decimal below; it is a dash while paused or after a
-lost fix. A lost fix means the last published fix is at least
-`AlertHost.SIGNAL_GAP_MILLIS` (10 s) old, computed on the banner tick and
-cleared by the next fix; it is not the retrospective lost/regained alert. The
+lost fix. A lost fix means no fix has arrived for at least
+`AlertHost.SIGNAL_GAP_MILLIS` (10 s), computed on the banner tick and cleared
+by the next arriving fix; it is not the retrospective lost/regained alert. The
+fix's recorded time is not an arrival time, because a GPX replay stamps points
+with the day they were recorded. The
 ETA reads the state's remaining distance, remaining duration and
 `etaEpochMillis`, not the clock. The turn card is the same green/amber/grey
 canon as round 3; off route, paused and arrival replace the turn facts with
@@ -2428,9 +2430,11 @@ fix or a clock step is not a signal loss.
 
 That pair is the alert channel's announcement and is independent of the live
 no-fix relation the navigation screen draws. `NavigationAlertBanners` computes
-the relation from the age of the last published fix on its one-second tick: the
-last fix being at least 10 s old means a lost fix, and the next published fix
-clears it. It produces no event and no sound, and it does not need the signal
+the relation from the time since a fix last arrived on its one-second tick: no
+arrival for at least 10 s means a lost fix, and the next arriving fix clears
+it. A fix's recorded `timeMillis` does not count as an arrival, so a replay of
+an old track cannot look lost while fixes are arriving. It produces no event
+and no sound, and it does not need the signal
 switch, so the dimmed turn and the dashed speed stay honest while the switch is
 off. A gap that has just ended is a retrospective event, not a live state; the
 screen does not use the pair for the relation.

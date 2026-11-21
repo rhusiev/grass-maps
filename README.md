@@ -1776,6 +1776,10 @@ prints stream values and saves a screenshot. `tools/control/mcp_server.py`
 exposes the same channel over stdio MCP. See `tools/control/README.md` for the
 method list, the token handling and the CLI examples.
 
+`core.search.switch` takes `{"enabled":true}` or `{"enabled":false}` and turns
+`network.online_search` on or off. It is allowlisted for control in the debug
+build, so a Device check can repeat the mid-flight cancellation proof (T-0616).
+
 ## Routing seam
 
 `RoutingEngine` in `plugin-api` is the engine contract (1.4.0). `plugins/valhalla`
@@ -3216,6 +3220,16 @@ record, so the card is built from the hit itself and makes no details call
 (T-0212). A coordinate row is the exception: it has no card behind it, so
 `MapScreen` moves the camera and opens nothing when `PlaceHit.isCoordinate` is
 set (T-0206).
+
+The notice under the field is the user's path to the `network.online_search`
+privacy switch. With the switch off it is the one-time prompt. It names the
+query, the IP address and the optional position before enabling. With the
+switch on the same notice also offers "Turn off online feature". That phrase is
+the glossary term for the privacy switch. The action calls
+`AppContainer.setOnlineSearchEnabled(false)` and uses the round 9 shell text
+token. Turning the switch off this way cancels a running Photon request at its
+next body chunk with a typed `AppError.SwitchOff`. The debug control path is
+`core.search.switch`.
 
 A keystroke may also carry `viewport` as `{"south": .., "west": .., "north":
 .., "east": ..}`. That is "search this area": the provider keeps only results

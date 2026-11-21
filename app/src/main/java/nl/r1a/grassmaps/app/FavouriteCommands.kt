@@ -22,11 +22,12 @@ import java.util.Locale
 internal object FavouriteCommandIds {
     val ADD: CommandId = CommandId("core.favourite.add")
     val DELETE: CommandId = CommandId("core.favourite.delete")
+    val RENAME: CommandId = CommandId("core.favourite.rename")
     val UNDO_DELETE: CommandId = CommandId("core.favourite.undo_delete")
     val IMPORT: CommandId = CommandId("core.favourite.import")
     val EXPORT: CommandId = CommandId("core.favourite.export")
 
-    val ALL: List<CommandId> = listOf(ADD, DELETE, UNDO_DELETE, IMPORT, EXPORT)
+    val ALL: List<CommandId> = listOf(ADD, DELETE, RENAME, UNDO_DELETE, IMPORT, EXPORT)
 }
 
 /**
@@ -49,6 +50,7 @@ internal fun favouriteCommands(
     listOf(
         AddFavouriteCommand(favourites),
         DeleteFavouriteCommand(favourites),
+        RenameFavouriteCommand(favourites),
         UndoDeleteFavouriteCommand(favourites),
         ImportFavouritesCommand(favourites, assetReader),
         ExportFavouritesCommand(favourites),
@@ -152,6 +154,27 @@ internal class DeleteFavouriteCommand(
         val id = id(params) ?: return Outcome.Failure(AppError.InvalidInput)
         return when (val outcome = favourites().delete(id)) {
             is Outcome.Success -> Outcome.Success(CommandResult(outcome.value.favourite.id.value))
+            is Outcome.Failure -> outcome
+        }
+    }
+}
+
+/** Renames one favourite and returns its new id. */
+internal class RenameFavouriteCommand(
+    private val favourites: () -> FavouritesAccess,
+) : Command<JsonElement, String>(
+        id = FavouriteCommandIds.RENAME,
+        paramsSerializer = JsonElement.serializer(),
+        resultSerializer = String.serializer(),
+        doc = "Renames a favourite and returns its new id.",
+        policy = FAVOURITE_POLICY,
+    ) {
+    override suspend fun execute(params: JsonElement): Outcome<CommandResult<String>> {
+        val target = id(params) ?: return Outcome.Failure(AppError.InvalidInput)
+        val json = params as? JsonObject ?: return Outcome.Failure(AppError.InvalidInput)
+        val name = json.text("name")?.trim() ?: return Outcome.Failure(AppError.InvalidInput)
+        return when (val outcome = favourites().rename(target, name)) {
+            is Outcome.Success -> Outcome.Success(CommandResult(outcome.value.id.value))
             is Outcome.Failure -> outcome
         }
     }

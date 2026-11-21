@@ -123,7 +123,9 @@ import nl.r1a.grassmaps.plugin.api.model.BuiltInProfiles
 import nl.r1a.grassmaps.plugin.api.model.Camera
 import nl.r1a.grassmaps.plugin.api.model.CameraUpdate
 import nl.r1a.grassmaps.plugin.api.model.DownloadsState
+import nl.r1a.grassmaps.plugin.api.model.FavouriteListSummary
 import nl.r1a.grassmaps.plugin.api.model.FavouriteListsState
+import nl.r1a.grassmaps.plugin.api.model.FavouritePointSummary
 import nl.r1a.grassmaps.plugin.api.model.FavouriteSort
 import nl.r1a.grassmaps.plugin.api.model.FavouriteSpecial
 import nl.r1a.grassmaps.plugin.api.model.GeoPoint
@@ -162,6 +164,8 @@ import nl.r1a.grassmaps.plugin.ui.api.ShellColors
 import nl.r1a.grassmaps.plugins.contours.ContoursLayerPanel
 import nl.r1a.grassmaps.plugins.downloads.ui.DownloadsScreenContent
 import nl.r1a.grassmaps.plugins.downloads.ui.DownloadsUiContract
+import nl.r1a.grassmaps.plugins.favourites.layer.FavouritesLayerController
+import nl.r1a.grassmaps.plugins.favourites.layer.FavouritesLayerPanel
 import nl.r1a.grassmaps.plugins.favourites.ui.FavouritesUiContract
 import nl.r1a.grassmaps.plugins.guidance.ui.GuidanceInput
 import nl.r1a.grassmaps.plugins.guidance.ui.GuidancePanelContent
@@ -479,6 +483,9 @@ private fun MapContent(
     LaunchedEffect(surface.host, container.trackLayer) {
         container.trackLayer.run()
     }
+    LaunchedEffect(surface.host, container.favouritesLayer) {
+        container.favouritesLayer.run()
+    }
     LaunchedEffect(cameraMode, container) {
         if (cameraMode != CameraMode.Heading) {
             return@LaunchedEffect
@@ -567,6 +574,24 @@ private fun MapContent(
     val pluginStatuses by container.pluginHost.statuses.collectAsState()
     val contoursPluginOn = pluginStatuses.firstOrNull { it.pluginId == CONTOURS_PLUGIN }?.enabled != false
     val contoursEnabled = contoursSwitch && contoursPluginOn
+    val favouritesLayerSettings by container.favouritesLayerSettings.active.collectAsState()
+    val favouritesLayerPluginOn = pluginStatuses.firstOrNull { it.pluginId == FavouritesLayerController.OWNER }?.enabled != false
+    val favouritesLibrary by container.favouritesLayerLibrary.collectAsState()
+    val favouriteGroups = remember(favouritesLibrary) { favouritesLibrary.markers.mapNotNull { marker -> marker.group }.distinct() }
+    // The lists plugin publishes after a group edit too. Collect it on IO:
+    // subscribing activates the plugin, and the layer only needs a signal.
+    LaunchedEffect(container) {
+        withContext(Dispatchers.IO) {
+            var previous: Pair<List<FavouriteListSummary>, List<FavouritePointSummary>>? = null
+            container.streamAccess.subscribe<FavouriteListsState>(FavouritesUiContract.listsStream).collect { state ->
+                val library = state.lists to state.points
+                if (library != previous) {
+                    previous = library
+                    container.onFavouritesChanged()
+                }
+            }
+        }
+    }
     val managerVisible by PluginManagerScreenSession.visible.collectAsState()
     val backupVisible by BackupScreenSession.visible.collectAsState()
     val styleChoice by container.mapStyleSettings.active.collectAsState()
@@ -1009,6 +1034,48 @@ private fun MapContent(
                                         container.contoursSettings.setEnabled(enabled)
                                     }.onFailure { error ->
                                         Log.w(TAG, "contour toggle not saved: $error")
+                                    }
+                                }
+                            },
+                        )
+                        FavouritesLayerPanel(
+                            modifier = Modifier.fillMaxWidth(),
+                            settings = favouritesLayerSettings,
+                            groups = favouriteGroups,
+                            pluginEnabled = favouritesLayerPluginOn,
+                            onIconsPerPointChange = { enabled ->
+                                scope.launch {
+                                    withContext(Dispatchers.IO) {
+                                        container.favouritesLayerSettings.setIconsPerPoint(enabled)
+                                    }.onFailure { error ->
+                                        Log.w(TAG, "saved-place icons not saved: $error")
+                                    }
+                                }
+                            },
+                            onMarkerShapeChange = { shape ->
+                                scope.launch {
+                                    withContext(Dispatchers.IO) {
+                                        container.favouritesLayerSettings.setMarkerShape(shape)
+                                    }.onFailure { error ->
+                                        Log.w(TAG, "saved-place shape not saved: $error")
+                                    }
+                                }
+                            },
+                            onShowNamesChange = { enabled ->
+                                scope.launch {
+                                    withContext(Dispatchers.IO) {
+                                        container.favouritesLayerSettings.setShowNames(enabled)
+                                    }.onFailure { error ->
+                                        Log.w(TAG, "saved-place names not saved: $error")
+                                    }
+                                }
+                            },
+                            onGroupShownChange = { group, shown ->
+                                scope.launch {
+                                    withContext(Dispatchers.IO) {
+                                        container.favouritesLayerSettings.setGroupShown(group, shown)
+                                    }.onFailure { error ->
+                                        Log.w(TAG, "saved list visibility not saved: $error")
                                     }
                                 }
                             },

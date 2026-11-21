@@ -721,6 +721,7 @@ application ID is `nl.r1a.grassmaps`.
 | `plugins/osm-places` | the `places.card` provider that maps OSM tags to place-card rows and evaluates `opening_hours` | `plugin-api` |
 | `plugins/online-search` | the opt-in `places.search` provider over the public Photon geocoder, behind the online-search switch | `plugin-api` |
 | `plugins/favourites-ui` | the favourites lists state, the create, move, recolour, Home and Work commands, and the browsing search, sorts and description rendering | `plugin-api` |
+| `plugins/favourites-layer` | the saved-place marker layer, its feature list and the four persisted map controls in the layers column | `plugin-api`, `plugin-ui-api` |
 | `plugins/links` | the pure `geo:` and osm.org link parsers, including the osm.org short-link decoder | `plugin-api` |
 | `plugins/share` | the decimal, DMS and DDM coordinate notations, the osm.org and `geo:` link builders, the copy, share and open-in commands, and track export file names and MIME types | `plugin-api` |
 | `plugins/coordinates` | the coordinate notation parser the search field reads, and the vectors it shares with the formatters | `plugin-api` |
@@ -3348,6 +3349,35 @@ The state is published as `favourites.ui.lists`; `ui-shell` draws the sheet and
 `app` wires the callbacks. The debug-only commands
 `core.favourites.lists_show` and `core.favourites.lists_hide` open it until the
 main UI has a favourites entry point.
+
+## Saved places on the map seam
+
+`plugins/favourites-layer` (T-0215) draws the merged favourites library as one
+marker per saved place in the map's markers slot. The plugin reads a snapshot
+the app maps from `FavouritesStore`; it never parses GPX and does not depend on
+`places`. Each marker carries the point's effective icon, colour and shape,
+so an OsmAnd import keeps its own look. The layer compiles one inline
+GeoJSON FeatureCollection into up to three symbol layers through
+`MapHost.addLayer`, under owner id `favourites.layer`: the shape background,
+the per-point icon and the name label. It adds no host method and no second
+source resolution per camera frame.
+
+The four layer rows live in the existing Layers cards column as one card; the
+Layers button and the style switch stay in `plugins/layers-panel`. Icons on
+points, marker shape, names on the map and each list's visibility are user
+controls persisted by `FavouritesLayerSettingsStore` in
+`settings/favourites-layer.json`. A marker-shape choice of "From place" keeps
+the shape stored in the library; the other three choices draw every marker
+with that shape. Hiding a list removes its markers from the feature list before
+any layer is built: a hidden list has no layer, no feature and no transparent
+style, as with a hidden track.
+
+A successful `core.favourite.add`, `delete`, `rename` or `import` command, or a
+change to the published lists state, signals the layer. It rereads the store
+and replaces its own layers as a whole, so add, remove and rename update the
+map without a restart. `FavouritesStore.rename` writes the new name through the
+same atomic, mutex-guarded path as every other mutation; ids are derived from
+stored values, so the command returns the point's new id.
 
 ## Tracks seam
 

@@ -60,6 +60,27 @@ class FavouriteCommandsTest {
         }
 
     @Test
+    fun aRenameThroughTheBusChangesTheStoredName() =
+        runTest {
+            val container = container(StandardTestDispatcher(testScheduler))
+            val id = text(container.commandBus.invoke(FavouriteCommandIds.ADD, addParams("Old name")))
+
+            val renamed = text(container.commandBus.invoke(FavouriteCommandIds.RENAME, renameParams(id, "New name")))
+            assertTrue(renamed.isNotEmpty())
+            assertTrue(FavouriteCommandIds.RENAME in FAVOURITE_MUTATION_IDS)
+
+            val loaded = container.favourites.load()
+            assertTrue(loaded is Outcome.Success)
+            assertEquals(
+                "New name",
+                (loaded as Outcome.Success)
+                    .value.favourites
+                    .single()
+                    .name,
+            )
+        }
+
+    @Test
     fun undoOfNothingIsATypedNoOpOnTheBus() =
         runTest {
             val container = container(StandardTestDispatcher(testScheduler))
@@ -173,6 +194,15 @@ class FavouriteCommandsTest {
         }
 
     private fun idParams(id: String): JsonObject = buildJsonObject { put("id", id) }
+
+    private fun renameParams(
+        id: String,
+        name: String,
+    ): JsonObject =
+        buildJsonObject {
+            put("id", id)
+            put("name", name)
+        }
 
     private fun pathParams(path: String): JsonObject = buildJsonObject { put("path", path) }
 

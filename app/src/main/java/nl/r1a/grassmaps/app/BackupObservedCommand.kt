@@ -39,6 +39,7 @@ internal val FAVOURITE_MUTATION_IDS: Set<CommandId> =
     setOf(
         FavouriteCommandIds.ADD,
         FavouriteCommandIds.DELETE,
+        FavouriteCommandIds.RENAME,
         FavouriteCommandIds.UNDO_DELETE,
         FavouriteCommandIds.IMPORT,
     )

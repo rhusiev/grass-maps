@@ -15,6 +15,7 @@ plugins/dev-tools	4
 plugins/direct-engine	25
 plugins/downloads-ui	58
 plugins/example	1
+plugins/favourites-layer	10
 plugins/favourites-ui	42
 plugins/gpx	33
 plugins/guidance-ui	18

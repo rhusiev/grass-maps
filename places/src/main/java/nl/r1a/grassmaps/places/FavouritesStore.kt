@@ -99,6 +99,43 @@ class FavouritesStore(
             }
         }
 
+    /**
+     * Renames one favourite and persists the library (T-0215). A blank or
+     * unportable name is [AppError.InvalidInput] and a missing point is
+     * [AppError.NotFound]. The store derives ids from stored values, so the
+     * returned record carries the id the renamed point now has.
+     */
+    suspend fun rename(
+        id: FavouriteId,
+        name: String,
+    ): Outcome<Favourite> =
+        mutex.withLock {
+            val cleanName = name.trim()
+            if (cleanName.isEmpty() || !cleanName.isPortable()) {
+                return@withLock Outcome.Failure(AppError.InvalidInput)
+            }
+            when (val loaded = snapshot()) {
+                is Outcome.Failure -> {
+                    loaded
+                }
+
+                is Outcome.Success -> {
+                    val index = loaded.value.favourites.indexOfFirst { favourite -> favourite.id == id }
+                    if (index < 0) {
+                        return@withLock Outcome.Failure(AppError.NotFound)
+                    }
+                    val renamed =
+                        loaded.value.favourites
+                            .toMutableList()
+                            .also { it[index] = it[index].copy(name = cleanName) }
+                    when (val written = persist(loaded.value.copy(favourites = renamed))) {
+                        is Outcome.Failure -> written
+                        is Outcome.Success -> Outcome.Success(written.value.favourites[index])
+                    }
+                }
+            }
+        }
+
     /** Puts a deleted favourite back at the index it occupied. */
     suspend fun undoDelete(id: FavouriteId): Outcome<Favourite> =
         mutex.withLock {

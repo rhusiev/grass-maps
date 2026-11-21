@@ -7,6 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -102,6 +103,8 @@ import nl.r1a.grassmaps.plugin.api.service.Strings
 import nl.r1a.grassmaps.plugin.api.service.SwitchState
 import nl.r1a.grassmaps.plugin.api.service.SystemClock
 import nl.r1a.grassmaps.plugins.coordinates.Coordinates
+import nl.r1a.grassmaps.plugins.favourites.layer.FavouriteLayerLibrary
+import nl.r1a.grassmaps.plugins.favourites.layer.FavouritesLayerController
 import nl.r1a.grassmaps.plugins.manager.PluginGroups
 import nl.r1a.grassmaps.plugins.map.controls.CameraModeController
 import nl.r1a.grassmaps.plugins.map.controls.MapControls
@@ -181,6 +184,7 @@ class AppContainer(
     private val searchHistorySettingsFileProvider: () -> File? = { null },
     private val onlineSearchSettingsFileProvider: () -> File? = { null },
     private val contoursSettingsFileProvider: () -> File? = { null },
+    private val favouritesLayerSettingsFileProvider: () -> File? = { null },
     private val pluginEnabledFileProvider: () -> File? = { null },
     private val rasterSettingsFileProvider: () -> File? = { null },
     private val mapStyleSettingsFileProvider: () -> File? = { null },
@@ -318,6 +322,25 @@ class AppContainer(
      */
     val contoursSettings: ContoursSettings by lazy {
         ContoursSettings(contoursSettingsFileProvider(), override = { contoursOverride })
+    }
+
+    /**
+     * The four saved-place layer controls (T-0215). Construction reads the
+     * settings file, so this is resolved once when the map screen composes.
+     */
+    val favouritesLayerSettings: FavouritesLayerSettingsStore by lazy {
+        FavouritesLayerSettingsStore(favouritesLayerSettingsFileProvider())
+    }
+
+    /** One signal per successful favourites mutation, including a rename. */
+    private val favouriteLibraryChanges = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** The last library the layer drew, so the layers card can list its groups. */
+    private val favouritesLayerLibraryState = MutableStateFlow(FavouriteLayerLibrary())
+    val favouritesLayerLibrary: StateFlow<FavouriteLayerLibrary> = favouritesLayerLibraryState.asStateFlow()
+
+    fun onFavouritesChanged() {
+        favouriteLibraryChanges.tryEmit(Unit)
     }
 
     /**
@@ -1057,6 +1080,35 @@ class AppContainer(
     }
 
     /**
+     * The saved-place marker layer (T-0215). The plugin owns the controller;
+     * the app supplies the persisted store snapshot, its mutation signals and
+     * the bound map. A redraw replaces this owner's layers as a whole.
+     */
+    val favouritesLayer: FavouritesLayerController by lazy {
+        FavouritesLayerController(
+            library = {
+                withContext(Dispatchers.IO) {
+                    when (val loaded = favourites.load()) {
+                        is Outcome.Failure -> {
+                            loaded
+                        }
+
+                        is Outcome.Success -> {
+                            val mapped = loaded.value.toFavouriteLayerLibrary()
+                            favouritesLayerLibraryState.value = mapped
+                            Outcome.Success(mapped)
+                        }
+                    }
+                }
+            },
+            changes = favouriteLibraryChanges,
+            settings = favouritesLayerSettings.active,
+            host = { mapSession.hostOrNull() },
+            log = { message -> Log.w(FAVOURITES_LAYER_TAG, message) },
+        )
+    }
+
+    /**
      * The map layer over the planned route (T-0408). The plugin module owns the
      * colour and pattern decision; the app gives it the bound map and the route
      * the map screen already draws.
@@ -1325,7 +1377,10 @@ class AppContainer(
             searchHistoryCommands(searchHistory) +
             trackCommands({ tracks }, assetReader) +
             favouriteCommands({ favourites }, assetReader).map { command ->
-                observedFavouriteCommand(command) { favouritesBackup?.onMutation() }
+                observedFavouriteCommand(command) {
+                    favouritesBackup?.onMutation()
+                    onFavouritesChanged()
+                }
             } +
             regionCommands({ regionDownloader }, regionNetwork, debuggable) +
             rasterCommands(
@@ -1461,6 +1516,7 @@ class AppContainer(
         const val MAP_CONTROLS_TAG = "GrassMapsMapControls"
         const val LINKS_TAG = "GrassMapsLinks"
         const val FAVOURITES_TAG = "GrassMapsFavourites"
+        const val FAVOURITES_LAYER_TAG = "GrassMapsFavouritesLayer"
         const val NAVIGATION_TAG = "GrassMapsNavigation"
         const val WAY_ALERTS_TAG = "GrassMapsWayAlerts"
         const val PROXIMITY_ALERTS_TAG = "GrassMapsProximityAlerts"

@@ -32,6 +32,12 @@ class FavouritesAccess internal constructor(
 
     suspend fun delete(id: FavouriteId): Outcome<DeletedFavourite> = access { store -> store.delete(id) }
 
+    /** Renames one saved place; the store returns the point's new derived id. */
+    suspend fun rename(
+        id: FavouriteId,
+        name: String,
+    ): Outcome<Favourite> = access { store -> store.rename(id, name) }
+
     suspend fun undoDelete(id: FavouriteId): Outcome<Favourite> = access { store -> store.undoDelete(id) }
 
     suspend fun createGroup(

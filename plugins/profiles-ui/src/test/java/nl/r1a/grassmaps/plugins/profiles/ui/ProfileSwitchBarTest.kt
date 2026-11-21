@@ -15,7 +15,14 @@ import java.io.File
 /** The map switcher keeps the prototype's pinned order, role and theme tokens (T-0604). */
 class ProfileSwitchBarTest {
     private val labels =
-        ProfileSwitchLabels(walk = "Walk", bike = "Bike", hike = "Hike", all = "All profiles")
+        ProfileSwitchLabels(
+            walk = "Walk",
+            bike = "Bike",
+            hike = "Hike",
+            all = "All profiles",
+            activeDescription = "%1\$s profile, active",
+            switchDescription = "%1\$s profile, switch to %2\$s",
+        )
 
     @Test
     fun thePinnedOrderAndTheNextProfileFollowThePrototype() {
@@ -36,7 +43,8 @@ class ProfileSwitchBarTest {
 
     @Test
     fun everyPinnedControlNamesItsProfileAndKeepsTheButtonRole() {
-        val items = profileSwitchItems(BuiltInProfiles.BIKE, labels, profileSwitchPalette(LightShellColors))
+        val items =
+            profileSwitchItems(BuiltInProfiles.BIKE, PINNED_SWITCH_PROFILES, labels, profileSwitchPalette(LightShellColors))
 
         assertEquals(listOf("Walk", "Bike", "Hike"), items.map { it.label })
         assertEquals(listOf(SWITCH_ROLE, SWITCH_ROLE, SWITCH_ROLE), items.map { it.role })
@@ -44,10 +52,33 @@ class ProfileSwitchBarTest {
     }
 
     @Test
+    fun everyDotAnnouncesItsOwnProfileAndActionDistinctly() {
+        val items =
+            profileSwitchItems(
+                active = BuiltInProfiles.WALK,
+                order = PINNED_SWITCH_PROFILES,
+                labels = labels,
+                palette = profileSwitchPalette(LightShellColors),
+            )
+
+        val descriptions = items.map { it.description }
+
+        assertEquals(3, descriptions.size)
+        assertEquals(3, descriptions.toSet().size)
+        descriptions.forEach { assertTrue("the label is blank", it.isNotBlank()) }
+        assertEquals("Walk profile, active", descriptions[0])
+        assertEquals("Bike profile, switch to Bike", descriptions[1])
+        assertEquals("Hike profile, switch to Bike", descriptions[2])
+        items.forEachIndexed { index, item ->
+            assertTrue("${item.label} is missing from its own label", descriptions[index].startsWith(item.label))
+        }
+    }
+
+    @Test
     fun theActiveControlUsesTheProfileColorInBothThemes() {
         listOf(LightShellColors, DarkShellColors).forEach { colors ->
             val palette = profileSwitchPalette(colors)
-            val items = profileSwitchItems(BuiltInProfiles.WALK, labels, palette)
+            val items = profileSwitchItems(BuiltInProfiles.WALK, PINNED_SWITCH_PROFILES, labels, palette)
 
             assertEquals("bar", colors.glass, palette.bar)
             assertEquals("border", colors.ring, palette.border)
@@ -88,8 +119,9 @@ class ProfileSwitchBarTest {
             listOf(
                 "profiles_group_style",
                 "profiles_group_units",
-                "profiles_switch_description",
                 "profiles_switch_all",
+                "profiles_switch_active",
+                "profiles_switch_to",
             )
         listOf("src/main/res/values/strings.xml", "src/main/res/values-uk/strings.xml").forEach { path ->
             val present =
@@ -97,10 +129,14 @@ class ProfileSwitchBarTest {
                     .findAll(File(path).readText())
                     .associate { it.groupValues[1] to it.groupValues[2] }
             keys.forEach { key -> assertTrue("$path misses $key", present[key]?.isNotBlank() == true) }
+            assertTrue(
+                "the active label names its own profile",
+                present.getValue("profiles_switch_active").contains("%1\$s"),
+            )
             assertEquals(
-                "the switch description names two profiles",
+                "the switch label names its own profile and the next one",
                 2,
-                present.getValue("profiles_switch_description").let { text ->
+                present.getValue("profiles_switch_to").let { text ->
                     listOf("%1\$s", "%2\$s").count { text.contains(it) }
                 },
             )

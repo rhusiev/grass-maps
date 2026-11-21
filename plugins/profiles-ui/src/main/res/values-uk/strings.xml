@@ -32,5 +32,6 @@
     <string name="profiles_notice_reset">Налаштування скинуто</string>
     <string name="profiles_undo">Скасувати</string>
     <string name="profiles_switch_all">Усі профілі</string>
-    <string name="profiles_switch_description">Профіль %1$s. Торкніться для %2$s</string>
+    <string name="profiles_switch_active">Профіль %1$s, активний</string>
+    <string name="profiles_switch_to">Профіль %1$s, перейти до %2$s</string>
 </resources>

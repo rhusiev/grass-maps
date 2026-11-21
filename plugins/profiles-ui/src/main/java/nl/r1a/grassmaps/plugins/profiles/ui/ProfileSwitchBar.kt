@@ -57,12 +57,10 @@ fun ProfileSwitchBar(
             bike = stringResource(R.string.profiles_bike),
             hike = stringResource(R.string.profiles_hike),
             all = stringResource(R.string.profiles_switch_all),
+            activeDescription = stringResource(R.string.profiles_switch_active),
+            switchDescription = stringResource(R.string.profiles_switch_to),
         )
-    val items = profileSwitchItems(active, labels, palette)
-    val activeLabel = items.firstOrNull { it.selected }?.label ?: labels.all
-    val next = nextProfile(order, active)
-    val nextLabel = items.firstOrNull { it.id == next }?.label ?: labels.all
-    val description = stringResource(R.string.profiles_switch_description, activeLabel, nextLabel)
+    val items = profileSwitchItems(active, order, labels, palette)
     Row(
         modifier =
             modifier
@@ -81,7 +79,7 @@ fun ProfileSwitchBar(
                         .background(item.fill, CircleShape)
                         .combinedClickable(role = Role.Button, onClick = onNext, onLongClick = onOpenAll)
                         .semantics {
-                            contentDescription = "${item.label}. $description"
+                            contentDescription = item.description
                             selected = item.selected
                         },
                 contentAlignment = Alignment.Center,
@@ -142,12 +140,13 @@ private fun ProfilePictogram(
 }
 
 // The canon bottom bar is 58 dp high and fully round (radius 29): round 5's
-// BAR_H = 58 and border-radius BAR_H / 2 in r3.py.
-private const val BAR_HEIGHT_DP = 58
-private const val BAR_CORNER_DP = 29
+// BAR_H = 58 and border-radius BAR_H / 2 in r3.py. The dots grow to the 48 dp
+// accessibility target, so the bar grows by the same 2 dp and keeps its pill.
+private const val BAR_HEIGHT_DP = 60
+private const val BAR_CORNER_DP = 30
 private const val BAR_INSET_DP = 8
 private const val DOT_INSET_DP = 6
-private const val DOT_SIZE_DP = 36
+private const val DOT_SIZE_DP = 48
 private const val DOT_GAP_DP = 4
 private const val DIVIDER_WIDTH_DP = 1
 private const val DIVIDER_HEIGHT_DP = 28

@@ -7,19 +7,27 @@ import nl.r1a.grassmaps.plugin.ui.api.ProfileColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellColors
 import nl.r1a.grassmaps.plugin.ui.api.contrastRatio
 import nl.r1a.grassmaps.plugin.ui.api.inkOn
+import java.util.Locale
 
-/** The four labels the bar reads from resources, so its rendering has no locale logic. */
+/** The labels and description templates the bar reads from resources. */
 internal data class ProfileSwitchLabels(
     val walk: String,
     val bike: String,
     val hike: String,
     val all: String,
+    val activeDescription: String,
+    val switchDescription: String,
 )
 
-/** One drawn pinned control. [role] is the string name of the Compose role the bar sets. */
+/**
+ * One drawn pinned control. [description] is its own accessibility label: the
+ * profile it names and the action a tap performs. [role] is the string name of
+ * the Compose role the bar sets.
+ */
 internal data class ProfileSwitchItem(
     val id: ProfileId,
     val label: String,
+    val description: String,
     val role: String,
     val selected: Boolean,
     val fill: Color,
@@ -71,16 +79,26 @@ internal fun profileSwitchPalette(colors: ShellColors): ProfileSwitchPalette =
 
 internal fun profileSwitchItems(
     active: ProfileId,
+    order: List<ProfileId>,
     labels: ProfileSwitchLabels,
     palette: ProfileSwitchPalette,
 ): List<ProfileSwitchItem> {
     val names = mapOf(BuiltInProfiles.WALK to labels.walk, BuiltInProfiles.BIKE to labels.bike, BuiltInProfiles.HIKE to labels.hike)
+    val nextLabel = names[nextProfile(order, active)] ?: labels.all
     return PINNED_SWITCH_PROFILES.map { id ->
         val selected = id == active
         val color = palette.profiles.colorOf(id)
+        val label = names.getValue(id)
+        val description =
+            if (selected) {
+                String.format(Locale.getDefault(), labels.activeDescription, label)
+            } else {
+                String.format(Locale.getDefault(), labels.switchDescription, label, nextLabel)
+            }
         ProfileSwitchItem(
             id = id,
-            label = names.getValue(id),
+            label = label,
+            description = description,
             role = SWITCH_ROLE,
             selected = selected,
             fill = if (selected) color else palette.quiet,

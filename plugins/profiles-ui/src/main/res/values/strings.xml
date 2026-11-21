@@ -32,5 +32,6 @@
     <string name="profiles_notice_reset">Settings reset</string>
     <string name="profiles_undo">Undo</string>
     <string name="profiles_switch_all">All profiles</string>
-    <string name="profiles_switch_description">Profile %1$s. Tap for %2$s</string>
+    <string name="profiles_switch_active">%1$s profile, active</string>
+    <string name="profiles_switch_to">%1$s profile, switch to %2$s</string>
 </resources>

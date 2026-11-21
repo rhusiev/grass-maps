@@ -95,6 +95,7 @@ fun SearchScreenHost(
     onEnableOnlineSearch: () -> Unit = {},
     onDisableOnlineSearch: () -> Unit = {},
     onAllowPosition: (Boolean) -> Unit = {},
+    onlineStopped: Boolean = false,
     onCollapsedCardSize: (IntSize) -> Unit = {},
 ) {
     val colors = LocalShellColors.current
@@ -113,6 +114,9 @@ fun SearchScreenHost(
             onlineEnable = stringResource(R.string.search_online_enable),
             onlineDisable = stringResource(R.string.search_online_disable),
             onlineBadge = stringResource(R.string.search_online_badge),
+            onlineStopped = stringResource(R.string.search_online_stopped),
+            onlineStoppedWithOnline = stringResource(R.string.search_online_stopped_with_online),
+            onlineStoppedNoResults = stringResource(R.string.search_online_stopped_no_results),
             positionAllow = stringResource(R.string.search_position_allow),
             positionStop = stringResource(R.string.search_position_stop),
         )
@@ -122,7 +126,16 @@ fun SearchScreenHost(
     // would drop characters typed quickly. The session's query is only the
     // search text; the field is the user's.
     var typed by remember { mutableStateOf("") }
-    val content = searchScreenContent(hits, typed, loading, failed, labels, onlineNotice)
+    val content =
+        searchScreenContent(
+            hits = hits,
+            query = typed,
+            loading = loading,
+            failed = failed,
+            labels = labels,
+            online = onlineNotice,
+            onlineStopped = onlineStopped,
+        )
     val focusRequester = remember { FocusRequester() }
 
     Box(modifier = modifier.fillMaxSize()) {

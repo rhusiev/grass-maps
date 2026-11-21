@@ -45,6 +45,9 @@
     <string name="search_online_enable">Увімкнути онлайн-пошук</string>
     <string name="search_online_disable">Вимкнути онлайн-функцію</string>
     <string name="search_online_badge">Онлайн</string>
+    <string name="search_online_stopped">Онлайн-пошук вимкнено. Показано результати з офлайн-індексу.</string>
+    <string name="search_online_stopped_with_online">Онлайн-пошук вимкнено. Рядки з позначкою Онлайн надійшли до зупинки; решта — з офлайн-індексу.</string>
+    <string name="search_online_stopped_no_results">Онлайн-пошук вимкнено. Офлайн-результатів немає.</string>
     <string name="search_position_allow">Надсилати мою позицію</string>
     <string name="search_position_stop">Припинити надсилати мою позицію</string>
 

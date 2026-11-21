@@ -45,6 +45,9 @@
     <string name="search_online_enable">Enable online search</string>
     <string name="search_online_disable">Turn off online feature</string>
     <string name="search_online_badge">Online</string>
+    <string name="search_online_stopped">Online search was turned off. Showing offline results.</string>
+    <string name="search_online_stopped_with_online">Online search was turned off. Rows marked Online arrived before it stopped; the rest are offline.</string>
+    <string name="search_online_stopped_no_results">Online search was turned off. No offline results.</string>
     <string name="search_position_allow">Send my position</string>
     <string name="search_position_stop">Stop sending my position</string>
 

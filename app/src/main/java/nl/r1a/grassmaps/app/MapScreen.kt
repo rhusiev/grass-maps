@@ -2582,6 +2582,7 @@ private fun SearchOverlay(
         onEnableOnlineSearch = onEnableOnlineSearch,
         onDisableOnlineSearch = onDisableOnlineSearch,
         onAllowPosition = onAllowPosition,
+        onlineStopped = state.onlineStopped != null,
         onCollapsedCardSize = onCollapsedCardSize,
     )
 }

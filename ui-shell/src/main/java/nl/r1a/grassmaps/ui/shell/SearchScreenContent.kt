@@ -70,6 +70,9 @@ data class SearchScreenLabels(
     val onlineEnable: String = "",
     val onlineDisable: String = "",
     val onlineBadge: String = "",
+    val onlineStopped: String = "",
+    val onlineStoppedWithOnline: String = "",
+    val onlineStoppedNoResults: String = "",
     val positionAllow: String = "",
     val positionStop: String = "",
 )
@@ -130,6 +133,10 @@ data class SearchScreenContent(
  * Turns the newest result set and the session flags into what the screen draws.
  * A blank field draws nothing below it; a failure says the index is missing
  * instead of pretending there are no matches.
+ *
+ * A switch that stopped the online half adds a line about it, but never changes
+ * a row's source: [SearchResultRow.online] remains the only mark of an online
+ * hit, so an offline row is never presented as online (T-0616).
  */
 fun searchScreenContent(
     hits: List<PlaceHit>,
@@ -138,11 +145,15 @@ fun searchScreenContent(
     failed: Boolean,
     labels: SearchScreenLabels,
     online: SearchOnlineNotice? = null,
+    onlineStopped: Boolean = false,
 ): SearchScreenContent {
     val view = searchResultView(hits)
     val message =
         when {
             failed -> labels.notReady
+            onlineStopped && view.rows.isEmpty() -> labels.onlineStoppedNoResults
+            onlineStopped && view.rows.any { it.online } -> labels.onlineStoppedWithOnline
+            onlineStopped -> labels.onlineStopped
             loading && view.rows.isEmpty() -> null
             query.isBlank() -> null
             view.rows.isEmpty() -> labels.noMatches

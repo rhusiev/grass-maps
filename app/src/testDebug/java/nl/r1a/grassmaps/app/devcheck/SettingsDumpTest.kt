@@ -4,6 +4,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import nl.r1a.grassmaps.app.UserDataLayout
 import nl.r1a.grassmaps.plugin.api.model.CatalogRegion
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -28,13 +29,24 @@ class SettingsDumpTest {
 
     @Test
     fun valuesAreDumpedAndSecretsAreRedacted() {
-        write("settings/units.json", """{"distance":"km"}""")
+        write(UserDataLayout.UNIT_SETTINGS_PATH, """{"distance":"km"}""")
         write("settings/raster.json", """{"url":"https://t.example/{z}.png?key=SECRETVALUE&a=1","api_key":"SECRETVALUE"}""")
 
         val dump = SettingsDump.dump(folder.root)
 
-        assertEquals("km", dump["settings/units.json"]!!.jsonObject["distance"]!!.jsonPrimitive.content)
+        assertEquals("km", dump[UserDataLayout.UNIT_SETTINGS_PATH]!!.jsonObject["distance"]!!.jsonPrimitive.content)
         assertFalse(dump.toString().contains("SECRETVALUE"))
+    }
+
+    @Test
+    fun theDumpTracksThePerProfileStoresNotTheAppWideFiles() {
+        assertEquals("profiles/units.json", UserDataLayout.UNIT_SETTINGS_PATH)
+        assertEquals("profiles/map-style.json", UserDataLayout.MAP_STYLE_SETTINGS_PATH)
+
+        assertTrue(VALUE_FILES.contains(UserDataLayout.UNIT_SETTINGS_PATH))
+        assertTrue(VALUE_FILES.contains(UserDataLayout.MAP_STYLE_SETTINGS_PATH))
+        assertFalse(VALUE_FILES.contains(UserDataLayout.LEGACY_UNIT_SETTINGS_PATH))
+        assertFalse(VALUE_FILES.contains(UserDataLayout.LEGACY_MAP_STYLE_SETTINGS_PATH))
     }
 
     @Test

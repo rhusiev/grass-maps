@@ -5,6 +5,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import nl.r1a.grassmaps.app.UserDataLayout
 import java.io.File
 
 private const val REDACTED = "<redacted>"
@@ -14,11 +15,12 @@ private val SECRET_KEY = Regex("token|secret|password|authorization|api[-_]?key|
 private val SECRET_QUERY = Regex("([?&](?:key|token|apikey|access_token)=)[^&\"\\s]+", RegexOption.IGNORE_CASE)
 
 /** Settings files dumped with their values, relative to the app files directory. */
-private val VALUE_FILES =
+internal val VALUE_FILES =
     listOf(
-        "settings/units.json",
+        // The per-profile stores replaced the app-wide settings/units.json and settings/style.json (T-0603).
+        UserDataLayout.UNIT_SETTINGS_PATH,
         "settings/map-labels.json",
-        "settings/style.json",
+        UserDataLayout.MAP_STYLE_SETTINGS_PATH,
         "settings/contours.json",
         "settings/raster.json",
         "settings/online-search.json",

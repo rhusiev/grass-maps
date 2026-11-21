@@ -1,3 +1,4 @@
+import buildlogic.CheckComposePluginsTask
 import buildlogic.CheckPrivacyDependenciesTask
 import buildlogic.CheckTranslationsTask
 import buildlogic.LintPluginManifestsTask
@@ -383,6 +384,28 @@ tasks.register<CheckTranslationsTask>("checkTranslations") {
             exclude("**/build/**")
         },
     )
+}
+
+// Compose compiler plugin guard: a @Composable declaration or a Modifier
+// extension compiled without the plugin gets a JVM signature the callers cannot
+// link, which fails only at runtime. The globs pick up new modules without an
+// edit here; the rules and their tests live in buildSrc.
+tasks.register<CheckComposePluginsTask>("checkComposePlugins") {
+    group = "verification"
+    description = "Fails when a module declares Compose UI without the Compose compiler plugin."
+    buildFiles.from(
+        fileTree(rootDir) {
+            include("*/build.gradle.kts", "plugins/*/build.gradle.kts")
+            exclude("buildSrc/**", "**/build/**")
+        },
+    )
+    sources.from(
+        fileTree(rootDir) {
+            include("*/src/**/*.kt", "plugins/*/src/**/*.kt")
+            exclude("buildSrc/**", "**/build/**")
+        },
+    )
+    rootDirectory.set(layout.projectDirectory)
 }
 
 // Map style rules (T-0108, design/map-style.md section 4): every authored style

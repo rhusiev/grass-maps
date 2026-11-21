@@ -143,6 +143,9 @@ step "Plugin boundaries"
 step "Plugin manifests"
 ./gradlew --console=plain checkPluginManifests || fail "plugin manifests"
 
+step "Compose plugin guard"
+./gradlew --console=plain checkComposePlugins || fail "compose plugin guard"
+
 step "Example plugin"
 ./gradlew --console=plain :plugins:example:check || fail "example plugin"
 

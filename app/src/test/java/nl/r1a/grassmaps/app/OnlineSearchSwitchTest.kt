@@ -21,6 +21,7 @@ import nl.r1a.grassmaps.plugin.api.service.Strings
 import nl.r1a.grassmaps.plugins.online.search.PhotonPlaceProvider
 import nl.r1a.grassmaps.plugins.online.search.PhotonTransport
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -33,10 +34,26 @@ class OnlineSearchSwitchTest {
             val command = OnlineSearchSwitchCommand { container }
 
             assertTrue(command.policy.allowlistedForControl)
-            assertEquals(Outcome.Success(CommandResult("enabled=true")), command.invokeRaw(params(true)))
+            assertEquals(Outcome.Success(CommandResult("enabled=true")), command.execute(params(true)))
             assertTrue(container.onlineSearchEnabled)
-            assertEquals(Outcome.Success(CommandResult("enabled=false")), command.invokeRaw(params(false)))
+            assertEquals(Outcome.Success(CommandResult("enabled=false")), command.execute(params(false)))
             assertEquals(false, container.onlineSearchEnabled)
+        }
+
+    @Test
+    fun `the debug command is allowlisted in the control catalog`() =
+        runTest {
+            lateinit var container: AppContainer
+            container =
+                AppContainer(
+                    strings = KeyOnlyStrings,
+                    extraCommands = { listOf(OnlineSearchSwitchCommand { container }) },
+                )
+
+            val entry = container.controlCommands.singleOrNull { it.id == ONLINE_SEARCH_SWITCH_COMMAND }
+
+            assertNotNull("core.search.switch is not in the control catalog", entry)
+            assertEquals(true, entry?.allowlistedForControl)
         }
 
     @Test

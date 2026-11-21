@@ -109,7 +109,7 @@ class DebugApplication : GrassMapsApplication() {
                 ),
             ) + placeCardCommands { container } + favouritesListsCommands() + trackLibraryCommands() +
                 downloadsScreenCommands { container } + profilesScreenCommands() + pluginManagerCommands() +
-                screenSettingsScreenCommands() +
+                OnlineSearchSwitchCommand { container } + screenSettingsScreenCommands() +
                 backupScreenCommands(
                     backup = { container.backup },
                     ui = { container.backupUi },

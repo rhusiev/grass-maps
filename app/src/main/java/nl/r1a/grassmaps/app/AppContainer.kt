@@ -160,6 +160,8 @@ class AppContainer(
     val strings: Strings,
     private val dispatchers: CommandDispatchers = CommandDispatchers(),
     private val switchEnabled: (SwitchId) -> Boolean = { false },
+    /** The privacy switches; tests inject one so the gate and the app share state. */
+    private val privacySwitches: PrivacySwitches = PrivacySwitchSettings(),
     private val locationSource: LocationSource = NoLocationSource,
     private val locationPermissionStore: LocationPermissionStore = InMemoryLocationPermissionStore(),
     private val routingFilesProvider: () -> File? = { null },
@@ -1246,7 +1248,6 @@ class AppContainer(
      * [nl.r1a.grassmaps.core.services.NetworkSwitches.regionUpdates]; the real
      * gate refuses the request while the switch is off.
      */
-    private val privacySwitches: PrivacySwitches = PrivacySwitchSettings()
     private val networkGate: NetworkGate = PrivacyNetworkGate(privacySwitches)
 
     /** The production network path for region downloads. */

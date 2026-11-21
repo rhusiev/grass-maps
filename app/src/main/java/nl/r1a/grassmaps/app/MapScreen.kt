@@ -60,7 +60,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -179,7 +178,6 @@ import nl.r1a.grassmaps.plugin.ui.api.ElevationChartRange
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartStretch
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenState
-import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenStatus
 import nl.r1a.grassmaps.plugin.ui.api.ShellColors
 import nl.r1a.grassmaps.plugins.contours.ContoursLayerPanel
 import nl.r1a.grassmaps.plugins.downloads.ui.DownloadsScreenContent
@@ -599,14 +597,6 @@ private fun MapContent(
     LaunchedEffect(container.navigationStartNotices) {
         container.navigationStartNotices.notices.collect { permissionNotice = true }
     }
-    LaunchedEffect(activity, windowColors) {
-        val window = activity?.window ?: return@LaunchedEffect
-        window.statusBarColor = windowColors.map.toArgb()
-        // The map runs under the status bar; its icons must follow the theme.
-        @Suppress("DEPRECATION")
-        window.decorView.systemUiVisibility =
-            if (windowColors.dark) 0 else android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-    }
     val scope = rememberCoroutineScope()
     val cameraMode by container.locationController.mode.collectAsState()
     val density = LocalDensity.current
@@ -954,6 +944,7 @@ private fun MapContent(
                 ::isNavigationActive,
             ).collect { active -> value = active }
         }
+    MapStatusBarOwner(container, navigationActive, navigationFixture)
     // The bar and the widget grid follow the one published profile state, so a
     // trip that activates its profile changes both when the map is back.
     // The guidance camera belongs to the process, not this composition, so a
@@ -2604,7 +2595,6 @@ private fun NavigationOverlay(
     onOpenAlerts: () -> Unit,
     dark: Boolean,
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val navigationState by container.navigation.state.collectAsState()
     val fixture by container.navigationScreenFixture.state.collectAsState()
@@ -2725,15 +2715,6 @@ private fun NavigationOverlay(
         previousScreen = navigationScreen
         if (next != null) {
             announcement = next
-        }
-    }
-    val activity = context as? Activity
-    DisposableEffect(navigationScreen.status) {
-        if (activity == null) {
-            onDispose { }
-        } else {
-            activity.setNavigationStatusBar(navigationScreen.status)
-            onDispose { activity.restoreStatusBar() }
         }
     }
     NavigationScreenHost(
@@ -3398,21 +3379,48 @@ private fun NavigationAlertSwitch.toAlertKind(): AlertKind =
         NavigationAlertSwitch.Hazard -> AlertKind.Hazard
     }
 
-/** The round 5 status bar follows the card's own state colour. */
-@Suppress("DEPRECATION")
-private fun Activity.setNavigationStatusBar(status: NavigationScreenStatus) {
-    val color =
-        when (status) {
-            NavigationScreenStatus.Following,
-            NavigationScreenStatus.Arrived,
-            -> android.graphics.Color.rgb(30, 127, 83)
-
-            NavigationScreenStatus.OffRoute -> android.graphics.Color.rgb(138, 90, 0)
-
-            NavigationScreenStatus.Paused -> android.graphics.Color.rgb(95, 99, 104)
+/**
+ * The only writer of the window status bar on the map screen. The theme and the
+ * navigation status feed one decision, so a theme change made while a
+ * navigation screen is open cannot overwrite the card colour. The live status
+ * is a distinct flow: a fix that leaves the card state unchanged does not
+ * recompose this owner.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun MapStatusBarOwner(
+    container: AppContainer,
+    navigationActive: Boolean,
+    fixture: NavigationScreenFixture?,
+) {
+    val activity = LocalContext.current as? Activity
+    val colors = LocalShellColors.current
+    val liveStatus by
+        remember(container) {
+            container.navigation.state.map(::navigationStatus).distinctUntilChanged()
+        }.collectAsState(initial = null)
+    val status =
+        if (!navigationActive) {
+            null
+        } else {
+            fixture?.state?.let(::navigationStatus) ?: liveStatus
         }
-    window.statusBarColor = color
-    window.decorView.systemUiVisibility = 0
+    val spec = statusBarSpec(status, colors)
+    DisposableEffect(activity, spec) {
+        if (activity != null) {
+            activity.applyStatusBar(spec)
+            onDispose { activity.restoreStatusBar() }
+        } else {
+            onDispose { }
+        }
+    }
+}
+
+@Suppress("DEPRECATION")
+private fun Activity.applyStatusBar(spec: StatusBarSpec) {
+    window.statusBarColor = spec.argb
+    window.decorView.systemUiVisibility =
+        if (spec.lightIcons) android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR else 0
 }
 
 @Suppress("DEPRECATION")

@@ -149,10 +149,17 @@ internal class MapHostState(
         // The first composition can call setStyle with the style this state was
         // built from. Reloading it would clear styleReady and re-run the engine
         // for nothing, so an unchanged style is a successful no-op. Styles that
-        // share one base document (Standard and Touring) differ only in their
-        // layers, so a switch between them keeps the loaded style and waits for
-        // the diff, which names the new id, before the id changes.
-        if (built == this.style.value) {
+        // share one base document (Meadow and Trail, light and dark) differ only
+        // in their layers, so a profile switch between them keeps the loaded
+        // style and waits for the diff, which names the new id, before the id
+        // changes. Only a changed base document or source plan reloads.
+        val previous = this.style.value
+        val reload =
+            needsStyleReload(
+                StyleVariant(id = loadedStyleId, baseStyleJson = previous.baseStyleJson),
+                StyleVariant(id = style.id, baseStyleJson = built.baseStyleJson),
+            )
+        if (!reload && built.plan == previous.plan) {
             pendingStyleId = style.id.takeIf { it != loadedStyleId }
             return Outcome.Success(Unit)
         }
@@ -315,6 +322,8 @@ internal data class OwnedLayer(
 internal data class BuiltStyle(
     val json: BaseStyle.Json,
     val plan: SourcePlan,
+    /** The composed base document, compared by [needsStyleReload] on a profile switch. */
+    val baseStyleJson: String,
 )
 
 /**
@@ -789,10 +798,11 @@ internal fun buildBaseStyle(
                     "layers" to JsonArray(emptyList()),
                 ),
         )
-    return BuiltStyle(BaseStyle.Json(document.toString()), plan)
+    val baseStyleJson = document.toString()
+    return BuiltStyle(BaseStyle.Json(baseStyleJson), plan, baseStyleJson)
 }
 
-private fun emptyBuiltStyle(): BuiltStyle = BuiltStyle(BaseStyle.Empty, SourcePlan(emptyMap(), emptyList()))
+private fun emptyBuiltStyle(): BuiltStyle = BuiltStyle(BaseStyle.Empty, SourcePlan(emptyMap(), emptyList()), "")
 
 /** A monotonic millisecond clock for the frame-driven puck animation. */
 private fun elapsedMillis(): Long = System.nanoTime() / NANOS_PER_MILLI

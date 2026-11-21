@@ -55,6 +55,19 @@ internal data class NavigationScreenInput(
     val units: UnitSystem = UnitSystem.Metric,
 )
 
+/** The card state one navigation state maps onto, without the rest of the screen. */
+internal fun navigationStatus(state: NavigationState): NavigationScreenStatus =
+    when {
+        state.phase == NavigationPhase.Arrived -> NavigationScreenStatus.Arrived
+
+        state.phase == NavigationPhase.Paused -> NavigationScreenStatus.Paused
+
+        state.relation == RouteRelation.OffRoute || state.phase == NavigationPhase.Rerouting ->
+            NavigationScreenStatus.OffRoute
+
+        else -> NavigationScreenStatus.Following
+    }
+
 /**
  * Maps one published navigation state and the values the screen already holds
  * onto the round 5 navigation screen.
@@ -72,24 +85,7 @@ internal fun navigationScreenState(
     zone: ZoneId = ZoneId.systemDefault(),
 ): NavigationScreenState {
     val state = input.state
-    val status =
-        when {
-            state.phase == NavigationPhase.Arrived -> {
-                NavigationScreenStatus.Arrived
-            }
-
-            state.phase == NavigationPhase.Paused -> {
-                NavigationScreenStatus.Paused
-            }
-
-            state.relation == RouteRelation.OffRoute || state.phase == NavigationPhase.Rerouting -> {
-                NavigationScreenStatus.OffRoute
-            }
-
-            else -> {
-                NavigationScreenStatus.Following
-            }
-        }
+    val status = navigationStatus(state)
     val destination = input.destination ?: strings.resolve(NavigationScreenStrings.DESTINATION)
     val next = input.panel?.entries?.firstOrNull { it.field == GuidancePanelField.NextTurn }
     val second = input.panel?.entries?.firstOrNull { it.field == GuidancePanelField.SecondTurn }

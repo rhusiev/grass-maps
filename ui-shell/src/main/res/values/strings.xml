@@ -43,6 +43,7 @@
     <string name="search_online_on_sends_position">Online results come from Photon (photon.komoot.io) and OpenStreetMap contributors. Your map position is sent.</string>
     <string name="search_online_on_no_position">Online results come from Photon (photon.komoot.io) and OpenStreetMap contributors. Your map position is not sent.</string>
     <string name="search_online_enable">Enable online search</string>
+    <string name="search_online_disable">Turn off online feature</string>
     <string name="search_online_badge">Online</string>
     <string name="search_position_allow">Send my position</string>
     <string name="search_position_stop">Stop sending my position</string>

@@ -68,6 +68,7 @@ data class SearchScreenLabels(
     val onlineOnSendsPosition: String = "",
     val onlineOnNoPosition: String = "",
     val onlineEnable: String = "",
+    val onlineDisable: String = "",
     val onlineBadge: String = "",
     val positionAllow: String = "",
     val positionStop: String = "",
@@ -85,13 +86,15 @@ data class SearchOnlineNotice(
     val text: String,
     val action: String?,
     val actionKind: SearchOnlineAction,
+    val offAction: String? = null,
 )
 
 /**
  * What the screen says about online search (T-0212). With the switch off it
  * names exactly what enabling sends: always the query and the IP address, and
  * the map position only when the separate allowance is on. With the switch on
- * it names the source and the current position choice.
+ * it names the source and the current position choice, and also offers to turn
+ * the online feature off. The one-time prompt still only offers to enable it.
  */
 fun searchOnlineNotice(
     labels: SearchScreenLabels,
@@ -103,6 +106,7 @@ fun searchOnlineNotice(
             text = if (positionAllowed) labels.onlineOnSendsPosition else labels.onlineOnNoPosition,
             action = if (positionAllowed) labels.positionStop else labels.positionAllow,
             actionKind = if (positionAllowed) SearchOnlineAction.STOP_POSITION else SearchOnlineAction.ALLOW_POSITION,
+            offAction = labels.onlineDisable,
         )
     } else {
         SearchOnlineNotice(

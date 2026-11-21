@@ -93,6 +93,7 @@ fun SearchScreenHost(
     onlineSearchEnabled: Boolean = false,
     positionAllowed: Boolean = false,
     onEnableOnlineSearch: () -> Unit = {},
+    onDisableOnlineSearch: () -> Unit = {},
     onAllowPosition: (Boolean) -> Unit = {},
     onCollapsedCardSize: (IntSize) -> Unit = {},
 ) {
@@ -110,6 +111,7 @@ fun SearchScreenHost(
             onlineOnSendsPosition = stringResource(R.string.search_online_on_sends_position),
             onlineOnNoPosition = stringResource(R.string.search_online_on_no_position),
             onlineEnable = stringResource(R.string.search_online_enable),
+            onlineDisable = stringResource(R.string.search_online_disable),
             onlineBadge = stringResource(R.string.search_online_badge),
             positionAllow = stringResource(R.string.search_position_allow),
             positionStop = stringResource(R.string.search_position_stop),
@@ -204,20 +206,15 @@ fun SearchScreenHost(
                 content.online?.let { notice ->
                     BasicText(text = notice.text, style = secondaryStyle(colors))
                     notice.action?.let { action ->
-                        BasicText(
-                            text = action,
-                            style = TextStyle(color = colors.ink, fontSize = DETAIL_FONT_SP.sp),
-                            modifier =
-                                Modifier
-                                    .clickable(role = Role.Button) {
-                                        when (notice.actionKind) {
-                                            SearchOnlineAction.ENABLE -> onEnableOnlineSearch()
-                                            SearchOnlineAction.ALLOW_POSITION -> onAllowPosition(true)
-                                            SearchOnlineAction.STOP_POSITION -> onAllowPosition(false)
-                                        }
-                                    }.padding(ROW_PADDING_DP.dp),
-                        )
+                        NoticeAction(action) {
+                            when (notice.actionKind) {
+                                SearchOnlineAction.ENABLE -> onEnableOnlineSearch()
+                                SearchOnlineAction.ALLOW_POSITION -> onAllowPosition(true)
+                                SearchOnlineAction.STOP_POSITION -> onAllowPosition(false)
+                            }
+                        }
                     }
+                    notice.offAction?.let { action -> NoticeAction(action, onDisableOnlineSearch) }
                 }
                 content.rows.forEach { row ->
                     SearchResultRowContent(
@@ -306,6 +303,21 @@ private fun SearchResultRowContent(
         }
         row.detail?.let { detail -> BasicText(text = detail, style = secondaryStyle(colors)) }
     }
+}
+
+/** One pressable line of the online-search notice, in the round 9 text token. */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun NoticeAction(
+    text: String,
+    onClick: () -> Unit,
+) {
+    val colors = LocalShellColors.current
+    BasicText(
+        text = text,
+        style = TextStyle(color = colors.ink, fontSize = DETAIL_FONT_SP.sp),
+        modifier = Modifier.clickable(role = Role.Button, onClick = onClick).padding(ROW_PADDING_DP.dp),
+    )
 }
 
 private fun secondaryStyle(colors: ShellColors): TextStyle = TextStyle(color = colors.muted, fontSize = DETAIL_FONT_SP.sp)

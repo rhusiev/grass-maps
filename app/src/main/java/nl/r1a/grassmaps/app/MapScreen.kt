@@ -1517,6 +1517,14 @@ private fun MapContent(
             )
         }
         if (!navigationActive) {
+            val setOnlineSearch: (Boolean) -> Unit = { enabled ->
+                scope.launch {
+                    container.setOnlineSearchEnabled(enabled).onFailure { error ->
+                        Log.w(TAG, "online search switch failed: $error")
+                    }
+                    onlineSearchEnabled = container.onlineSearchEnabled
+                }
+            }
             SearchOverlay(
                 surface = surface,
                 state = searchState,
@@ -1623,14 +1631,8 @@ private fun MapContent(
                 },
                 onlineSearchEnabled = onlineSearchEnabled,
                 positionAllowed = positionAllowed,
-                onEnableOnlineSearch = {
-                    scope.launch {
-                        container.setOnlineSearchEnabled(true).onFailure { error ->
-                            Log.w(TAG, "online search switch failed: $error")
-                        }
-                        onlineSearchEnabled = container.onlineSearchEnabled
-                    }
-                },
+                onEnableOnlineSearch = { setOnlineSearch(true) },
+                onDisableOnlineSearch = { setOnlineSearch(false) },
                 onCollapsedCardSize = { size -> searchCardHeightPx = size.height },
                 onAllowPosition = { allowed ->
                     scope.launch {
@@ -2542,6 +2544,7 @@ private fun SearchOverlay(
     onlineSearchEnabled: Boolean,
     positionAllowed: Boolean,
     onEnableOnlineSearch: () -> Unit,
+    onDisableOnlineSearch: () -> Unit,
     onAllowPosition: (Boolean) -> Unit,
     onCollapsedCardSize: (IntSize) -> Unit,
 ) {
@@ -2568,6 +2571,7 @@ private fun SearchOverlay(
         onlineSearchEnabled = onlineSearchEnabled,
         positionAllowed = positionAllowed,
         onEnableOnlineSearch = onEnableOnlineSearch,
+        onDisableOnlineSearch = onDisableOnlineSearch,
         onAllowPosition = onAllowPosition,
         onCollapsedCardSize = onCollapsedCardSize,
     )

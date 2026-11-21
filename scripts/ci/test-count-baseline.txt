@@ -8,7 +8,7 @@ navigation	83
 places	163
 planner	22
 plugin-api	103
-plugin-ui-api	12
+plugin-ui-api	13
 plugins/contours	18
 plugins/coordinates	11
 plugins/dev-tools	4
@@ -46,4 +46,4 @@ plugins/way-alerts	23
 regions	309
 routing	86
 tracks	177
-ui-shell	293
+ui-shell	294

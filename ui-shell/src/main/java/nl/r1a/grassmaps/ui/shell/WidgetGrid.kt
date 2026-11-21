@@ -261,7 +261,9 @@ private const val REMOVE_GLYPH = "−"
 private const val CLEAR_GLYPH = "×"
 private const val ADD_GLYPH = "+"
 private const val GRID_GAP_DP = 6
-private const val GRID_CORNER_DP = 10
+
+// The canon glass radius, from round9/_build/common.py's .glass rule.
+private const val GRID_CORNER_DP = 16
 private const val EMPTY_SLOT_HEIGHT_DP = 38
 private const val CELL_PADDING_DP = 10
 private const val CELL_VERTICAL_PADDING_DP = 6

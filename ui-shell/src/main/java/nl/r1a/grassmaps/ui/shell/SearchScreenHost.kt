@@ -313,7 +313,9 @@ private fun secondaryStyle(colors: ShellColors): TextStyle = TextStyle(color = c
 private const val CLOSE_GLYPH = "×"
 private const val ONLINE_BADGE_SEPARATOR = " · "
 private const val WEIGHT_ONE = 1f
-private const val PANEL_CORNER_DP = 12
+
+// The canon glass radius, from round9/_build/common.py's .glass rule.
+private const val PANEL_CORNER_DP = 16
 private const val PANEL_PADDING_DP = 12
 private const val PANEL_MAX_WIDTH_DP = 420
 private const val FIELD_PADDING_DP = 8

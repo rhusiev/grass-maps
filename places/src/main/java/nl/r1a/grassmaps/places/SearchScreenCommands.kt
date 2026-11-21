@@ -70,7 +70,8 @@ private val REMEMBERED_STATUSES: Set<SearchScreenStatus> = setOf(SearchScreenSta
  * fallback when no mounted pack has a search section; the query itself visits
  * every mounted pack (T-0633). An absent `index` uses [defaultIndex], which the
  * app sets to the pack the single-region readers treat as active. The result is
- * a one-line summary; the screen itself reads [SearchScreenSession.state].
+ * a one-line summary that names the switch when the online half was stopped;
+ * the screen itself reads [SearchScreenSession.state].
  *
  * History is written on two events only. `submit: true` runs the query and
  * remembers it, because the user confirmed the field. `pick: true` remembers
@@ -113,10 +114,14 @@ class SearchScreenCommand(
                 if (request.submit && state.status in REMEMBERED_STATUSES) {
                     record(request)
                 }
+                if (state.onlineStopped != null) {
+                    log("search online stopped: ${state.onlineStopped} status=${state.status} hits=${state.hits.size}")
+                }
                 Outcome.Success(
                     CommandResult(
                         "sequence=${state.sequence} status=${state.status} hits=${state.hits.size} " +
-                            "top=\"${state.hits.firstOrNull()?.name ?: ""}\"",
+                            "top=\"${state.hits.firstOrNull()?.name ?: ""}\" " +
+                            "switchOff=${state.onlineStopped?.switch ?: "-"}",
                     ),
                 )
             }

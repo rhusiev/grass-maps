@@ -150,6 +150,7 @@ class SearchScreenSession(
         if (!loading) {
             return Outcome.Failure(AppError.Cancelled)
         }
+        var onlineStopped: AppError.SwitchOff? = null
         val outcome =
             search(
                 SearchScreenRequest(
@@ -159,6 +160,7 @@ class SearchScreenSession(
                     context = context,
                     cancellation = CancellationHandle { token.get() },
                     onPartial = { hits -> publishPartial(query, sequence, hits, token) },
+                    onOnlineStopped = { stopped -> onlineStopped = stopped },
                 ),
             )
         return when (outcome) {
@@ -172,6 +174,7 @@ class SearchScreenSession(
                             sequence = sequence,
                             status = SearchScreenStatus.FAILED,
                             error = outcome.error,
+                            onlineStopped = onlineStopped,
                         ),
                         terminal = true,
                     )
@@ -191,6 +194,7 @@ class SearchScreenSession(
                             sequence = sequence,
                             status = if (hits.isEmpty()) SearchScreenStatus.EMPTY else SearchScreenStatus.RESULTS,
                             hits = hits,
+                            onlineStopped = onlineStopped,
                         ),
                         terminal = true,
                     )

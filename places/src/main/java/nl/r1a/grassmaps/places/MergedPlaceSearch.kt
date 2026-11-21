@@ -26,6 +26,12 @@ import nl.r1a.grassmaps.plugin.api.provider.PlaceHit
  * A failed online search never hides offline results. A failed offline search
  * still succeeds with the online rows when the online call succeeded, so a
  * device without a region index can use online search.
+ *
+ * When the privacy switch stops an online request that had already started,
+ * the typed [AppError.SwitchOff] is reported through
+ * [SearchScreenRequest.onOnlineStopped]. The offline rows still succeed, and
+ * the note lets the screen say online search was turned off without calling an
+ * offline row online (T-0616).
  */
 class MergedPlaceSearch(
     private val offline: suspend (SearchScreenRequest) -> Outcome<List<PlaceHit>>,
@@ -69,6 +75,10 @@ class MergedPlaceSearch(
         val onlineOutcome = online(onlineRequest)
         if (onlineOutcome is Outcome.Failure && onlineOutcome.error == AppError.Cancelled) {
             return onlineOutcome
+        }
+        val stopped = (onlineOutcome as? Outcome.Failure)?.error as? AppError.SwitchOff
+        if (stopped != null) {
+            request.onOnlineStopped(stopped)
         }
         if (request.cancellation.isCancelled()) {
             return Outcome.Failure(AppError.Cancelled)

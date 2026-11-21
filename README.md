@@ -1779,6 +1779,9 @@ method list, the token handling and the CLI examples.
 `core.search.switch` takes `{"enabled":true}` or `{"enabled":false}` and turns
 `network.online_search` on or off. It is allowlisted for control in the debug
 build, so a Device check can repeat the mid-flight cancellation proof (T-0616).
+A search stopped this way still answers with its offline rows and names the
+switch as `switchOff=network.online_search` in the control result, so the
+typed refusal stays visible when an offline index answers.
 
 ## Routing seam
 
@@ -3234,6 +3237,15 @@ the glossary term for the privacy switch. The action calls
 token. Turning the switch off this way cancels a running Photon request at its
 next body chunk with a typed `AppError.SwitchOff`. The debug control path is
 `core.search.switch`.
+
+When an offline index answers, the merge keeps those rows instead of hiding
+them, and carries the typed refusal into `SearchScreenState.onlineStopped`. The
+control result names the switch, logcat records the refusal, and the screen
+says "Online search was turned off". With only index rows it says "Showing
+offline results"; with none it says there are no offline results; if any row
+came from Photon first, it says that rows marked Online arrived before the
+switch and the rest are offline. A row keeps its own source, so an offline row
+is never presented as an online one.
 
 A keystroke may also carry `viewport` as `{"south": .., "west": .., "north":
 .., "east": ..}`. That is "search this area": the provider keeps only results

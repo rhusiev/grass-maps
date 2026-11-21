@@ -12,7 +12,8 @@ import java.util.UUID
 
 class UnitSettingsTest {
     private val directory = File(System.getProperty("java.io.tmpdir"), "unit-settings-${UUID.randomUUID()}")
-    private val file = File(File(directory, "settings"), "units.json")
+    private val legacyFile = File(File(directory, "settings"), "units.json")
+    private val storeFile = File(File(directory, "profiles"), "units.json")
 
     @After
     fun removeDirectory() {
@@ -29,46 +30,47 @@ class UnitSettingsTest {
 
     @Test
     fun imperialIsStoredAndReadBack() {
-        val settings = UnitSettings(file)
+        val settings = open()
 
         assertEquals(Outcome.Success(Unit), settings.set(UnitSystem.Imperial))
         assertEquals(UnitSystem.Imperial, settings.units.value)
-        assertEquals(UnitSystem.Imperial, UnitSettings(file).units.value)
+        assertEquals(UnitSystem.Imperial, open().units.value)
     }
 
     @Test
     fun metricIsStoredAfterImperial() {
-        UnitSettings(file).set(UnitSystem.Imperial)
-        val settings = UnitSettings(file)
+        open().set(UnitSystem.Imperial)
+        val settings = open()
 
         assertEquals(Outcome.Success(Unit), settings.set(UnitSystem.Metric))
 
-        assertEquals(UnitSystem.Metric, UnitSettings(file).units.value)
+        assertEquals(UnitSystem.Metric, open().units.value)
     }
 
     @Test
-    fun aCorruptFileReadsAsMetricWithoutAnError() {
-        file.parentFile?.mkdirs()
-        file.writeText("""{"units":"furlongs"}""")
+    fun aCorruptLegacyValueReadsAsMetricWithoutAnError() {
+        legacyFile.parentFile?.mkdirs()
+        legacyFile.writeText("""{"units":"furlongs"}""")
 
-        assertEquals(UnitSystem.Metric, UnitSettings(file).units.value)
+        assertEquals(UnitSystem.Metric, open().units.value)
 
-        file.writeText("not json at all")
+        legacyFile.writeText("not json at all")
 
-        assertEquals(UnitSystem.Metric, UnitSettings(file).units.value)
+        assertEquals(UnitSystem.Metric, open().units.value)
     }
 
     @Test
-    fun anUnwritableTargetIsATypedFailureAndKeepsTheNewValue() {
-        directory.mkdirs()
-        val blocked = File(directory, "units.json")
-        blocked.mkdirs()
-        val settings = UnitSettings(blocked)
+    fun anUnwritableTargetIsATypedFailureAndKeepsTheStoredValue() {
+        storeFile.parentFile?.mkdirs()
+        storeFile.mkdirs()
+        val settings = open()
 
         val outcome = settings.set(UnitSystem.Imperial)
 
         assertTrue(outcome is Outcome.Failure)
         assertTrue((outcome as Outcome.Failure).error is AppError.Internal)
-        assertEquals(UnitSystem.Imperial, settings.units.value)
+        assertEquals("a value that never reached the file is not published", UnitSystem.Metric, settings.units.value)
     }
+
+    private fun open(): UnitSettings = UnitSettings.open(storeFile, legacyFile)
 }

@@ -25,5 +25,7 @@ interface ProfileSettingsGroup {
     companion object {
         const val ROUTING = "routing"
         const val ALERTS = "alerts"
+        const val STYLE = "style"
+        const val UNITS = "units"
     }
 }

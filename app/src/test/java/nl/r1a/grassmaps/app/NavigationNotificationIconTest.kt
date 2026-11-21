@@ -35,24 +35,36 @@ class NavigationNotificationIconTest {
     }
 
     @Test
-    fun theIconIsOneMonochromeVectorPath() {
+    fun theIconIsAMonochromeGrowsOutVector() {
         val vector = document(DRAWABLE).documentElement
 
         assertEquals("vector", vector.tagName)
         assertEquals("24dp", vector.getAttributeNS(ANDROID_NAMESPACE, "width"))
         assertEquals("24dp", vector.getAttributeNS(ANDROID_NAMESPACE, "height"))
+        assertEquals("24", vector.getAttributeNS(ANDROID_NAMESPACE, "viewportWidth"))
+        assertEquals("24", vector.getAttributeNS(ANDROID_NAMESPACE, "viewportHeight"))
         assertEquals("the icon must not depend on a theme tint", "", vector.getAttributeNS(ANDROID_NAMESPACE, "tint"))
 
+        val groups = vector.getElementsByTagName("group")
+        assertEquals("the traced SVG's -0.2 offset", 1, groups.length)
+        assertEquals("-0.2", (groups.item(0) as Element).getAttributeNS(ANDROID_NAMESPACE, "translateY"))
+
+        // The sprout's stem, two leaves and solid start ring: the four filled
+        // shapes of 3b3-grows-out-notification.svg, with the circle traced as a
+        // path because a VectorDrawable has no circle element.
         val paths = vector.getElementsByTagName("path")
-        assertEquals("the icon is one filled path", 1, paths.length)
-        val path = paths.item(0) as Element
-        assertEquals("#FFFFFFFF", path.getAttributeNS(ANDROID_NAMESPACE, "fillColor"))
-        assertEquals("", path.getAttributeNS(ANDROID_NAMESPACE, "strokeColor"))
-        assertEquals("", path.getAttributeNS(ANDROID_NAMESPACE, "fillAlpha"))
-        assertTrue(
-            "the path has no outline",
-            path.getAttributeNS(ANDROID_NAMESPACE, "pathData").startsWith("M"),
-        )
+        assertEquals("the icon is four filled shapes", 4, paths.length)
+        for (i in 0 until paths.length) {
+            val path = paths.item(i) as Element
+            assertEquals("#FFFFFFFF", path.getAttributeNS(ANDROID_NAMESPACE, "fillColor"))
+            assertEquals("", path.getAttributeNS(ANDROID_NAMESPACE, "strokeColor"))
+            assertEquals("", path.getAttributeNS(ANDROID_NAMESPACE, "fillAlpha"))
+            assertTrue(
+                "path $i has no outline",
+                path.getAttributeNS(ANDROID_NAMESPACE, "pathData").startsWith("M") ||
+                    path.getAttributeNS(ANDROID_NAMESPACE, "pathData").startsWith("m"),
+            )
+        }
     }
 
     private fun document(path: String) =

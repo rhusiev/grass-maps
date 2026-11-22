@@ -26,7 +26,7 @@ import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
  *
  * | Feature | Walk (4 km/h) | Hike (5 km/h) | Bike (18 km/h) |
  * |---|---|---|---|
- * | Railway crossing | 100 m, then 50 m | 50 m, 36 s | 150 m, 30 s |
+ * | Railway crossing, tram crossing | 100 m, then 50 m | 50 m, 36 s | 150 m, 30 s |
  * | Tunnel | - | - | 200 m, 40 s |
  * | Hazard, ford, barrier | - | 30 m, 22 s | 100 m, 20 s |
  *
@@ -83,7 +83,9 @@ object WayAlertDistance {
 
     private fun walkStages(kind: WayAlertFeatureKind): List<Double> =
         when (kind) {
-            WayAlertFeatureKind.RailwayCrossing -> listOf(WALK_RAILWAY_FIRST_METERS, WALK_RAILWAY_SECOND_METERS)
+            WayAlertFeatureKind.RailwayCrossing,
+            WayAlertFeatureKind.TramLevelCrossing,
+            -> listOf(WALK_RAILWAY_FIRST_METERS, WALK_RAILWAY_SECOND_METERS)
 
             WayAlertFeatureKind.Tunnel,
             WayAlertFeatureKind.Hazard,
@@ -94,15 +96,23 @@ object WayAlertDistance {
 
     private fun bikeMeters(kind: WayAlertFeatureKind): Double =
         when (kind) {
-            WayAlertFeatureKind.RailwayCrossing -> 150.0
+            WayAlertFeatureKind.RailwayCrossing,
+            WayAlertFeatureKind.TramLevelCrossing,
+            -> 150.0
+
             WayAlertFeatureKind.Tunnel -> 200.0
+
             WayAlertFeatureKind.Hazard, WayAlertFeatureKind.Ford, WayAlertFeatureKind.Barrier -> 100.0
         }
 
     private fun hikeMeters(kind: WayAlertFeatureKind): Double? =
         when (kind) {
-            WayAlertFeatureKind.RailwayCrossing -> 50.0
+            WayAlertFeatureKind.RailwayCrossing,
+            WayAlertFeatureKind.TramLevelCrossing,
+            -> 50.0
+
             WayAlertFeatureKind.Tunnel -> null
+
             WayAlertFeatureKind.Hazard, WayAlertFeatureKind.Ford, WayAlertFeatureKind.Barrier -> 30.0
         }
 }

@@ -36,12 +36,17 @@ enum class AlertKind {
         /**
          * The alert kind that announces a region way feature (T-0319). Ford and
          * barrier share the hazard switch and banner, as the product scope's
-         * one hazard row does.
+         * one hazard row does. A tram crossing keeps the railway crossing
+         * banner: only the route-warning list names the two kinds apart (Q50).
          */
         fun forWayFeature(kind: WayAlertFeatureKind): AlertKind =
             when (kind) {
-                WayAlertFeatureKind.RailwayCrossing -> RailwayCrossing
+                WayAlertFeatureKind.RailwayCrossing,
+                WayAlertFeatureKind.TramLevelCrossing,
+                -> RailwayCrossing
+
                 WayAlertFeatureKind.Tunnel -> Tunnel
+
                 WayAlertFeatureKind.Hazard, WayAlertFeatureKind.Ford, WayAlertFeatureKind.Barrier -> Hazard
             }
 

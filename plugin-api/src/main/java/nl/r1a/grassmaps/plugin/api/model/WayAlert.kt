@@ -7,11 +7,14 @@ import kotlinx.serialization.Serializable
  *
  * [Ford] and [Barrier] are separate kinds because the route-warning list
  * (T-0409) will name them; the way-alert switches group both under the hazard
- * switch, as the product scope does.
+ * switch, as the product scope does. [TramLevelCrossing] is separate from
+ * [RailwayCrossing] because the route-warning list names a tram crossing on its
+ * own (Q50); the navigation banner still uses the railway crossing alert.
  */
 @Serializable
 enum class WayAlertFeatureKind {
     RailwayCrossing,
+    TramLevelCrossing,
     Tunnel,
     Hazard,
     Ford,

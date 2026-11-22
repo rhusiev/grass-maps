@@ -5,11 +5,11 @@ import nl.r1a.grassmaps.plugin.api.model.WayAlertFeatureKind
 import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
 
 /**
- * The five things a route warning names (T-0409).
+ * The six things a route warning names (T-0409, Q50).
  *
- * A ford, a barrier and a railway crossing are region features, the same ones
- * the way alerts read. Steps are a route attribute, because the region feature
- * component does not carry it: the route engine's annotated runs do. A private
+ * A ford, a barrier and the two crossing kinds are region features, the same
+ * ones the way alerts read. Steps are a route attribute, because the region
+ * feature component does not carry it: the route engine's annotated runs do. A private
  * way would be one too, but no v1 engine supplies the OSM access tag it needs;
  * the kind stays for an engine that does.
  */
@@ -18,6 +18,7 @@ enum class RouteWarningKind {
     Steps,
     Barrier,
     RailwayCrossing,
+    TramLevelCrossing,
     PrivateWay,
 }
 
@@ -71,6 +72,7 @@ data class RouteWarning(
  * | Steps | yes | yes | yes |
  * | Barrier | yes | yes | no |
  * | Railway crossing | yes | yes | yes |
+ * | Tram crossing | yes | yes | yes |
  * | Private way | yes | yes | yes |
  *
  * A barrier is dropped for a bike because the region component keeps gates,
@@ -101,7 +103,9 @@ object RouteWarningPolicy {
 
             RouteWarningKind.Barrier -> FOOT
 
-            RouteWarningKind.RailwayCrossing -> FOOT_AND_BIKE
+            RouteWarningKind.RailwayCrossing,
+            RouteWarningKind.TramLevelCrossing,
+            -> FOOT_AND_BIKE
         }
 
     fun appliesTo(
@@ -109,12 +113,13 @@ object RouteWarningPolicy {
         profile: RouteProfile,
     ): Boolean = profile in profilesFor(kind)
 
-    /** The warning kind a region feature names, or null when it is not one of the five. */
+    /** The warning kind a region feature names, or null when it is not one of the six. */
     internal fun kindOf(kind: WayAlertFeatureKind): RouteWarningKind? =
         when (kind) {
             WayAlertFeatureKind.Ford -> RouteWarningKind.Ford
             WayAlertFeatureKind.Barrier -> RouteWarningKind.Barrier
             WayAlertFeatureKind.RailwayCrossing -> RouteWarningKind.RailwayCrossing
+            WayAlertFeatureKind.TramLevelCrossing -> RouteWarningKind.TramLevelCrossing
             WayAlertFeatureKind.Hazard, WayAlertFeatureKind.Tunnel -> null
         }
 }

@@ -1,0 +1,27 @@
+{
+  "id": "style.meadow",
+  "name": "plugin.style_meadow.name",
+  "description": "plugin.style_meadow.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmaps.plugins.style.meadow.MeadowStylePlugin",
+  "contributes": {
+    "providers": [
+      {
+        "contract": "map.layers",
+        "version": "1.0.0",
+        "capabilities": {
+          "styles": ["meadow", "meadow-dark"]
+        }
+      }
+    ]
+  },
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": ["map", "contours"]
+  },
+  "activation": [
+    "provider"
+  ]
+}

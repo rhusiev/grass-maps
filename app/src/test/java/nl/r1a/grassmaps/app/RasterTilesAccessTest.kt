@@ -35,7 +35,7 @@ class RasterTilesAccessTest {
             val outcome =
                 tiles.apply(
                     host = host,
-                    styleId = StyleId("standard"),
+                    styleId = StyleId("meadow"),
                     enabled = true,
                     layer =
                         RasterLayerState(
@@ -62,7 +62,7 @@ class RasterTilesAccessTest {
             val host = FakeMapHost(CAMERA)
             val tiles = RasterTilesAccess(registry(GeneratedPlugins.plugins), NoNetworkGate)
 
-            tiles.apply(host, StyleId("standard"), enabled = true, layer = underlay())
+            tiles.apply(host, StyleId("meadow"), enabled = true, layer = underlay())
 
             assertEquals(LayerSlot.Underlay, host.layers.single().slot)
         }
@@ -73,8 +73,8 @@ class RasterTilesAccessTest {
             val host = FakeMapHost(CAMERA)
             val tiles = RasterTilesAccess(registry(GeneratedPlugins.plugins), NoNetworkGate)
 
-            tiles.apply(host, StyleId("standard"), enabled = true, layer = underlay())
-            tiles.apply(host, StyleId("standard"), enabled = true, layer = underlay(percent = 40))
+            tiles.apply(host, StyleId("meadow"), enabled = true, layer = underlay())
+            tiles.apply(host, StyleId("meadow"), enabled = true, layer = underlay(percent = 40))
 
             // The host replaces a layer with the same id in place, so a slider
             // drag never removes the layer and never drops the engine's tiles.
@@ -93,8 +93,8 @@ class RasterTilesAccessTest {
             val host = FakeMapHost(CAMERA)
             val tiles = RasterTilesAccess(registry(GeneratedPlugins.plugins), NoNetworkGate)
 
-            tiles.apply(host, StyleId("standard"), enabled = true, layer = underlay())
-            assertEquals(Outcome.Success(Unit), tiles.apply(host, StyleId("standard"), enabled = false, layer = underlay()))
+            tiles.apply(host, StyleId("meadow"), enabled = true, layer = underlay())
+            assertEquals(Outcome.Success(Unit), tiles.apply(host, StyleId("meadow"), enabled = false, layer = underlay()))
 
             assertTrue(host.layers.isEmpty())
             assertFalse(tiles.allows("https://tile.openstreetmap.org/5/10/20.png"))
@@ -106,7 +106,7 @@ class RasterTilesAccessTest {
             val host = FakeMapHost(CAMERA)
             val tiles = RasterTilesAccess(registry(GeneratedPlugins.plugins), NoNetworkGate)
 
-            val outcome = tiles.apply(host, StyleId("standard"), enabled = false, layer = underlay(), areas = listOf(AREA))
+            val outcome = tiles.apply(host, StyleId("meadow"), enabled = false, layer = underlay(), areas = listOf(AREA))
 
             assertEquals(Outcome.Success(Unit), outcome)
             val added = host.layers.single()
@@ -126,9 +126,9 @@ class RasterTilesAccessTest {
         runTest {
             val host = FakeMapHost(CAMERA)
             val tiles = RasterTilesAccess(registry(GeneratedPlugins.plugins), NoNetworkGate)
-            tiles.apply(host, StyleId("standard"), enabled = false, layer = underlay(), areas = listOf(AREA))
+            tiles.apply(host, StyleId("meadow"), enabled = false, layer = underlay(), areas = listOf(AREA))
 
-            tiles.apply(host, StyleId("standard"), enabled = false, layer = underlay().copy(areasShown = false), areas = listOf(AREA))
+            tiles.apply(host, StyleId("meadow"), enabled = false, layer = underlay().copy(areasShown = false), areas = listOf(AREA))
 
             assertTrue(host.layers.isEmpty())
         }
@@ -140,7 +140,7 @@ class RasterTilesAccessTest {
 
             assertEquals(
                 Outcome.Failure(AppError.NotFound),
-                tiles.apply(FakeMapHost(CAMERA), StyleId("standard"), enabled = true, layer = underlay()),
+                tiles.apply(FakeMapHost(CAMERA), StyleId("meadow"), enabled = true, layer = underlay()),
             )
         }
 

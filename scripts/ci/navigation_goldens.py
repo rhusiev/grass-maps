@@ -6,7 +6,7 @@ navigation state, the committed `test-data/navigation/screen-route.json`. The
 screen is still the production composable: the command supplies the same values
 a published state does, not a picture. The map behind it is set by
 `core.map.set_camera`, and the theme is the system night mode plus the matching
-Standard style.
+Meadow style.
 
 Comparison uses the same 108x192 mean-block grid as the map goldens, applied to
 the whole frame: the turn card and the End/ETA/expand bar are the subject, so the
@@ -40,7 +40,7 @@ SCHEMA = "grass-maps-navigation-goldens/1"
 REFERENCE = ROOT / "test-data" / "navigation-goldens"
 ROUTE_PATH = ROOT / "test-data" / "navigation" / "screen-route.json"
 ROUTE = json.loads(ROUTE_PATH.read_text(encoding="utf-8"))
-STYLE_IDS = {"light": "standard", "dark": "standard-dark"}
+STYLE_IDS = {"light": "meadow", "dark": "meadow-dark"}
 THEMES = ("light", "dark")
 CASES = (
     ("following", "collapsed", ()),

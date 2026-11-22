@@ -54,8 +54,8 @@ internal class DebugMapHarness(
                             switchesDone = true
                             Log.i(TAG, "switch-start")
                             repeat(styleSwitches) { index ->
-                                val touring = index % 2 == 0
-                                val style = bundle.styles.getValue(if (touring) TOURING else STANDARD)
+                                val trail = index % 2 == 0
+                                val style = bundle.styles.getValue(if (trail) TRAIL else MEADOW)
                                 surface.host.setStyle(style.spec).onFailure { error ->
                                     Log.w(TAG, "style rejected: $error")
                                 }

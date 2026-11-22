@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the Standard style single-colour SDF icon sprite.
+"""Build the Meadow style single-colour SDF icon sprite.
 
 The source SVGs are vendored next to this script.  `sources.json` records, for
 every icon, the upstream repository, the path inside it, the commit the file
@@ -25,7 +25,7 @@ The 15 road-shield frames (`US:I-<n>char`, `NL:S-road-<n>char`,
 because the open icon sets have no shield outline for these networks.  They
 are Apache-2.0, like the rest of this repository.
 
-The output is one sheet used by both the light and dark Standard variants.  A
+The output is one sheet used by both the light and dark Meadow variants.  A
 pixel's red, green and blue channels are white; the alpha channel carries the
 signed distance.  MapLibre decodes it with the constants of its SDF shader
 (`SDF_PX = 8`, cutoff 0.25): alpha 255 * (1 - 0.25 - d / 8), where d is the
@@ -61,7 +61,7 @@ SOURCES = HERE / "sources.json"
 SDF_RADIUS_PX = 8.0
 SDF_CUTOFF = 0.25
 SDF_PADDING_PX = 6
-SHEET_NAME = "standard"
+SHEET_NAME = "meadow"
 SHEET_1X_WIDTH = 512
 SHEET_GAP_PX = 1
 # Four samples per output pixel keep the edge position within a quarter pixel

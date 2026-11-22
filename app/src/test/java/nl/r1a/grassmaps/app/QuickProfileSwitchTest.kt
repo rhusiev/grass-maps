@@ -42,8 +42,8 @@ class QuickProfileSwitchTest {
 
     @Test
     fun oneTapPublishesAllFiveCategoriesFromTheNextProfile() {
-        seed(walk, MapStyleChoice.STANDARD, UnitSystem.Metric, RoutePreference.Avoid, false)
-        seed(bike, MapStyleChoice.TOURING, UnitSystem.Imperial, RoutePreference.DontMind, true)
+        seed(walk, MapStyleChoice.MEADOW, UnitSystem.Metric, RoutePreference.Avoid, false)
+        seed(bike, MapStyleChoice.TRAIL, UnitSystem.Imperial, RoutePreference.DontMind, true)
         val controller = controller()
         val switch = switch(BuiltInProfiles.ALL, controller)
 
@@ -51,7 +51,7 @@ class QuickProfileSwitchTest {
         val active = controller.active.value
 
         assertEquals(bike, active.profileId)
-        assertEquals(MapStyleChoice.TOURING, active.style)
+        assertEquals(MapStyleChoice.TRAIL, active.style)
         assertEquals(UnitSystem.Imperial, active.units)
         assertEquals(RoutePreference.DontMind, active.routing.hills)
         assertEquals(true, active.alerts.settings.signal)

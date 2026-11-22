@@ -7,13 +7,13 @@ import kotlinx.coroutines.flow.getAndUpdate
 
 /**
  * The map styles a user can pick. The UI names are Meadow and Trail. The ids
- * stay `standard` and `touring` until the rename task (T-0617).
+ * are `meadow` and `trail`.
  */
 enum class MapStyleChoice(
     val styleId: String,
 ) {
-    STANDARD("standard"),
-    TOURING("touring"),
+    MEADOW("meadow"),
+    TRAIL("trail"),
     ;
 
     companion object {
@@ -27,7 +27,7 @@ enum class MapStyleChoice(
  * collects [active] and applies the matching style in place.
  */
 class ActiveStyleState(
-    initial: MapStyleChoice = MapStyleChoice.STANDARD,
+    initial: MapStyleChoice = MapStyleChoice.MEADOW,
 ) {
     private val state = MutableStateFlow(initial)
 

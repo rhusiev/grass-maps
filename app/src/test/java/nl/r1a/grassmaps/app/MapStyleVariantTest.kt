@@ -10,30 +10,30 @@ import org.junit.Test
  *
  * Route preview, the Stops sheet and the navigation screen are states of one
  * production map screen, so they cannot load a different variant. The dark
- * captures used to force `standard-dark` through the debug command while the
+ * captures used to force `meadow-dark` through the debug command while the
  * app itself kept the light base under dark chrome; this table is the app's
  * own path now.
  */
 class MapStyleVariantTest {
     @Test
     fun routePreviewAndStopsTakeTheDarkVariantInTheDarkTheme() {
-        val preview = mapStyleId(MapStyleChoice.STANDARD, dark = true)
-        val stops = mapStyleId(MapStyleChoice.STANDARD, dark = true)
+        val preview = mapStyleId(MapStyleChoice.MEADOW, dark = true)
+        val stops = mapStyleId(MapStyleChoice.MEADOW, dark = true)
 
-        assertEquals(StyleId("standard-dark"), preview)
+        assertEquals(StyleId("meadow-dark"), preview)
         assertEquals("both screens are one map screen and one variant", preview, stops)
     }
 
     @Test
     fun trailKeepsItsOwnDarkVariant() {
-        assertEquals(StyleId("touring-dark"), mapStyleId(MapStyleChoice.TOURING, dark = true))
-        assertEquals(StyleId("touring"), mapStyleId(MapStyleChoice.TOURING, dark = false))
+        assertEquals(StyleId("trail-dark"), mapStyleId(MapStyleChoice.TRAIL, dark = true))
+        assertEquals(StyleId("trail"), mapStyleId(MapStyleChoice.TRAIL, dark = false))
     }
 
     @Test
     fun theLightThemeKeepsTheLightVariants() {
-        assertEquals(StyleId("standard"), mapStyleId(MapStyleChoice.STANDARD, dark = false))
-        assertEquals(StyleId("standard-dark"), mapStyleId(MapStyleChoice.STANDARD, dark = true))
+        assertEquals(StyleId("meadow"), mapStyleId(MapStyleChoice.MEADOW, dark = false))
+        assertEquals(StyleId("meadow-dark"), mapStyleId(MapStyleChoice.MEADOW, dark = true))
     }
 
     @Test
@@ -41,8 +41,8 @@ class MapStyleVariantTest {
         val dark = isDarkTheme(fixture = null, override = null, systemDark = true)
 
         assertEquals("the system night mode is the default", true, dark)
-        assertEquals(StyleId("standard-dark"), mapStyleId(MapStyleChoice.STANDARD, dark))
-        assertEquals(StyleId("touring-dark"), mapStyleId(MapStyleChoice.TOURING, dark))
+        assertEquals(StyleId("meadow-dark"), mapStyleId(MapStyleChoice.MEADOW, dark))
+        assertEquals(StyleId("trail-dark"), mapStyleId(MapStyleChoice.TRAIL, dark))
     }
 
     @Test

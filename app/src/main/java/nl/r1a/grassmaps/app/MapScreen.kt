@@ -268,12 +268,12 @@ import kotlin.math.roundToInt
 import nl.r1a.grassmaps.plugins.layers.panel.R as LayersStrings
 import nl.r1a.grassmaps.ui.shell.R as ShellStrings
 
-private val STANDARD_STYLE_PLUGIN = PluginId("style.standard")
-private val TOURING_STYLE_PLUGIN = PluginId("style.touring")
-internal val STANDARD = StyleId("standard")
-internal val STANDARD_DARK = StyleId("standard-dark")
-internal val TOURING = StyleId("touring")
-internal val TOURING_DARK = StyleId("touring-dark")
+private val MEADOW_STYLE_PLUGIN = PluginId("style.meadow")
+private val TRAIL_STYLE_PLUGIN = PluginId("style.trail")
+internal val MEADOW = StyleId("meadow")
+internal val MEADOW_DARK = StyleId("meadow-dark")
+internal val TRAIL = StyleId("trail")
+internal val TRAIL_DARK = StyleId("trail-dark")
 private const val TAG = "GrassMapsMap"
 private const val BAR_PADDING_DP = 16
 
@@ -485,7 +485,7 @@ private fun MapScreenContent(
                 loadBundle(container, context.applicationContext)
             }
         if (bundle == null) {
-            Log.w(TAG, "no map style provider; check the style.standard plugin manifest")
+            Log.w(TAG, "no map style provider; check the style.meadow plugin manifest")
         }
     }
     val loaded = bundle
@@ -511,7 +511,7 @@ private fun MapScreenContent(
         remember(context) {
             PuckAgeFormatter { ageMillis -> formatPuckAge(context, ageMillis) }
         }
-    val initialStyle = loaded.styles.getValue(STANDARD).spec
+    val initialStyle = loaded.styles.getValue(MEADOW).spec
     // Only the base style owns the surface. A language change recomposes the
     // screen but keeps this key, so the map is never rebuilt (T-0111).
     val surface =
@@ -3190,19 +3190,19 @@ private suspend fun loadBundle(
     // follows it, so a pack installed later needs no restart.
     container.startSearchIndexes()
     val sources = MapSources.resolve(context, container.regionsRoot)
-    val standard = loadStyle(container, STANDARD_STYLE_PLUGIN, STANDARD) ?: return null
-    // A missing Touring plugin leaves Trail drawing the Standard style, and a
+    val meadow = loadStyle(container, MEADOW_STYLE_PLUGIN, MEADOW) ?: return null
+    // A missing Trail plugin leaves Trail drawing the Meadow style, and a
     // missing dark variant keeps its light variant rather than no map.
-    val standardDark = loadStyle(container, STANDARD_STYLE_PLUGIN, STANDARD_DARK) ?: standard
-    val touring = loadStyle(container, TOURING_STYLE_PLUGIN, TOURING) ?: standard
-    val touringDark = loadStyle(container, TOURING_STYLE_PLUGIN, TOURING_DARK) ?: touring
+    val meadowDark = loadStyle(container, MEADOW_STYLE_PLUGIN, MEADOW_DARK) ?: meadow
+    val trail = loadStyle(container, TRAIL_STYLE_PLUGIN, TRAIL) ?: meadow
+    val trailDark = loadStyle(container, TRAIL_STYLE_PLUGIN, TRAIL_DARK) ?: trail
     return MapBundle(
         styles =
             mapOf(
-                STANDARD to standard,
-                STANDARD_DARK to standardDark,
-                TOURING to touring,
-                TOURING_DARK to touringDark,
+                MEADOW to meadow,
+                MEADOW_DARK to meadowDark,
+                TRAIL to trail,
+                TRAIL_DARK to trailDark,
             ),
         sources = sources,
     )

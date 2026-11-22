@@ -34,39 +34,39 @@ class ProfileSettingsStyleUnitsTest {
 
     @Test
     fun copyingTheTwoGroupsCopiesTheStyleAndTheUnits() {
-        style.select(BuiltInProfiles.WALK, MapStyleChoice.TOURING)
+        style.select(BuiltInProfiles.WALK, MapStyleChoice.TRAIL)
         units.set(BuiltInProfiles.WALK, UnitSystem.Imperial)
 
         val result = service.copySettings("walk", "bike", setOf(ProfileSettingsGroup.STYLE, ProfileSettingsGroup.UNITS))
 
         assertTrue(result is Outcome.Success)
-        assertEquals(MapStyleChoice.TOURING, style.forProfile(BuiltInProfiles.BIKE))
+        assertEquals(MapStyleChoice.TRAIL, style.forProfile(BuiltInProfiles.BIKE))
         assertEquals(UnitSystem.Imperial, units.forProfile(BuiltInProfiles.BIKE))
     }
 
     @Test
     fun resettingTheTwoGroupsRestoresDefaultsAndUndoBringsThemBack() {
-        style.select(BuiltInProfiles.BIKE, MapStyleChoice.TOURING)
+        style.select(BuiltInProfiles.BIKE, MapStyleChoice.TRAIL)
         units.set(BuiltInProfiles.BIKE, UnitSystem.Imperial)
 
         assertTrue(service.reset("bike", setOf(ProfileSettingsGroup.STYLE, ProfileSettingsGroup.UNITS)) is Outcome.Success)
-        assertEquals(MapStyleChoice.STANDARD, style.forProfile(BuiltInProfiles.BIKE))
+        assertEquals(MapStyleChoice.MEADOW, style.forProfile(BuiltInProfiles.BIKE))
         assertEquals(UnitSystem.Metric, units.forProfile(BuiltInProfiles.BIKE))
 
         assertTrue(service.undo() is Outcome.Success)
-        assertEquals(MapStyleChoice.TOURING, style.forProfile(BuiltInProfiles.BIKE))
+        assertEquals(MapStyleChoice.TRAIL, style.forProfile(BuiltInProfiles.BIKE))
         assertEquals(UnitSystem.Imperial, units.forProfile(BuiltInProfiles.BIKE))
     }
 
     @Test
     fun undoingACopyRestoresTheEarlierStyleAndUnits() {
-        style.select(BuiltInProfiles.WALK, MapStyleChoice.TOURING)
+        style.select(BuiltInProfiles.WALK, MapStyleChoice.TRAIL)
         units.set(BuiltInProfiles.WALK, UnitSystem.Imperial)
 
         service.copySettings("walk", "bike", setOf(ProfileSettingsGroup.STYLE, ProfileSettingsGroup.UNITS))
         assertTrue(service.undo() is Outcome.Success)
 
-        assertEquals(MapStyleChoice.STANDARD, style.forProfile(BuiltInProfiles.BIKE))
+        assertEquals(MapStyleChoice.MEADOW, style.forProfile(BuiltInProfiles.BIKE))
         assertEquals(UnitSystem.Metric, units.forProfile(BuiltInProfiles.BIKE))
     }
 }

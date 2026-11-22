@@ -34,7 +34,7 @@ import kotlin.math.sqrt
  * crossing routes from mixing into one polygon.
  *
  * Hiking and cycling bands have their own palette, opacity and minimum zoom:
- * the design gives hiking z10 in Standard and z9 in Touring, and cycling z12
+ * the design gives hiking z10 in Meadow and z9 in Trail, and cycling z12
  * and z11, so one overlay serves both styles. A waymark is one colored shield
  * per member way per relation from z14: a plate tinted with the network colour
  * and one OSMC foreground shape in white. Point placement makes one way one
@@ -487,10 +487,10 @@ object RouteRelationLayers {
         return (segment.laneRank - center) / segment.laneCount
     }
 
-    /** The design gives hiking z10 in Standard and z9 in Touring; one overlay serves both. */
+    /** The design gives hiking z10 in Meadow and z9 in Trail; one overlay serves both. */
     private const val HIKING_MIN_ZOOM = 9f
 
-    /** The design gives cycling z12 in Standard and z11 in Touring; one overlay serves both. */
+    /** The design gives cycling z12 in Meadow and z11 in Trail; one overlay serves both. */
     private const val CYCLING_MIN_ZOOM = 11f
 
     /**

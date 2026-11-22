@@ -1,0 +1,27 @@
+{
+  "id": "style.trail",
+  "name": "plugin.style_trail.name",
+  "description": "plugin.style_trail.description",
+  "version": "0.1.0",
+  "api": "0.1.0",
+  "implementation": "nl.r1a.grassmaps.plugins.style.trail.TrailStylePlugin",
+  "contributes": {
+    "providers": [
+      {
+        "contract": "map.layers",
+        "version": "1.0.0",
+        "capabilities": {
+          "styles": ["trail", "trail-dark"]
+        }
+      }
+    ]
+  },
+  "needs": {
+    "network": [],
+    "location": "none",
+    "regions": ["map", "contours"]
+  },
+  "activation": [
+    "provider"
+  ]
+}

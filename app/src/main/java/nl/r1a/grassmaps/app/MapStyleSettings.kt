@@ -45,8 +45,8 @@ internal fun mapStyleId(
 ): StyleId =
     StyleId(
         when (choice) {
-            MapStyleChoice.STANDARD -> if (dark) "standard-dark" else "standard"
-            MapStyleChoice.TOURING -> if (dark) "touring-dark" else "touring"
+            MapStyleChoice.MEADOW -> if (dark) "meadow-dark" else "meadow"
+            MapStyleChoice.TRAIL -> if (dark) "trail-dark" else "trail"
         },
     )
 
@@ -54,7 +54,7 @@ internal fun mapStyleId(
  * The map style chosen in the layers panel (T-0109), one value per profile
  * (T-0603). The store is keyed by [ProfileId] under the per-profile contract of
  * architecture section 20. Each profile holds the stable key [STYLE_KEY] with
- * `standard` or `touring`; only a profile that differs from Meadow is stored.
+ * `meadow` or `trail`; only a profile that differs from Meadow is stored.
  *
  * [open] migrates the unversioned app-wide `settings/style.json` into
  * [BuiltInProfiles.WALK], the profile active before profiles existed, and keeps
@@ -162,7 +162,7 @@ class MapStyleSettings(
 
     companion object {
         /** Meadow is the default style. */
-        val DEFAULT_CHOICE: MapStyleChoice = MapStyleChoice.STANDARD
+        val DEFAULT_CHOICE: MapStyleChoice = MapStyleChoice.MEADOW
 
         const val SCHEMA_VERSION = 1
         const val ERROR_ID = "app.map_style_settings"

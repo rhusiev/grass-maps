@@ -8,7 +8,7 @@ import nl.r1a.grassmaps.plugin.api.provider.MapLayerProvider
 import nl.r1a.grassmaps.plugin.api.provider.ProviderContract
 
 /**
- * Supplies the contour overlays for the Standard and Touring variants.
+ * Supplies the contour overlays for the Meadow and Trail variants.
  *
  * The plugin is an overlay provider, not a base-style provider: it publishes no
  * [StyleSpec] of its own and draws on the `contours` source that the mounted

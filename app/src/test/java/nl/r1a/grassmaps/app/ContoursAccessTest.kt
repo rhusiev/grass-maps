@@ -17,11 +17,11 @@ import org.junit.Test
 
 class ContoursAccessTest {
     @Test
-    fun theProviderPublishesTheStandardOverlayThroughTheRegistry() =
+    fun theProviderPublishesTheMeadowOverlayThroughTheRegistry() =
         runTest {
             val contours = ContoursAccess(registry(GeneratedPlugins.plugins))
 
-            val layers = contours.layers(StyleId("standard"))
+            val layers = contours.layers(StyleId("meadow"))
 
             assertTrue(layers is Outcome.Success)
             val published = (layers as Outcome.Success).value
@@ -38,7 +38,7 @@ class ContoursAccessTest {
             val host = FakeMapHost(CAMERA)
             val contours = ContoursAccess(registry(GeneratedPlugins.plugins))
 
-            assertEquals(Outcome.Success(Unit), contours.apply(host, StyleId("standard"), enabled = true))
+            assertEquals(Outcome.Success(Unit), contours.apply(host, StyleId("meadow"), enabled = true))
 
             assertEquals(4, host.layers.size)
             assertTrue(host.layers.all { it.owner == CONTOURS_PLUGIN })
@@ -55,9 +55,9 @@ class ContoursAccessTest {
         runTest {
             val host = FakeMapHost(CAMERA)
             val contours = ContoursAccess(registry(GeneratedPlugins.plugins))
-            contours.apply(host, StyleId("standard"), enabled = true)
+            contours.apply(host, StyleId("meadow"), enabled = true)
 
-            assertEquals(Outcome.Success(Unit), contours.apply(host, StyleId("standard"), enabled = false))
+            assertEquals(Outcome.Success(Unit), contours.apply(host, StyleId("meadow"), enabled = false))
 
             assertTrue(host.layers.isEmpty())
             assertEquals(listOf(CONTOURS_PLUGIN, CONTOURS_PLUGIN), host.removedOwners)
@@ -80,7 +80,7 @@ class ContoursAccessTest {
 
             assertEquals(
                 Outcome.Failure(AppError.NotFound),
-                contours.apply(FakeMapHost(CAMERA), StyleId("standard"), enabled = true),
+                contours.apply(FakeMapHost(CAMERA), StyleId("meadow"), enabled = true),
             )
         }
 

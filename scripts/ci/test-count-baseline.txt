@@ -36,8 +36,8 @@ plugins/route-layer	20
 plugins/route-relations	20
 plugins/route-warnings	12
 plugins/share	49
-plugins/style-standard	13
-plugins/style-touring	13
+plugins/style-meadow	13
+plugins/style-trail	13
 plugins/synthetic-data	20
 plugins/track-layer	6
 plugins/track-library	39

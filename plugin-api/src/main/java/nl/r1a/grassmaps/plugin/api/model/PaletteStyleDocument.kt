@@ -12,7 +12,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 
 /**
- * An authored style document (the Standard and Touring styles), split into one
+ * An authored style document (the Meadow and Trail styles), split into one
  * layer list and a light/dark palette pair. Every colour in the list is a
  * palette token, so both variants have the same layers, the same draw order and
  * the same cost. The base document carries only the version, glyphs and sprite,

@@ -9,43 +9,43 @@ import org.junit.Test
 class ActiveStyleStateTest {
     @Test
     fun startsOnMeadowByDefault() {
-        assertEquals(MapStyleChoice.STANDARD, ActiveStyleState().active.value)
+        assertEquals(MapStyleChoice.MEADOW, ActiveStyleState().active.value)
     }
 
     @Test
     fun selectingTrailChangesTheActiveStyle() {
         val state = ActiveStyleState()
 
-        assertTrue(state.select(MapStyleChoice.TOURING))
+        assertTrue(state.select(MapStyleChoice.TRAIL))
 
-        assertEquals(MapStyleChoice.TOURING, state.active.value)
+        assertEquals(MapStyleChoice.TRAIL, state.active.value)
     }
 
     @Test
     fun selectingTheActiveStyleChangesNothing() {
-        val state = ActiveStyleState(MapStyleChoice.TOURING)
+        val state = ActiveStyleState(MapStyleChoice.TRAIL)
 
-        assertFalse(state.select(MapStyleChoice.TOURING))
+        assertFalse(state.select(MapStyleChoice.TRAIL))
 
-        assertEquals(MapStyleChoice.TOURING, state.active.value)
+        assertEquals(MapStyleChoice.TRAIL, state.active.value)
     }
 
     @Test
     fun switchingBackRestoresMeadow() {
         val state = ActiveStyleState()
-        state.select(MapStyleChoice.TOURING)
+        state.select(MapStyleChoice.TRAIL)
 
-        state.select(MapStyleChoice.STANDARD)
+        state.select(MapStyleChoice.MEADOW)
 
-        assertEquals(MapStyleChoice.STANDARD, state.active.value)
+        assertEquals(MapStyleChoice.MEADOW, state.active.value)
     }
 
     @Test
     fun choicesMapToTheUnchangedStyleIds() {
-        assertEquals("standard", MapStyleChoice.STANDARD.styleId)
-        assertEquals("touring", MapStyleChoice.TOURING.styleId)
-        assertEquals(MapStyleChoice.TOURING, MapStyleChoice.fromStyleId("touring"))
-        assertNull(MapStyleChoice.fromStyleId("touring-dark"))
+        assertEquals("meadow", MapStyleChoice.MEADOW.styleId)
+        assertEquals("trail", MapStyleChoice.TRAIL.styleId)
+        assertEquals(MapStyleChoice.TRAIL, MapStyleChoice.fromStyleId("trail"))
+        assertNull(MapStyleChoice.fromStyleId("trail-dark"))
         assertNull(MapStyleChoice.fromStyleId(null))
     }
 }

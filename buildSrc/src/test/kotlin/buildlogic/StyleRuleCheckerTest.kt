@@ -113,7 +113,7 @@ class StyleRuleCheckerTest {
     fun checksEveryVariantWithItsOwnPalette() {
         val document =
             document(fills(58) + line("stream", emptyMap())).toMutableMap().apply {
-                put("styles", mapOf("standard" to "light", "standard-dark" to "dark"))
+                put("styles", mapOf("meadow" to "light", "meadow-dark" to "dark"))
                 put(
                     "palettes",
                     mapOf(
@@ -125,7 +125,7 @@ class StyleRuleCheckerTest {
 
         val errors = StyleRuleChecker.check("style.json", document)
 
-        assertTrue(errors.any { "standard-dark" in it && "unknown palette token '@line'" in it })
+        assertTrue(errors.any { "meadow-dark" in it && "unknown palette token '@line'" in it })
     }
 
     private fun validDocument(layers: List<Map<String, Any>> = fills(73)): Map<*, *> =
@@ -133,7 +133,7 @@ class StyleRuleCheckerTest {
 
     private fun document(layers: List<Map<String, Any>>): Map<*, *> =
         mapOf(
-            "styles" to mapOf("standard" to "light", "standard-dark" to "dark"),
+            "styles" to mapOf("meadow" to "light", "meadow-dark" to "dark"),
             "palettes" to
                 mapOf(
                     "light" to mapOf("land" to "#ffffff", "line" to "#111111", "label" to "#222222"),

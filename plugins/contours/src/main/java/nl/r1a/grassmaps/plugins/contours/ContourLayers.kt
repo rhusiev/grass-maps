@@ -20,8 +20,8 @@ import nl.r1a.grassmaps.plugin.api.model.StyleId
  *
  * The archive stores `ele` in metres and `idx` as a Boolean on the 100 m index
  * lines. The pack is built at 10 m from the 90 m DEM: 100 m lines appear from
- * z11, 50 m lines from z12 and all 10 m lines from z13, so the Standard style
- * draws 100 / 50 / 10 m at z12 / z13 / z14 and Touring draws the same ladder
+ * z11, 50 m lines from z12 and all 10 m lines from z13, so the Meadow style
+ * draws 100 / 50 / 10 m at z12 / z13 / z14 and Trail draws the same ladder
  * one zoom earlier. The filter on `ele` keeps the bands nested: z13 adds the
  * 50 m lines to the 100 m lines, and z14 adds the 10 m lines to both.
  */
@@ -30,8 +30,8 @@ internal enum class ContourVariant(
     val palette: ContourPalette,
     val firstZoom: Float,
 ) {
-    StandardLight(
-        styleId = StyleId("standard"),
+    MeadowLight(
+        styleId = StyleId("meadow"),
         palette =
             ContourPalette(
                 minor = "#dcc2a6",
@@ -41,8 +41,8 @@ internal enum class ContourVariant(
             ),
         firstZoom = 12f,
     ),
-    StandardDark(
-        styleId = StyleId("standard-dark"),
+    MeadowDark(
+        styleId = StyleId("meadow-dark"),
         palette =
             ContourPalette(
                 minor = "#2e343c",
@@ -52,8 +52,8 @@ internal enum class ContourVariant(
             ),
         firstZoom = 12f,
     ),
-    TouringLight(
-        styleId = StyleId("touring"),
+    TrailLight(
+        styleId = StyleId("trail"),
         palette =
             ContourPalette(
                 minor = "#d6b48e",
@@ -63,8 +63,8 @@ internal enum class ContourVariant(
             ),
         firstZoom = 11f,
     ),
-    TouringDark(
-        styleId = StyleId("touring-dark"),
+    TrailDark(
+        styleId = StyleId("trail-dark"),
         palette =
             ContourPalette(
                 minor = "#24403a",

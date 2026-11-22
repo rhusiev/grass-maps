@@ -193,7 +193,7 @@ class BackupBundleRoundTripTest {
                             listOf(
                                 nl.r1a.grassmaps.core.services.backup.BundleEntry(
                                     "style",
-                                    kotlinx.serialization.json.buildJsonObject { put("style", "touring") },
+                                    kotlinx.serialization.json.buildJsonObject { put("style", "trail") },
                                 ),
                             ),
                         ),
@@ -261,7 +261,7 @@ class BackupBundleRoundTripTest {
         )
         stores.clock.nowMillis = 2_000L
         stores.route.remember(routeEntry())
-        stores.style.select(MapStyleChoice.TOURING)
+        stores.style.select(MapStyleChoice.TRAIL)
         stores.host.setEnabled(PluginId("map.contours"), false)
         val report = stores.tracks.import("garmin-connect-hike.gpx", gpx("tracks/garmin-connect-hike.gpx"))
         val record = (report as Outcome.Success).value.tracks.single()

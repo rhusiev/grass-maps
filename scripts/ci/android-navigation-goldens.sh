@@ -5,7 +5,7 @@
 # The debug build's `core.nav.show_screen` command fills the real navigation
 # screen with the committed `test-data/navigation/screen-route.json`, so a live
 # session cannot drift the capture. Light and dark are the system night mode and
-# the matching Standard style. References live in
+# the matching Meadow style. References live in
 # test-data/navigation-goldens/<theme>/.
 #
 # On this machine the script re-executes under the `gm-emulator` slot and boots

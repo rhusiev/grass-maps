@@ -135,14 +135,14 @@ private fun StyleRow(
 
 private fun MapStyleChoice.nameRes(): Int =
     when (this) {
-        MapStyleChoice.STANDARD -> R.string.layers_panel_style_meadow
-        MapStyleChoice.TOURING -> R.string.layers_panel_style_trail
+        MapStyleChoice.MEADOW -> R.string.layers_panel_style_meadow
+        MapStyleChoice.TRAIL -> R.string.layers_panel_style_trail
     }
 
 private fun MapStyleChoice.hintRes(): Int =
     when (this) {
-        MapStyleChoice.STANDARD -> R.string.layers_panel_style_meadow_hint
-        MapStyleChoice.TOURING -> R.string.layers_panel_style_trail_hint
+        MapStyleChoice.MEADOW -> R.string.layers_panel_style_meadow_hint
+        MapStyleChoice.TRAIL -> R.string.layers_panel_style_trail_hint
     }
 
 @Suppress("ktlint:standard:function-naming")

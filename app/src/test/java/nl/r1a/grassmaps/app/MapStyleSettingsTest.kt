@@ -24,56 +24,56 @@ class MapStyleSettingsTest {
 
     @Test
     fun theMapStartsOnMeadowWhenNothingWasSaved() {
-        assertEquals(MapStyleChoice.STANDARD, MapStyleSettings().current())
+        assertEquals(MapStyleChoice.MEADOW, MapStyleSettings().current())
     }
 
     @Test
     fun switchingToTrailChangesTheActiveStyleState() {
         val settings = MapStyleSettings()
 
-        assertEquals(Outcome.Success(Unit), settings.select(MapStyleChoice.TOURING))
+        assertEquals(Outcome.Success(Unit), settings.select(MapStyleChoice.TRAIL))
 
-        assertEquals(MapStyleChoice.TOURING, settings.active.value)
+        assertEquals(MapStyleChoice.TRAIL, settings.active.value)
     }
 
     @Test
     fun theChoicePersistsAcrossANewInstance() {
-        MapStyleSettings.open(storeFile, legacyFile).select(MapStyleChoice.TOURING)
+        MapStyleSettings.open(storeFile, legacyFile).select(MapStyleChoice.TRAIL)
 
-        assertEquals(MapStyleChoice.TOURING, MapStyleSettings.open(storeFile, legacyFile).current())
-        assertEquals(MapStyleChoice.TOURING, MapStyleSettings.open(storeFile, legacyFile).forProfile(BuiltInProfiles.WALK))
+        assertEquals(MapStyleChoice.TRAIL, MapStyleSettings.open(storeFile, legacyFile).current())
+        assertEquals(MapStyleChoice.TRAIL, MapStyleSettings.open(storeFile, legacyFile).forProfile(BuiltInProfiles.WALK))
     }
 
     @Test
     fun anUnknownOrCorruptValueFallsBackToMeadow() {
         storeFile.parentFile?.mkdirs()
-        storeFile.writeText("""{"schema_version":1,"profiles":{"walk":{"style":"touring-dark"}}}""")
-        assertEquals(MapStyleChoice.STANDARD, MapStyleSettings.open(storeFile, legacyFile).current())
+        storeFile.writeText("""{"schema_version":1,"profiles":{"walk":{"style":"trail-dark"}}}""")
+        assertEquals(MapStyleChoice.MEADOW, MapStyleSettings.open(storeFile, legacyFile).current())
 
         storeFile.writeText("{not json")
-        assertEquals(MapStyleChoice.STANDARD, MapStyleSettings.open(storeFile, legacyFile).current())
+        assertEquals(MapStyleChoice.MEADOW, MapStyleSettings.open(storeFile, legacyFile).current())
     }
 
     @Test
     fun theLegacyAppWideChoiceMovesToTheWalkProfile() {
         legacyFile.parentFile?.mkdirs()
-        legacyFile.writeText("""{"style":"touring"}""")
+        legacyFile.writeText("""{"style":"trail"}""")
 
         val settings = MapStyleSettings.open(storeFile, legacyFile)
 
-        assertEquals(MapStyleChoice.TOURING, settings.forProfile(BuiltInProfiles.WALK))
-        assertEquals(MapStyleChoice.STANDARD, settings.forProfile(BuiltInProfiles.BIKE))
+        assertEquals(MapStyleChoice.TRAIL, settings.forProfile(BuiltInProfiles.WALK))
+        assertEquals(MapStyleChoice.MEADOW, settings.forProfile(BuiltInProfiles.BIKE))
         assertFalse(legacyFile.isFile)
     }
 
     @Test
     fun activatingAProfilePublishesItsStyle() {
         val settings = MapStyleSettings.open(storeFile, legacyFile)
-        settings.select(ProfileId("bike"), MapStyleChoice.TOURING)
+        settings.select(ProfileId("bike"), MapStyleChoice.TRAIL)
 
         settings.activate(ProfileId("bike"))
-        assertEquals(MapStyleChoice.TOURING, settings.active.value)
+        assertEquals(MapStyleChoice.TRAIL, settings.active.value)
         settings.activate(BuiltInProfiles.WALK)
-        assertEquals(MapStyleChoice.STANDARD, settings.active.value)
+        assertEquals(MapStyleChoice.MEADOW, settings.active.value)
     }
 }

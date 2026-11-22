@@ -113,7 +113,7 @@ class RasterLayerTest {
     @Test
     fun theProviderDrawsOnlyTheShownSource() {
         val provider = RasterLayerProvider()
-        val style = StyleId("standard")
+        val style = StyleId("meadow")
 
         assertTrue(provider.layers(style).isEmpty())
 
@@ -136,7 +136,7 @@ class RasterLayerTest {
             opacity = RasterTransparency.opacityOf(40),
         )
 
-        val layer = provider.layers(StyleId("standard")).single()
+        val layer = provider.layers(StyleId("meadow")).single()
 
         assertEquals(LayerSlot.Underlay, layer.slot)
         assertEquals("0.4", rasterOpacity(layer))

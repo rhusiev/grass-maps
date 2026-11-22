@@ -10,7 +10,7 @@ import java.util.Locale
 
 /** The in-app language applies without a restart and never rebuilds the map surface. */
 class LocaleChangeTest {
-    private val style = StyleId("standard")
+    private val style = StyleId("meadow")
 
     @Test
     fun aChosenLanguageResolvesIndependentlyOfThePhoneLocale() {
@@ -26,6 +26,6 @@ class LocaleChangeTest {
         val after = mapSurfaceIdentity(style, UiLanguage.UKRAINIAN)
 
         assertEquals(before, after)
-        assertNotEquals(before, mapSurfaceIdentity(StyleId("touring"), UiLanguage.UKRAINIAN))
+        assertNotEquals(before, mapSurfaceIdentity(StyleId("trail"), UiLanguage.UKRAINIAN))
     }
 }

@@ -12,7 +12,7 @@ import nl.r1a.grassmaps.plugin.api.provider.ProviderContract
  * (T-0514).
  *
  * The provider supplies no base style: it draws one raster layer over the
- * active Standard or Touring style. The app shows a source through [show] and
+ * active Meadow or Trail style. The app shows a source through [show] and
  * removes it through [show] with null, so the layer belongs to the plugin and
  * the map host owns the drawing. A changed placement or opacity is the same
  * layer with a different slot or `raster-opacity`, so nothing is removed.

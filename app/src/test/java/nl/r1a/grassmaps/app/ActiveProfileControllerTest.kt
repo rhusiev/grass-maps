@@ -36,8 +36,8 @@ class ActiveProfileControllerTest {
 
     @Test
     fun switchingTheProfileChangesWidgetsStyleUnitsRoutingAndAlertsTogether() {
-        seed(walk, MapStyleChoice.STANDARD, UnitSystem.Metric, RoutePreference.Avoid, false)
-        seed(bike, MapStyleChoice.TOURING, UnitSystem.Imperial, RoutePreference.DontMind, true)
+        seed(walk, MapStyleChoice.MEADOW, UnitSystem.Metric, RoutePreference.Avoid, false)
+        seed(bike, MapStyleChoice.TRAIL, UnitSystem.Imperial, RoutePreference.DontMind, true)
         val controller = controller()
         val before = controller.active.value
 
@@ -45,7 +45,7 @@ class ActiveProfileControllerTest {
         val after = controller.active.value
 
         assertEquals(bike, after.profileId)
-        assertEquals(MapStyleChoice.TOURING, after.style)
+        assertEquals(MapStyleChoice.TRAIL, after.style)
         assertEquals(UnitSystem.Imperial, after.units)
         assertEquals(RoutePreference.DontMind, after.routing.hills)
         assertEquals(true, after.alerts.settings.signal)
@@ -55,8 +55,8 @@ class ActiveProfileControllerTest {
 
     @Test
     fun switchingBackRestoresTheFirstProfileWithoutStaleValues() {
-        seed(walk, MapStyleChoice.STANDARD, UnitSystem.Metric, RoutePreference.Avoid, false)
-        seed(bike, MapStyleChoice.TOURING, UnitSystem.Imperial, RoutePreference.DontMind, true)
+        seed(walk, MapStyleChoice.MEADOW, UnitSystem.Metric, RoutePreference.Avoid, false)
+        seed(bike, MapStyleChoice.TRAIL, UnitSystem.Imperial, RoutePreference.DontMind, true)
         val controller = controller()
 
         controller.activate(bike)
@@ -64,7 +64,7 @@ class ActiveProfileControllerTest {
         val after = controller.active.value
 
         assertEquals(walk, after.profileId)
-        assertEquals(MapStyleChoice.STANDARD, after.style)
+        assertEquals(MapStyleChoice.MEADOW, after.style)
         assertEquals(UnitSystem.Metric, after.units)
         assertEquals(RoutePreference.Avoid, after.routing.hills)
         assertEquals(false, after.alerts.settings.signal)
@@ -72,13 +72,13 @@ class ActiveProfileControllerTest {
 
     @Test
     fun thePerStoreActiveFlowsFollowTheSameSwitch() {
-        seed(walk, MapStyleChoice.STANDARD, UnitSystem.Metric, RoutePreference.Normal, false)
-        seed(bike, MapStyleChoice.TOURING, UnitSystem.Imperial, RoutePreference.Normal, false)
+        seed(walk, MapStyleChoice.MEADOW, UnitSystem.Metric, RoutePreference.Normal, false)
+        seed(bike, MapStyleChoice.TRAIL, UnitSystem.Imperial, RoutePreference.Normal, false)
         val controller = controller()
 
         controller.activate(bike)
 
-        assertEquals("no screen keeps a stale style", MapStyleChoice.TOURING, style.active.value)
+        assertEquals("no screen keeps a stale style", MapStyleChoice.TRAIL, style.active.value)
         assertEquals("no screen keeps a stale unit", UnitSystem.Imperial, units.units.value)
         assertEquals(bike, alerts.activeProfileId())
     }

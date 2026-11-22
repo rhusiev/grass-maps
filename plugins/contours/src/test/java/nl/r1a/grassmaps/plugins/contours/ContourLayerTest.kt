@@ -31,8 +31,8 @@ class ContourLayerTest {
     }
 
     @Test
-    fun standardShowsOneHundredFiftyAndTenAtZ12To14() {
-        val layers = ContourLayers.layers(StyleId("standard"))
+    fun meadowShowsOneHundredFiftyAndTenAtZ12To14() {
+        val layers = ContourLayers.layers(StyleId("meadow"))
 
         assertEquals(12f to 24f, zoomOf(layers, "contour-index"))
         assertEquals(13f to 24f, zoomOf(layers, "contour-50"))
@@ -41,8 +41,8 @@ class ContourLayerTest {
     }
 
     @Test
-    fun touringShowsEveryBandOneZoomEarlier() {
-        val layers = ContourLayers.layers(StyleId("touring"))
+    fun trailShowsEveryBandOneZoomEarlier() {
+        val layers = ContourLayers.layers(StyleId("trail"))
 
         assertEquals(11f to 24f, zoomOf(layers, "contour-index"))
         assertEquals(12f to 24f, zoomOf(layers, "contour-50"))
@@ -53,8 +53,8 @@ class ContourLayerTest {
     @Test
     fun theDarkAndLightVariantsShareTheirZoomTable() {
         for ((light, dark) in listOf(
-            StyleId("standard") to StyleId("standard-dark"),
-            StyleId("touring") to StyleId("touring-dark"),
+            StyleId("meadow") to StyleId("meadow-dark"),
+            StyleId("trail") to StyleId("trail-dark"),
         )) {
             val lightZooms = ContourLayers.layers(light).map { it.spec.id.value to zoomOf(it) }
             val darkZooms = ContourLayers.layers(dark).map { it.spec.id.value to zoomOf(it) }
@@ -64,19 +64,19 @@ class ContourLayerTest {
 
     @Test
     fun thePaletteMatchesMapStyleSectionThree() {
-        assertEquals("#dcc2a6", palette("standard").minor)
-        assertEquals("#c9a27c", palette("standard").index)
-        assertEquals("#2e343c", palette("standard-dark").minor)
-        assertEquals("#3e4650", palette("standard-dark").index)
-        assertEquals("#d6b48e", palette("touring").minor)
-        assertEquals("#bf9364", palette("touring").index)
-        assertEquals("#24403a", palette("touring-dark").minor)
-        assertEquals("#30554c", palette("touring-dark").index)
+        assertEquals("#dcc2a6", palette("meadow").minor)
+        assertEquals("#c9a27c", palette("meadow").index)
+        assertEquals("#2e343c", palette("meadow-dark").minor)
+        assertEquals("#3e4650", palette("meadow-dark").index)
+        assertEquals("#d6b48e", palette("trail").minor)
+        assertEquals("#bf9364", palette("trail").index)
+        assertEquals("#24403a", palette("trail-dark").minor)
+        assertEquals("#30554c", palette("trail-dark").index)
     }
 
     @Test
     fun theFiftyMetreLinesAreThickerThanTheTenMetreLines() {
-        val layers = ContourLayers.layers(StyleId("standard"))
+        val layers = ContourLayers.layers(StyleId("meadow"))
 
         assertEquals(1.3f, paintFloat(layers, "contour-index", "line-width"))
         assertEquals(0.85f, paintFloat(layers, "contour-index", "line-opacity"))
@@ -91,7 +91,7 @@ class ContourLayerTest {
 
     @Test
     fun theIndexFilterIsTheHundredMetreIndex() {
-        val index = ContourLayers.layers(StyleId("standard")).first { it.spec.id.value == "contour-index" }
+        val index = ContourLayers.layers(StyleId("meadow")).first { it.spec.id.value == "contour-index" }
         val parts = index.spec.filter!!.jsonArray
 
         assertEquals("all", (parts[0] as JsonPrimitive).content)
@@ -105,7 +105,7 @@ class ContourLayerTest {
 
     @Test
     fun aFiftyMetreBandAcceptsOnlyNonIndexFifties() {
-        val layer = ContourLayers.layers(StyleId("standard")).first { it.spec.id.value == "contour-50" }
+        val layer = ContourLayers.layers(StyleId("meadow")).first { it.spec.id.value == "contour-50" }
         val parts = layer.spec.filter!!.jsonArray
 
         assertEquals("all", (parts[0] as JsonPrimitive).content)
@@ -122,7 +122,7 @@ class ContourLayerTest {
 
     @Test
     fun aTenMetreBandExcludesTheFiftyMetreLines() {
-        val layer = ContourLayers.layers(StyleId("standard")).first { it.spec.id.value == "contour-10" }
+        val layer = ContourLayers.layers(StyleId("meadow")).first { it.spec.id.value == "contour-10" }
         val parts = layer.spec.filter!!.jsonArray
 
         assertEquals("all", (parts[0] as JsonPrimitive).content)
@@ -136,7 +136,7 @@ class ContourLayerTest {
 
     @Test
     fun theLabelIsALinePlacedSymbolWithTheAuthoredHalo() {
-        val label = ContourLayers.layers(StyleId("standard-dark")).single { it.spec.type == LayerType.Symbol }
+        val label = ContourLayers.layers(StyleId("meadow-dark")).single { it.spec.type == LayerType.Symbol }
 
         assertEquals(10f, (label.spec.layout["text-size"] as JsonPrimitive).content.toFloat())
         assertEquals("Noto Sans Italic", (label.spec.layout["text-font"] as JsonArray)[0].toString().trim('"'))
@@ -149,8 +149,8 @@ class ContourLayerTest {
 
     @Test
     fun anUnknownStyleDrawsNoLayers() {
-        assertTrue(ContourLayers.layers(StyleId("standard-water")).isEmpty())
-        assertNull(ContourVariant.forStyle(StyleId("standard-water")))
+        assertTrue(ContourLayers.layers(StyleId("meadow-water")).isEmpty())
+        assertNull(ContourVariant.forStyle(StyleId("meadow-water")))
     }
 
     private fun palette(style: String): ContourPalette = ContourVariant.forStyle(StyleId(style))!!.palette

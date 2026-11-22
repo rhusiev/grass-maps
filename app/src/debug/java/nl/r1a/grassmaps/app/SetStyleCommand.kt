@@ -33,7 +33,7 @@ import nl.r1a.grassmaps.plugin.api.provider.MapLayerProvider
 internal val SET_STYLE_COMMAND: CommandId = CommandId("core.map.set_style")
 
 /**
- * Loads a style by id from the Standard or Touring style plugin and applies its layers in
+ * Loads a style by id from the Meadow or Trail style plugin and applies its layers in
  * place. It exists only in the debug source set: the release app has no style
  * command, and theme-driven selection is T-0111.
  */
@@ -145,7 +145,7 @@ internal class SetStyleCommand(
     }
 
     private companion object {
-        val STYLE_PLUGINS = listOf(PluginId("style.standard"), PluginId("style.touring"))
+        val STYLE_PLUGINS = listOf(PluginId("style.meadow"), PluginId("style.trail"))
         const val TAG = "GrassMapsStyle"
         const val DEFAULT_IDLE_TIMEOUT_MS = 10_000L
     }

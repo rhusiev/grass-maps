@@ -498,12 +498,12 @@ runner minutes but not wall time to a push run. The native follower replay
 first ran in run `42979708400` at 7 min 04 s (6 min 43 s in the emulator step).
 The goldens job was split on 2026-11-16: one job ran all sets on one emulator
 and took 1 h 55 m to 3 h 05 m, and run `a36dca45` was cancelled at its
-210-minute bound. Now one job builds the APK and eight jobs (`standard-light`,
-`standard-dark`, `touring-light`, `touring-dark`, `contours`, `fixture`, `navigation`, `raster`) each boot their
+210-minute bound. Now one job builds the APK and eight jobs (`meadow-light`,
+`meadow-dark`, `trail-light`, `trail-dark`, `contours`, `fixture`, `navigation`, `raster`) each boot their
 own emulator and run in parallel; `scripts/ci/android-goldens-ci.sh APK SET`
-runs one set, and with no set it runs Standard and Touring (both styles each), contours,
+runs one set, and with no set it runs Meadow and Trail (both styles each), contours,
 fixture, navigation and raster in order on one emulator, as a local run does.
-On run `903d1cc8` Standard light took ~46 min, dark ~42 min and the other four
+On run `903d1cc8` Meadow light took ~46 min, dark ~42 min and the other four
 sets ~46 min together, so the per-set bound is 100 minutes.
 
 A job that regularly uses most of its timeout is the same risk as one that
@@ -667,9 +667,9 @@ three notations and parses it back.
 
 `test-data/styles/bench-light.json` is the phase-A dense bench style. The
 T-0020 spike checks that every layer, filter and expression in it compiles to a
-maplibre-compose layer node. The Standard style keeps that layer list as its
+maplibre-compose layer node. The Meadow style keeps that layer list as its
 reproduction baseline but owns its authored document in
-`plugins/style-standard/src/main/styles/standard.json`.
+`plugins/style-meadow/src/main/styles/meadow.json`.
 
 `test-data/location/mock-walk.gpx` is a 60-point synthetic walk around Lviv at
 one fix per second. The debug build replays it through `MockGpxLocationSource`;
@@ -709,8 +709,8 @@ application ID is `nl.r1a.grassmaps`.
 | `devtools` | debug harness: benchmark hooks, GPX replay, screenshot and state probes | `core`, `control`, `plugin-api` |
 | `app` | composition root, Android entry points, foreground service, manifest, resources | every module |
 | `plugins/example` | debug-only example of a first-party plugin module | `plugin-api` |
-| `plugins/style-standard` | the Standard (Meadow) light and dark palettes as a `MapLayerProvider` | `plugin-api` |
-| `plugins/style-touring` | the Touring (Trail) light and dark palettes, the one-zoom-earlier threshold and the path dash ladder, as a `MapLayerProvider` | `plugin-api` |
+| `plugins/style-meadow` | the Meadow light and dark palettes as a `MapLayerProvider` | `plugin-api` |
+| `plugins/style-trail` | the Trail light and dark palettes, the one-zoom-earlier threshold and the path dash ladder, as a `MapLayerProvider` | `plugin-api` |
 | `plugins/layers-panel` | the layers button and the map styles card: the Meadow and Trail rows and the active-style state | `plugin-api`, `plugin-ui-api` |
 | `plugins/synthetic-data` | the debug-only synthetic elevation `DataSource` and its real contour overlay | `plugin-api` |
 | `plugins/gpx` | GPX 1.0/1.1 import and export as a `FileFormat` provider | `plugin-api` |
@@ -733,7 +733,7 @@ application ID is `nl.r1a.grassmaps`.
 | `plugins/track-layer` | the imported-track line layer and the controller that keeps it on the map | `plugin-api` |
 | `plugins/route-layer` | the route line's colour and pattern decision: slope and surface palettes, the unpaved dash and the steps stripe, drawn through `MapHost` | `plugin-api` |
 | `plugins/track-library` | the track library state, its folder definitions, the rename, describe, move and delete actions with one-step undo, and the four fixed orders and name search | `plugin-api` |
-| `plugins/contours` | the contour overlay for the Standard and Touring variants and the one-row card the layers button opens | `plugin-api`, `plugin-ui-api` |
+| `plugins/contours` | the contour overlay for the Meadow and Trail variants and the one-row card the layers button opens | `plugin-api`, `plugin-ui-api` |
 | `plugins/route-relations` | the hiking and cycling relation geometry assembler, the shared-way lane assignment, the OSMC waymark mapping, the cycling node-network numbers and the `MapHost` layers over an inline GeoJSON source | `plugin-api` |
 | `plugins/raster` | the online raster tile source: the OSM preset, the user URL template, the tile client behind the online-tiles switch, the underlay/overlay placement and the transparency, the EOX Sentinel-2 presets with their licence, the area plan, the area downloader and the card the layers button opens | `plugin-api`, `plugin-ui-api` |
 | `plugins/route-warnings` | the warning list for fords, steps, barriers, railway crossings and private ways, with its profile filter and distance order | `plugin-api` |
@@ -829,11 +829,10 @@ start is not used. The button and the card hide while a route, track, relation,
 analysis or follow sheet uses the bottom centre. A card that is always open
 covers the map's centre on a phone. The button (`plugins/layers-panel`) is view
 state. The card it opens starts with the map
-styles card, two radio rows: Meadow (Standard, "Everyday and city") and Trail
-(Touring, "Cycling and hiking"). The choice is stored per profile in
-`profiles/map-style.json` under the `style` key (`"touring"` for Trail); the old
+styles card, two radio rows: Meadow and Trail. The choice is stored per profile in
+`profiles/map-style.json` under the `style` key (`"trail"` for Trail); the old
 app-wide `settings/style.json` migrates once to the walk profile. A profile with
-no value means Standard (Meadow). Night
+no value means Meadow. Night
 mode is not a third choice: the map loads the chosen style's dark variant when
 the shell is dark, so Meadow becomes Meadow dark and Trail becomes Trail dark.
 The system night mode decides by default. The debug-only `core.theme.set` pin,
@@ -889,9 +888,9 @@ The layer draws at one of two placements (T-0514). `Overlay` is the default:
 and below the contour, track, route, marker and label groups. The base style's
 own labels live in `Base`, so at 40 % they show through the tiles instead of
 sitting above them. `Underlay` is `LayerSlot.Underlay`, the one group below
-`Base`: the base map draws over the imagery, and because the Standard and
-Touring styles start with an opaque background, an underlay is only visible in a
-style that leaves it a gap. Touring stays opaque on purpose (T-0109): a
+`Base`: the base map draws over the imagery, and because the Meadow and
+Trail styles start with an opaque background, an underlay is only visible in a
+style that leaves it a gap. Trail stays opaque on purpose (T-0109): a
 transparent base would leave the labels and fills over raw imagery, and the
 imagery would show only in gaps anyway. The underlay row stays (Q45). Both placements are the same layer, the same
 provider and the same gate; the placement picks the slot.
@@ -1154,21 +1153,20 @@ style. A profile switch between styles that share the base is a no-op for the
 loader (`needsStyleReload` in `map`); a base-style change loads once. A base
 style carries sources and glyphs but no layers; the consumer applies the
 provider's layers with `applyStyleDiff`, and only `setStyle` may reload.
-`plugins/style-standard/src/main/styles/standard.json` holds one layer list and
+`plugins/style-meadow/src/main/styles/meadow.json` holds one layer list and
 two palettes; the provider resolves the palette tokens and returns
-`standard` (light) and `standard-dark`. `plugins/style-touring/src/main/styles/touring.json`
-holds the Touring list and returns `touring` and `touring-dark`. Both read their
+`meadow` (light) and `meadow-dark`. `plugins/style-trail/src/main/styles/trail.json`
+holds the Trail list and returns `trail` and `trail-dark`. Both read their
 document through `PaletteStyleDocument` in `plugin-api`, and both return the
 same base document, so a switch between them updates layers in place and the
-map host keeps the loaded style. `zoomOffsets` starts every Touring layer one
-zoom earlier, which is the threshold half of map-style.md section 1. Touring
+map host keeps the loaded style. `zoomOffsets` starts every Trail layer one
+zoom earlier, which is the threshold half of map-style.md section 1. Trail
 draws five path layers keyed on the tile's `kind_detail` (the schema has no
 `tracktype`), each from z12: `roads_footway` and `roads_path` dotted, `roads_steps`
 short and tight, `roads_track` and `roads_cycleway` long dashed. Widths grow
-from z13 to z18. The code ids stay `standard` and `touring` until T-0617 renames
-them. The Touring style lints as Standard does (75 to 85 layers, at most 15
-symbol layers) and has its own goldens in `test-data/map-goldens/touring/`
-(`--profile touring`, API 29 `swangle` AVD), the same 40 cases as Standard.
+from z13 to z18. The code ids are `meadow` and `trail`. The Trail style lints as
+Meadow does (75 to 85 layers, at most 15 symbol layers) and has its own goldens in `test-data/map-goldens/trail/`
+(`--profile trail`, API 29 `swangle` AVD), the same 40 cases as Meadow.
 Symbol text and halo colours in the palettes are `rgb()` arrays: the current
 text path drops the green channel from a hex text colour, so the style avoids
 that form until the render path is fixed.
@@ -1195,7 +1193,7 @@ belong to `RegionDownloader`.
 
 The debug-only `core.map.set_style` command selects a style id and applies its
 layers in place; the golden harness uses it to capture the light and dark
-Standard variants from one install. The debug-only `core.map.set_camera`
+Meadow variants from one install. The debug-only `core.map.set_camera`
 command moves the camera to an exact latitude, longitude, zoom, bearing and
 tilt and returns only after MapLibre's idle event. Both are registered only in
 the debug source set, so no style or camera command is compiled into a release
@@ -1213,8 +1211,8 @@ activity window. On this emulator that path does not see the map's
 `screencap` reads the composited display instead, and the camera command still
 comes from the control channel.
 
-The Standard goldens in `test-data/map-goldens/standard/light/` and
-`standard/dark/` are ten fixture places at z12, z13 and z14, captured in both
+The Meadow goldens in `test-data/map-goldens/meadow/light/` and
+`meadow/dark/` are ten fixture places at z12, z13 and z14, captured in both
 variants. They run in CI on the API 29 emulator with the `swangle` software
 renderer. `swiftshader_indirect` zeroes the green channel of every text colour,
 which turns light labels on the dark style magenta; `swangle` renders them
@@ -1231,23 +1229,23 @@ its size.
 
 ```sh
 GOLDEN_AVD_NAME=grassmaps-goldens-api29 \
-  ./scripts/ci/android-map-goldens.sh --profile standard --style both --update
+  ./scripts/ci/android-map-goldens.sh --profile meadow --style both --update
 ```
 
-The Touring goldens in `test-data/map-goldens/touring/touring-light/` and
-`touring/touring-dark/` are the same 40 cases in the Touring style, captured the
-same way with `--profile touring --update` (T-0109). They differ from the
-Standard set only in the style, so a path or track dash change shows there.
+The Trail goldens in `test-data/map-goldens/trail/trail-light/` and
+`trail/trail-dark/` are the same 40 cases in the Trail style, captured the
+same way with `--profile trail --update` (T-0109). They differ from the
+Meadow set only in the style, so a path or track dash change shows there.
 
 The script's default AVD is `grassmaps-bench`, which is 1080x2400: a different
 geometry that shifts the whole frame against the committed 1080x1920 set, so
 `GOLDEN_AVD_NAME` must be set explicitly for a capture that enters the set.
 
-The Standard and fixture profiles default to contours off, which is how their
+The Meadow and fixture profiles default to contours off, which is how their
 references stay valid; the script always passes that state to the app. The
 contour references in `test-data/map-goldens/contours/` are the fixture centre
 at z12, z13 and z14 with the committed 10 m archive on, in all four variants
-(`light`, `dark`, `touring-light`, `touring-dark`):
+(`light`, `dark`, `trail-light`, `trail-dark`):
 
 ```sh
 ./scripts/ci/android-map-goldens.sh --profile contours --style all --update
@@ -1294,7 +1292,7 @@ a blank, wrong or shifted map still changes most blocks.
 
 The run writes `comparison.json` and one diff image per position. The 1 % bound
 is measured: at the fixed head, the first full run after the relation goldens
-were recaptured put all 80 Standard positions at 0.0 % block mismatch, while the
+were recaptured put all 80 Meadow positions at 0.0 % block mismatch, while the
 previous 5 % bound had admitted the contour seam on 13 consecutive cadences, at
 3.265 % on one position and 3.675 % at its worst.
 
@@ -1362,7 +1360,7 @@ adds them under `map.contours` so turning the overlay off removes exactly those
 layers. The ladder is cumulative: z12 adds the 100 m index, z13 adds the 50 m
 lines to it, and z14 adds the 10 m lines to both.
 
-| Layer | Standard | Touring | Width / opacity |
+| Layer | Meadow | Trail | Width / opacity |
 |---|---|---|---|
 | `contour-index` (100 m) | z12+ | z11+ | 1.3 dp / 0.85 |
 | `contour-50` | z13+ | z12+ | 1.0 dp / 0.7 |
@@ -1370,11 +1368,11 @@ lines to it, and z14 adds the 10 m lines to both.
 | `contour-label` | z14+ | z13+ | 10 pt italic, 1.5 halo |
 
 The palette is map-style.md section 3: minor/index `#dcc2a6`/`#c9a27c` in
-Standard light, `#2e343c`/`#3e4650` in Standard dark, `#d6b48e`/`#bf9364` in
-Touring light and `#24403a`/`#30554c` in Touring dark. Label text and halo come
-from the same section's label pair. The Touring contour references also use the
-Touring base palette and its one-zoom-earlier threshold from
-`plugins/style-touring`. The 50 m band filters `ele % 50 == 0` and
+Meadow light, `#2e343c`/`#3e4650` in Meadow dark, `#d6b48e`/`#bf9364` in
+Trail light and `#24403a`/`#30554c` in Trail dark. Label text and halo come
+from the same section's label pair. The Trail contour references also use the
+Trail base palette and its one-zoom-earlier threshold from
+`plugins/style-trail`. The 50 m band filters `ele % 50 == 0` and
 excludes the 100 m index; the 10 m band filters `ele % 10 == 0` and excludes the
 50 m lines, so the coarser line is never drawn twice. The index and label
 layers filter the archive's Boolean `idx == true`, which the pack sets only on
@@ -1383,7 +1381,7 @@ layers filter the archive's Boolean `idx == true`, which the pack sets only on
 The Lviv pack and the committed fixture are built from Copernicus DEM GLO-30
 averaged to 90 m, with `gdal_contour -i 10`. The pack stores 100 m index lines
 from z11, 50 m lines from z12 and all 10 m lines from z13; the style then draws
-100 / 50 / 10 m at z12 / z13 / z14 in Standard and one zoom earlier in Touring.
+100 / 50 / 10 m at z12 / z13 / z14 in Meadow and one zoom earlier in Trail.
 The fixture manifest records `lviv-90m-10m.pmtiles` and its sha256, and the
 committed component is 40,899 B. The Lviv component is 19,164,271 B,
 `aee7e909…`; the full built archive is 20,858,533 B, `d5a1ba5d…`, with 207,208

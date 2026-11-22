@@ -78,8 +78,8 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
                 ":places",
                 ":tracks",
                 ":ui-shell",
-                ":plugins:style-standard",
-                ":plugins:style-touring",
+                ":plugins:style-meadow",
+                ":plugins:style-trail",
                 ":plugins:layers-panel",
                 ":plugins:gpx",
                 ":plugins:info-widgets",
@@ -142,8 +142,8 @@ val moduleDependencyAllowlist: Map<String, Set<String>> =
         ":plugins:links" to setOf(":plugin-api"),
         ":plugins:share" to setOf(":plugin-api"),
         ":plugins:coordinates" to setOf(":plugin-api"),
-        ":plugins:style-standard" to setOf(":plugin-api", ":plugin-ui-api"),
-        ":plugins:style-touring" to setOf(":plugin-api", ":plugin-ui-api"),
+        ":plugins:style-meadow" to setOf(":plugin-api", ":plugin-ui-api"),
+        ":plugins:style-trail" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:layers-panel" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:synthetic-data" to setOf(":plugin-api", ":plugin-ui-api"),
         ":plugins:valhalla" to setOf(":plugin-api"),
@@ -228,8 +228,8 @@ val moduleTestDependencyAllowlist: Map<String, Set<String>> =
         ":plugins:profiles-ui" to setOf(":plugin-api"),
         // The style tests evaluate their water filters through the plugin-api
         // filter fixture. Test only; the plugin's runtime classpath is unchanged.
-        ":plugins:style-standard" to setOf(":plugin-api"),
-        ":plugins:style-touring" to setOf(":plugin-api"),
+        ":plugins:style-meadow" to setOf(":plugin-api"),
+        ":plugins:style-trail" to setOf(":plugin-api"),
     )
 val moduleBoundaryViolations = objects.listProperty(String::class.java)
 val moduleBoundaryEdges = objects.property(Int::class.java).convention(0)

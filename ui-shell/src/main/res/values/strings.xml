@@ -11,6 +11,8 @@
     <string name="place_card_unknown">Hours unknown</string>
     <string name="place_card_close">Close the place card</string>
     <string name="place_card_pane_title">Place details</string>
+    <string name="place_card_route">Route</string>
+    <string name="place_card_save">Save</string>
 
     <string name="favourites_lists_title">Lists</string>
     <string name="favourites_lists_close">Close the lists</string>

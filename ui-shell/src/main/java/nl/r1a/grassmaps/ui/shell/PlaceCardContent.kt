@@ -54,6 +54,58 @@ data class PlaceCardShortcutRow(
     val link: PlaceCardLink,
 )
 
+/** Where the place card sits over the map (T-0612). */
+enum class SheetAnchor {
+    Bottom,
+}
+
+/** The one action pinned to the bottom of the place sheet (T-0612). */
+enum class PlaceCardPrimaryAction {
+    Route,
+}
+
+/**
+ * The sheet structure the host draws, resolved here so a JVM test can check it
+ * without a Compose renderer (T-0612). The host lays out every part from this
+ * value: the anchor, the handle, the pinned action and the tiles.
+ */
+data class PlaceCardSheet(
+    val anchor: SheetAnchor,
+    val hasHandle: Boolean,
+    val subtitle: String?,
+    val coordinates: List<PlaceCardRow>,
+    val shortcuts: List<PlaceCardShortcutRow>,
+    val saveLabel: String,
+    val routeLabel: String,
+    val primaryAction: PlaceCardPrimaryAction,
+)
+
+/** Resolves the bottom sheet for one place card. */
+fun placeCardSheet(
+    content: PlaceCardContent,
+    strings: Strings,
+): PlaceCardSheet =
+    PlaceCardSheet(
+        anchor = SheetAnchor.Bottom,
+        hasHandle = true,
+        subtitle = content.kind,
+        coordinates = content.coordinates,
+        shortcuts = content.shortcuts,
+        saveLabel = strings.resolve(SAVE_ACTION_LABEL),
+        routeLabel = strings.resolve(ROUTE_ACTION_LABEL),
+        primaryAction = PlaceCardPrimaryAction.Route,
+    )
+
+/** Runs the sheet's pinned action through its caller. */
+fun invokePlaceCardPrimary(
+    action: PlaceCardPrimaryAction,
+    onRoute: () -> Unit,
+) {
+    when (action) {
+        PlaceCardPrimaryAction.Route -> onRoute()
+    }
+}
+
 /**
  * Resolves a card's label keys through [strings] and drops blank fields.
  *
@@ -121,6 +173,12 @@ internal const val OPENING_STATE_LABEL = "place_card_opening_state"
 
 /** The shell-owned chrome label above the coordinate rows. */
 internal const val COORDINATES_TITLE = "place_card_coordinates"
+
+/** The primary action pinned to the bottom of the sheet. */
+internal const val ROUTE_ACTION_LABEL = "place_card_route"
+
+/** The save tile beside Share and Open. */
+internal const val SAVE_ACTION_LABEL = "place_card_save"
 
 /** The i18n key for one open state. */
 internal fun openingStateKey(state: PlaceOpeningState): String =

@@ -15,6 +15,7 @@ internal fun RouteWarningKind.glyph(): RouteWarningGlyph =
         RouteWarningKind.Steps -> RouteWarningGlyph.Steps
         RouteWarningKind.Barrier -> RouteWarningGlyph.Barrier
         RouteWarningKind.RailwayCrossing -> RouteWarningGlyph.RailwayCrossing
+        RouteWarningKind.TramLevelCrossing -> RouteWarningGlyph.TramLevelCrossing
         RouteWarningKind.PrivateWay -> RouteWarningGlyph.PrivateWay
     }
 

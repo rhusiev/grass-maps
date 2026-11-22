@@ -150,6 +150,7 @@
     <string name="route_warnings_kind_steps">Сходи</string>
     <string name="route_warnings_kind_barrier">Бар\'єр</string>
     <string name="route_warnings_kind_railway_crossing">Залізничний переїзд</string>
+    <string name="route_warnings_kind_tram_level_crossing">Трамвайний переїзд</string>
     <string name="route_warnings_kind_private_way">Приватна дорога</string>
     <string name="route_warnings_detail_private">access=private</string>
     <string name="route_warnings_detail_push_bike">пішки з велосипедом</string>

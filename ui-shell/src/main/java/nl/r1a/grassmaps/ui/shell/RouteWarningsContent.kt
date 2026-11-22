@@ -53,6 +53,7 @@ private const val KIND_FORD_KEY = "route_warnings_kind_ford"
 private const val KIND_STEPS_KEY = "route_warnings_kind_steps"
 private const val KIND_BARRIER_KEY = "route_warnings_kind_barrier"
 private const val KIND_RAILWAY_CROSSING_KEY = "route_warnings_kind_railway_crossing"
+private const val KIND_TRAM_LEVEL_CROSSING_KEY = "route_warnings_kind_tram_level_crossing"
 private const val KIND_PRIVATE_WAY_KEY = "route_warnings_kind_private_way"
 private const val DETAIL_PRIVATE_KEY = "route_warnings_detail_private"
 private const val DETAIL_PUSH_BIKE_KEY = "route_warnings_detail_push_bike"
@@ -62,7 +63,7 @@ private const val DETAIL_PUSH_BIKE_KEY = "route_warnings_detail_push_bike"
  *
  * The scanner publishes its own `RouteWarningKind` in the route-warnings
  * plugin, which `ui-shell` does not depend on. `app` maps one to one onto this
- * vocabulary, so the panel names the five kinds without reaching into a
+ * vocabulary, so the panel names the six kinds without reaching into a
  * plugin.
  */
 enum class RouteWarningGlyph {
@@ -70,6 +71,7 @@ enum class RouteWarningGlyph {
     Steps,
     Barrier,
     RailwayCrossing,
+    TramLevelCrossing,
     PrivateWay,
 }
 
@@ -333,6 +335,7 @@ internal fun routeWarningKindText(
         RouteWarningGlyph.Steps -> strings.resolve(KIND_STEPS_KEY)
         RouteWarningGlyph.Barrier -> strings.resolve(KIND_BARRIER_KEY)
         RouteWarningGlyph.RailwayCrossing -> strings.resolve(KIND_RAILWAY_CROSSING_KEY)
+        RouteWarningGlyph.TramLevelCrossing -> strings.resolve(KIND_TRAM_LEVEL_CROSSING_KEY)
         RouteWarningGlyph.PrivateWay -> strings.resolve(KIND_PRIVATE_WAY_KEY)
     }
 
@@ -362,6 +365,7 @@ internal fun routeWarningGlyphText(glyph: RouteWarningGlyph): String =
         RouteWarningGlyph.Steps -> "\u2263"
         RouteWarningGlyph.Barrier -> "\u2298"
         RouteWarningGlyph.RailwayCrossing -> "\u2715"
+        RouteWarningGlyph.TramLevelCrossing -> "\u2716"
         RouteWarningGlyph.PrivateWay -> "\u2297"
     }
 

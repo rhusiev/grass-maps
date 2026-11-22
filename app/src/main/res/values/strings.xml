@@ -143,6 +143,7 @@
     <string name="route_warnings_kind_steps">Steps</string>
     <string name="route_warnings_kind_barrier">Barrier</string>
     <string name="route_warnings_kind_railway_crossing">Railway crossing</string>
+    <string name="route_warnings_kind_tram_level_crossing">Tram crossing</string>
     <string name="route_warnings_kind_private_way">Private way</string>
     <string name="route_warnings_detail_private">access=private</string>
     <string name="route_warnings_detail_push_bike">push the bike</string>

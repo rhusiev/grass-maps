@@ -51,11 +51,11 @@ import nl.r1a.grassmaps.regions.core.RegionReader as NativeRegionReader
  *   same-version reinstall of that component is read again.
  *
  * The component is `way-alerts.geojson`, a GeoJSON `FeatureCollection` whose
- * features carry `kind` (`railway_crossing`, `tunnel`, `hazard`, `ford` or
- * `barrier`), `osmType` (`node` or `way`) and `osmId`. It is region data, not
- * a Valhalla tile: the engine does not return hazards, fords or barriers, and
- * T-0301 verified its tiles do not carry them. `relations.json` is the
- * route-relations document.
+ * features carry `kind` (`railway_crossing`, `tram_level_crossing`, `tunnel`,
+ * `hazard`, `ford` or `barrier`), `osmType` (`node` or `way`) and `osmId`. It is
+ * region data, not a Valhalla tile: the engine does not return hazards, fords
+ * or barriers, and T-0301 verified its tiles do not carry them.
+ * `relations.json` is the route-relations document.
  *
  * A package without a component is valid and reports no features, so an older
  * region still opens. A component that is present but unreadable is
@@ -361,6 +361,7 @@ private fun LatLon.toGeoPoint(): GeoPoint = GeoPoint(latitude = latitude, longit
 private fun AlertKind.toModel(): WayAlertFeatureKind =
     when (this) {
         AlertKind.RAILWAY_CROSSING -> WayAlertFeatureKind.RailwayCrossing
+        AlertKind.TRAM_LEVEL_CROSSING -> WayAlertFeatureKind.TramLevelCrossing
         AlertKind.TUNNEL -> WayAlertFeatureKind.Tunnel
         AlertKind.HAZARD -> WayAlertFeatureKind.Hazard
         AlertKind.FORD -> WayAlertFeatureKind.Ford

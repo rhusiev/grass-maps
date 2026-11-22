@@ -515,7 +515,7 @@ def write_manifest(spec: dict, boundaries: dict | None = None) -> dict:
             "extraction": spec["extractor"],
             "features": _feature_counts(
                 pack / "way-alerts.geojson",
-                ("railway_crossing", "tunnel", "hazard", "ford", "barrier"),
+                ("railway_crossing", "tram_level_crossing", "tunnel", "hazard", "ford", "barrier"),
             ),
         },
         "routeRelationSource": {

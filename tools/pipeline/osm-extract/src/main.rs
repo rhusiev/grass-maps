@@ -313,6 +313,7 @@ struct Stats {
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 enum WayAlertKind {
     RailwayCrossing,
+    TramLevelCrossing,
     Tunnel,
     Hazard,
     Ford,
@@ -323,6 +324,7 @@ impl WayAlertKind {
     fn as_str(self) -> &'static str {
         match self {
             WayAlertKind::RailwayCrossing => "railway_crossing",
+            WayAlertKind::TramLevelCrossing => "tram_level_crossing",
             WayAlertKind::Tunnel => "tunnel",
             WayAlertKind::Hazard => "hazard",
             WayAlertKind::Ford => "ford",
@@ -334,6 +336,7 @@ impl WayAlertKind {
 #[derive(Default)]
 struct WayAlertStats {
     railway_crossings: u64,
+    tram_level_crossings: u64,
     tunnels: u64,
     hazards: u64,
     fords: u64,
@@ -423,10 +426,12 @@ fn main() -> ExitCode {
         return match run_way_alerts(&options) {
             Ok(stats) => {
                 eprintln!(
-                    "osm-extract: way-alerts: {} railway crossings, {} tunnels, {} hazards, \
-                     {} fords, {} barriers ({} shared crossings, {} skipped tunnels, \
-                     {} skipped barriers, {} skipped shared nodes, {} ways without coordinates)",
+                    "osm-extract: way-alerts: {} railway crossings, {} tram level crossings, \
+                     {} tunnels, {} hazards, {} fords, {} barriers ({} shared crossings, \
+                     {} skipped tunnels, {} skipped barriers, {} skipped shared nodes, \
+                     {} ways without coordinates)",
                     stats.railway_crossings,
+                    stats.tram_level_crossings,
                     stats.tunnels,
                     stats.hazards,
                     stats.fords,
@@ -867,9 +872,14 @@ fn run_way_alerts(options: &Options) -> Result<WayAlertStats, String> {
             continue;
         }
         stats.shared_crossings += 1;
-        stats.record(WayAlertKind::RailwayCrossing);
+        let kind = if tag(tags, "railway").is_some_and(|value| value == "tram_level_crossing") {
+            WayAlertKind::TramLevelCrossing
+        } else {
+            WayAlertKind::RailwayCrossing
+        };
+        stats.record(kind);
         features.push(WayAlertFeature {
-            kind: WayAlertKind::RailwayCrossing,
+            kind,
             element_type: "node",
             id,
             coordinates: vec![(lon, lat)],
@@ -1271,6 +1281,7 @@ impl WayAlertStats {
     fn record(&mut self, kind: WayAlertKind) {
         match kind {
             WayAlertKind::RailwayCrossing => self.railway_crossings += 1,
+            WayAlertKind::TramLevelCrossing => self.tram_level_crossings += 1,
             WayAlertKind::Tunnel => self.tunnels += 1,
             WayAlertKind::Hazard => self.hazards += 1,
             WayAlertKind::Ford => self.fords += 1,
@@ -1280,13 +1291,14 @@ impl WayAlertStats {
 }
 
 /// Every kind a point feature can carry, strongest first. A node with several
-/// tags (a ford at a gate) is one feature: a crossing, then a hazard, then a
-/// ford, then a barrier (T-0319A).
+/// tags (a ford at a gate) is one feature: a railway or tram crossing, then a
+/// hazard, then a ford, then a barrier (T-0319A).
 fn node_alert_kind(tags: &[(String, String)]) -> Option<WayAlertKind> {
-    if tag(tags, "railway")
-        .is_some_and(|value| value == "level_crossing" || value == "tram_level_crossing")
-    {
+    if tag(tags, "railway").is_some_and(|value| value == "level_crossing") {
         return Some(WayAlertKind::RailwayCrossing);
+    }
+    if tag(tags, "railway").is_some_and(|value| value == "tram_level_crossing") {
+        return Some(WayAlertKind::TramLevelCrossing);
     }
     if has_significant_value(tags, "hazard") {
         return Some(WayAlertKind::Hazard);
@@ -2215,14 +2227,14 @@ mod tests {
     }
 
     #[test]
-    fn a_tram_crossing_and_a_level_crossing_are_both_railway_crossings() {
+    fn a_tram_crossing_and_a_level_crossing_are_distinct_kinds() {
         assert_eq!(
             node_alert_kind(&tags(&[("railway", "level_crossing")])),
             Some(WayAlertKind::RailwayCrossing),
         );
         assert_eq!(
             node_alert_kind(&tags(&[("railway", "tram_level_crossing")])),
-            Some(WayAlertKind::RailwayCrossing),
+            Some(WayAlertKind::TramLevelCrossing),
         );
         assert_eq!(
             node_alert_kind(&tags(&[("railway", "rail")])),
@@ -2336,6 +2348,7 @@ mod tests {
         std::fs::remove_file(&out).ok();
 
         assert_eq!(stats.railway_crossings, 2, "a tagged and a shared crossing");
+        assert_eq!(stats.tram_level_crossings, 0);
         assert_eq!(stats.shared_crossings, 1);
         assert_eq!(stats.tunnels, 1);
         assert_eq!(stats.hazards, 3, "two nodes and one way");

@@ -204,7 +204,7 @@ def way_alert_counts():
     kinds = Counter(feature["properties"]["kind"] for feature in document["features"])
     return {
         kind: kinds.get(kind, 0)
-        for kind in ("railway_crossing", "tunnel", "hazard", "ford", "barrier")
+        for kind in ("railway_crossing", "tram_level_crossing", "tunnel", "hazard", "ford", "barrier")
     }
 
 

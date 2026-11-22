@@ -107,6 +107,7 @@ fn feature(raw: RawFeature) -> Result<AlertFeature, RegionReadError> {
 fn kind(kind: &str) -> Result<AlertKind, RegionReadError> {
     match kind {
         "railway_crossing" => Ok(AlertKind::RailwayCrossing),
+        "tram_level_crossing" => Ok(AlertKind::TramLevelCrossing),
         "tunnel" => Ok(AlertKind::Tunnel),
         "hazard" => Ok(AlertKind::Hazard),
         "ford" => Ok(AlertKind::Ford),

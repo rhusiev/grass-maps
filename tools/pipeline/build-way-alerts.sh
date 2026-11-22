@@ -4,13 +4,15 @@
 #
 # The output is `way-alerts.geojson`, the component `regions.RegionReader`
 # reads: a GeoJSON FeatureCollection whose features carry `kind`
-# (`railway_crossing`, `tunnel`, `hazard`, `ford` or `barrier`), `osmType`
-# (`node` or `way`) and `osmId`. A node is a Point, a way a LineString.
+# (`railway_crossing`, `tram_level_crossing`, `tunnel`, `hazard`, `ford` or
+# `barrier`), `osmType` (`node` or `way`) and `osmId`. A node is a Point, a way
+# a LineString.
 #
 # The selection is the T-0319A rule, implemented in tools/pipeline/osm-extract:
-#   railway_crossing  node with railway=level_crossing or
-#                     railway=tram_level_crossing, or a node shared by a
+#   railway_crossing  node with railway=level_crossing, or a node shared by a
 #                     railway=rail/narrow_gauge way and a travel highway=* way
+#   tram_level_crossing node with railway=tram_level_crossing, including a
+#                     shared node carrying that tag (Q50)
 #   tunnel            way with tunnel=* on a travel highway=* (building
 #                     passages, culverts, floodways, canals and pipes are not
 #                     passages a rider goes through)

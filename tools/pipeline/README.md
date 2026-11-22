@@ -193,9 +193,9 @@ and the 2,921,155 B Lviv component.
 
 Selection rules, exact:
 
-- `railway_crossing`: a node with `railway=level_crossing` or
-  `railway=tram_level_crossing`; or a node shared by a `railway=rail` or
-  `railway=narrow_gauge` way and a travel `highway=*` way. The shared-node rule
+- `railway_crossing`: a node with `railway=level_crossing`; or a node shared by
+  a `railway=rail` or `railway=narrow_gauge` way and a travel `highway=*` way.
+  The shared-node rule
   covers the convention where the crossing is the intersection of the two ways
   and carries no tag of its own. A way with `bridge=*` or `tunnel=*` (other than
   `no`) is grade-separated and does not contribute a shared node. A shared node
@@ -203,6 +203,9 @@ Selection rules, exact:
   `halt`, `stop`, `derail`, `milestone`, `traverser`, `turntable`,
   `water_tower`, `roundhouse` or `junction` is infrastructure, not a crossing,
   and is skipped.
+- `tram_level_crossing`: a node with `railway=tram_level_crossing`, including a
+  shared node carrying that tag. It is its own kind in the route-warning list,
+  while the navigation banner keeps the railway crossing alert (Q50).
 - `tunnel`: a way with `tunnel=*` on a travel `highway=*` way. `no`,
   `building_passage`, `culvert`, `floodway`, `canal` and `pipe` are skipped: a
   building passage and a water culvert are not a passage a rider goes through,

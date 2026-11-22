@@ -52,7 +52,7 @@ class MapHostStateTest {
 
         val result =
             session.applyStyleDiff(
-                StyleDiff(StyleId("touring"), listOf(background("stale"))),
+                StyleDiff(StyleId("trail"), listOf(background("stale"))),
             )
 
         assertEquals(Outcome.Failure(AppError.InvalidInput), result)
@@ -63,16 +63,16 @@ class MapHostStateTest {
     fun setStyleChangesWhichDiffIsAccepted() {
         val session = session()
 
-        assertEquals(Outcome.Success(Unit), session.applyStyle(style(StyleId("touring"))))
+        assertEquals(Outcome.Success(Unit), session.applyStyle(style(StyleId("trail"))))
         assertEquals(
             Outcome.Failure(AppError.InvalidInput),
             session.applyStyleDiff(StyleDiff(LOADED_STYLE, listOf(background("stale")))),
         )
         assertEquals(
             Outcome.Success(Unit),
-            session.applyStyleDiff(StyleDiff(StyleId("touring"), listOf(background("new")))),
+            session.applyStyleDiff(StyleDiff(StyleId("trail"), listOf(background("new")))),
         )
-        assertEquals(StyleId("touring"), session.loadedStyleId)
+        assertEquals(StyleId("trail"), session.loadedStyleId)
     }
 
     @Test
@@ -200,7 +200,7 @@ class MapHostStateTest {
         session.onStyleLoaded()
         val generation = session.styleGeneration.value
 
-        assertEquals(Outcome.Success(Unit), session.applyStyle(style(StyleId("touring"))))
+        assertEquals(Outcome.Success(Unit), session.applyStyle(style(StyleId("trail"))))
 
         assertEquals(LOADED_STYLE, session.loadedStyleId)
         assertTrue("a layers-only switch must not clear styleReady", session.styleReady.value)
@@ -212,12 +212,12 @@ class MapHostStateTest {
         val session = session()
         session.applyStyleDiff(StyleDiff(LOADED_STYLE, listOf(background("kept"))))
         val before = session.layers.value
-        session.applyStyle(style(StyleId("touring")))
+        session.applyStyle(style(StyleId("trail")))
 
         val result =
             session.applyStyleDiff(
                 StyleDiff(
-                    StyleId("touring"),
+                    StyleId("trail"),
                     listOf(
                         SlottedLayer(
                             LayerSlot.Base,
@@ -251,7 +251,7 @@ class MapHostStateTest {
         val session = session()
         val before = session.style.value
 
-        val result = session.applyStyle(StyleSpec(StyleId("touring"), "  "))
+        val result = session.applyStyle(StyleSpec(StyleId("trail"), "  "))
 
         assertEquals(Outcome.Failure(AppError.InvalidInput), result)
         assertEquals(LOADED_STYLE, session.loadedStyleId)
@@ -263,7 +263,7 @@ class MapHostStateTest {
         val session = session()
         val before = session.style.value
 
-        val result = session.applyStyle(StyleSpec(StyleId("touring"), "[1, 2, 3]"))
+        val result = session.applyStyle(StyleSpec(StyleId("trail"), "[1, 2, 3]"))
 
         assertEquals(Outcome.Failure(AppError.InvalidInput), result)
         assertEquals(LOADED_STYLE, session.loadedStyleId)
@@ -430,7 +430,7 @@ class MapHostStateTest {
         val tiles = MapTileSource { _, _, _ -> EMPTY_TILE }
         session.applySources(EMPTY_RESOLVER, mapOf(MapSourceIds.REGION to tiles))
 
-        session.applyStyle(StyleSpec(LOADED_STYLE, TOURING_DOCUMENT, sources = declaredSources()))
+        session.applyStyle(StyleSpec(LOADED_STYLE, TRAIL_DOCUMENT, sources = declaredSources()))
 
         assertSame(
             tiles,
@@ -443,13 +443,13 @@ class MapHostStateTest {
     @Test
     fun aSourceRefreshBuildsFromTheStyleLastSet() {
         val session = MapHostState(declaredStyle(), CAMERA) { null }
-        session.applyStyle(StyleSpec(LOADED_STYLE, TOURING_DOCUMENT, sources = declaredSources()))
+        session.applyStyle(StyleSpec(LOADED_STYLE, TRAIL_DOCUMENT, sources = declaredSources()))
         val tiles = MapTileSource { _, _, _ -> EMPTY_TILE }
 
         session.applySources(EMPTY_RESOLVER, mapOf(MapSourceIds.REGION to tiles))
 
         val document = Json.parseToJsonElement(session.style.value.json.json).jsonObject
-        assertEquals("touring", document.getValue("glyphs").jsonPrimitive.content)
+        assertEquals("trail", document.getValue("glyphs").jsonPrimitive.content)
         assertSame(
             tiles,
             session.style.value.plan.app
@@ -491,9 +491,9 @@ class MapHostStateTest {
     private fun malformedFilter(): JsonArray = JsonArray(listOf(JsonPrimitive("has")))
 
     private companion object {
-        val LOADED_STYLE: StyleId = StyleId("standard")
+        val LOADED_STYLE: StyleId = StyleId("meadow")
         const val VALID_STYLE = """{"version":8}"""
-        const val TOURING_DOCUMENT = """{"version":8,"glyphs":"touring"}"""
+        const val TRAIL_DOCUMENT = """{"version":8,"glyphs":"trail"}"""
         val CAMERA = Camera(center = GeoPoint(0.0, 0.0), zoom = 1.0)
         val EMPTY_RESOLVER: (SourceId) -> String? = { null }
         val EMPTY_TILE = ByteArray(0)

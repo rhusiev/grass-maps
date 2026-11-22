@@ -161,7 +161,7 @@ class SourcePlanTest {
             ),
     ): StyleSpec =
         StyleSpec(
-            id = StyleId("standard"),
+            id = StyleId("meadow"),
             baseStyleJson = BASE_STYLE,
             sources = sources,
         )

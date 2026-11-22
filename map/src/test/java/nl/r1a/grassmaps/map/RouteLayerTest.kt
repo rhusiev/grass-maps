@@ -55,7 +55,7 @@ class RouteLayerTest {
     fun theHostStateKeepsAndClearsTheRoute() {
         val state =
             MapHostState(
-                StyleSpec(StyleId("standard"), """{"version":8}"""),
+                StyleSpec(StyleId("meadow"), """{"version":8}"""),
                 Camera(center = GeoPoint(49.84, 24.03), zoom = 12.0),
             ) { null }
         val route = route()
@@ -71,7 +71,7 @@ class RouteLayerTest {
     fun theHostStateKeepsTheColourStyleWithItsRoute() {
         val state =
             MapHostState(
-                StyleSpec(StyleId("standard"), """{"version":8}"""),
+                StyleSpec(StyleId("meadow"), """{"version":8}"""),
                 Camera(center = GeoPoint(49.84, 24.03), zoom = 12.0),
             ) { null }
         val route = route()

@@ -15,8 +15,8 @@ class StyleVariantResolverTest {
 
     @Test
     fun aSameBaseProfileSwitchIsANoOp() {
-        val meadow = StyleVariant(StyleId("standard"), base)
-        val trail = StyleVariant(StyleId("touring"), base)
+        val meadow = StyleVariant(StyleId("meadow"), base)
+        val trail = StyleVariant(StyleId("trail"), base)
 
         assertFalse(needsStyleReload(meadow, trail))
         assertFalse(needsStyleReload(trail, meadow))
@@ -24,15 +24,15 @@ class StyleVariantResolverTest {
 
     @Test
     fun aDarkVariantOfTheSameStyleStaysOnTheLoadedBase() {
-        val light = StyleVariant(StyleId("standard"), base)
-        val dark = StyleVariant(StyleId("standard-dark"), base)
+        val light = StyleVariant(StyleId("meadow"), base)
+        val dark = StyleVariant(StyleId("meadow-dark"), base)
 
         assertFalse(needsStyleReload(light, dark))
     }
 
     @Test
     fun aChangedBaseDocumentForcesOneReload() {
-        val meadow = StyleVariant(StyleId("standard"), base)
+        val meadow = StyleVariant(StyleId("meadow"), base)
         val other = StyleVariant(StyleId("other"), base.replace("sprite", "icon"))
 
         assertTrue(needsStyleReload(meadow, other))
@@ -40,6 +40,6 @@ class StyleVariantResolverTest {
 
     @Test
     fun theFirstStyleAlwaysLoads() {
-        assertTrue(needsStyleReload(null, StyleVariant(StyleId("standard"), base)))
+        assertTrue(needsStyleReload(null, StyleVariant(StyleId("meadow"), base)))
     }
 }

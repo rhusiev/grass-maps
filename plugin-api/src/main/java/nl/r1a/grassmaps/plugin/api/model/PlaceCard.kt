@@ -26,6 +26,12 @@ data class PlaceCard(
      * no request. A provider leaves this false.
      */
     val online: Boolean = false,
+    /**
+     * The place's point, when the source carried one (T-0612). The host uses it
+     * as a route destination and as the saved-favourite point. It is data, not
+     * a row: the coordinate notations the shell draws stay the three text rows.
+     */
+    val position: GeoPoint? = null,
 ) {
     /** True when the card has no field or action to draw at all. */
     val isEmpty: Boolean

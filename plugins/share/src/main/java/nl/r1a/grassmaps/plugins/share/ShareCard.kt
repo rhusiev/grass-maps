@@ -69,6 +69,7 @@ object ShareCard {
         card.copy(
             coordinates = coordinates(point),
             shortcuts = shortcutsFor(name, identity, point),
+            position = point,
         )
 
     private fun shortcutsFor(

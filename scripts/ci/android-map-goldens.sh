@@ -14,9 +14,9 @@
 #
 # Usage:
 #   ./scripts/ci/android-map-goldens.sh --profile fixture [--update] [APK]
-#   ./scripts/ci/android-map-goldens.sh --profile standard [--style light|dark|both] [--update] [APK]
-#   ./scripts/ci/android-map-goldens.sh --profile touring [--style touring|touring-light|touring-dark] [--update] [APK]
-#   ./scripts/ci/android-map-goldens.sh --profile contours [--style all|both|touring] [--update] [APK]
+#   ./scripts/ci/android-map-goldens.sh --profile meadow [--style light|dark|both] [--update] [APK]
+#   ./scripts/ci/android-map-goldens.sh --profile trail [--style trail|trail-light|trail-dark] [--update] [APK]
+#   ./scripts/ci/android-map-goldens.sh --profile contours [--style all|both|trail] [--update] [APK]
 #   ./scripts/ci/android-map-goldens.sh --profile raster [--positions raster-overlay-40] [--update] [APK]
 #   ./scripts/ci/android-map-goldens.sh --profile oblast \
 #       --region-package /hdd/t-0102-evidence/region/ua-46/2026-11-05-bench \
@@ -24,7 +24,7 @@
 #   ./scripts/ci/android-map-goldens.sh --profile world \
 #       --region-package /hdd/t-0502-world/out/world/2026-11-16 [--update] [APK]
 #
-# The fixture, standard, touring and raster profiles run with contours off, which keeps
+# The fixture, meadow, trail and raster profiles run with contours off, which keeps
 # their existing references valid; the contours profile runs with the fixture's
 # committed contour archive on. --contours on|off overrides either default.
 #
@@ -90,17 +90,17 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -n "$PROFILE" ]] || {
-    echo "android-map-goldens.sh: --profile standard|touring|contours|fixture|raster|oblast|world is required" >&2
+    echo "android-map-goldens.sh: --profile meadow|trail|contours|fixture|raster|oblast|world is required" >&2
     exit 2
 }
-if [[ "$PROFILE" == "standard" || "$PROFILE" == "contours" ]]; then
+if [[ "$PROFILE" == "meadow" || "$PROFILE" == "contours" ]]; then
     STYLE="${STYLE:-both}"
 fi
-if [[ "$PROFILE" == "touring" ]]; then
-    STYLE="${STYLE:-touring}"
+if [[ "$PROFILE" == "trail" ]]; then
+    STYLE="${STYLE:-trail}"
 fi
-if [[ -n "$STYLE" && "$PROFILE" != "standard" && "$PROFILE" != "touring" && "$PROFILE" != "contours" ]]; then
-    echo "android-map-goldens.sh: --style applies to --profile standard, touring or contours" >&2
+if [[ -n "$STYLE" && "$PROFILE" != "meadow" && "$PROFILE" != "trail" && "$PROFILE" != "contours" ]]; then
+    echo "android-map-goldens.sh: --style applies to --profile meadow, trail or contours" >&2
     exit 2
 fi
 case "$CONTOURS" in
@@ -112,9 +112,9 @@ case "$CONTOURS" in
         ;;
 esac
 case "$STYLE" in
-    ""|light|dark|both|touring|touring-light|touring-dark|all) ;;
+    ""|light|dark|both|trail|trail-light|trail-dark|all) ;;
     *)
-        echo "android-map-goldens.sh: --style must be light, dark, both, touring, touring-light, touring-dark or all" >&2
+        echo "android-map-goldens.sh: --style must be light, dark, both, trail, trail-light, trail-dark or all" >&2
         exit 2
         ;;
 esac
@@ -260,8 +260,8 @@ styles=()
 case "$STYLE" in
     "") styles=("") ;;
     both) styles=(light dark) ;;
-    touring) styles=(touring-light touring-dark) ;;
-    all) styles=(light dark touring-light touring-dark) ;;
+    trail) styles=(trail-light trail-dark) ;;
+    all) styles=(light dark trail-light trail-dark) ;;
     *) styles=("$STYLE") ;;
 esac
 

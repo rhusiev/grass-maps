@@ -118,14 +118,14 @@ INSTALL_RETRY_PAUSE_S = 5.0
 # The first camera command can run before the app has drawn anything under
 # swiftshader, leaving a black capture. The debug harness logs its first full
 # frame, so wait for that line before the first position.
-# The authored Standard style compiles more layers than the T-0020 bench style,
+# The authored Meadow style compiles more layers than the T-0020 bench style,
 # and swiftshader needs longer than a minute for the first full frame on the CI
 # emulator (T-0108: style-loaded at 46 s, first frame just after 60 s).
 FIRST_FRAME_TIMEOUT_S = 180.0
 DEVICE_DEADLINE_S = 180.0
 BLOCK_DELTA = 32
 # Measured, not assumed. At the fixed head the first full run after the
-# relation goldens were recaptured put all 80 Standard positions at 0.0 %
+# relation goldens were recaptured put all 80 Meadow positions at 0.0 %
 # block mismatch. The previous 5 % bound had admitted the contour seam on 13
 # consecutive cadences, at 3.265 % on one position and 3.675 % at its worst,
 # so 1 % is the gate the fixed references can carry.
@@ -140,20 +140,20 @@ GRID_HEIGHT = 192
 # failure.
 COMMITTED_AVD_NAME = "grassmaps-goldens-api29"
 DEVICE_REGION_STAGE = "/data/local/tmp/grass-map-golden-region"
-# The app's style ids. `light` is the default id the app loads. The Touring
-# ids belong to the `touring` profile and the contours touring references.
+# The app's style ids. `light` is the default id the app loads. The Trail
+# ids belong to the `trail` profile and the contours trail references.
 STYLE_IDS = {
-    "light": "standard",
-    "dark": "standard-dark",
-    "touring-light": "touring",
-    "touring-dark": "touring-dark",
+    "light": "meadow",
+    "dark": "meadow-dark",
+    "trail-light": "trail",
+    "trail-dark": "trail-dark",
 }
 # The launch extra the app reads for the golden capture (ContoursSettings).
 CONTOURS_EXTRA = "map.contours.enabled"
 
 # Ten fixture places at three zooms. The fixture is the CI map (T-0015), so the
 # style goldens stay small and need no region archive.
-STANDARD_PLACES = (
+MEADOW_PLACES = (
     ("place-a", 49.9420, 23.9440),
     ("place-b", 49.9420, 23.9560),
     ("place-c", 49.9460, 23.9440),
@@ -165,13 +165,13 @@ STANDARD_PLACES = (
     ("place-i", 49.9580, 23.9440),
     ("place-j", 49.9580, 23.9560),
 )
-STANDARD_ZOOMS = (12.0, 13.0, 14.0)
+MEADOW_ZOOMS = (12.0, 13.0, 14.0)
 
 POSITIONS = {
-    "standard": tuple(
+    "meadow": tuple(
         (f"{name}-z{int(zoom)}", lat, lon, zoom, 0.0, 0.0)
-        for name, lat, lon in STANDARD_PLACES
-        for zoom in STANDARD_ZOOMS
+        for name, lat, lon in MEADOW_PLACES
+        for zoom in MEADOW_ZOOMS
     ),
     # T-0417: one fixture place at the three contour zooms. The archive has
     # index lines at z12-z13 and the 20 m lines at z14, so the three images
@@ -216,14 +216,14 @@ POSITIONS = {
 WORLD_PROFILE = "world"
 REGION_PACKAGE_PROFILES = frozenset({"oblast", WORLD_PROFILE})
 
-# T-0311: the same fixed route on the Standard fixture, at a driving overview
+# T-0311: the same fixed route on the Meadow fixture, at a driving overview
 # zoom and at a walking zoom. The route and its turn maneuvers are committed so
 # the capture needs no routing pack.
 # T-0408: the same drawn positions with a route whose segments carry grade,
 # surface and highway, so the golden shows the slope colours, an unpaved dash
 # and the steps' stripe ink.
 ROUTE_CASES = {
-    "standard": (
+    "meadow": (
         ("route-turns-z14", 49.9520, 23.9502, 14.0, 0.0, 0.0),
         ("route-turns-z15", 49.9520, 23.9502, 15.0, 0.0, 0.0),
         ("route-colours-z14", 49.9520, 23.9502, 14.0, 0.0, 0.0),
@@ -244,7 +244,7 @@ ROUTE_COLOUR_FIXTURE = ROUTE_COLOUR_FIXTURE_PATH.read_text(encoding="utf-8")
 # committed fixture-mini extraction, not an authored drawing, so the capture
 # exercises the real parser and assembler.
 ROUTE_RELATION_CASES = {
-    "standard": (
+    "meadow": (
         ("hiking-routes-z13", 49.9470, 23.9540, 13.0, 0.0, 0.0),
         ("hiking-routes-z14", 49.9470, 23.9540, 14.0, 0.0, 0.0),
         ("cycling-routes-z12", 49.9470, 23.9540, 12.0, 0.0, 0.0),
@@ -263,7 +263,7 @@ ROUTE_RELATIONS_FIXTURE = ROUTE_RELATIONS_FIXTURE_PATH.read_text(encoding="utf-8
 # with the green track absent. The pair is the golden evidence that a track
 # draws in its sidecar colour and that a hidden track draws no feature at all.
 TRACK_CASES = {
-    "standard": (
+    "meadow": (
         ("track-looks-z15", 49.9520, 23.9502, 15.0, 0.0, 0.0),
         ("track-looks-hidden-z15", 49.9520, 23.9502, 15.0, 0.0, 0.0),
     ),
@@ -281,12 +281,12 @@ REGION_HIGHLIGHT_POSITION_NAMES = frozenset(
 REGION_HIGHLIGHTS_FIXTURE_PATH = ROOT / "test-data" / "map-goldens" / "region-highlights.json"
 REGION_HIGHLIGHTS_FIXTURE = REGION_HIGHLIGHTS_FIXTURE_PATH.read_text(encoding="utf-8")
 
-# T-0109: Touring draws the Standard profile's cases, so the two reference sets
+# T-0109: Trail draws the Meadow profile's cases, so the two reference sets
 # show the same places and differ only in the style.
-POSITIONS["touring"] = POSITIONS["standard"]
-ROUTE_CASES["touring"] = ROUTE_CASES["standard"]
-ROUTE_RELATION_CASES["touring"] = ROUTE_RELATION_CASES["standard"]
-TRACK_CASES["touring"] = TRACK_CASES["standard"]
+POSITIONS["trail"] = POSITIONS["meadow"]
+ROUTE_CASES["trail"] = ROUTE_CASES["meadow"]
+ROUTE_RELATION_CASES["trail"] = ROUTE_RELATION_CASES["meadow"]
+TRACK_CASES["trail"] = TRACK_CASES["meadow"]
 TRACK_POSITION_NAMES = frozenset(case[0] for cases in TRACK_CASES.values() for case in cases)
 TRACK_LOOKS_FIXTURE_PATH = ROOT / "test-data" / "map-goldens" / "track-looks.json"
 TRACK_LOOKS_FIXTURE = TRACK_LOOKS_FIXTURE_PATH.read_text(encoding="utf-8")

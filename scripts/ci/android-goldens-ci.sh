@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# The CI golden run, as named sets: `standard` (Standard light and dark;
-# `standard-light` and `standard-dark` run one style each), `touring` (the same
-# cases in the Touring style; `touring-light` and `touring-dark` run one each),
+# The CI golden run, as named sets: `meadow` (Meadow light and dark;
+# `meadow-light` and `meadow-dark` run one style each), `trail` (the same
+# cases in the Trail style; `trail-light` and `trail-dark` run one each),
 # `contours` (the fixture's contour archive on), `fixture` (the T-0102 set,
 # contours off), `navigation`, and `raster` (overlay and underlay over the
 # loopback tile fixture; the one set that turns the radios on, so it runs last).
@@ -10,7 +10,7 @@
 # With no set named, every set runs in that order on the one booted emulator,
 # which is the local use. CI runs one set per job, each on its own emulator, so
 # the sets run in parallel (one job took 2-3.5 h and hit its 210 min bound;
-# each Standard style alone took ~45 min, so CI runs the two styles apart).
+# each Meadow style alone took ~45 min, so CI runs the two styles apart).
 # A compare failure does not stop the next set, because a capture-only run is
 # how the references are promoted; the exit code still reports any failure.
 #
@@ -22,8 +22,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 APK="${1:-$ROOT/app/build/outputs/apk/debug/app-debug.apk}"
 shift || true
-readonly ALL_SETS=(standard touring contours fixture navigation raster)
-readonly KNOWN_SETS=(standard standard-light standard-dark touring touring-light touring-dark contours fixture navigation raster)
+readonly ALL_SETS=(meadow trail contours fixture navigation raster)
+readonly KNOWN_SETS=(meadow meadow-light meadow-dark trail trail-light trail-dark contours fixture navigation raster)
 if (($# > 0)); then
     SETS=("$@")
 else
@@ -39,20 +39,20 @@ skip_reboot=0
 
 run_set() {
     case "$1" in
-        standard)
-            GOLDEN_SKIP_REBOOT="$skip_reboot" ./scripts/ci/android-map-goldens.sh --profile standard \
+        meadow)
+            GOLDEN_SKIP_REBOOT="$skip_reboot" ./scripts/ci/android-map-goldens.sh --profile meadow \
                 --style both "$APK"
             ;;
-        standard-light | standard-dark)
-            GOLDEN_SKIP_REBOOT="$skip_reboot" ./scripts/ci/android-map-goldens.sh --profile standard \
-                --style "${1#standard-}" --output "$ROOT/build/map-goldens/$1" "$APK"
+        meadow-light | meadow-dark)
+            GOLDEN_SKIP_REBOOT="$skip_reboot" ./scripts/ci/android-map-goldens.sh --profile meadow \
+                --style "${1#meadow-}" --output "$ROOT/build/map-goldens/$1" "$APK"
             ;;
-        touring)
-            GOLDEN_SKIP_REBOOT="$skip_reboot" ./scripts/ci/android-map-goldens.sh --profile touring \
-                --style touring "$APK"
+        trail)
+            GOLDEN_SKIP_REBOOT="$skip_reboot" ./scripts/ci/android-map-goldens.sh --profile trail \
+                --style trail "$APK"
             ;;
-        touring-light | touring-dark)
-            GOLDEN_SKIP_REBOOT="$skip_reboot" ./scripts/ci/android-map-goldens.sh --profile touring \
+        trail-light | trail-dark)
+            GOLDEN_SKIP_REBOOT="$skip_reboot" ./scripts/ci/android-map-goldens.sh --profile trail \
                 --style "$1" --output "$ROOT/build/map-goldens/$1" "$APK"
             ;;
         contours)

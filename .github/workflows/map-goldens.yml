@@ -20,8 +20,8 @@ on:
     branches:
       - dev
     paths:
-      - 'plugins/style-standard/**'   # the style itself
-      - 'plugins/style-touring/**'
+      - 'plugins/style-meadow/**'   # the style itself
+      - 'plugins/style-trail/**'
       - 'plugins/layers-panel/**'
       - 'app/src/main/assets/sprites/**'
       - 'app/src/main/assets/fonts/**'
@@ -94,7 +94,7 @@ jobs:
     runs-on: ubuntu-latest
     # One job ran every set on one emulator and took 1 h 55 m to 3 h 05 m;
     # run a36dca45 was cancelled at its 210-minute bound. Measured on run
-    # 903d1cc8 (2 h 37 m): build and boot ~23 min, Standard light ~46 min,
+    # 903d1cc8 (2 h 37 m): build and boot ~23 min, Meadow light ~46 min,
     # dark ~42 min, the other four sets ~46 min together. Each set now boots
     # its own emulator in parallel, the longest ~70 min with the APK fetch and
     # boot; 100 minutes leaves a margin of about 40 %.
@@ -102,7 +102,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        set: [standard-light, standard-dark, touring-light, touring-dark, contours, fixture, navigation, raster]
+        set: [meadow-light, meadow-dark, trail-light, trail-dark, contours, fixture, navigation, raster]
     steps:
       - name: Check out
         uses: actions/checkout@v7

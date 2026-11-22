@@ -145,48 +145,48 @@ class RadioConditionsTest(unittest.TestCase):
 
 class InvokeStyleTest(unittest.TestCase):
     def test_socket_timeout_is_retried(self) -> None:
-        client = FakeClient([TimeoutError("timed out"), "style=standard-dark loaded=true idle=true"])
+        client = FakeClient([TimeoutError("timed out"), "style=meadow-dark loaded=true idle=true"])
 
         with mock.patch.object(map_goldens.time, "sleep"):
             result = map_goldens.invoke_style(client, "dark")
 
-        self.assertIn("style=standard-dark", result)
+        self.assertIn("style=meadow-dark", result)
         self.assertEqual(client.calls, 2)
 
     def test_a_wrong_style_answer_fails(self) -> None:
-        client = FakeClient(["style=standard loaded=true idle=true"])
+        client = FakeClient(["style=meadow loaded=true idle=true"])
 
         with self.assertRaises(map_goldens.GoldenError):
             map_goldens.invoke_style(client, "dark")
 
 
-class TouringPositionsTest(unittest.TestCase):
-    def test_touring_draws_the_standard_cases(self) -> None:
-        self.assertEqual(map_goldens.cases("standard"), map_goldens.cases("touring"))
-        self.assertEqual(40, len(map_goldens.cases("touring")))
+class TrailPositionsTest(unittest.TestCase):
+    def test_trail_draws_the_meadow_cases(self) -> None:
+        self.assertEqual(map_goldens.cases("meadow"), map_goldens.cases("trail"))
+        self.assertEqual(40, len(map_goldens.cases("trail")))
 
-    def test_touring_styles_use_the_touring_style_ids(self) -> None:
-        self.assertEqual("touring", map_goldens.STYLE_IDS["touring-light"])
-        self.assertEqual("touring-dark", map_goldens.STYLE_IDS["touring-dark"])
+    def test_trail_styles_use_the_trail_style_ids(self) -> None:
+        self.assertEqual("trail", map_goldens.STYLE_IDS["trail-light"])
+        self.assertEqual("trail-dark", map_goldens.STYLE_IDS["trail-dark"])
 
-    def test_touring_references_sit_beside_standard(self) -> None:
+    def test_trail_references_sit_beside_meadow(self) -> None:
         self.assertEqual(
-            map_goldens.ROOT / "test-data" / "map-goldens" / "touring" / "touring-dark",
-            map_goldens.default_reference("touring", "touring-dark"),
+            map_goldens.ROOT / "test-data" / "map-goldens" / "trail" / "trail-dark",
+            map_goldens.default_reference("trail", "trail-dark"),
         )
 
 
-class StandardPositionsTest(unittest.TestCase):
+class MeadowPositionsTest(unittest.TestCase):
     def test_ten_places_at_three_zooms(self) -> None:
-        positions = map_goldens.POSITIONS["standard"]
+        positions = map_goldens.POSITIONS["meadow"]
 
         self.assertEqual(30, len(positions))
         self.assertEqual(10, len({name.rsplit("-z", 1)[0] for name, *_ in positions}))
         self.assertEqual({12.0, 13.0, 14.0}, {position[3] for position in positions})
         self.assertEqual(30, len({position[0] for position in positions}))
 
-    def test_route_positions_extend_the_standard_capture(self) -> None:
-        positions = map_goldens.cases("standard")
+    def test_route_positions_extend_the_meadow_capture(self) -> None:
+        positions = map_goldens.cases("meadow")
 
         self.assertEqual(40, len(positions))
         self.assertEqual(40, len({position[0] for position in positions}))
@@ -219,7 +219,7 @@ class StandardPositionsTest(unittest.TestCase):
         )
 
     def test_route_relation_positions_carry_the_fixture_component(self) -> None:
-        positions = map_goldens.cases("standard")
+        positions = map_goldens.cases("meadow")
 
         names = {
             "hiking-routes-z13",
@@ -239,7 +239,7 @@ class StandardPositionsTest(unittest.TestCase):
         self.assertEqual({"lcn", "rcn"}, {node["network"] for node in component["nodes"]})
 
     def test_track_positions_carry_their_track_sets(self) -> None:
-        positions = map_goldens.cases("standard")
+        positions = map_goldens.cases("meadow")
 
         names = {"track-looks-z15", "track-looks-hidden-z15"}
         self.assertEqual(names, set(map_goldens.TRACK_POSITION_NAMES))
@@ -255,7 +255,7 @@ class StandardPositionsTest(unittest.TestCase):
 
     def test_named_positions_narrow_a_capture_or_compare(self) -> None:
         selected = map_goldens.selected_positions(
-            "standard", "hiking-routes-z13,hiking-routes-z14"
+            "meadow", "hiking-routes-z13,hiking-routes-z14"
         )
 
         self.assertIsNotNone(selected)
@@ -264,12 +264,12 @@ class StandardPositionsTest(unittest.TestCase):
             {case[0] for case in selected},
         )
         with self.assertRaises(map_goldens.GoldenError):
-            map_goldens.selected_positions("standard", "place-z99")
+            map_goldens.selected_positions("meadow", "place-z99")
 
     def test_style_reference_paths_are_separate(self) -> None:
         self.assertEqual(
-            map_goldens.default_reference("standard", "dark"),
-            map_goldens.ROOT / "test-data" / "map-goldens" / "standard" / "dark",
+            map_goldens.default_reference("meadow", "dark"),
+            map_goldens.ROOT / "test-data" / "map-goldens" / "meadow" / "dark",
         )
         self.assertEqual(
             map_goldens.default_reference("fixture", None),
@@ -302,7 +302,7 @@ class RasterPositionsTest(unittest.TestCase):
 
     def test_the_raster_cases_stay_in_their_own_profile(self) -> None:
         self.assertEqual(tuple(map_goldens.POSITIONS["raster"]), map_goldens.cases("raster"))
-        names = {case[0] for case in map_goldens.cases("standard")}
+        names = {case[0] for case in map_goldens.cases("meadow")}
         self.assertNotIn("raster-overlay-40", names)
 
 
@@ -332,7 +332,7 @@ class WorldPositionsTest(unittest.TestCase):
             (Path(temp) / "manifest.json").write_text(json.dumps({"region": "world"}))
             map_goldens.require_profile_region("world", Path(temp))
         self.assertIn("oblast", map_goldens.REGION_PACKAGE_PROFILES)
-        self.assertNotIn("standard", map_goldens.REGION_PACKAGE_PROFILES)
+        self.assertNotIn("meadow", map_goldens.REGION_PACKAGE_PROFILES)
 
 
 class RasterTileFixtureTest(unittest.TestCase):
@@ -502,7 +502,7 @@ class ContoursPositionsTest(unittest.TestCase):
             [position[0] for position in positions],
         )
 
-    def test_the_contours_reference_is_separate_from_standard(self) -> None:
+    def test_the_contours_reference_is_separate_from_meadow(self) -> None:
         self.assertEqual(
             map_goldens.default_reference("contours", "dark"),
             map_goldens.ROOT / "test-data" / "map-goldens" / "contours" / "dark",
@@ -513,10 +513,10 @@ class StyleVariantTest(unittest.TestCase):
     def test_four_variants_map_to_four_style_ids(self) -> None:
         self.assertEqual(
             {
-                "light": "standard",
-                "dark": "standard-dark",
-                "touring-light": "touring",
-                "touring-dark": "touring-dark",
+                "light": "meadow",
+                "dark": "meadow-dark",
+                "trail-light": "trail",
+                "trail-dark": "trail-dark",
             },
             map_goldens.STYLE_IDS,
         )
@@ -949,7 +949,7 @@ class CompareRecaptureTest(unittest.TestCase):
                 return {"name": name, "idle": True, "stability": {"stable": True}}
 
             document = map_goldens.compare(
-                "standard",
+                "meadow",
                 captured,
                 reference,
                 output,
@@ -979,7 +979,7 @@ class CompareRecaptureTest(unittest.TestCase):
                 return {"name": name, "idle": True, "stability": {"stable": True}}
 
             document = map_goldens.compare(
-                "standard",
+                "meadow",
                 captured,
                 reference,
                 output,
@@ -1004,7 +1004,7 @@ class CompareRecaptureTest(unittest.TestCase):
                 raise AssertionError("a passing position must not be re-captured")
 
             document = map_goldens.compare(
-                "standard",
+                "meadow",
                 captured,
                 reference,
                 output,
@@ -1114,7 +1114,7 @@ class UpdateReferenceGuardTest(unittest.TestCase):
             self._png(reference / "p2.png", self.SMALL, 255)
 
             map_goldens.update_reference(
-                "standard",
+                "meadow",
                 captured,
                 reference,
                 positions=(self.FIRST, self.SECOND),
@@ -1140,7 +1140,7 @@ class UpdateReferenceGuardTest(unittest.TestCase):
 
             with self.assertRaises(map_goldens.GoldenError) as raised:
                 map_goldens.update_reference(
-                    "standard",
+                    "meadow",
                     captured,
                     reference,
                     positions=(self.FIRST, self.SECOND),
@@ -1161,7 +1161,7 @@ class UpdateReferenceGuardTest(unittest.TestCase):
 
             with mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
                 map_goldens.update_reference(
-                    "standard",
+                    "meadow",
                     captured,
                     reference,
                     positions=(self.SECOND,),
@@ -1180,7 +1180,7 @@ class UpdateReferenceGuardTest(unittest.TestCase):
 
             with self.assertRaises(map_goldens.GoldenError) as raised:
                 map_goldens.compare(
-                    "standard",
+                    "meadow",
                     captured,
                     reference,
                     output,
@@ -1210,7 +1210,7 @@ class RecaptureSerialTest(unittest.TestCase):
         log = directory / "adb.log"
         captured = directory / "captured"
         captured.mkdir()
-        command = ["compare", "--profile", "standard", "--captured", str(captured)]
+        command = ["compare", "--profile", "meadow", "--captured", str(captured)]
         if serial is not None:
             command += ["--serial", serial]
         args = map_goldens.build_parser().parse_args(command)
@@ -1561,7 +1561,7 @@ class RegionHighlightCasesTest(unittest.TestCase):
         self.assertEqual(2, len(map_goldens.POSITIONS["world"]))
 
     def test_no_other_profile_draws_the_highlights(self) -> None:
-        for profile in ("standard", "touring", "oblast"):
+        for profile in ("meadow", "trail", "oblast"):
             names = {case[0] for case in map_goldens.cases(profile)}
             self.assertNotIn("region-highlights-z6", names)
 

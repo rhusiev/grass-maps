@@ -20,7 +20,7 @@ import javax.xml.parsers.DocumentBuilderFactory
  * on topografix.com, so vendoring it would be a user decision under
  * `AGENTS.md`'s licence rule. This object instead encodes the schema's
  * sequence, cardinality, namespace and simple-type rules. It is deliberately
- * stricter than `processContents="lax"`: an unknown `grassmap` extension fails,
+ * stricter than `processContents="lax"`: an unknown `grassmaps` extension fails,
  * so a typo cannot pass as an extension.
  */
 internal object GpxSchema11 {

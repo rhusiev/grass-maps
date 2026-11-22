@@ -38,8 +38,8 @@ class TrackExportTest {
             assertEquals("Lviv hills hike.gpx", file.fileName)
             assertEquals("application/gpx+xml", file.mimeType)
             val text = file.bytes.toString(Charsets.UTF_8)
-            assertTrue(text.contains("<grassmap:colour>${record.style.colour}</grassmap:colour>"))
-            assertTrue(text.contains("<grassmap:widthDp>${record.style.widthDp}</grassmap:widthDp>"))
+            assertTrue(text.contains("<grassmaps:colour>${record.style.colour}</grassmaps:colour>"))
+            assertTrue(text.contains("<grassmaps:widthDp>${record.style.widthDp}</grassmaps:widthDp>"))
 
             val reread = reread(access, file.bytes)
             assertEquals(

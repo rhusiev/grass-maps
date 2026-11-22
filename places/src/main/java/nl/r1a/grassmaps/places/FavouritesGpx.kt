@@ -75,7 +75,7 @@ internal object FavouritesGpx {
             append("<gpx version=\"1.1\" creator=\"").append(CREATOR).append('"')
             append(" xmlns=\"").append(GPX_NAMESPACE).append('"')
             append(" xmlns:osmand=\"").append(OSMAND_NAMESPACE).append('"')
-            append(" xmlns:grassmap=\"").append(GRASSMAP_NAMESPACE).append('"')
+            append(" xmlns:grassmaps=\"").append(GRASSMAP_NAMESPACE).append('"')
             append(" xmlns:xsi=\"").append(XSI_NAMESPACE).append('"')
             append(" xsi:schemaLocation=\"").append(GPX_NAMESPACE).append(' ')
             append(GPX_SCHEMA).append("\">\n")
@@ -138,9 +138,9 @@ internal object FavouritesGpx {
         appendText(favourite.shape.wireName)
         append("</osmand:background>\n")
         if (favourite.special != null) {
-            append("      <grassmap:special>")
+            append("      <grassmaps:special>")
             appendText(favourite.special.wireName)
-            append("</grassmap:special>\n")
+            append("</grassmaps:special>\n")
         }
         append("    </extensions>\n")
         append("  </wpt>\n")
@@ -289,7 +289,7 @@ internal object FavouritesGpx {
     private fun readSpecial(element: Element): FavouriteSpecial? {
         for (extensions in childElements(element, ELEMENT_EXTENSIONS)) {
             for (child in elementChildren(extensions)) {
-                if (prefix(child.tagName) != GRASSMAP_PREFIX || localName(child.tagName) != ELEMENT_SPECIAL) {
+                if (prefix(child.tagName) !in GRASSMAP_PREFIXES || localName(child.tagName) != ELEMENT_SPECIAL) {
                     continue
                 }
                 val name = child.textContent?.trim()?.lowercase(Locale.ROOT) ?: continue
@@ -469,7 +469,9 @@ internal object FavouritesGpx {
     private const val OSMAND_NAMESPACE = "https://osmand.net"
     private const val OSMAND_PREFIX = "osmand"
     private const val GRASSMAP_NAMESPACE = "https://grassmaps.app/gpx/1"
-    private const val GRASSMAP_PREFIX = "grassmap"
+
+    // Exports use `grassmaps`; files exported before the rename use `grassmap`.
+    private val GRASSMAP_PREFIXES = setOf("grassmaps", "grassmap")
     private const val XSI_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance"
 
     private const val ELEMENT_GPX = "gpx"

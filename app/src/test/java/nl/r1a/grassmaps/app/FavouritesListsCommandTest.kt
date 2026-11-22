@@ -83,8 +83,8 @@ class FavouritesListsCommandTest {
             assertEquals(FavouriteSpecial.HOME, container.point("Rynok Square").special)
             assertEquals(FavouriteSpecial.WORK, container.point("Office").special)
             val specials = gpx()
-            assertTrue(specials.contains("<grassmap:special>home</grassmap:special>"))
-            assertTrue(specials.contains("<grassmap:special>work</grassmap:special>"))
+            assertTrue(specials.contains("<grassmaps:special>home</grassmaps:special>"))
+            assertTrue(specials.contains("<grassmaps:special>work</grassmaps:special>"))
 
             assertEquals(
                 listOf("Rynok Square", "Office"),
@@ -138,7 +138,7 @@ class FavouritesListsCommandTest {
             command(container, FavouritesUiContract.setHome, listParams("pointId" to container.idOf("Rynok Square")))
             undo(container)
             assertEquals(null, container.point("Rynok Square").special)
-            assertTrue(!gpx().contains("<grassmap:special>home</grassmap:special>"))
+            assertTrue(!gpx().contains("<grassmaps:special>home</grassmaps:special>"))
         }
 
     @Test

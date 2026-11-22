@@ -3386,7 +3386,7 @@ A list is an OsmAnd group. Moving a point changes its `<type>`; if the point's
 appearance matched its old list's, it adopts the destination's appearance.
 Recolouring a list changes the group colour and every member's
 `osmand:color`, including points that inherited the list's look. Home and Work
-are written as `<grassmap:special>` in our own GPX namespace inside
+are written as `<grassmaps:special>` in our own GPX namespace inside
 `<extensions>`, which OsmAnd and plain GPX readers ignore. A file that names
 the same special twice keeps the first, so the library holds one Home and one
 Work at most.
@@ -3444,7 +3444,7 @@ missing or out-of-range coordinates is skipped with a structural locator such
 as `trk[0]/trkseg[1]/trkpt[4]`; a broken elevation or time only clears that
 field. A document that is not well-formed XML at all is `CorruptData`.
 Export writes the elements GPX 1.1 defines, in schema order, and keeps a stored
-track's colour and width as `<grassmap:colour>` and `<grassmap:widthDp>` inside
+track's colour and width as `<grassmaps:colour>` and `<grassmaps:widthDp>` inside
 `<trk><extensions>`. That namespace is
 `https://grassmaps.app/gpx/1`, the same one favourites use. The importer ignores
 it, so a round-trip returns the same geometry, names, elevations and times; the

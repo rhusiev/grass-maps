@@ -96,8 +96,8 @@ class GpxExportTest {
 
             val exported = export(ImportedEntities(tracks = listOf(styled)))
             val text = exported.toString(Charsets.UTF_8)
-            assertTrue(text.contains("<grassmap:colour>#C2185B</grassmap:colour>"))
-            assertTrue(text.contains("<grassmap:widthDp>6.0</grassmap:widthDp>"))
+            assertTrue(text.contains("<grassmaps:colour>#C2185B</grassmaps:colour>"))
+            assertTrue(text.contains("<grassmaps:widthDp>6.0</grassmaps:widthDp>"))
             GpxSchema11.assertValid(exported)
 
             val reread = parse(exported).entities.tracks.single()

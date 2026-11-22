@@ -139,8 +139,8 @@ class FavouriteListsStoreTest {
             val reloaded = loaded(FavouritesStore(file))
             assertEquals(FavouriteSpecial.Home, favouriteNamed(reloaded, "Aqueduct").special)
             val exported = exportText(store)
-            assertTrue(exported.contains("<grassmap:special>home</grassmap:special>"))
-            assertTrue(exported.contains("<grassmap:special>work</grassmap:special>"))
+            assertTrue(exported.contains("<grassmaps:special>home</grassmaps:special>"))
+            assertTrue(exported.contains("<grassmaps:special>work</grassmaps:special>"))
 
             assertEquals(Outcome.Success(FavouriteUndo.APPLIED), store.undoListAction(secondHome.undo))
             val restored = loaded(store)
@@ -342,10 +342,10 @@ class FavouriteListsStoreTest {
         val text = exportText(reloaded)
         if (present) {
             assertEquals(special, point.special)
-            assertTrue(text.contains("<grassmap:special>${special.wireName}</grassmap:special>"))
+            assertTrue(text.contains("<grassmaps:special>${special.wireName}</grassmaps:special>"))
         } else {
             assertNull(point.special)
-            assertFalse(text.contains("<grassmap:special>${special.wireName}</grassmap:special>"))
+            assertFalse(text.contains("<grassmaps:special>${special.wireName}</grassmaps:special>"))
         }
     }
 

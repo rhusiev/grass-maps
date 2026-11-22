@@ -42,7 +42,7 @@ enum class FavouriteSpecial(
  * documented defaults ([DEFAULT_COLOR] and [FavouriteShape.Circle]).
  *
  * [special] is not part of OsmAnd's dialect. The store writes it as
- * `<grassmap:special>` inside `<extensions>`, which OsmAnd and plain GPX
+ * `<grassmaps:special>` inside `<extensions>`, which OsmAnd and plain GPX
  * readers ignore.
  */
 data class Favourite(

@@ -16,7 +16,7 @@ import java.time.Instant
 /**
  * Writes the GPX 1.1 a reader can import again. Only the elements GPX defines
  * are emitted for geometry, elevation and time. A track the store styles also
- * carries its colour and width as `<grassmap:...>` values inside
+ * carries its colour and width as `<grassmaps:...>` values inside
  * `<trk><extensions>`; other readers ignore that namespace, and the importer
  * keeps the geometry and the GPX metadata unchanged.
  *
@@ -42,7 +42,7 @@ internal object GpxWriter {
                 append("<gpx version=\"").append(GPX_VERSION).append('"')
                 append(" creator=\"").append(CREATOR).append('"')
                 append(" xmlns=\"").append(GPX_NAMESPACE).append('"')
-                append(" xmlns:grassmap=\"").append(GRASSMAP_NAMESPACE).append('"')
+                append(" xmlns:grassmaps=\"").append(GRASSMAP_NAMESPACE).append('"')
                 append(" xmlns:xsi=\"").append(XSI_NAMESPACE).append('"')
                 append(" xsi:schemaLocation=\"").append(GPX_NAMESPACE).append(' ')
                 append(GPX_SCHEMA).append("\">\n")
@@ -149,8 +149,8 @@ internal object GpxWriter {
 
     private fun StringBuilder.appendTrackStyle(style: TrackStyle) {
         append("    <extensions>\n")
-        append("      <grassmap:colour>").appendText(style.colour).append("</grassmap:colour>\n")
-        append("      <grassmap:widthDp>").append(decimal(style.widthDp.toDouble())).append("</grassmap:widthDp>\n")
+        append("      <grassmaps:colour>").appendText(style.colour).append("</grassmaps:colour>\n")
+        append("      <grassmaps:widthDp>").append(decimal(style.widthDp.toDouble())).append("</grassmaps:widthDp>\n")
         append("    </extensions>\n")
     }
 

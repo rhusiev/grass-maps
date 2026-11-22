@@ -214,6 +214,55 @@ class PlaceCardContentTest {
         )
     }
 
+    @Test
+    fun theSheetIsBottomAnchoredWithAHandleAndAPinnedRouteAction() {
+        val content = placeCardContent(cardWithCoordinatesAndActions(), MapStrings(RESOLVED))
+
+        val sheet = placeCardSheet(content, MapStrings(RESOLVED))
+
+        assertEquals(SheetAnchor.Bottom, sheet.anchor)
+        assertTrue(sheet.hasHandle)
+        assertEquals(PlaceCardPrimaryAction.Route, sheet.primaryAction)
+        assertEquals("Route", sheet.routeLabel)
+        assertEquals("Save", sheet.saveLabel)
+        assertEquals("cafe", sheet.subtitle)
+        assertEquals(3, sheet.coordinates.size)
+        assertTrue(sheet.shortcuts.any { it.label == "Share place" })
+        assertTrue(sheet.shortcuts.any { it.label == "Open in another app" })
+    }
+
+    @Test
+    fun theRouteActionReachesTheCaller() {
+        var calls = 0
+
+        invokePlaceCardPrimary(PlaceCardPrimaryAction.Route) { calls += 1 }
+
+        assertEquals(1, calls)
+    }
+
+    private fun cardWithCoordinatesAndActions(): PlaceCard =
+        PlaceCard(
+            name = "Кав'ярня Левада",
+            kind = "cafe",
+            coordinates =
+                listOf(
+                    entry("share.coordinate_decimal", PlaceCardValue.Text("49.821740, 24.023910")),
+                    entry("share.coordinate_dms", PlaceCardValue.Text("49°49'18.26\"N, 24°01'26.08\"E")),
+                    entry("share.coordinate_ddm", PlaceCardValue.Text("49°49.3044'N, 24°01.4346'E")),
+                ),
+            shortcuts =
+                listOf(
+                    PlaceCardShortcut(
+                        labelKey = "share.share_place",
+                        link = PlaceCardLink(PlaceCardAction.SHARE, "https://www.openstreetmap.org/node/42"),
+                    ),
+                    PlaceCardShortcut(
+                        labelKey = "share.open_in",
+                        link = PlaceCardLink(PlaceCardAction.OPEN_IN, "geo:49.821740,24.023910"),
+                    ),
+                ),
+        )
+
     private fun entry(
         labelKey: String,
         value: PlaceCardValue,
@@ -248,6 +297,8 @@ class PlaceCardContentTest {
                 "place_card_closed" to "Closed now",
                 "place_card_unknown" to "Hours unknown",
                 "place_card_coordinates" to "Coordinates",
+                "place_card_route" to "Route",
+                "place_card_save" to "Save",
                 "share.coordinate_decimal" to "Decimal degrees",
                 "share.coordinate_dms" to "DMS",
                 "share.coordinate_ddm" to "DDM",

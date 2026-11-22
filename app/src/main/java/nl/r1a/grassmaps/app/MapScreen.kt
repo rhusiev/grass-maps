@@ -1655,6 +1655,34 @@ private fun MapContent(
                         Log.w(TAG, "place card action ${link.action} failed: $error")
                     }
                 },
+                onRoute = {
+                    val place = placeCard
+                    val position = place?.position
+                    if (position != null) {
+                        PlaceCardSession.hide()
+                        scope.launch {
+                            setPlanPoint(container, RoutePlanRole.Destination, position, label = place.name)
+                        }
+                    }
+                },
+                onSave = {
+                    val place = placeCard
+                    val position = place?.position
+                    val name = place?.name
+                    if (position != null && name != null) {
+                        scope.launch {
+                            val params =
+                                buildJsonObject {
+                                    put("lat", position.latitude)
+                                    put("lon", position.longitude)
+                                    put("name", name)
+                                }
+                            container.commandBus.invoke(FavouriteCommandIds.ADD, params).onFailure { error ->
+                                Log.w(TAG, "place card save failed: $error")
+                            }
+                        }
+                    }
+                },
             )
         }
         if (!navigationActive) {

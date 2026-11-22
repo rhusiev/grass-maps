@@ -4,6 +4,7 @@ import nl.r1a.grassmaps.plugin.api.model.UnitSystem
 import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
 import nl.r1a.grassmaps.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.util.Locale
@@ -105,6 +106,7 @@ class RouteWarningsContentTest {
                 RouteWarningGlyph.Steps to "Steps",
                 RouteWarningGlyph.Barrier to "Barrier",
                 RouteWarningGlyph.RailwayCrossing to "Railway crossing",
+                RouteWarningGlyph.TramLevelCrossing to "Tram crossing",
                 RouteWarningGlyph.PrivateWay to "Private way",
             )
 
@@ -121,12 +123,27 @@ class RouteWarningsContentTest {
                 RouteWarningGlyph.Steps to "Сходи",
                 RouteWarningGlyph.Barrier to "Бар'єр",
                 RouteWarningGlyph.RailwayCrossing to "Залізничний переїзд",
+                RouteWarningGlyph.TramLevelCrossing to "Трамвайний переїзд",
                 RouteWarningGlyph.PrivateWay to "Приватна дорога",
             )
 
         for ((glyph, label) in expected) {
             assertEquals(label, routeWarningKindText(glyph, MapStrings(UKRAINIAN, UKRAINIAN_PLURALS, "uk")))
         }
+    }
+
+    @Test
+    fun aTramCrossingReadsDifferentlyFromARailwayCrossing() {
+        val english = MapStrings(ENGLISH, ENGLISH_PLURALS)
+        val ukrainian = MapStrings(UKRAINIAN, UKRAINIAN_PLURALS, "uk")
+
+        assertEquals("Tram crossing", routeWarningKindText(RouteWarningGlyph.TramLevelCrossing, english))
+        assertEquals("Railway crossing", routeWarningKindText(RouteWarningGlyph.RailwayCrossing, english))
+        assertEquals("Трамвайний переїзд", routeWarningKindText(RouteWarningGlyph.TramLevelCrossing, ukrainian))
+        assertNotEquals(
+            routeWarningKindText(RouteWarningGlyph.RailwayCrossing, ukrainian),
+            routeWarningKindText(RouteWarningGlyph.TramLevelCrossing, ukrainian),
+        )
     }
 
     private fun row(
@@ -182,6 +199,7 @@ class RouteWarningsContentTest {
                 "route_warnings_kind_steps" to "Steps",
                 "route_warnings_kind_barrier" to "Barrier",
                 "route_warnings_kind_railway_crossing" to "Railway crossing",
+                "route_warnings_kind_tram_level_crossing" to "Tram crossing",
                 "route_warnings_kind_private_way" to "Private way",
                 "route_warnings_detail_private" to "access=private",
                 "route_warnings_detail_push_bike" to "push the bike",
@@ -217,6 +235,7 @@ class RouteWarningsContentTest {
                     "route_warnings_kind_steps" to "Сходи",
                     "route_warnings_kind_barrier" to "Бар'єр",
                     "route_warnings_kind_railway_crossing" to "Залізничний переїзд",
+                    "route_warnings_kind_tram_level_crossing" to "Трамвайний переїзд",
                     "route_warnings_kind_private_way" to "Приватна дорога",
                     "route_warnings_detail_private" to "access=private",
                     "route_warnings_detail_push_bike" to "пішки з велосипедом",

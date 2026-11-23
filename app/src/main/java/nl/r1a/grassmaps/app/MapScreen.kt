@@ -69,6 +69,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -275,7 +276,7 @@ internal val MEADOW_DARK = StyleId("meadow-dark")
 internal val TRAIL = StyleId("trail")
 internal val TRAIL_DARK = StyleId("trail-dark")
 private const val TAG = "GrassMapsMap"
-private const val BAR_PADDING_DP = 16
+internal const val BAR_PADDING_DP = 16
 
 // T-0612: the collapsed search field shares the bottom chrome with the profile
 // switcher. BottomStart puts it left of those buttons; the existing bottom-left
@@ -323,10 +324,30 @@ private const val SETTINGS_ENTRY_GAP_DP = 8
 /** Clearance above the map credit and the Layers button when the arc is on. */
 private const val QUICK_ACCESS_BOTTOM_CLEARANCE_DP = 72
 private const val ARC_BOTTOM_CLEARANCE_DP = 120
-private const val WIDGET_GRID_GAP_DP = 8
+internal const val WIDGET_GRID_GAP_DP = 8
 
 /** The read-only route card sits just below the status bar, over the map. */
 private const val ROUTE_CARD_TOP_DP = 8
+
+/**
+ * The top-anchored control bar is measured in pixels. Leave its width, its own
+ * screen padding and one gap on the end side so a neighbour cannot slide under
+ * it (T-0612). The widget grid and the route card share this rule.
+ */
+internal fun topControlBarEndInset(controlBarWidth: Dp): Dp =
+    controlBarWidth + (BAR_PADDING_DP + WIDGET_GRID_GAP_DP).dp
+
+/** Horizontal insets of the over-map route card (T-0612). */
+internal data class RouteCardInsets(val start: Dp, val end: Dp)
+
+/**
+ * Placement model for the route card. It takes the measured bar width and the
+ * arc flag so the clearance rule can be pinned by a test; today both sides use
+ * only the screen padding.
+ */
+internal fun routeCardInsets(controlBarWidth: Dp, arc: Boolean): RouteCardInsets =
+    RouteCardInsets(start = BAR_PADDING_DP.dp, end = BAR_PADDING_DP.dp)
+
 private const val BANNER_CORNER_DP = 8
 private const val BANNER_HORIZONTAL_DP = 16
 private const val BANNER_VERTICAL_DP = 10
@@ -1194,7 +1215,7 @@ private fun MapContent(
                         .padding(
                             start = BAR_PADDING_DP.dp,
                             top = (BAR_PADDING_DP + WIDGET_GRID_GAP_DP).dp + with(density) { searchCardHeightPx.toDp() },
-                            end = (BAR_PADDING_DP + WIDGET_GRID_GAP_DP).dp + with(density) { controlBarWidthPx.toDp() },
+                            end = topControlBarEndInset(with(density) { controlBarWidthPx.toDp() }),
                         ),
             )
         }
@@ -1205,6 +1226,7 @@ private fun MapContent(
         if (!navigationActive && readyPlan.status == RoutePlanStatus.Ready && !stopsOpen) {
             val summary = routePlanPreview(readyPlan, container.strings, time = routePreviewTime, units = units)
             if (summary != null) {
+                val cardInsets = routeCardInsets(with(density) { controlBarWidthPx.toDp() }, layout.arc)
                 RouteSummaryCardContent(
                     card = routeSummaryCard(summary, container.strings),
                     onSave = planSave,
@@ -1215,9 +1237,9 @@ private fun MapContent(
                             .align(Alignment.TopCenter)
                             .statusBarsPadding()
                             .padding(
-                                start = BAR_PADDING_DP.dp,
+                                start = cardInsets.start,
                                 top = ROUTE_CARD_TOP_DP.dp,
-                                end = BAR_PADDING_DP.dp,
+                                end = cardInsets.end,
                             ),
                 )
             }

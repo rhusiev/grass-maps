@@ -98,6 +98,7 @@ private const val LABEL_FONT_SP = 12
 private const val ROW_TITLE_FONT_SP = 17
 private const val BODY_FONT_SP = 14
 private const val ACTION_FONT_SP = 15
+private const val ACTION_MIN_HEIGHT_DP = 48
 private const val PROGRESS_BAR_DP = 4
 private const val SWITCH_ROW_HEIGHT_DP = 48
 private const val SWITCH_TRACK_WIDTH_DP = 52
@@ -200,18 +201,6 @@ fun DownloadsScreenContent(
                     BasicText(
                         text = state.serverUrl,
                         style = TextStyle(color = MUTED, fontSize = BODY_FONT_SP.sp),
-                    )
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(SPACED_DP.dp)) {
-                    ActionButton(
-                        text = stringResource(R.string.downloads_update_all),
-                        onClick = onUpdateAll,
-                        quiet = true,
-                    )
-                    ActionButton(
-                        text = stringResource(R.string.downloads_token_settings),
-                        onClick = onTokenSettings,
-                        quiet = true,
                     )
                 }
             }
@@ -325,13 +314,17 @@ fun DownloadsScreenContent(
             onCancel = onCancel,
             onRemove = onRemove,
             onSearch = onSearch,
+            onUpdateAll = onUpdateAll,
+            onTokenSettings = onTokenSettings,
         )
     }
 }
 
 /**
- * The bar at the bottom: the open region's sheet, the "near you" suggestion and
- * the search field. It stays in place while the list above it scrolls.
+ * The bar at the bottom: the open region's sheet, the "near you" suggestion,
+ * the search field and the two screen-wide actions. It stays in place while the
+ * list above it scrolls, and it is a sibling of that list so it never covers the
+ * last catalogue row.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -343,6 +336,8 @@ private fun DownloadsActionBar(
     onCancel: (String) -> Unit,
     onRemove: (String) -> Unit,
     onSearch: (String) -> Unit,
+    onUpdateAll: () -> Unit,
+    onTokenSettings: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = SCREEN_PADDING_DP.dp, vertical = GAP_DP.dp),
@@ -368,6 +363,23 @@ private fun DownloadsActionBar(
             NearMeCard(row = nearMe, preferUkrainian = preferUkrainian, onDownload = onDownload, onCancel = onCancel)
         }
         SearchField(query = state.query, onSearch = onSearch)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(GAP_DP.dp),
+        ) {
+            ActionButton(
+                text = stringResource(R.string.downloads_update_all),
+                onClick = onUpdateAll,
+                quiet = true,
+                modifier = Modifier.weight(1f),
+            )
+            ActionButton(
+                text = stringResource(R.string.downloads_token_settings),
+                onClick = onTokenSettings,
+                quiet = true,
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }
 
@@ -806,6 +818,7 @@ private fun ActionButton(
     onClick: () -> Unit,
     quiet: Boolean = false,
     destructive: Boolean = false,
+    modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(CARD_CORNER_DP.dp)
     val background =
@@ -828,12 +841,14 @@ private fun ActionButton(
         }
     Box(
         modifier =
-            Modifier
+            modifier
+                .heightIn(min = ACTION_MIN_HEIGHT_DP.dp)
                 .clip(shape)
                 .background(background, shape)
                 .border(1.dp, outline, shape)
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(horizontal = CARD_PADDING_DP.dp, vertical = GAP_DP.dp),
+        contentAlignment = Alignment.Center,
     ) {
         BasicText(
             text = text,

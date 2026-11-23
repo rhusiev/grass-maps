@@ -131,6 +131,7 @@ python3 scripts/ci/android_benchmark_test.py || fail "script tests (benchmark)"
 python3 scripts/ci/test_count_test.py || fail "script tests (test count)"
 python3 scripts/ci/oblast_pipeline_test.py || fail "script tests (oblast pipeline)"
 python3 scripts/ci/fdroid_metadata_test.py || fail "script tests (F-Droid metadata)"
+python3 tools/control/no_mcp_test.py || fail "script tests (no MCP bridge)"
 
 step "Region package server tests"
 python3 -m unittest discover -s server/tests -p '*_test.py' || fail "region package server tests"

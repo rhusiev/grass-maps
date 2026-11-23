@@ -29,10 +29,10 @@ fun LayersSheet(
 ) {
     ShellBottomSheet(
         sheetTitle = paneTitle,
-        closeLabel = closeLabel,
         onDismiss = onDismiss,
         anchor = LAYERS_SHEET_ANCHOR,
         showHandle = LAYERS_SHEET_HAS_HANDLE,
+        closeLabel = closeLabel,
         content = content,
     )
 }

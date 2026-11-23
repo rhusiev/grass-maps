@@ -3,38 +3,20 @@ package nl.r1a.grassmaps.ui.shell
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusTarget
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -75,115 +57,68 @@ fun PlaceCardHost(
         return
     }
     val sheet = placeCardSheet(content, strings)
-    Box(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(colors.scrim)
-                // Tapping outside the sheet closes it, but the scrim is not a
-                // control: a screen reader user closes the sheet with its own
-                // close button instead of an unlabeled full-screen button.
-                .pointerInput(Unit) { detectTapGestures { onClose() } },
-    ) {
-        BoxWithConstraints(
-            modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .widthIn(max = SHEET_MAX_WIDTH_DP.dp),
-        ) {
-            val contentMaxHeight = maxHeight * SHEET_CONTENT_MAX_FRACTION
-            val focusRequester = remember { FocusRequester() }
-            LaunchedEffect(Unit) { focusRequester.requestFocus() }
-            Column(
-                modifier =
-                    Modifier
-                        .heightIn(max = contentMaxHeight + SHEET_CHROME_HEIGHT_DP.dp)
-                        .reportsBottomChrome(key = BOTTOM_SHEET_KEY)
-                        .background(
-                            colors.surface,
-                            RoundedCornerShape(topStart = SHEET_CORNER_DP.dp, topEnd = SHEET_CORNER_DP.dp),
-                        )
-                        // A tap inside the sheet must not reach the scrim.
-                        .pointerInput(Unit) { detectTapGestures(onTap = {}) }
-                        .navigationBarsPadding()
-                        .padding(horizontal = SHEET_PADDING_DP.dp)
-                        .padding(bottom = SHEET_PADDING_DP.dp)
-                        .focusRequester(focusRequester)
-                        .focusTarget()
-                        .semantics { paneTitle = strings.resolve(PANE_TITLE_KEY) },
-                verticalArrangement = Arrangement.spacedBy(SECTION_GAP_DP.dp),
-            ) {
-                if (sheet.hasHandle) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .padding(top = HANDLE_TOP_DP.dp, bottom = HANDLE_BOTTOM_DP.dp)
-                                .align(Alignment.CenterHorizontally)
-                                .width(HANDLE_WIDTH_DP.dp)
-                                .height(HANDLE_HEIGHT_DP.dp)
-                                .background(colors.handle, RoundedCornerShape(HANDLE_RADIUS_DP.dp)),
-                    )
-                }
+    ShellBottomSheet(
+        sheetTitle = strings.resolve(PANE_TITLE_KEY),
+        onDismiss = onClose,
+        modifier = modifier,
+        showHandle = sheet.hasHandle,
+        chromeHeight = SHEET_CHROME_HEIGHT_DP.dp,
+        header = {
+            Column(verticalArrangement = Arrangement.spacedBy(SHEET_SECTION_GAP_DP.dp)) {
                 CardHeader(content = content, strings = strings, colors = colors, onClose = onClose)
                 sheet.subtitle?.let { Line(text = it, style = secondaryStyle(colors)) }
-                Column(
-                    modifier =
-                        Modifier
-                            .heightIn(max = contentMaxHeight)
-                            .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(SECTION_GAP_DP.dp),
-                ) {
-                    content.address?.let { Line(text = it, style = secondaryStyle(colors)) }
-                    content.openingHours?.let { row ->
-                        LabeledRow(label = row.label, value = row.value, colors = colors, onAction = onAction)
-                    }
-                    content.openingState?.let { row ->
-                        LabeledRow(label = row.label, value = row.value, colors = colors, onAction = onAction)
-                    }
-                    Section(
-                        title = strings.resolve(COORDINATES_TITLE),
-                        rows = sheet.coordinates,
-                        colors = colors,
-                        onAction = onAction,
-                    )
-                    Section(title = strings.resolve(CONTACT_TITLE), rows = content.contacts, colors = colors, onAction = onAction)
-                    Section(
-                        title = strings.resolve(ACCESSIBILITY_TITLE),
-                        rows = content.accessibility,
-                        colors = colors,
-                        onAction = onAction,
-                    )
-                    Section(title = strings.resolve(DETAILS_TITLE), rows = content.attributes, colors = colors, onAction = onAction)
-                }
-                Tiles(
-                    saveLabel = sheet.saveLabel,
-                    shortcuts = sheet.shortcuts,
-                    colors = colors,
-                    onSave = onSave,
-                    onAction = onAction,
-                )
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = MIN_TAP_TARGET_DP.dp)
-                            .background(colors.accent, RoundedCornerShape(ACTION_CORNER_DP.dp))
-                            .clickable(role = Role.Button) { invokePlaceCardPrimary(sheet.primaryAction, onRoute) },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    BasicText(
-                        text = sheet.routeLabel,
-                        style =
-                            TextStyle(
-                                color = inkOn(colors.accent, colors),
-                                fontSize = ROW_FONT_SP.sp,
-                                fontWeight = FontWeight.SemiBold,
-                            ),
-                    )
-                }
             }
+        },
+        footer = {
+            Tiles(
+                saveLabel = sheet.saveLabel,
+                shortcuts = sheet.shortcuts,
+                colors = colors,
+                onSave = onSave,
+                onAction = onAction,
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                        .background(colors.accent, RoundedCornerShape(ACTION_CORNER_DP.dp))
+                        .clickable(role = Role.Button) { invokePlaceCardPrimary(sheet.primaryAction, onRoute) },
+                contentAlignment = Alignment.Center,
+            ) {
+                BasicText(
+                    text = sheet.routeLabel,
+                    style =
+                        TextStyle(
+                            color = inkOn(colors.accent, colors),
+                            fontSize = ROW_FONT_SP.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        ),
+                )
+            }
+        },
+    ) {
+        content.address?.let { Line(text = it, style = secondaryStyle(colors)) }
+        content.openingHours?.let { row ->
+            LabeledRow(label = row.label, value = row.value, colors = colors, onAction = onAction)
         }
+        content.openingState?.let { row ->
+            LabeledRow(label = row.label, value = row.value, colors = colors, onAction = onAction)
+        }
+        Section(
+            title = strings.resolve(COORDINATES_TITLE),
+            rows = sheet.coordinates,
+            colors = colors,
+            onAction = onAction,
+        )
+        Section(title = strings.resolve(CONTACT_TITLE), rows = content.contacts, colors = colors, onAction = onAction)
+        Section(
+            title = strings.resolve(ACCESSIBILITY_TITLE),
+            rows = content.accessibility,
+            colors = colors,
+            onAction = onAction,
+        )
+        Section(title = strings.resolve(DETAILS_TITLE), rows = content.attributes, colors = colors, onAction = onAction)
     }
 }
 
@@ -212,21 +147,7 @@ private fun CardHeader(
                 modifier = Modifier.semantics { heading() },
             )
         }
-        Box(
-            modifier =
-                Modifier
-                    .height(MIN_TAP_TARGET_DP.dp)
-                    .width(MIN_TAP_TARGET_DP.dp)
-                    .clickable(role = Role.Button, onClick = onClose)
-                    .semantics { contentDescription = strings.resolve(CLOSE_DESCRIPTION) },
-            contentAlignment = Alignment.Center,
-        ) {
-            BasicText(
-                text = CLOSE_GLYPH,
-                style = TextStyle(color = colors.ink, fontSize = CLOSE_FONT_SP.sp),
-                modifier = Modifier.clearAndSetSemantics {},
-            )
-        }
+        SheetCloseButton(label = strings.resolve(CLOSE_DESCRIPTION), onClick = onClose)
     }
 }
 
@@ -340,23 +261,11 @@ private const val ACCESSIBILITY_TITLE = "place_card_accessibility"
 private const val DETAILS_TITLE = "place_card_details"
 private const val CLOSE_DESCRIPTION = "place_card_close"
 private const val PANE_TITLE_KEY = "place_card_pane_title"
-private const val CLOSE_GLYPH = "×"
 
-private const val SHEET_MAX_WIDTH_DP = 560
-private const val SHEET_CORNER_DP = 22
-private const val SHEET_PADDING_DP = 16
-private const val SHEET_CONTENT_MAX_FRACTION = 0.5f
 private const val SHEET_CHROME_HEIGHT_DP = 300
 private const val MIN_TAP_TARGET_DP = 48
-private const val HANDLE_TOP_DP = 9
-private const val HANDLE_BOTTOM_DP = 10
-private const val HANDLE_WIDTH_DP = 36
-private const val HANDLE_HEIGHT_DP = 4
-private const val HANDLE_RADIUS_DP = 2
-private const val SECTION_GAP_DP = 10
 private const val ROW_LABEL_WIDTH_DP = 132
 private const val ACTION_CORNER_DP = 8
 private const val TITLE_FONT_SP = 20
 private const val SECTION_FONT_SP = 13
 private const val ROW_FONT_SP = 15
-private const val CLOSE_FONT_SP = 20

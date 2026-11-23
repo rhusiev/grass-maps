@@ -68,8 +68,11 @@ import nl.r1a.grassmaps.plugin.ui.api.ShellColors
  * values, and [anchorOffset] is the same position offset the map host was given,
  * so a puck that sits off-centre keeps its markers under it.
  *
- * [cardModifier] positions the field and the list (the app adds status-bar and
- * edge padding there); the markers always use the full map viewport.
+ * [cardModifier] adds edge padding to the field and the list; the app gives the
+ * open list a top anchor and the closed field bottom-bar padding.
+ * [collapsedAnchor] places only the closed field in this Box, so the open list
+ * keeps its readable position above the keyboard.
+ * The markers always use the full map viewport.
  * [onCollapsedCardSize] receives the size of the closed field, so a screen can
  * place its own elements below it at any font scale. When no offline index is
  * mounted, the line under the field offers [onOpenDownloads] as the next step;
@@ -93,6 +96,7 @@ fun SearchScreenHost(
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
     cardModifier: Modifier = Modifier,
+    collapsedAnchor: Alignment = Alignment.TopStart,
     onlineSearchEnabled: Boolean = false,
     positionAllowed: Boolean = false,
     onEnableOnlineSearch: () -> Unit = {},
@@ -157,7 +161,9 @@ fun SearchScreenHost(
                 text = content.labels.title,
                 style = TextStyle(color = colors.ink, fontSize = FIELD_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
                 modifier =
-                    cardModifier
+                    Modifier
+                        .align(collapsedAnchor)
+                        .then(cardModifier)
                         .onSizeChanged(onCollapsedCardSize)
                         .background(colors.glass, RoundedCornerShape(PANEL_CORNER_DP.dp))
                         .clickable(role = Role.Button) { onExpandedChange(true) }

@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -272,6 +273,13 @@ internal val TRAIL = StyleId("trail")
 internal val TRAIL_DARK = StyleId("trail-dark")
 private const val TAG = "GrassMapsMap"
 private const val BAR_PADDING_DP = 16
+
+// T-0612: the collapsed search field shares the bottom chrome with the profile
+// switcher. BottomStart puts it left of those buttons; the existing bottom-left
+// clearance keeps it above the bar and the map credit. 48 dp is the shell's tap
+// target, so the closed pill is as easy to open as any other control.
+private val SEARCH_COLLAPSED_ANCHOR: Alignment = Alignment.BottomStart
+private const val SEARCH_COLLAPSED_MIN_HEIGHT_DP = 48
 
 /** How often a by-sun theme recomputes the day boundary (T-0111). */
 private const val SUN_REFRESH_MILLIS = 30_000L
@@ -2596,9 +2604,20 @@ private fun SearchOverlay(
         onClear = onClear,
         modifier = Modifier.fillMaxSize(),
         cardModifier =
-            Modifier
-                .statusBarsPadding()
-                .padding(BAR_PADDING_DP.dp),
+            if (expanded) {
+                // The open results list keeps the top anchor: it stays readable
+                // above the keyboard and never grows under the system IME.
+                Modifier
+                    .statusBarsPadding()
+                    .padding(BAR_PADDING_DP.dp)
+            } else {
+                Modifier
+                    .navigationBarsPadding()
+                    .padding(bottom = QUICK_ACCESS_BOTTOM_CLEARANCE_DP.dp)
+                    .padding(BAR_PADDING_DP.dp)
+                    .heightIn(min = SEARCH_COLLAPSED_MIN_HEIGHT_DP.dp)
+            },
+        collapsedAnchor = SEARCH_COLLAPSED_ANCHOR,
         onlineSearchEnabled = onlineSearchEnabled,
         positionAllowed = positionAllowed,
         onEnableOnlineSearch = onEnableOnlineSearch,

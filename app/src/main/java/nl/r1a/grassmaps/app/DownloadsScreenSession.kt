@@ -9,8 +9,9 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * Process-scoped like the lists and library sheets, so a rebuilt composition
  * keeps it. The catalogue, the rows and the transfers come from the
- * `downloads.ui` stream; this only carries the screen's visibility. The debug
- * control channel opens it until the map gets its own entry point.
+ * `downloads.ui` stream; this only carries the screen's visibility. The
+ * search screen's no-index action and the debug control channel both open it
+ * here, so neither adds another downloads flow.
  */
 object DownloadsScreenSession {
     private val visibleState = MutableStateFlow(false)

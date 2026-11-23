@@ -41,6 +41,7 @@ class PlaceCardStringsTest {
                 "place_card_unknown",
                 "place_card_close",
                 "place_card_pane_title",
+                "place_card_walk_estimate",
                 "favourites_lists_title",
                 "favourites_lists_close",
                 "favourites_lists_undo",

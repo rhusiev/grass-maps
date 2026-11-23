@@ -257,8 +257,18 @@ object DownloadsScreen {
         )
     }
 
-    // RED: the derivation from a first-run offer's parts is filled in after the test fails.
-    fun partPills(offer: FirstRunOffer): List<CatalogPartKind> = emptyList()
+    /** The parts a first-run row names as labels, in the design's order. */
+    private val PART_PILL_KINDS =
+        listOf(
+            CatalogPartKind.MAP,
+            CatalogPartKind.SEARCH,
+            CatalogPartKind.ELEVATION,
+            CatalogPartKind.ROUTING,
+            CatalogPartKind.CONTOURS,
+        )
+
+    /** Pill labels come only from the parts the offer carries; an add-on or an unknown kind is not a pill. */
+    fun partPills(offer: FirstRunOffer): List<CatalogPartKind> = PART_PILL_KINDS.filter { kind -> offer.parts.any { it.kind == kind } }
 
     private fun partRows(
         data: DownloadsData,

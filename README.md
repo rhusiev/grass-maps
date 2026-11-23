@@ -705,7 +705,7 @@ application ID is `nl.r1a.grassmaps`.
 | `places` | place and search provider hosts, favourites store | `plugin-api` |
 | `tracks` | GPX import and export, the track file store and sidecars, analysis engine | `plugin-api` |
 | `ui-shell` | screens, the navigation screen, bottom bar and sheet, configurable button and widget grid, command palette, theme, strings | `plugin-api`, `plugin-ui-api` |
-| `control` | JSON-RPC control channel and MCP server, peer auth, allowlist, privacy switch | `core`, `plugin-api` |
+| `control` | JSON-RPC control channel, peer auth, allowlist, privacy switch | `core`, `plugin-api` |
 | `devtools` | debug harness: benchmark hooks, GPX replay, screenshot and state probes | `core`, `control`, `plugin-api` |
 | `app` | composition root, Android entry points, foreground service, manifest, resources | every module |
 | `plugins/example` | debug-only example of a first-party plugin module | `plugin-api` |
@@ -1770,9 +1770,8 @@ control channel, the development tools and the `ai.control` switch id, so a
 dependency that moves out of the debug lane fails the build.
 
 `tools/control/grassctl.py` lists commands, invokes an allowlisted command,
-prints stream values and saves a screenshot. `tools/control/mcp_server.py`
-exposes the same channel over stdio MCP. See `tools/control/README.md` for the
-method list, the token handling and the CLI examples.
+prints stream values and saves a screenshot. See `tools/control/README.md` for
+the method list, the token handling and the CLI examples.
 
 `core.search.switch` takes `{"enabled":true}` or `{"enabled":false}` and turns
 `network.online_search` on or off. It is allowlisted for control in the debug

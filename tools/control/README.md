@@ -73,14 +73,6 @@ The channel serves one controller connection at a time, so a second client waits
 until the first disconnects. `subscribe --invoke` changes state from the same
 connection.
 
-## MCP server
-
-`tools/control/mcp_server.py` is a stdio MCP bridge over the same client. Tools:
-`grassmaps_list_commands`, `grassmaps_invoke_command`, `grassmaps_screenshot`,
-`grassmaps_read_stream`. Environment: `GRASSMAPS_CONTROL_PORT`,
-`GRASSMAPS_CONTROL_ABSTRACT`, `GRASSMAPS_CONTROL_SERIAL`,
-`GRASSMAPS_CONTROL_TOKEN_FILE`.
-
 ## Not built here
 
 The release AI-control switch and the user's allowlist are T-0114. This channel

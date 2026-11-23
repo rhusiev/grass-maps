@@ -8,6 +8,9 @@
     <string name="downloads_on_this_phone">On this phone</string>
     <string name="downloads_available">Available</string>
     <string name="downloads_map_description">Map of the regions, colored by download state. Use the region list to open one</string>
+    <string name="downloads_legend_updating">Updating</string>
+    <string name="downloads_legend_update_ready">Update ready</string>
+    <string name="downloads_legend_you">You</string>
     <string name="downloads_search_hint">Search regions</string>
     <string name="downloads_search_results">Search results</string>
     <string name="downloads_search_empty">No region matches</string>

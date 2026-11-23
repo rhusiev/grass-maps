@@ -94,6 +94,41 @@ private const val INSTALLED_ALPHA = 0.55f
 private const val PENDING_ALPHA = 0.3f
 private const val FAILED_ALPHA = 0.3f
 
+internal const val LEGEND_ON_THIS_PHONE = "downloads_on_this_phone"
+internal const val LEGEND_UPDATING = "downloads_legend_updating"
+internal const val LEGEND_UPDATE_READY = "downloads_legend_update_ready"
+internal const val LEGEND_NEAR_YOU = "downloads_near_you"
+internal const val LEGEND_AVAILABLE = "downloads_available"
+internal const val LEGEND_YOU = "downloads_legend_you"
+
+/** Every colour the mini-map paints, so the legend swatches cannot invent one. */
+internal enum class MiniMapPaint {
+    INSTALLED,
+    PENDING,
+    FAILED,
+    AVAILABLE,
+    SELECTED,
+    ;
+
+    fun color(colors: ShellColors): Color =
+        when (this) {
+            INSTALLED -> colors.accent.copy(alpha = INSTALLED_ALPHA)
+            PENDING -> colors.accent.copy(alpha = PENDING_ALPHA)
+            FAILED -> colors.danger.copy(alpha = FAILED_ALPHA)
+            AVAILABLE -> colors.line
+            SELECTED -> colors.ink
+        }
+}
+
+/** One label in the mini-map's key: a string key for tests and a paint for the swatch. */
+internal data class MiniMapLegendEntry(
+    val labelKey: String,
+    val paint: MiniMapPaint,
+)
+
+// RED: the derivation is filled in with the six states after the test fails.
+internal val miniMapLegend: List<MiniMapLegendEntry> = emptyList()
+
 private const val MAP_HEIGHT_DP = 200
 private const val MAP_CORNER_DP = 16
 private const val BORDER_STROKE_PX = 1.5f
@@ -156,24 +191,13 @@ private fun outlinePath(
         }
     }
 
-private fun fillFor(
+internal fun fillFor(
     status: DownloadRowStatus?,
     colors: ShellColors,
 ): Color =
     when (status) {
-        DownloadRowStatus.INSTALLED -> {
-            colors.accent.copy(alpha = INSTALLED_ALPHA)
-        }
-
-        DownloadRowStatus.UPDATE_AVAILABLE, DownloadRowStatus.DOWNLOADING -> {
-            colors.accent.copy(alpha = PENDING_ALPHA)
-        }
-
-        DownloadRowStatus.FAILED -> {
-            colors.danger.copy(alpha = FAILED_ALPHA)
-        }
-
-        DownloadRowStatus.AVAILABLE, null -> {
-            colors.line
-        }
+        DownloadRowStatus.INSTALLED -> MiniMapPaint.INSTALLED.color(colors)
+        DownloadRowStatus.UPDATE_AVAILABLE, DownloadRowStatus.DOWNLOADING -> MiniMapPaint.PENDING.color(colors)
+        DownloadRowStatus.FAILED -> MiniMapPaint.FAILED.color(colors)
+        DownloadRowStatus.AVAILABLE, null -> MiniMapPaint.AVAILABLE.color(colors)
     }

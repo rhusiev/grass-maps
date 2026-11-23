@@ -257,6 +257,9 @@ object DownloadsScreen {
         )
     }
 
+    // RED: the derivation from a first-run offer's parts is filled in after the test fails.
+    fun partPills(offer: FirstRunOffer): List<CatalogPartKind> = emptyList()
+
     private fun partRows(
         data: DownloadsData,
         entry: CatalogRegion,

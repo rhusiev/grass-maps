@@ -1183,6 +1183,9 @@ private fun MapContent(
                             }
                         }
                     },
+                    // Reuse the map's existing all-profiles entry point; the
+                    // settings screen is only reachable from the debug channel.
+                    onMore = { ProfilesScreenSession.show() },
                 )
                 ContoursLayerPanel(
                     modifier = Modifier.fillMaxWidth(),

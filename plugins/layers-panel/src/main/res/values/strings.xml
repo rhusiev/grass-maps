@@ -8,4 +8,5 @@
     <string name="layers_panel_style_meadow_hint">Everyday and city</string>
     <string name="layers_panel_style_trail">Trail</string>
     <string name="layers_panel_style_trail_hint">Cycling and hiking</string>
+    <string name="layers_panel_more">More…</string>
 </resources>

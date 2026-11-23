@@ -368,6 +368,7 @@
     <string name="map_layout_buttons_tab">Кнопки</string>
     <string name="map_layout_widgets_tab">Віджети</string>
     <string name="map_layout_close">Закрити</string>
+    <string name="layers_sheet_close">Закрити шари</string>
     <string name="map_layout_hint_buttons">Натисніть кнопку, щоб поставити її в позначений слот. Натисніть ще раз, щоб прибрати.</string>
     <string name="map_layout_hint_widgets">Натисніть віджет, щоб поставити його в позначений слот. Натисніть ще раз, щоб прибрати.</string>
     <string name="map_layout_not_shown">Віджети, яких не показано</string>

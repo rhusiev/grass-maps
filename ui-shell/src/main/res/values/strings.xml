@@ -350,6 +350,7 @@
     <string name="map_layout_buttons_tab">Buttons</string>
     <string name="map_layout_widgets_tab">Widgets</string>
     <string name="map_layout_close">Close</string>
+    <string name="layers_sheet_close">Close layers</string>
     <string name="map_layout_hint_buttons">Tap a button to put it in the marked slot. Tap it again to remove it.</string>
     <string name="map_layout_hint_widgets">Tap a widget to put it in the marked slot. Tap it again to remove it.</string>
     <string name="map_layout_not_shown">Widgets not shown</string>

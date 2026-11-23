@@ -128,6 +128,7 @@
     <string name="route_planner_role_via">Проміжна точка</string>
     <string name="route_planner_role_destination">Пункт призначення</string>
     <string name="route_planner_stops">Проміжні точки</string>
+    <string name="route_planner_stops_done">Завершити редагування точок</string>
     <string name="route_planner_move_up">Перемістити проміжну точку раніше</string>
     <string name="route_planner_move_down">Перемістити проміжну точку пізніше</string>
     <string name="route_planner_remove_via">Видалити проміжну точку</string>

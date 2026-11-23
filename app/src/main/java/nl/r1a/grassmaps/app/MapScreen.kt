@@ -238,6 +238,7 @@ import nl.r1a.grassmaps.ui.shell.NavigationSheet
 import nl.r1a.grassmaps.ui.shell.PlaceCardHost
 import nl.r1a.grassmaps.ui.shell.RelationAnalysisPanel
 import nl.r1a.grassmaps.ui.shell.RoutePlanPanel
+import nl.r1a.grassmaps.ui.shell.RoutePlanSheetView
 import nl.r1a.grassmaps.ui.shell.RoutePreviewTime
 import nl.r1a.grassmaps.ui.shell.RouteSummaryCardContent
 import nl.r1a.grassmaps.ui.shell.SearchScreenHost
@@ -807,11 +808,16 @@ private fun MapContent(
             container.streamAccess.subscribe<RoutePlanState>(RoutePlannerContract.stateStream)
         }
     val plan by planFlow.collectAsState(initial = RoutePlanState())
-    // T-0612: the read-only card hands Stops off to the planner sheet's own
-    // stops list. There is no separate stops sheet, so the card steps aside
-    // while that existing list is in use; a new plan brings the card back.
+    // T-0612: the read-only card is the route view and its Stops action opens
+    // the planner sheet's existing stops section. The sheet composes the
+    // editable header only while that section is in use; a cleared plan closes it.
     var stopsOpen by remember { mutableStateOf(false) }
-    LaunchedEffect(plan.status) { stopsOpen = false }
+    // A reroute keeps the Stops sheet open: adding a via or undoing an edit
+    // passes through Planning, and closing the editor there would break the
+    // edit. A cleared plan closes it (T-0612).
+    LaunchedEffect(plan.status) {
+        if (plan.status == RoutePlanStatus.Idle) stopsOpen = false
+    }
     val historyFlow =
         remember(container) {
             container.streamAccess.subscribe<List<RouteHistoryEntry>>(RoutePlannerContract.historyStream)
@@ -1953,6 +1959,10 @@ private fun MapContent(
                 time = routePreviewTime,
                 units = units,
                 dark = dark,
+                // The card over the map is the route view. Only its Stops
+                // action opens the editable header and the existing stop list.
+                view = if (stopsOpen) RoutePlanSheetView.Stops else RoutePlanSheetView.Summary,
+                onDoneStops = { stopsOpen = false },
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)

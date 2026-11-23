@@ -126,8 +126,20 @@ internal data class MiniMapLegendEntry(
     val paint: MiniMapPaint,
 )
 
-// RED: the derivation is filled in with the six states after the test fails.
-internal val miniMapLegend: List<MiniMapLegendEntry> = emptyList()
+/**
+ * The six states the map's key names, in the design's order. Updating and
+ * update ready share the one pending tint, and the two position labels share
+ * the selected outline: those are the only colours the map paints for them.
+ */
+internal val miniMapLegend =
+    listOf(
+        MiniMapLegendEntry(LEGEND_ON_THIS_PHONE, MiniMapPaint.INSTALLED),
+        MiniMapLegendEntry(LEGEND_UPDATING, MiniMapPaint.PENDING),
+        MiniMapLegendEntry(LEGEND_UPDATE_READY, MiniMapPaint.PENDING),
+        MiniMapLegendEntry(LEGEND_NEAR_YOU, MiniMapPaint.SELECTED),
+        MiniMapLegendEntry(LEGEND_AVAILABLE, MiniMapPaint.AVAILABLE),
+        MiniMapLegendEntry(LEGEND_YOU, MiniMapPaint.SELECTED),
+    )
 
 private const val MAP_HEIGHT_DP = 200
 private const val MAP_CORNER_DP = 16

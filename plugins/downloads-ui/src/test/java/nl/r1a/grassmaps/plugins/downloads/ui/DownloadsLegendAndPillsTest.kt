@@ -109,7 +109,7 @@ class DownloadsLegendAndPillsTest {
     }
 
     @Test
-    fun partPillsAreLabelsWithNoDownloadIdOrAction() {
+    fun firstRunPartsHaveNoOwnAction() {
         val offer = regionOffer(CatalogPartKind.MAP, CatalogPartKind.SEARCH)
 
         assertTrue(offer.parts.all { it.downloadId == null })
@@ -138,8 +138,7 @@ class DownloadsLegendAndPillsTest {
             parts = kinds.map(::part),
         )
 
-    private fun part(kind: CatalogPartKind) =
-        DownloadPartRow(kind = kind, version = "v", bytes = 1L, installed = false)
+    private fun part(kind: CatalogPartKind) = DownloadPartRow(kind = kind, version = "v", bytes = 1L, installed = false)
 
     private fun resources(path: String): Map<String, String> =
         Regex("""<string name="([^"]+)">([^<]*)</string>""")

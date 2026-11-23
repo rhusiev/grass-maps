@@ -21,7 +21,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -35,11 +34,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -69,7 +65,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -227,6 +222,7 @@ import nl.r1a.grassmaps.ui.shell.FavouritesListsHost
 import nl.r1a.grassmaps.ui.shell.FollowTrackSheet
 import nl.r1a.grassmaps.ui.shell.GrassMapsTheme
 import nl.r1a.grassmaps.ui.shell.GridWidget
+import nl.r1a.grassmaps.ui.shell.LayersSheet
 import nl.r1a.grassmaps.ui.shell.LocalBottomChrome
 import nl.r1a.grassmaps.ui.shell.MapControlBar
 import nl.r1a.grassmaps.ui.shell.MapLayoutSheet
@@ -329,8 +325,6 @@ private const val PANEL_GAP_DP = 8
 /** Keeps the layers cards below the control bar at the top end. */
 private const val LAYERS_COLUMN_HEIGHT_FRACTION = 0.5f
 
-/** Widest a layers card may grow, so the bottom-end column never reaches the bottom start. */
-private const val LAYERS_CARD_MAX_WIDTH_DP = 260
 private const val METRE_DECIMALS = 1
 private const val KILOMETRE_DECIMALS = 2
 private const val WHOLE_VALUE_MIN = 1.0
@@ -1126,13 +1120,16 @@ private fun MapContent(
                         ),
             )
         }
+        val bottomSheetShown =
+            !navigationActive &&
+                (
+                    plan.status != RoutePlanStatus.Idle ||
+                        selectedTrack != null ||
+                        (selectedRelation != null && relationSummary != null) ||
+                        (analysisTrack != null && analysisSummary != null) ||
+                        followSheet != null
+                )
         if (!navigationActive) {
-            val bottomSheetShown =
-                plan.status != RoutePlanStatus.Idle ||
-                    selectedTrack != null ||
-                    (selectedRelation != null && relationSummary != null) ||
-                    (analysisTrack != null && analysisSummary != null) ||
-                    followSheet != null
             Column(
                 modifier =
                     Modifier
@@ -1143,170 +1140,6 @@ private fun MapContent(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp, Alignment.Bottom),
             ) {
-                if (layersOpen && !bottomSheetShown) {
-                    val layersPaneTitle = stringResource(LayersStrings.string.layers_panel_button)
-                    Column(
-                        modifier =
-                            Modifier
-                                .weight(1f, fill = false)
-                                .widthIn(max = LAYERS_CARD_MAX_WIDTH_DP.dp)
-                                .width(IntrinsicSize.Max)
-                                .verticalScroll(rememberScrollState())
-                                .semantics { paneTitle = layersPaneTitle }
-                                .reportsBottomChrome(),
-                        horizontalAlignment = Alignment.End,
-                        verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
-                    ) {
-                        MapStylePanel(
-                            modifier = Modifier.fillMaxWidth(),
-                            active = styleChoice,
-                            onSelect = { choice ->
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        container.mapStyleSettings.select(choice)
-                                    }.onFailure { error ->
-                                        Log.w(TAG, "map style not saved: $error")
-                                    }
-                                }
-                            },
-                        )
-                        ContoursLayerPanel(
-                            modifier = Modifier.fillMaxWidth(),
-                            pluginEnabled = contoursPluginOn,
-                            enabled = contoursEnabled,
-                            onEnabledChange = { enabled ->
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        container.contoursSettings.setEnabled(enabled)
-                                    }.onFailure { error ->
-                                        Log.w(TAG, "contour toggle not saved: $error")
-                                    }
-                                }
-                            },
-                        )
-                        FavouritesLayerPanel(
-                            modifier = Modifier.fillMaxWidth(),
-                            settings = favouritesLayerSettings,
-                            groups = favouriteGroups,
-                            pluginEnabled = favouritesLayerPluginOn,
-                            onIconsPerPointChange = { enabled ->
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        container.favouritesLayerSettings.setIconsPerPoint(enabled)
-                                    }.onFailure { error ->
-                                        Log.w(TAG, "saved-place icons not saved: $error")
-                                    }
-                                }
-                            },
-                            onMarkerShapeChange = { shape ->
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        container.favouritesLayerSettings.setMarkerShape(shape)
-                                    }.onFailure { error ->
-                                        Log.w(TAG, "saved-place shape not saved: $error")
-                                    }
-                                }
-                            },
-                            onShowNamesChange = { enabled ->
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        container.favouritesLayerSettings.setShowNames(enabled)
-                                    }.onFailure { error ->
-                                        Log.w(TAG, "saved-place names not saved: $error")
-                                    }
-                                }
-                            },
-                            onGroupShownChange = { group, shown ->
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        container.favouritesLayerSettings.setGroupShown(group, shown)
-                                    }.onFailure { error ->
-                                        Log.w(TAG, "saved list visibility not saved: $error")
-                                    }
-                                }
-                            },
-                        )
-                        val configuration = LocalConfiguration.current
-                        RasterLayerPanel(
-                            modifier = Modifier.fillMaxWidth(),
-                            areaModel =
-                                RasterAreaSectionModel(
-                                    items = remember(rasterAreaPacks) { container.rasterAreas.items() },
-                                    areasShown = rasterLayer.areasShown,
-                                    state = rasterAreaState,
-                                    onlineEnabled = onlineTilesEnabled,
-                                    source = rasterLayer.source,
-                                    viewBounds =
-                                        remember(layersOpen, configuration.screenWidthDp, configuration.screenHeightDp) {
-                                            viewportBounds(
-                                                cameraNow(),
-                                                configuration.screenWidthDp,
-                                                configuration.screenHeightDp,
-                                            )
-                                        },
-                                    refusalOf = container.rasterAreas::refusalOf,
-                                    freeBytes = remember(rasterAreaState) { container.rasterAreas.freeBytesNow() },
-                                ),
-                            areaActions =
-                                RasterAreaSectionActions(
-                                    onAreasShownChange = { shown ->
-                                        scope.launch {
-                                            withContext(Dispatchers.IO) { container.rasterSettings.setAreasShown(shown) }
-                                                .onFailure { error -> Log.w(TAG, "offline areas switch not saved: $error") }
-                                        }
-                                    },
-                                    onDownload = container.rasterAreas::start,
-                                    onCancel = container.rasterAreas::cancel,
-                                    onDelete = { id -> scope.launch { container.rasterAreas.remove(id) } },
-                                    onAcknowledge = container.rasterAreas::acknowledge,
-                                ),
-                            onPresetChange = { id ->
-                                scope.launch {
-                                    withContext(Dispatchers.IO) { container.rasterSettings.usePreset(id) }
-                                        .onFailure { error -> Log.w(TAG, "online tiles source not saved: $error") }
-                                }
-                            },
-                            enabled = onlineTilesEnabled,
-                            source = rasterLayer.source,
-                            placement = rasterLayer.placement,
-                            percent = rasterLayer.transparencyPercent,
-                            onEnabledChange = { enabled ->
-                                scope.launch {
-                                    container.setOnlineTilesEnabled(enabled).onFailure { error ->
-                                        Log.w(TAG, "online tiles switch failed: $error")
-                                    }
-                                }
-                            },
-                            onPlacementChange = { placement ->
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        container.setRasterPlacement(placement)
-                                    }.onFailure { error ->
-                                        Log.w(TAG, "online tiles placement not saved: $error")
-                                    }
-                                }
-                            },
-                            onTransparencyChange = { percent, store ->
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        container.setRasterTransparency(percent, store)
-                                    }.onFailure { error ->
-                                        Log.w(TAG, "online tiles transparency not saved: $error")
-                                    }
-                                }
-                            },
-                            onCustomSource = { template ->
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        container.useCustomRasterSource(template)
-                                    }.onFailure { error ->
-                                        Log.w(TAG, "custom tile source rejected: $error")
-                                    }
-                                }
-                            },
-                        )
-                    }
-                }
                 if (!bottomSheetShown) {
                     LayersButton(
                         open = layersOpen,
@@ -1322,6 +1155,162 @@ private fun MapContent(
                         modifier = Modifier,
                     )
                 }
+            }
+        }
+        if (!navigationActive && layersOpen && !bottomSheetShown) {
+            LayersSheet(
+                paneTitle = stringResource(LayersStrings.string.layers_panel_button),
+                closeLabel = stringResource(ShellStrings.string.layers_sheet_close),
+                onDismiss = { layersOpen = false },
+            ) {
+                MapStylePanel(
+                    modifier = Modifier.fillMaxWidth(),
+                    active = styleChoice,
+                    onSelect = { choice ->
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                container.mapStyleSettings.select(choice)
+                            }.onFailure { error ->
+                                Log.w(TAG, "map style not saved: $error")
+                            }
+                        }
+                    },
+                )
+                ContoursLayerPanel(
+                    modifier = Modifier.fillMaxWidth(),
+                    pluginEnabled = contoursPluginOn,
+                    enabled = contoursEnabled,
+                    onEnabledChange = { enabled ->
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                container.contoursSettings.setEnabled(enabled)
+                            }.onFailure { error ->
+                                Log.w(TAG, "contour toggle not saved: $error")
+                            }
+                        }
+                    },
+                )
+                FavouritesLayerPanel(
+                    modifier = Modifier.fillMaxWidth(),
+                    settings = favouritesLayerSettings,
+                    groups = favouriteGroups,
+                    pluginEnabled = favouritesLayerPluginOn,
+                    onIconsPerPointChange = { enabled ->
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                container.favouritesLayerSettings.setIconsPerPoint(enabled)
+                            }.onFailure { error ->
+                                Log.w(TAG, "saved-place icons not saved: $error")
+                            }
+                        }
+                    },
+                    onMarkerShapeChange = { shape ->
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                container.favouritesLayerSettings.setMarkerShape(shape)
+                            }.onFailure { error ->
+                                Log.w(TAG, "saved-place shape not saved: $error")
+                            }
+                        }
+                    },
+                    onShowNamesChange = { enabled ->
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                container.favouritesLayerSettings.setShowNames(enabled)
+                            }.onFailure { error ->
+                                Log.w(TAG, "saved-place names not saved: $error")
+                            }
+                        }
+                    },
+                    onGroupShownChange = { group, shown ->
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                container.favouritesLayerSettings.setGroupShown(group, shown)
+                            }.onFailure { error ->
+                                Log.w(TAG, "saved list visibility not saved: $error")
+                            }
+                        }
+                    },
+                )
+                val configuration = LocalConfiguration.current
+                RasterLayerPanel(
+                    modifier = Modifier.fillMaxWidth(),
+                    areaModel =
+                        RasterAreaSectionModel(
+                            items = remember(rasterAreaPacks) { container.rasterAreas.items() },
+                            areasShown = rasterLayer.areasShown,
+                            state = rasterAreaState,
+                            onlineEnabled = onlineTilesEnabled,
+                            source = rasterLayer.source,
+                            viewBounds =
+                                remember(layersOpen, configuration.screenWidthDp, configuration.screenHeightDp) {
+                                    viewportBounds(
+                                        cameraNow(),
+                                        configuration.screenWidthDp,
+                                        configuration.screenHeightDp,
+                                    )
+                                },
+                            refusalOf = container.rasterAreas::refusalOf,
+                            freeBytes = remember(rasterAreaState) { container.rasterAreas.freeBytesNow() },
+                        ),
+                    areaActions =
+                        RasterAreaSectionActions(
+                            onAreasShownChange = { shown ->
+                                scope.launch {
+                                    withContext(Dispatchers.IO) { container.rasterSettings.setAreasShown(shown) }
+                                        .onFailure { error -> Log.w(TAG, "offline areas switch not saved: $error") }
+                                }
+                            },
+                            onDownload = container.rasterAreas::start,
+                            onCancel = container.rasterAreas::cancel,
+                            onDelete = { id -> scope.launch { container.rasterAreas.remove(id) } },
+                            onAcknowledge = container.rasterAreas::acknowledge,
+                        ),
+                    onPresetChange = { id ->
+                        scope.launch {
+                            withContext(Dispatchers.IO) { container.rasterSettings.usePreset(id) }
+                                .onFailure { error -> Log.w(TAG, "online tiles source not saved: $error") }
+                        }
+                    },
+                    enabled = onlineTilesEnabled,
+                    source = rasterLayer.source,
+                    placement = rasterLayer.placement,
+                    percent = rasterLayer.transparencyPercent,
+                    onEnabledChange = { enabled ->
+                        scope.launch {
+                            container.setOnlineTilesEnabled(enabled).onFailure { error ->
+                                Log.w(TAG, "online tiles switch failed: $error")
+                            }
+                        }
+                    },
+                    onPlacementChange = { placement ->
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                container.setRasterPlacement(placement)
+                            }.onFailure { error ->
+                                Log.w(TAG, "online tiles placement not saved: $error")
+                            }
+                        }
+                    },
+                    onTransparencyChange = { percent, store ->
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                container.setRasterTransparency(percent, store)
+                            }.onFailure { error ->
+                                Log.w(TAG, "online tiles transparency not saved: $error")
+                            }
+                        }
+                    },
+                    onCustomSource = { template ->
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                container.useCustomRasterSource(template)
+                            }.onFailure { error ->
+                                Log.w(TAG, "custom tile source rejected: $error")
+                            }
+                        }
+                    },
+                )
             }
         }
         if (!navigationActive) {

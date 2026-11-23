@@ -1,0 +1,36 @@
+# F-Droid submission metadata for Grass Maps. The release APK is signed with
+# the project's own stable key, so Binaries and AllowedAPKSigningKeys let
+# F-Droid ship that APK instead of rebuilding it. See ../README.md.
+Categories:
+  - Navigation
+  - Science & Education
+License: Apache-2.0
+AuthorName: rhusiev
+SourceCode: https://github.com/rhusiev/grass-maps
+IssueTracker: https://github.com/rhusiev/grass-maps/issues
+Summary: Offline maps, routing and navigation with on-device search
+Description: |
+  Grass Maps is an Android app for offline maps, routing and navigation. Kotlin
+  and Compose build the UI, and a Rust core holds the search index and the
+  region reader. MapLibre Native sits behind our own map interface, so the map
+  binding stays a one-module swap.
+
+  Install region packs for the oblasts you need and use them without a
+  connection. The app plans routes from the installed data, follows them with
+  turn guidance and way alerts, and draws elevation, contours and hiking and
+  cycling relations over the map. Search reads the offline index, while online
+  search and raster tiles stay optional behind privacy switches.
+
+  A foreground service keeps navigation and downloads running when the screen
+  is off. Profiles keep layout, map style, units and settings apart, with a
+  one-tap switch. Favourites, GPX tracks, search and route history, and backup
+  and restore with per-conflict choices are all in the app.
+
+  This is an early alpha. The signed release APK has no embedded region-server
+  token: enter your own token in Downloads settings to fetch region packs. Some
+  screens keep an older composition while the design is still being polished.
+Binaries:
+  - https://github.com/rhusiev/grass-maps/releases/download/0.1.0-alpha.2/grassmaps-0.1.0-alpha.2.apk
+AllowedAPKSigningKeys:
+  - 3fc003c4efbfb379b9c67b593dd9f9ab797f395473a0a2b64fc2425431f51ff0
+Changelog: changelog/1.txt

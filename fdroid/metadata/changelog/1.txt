@@ -1,0 +1,11 @@
+0.1.0-alpha.2
+
+- Offline-first maps from installed region packs, with routing, search,
+  elevation, contours and online tiles behind privacy switches
+- Route planning with alternatives and preferences, turn guidance, way alerts,
+  a foreground service and a notifications-free start refusal message
+- Profiles with per-profile layout, style, units, settings and a one-tap switch
+- Backup/restore with per-conflict choices, and a screen reader pass over the
+  main screens
+- Release APK signed with the project's own key; no debug control channel, no
+  dev tools and no region-server token in the release build

@@ -39,10 +39,10 @@
     <string name="location_age_minutes">%1$d хв тому</string>
     <string name="location_age_hours">%1$d год тому</string>
     <string name="location_age_long_ago">дуже давно</string>
-    <string name="control_edit_label">Змінити</string>
+    <string name="control_edit_label">Змінити розкладку</string>
     <string name="control_edit_done_label">Готово</string>
-    <string name="control_edit_description">Змінити кнопки</string>
-    <string name="control_edit_done_description">Завершити редагування кнопок</string>
+    <string name="control_edit_description">Змінити кнопки та віджети карти</string>
+    <string name="control_edit_done_description">Завершити редагування кнопок і віджетів карти</string>
     <string name="map_region_needs_redownload">Дані мапи потребують повторного завантаження</string>
     <string name="dev_tools_title">Інструменти розробника</string>
     <string name="dev_tools_replay_active">Відтворення: увімкнено</string>

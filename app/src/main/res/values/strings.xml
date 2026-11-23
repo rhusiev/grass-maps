@@ -40,10 +40,10 @@
     <string name="location_age_minutes">%1$d min ago</string>
     <string name="location_age_hours">%1$d h ago</string>
     <string name="location_age_long_ago">a long time ago</string>
-    <string name="control_edit_label">Edit</string>
+    <string name="control_edit_label">Edit layout</string>
     <string name="control_edit_done_label">Done</string>
-    <string name="control_edit_description">Edit controls</string>
-    <string name="control_edit_done_description">Finish editing controls</string>
+    <string name="control_edit_description">Edit map buttons and widgets</string>
+    <string name="control_edit_done_description">Finish editing map buttons and widgets</string>
     <string name="map_region_needs_redownload">Map data needs re-download</string>
     <string name="dev_tools_title">Development tools</string>
     <string name="dev_tools_replay_active">Replay: on</string>

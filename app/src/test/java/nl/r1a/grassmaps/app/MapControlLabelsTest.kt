@@ -55,6 +55,42 @@ class MapControlLabelsTest {
         }
     }
 
+    @Test
+    fun theEditButtonNamesTheLayoutItEdits() {
+        assertNamesLayout(ENGLISH, english, "layout", "button", "widget")
+        assertNamesLayout(UKRAINIAN, ukrainian, "розкладк", "кноп", "віджет")
+    }
+
+    /**
+     * The Edit pill opens the layout sheet, which places both control buttons
+     * and widgets. Its visible label and its spoken names must say that object
+     * instead of the generic word "Edit".
+     */
+    private fun assertNamesLayout(
+        locale: String,
+        resources: Map<String, String>,
+        layout: String,
+        button: String,
+        widget: String,
+    ) {
+        val label = resources["control_edit_label"]
+        val description = resources["control_edit_description"]
+        val doneDescription = resources["control_edit_done_description"]
+        assertTrue("$locale edit label is missing", label?.isNotBlank() == true)
+        assertTrue("$locale edit description is missing", description?.isNotBlank() == true)
+        assertTrue("$locale done description is missing", doneDescription?.isNotBlank() == true)
+        assertTrue(
+            "$locale edit label does not name the layout: '$label'",
+            label!!.contains(layout, ignoreCase = true),
+        )
+        for ((key, value) in listOf("edit description" to description, "done description" to doneDescription)) {
+            assertTrue(
+                "$locale $key does not name both buttons and widgets: '$value'",
+                value!!.contains(button, ignoreCase = true) && value.contains(widget, ignoreCase = true),
+            )
+        }
+    }
+
     private fun resources(path: String): Map<String, String> =
         Regex("""<string name="([^"]+)">([^<]*)</string>""")
             .findAll(File(path).readText())

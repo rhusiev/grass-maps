@@ -26,8 +26,8 @@ enum class MapStyleChoice(
 /** The token swatch this style's row shows; no preview artwork ships with the app. */
 fun MapStyleChoice.swatch(): StyleSwatch =
     when (this) {
-        MEADOW -> StyleSwatch.MEADOW
-        TRAIL -> StyleSwatch.TRAIL
+        MapStyleChoice.MEADOW -> StyleSwatch.MEADOW
+        MapStyleChoice.TRAIL -> StyleSwatch.TRAIL
     }
 
 /**

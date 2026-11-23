@@ -315,6 +315,7 @@ private val PROFILE_SWITCH_KEY: Any = Any()
  */
 private const val PROFILE_SWITCH_DROP_DP = 4
 private const val PROFILE_SWITCH_CREDIT_GAP_DP = 16
+private const val SETTINGS_ENTRY_GAP_DP = 8
 
 /** Clearance above the map credit and the Layers button when the arc is on. */
 private const val QUICK_ACCESS_BOTTOM_CLEARANCE_DP = 72
@@ -741,6 +742,9 @@ private fun MapContent(
     val managerVisible by PluginManagerScreenSession.visible.collectAsState()
     val backupVisible by BackupScreenSession.visible.collectAsState()
     val settingsVisible by ScreenSettingsSession.visible.collectAsState()
+    val settingsIndexVisible by SettingsIndexSession.visible.collectAsState()
+    val settingsEntryLabel = remember(container.strings) { container.strings.resolve(SETTINGS_INDEX_TITLE_KEY) }
+    val settingsIndexPage = remember(container.strings) { settingsIndexContent(container.strings) }
     val styleChoice by container.mapStyleSettings.active.collectAsState()
     val dark = LocalShellColors.current.dark
     val active = bundle.styles.getValue(mapStyleId(styleChoice, mapDark))
@@ -1410,12 +1414,25 @@ private fun MapContent(
                         .height(PROFILE_SWITCH_CREDIT_GAP_DP.dp)
                         .reportsBottomChrome(key = PROFILE_SWITCH_KEY),
                 )
-                ProfileSwitchBar(
-                    active = profile,
-                    order = profileOrder,
-                    onNext = { container.quickProfileSwitch.next() },
-                    onOpenAll = { ProfilesScreenSession.show() },
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(SETTINGS_ENTRY_GAP_DP.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ProfileSwitchBar(
+                        active = profile,
+                        order = profileOrder,
+                        onNext = { container.quickProfileSwitch.next() },
+                        onOpenAll = { ProfilesScreenSession.show() },
+                    )
+                    // No user-visible path to settings existed: every profile
+                    // control and the Layers More row open all profiles, and the
+                    // only ScreenSettingsSession.show() caller was a debug
+                    // command. This button is the smallest honest UI entry.
+                    SettingsEntryButton(
+                        label = settingsEntryLabel,
+                        onClick = SettingsIndexSession::show,
+                    )
+                }
             }
         }
         if (!navigationActive) {
@@ -2265,6 +2282,24 @@ private fun MapContent(
                             TrackLibraryContract.selectFolder,
                             listParams("folderId" to folderId.orEmpty()),
                         )
+                    }
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        // Composed before the screens its rows open, so their back handlers
+        // win while they are up and closing one returns to the index.
+        if (settingsIndexVisible && !navigationActive) {
+            BackHandler { SettingsIndexSession.hide() }
+            SettingsIndexHost(
+                content = settingsIndexPage,
+                dark = dark,
+                onBack = SettingsIndexSession::hide,
+                onOpen = { target ->
+                    when (target) {
+                        SettingsIndexTarget.PROFILES -> ProfilesScreenSession.show()
+                        SettingsIndexTarget.APPEARANCE -> ScreenSettingsSession.show()
+                        SettingsIndexTarget.DOWNLOADS -> DownloadsScreenSession.show()
                     }
                 },
                 modifier = Modifier.fillMaxSize(),

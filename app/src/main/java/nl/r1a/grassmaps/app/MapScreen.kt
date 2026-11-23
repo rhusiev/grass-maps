@@ -334,19 +334,30 @@ private const val ROUTE_CARD_TOP_DP = 8
  * screen padding and one gap on the end side so a neighbour cannot slide under
  * it (T-0612). The widget grid and the route card share this rule.
  */
-internal fun topControlBarEndInset(controlBarWidth: Dp): Dp =
-    controlBarWidth + (BAR_PADDING_DP + WIDGET_GRID_GAP_DP).dp
+internal fun topControlBarEndInset(controlBarWidth: Dp): Dp = controlBarWidth + (BAR_PADDING_DP + WIDGET_GRID_GAP_DP).dp
 
 /** Horizontal insets of the over-map route card (T-0612). */
-internal data class RouteCardInsets(val start: Dp, val end: Dp)
+internal data class RouteCardInsets(
+    val start: Dp,
+    val end: Dp,
+)
 
 /**
- * Placement model for the route card. It takes the measured bar width and the
- * arc flag so the clearance rule can be pinned by a test; today both sides use
- * only the screen padding.
+ * Placement model for the route card. The non-arc bar is anchored at the top
+ * end, so the card reserves its measured width there through the shared inset
+ * rule. The arc bar is anchored at the bottom end, out of the card's reach, so
+ * the card keeps the symmetric screen padding. The width is in dp, so a larger
+ * font scale wraps the text inside the same bounds instead of pushing content
+ * under the bar.
  */
-internal fun routeCardInsets(controlBarWidth: Dp, arc: Boolean): RouteCardInsets =
-    RouteCardInsets(start = BAR_PADDING_DP.dp, end = BAR_PADDING_DP.dp)
+internal fun routeCardInsets(
+    controlBarWidth: Dp,
+    arc: Boolean,
+): RouteCardInsets =
+    RouteCardInsets(
+        start = BAR_PADDING_DP.dp,
+        end = if (arc) BAR_PADDING_DP.dp else topControlBarEndInset(controlBarWidth),
+    )
 
 private const val BANNER_CORNER_DP = 8
 private const val BANNER_HORIZONTAL_DP = 16

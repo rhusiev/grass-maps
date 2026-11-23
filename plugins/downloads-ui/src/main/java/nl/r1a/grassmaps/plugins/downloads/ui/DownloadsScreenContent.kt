@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -106,6 +107,11 @@ private const val SWITCH_TRACK_HEIGHT_DP = 32
 private const val SWITCH_KNOB_DP = 24
 private const val SWITCH_INSET_DP = 4
 private const val SWITCH_BORDER_DP = 1
+private const val LEGEND_SWATCH_DP = 9
+private const val LEGEND_SWATCH_CORNER_DP = 2
+private const val LEGEND_FONT_SP = 11
+private const val PILL_HEIGHT_DP = 24
+private const val PILL_FONT_SP = 11
 
 /**
  * The downloads screen (T-0504), drawn from the published state.
@@ -219,6 +225,7 @@ fun DownloadsScreenContent(
                     description = stringResource(R.string.downloads_map_description),
                     onTapRegion = onOpenRegion,
                 )
+                MiniMapLegend()
             }
 
             if (state.appliesAtNextStart) {
@@ -319,6 +326,59 @@ fun DownloadsScreenContent(
         )
     }
 }
+
+/**
+ * The mini-map's key. Each swatch takes the paint the map uses for that state,
+ * so the legend cannot claim a colour the map never draws.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun MiniMapLegend() {
+    val colors = LocalShellColors.current
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(GAP_DP.dp),
+        verticalArrangement = Arrangement.spacedBy(SPACED_DP.dp),
+    ) {
+        for (entry in miniMapLegend) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(SPACED_DP.dp),
+            ) {
+                val swatch =
+                    if (entry.labelKey == LEGEND_YOU) {
+                        CircleShape
+                    } else {
+                        RoundedCornerShape(LEGEND_SWATCH_CORNER_DP.dp)
+                    }
+                Box(
+                    modifier =
+                        Modifier
+                            .size(LEGEND_SWATCH_DP.dp)
+                            .clip(swatch)
+                            .background(entry.paint.color(colors))
+                            .border(1.dp, CONTROL_BORDER, swatch),
+                )
+                BasicText(
+                    text = legendLabel(entry.labelKey),
+                    style = TextStyle(color = MUTED, fontSize = LEGEND_FONT_SP.sp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun legendLabel(key: String): String =
+    when (key) {
+        LEGEND_ON_THIS_PHONE -> stringResource(R.string.downloads_on_this_phone)
+        LEGEND_UPDATING -> stringResource(R.string.downloads_legend_updating)
+        LEGEND_UPDATE_READY -> stringResource(R.string.downloads_legend_update_ready)
+        LEGEND_NEAR_YOU -> stringResource(R.string.downloads_near_you)
+        LEGEND_AVAILABLE -> stringResource(R.string.downloads_available)
+        LEGEND_YOU -> stringResource(R.string.downloads_legend_you)
+        else -> error("Unknown map legend label: $key")
+    }
 
 /**
  * The bar at the bottom: the open region's sheet, the "near you" suggestion,
@@ -516,11 +576,8 @@ private fun FirstRunRow(
                     style = TextStyle(color = MUTED, fontSize = BODY_FONT_SP.sp),
                 )
                 offer.transfer?.let { transfer -> TransferLine(transfer) }
-                if (offer.parts.size > 1) {
-                    for (part in offer.parts) {
-                        PartRow(part, installable = false, onDownload = onDownload, onCancel = {})
-                    }
-                }
+                // Labels only: the card keeps its one download or cancel action.
+                PartPills(DownloadsScreen.partPills(offer))
                 if (offer.installed) {
                     BasicText(
                         text = stringResource(R.string.downloads_on_this_phone),
@@ -1041,6 +1098,38 @@ private fun ServerForm(
             text = stringResource(R.string.downloads_save),
             onClick = { onSave(url, token) },
         )
+    }
+}
+
+/** The part names as pills: labels inside the first-run row, never a second download action. */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun PartPills(kinds: List<CatalogPartKind>) {
+    if (kinds.isEmpty()) {
+        return
+    }
+    val shape = RoundedCornerShape((PILL_HEIGHT_DP / 2).dp)
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(SPACED_DP.dp),
+        verticalArrangement = Arrangement.spacedBy(SPACED_DP.dp),
+    ) {
+        for (kind in kinds) {
+            Box(
+                modifier =
+                    Modifier
+                        .height(PILL_HEIGHT_DP.dp)
+                        .clip(shape)
+                        .background(SOFT)
+                        .border(1.dp, CONTROL_BORDER, shape)
+                        .padding(horizontal = GAP_DP.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                BasicText(
+                    text = partLabel(kind),
+                    style = TextStyle(color = MUTED, fontSize = PILL_FONT_SP.sp, fontWeight = FontWeight.Medium),
+                )
+            }
+        }
     }
 }
 

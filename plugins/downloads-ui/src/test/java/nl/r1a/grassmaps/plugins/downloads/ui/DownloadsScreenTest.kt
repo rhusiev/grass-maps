@@ -98,6 +98,31 @@ class DownloadsScreenTest {
     }
 
     @Test
+    fun aFirstRunOfferShowsTheQueuedTransferFromTheStore() {
+        // Blind review section 7: the Lviv card kept its Download pill while
+        // the transfer was running, because the offer carried no transfer.
+        val queued =
+            DownloadTransfer(
+                region = CatalogFixture.LVIV,
+                state = DownloadTransferState.WAITING,
+                bytesTotal = 210_943_205L,
+            )
+        val state =
+            DownloadsScreen.state(
+                data =
+                    DownloadsData(
+                        catalog = CatalogTestData.withWorldAndAddon(),
+                        serverUrl = SERVER,
+                        transfers = listOf(queued),
+                    ),
+                detectedRegion = CatalogFixture.LVIV,
+            )
+
+        assertEquals(queued, state.firstRun.single { it.kind == FirstRunOfferKind.REGION }.transfer)
+        assertNull(state.firstRun.first().transfer)
+    }
+
+    @Test
     fun theAddonIsOfferedOnlyOnceItsRegionIsInstalled() {
         val catalog = CatalogTestData.withWorldAndAddon()
         val installed = InstalledPack(CatalogFixture.LVIV, "old", parts = listOf(CatalogPartKind.MAP))

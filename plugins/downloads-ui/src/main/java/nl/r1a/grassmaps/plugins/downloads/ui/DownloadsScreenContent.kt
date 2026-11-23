@@ -267,6 +267,7 @@ fun DownloadsScreenContent(
                         offer = offer,
                         preferUkrainian = preferUkrainian,
                         onDownload = onDownload,
+                        onCancel = onCancel,
                     )
                 }
             }
@@ -463,6 +464,7 @@ private fun FirstRunRow(
     offer: FirstRunOffer,
     preferUkrainian: Boolean,
     onDownload: (String) -> Unit,
+    onCancel: (String) -> Unit,
 ) {
     val name = offer.name(preferUkrainian) ?: offer.region
     val title =
@@ -501,6 +503,7 @@ private fun FirstRunRow(
                     text = stringResource(R.string.downloads_size_only, DownloadsFormat.size(offer.bytes)),
                     style = TextStyle(color = MUTED, fontSize = BODY_FONT_SP.sp),
                 )
+                offer.transfer?.let { transfer -> TransferLine(transfer) }
                 if (offer.parts.size > 1) {
                     for (part in offer.parts) {
                         PartRow(part, installable = false, onDownload = onDownload, onCancel = {})
@@ -513,11 +516,21 @@ private fun FirstRunRow(
                     )
                 }
             }
-            if (action && !offer.installed) {
-                ActionButton(
-                    text = stringResource(R.string.downloads_download_short),
-                    onClick = { onDownload(offer.downloadId ?: offer.region) },
-                )
+            when {
+                offer.transfer != null -> {
+                    ActionButton(
+                        text = stringResource(R.string.downloads_cancel),
+                        onClick = { onCancel(offer.downloadId ?: offer.region) },
+                        quiet = true,
+                    )
+                }
+
+                action && !offer.installed -> {
+                    ActionButton(
+                        text = stringResource(R.string.downloads_download_short),
+                        onClick = { onDownload(offer.downloadId ?: offer.region) },
+                    )
+                }
             }
         }
     }

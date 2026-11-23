@@ -546,6 +546,8 @@ data class FirstRunOffer(
     val installed: Boolean = false,
     /** The id the offer's download button sends, when it differs from [region] (an add-on). */
     val downloadId: String? = null,
+    /** The store's transfer for that id, so the card shows its queued or live state. */
+    val transfer: DownloadTransfer? = null,
 ) {
     fun name(preferUkrainian: Boolean): String? =
         if (preferUkrainian) {

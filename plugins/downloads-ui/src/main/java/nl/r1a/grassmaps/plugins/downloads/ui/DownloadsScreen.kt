@@ -171,6 +171,7 @@ object DownloadsScreen {
                     bytes = world.bytes,
                     parts = partRows(data, world, installed),
                     installed = installed?.version == world.version,
+                    transfer = data.transfer(world.id),
                 )
         }
         val detected = detectedRegion?.let { id -> catalog.regions.firstOrNull { it.id == id } } ?: return offers
@@ -189,6 +190,7 @@ object DownloadsScreen {
                     bytes = base.sumOf { it.bytes },
                     parts = base.map { part -> partRow(part, installedParts) },
                     installed = atVersion && base.all { installedParts.contains(it.kind) },
+                    transfer = data.transfer(detected.id),
                 )
         }
         detected.parts.firstOrNull { it.kind == CatalogPartKind.ROUTING }?.let { routing ->
@@ -214,6 +216,7 @@ object DownloadsScreen {
                     parts = listOf(addonRow(data, detected, addon, installedParts)),
                     installed = installedParts.contains(CatalogPartKind.ELEVATION_30M),
                     downloadId = addon.packageId(detected.id),
+                    transfer = data.transfer(addon.packageId(detected.id)),
                 )
         }
         return offers

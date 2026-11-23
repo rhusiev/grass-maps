@@ -5,12 +5,15 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -20,8 +23,12 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmaps.plugin.ui.api.LayerRowSpec
+import nl.r1a.grassmaps.plugin.ui.api.LayerStyleOption
+import nl.r1a.grassmaps.plugin.ui.api.LayerStyleRow
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellColors
+import nl.r1a.grassmaps.plugin.ui.api.layerStyleRows
 
 private const val BUTTON_CORNER_DP = 8
 private const val BUTTON_HORIZONTAL_DP = 12
@@ -32,6 +39,7 @@ private const val PANEL_HORIZONTAL_DP = 12
 private const val PANEL_VERTICAL_DP = 8
 private const val PANEL_GAP_DP = 6
 private const val PANEL_FONT_SP = 13
+private const val STYLE_HINT_GAP_DP = 2
 private const val SELECTED_MARK = "●"
 private const val UNSELECTED_MARK = "○"
 
@@ -94,8 +102,17 @@ fun MapStylePanel(
         verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
     ) {
         PanelText(stringResource(R.string.layers_panel_style_title), colors.muted)
-        for (choice in MapStyleChoice.entries) {
-            StyleRow(choice = choice, colors = colors, selected = choice == active, onSelect = onSelect)
+        val choices = MapStyleChoice.entries
+        val options =
+            choices.map { choice ->
+                LayerStyleOption(
+                    name = stringResource(choice.nameRes()),
+                    hint = stringResource(choice.hintRes()),
+                )
+            }
+        val rows = layerStyleRows(options, selectedName = stringResource(active.nameRes()))
+        rows.zip(choices).forEach { (row, choice) ->
+            StyleRow(row = row, colors = colors, onSelect = { onSelect(choice) })
         }
     }
 }
@@ -103,33 +120,35 @@ fun MapStylePanel(
 @Suppress("ktlint:standard:function-naming")
 @Composable
 private fun StyleRow(
-    choice: MapStyleChoice,
+    row: LayerStyleRow,
     colors: ShellColors,
-    selected: Boolean,
-    onSelect: (MapStyleChoice) -> Unit,
+    onSelect: () -> Unit,
 ) {
-    val name = stringResource(choice.nameRes())
-    val hint = stringResource(choice.hintRes())
     Row(
         modifier =
             Modifier
+                .fillMaxWidth()
                 .clip(RoundedCornerShape(PANEL_CORNER_DP.dp))
                 .selectable(
-                    selected = selected,
+                    selected = row.selected,
                     role = Role.RadioButton,
-                    onClick = { onSelect(choice) },
-                ).padding(vertical = PANEL_GAP_DP.dp),
+                    onClick = onSelect,
+                ).heightIn(min = LayerRowSpec.ROW_MIN_HEIGHT_DP.dp)
+                .padding(horizontal = PANEL_GAP_DP.dp, vertical = PANEL_GAP_DP.dp),
         horizontalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         PanelText(
-            text = if (selected) SELECTED_MARK else UNSELECTED_MARK,
+            text = if (row.selected) SELECTED_MARK else UNSELECTED_MARK,
             color = colors.ink,
             // The radio role already carries the selected state; the mark is
             // decoration and must not be read as a character.
             modifier = Modifier.clearAndSetSemantics {},
         )
-        PanelText(name, colors.ink)
-        PanelText(hint, colors.muted)
+        Column(verticalArrangement = Arrangement.spacedBy(STYLE_HINT_GAP_DP.dp)) {
+            PanelText(row.name, colors.ink)
+            PanelText(row.hint, colors.muted)
+        }
     }
 }
 

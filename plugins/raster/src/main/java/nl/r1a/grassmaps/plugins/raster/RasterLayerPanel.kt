@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -40,6 +43,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmaps.plugin.ui.api.LayerRowSpec
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import kotlin.math.roundToInt
 
@@ -125,7 +129,8 @@ fun RasterLayerPanel(
                         value = enabled,
                         role = Role.Switch,
                         onValueChange = onEnabledChange,
-                    ).padding(vertical = PANEL_GAP_DP.dp),
+                    ).heightIn(min = LayerRowSpec.ROW_MIN_HEIGHT_DP.dp)
+                    .padding(horizontal = PANEL_GAP_DP.dp, vertical = PANEL_GAP_DP.dp),
             horizontalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
         ) {
             PanelText(source.displayName, PANEL_FOREGROUND)
@@ -171,7 +176,9 @@ fun RasterLayerPanel(
                     Modifier
                         .clip(RoundedCornerShape(PANEL_CORNER_DP.dp))
                         .clickable { onCustomSource(template.trim()) }
-                        .padding(vertical = PANEL_GAP_DP.dp),
+                        .heightIn(min = LayerRowSpec.ROW_MIN_HEIGHT_DP.dp)
+                        .wrapContentSize(Alignment.CenterStart)
+                        .padding(horizontal = PANEL_GAP_DP.dp),
                 horizontalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
             ) {
                 PanelText(stringResource(R.string.map_raster_custom_use), PANEL_FOREGROUND)
@@ -239,7 +246,9 @@ private fun PlacementChoice(
                     selected = selected,
                     role = Role.RadioButton,
                     onClick = onClick,
-                ).padding(horizontal = PANEL_GAP_DP.dp, vertical = PANEL_VERTICAL_DP.dp),
+                ).heightIn(min = LayerRowSpec.ROW_MIN_HEIGHT_DP.dp)
+                .wrapContentSize(Alignment.Center)
+                .padding(horizontal = PANEL_GAP_DP.dp),
     ) {
         PanelText(label, if (selected) PANEL_FOREGROUND else PANEL_MUTED)
     }
@@ -264,11 +273,13 @@ private fun TransparencyControl(
     val latest by rememberUpdatedState(onTransparencyChange)
     Column(verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp)) {
         PanelText("$label $percent %", PANEL_FOREGROUND)
-        Canvas(
+        // The track draws at 24 dp, but the whole 48 dp row takes the tap: a
+        // thin slider is the hardest control to hit on a phone.
+        Box(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(SLIDER_HEIGHT_DP.dp)
+                    .heightIn(min = LayerRowSpec.ROW_MIN_HEIGHT_DP.dp)
                     .semantics {
                         contentDescription = label
                         progressBarRangeInfo = ProgressBarRangeInfo(percent.toFloat(), PERCENT_RANGE)
@@ -288,12 +299,20 @@ private fun TransparencyControl(
                             }
                         }
                     },
+            contentAlignment = Alignment.Center,
         ) {
-            val centerY = size.height / 2f
-            val filled = size.width * percent / RasterTransparency.MAX_PERCENT
-            drawLine(colors.muted, Offset(0f, centerY), Offset(size.width, centerY), strokeWidth = TRACK_STROKE.toPx())
-            drawLine(colors.ink, Offset(0f, centerY), Offset(filled, centerY), strokeWidth = TRACK_STROKE.toPx())
-            drawCircle(colors.ink, radius = KNOB_RADIUS.toPx(), center = Offset(filled, centerY))
+            Canvas(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(SLIDER_HEIGHT_DP.dp),
+            ) {
+                val centerY = size.height / 2f
+                val filled = size.width * percent / RasterTransparency.MAX_PERCENT
+                drawLine(colors.muted, Offset(0f, centerY), Offset(size.width, centerY), strokeWidth = TRACK_STROKE.toPx())
+                drawLine(colors.ink, Offset(0f, centerY), Offset(filled, centerY), strokeWidth = TRACK_STROKE.toPx())
+                drawCircle(colors.ink, radius = KNOB_RADIUS.toPx(), center = Offset(filled, centerY))
+            }
         }
     }
 }

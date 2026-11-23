@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -16,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -25,6 +28,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import nl.r1a.grassmaps.plugin.api.model.BoundingBox
+import nl.r1a.grassmaps.plugin.ui.api.LayerRowSpec
 
 private const val DEFAULT_FROM_ZOOM = 8
 private const val DEFAULT_TO_ZOOM = 12
@@ -210,7 +214,9 @@ private fun StepButton(
                 .background(FIELD_BACKGROUND)
                 .semantics { contentDescription = description }
                 .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-                .padding(horizontal = PANEL_VERTICAL_DP.dp, vertical = PANEL_GAP_DP.dp / 2),
+                .heightIn(min = LayerRowSpec.ROW_MIN_HEIGHT_DP.dp)
+                .wrapContentSize(Alignment.Center)
+                .padding(horizontal = PANEL_VERTICAL_DP.dp),
     ) {
         PanelText(symbol, if (enabled) PANEL_FOREGROUND else PANEL_MUTED)
     }
@@ -224,7 +230,10 @@ private fun SwitchRow(
     onChange: (Boolean) -> Unit,
 ) {
     Row(
-        modifier = Modifier.toggleable(value = value, role = Role.Switch, onValueChange = onChange),
+        modifier =
+            Modifier
+                .toggleable(value = value, role = Role.Switch, onValueChange = onChange)
+                .heightIn(min = LayerRowSpec.ROW_MIN_HEIGHT_DP.dp),
         horizontalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
     ) {
         PanelText(label, PANEL_FOREGROUND)
@@ -243,7 +252,8 @@ private fun ActionText(
             Modifier
                 .clip(RoundedCornerShape(PANEL_CORNER_DP.dp))
                 .clickable(role = Role.Button, onClick = onClick)
-                .padding(vertical = PANEL_GAP_DP.dp / 2),
+                .heightIn(min = LayerRowSpec.ROW_MIN_HEIGHT_DP.dp)
+                .wrapContentSize(Alignment.Center),
     ) {
         PanelText(text, PANEL_FOREGROUND)
     }

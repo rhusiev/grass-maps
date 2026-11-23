@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,6 +20,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmaps.plugin.ui.api.LayerRowSpec
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 
 private val PANEL_BACKGROUND: Color
@@ -76,7 +78,8 @@ fun ContoursLayerPanel(
                         value = toggle,
                         role = Role.Switch,
                         onValueChange = onEnabledChange,
-                    ).padding(vertical = PANEL_GAP_DP.dp),
+                    ).heightIn(min = LayerRowSpec.ROW_MIN_HEIGHT_DP.dp)
+                    .padding(horizontal = PANEL_GAP_DP.dp, vertical = PANEL_GAP_DP.dp),
             horizontalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
         ) {
             PanelText(stringResource(R.string.map_contours_toggle), PANEL_FOREGROUND)

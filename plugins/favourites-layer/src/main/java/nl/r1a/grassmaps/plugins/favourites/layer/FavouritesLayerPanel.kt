@@ -5,12 +5,15 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -19,6 +22,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmaps.plugin.ui.api.LayerRowSpec
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellColors
 
@@ -87,7 +91,9 @@ fun FavouritesLayerPanel(
                             .clip(RoundedCornerShape(CORNER_DP.dp))
                             .selectable(selected = choice == settings.markerShape, role = Role.RadioButton) {
                                 onMarkerShapeChange(choice)
-                            }.padding(vertical = GAP_DP.dp),
+                            }.heightIn(min = LayerRowSpec.RADIO_MIN_SIZE_DP.dp)
+                            .wrapContentSize(Alignment.CenterStart)
+                            .padding(horizontal = GAP_DP.dp),
                 )
             }
         }
@@ -147,7 +153,8 @@ private fun SwitchRow(
             Modifier
                 .clip(RoundedCornerShape(CORNER_DP.dp))
                 .toggleable(value = value, role = Role.Switch, onValueChange = onChange)
-                .padding(vertical = GAP_DP.dp),
+                .heightIn(min = LayerRowSpec.ROW_MIN_HEIGHT_DP.dp)
+                .padding(horizontal = GAP_DP.dp, vertical = GAP_DP.dp),
         horizontalArrangement = Arrangement.spacedBy(GAP_DP.dp),
     ) {
         PanelText(label, colors.ink)

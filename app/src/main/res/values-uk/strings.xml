@@ -344,4 +344,13 @@
     <string name="settings.language.en">Англійська (США)</string>
     <string name="settings.language.en_gb">Англійська (Велика Британія)</string>
     <string name="settings.language.uk">Українська</string>
+
+    <!-- T-0612: індекс налаштувань -->
+    <string name="settings.index.subtitle">Зміни застосовуються одразу</string>
+    <string name="settings.index.group.use">ВИКОРИСТАННЯ</string>
+    <string name="settings.index.group.data">ДАНІ ТА ПРИВАТНІСТЬ</string>
+    <string name="settings.index.row.profiles">Профілі</string>
+    <string name="settings.index.row.language">Мова</string>
+    <string name="settings.index.row.appearance">Вигляд</string>
+    <string name="settings.index.row.downloads">Завантаження карт</string>
 </resources>

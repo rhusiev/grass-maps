@@ -319,4 +319,13 @@
     <string name="settings.language.en">English (US)</string>
     <string name="settings.language.en_gb">English (UK)</string>
     <string name="settings.language.uk">Українська</string>
+
+    <!-- T-0612: the settings index -->
+    <string name="settings.index.subtitle">Changes apply at once</string>
+    <string name="settings.index.group.use">USE</string>
+    <string name="settings.index.group.data">DATA AND PRIVACY</string>
+    <string name="settings.index.row.profiles">Profiles</string>
+    <string name="settings.index.row.language">Language</string>
+    <string name="settings.index.row.appearance">Appearance</string>
+    <string name="settings.index.row.downloads">Map downloads</string>
 </resources>

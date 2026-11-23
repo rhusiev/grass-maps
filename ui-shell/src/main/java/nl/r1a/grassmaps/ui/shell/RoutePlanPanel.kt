@@ -69,15 +69,47 @@ private const val CONTROL_FONT_SP = 20
 private const val RECENT_LIMIT = 5
 
 /**
+ * Which surface the planner sheet composes. [Summary] is the read-only route
+ * view: the card over the map is primary, and the sheet has no editable header.
+ * [Stops] is the existing editable header and stop list, opened by the card's
+ * Stops action.
+ */
+enum class RoutePlanSheetView {
+    Summary,
+    Stops,
+}
+
+/** The sections a planner-sheet view composes. */
+data class RoutePlanSheetSections(
+    val editableHeader: Boolean,
+    val stopList: Boolean,
+)
+
+/** The view the planner sheet opens with: the read-only card is primary. */
+val DEFAULT_ROUTE_PLAN_SHEET_VIEW: RoutePlanSheetView = RoutePlanSheetView.Summary
+
+/** Maps a sheet view to the sections its Composable composes. */
+fun routePlanSheetSections(view: RoutePlanSheetView): RoutePlanSheetSections =
+    when (view) {
+        RoutePlanSheetView.Summary -> RoutePlanSheetSections(editableHeader = false, stopList = false)
+        RoutePlanSheetView.Stops -> RoutePlanSheetSections(editableHeader = true, stopList = true)
+    }
+
+/**
  * The planning panel (T-0302, stops T-0303, controls and history T-0304): the
  * start/end plan, the editable stop chain, the returned alternatives, the
  * preview with its Save and Start actions, and the turn stepper. The map and
  * this card read the same [RoutePlanState], so an alternative changes both or
  * neither.
  *
- * The preview card is [routePlanPreview] and nothing else. Undo, redo, swap, the
- * close control, the stop rows, the coordinate field and the turn stepper are
- * controls around it, not extra preview rows.
+ * The preview card is [routePlanPreview] and nothing else. The turn stepper is
+ * a control around it, not an extra preview row.
+ *
+ * The editable header - undo, redo, swap, the coordinate field and the stop
+ * rows - lives only in [RoutePlanSheetView.Stops]. The default view composes no
+ * editable header, so the read-only card over the map is the route UI. The
+ * card's Stops action opens this sheet in [RoutePlanSheetView.Stops], which
+ * runs the same commands and the same [StopList] as before (T-0612).
  *
  * The elevation chart (T-0404) sits under the preview, behind the Details
  * toggle, with its axis chips beside it. It plots the analysis engine's profile
@@ -123,9 +155,12 @@ fun RoutePlanPanel(
     time: RoutePreviewTime? = null,
     units: UnitSystem = UnitSystem.Metric,
     dark: Boolean = false,
+    view: RoutePlanSheetView = DEFAULT_ROUTE_PLAN_SHEET_VIEW,
+    onDoneStops: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     if (state.status == RoutePlanStatus.Idle) return
+    val sections = routePlanSheetSections(view)
     val preview = routePlanPreview(state, strings, time = time, units = units)
     var detailsExpanded by remember(state.selected) { mutableStateOf(false) }
     var preferencesVisible by remember { mutableStateOf(false) }
@@ -144,27 +179,32 @@ fun RoutePlanPanel(
                 .semantics { paneTitle = strings.resolve(PANE_TITLE_KEY) },
         verticalArrangement = Arrangement.spacedBy(PANEL_ROW_GAP_DP.dp),
     ) {
-        PanelControls(
-            state = state,
-            strings = strings,
-            onUndo = onUndo,
-            onRedo = onRedo,
-            onSwap = onSwap,
-            onClose = onClose,
-        )
-        CoordinateEntry(
-            strings = strings,
-            parseCoordinate = parseCoordinate,
-            onStartPoint = onStartPoint,
-            onDestinationPoint = onDestinationPoint,
-            onAddVia = onAddVia,
-        )
-        StopList(
-            stops = state.stops,
-            strings = strings,
-            onRemoveVia = onRemoveVia,
-            onMoveVia = onMoveVia,
-        )
+        if (sections.editableHeader) {
+            PanelControls(
+                state = state,
+                strings = strings,
+                onUndo = onUndo,
+                onRedo = onRedo,
+                onSwap = onSwap,
+                onDone = onDoneStops,
+                onClose = onClose,
+            )
+            CoordinateEntry(
+                strings = strings,
+                parseCoordinate = parseCoordinate,
+                onStartPoint = onStartPoint,
+                onDestinationPoint = onDestinationPoint,
+                onAddVia = onAddVia,
+            )
+        }
+        if (sections.stopList) {
+            StopList(
+                stops = state.stops,
+                strings = strings,
+                onRemoveVia = onRemoveVia,
+                onMoveVia = onMoveVia,
+            )
+        }
         when (state.status) {
             RoutePlanStatus.PickingStart -> {
                 StatusLine(strings.resolve(PICK_START_KEY), live = true)
@@ -299,6 +339,7 @@ private fun PanelControls(
     onUndo: () -> Unit,
     onRedo: () -> Unit,
     onSwap: () -> Unit,
+    onDone: () -> Unit,
     onClose: () -> Unit,
 ) {
     Row(
@@ -325,6 +366,12 @@ private fun PanelControls(
             onClick = onSwap,
         )
         Box(Modifier.weight(1f))
+        ControlGlyph(
+            glyph = DONE_GLYPH,
+            description = strings.resolve(STOPS_DONE_KEY),
+            enabled = true,
+            onClick = onDone,
+        )
         ControlGlyph(
             glyph = CLOSE_GLYPH,
             description = strings.resolve(PANEL_CLOSE_KEY),
@@ -711,6 +758,7 @@ private fun StatusLine(
 
 private const val SWAP_GLYPH = "\u21C4"
 private const val CLOSE_GLYPH = "\u00D7"
+private const val DONE_GLYPH = "\u2713"
 private const val UNDO_GLYPH = "\u21B6"
 private const val REDO_GLYPH = "\u21B7"
 private const val UP_GLYPH = "\u2191"
@@ -735,6 +783,7 @@ private const val ENGINE_UNAVAILABLE_KEY = "route_planner_engine_unavailable"
 private const val NO_ALTERNATIVES_KEY = "route_planner_no_alternatives"
 private const val SWAP_KEY = "route_planner_swap"
 private const val PANEL_CLOSE_KEY = "route_planner_close"
+private const val STOPS_DONE_KEY = "route_planner_stops_done"
 private const val UNDO_DESCRIPTION_KEY = "route_planner_undo"
 private const val REDO_DESCRIPTION_KEY = "route_planner_redo"
 private const val COORDINATE_HINT_KEY = "route_planner_coordinate_hint"

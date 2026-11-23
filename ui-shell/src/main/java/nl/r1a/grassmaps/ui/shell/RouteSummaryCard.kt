@@ -26,8 +26,8 @@ import nl.r1a.grassmaps.plugin.api.service.Strings
 
 /**
  * The read-only route card over the map (T-0612). It shows the three values of
- * [RoutePreview] and offers Save, Start and Stops. The editable planner sheet
- * stays exactly as it is; this card only reads the same published plan.
+ * [RoutePreview] and offers Save, Start and Stops. It is the primary route
+ * view: the planner sheet below composes no editable header until Stops opens.
  *
  * The values come from [routePlanPreview], so the card cannot drift from the
  * sheet. Save and Start are not second action paths: the host passes the same
@@ -35,7 +35,8 @@ import nl.r1a.grassmaps.plugin.api.service.Strings
  *
  * The design draws a separate Stops sheet. The app has none: the only stops
  * list is the planner sheet's own section, keyed by [ROUTE_STOPS_KEY]. The
- * Stops action opens that section, not a duplicate list.
+ * Stops action opens that section in [RoutePlanSheetView.Stops], not a
+ * duplicate list.
  */
 enum class RouteSummaryField {
     Time,
@@ -62,6 +63,9 @@ enum class RouteStopsAction {
     ;
 
     val targetKey: String = ROUTE_STOPS_KEY
+
+    /** The planner-sheet view this action opens. */
+    val sheetView: RoutePlanSheetView = RoutePlanSheetView.Stops
 }
 
 /** The card's model. Construction fixes the list at its six entries. */

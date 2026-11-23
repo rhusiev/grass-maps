@@ -75,6 +75,7 @@ private const val END_HEIGHT_DP = 40
 private const val END_CORNER_DP = 20
 private const val DONE_HEIGHT_DP = 52
 private const val ROUND_BUTTON_DP = 40
+private const val EXPAND_BUTTON_DP = 48
 private const val RECENTRE_DP = 52
 private const val SHEET_CORNER_DP = 22
 private const val SHEET_PADDING_DP = 16
@@ -442,6 +443,7 @@ private fun Bar(
                 description = strings.resolve(NavigationScreenStrings.EXPAND),
                 colors = colors,
                 onClick = onExpand,
+                size = EXPAND_BUTTON_DP,
             )
         }
     }

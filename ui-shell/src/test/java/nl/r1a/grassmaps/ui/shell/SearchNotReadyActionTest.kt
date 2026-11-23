@@ -3,6 +3,7 @@ package nl.r1a.grassmaps.ui.shell
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
@@ -58,6 +59,17 @@ class SearchNotReadyActionTest {
     }
 
     @Test
+    fun theNoticeActionSetsIts48DpTapTargetFromTheNamedConstant() {
+        // NoticeAction is a private Composable and the JVM tests have no
+        // Compose runtime, so its Modifier cannot be inspected here. Pin the
+        // named constant and its heightIn use in the source instead.
+        val source = File(HOST_FILE).readText()
+
+        assertTrue("the named 48 dp constant is missing", source.contains("private const val MIN_TAP_TARGET_DP = 48"))
+        assertTrue("heightIn no longer uses the constant", source.contains("heightIn(min = MIN_TAP_TARGET_DP.dp)"))
+    }
+
+    @Test
     fun bothBundlesCarryTheNotReadyExplanationAndAction() {
         val english = resources(ENGLISH)
         val ukrainian = resources(UKRAINIAN)
@@ -80,6 +92,7 @@ class SearchNotReadyActionTest {
             .associate { it.groupValues[1] to it.groupValues[2] }
 
     private companion object {
+        const val HOST_FILE = "src/main/java/nl/r1a/grassmaps/ui/shell/SearchScreenHost.kt"
         const val ENGLISH = "src/main/res/values/strings.xml"
         const val UKRAINIAN = "src/main/res/values-uk/strings.xml"
 

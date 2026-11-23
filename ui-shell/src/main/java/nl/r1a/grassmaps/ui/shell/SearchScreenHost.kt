@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -339,7 +340,11 @@ private fun NoticeAction(
     BasicText(
         text = text,
         style = TextStyle(color = colors.ink, fontSize = DETAIL_FONT_SP.sp),
-        modifier = Modifier.clickable(role = Role.Button, onClick = onClick).padding(ROW_PADDING_DP.dp),
+        modifier =
+            Modifier
+                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .clickable(role = Role.Button, onClick = onClick)
+                .padding(ROW_PADDING_DP.dp),
     )
 }
 
@@ -357,6 +362,9 @@ private const val FIELD_PADDING_DP = 8
 private const val FIELD_CORNER_DP = 6
 private const val ROW_GAP_DP = 4
 private const val ROW_PADDING_DP = 6
+
+// Shared by every notice link, including the no-index action.
+private const val MIN_TAP_TARGET_DP = 48
 private const val CLOSE_PADDING_DP = 8
 private const val MARKER_SIZE_DP = 12
 private const val MARKER_CORNER_DP = 6

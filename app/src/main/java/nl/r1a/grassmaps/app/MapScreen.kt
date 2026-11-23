@@ -238,6 +238,7 @@ import nl.r1a.grassmaps.ui.shell.PlaceCardHost
 import nl.r1a.grassmaps.ui.shell.RelationAnalysisPanel
 import nl.r1a.grassmaps.ui.shell.RoutePlanPanel
 import nl.r1a.grassmaps.ui.shell.RoutePreviewTime
+import nl.r1a.grassmaps.ui.shell.RouteSummaryCardContent
 import nl.r1a.grassmaps.ui.shell.SearchScreenHost
 import nl.r1a.grassmaps.ui.shell.TrackAnalysisPanel
 import nl.r1a.grassmaps.ui.shell.TrackImportConfirmSheet
@@ -251,7 +252,9 @@ import nl.r1a.grassmaps.ui.shell.aboveBottomSheet
 import nl.r1a.grassmaps.ui.shell.followTrackSheetDisplay
 import nl.r1a.grassmaps.ui.shell.navigationAnnouncement
 import nl.r1a.grassmaps.ui.shell.reportsBottomChrome
+import nl.r1a.grassmaps.ui.shell.routePlanPreview
 import nl.r1a.grassmaps.ui.shell.routePlanTurns
+import nl.r1a.grassmaps.ui.shell.routeSummaryCard
 import nl.r1a.grassmaps.ui.shell.routeTurnStep
 import nl.r1a.grassmaps.ui.shell.trackImportConfirmContent
 import nl.r1a.grassmaps.ui.shell.trackImportNotice
@@ -321,6 +324,9 @@ private const val SETTINGS_ENTRY_GAP_DP = 8
 private const val QUICK_ACCESS_BOTTOM_CLEARANCE_DP = 72
 private const val ARC_BOTTOM_CLEARANCE_DP = 120
 private const val WIDGET_GRID_GAP_DP = 8
+
+/** The read-only route card sits just below the status bar, over the map. */
+private const val ROUTE_CARD_TOP_DP = 8
 private const val BANNER_CORNER_DP = 8
 private const val BANNER_HORIZONTAL_DP = 16
 private const val BANNER_VERTICAL_DP = 10
@@ -767,6 +773,11 @@ private fun MapContent(
             container.streamAccess.subscribe<RoutePlanState>(RoutePlannerContract.stateStream)
         }
     val plan by planFlow.collectAsState(initial = RoutePlanState())
+    // T-0612: the read-only card hands Stops off to the planner sheet's own
+    // stops list. There is no separate stops sheet, so the card steps aside
+    // while that existing list is in use; a new plan brings the card back.
+    var stopsOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(plan.status) { stopsOpen = false }
     val historyFlow =
         remember(container) {
             container.streamAccess.subscribe<List<RouteHistoryEntry>>(RoutePlannerContract.historyStream)
@@ -1025,6 +1036,61 @@ private fun MapContent(
             }
         }
     }
+    // T-0612: one Save path and one Start path. The planner sheet and the
+    // read-only card over the map both call these lambdas, so neither view owns
+    // a second action.
+    val planStart: () -> Unit = {
+        scope.launch {
+            val selected = plan.selected
+            if (selected == null) {
+                return@launch
+            }
+            val route =
+                Route(
+                    geometry = selected.geometry,
+                    distanceMeters = selected.distanceMeters,
+                    durationSeconds = selected.durationSeconds,
+                    segments = selected.segments,
+                    instructions = selected.instructions,
+                )
+            when (val outcome = container.guidance.start(route, RouteProfile.Walk)) {
+                is Outcome.Failure -> {
+                    Toast
+                        .makeText(context, guidanceStartFailureMessage(outcome.error), Toast.LENGTH_LONG)
+                        .show()
+                    Log.w(TAG, "route start failed: ${outcome.error}")
+                }
+
+                is Outcome.Success -> {
+                    navigationDestination = plan.destination?.label?.takeIf { it.isNotBlank() }
+                    navigationVias = plan.vias.map { it.label }
+                    navigationSheet = NavigationSheet.Collapsed
+                    invokePlannerCommand(container, RoutePlannerContract.clear, JsonObject(emptyMap()))
+                }
+            }
+        }
+    }
+    val planSave: () -> Unit = {
+        scope.launch {
+            when (val result = saveRoute(container.tracks, plan)) {
+                is RouteSaveResult.Saved -> {
+                    Toast
+                        .makeText(context, container.strings.resolve(ROUTE_SAVED_KEY), Toast.LENGTH_SHORT)
+                        .show()
+                }
+
+                is RouteSaveResult.Failed -> {
+                    Log.w(TAG, "route save failed: ${result.error}")
+                    Toast
+                        .makeText(
+                            context,
+                            container.strings.resolve(ROUTE_SAVE_FAILED_KEY, listOf(result.error.toString())),
+                            Toast.LENGTH_LONG,
+                        ).show()
+                }
+            }
+        }
+    }
     Box(Modifier.fillMaxSize().onSizeChanged { viewport = it }) {
         MapSurfaceView(
             surface = surface,
@@ -1131,6 +1197,30 @@ private fun MapContent(
                             end = (BAR_PADDING_DP + WIDGET_GRID_GAP_DP).dp + with(density) { controlBarWidthPx.toDp() },
                         ),
             )
+        }
+        // T-0612: the read-only card over the map. It reads the same published
+        // plan as the planner sheet and shares its Save and Start lambdas. The
+        // Stops action hands off to that sheet's existing stops section.
+        val readyPlan = plan
+        if (!navigationActive && readyPlan.status == RoutePlanStatus.Ready && !stopsOpen) {
+            val summary = routePlanPreview(readyPlan, container.strings, time = routePreviewTime, units = units)
+            if (summary != null) {
+                RouteSummaryCardContent(
+                    card = routeSummaryCard(summary, container.strings),
+                    onSave = planSave,
+                    onStart = planStart,
+                    onStops = { stopsOpen = true },
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .statusBarsPadding()
+                            .padding(
+                                start = BAR_PADDING_DP.dp,
+                                top = ROUTE_CARD_TOP_DP.dp,
+                                end = BAR_PADDING_DP.dp,
+                            ),
+                )
+            }
         }
         val bottomSheetShown =
             !navigationActive &&
@@ -1786,58 +1876,8 @@ private fun MapContent(
                         )
                     }
                 },
-                onStart = {
-                    scope.launch {
-                        val selected = plan.selected
-                        if (selected == null) {
-                            return@launch
-                        }
-                        val route =
-                            Route(
-                                geometry = selected.geometry,
-                                distanceMeters = selected.distanceMeters,
-                                durationSeconds = selected.durationSeconds,
-                                segments = selected.segments,
-                                instructions = selected.instructions,
-                            )
-                        when (val outcome = container.guidance.start(route, RouteProfile.Walk)) {
-                            is Outcome.Failure -> {
-                                Toast
-                                    .makeText(context, guidanceStartFailureMessage(outcome.error), Toast.LENGTH_LONG)
-                                    .show()
-                                Log.w(TAG, "route start failed: ${outcome.error}")
-                            }
-
-                            is Outcome.Success -> {
-                                navigationDestination = plan.destination?.label?.takeIf { it.isNotBlank() }
-                                navigationVias = plan.vias.map { it.label }
-                                navigationSheet = NavigationSheet.Collapsed
-                                invokePlannerCommand(container, RoutePlannerContract.clear, JsonObject(emptyMap()))
-                            }
-                        }
-                    }
-                },
-                onSave = {
-                    scope.launch {
-                        when (val result = saveRoute(container.tracks, plan)) {
-                            is RouteSaveResult.Saved -> {
-                                Toast
-                                    .makeText(context, container.strings.resolve(ROUTE_SAVED_KEY), Toast.LENGTH_SHORT)
-                                    .show()
-                            }
-
-                            is RouteSaveResult.Failed -> {
-                                Log.w(TAG, "route save failed: ${result.error}")
-                                Toast
-                                    .makeText(
-                                        context,
-                                        container.strings.resolve(ROUTE_SAVE_FAILED_KEY, listOf(result.error.toString())),
-                                        Toast.LENGTH_LONG,
-                                    ).show()
-                            }
-                        }
-                    }
-                },
+                onStart = planStart,
+                onSave = planSave,
                 onClose = {
                     scope.launch {
                         invokePlannerCommand(container, RoutePlannerContract.clear, JsonObject(emptyMap()))

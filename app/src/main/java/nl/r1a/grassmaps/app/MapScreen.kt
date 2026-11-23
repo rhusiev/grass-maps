@@ -755,6 +755,8 @@ private fun MapContent(
     // moment an event needs it, so a pan does not recompose the map content;
     // only the search markers, which have to follow the map, collect it.
     val cameraNow: () -> Camera = remember(surface) { { surface.host.camera.value } }
+    // The last fix is the walking origin; without one the camera centre stands in (T-0612).
+    val lastFix by container.locationFixes.collectAsState(initial = null)
     val contoursSwitch by container.contoursSettings.enabled.collectAsState()
     val pluginStatuses by container.pluginHost.statuses.collectAsState()
     val contoursPluginOn = pluginStatuses.firstOrNull { it.pluginId == CONTOURS_PLUGIN }?.enabled != false
@@ -1793,6 +1795,8 @@ private fun MapContent(
             PlaceCardHost(
                 card = placeCard,
                 strings = container.strings,
+                origin = lastFix?.position ?: cameraNow().center,
+                units = units,
                 onClose = { PlaceCardSession.hide() },
                 onAction = { link ->
                     container.platformActions.launch(link).onFailure { error ->

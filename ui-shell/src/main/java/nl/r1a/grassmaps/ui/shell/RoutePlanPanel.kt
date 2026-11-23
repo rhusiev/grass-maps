@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
@@ -190,12 +189,10 @@ fun RoutePlanPanel(
             }
 
             RoutePlanStatus.Ready -> {
-                if (state.options.size > 1) {
-                    AlternativeChips(
-                        state = state,
-                        strings = strings,
-                        onSelectAlternative = onSelectAlternative,
-                    )
+                RouteModeChipsRow(chips = routeModeChips(state, strings))
+                val cards = routeAlternativeCards(state, strings)
+                if (cards.isNotEmpty()) {
+                    RouteAlternativeCards(cards = cards, onSelectAlternative = onSelectAlternative)
                 } else {
                     StatusLine(strings.resolve(NO_ALTERNATIVES_KEY), live = true)
                 }
@@ -623,54 +620,6 @@ private fun stopText(stop: RoutePlanPoint): String =
         String.format(Locale.US, "%.5f, %.5f", stop.position.latitude, stop.position.longitude)
     }
 
-@Suppress("ktlint:standard:function-naming")
-@Composable
-private fun AlternativeChips(
-    state: RoutePlanState,
-    strings: Strings,
-    onSelectAlternative: (Int) -> Unit,
-) {
-    Row(
-        modifier = Modifier,
-        horizontalArrangement = Arrangement.spacedBy(PANEL_ROW_GAP_DP.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        state.options.forEachIndexed { index, option ->
-            val selected = index == state.selectedIndex
-            val duration = routePlanAlternativeText(option.durationSeconds, strings)
-            val description =
-                strings.resolve(ALTERNATIVE_DESCRIPTION_KEY, listOf((index + 1).toString(), duration))
-            BasicText(
-                text = duration,
-                style =
-                    TextStyle(
-                        color = if (selected) ROUTE_CHIP_SELECTED_INK else ROUTE_VALUE_COLOR,
-                        fontSize = STATUS_FONT_SP.sp,
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                    ),
-                modifier =
-                    Modifier
-                        .semantics { contentDescription = description }
-                        .background(
-                            if (selected) ROUTE_CHIP_SELECTED_COLOR else ROUTE_CHIP_COLOR,
-                            RoundedCornerShape(CHIP_CORNER_DP.dp),
-                        ).border(
-                            1.dp,
-                            if (selected) ROUTE_CHIP_SELECTED_COLOR else ROUTE_CONTROL_BORDER,
-                            RoundedCornerShape(CHIP_CORNER_DP.dp),
-                        ).selectable(
-                            selected = selected,
-                            role = Role.RadioButton,
-                            onClick = { onSelectAlternative(index) },
-                        ).padding(
-                            horizontal = CHIP_PADDING_HORIZONTAL_DP.dp,
-                            vertical = CHIP_PADDING_VERTICAL_DP.dp,
-                        ),
-            )
-        }
-    }
-}
-
 /**
  * The preview card: the three values on the first row, the two actions on the
  * card's trailing row with Start outermost, because it is the primary (T-0411).
@@ -784,7 +733,6 @@ private const val PACK_MISSING_KEY = "route_planner_pack_missing"
 private const val PACK_UNUSABLE_KEY = "route_planner_pack_unusable"
 private const val ENGINE_UNAVAILABLE_KEY = "route_planner_engine_unavailable"
 private const val NO_ALTERNATIVES_KEY = "route_planner_no_alternatives"
-private const val ALTERNATIVE_DESCRIPTION_KEY = "route_planner_alternative_description"
 private const val SWAP_KEY = "route_planner_swap"
 private const val PANEL_CLOSE_KEY = "route_planner_close"
 private const val UNDO_DESCRIPTION_KEY = "route_planner_undo"

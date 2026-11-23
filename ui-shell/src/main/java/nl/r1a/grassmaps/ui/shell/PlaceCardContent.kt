@@ -1,12 +1,15 @@
 package nl.r1a.grassmaps.ui.shell
 
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
 import nl.r1a.grassmaps.plugin.api.model.PlaceCard
 import nl.r1a.grassmaps.plugin.api.model.PlaceCardEntry
 import nl.r1a.grassmaps.plugin.api.model.PlaceCardLink
 import nl.r1a.grassmaps.plugin.api.model.PlaceCardShortcut
 import nl.r1a.grassmaps.plugin.api.model.PlaceCardValue
 import nl.r1a.grassmaps.plugin.api.model.PlaceOpeningState
+import nl.r1a.grassmaps.plugin.api.model.UnitSystem
 import nl.r1a.grassmaps.plugin.api.service.Strings
+import java.util.Locale
 
 /**
  * One drawn row: the label and the value the active language resolved, plus the
@@ -26,6 +29,8 @@ data class PlaceCardContent(
     val name: String?,
     val kind: String?,
     val address: String?,
+    /** The place point, used with the caller's position for the subtitle estimate (T-0612). */
+    val position: GeoPoint? = null,
     val openingHours: PlaceCardRow?,
     val openingState: PlaceCardRow?,
     val contacts: List<PlaceCardRow>,
@@ -84,11 +89,15 @@ data class PlaceCardSheet(
 fun placeCardSheet(
     content: PlaceCardContent,
     strings: Strings,
+    origin: GeoPoint? = null,
+    units: UnitSystem = UnitSystem.Metric,
+    locale: Locale = Locale.getDefault(),
 ): PlaceCardSheet =
     PlaceCardSheet(
         anchor = SheetAnchor.Bottom,
         hasHandle = true,
-        subtitle = content.kind,
+        subtitle =
+            placeCardSubtitle(content.kind, origin, content.position, units, strings, locale),
         coordinates = content.coordinates,
         shortcuts = content.shortcuts,
         saveLabel = strings.resolve(SAVE_ACTION_LABEL),
@@ -121,6 +130,7 @@ fun placeCardContent(
     PlaceCardContent(
         name = card.name.nonBlank(),
         kind = card.kind.nonBlank(),
+        position = card.position,
         address = card.address.nonBlank(),
         openingHours =
             card.openingHours.nonBlank()?.let { hours ->

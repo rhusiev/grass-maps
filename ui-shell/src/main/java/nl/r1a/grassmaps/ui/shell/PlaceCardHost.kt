@@ -22,8 +22,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
 import nl.r1a.grassmaps.plugin.api.model.PlaceCard
 import nl.r1a.grassmaps.plugin.api.model.PlaceCardLink
+import nl.r1a.grassmaps.plugin.api.model.UnitSystem
 import nl.r1a.grassmaps.plugin.api.service.Strings
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellColors
@@ -39,12 +41,16 @@ import nl.r1a.grassmaps.plugin.ui.api.inkOn
  * and the share, copy and open-in buttons arrive on the card model (T-0210);
  * a row whose entry carried a link launches it through [onAction]. [onRoute]
  * sends the place to the route planner and [onSave] stores it as a favourite.
+ * [origin] is the last known position or the camera centre; with the place
+ * point it gives the subtitle its distance and walking estimate (T-0612).
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 fun PlaceCardHost(
     card: PlaceCard?,
     strings: Strings,
+    origin: GeoPoint? = null,
+    units: UnitSystem = UnitSystem.Metric,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     onAction: (PlaceCardLink) -> Unit = {},
@@ -56,7 +62,7 @@ fun PlaceCardHost(
     if (content.isEmpty) {
         return
     }
-    val sheet = placeCardSheet(content, strings)
+    val sheet = placeCardSheet(content, strings, origin, units)
     ShellBottomSheet(
         sheetTitle = strings.resolve(PANE_TITLE_KEY),
         onDismiss = onClose,

@@ -13,6 +13,7 @@
     <string name="place_card_pane_title">Place details</string>
     <string name="place_card_route">Route</string>
     <string name="place_card_save">Save</string>
+    <string name="place_card_walk_estimate">estimated %1$s on foot</string>
 
     <string name="favourites_lists_title">Lists</string>
     <string name="favourites_lists_close">Close the lists</string>

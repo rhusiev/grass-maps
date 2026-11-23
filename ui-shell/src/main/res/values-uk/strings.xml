@@ -13,6 +13,7 @@
     <string name="place_card_pane_title">Деталі місця</string>
     <string name="place_card_route">Маршрут</string>
     <string name="place_card_save">Зберегти</string>
+    <string name="place_card_walk_estimate">орієнтовно %1$s пішки</string>
 
     <string name="favourites_lists_title">Списки</string>
     <string name="favourites_lists_close">Закрити списки</string>

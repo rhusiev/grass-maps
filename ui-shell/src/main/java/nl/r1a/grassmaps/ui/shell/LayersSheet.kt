@@ -14,6 +14,15 @@ val LAYERS_SHEET_ANCHOR: Alignment = Alignment.BottomCenter
 const val LAYERS_SHEET_HAS_HANDLE = true
 
 /**
+ * The full-screen destination behind the Layers card's "More..." row.
+ *
+ * The map's all-profiles grid button already opens `ProfilesScreenSession`,
+ * so the new row reuses that entry point and no screen is added. The theme
+ * settings screen has a session too, but only its debug command opens it.
+ */
+const val LAYERS_MORE_ENTRY_POINT = "all_profiles"
+
+/**
  * The Layers card as a bottom sheet.
  *
  * The host supplies the plugin rows; this composable supplies only the sheet

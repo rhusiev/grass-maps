@@ -3,9 +3,11 @@ package nl.r1a.grassmaps.ui.shell
 import androidx.compose.ui.Alignment
 import nl.r1a.grassmaps.plugin.ui.api.LayerRowSpec
 import nl.r1a.grassmaps.plugin.ui.api.LayerStyleOption
+import nl.r1a.grassmaps.plugin.ui.api.StyleSwatch
 import nl.r1a.grassmaps.plugin.ui.api.layerStyleRows
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -29,8 +31,8 @@ class LayersSheetCompositionTest {
             layerStyleRows(
                 options =
                     listOf(
-                        LayerStyleOption(name = "Meadow", hint = "Everyday and city"),
-                        LayerStyleOption(name = "Trail", hint = "Cycling and hiking"),
+                        LayerStyleOption(name = "Meadow", hint = "Everyday and city", swatch = StyleSwatch.MEADOW),
+                        LayerStyleOption(name = "Trail", hint = "Cycling and hiking", swatch = StyleSwatch.TRAIL),
                     ),
                 selectedName = "Trail",
             )
@@ -52,5 +54,28 @@ class LayersSheetCompositionTest {
     fun theLayersCardIsABottomSheetWithAHandle() {
         assertEquals(Alignment.BottomCenter, LAYERS_SHEET_ANCHOR)
         assertTrue(LAYERS_SHEET_HAS_HANDLE)
+    }
+
+    @Test
+    fun eachRoundElevenStyleCarriesItsOwnTokenSwatch() {
+        val rows =
+            layerStyleRows(
+                options =
+                    listOf(
+                        LayerStyleOption(name = "Meadow", hint = "Everyday and city", swatch = StyleSwatch.MEADOW),
+                        LayerStyleOption(name = "Trail", hint = "Cycling and hiking", swatch = StyleSwatch.TRAIL),
+                    ),
+                selectedName = "Trail",
+            )
+
+        assertEquals(StyleSwatch.MEADOW, rows[0].swatch)
+        assertEquals(StyleSwatch.TRAIL, rows[1].swatch)
+        assertNotEquals(rows[0].swatch, rows[1].swatch)
+        assertEquals(2, StyleSwatch.entries.size)
+    }
+
+    @Test
+    fun theMoreRowReusesTheExistingAllProfilesEntryPoint() {
+        assertEquals("all_profiles", LAYERS_MORE_ENTRY_POINT)
     }
 }

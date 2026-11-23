@@ -12,16 +12,30 @@ object LayerRowSpec {
     const val RADIO_MIN_SIZE_DP = 48
 }
 
-/** One map style choice as the card receives it: a name and its short hint. */
+/**
+ * The flat swatch a style row shows beside its name.
+ *
+ * The app ships no preview artwork for Meadow or Trail. Each style therefore
+ * takes one existing shell token, and the two styles use different tokens so
+ * the swatches tell them apart without inventing an image.
+ */
+enum class StyleSwatch {
+    MEADOW,
+    TRAIL,
+}
+
+/** One map style choice as the card receives it: a name, its hint and its swatch. */
 data class LayerStyleOption(
     val name: String,
     val hint: String,
+    val swatch: StyleSwatch,
 )
 
 /** One style row: the choice is [name], [hint] explains when to use it. */
 data class LayerStyleRow(
     val name: String,
     val hint: String,
+    val swatch: StyleSwatch,
     val selected: Boolean,
 )
 
@@ -39,6 +53,7 @@ fun layerStyleRows(
         LayerStyleRow(
             name = option.name,
             hint = option.hint,
+            swatch = option.swatch,
             selected = option.name == selectedName,
         )
     }

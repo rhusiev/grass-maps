@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.getAndUpdate
+import nl.r1a.grassmaps.plugin.ui.api.StyleSwatch
 
 /**
  * The map styles a user can pick. The UI names are Meadow and Trail. The ids
@@ -21,6 +22,13 @@ enum class MapStyleChoice(
         fun fromStyleId(styleId: String?): MapStyleChoice? = entries.firstOrNull { it.styleId == styleId }
     }
 }
+
+/** The token swatch this style's row shows; no preview artwork ships with the app. */
+fun MapStyleChoice.swatch(): StyleSwatch =
+    when (this) {
+        MEADOW -> StyleSwatch.MEADOW
+        TRAIL -> StyleSwatch.TRAIL
+    }
 
 /**
  * The style the map shows. The layers panel calls [select], and the map

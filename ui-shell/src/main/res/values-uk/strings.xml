@@ -38,7 +38,8 @@
     <string name="search_hint">Назва, вулиця або номер будинку</string>
     <string name="search_close">Закрити пошук</string>
     <string name="search_no_matches">Немає збігів</string>
-    <string name="search_not_ready">Для цих мап немає пошукового індексу</string>
+    <string name="search_not_ready">Для офлайн-пошуку потрібна завантажена мапа області з пошуковим індексом.</string>
+    <string name="search_not_ready_action">Відкрити завантаження, щоб отримати область</string>
     <string name="search_loading">Пошук</string>
     <string name="search_online_off_sends_position">Онлайн-пошук вимкнено. Його ввімкнення надсилає текст запиту, вашу IP-адресу та позицію на карті до photon.komoot.io.</string>
     <string name="search_online_off_no_position">Онлайн-пошук вимкнено. Його ввімкнення надсилає текст запиту та вашу IP-адресу до photon.komoot.io. Позиція на карті не надсилається.</string>

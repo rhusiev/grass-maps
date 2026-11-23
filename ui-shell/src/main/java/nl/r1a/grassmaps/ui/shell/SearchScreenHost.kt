@@ -70,7 +70,9 @@ import nl.r1a.grassmaps.plugin.ui.api.ShellColors
  * [cardModifier] positions the field and the list (the app adds status-bar and
  * edge padding there); the markers always use the full map viewport.
  * [onCollapsedCardSize] receives the size of the closed field, so a screen can
- * place its own elements below it at any font scale.
+ * place its own elements below it at any font scale. When no offline index is
+ * mounted, the line under the field offers [onOpenDownloads] as the next step;
+ * the screen never turns downloads or online search on by itself.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -97,6 +99,7 @@ fun SearchScreenHost(
     onAllowPosition: (Boolean) -> Unit = {},
     onlineStopped: Boolean = false,
     onCollapsedCardSize: (IntSize) -> Unit = {},
+    onOpenDownloads: () -> Unit = {},
 ) {
     val colors = LocalShellColors.current
     val labels =
@@ -106,6 +109,7 @@ fun SearchScreenHost(
             close = stringResource(R.string.search_close),
             noMatches = stringResource(R.string.search_no_matches),
             notReady = stringResource(R.string.search_not_ready),
+            notReadyAction = stringResource(R.string.search_not_ready_action),
             loading = stringResource(R.string.search_loading),
             onlineOffSendsPosition = stringResource(R.string.search_online_off_sends_position),
             onlineOffNoPosition = stringResource(R.string.search_online_off_no_position),
@@ -238,6 +242,12 @@ fun SearchScreenHost(
                             onPick(row.name)
                         },
                     )
+                }
+                content.notReady?.let { notice ->
+                    BasicText(text = notice.explanation, style = secondaryStyle(colors))
+                    NoticeAction(notice.action) {
+                        runNotReadyAction(notice.actionKind, onOpenDownloads)
+                    }
                 }
                 content.message?.let { message -> BasicText(text = message, style = secondaryStyle(colors)) }
             }

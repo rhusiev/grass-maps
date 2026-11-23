@@ -62,6 +62,7 @@ data class SearchScreenLabels(
     val close: String,
     val noMatches: String,
     val notReady: String,
+    val notReadyAction: String = "",
     val loading: String,
     val onlineOffSendsPosition: String = "",
     val onlineOffNoPosition: String = "",
@@ -119,6 +120,42 @@ fun searchOnlineNotice(
         )
     }
 
+/** The action the no-index line offers: the one entry point to map downloads. */
+enum class SearchNotReadyAction {
+    OPEN_DOWNLOADS,
+}
+
+/**
+ * What a fresh install sees when no offline index is mounted: why the search
+ * needs a map region, and the one action that takes the user to Downloads.
+ */
+data class SearchNotReadyNotice(
+    val explanation: String,
+    val action: String,
+    val actionKind: SearchNotReadyAction,
+)
+
+/** The no-index line and its action, both from the screen's bundles. */
+fun searchNotReadyNotice(labels: SearchScreenLabels): SearchNotReadyNotice =
+    SearchNotReadyNotice(
+        explanation = labels.notReady,
+        action = labels.notReadyAction,
+        actionKind = SearchNotReadyAction.OPEN_DOWNLOADS,
+    )
+
+/**
+ * Sends the no-index action to the callback that opens Downloads. Kept pure so
+ * a JVM test pins which callback the offered action calls.
+ */
+fun runNotReadyAction(
+    action: SearchNotReadyAction,
+    onOpenDownloads: () -> Unit,
+) {
+    when (action) {
+        SearchNotReadyAction.OPEN_DOWNLOADS -> onOpenDownloads()
+    }
+}
+
 /** One keystroke's worth of screen content: the labels, the rows and the state line. */
 data class SearchScreenContent(
     val labels: SearchScreenLabels,
@@ -127,12 +164,13 @@ data class SearchScreenContent(
     val message: String?,
     val loading: Boolean,
     val online: SearchOnlineNotice? = null,
+    val notReady: SearchNotReadyNotice? = null,
 )
 
 /**
  * Turns the newest result set and the session flags into what the screen draws.
- * A blank field draws nothing below it; a failure says the index is missing
- * instead of pretending there are no matches.
+ * A blank field draws nothing below it; a failure explains the missing index
+ * and offers Downloads instead of pretending there are no matches.
  *
  * A switch that stopped the online half adds a line about it, but never changes
  * a row's source: [SearchResultRow.online] remains the only mark of an online
@@ -150,7 +188,7 @@ fun searchScreenContent(
     val view = searchResultView(hits)
     val message =
         when {
-            failed -> labels.notReady
+            failed -> null
             onlineStopped && view.rows.isEmpty() -> labels.onlineStoppedNoResults
             onlineStopped && view.rows.any { it.online } -> labels.onlineStoppedWithOnline
             onlineStopped -> labels.onlineStopped
@@ -166,5 +204,6 @@ fun searchScreenContent(
         message = message,
         loading = loading,
         online = online,
+        notReady = if (failed) searchNotReadyNotice(labels) else null,
     )
 }

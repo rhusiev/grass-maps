@@ -95,7 +95,8 @@ class SearchResultViewTest {
     fun aRunAgainstAMissingIndexSaysTheIndexIsMissing() {
         val content = searchScreenContent(emptyList(), query = "льв", loading = false, failed = true, labels = UKRAINIAN_LABELS)
 
-        assertEquals("Для цих карт немає пошукового індексу", content.message)
+        assertEquals("Для цих карт немає пошукового індексу", content.notReady!!.explanation)
+        assertNull("the failure is the notice, not a no-matches line", content.message)
     }
 
     @Test

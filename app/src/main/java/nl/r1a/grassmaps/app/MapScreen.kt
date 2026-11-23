@@ -1632,6 +1632,10 @@ private fun MapContent(
                         }
                     }
                 },
+                onOpenDownloads = {
+                    searchExpanded = false
+                    DownloadsScreenSession.show()
+                },
             )
         }
         if (!navigationActive) {
@@ -2573,6 +2577,7 @@ private fun SearchOverlay(
     onDisableOnlineSearch: () -> Unit,
     onAllowPosition: (Boolean) -> Unit,
     onCollapsedCardSize: (IntSize) -> Unit,
+    onOpenDownloads: () -> Unit,
 ) {
     val camera by surface.host.camera.collectAsState()
     SearchScreenHost(
@@ -2601,6 +2606,7 @@ private fun SearchOverlay(
         onAllowPosition = onAllowPosition,
         onlineStopped = state.onlineStopped != null,
         onCollapsedCardSize = onCollapsedCardSize,
+        onOpenDownloads = onOpenDownloads,
     )
 }
 

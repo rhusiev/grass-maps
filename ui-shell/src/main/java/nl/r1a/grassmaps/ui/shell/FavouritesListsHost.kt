@@ -91,6 +91,22 @@ fun FavouritesListsHost(
             verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
         ) {
             Header(content = content, onUndo = onUndo, onClose = onClose)
+            SavedScreenSection(
+                state = state,
+                strings = strings,
+                query = query,
+                newListName = newName,
+                newListColor = newColor,
+                onQueryChange = {
+                    query = it
+                    onQueryChange(it)
+                },
+                onSortChange = onSortChange,
+                onCreateList = { name, color ->
+                    onCreateList(name, color)
+                    newName = ""
+                },
+            )
             SectionTitle(text = strings.resolve(NEW_LIST_KEY))
             ListCreator(
                 name = newName,

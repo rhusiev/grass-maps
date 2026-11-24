@@ -1,6 +1,7 @@
 package nl.r1a.grassmaps.plugins.downloads.ui
 
 import nl.r1a.grassmaps.plugin.api.model.DownloadProblemKind
+import nl.r1a.grassmaps.plugin.api.model.DownloadsState
 
 /**
  * The sentence one typed problem shows (T-0504).
@@ -11,6 +12,34 @@ import nl.r1a.grassmaps.plugin.api.model.DownloadProblemKind
  * renderer.
  */
 internal object DownloadsProblemText {
+    /** A failed catalog request is not a failed transfer, even when both have the same cause. */
+    fun catalogKey(state: DownloadsState): Int? {
+        if (!state.downloadsEnabled) {
+            return null
+        }
+        return when (val kind = state.catalogProblem?.kind) {
+            null, DownloadProblemKind.SWITCH_OFF -> {
+                when {
+                    state.catalogLoaded -> null
+                    state.query.isBlank() -> R.string.downloads_empty
+                    else -> R.string.downloads_catalog_unavailable
+                }
+            }
+
+            DownloadProblemKind.NETWORK -> {
+                if (state.catalogLoaded) R.string.downloads_no_connection else R.string.downloads_catalog_offline
+            }
+
+            DownloadProblemKind.CORRUPT_DATA, DownloadProblemKind.STORAGE, DownloadProblemKind.OTHER, DownloadProblemKind.UPDATE_FAILED -> {
+                R.string.downloads_catalog_unavailable
+            }
+
+            else -> {
+                key(kind)
+            }
+        }
+    }
+
     fun key(kind: DownloadProblemKind): Int =
         when (kind) {
             DownloadProblemKind.TOKEN_REQUIRED -> R.string.downloads_token_required

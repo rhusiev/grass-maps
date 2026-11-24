@@ -13,7 +13,7 @@ plugins/contours	18
 plugins/coordinates	11
 plugins/dev-tools	4
 plugins/direct-engine	25
-plugins/downloads-ui	75
+plugins/downloads-ui	85
 plugins/example	1
 plugins/favourites-layer	11
 plugins/favourites-ui	42

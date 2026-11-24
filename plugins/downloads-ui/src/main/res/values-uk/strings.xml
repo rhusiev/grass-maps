@@ -3,7 +3,7 @@
     <string name="plugin.downloads_ui.name">Мапи</string>
     <string name="plugin.downloads_ui.description">Показує сервер карт, його регіони та їхні частини й завантажує їх.</string>
 
-    <string name="downloads_title">Мапи</string>
+    <string name="downloads_title">Завантаження карт</string>
     <string name="downloads_first_run_title">Завантажити для початку</string>
     <string name="downloads_on_this_phone">На цьому телефоні</string>
     <string name="downloads_available">Доступні</string>
@@ -16,6 +16,9 @@
     <string name="downloads_search_empty">Жодна область не підходить</string>
     <string name="downloads_near_you">Поруч із вами</string>
     <string name="downloads_empty">Ще немає мап</string>
+    <string name="downloads_catalog_unavailable">Список областей не завантажено</string>
+    <string name="downloads_catalog_offline">Немає з’єднання. Підключіться, щоб завантажити список областей</string>
+    <string name="downloads_no_connection">Немає з’єднання</string>
     <string name="downloads_update_all">Оновити все</string>
 
     <string name="downloads_world_overview">Огляд світу</string>
@@ -67,14 +70,9 @@
     <string name="downloads_part_other">Інші дані</string>
     <string name="downloads_waiting_for_wifi">Очікування Wi-Fi</string>
     <string name="downloads_use_mobile_data_now">Завантажити зараз через мобільний інтернет</string>
-    <string name="downloads_switch_title">Завантаження мап</string>
     <string name="downloads_switch_on">Увімкнено</string>
     <string name="downloads_switch_off">Вимкнено</string>
-    <string name="downloads_switch_turn_on">Увімкнути завантаження</string>
-    <string name="downloads_mobile_data_title">Мобільний інтернет</string>
     <string name="downloads_mobile_data_wifi_only">Лише Wi-Fi</string>
-    <string name="downloads_mobile_data_any">Wi-Fi і мобільний інтернет</string>
-    <string name="downloads_auto_update_start">Оновлювати мапи автоматично щомісяця</string>
-    <string name="downloads_auto_update_stop">Не оновлювати мапи автоматично</string>
+    <string name="downloads_auto_update">Автоматичні щомісячні оновлення</string>
     <string name="downloads_applies_at_next_start">Висоти використають нові мапи під час наступного запуску застосунку</string>
 </resources>

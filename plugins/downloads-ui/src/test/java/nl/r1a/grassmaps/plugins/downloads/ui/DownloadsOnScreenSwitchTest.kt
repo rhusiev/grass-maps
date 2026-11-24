@@ -13,8 +13,6 @@ import nl.r1a.grassmaps.plugin.api.model.DownloadsData
 import nl.r1a.grassmaps.plugin.api.model.DownloadsState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -32,22 +30,15 @@ class DownloadsOnScreenSwitchTest {
         val state = DownloadsScreen.state(DownloadsData(serverUrl = SERVER))
 
         assertFalse(state.downloadsEnabled)
-        val notice = downloadsSwitchNotice(LABELS, enabled = state.downloadsEnabled)
-        assertFalse(notice.checked)
-        assertEquals("Off", notice.stateText)
-        assertEquals("Map downloads", notice.title)
-        assertNotNull(notice.alert)
     }
 
     @Test
-    fun theOffStateAlertHasADirectActionAndTheSwitchKeepsTheHonestPrivacyNote() {
-        val notice = downloadsSwitchNotice(LABELS, enabled = false)
+    fun theOffSwitchKeepsItsStatusAndPrivacyNote() {
+        val source = File(SCREEN_FILE).readText()
+        val switch = source.substringAfter("private fun DownloadsSwitchRow(").substringBefore("\n}")
 
-        assertNotNull(notice.alert)
-        assertEquals("Downloads are switched off", notice.alert!!.message)
-        assertEquals("Turn on downloads", notice.alert.action)
-        assertTrue(notice.privacyNote.contains("IP address"))
-        assertTrue(notice.privacyNote.contains("which maps"))
+        assertTrue(switch.contains("if (checked) R.string.downloads_switch_on else R.string.downloads_switch_off"))
+        assertTrue(switch.contains("stringResource(R.string.downloads_server_sees)"))
     }
 
     @Test
@@ -61,7 +52,6 @@ class DownloadsOnScreenSwitchTest {
 
             assertEquals(listOf("refresh", "switch:true", "refresh"), access.calls)
             assertTrue(state.downloadsEnabled)
-            assertNull(downloadsSwitchNotice(LABELS, enabled = state.downloadsEnabled).alert)
         }
 
     @Test
@@ -87,9 +77,9 @@ class DownloadsOnScreenSwitchTest {
     fun theSwitchWordingLandsInBothLocales() {
         for (path in listOf(ENGLISH, UKRAINIAN)) {
             val bundle = resources(path)
-            assertTrue(bundle.getValue("downloads_switch_title").isNotBlank())
+            assertTrue(bundle.getValue("downloads_title").isNotBlank())
             assertTrue(bundle.getValue("downloads_switch_off").isNotBlank())
-            assertTrue(bundle.getValue("downloads_switch_turn_on").isNotBlank())
+            assertTrue(bundle.getValue("downloads_switch_on").isNotBlank())
             assertTrue(
                 bundle.getValue("downloads_server_sees").contains("IP address") ||
                     bundle.getValue("downloads_server_sees").contains("IP-адрес"),
@@ -122,15 +112,6 @@ class DownloadsOnScreenSwitchTest {
         const val SERVER = "https://maps.test"
         const val ENGLISH = "src/main/res/values/strings.xml"
         const val UKRAINIAN = "src/main/res/values-uk/strings.xml"
-
-        val LABELS =
-            DownloadsSwitchLabels(
-                title = "Map downloads",
-                onText = "On",
-                offText = "Off",
-                privacyNote = "The server sees your token, your IP address and which maps you fetch.",
-                offMessage = "Downloads are switched off",
-                turnOnAction = "Turn on downloads",
-            )
+        const val SCREEN_FILE = "src/main/java/nl/r1a/grassmaps/plugins/downloads/ui/DownloadsScreenContent.kt"
     }
 }

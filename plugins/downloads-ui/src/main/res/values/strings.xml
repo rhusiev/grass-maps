@@ -3,7 +3,7 @@
     <string name="plugin.downloads_ui.name">Maps</string>
     <string name="plugin.downloads_ui.description">Shows the map server, its regions and their parts, and downloads them.</string>
 
-    <string name="downloads_title">Maps</string>
+    <string name="downloads_title">Map downloads</string>
     <string name="downloads_first_run_title">Download to start</string>
     <string name="downloads_on_this_phone">On this phone</string>
     <string name="downloads_available">Available</string>
@@ -16,6 +16,9 @@
     <string name="downloads_search_empty">No region matches</string>
     <string name="downloads_near_you">Near you</string>
     <string name="downloads_empty">No maps yet</string>
+    <string name="downloads_catalog_unavailable">Region list not loaded</string>
+    <string name="downloads_catalog_offline">No connection. Connect to load regions</string>
+    <string name="downloads_no_connection">No connection</string>
     <string name="downloads_update_all">Update all</string>
 
     <string name="downloads_world_overview">World overview</string>
@@ -67,14 +70,9 @@
     <string name="downloads_part_other">Other data</string>
     <string name="downloads_waiting_for_wifi">Waiting for Wi-Fi</string>
     <string name="downloads_use_mobile_data_now">Download now on mobile data</string>
-    <string name="downloads_switch_title">Map downloads</string>
     <string name="downloads_switch_on">On</string>
     <string name="downloads_switch_off">Off</string>
-    <string name="downloads_switch_turn_on">Turn on downloads</string>
-    <string name="downloads_mobile_data_title">Mobile data</string>
     <string name="downloads_mobile_data_wifi_only">Wi-Fi only</string>
-    <string name="downloads_mobile_data_any">Wi-Fi and mobile data</string>
-    <string name="downloads_auto_update_start">Update maps automatically, monthly</string>
-    <string name="downloads_auto_update_stop">Stop updating maps automatically</string>
+    <string name="downloads_auto_update">Automatic monthly updates</string>
     <string name="downloads_applies_at_next_start">Elevation uses the new maps the next time you start the app</string>
 </resources>

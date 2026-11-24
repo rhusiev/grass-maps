@@ -772,14 +772,17 @@ private fun MapContent(
         val start = cameraNow().zoom
         mutableFloatStateOf(if (start.isFinite()) start.toFloat().coerceIn(zoomSliderSpec.min, zoomSliderSpec.max) else zoomSliderSpec.min)
     }
+    val slideDescription = stringResource(R.string.control_zoom_slider_description)
+    val zoomInDescription = stringResource(R.string.control_zoom_in_description)
+    val zoomOutDescription = stringResource(R.string.control_zoom_out_description)
     val zoomSlider =
-        remember(sliderZoom, context) {
+        remember(sliderZoom, slideDescription, zoomInDescription, zoomOutDescription) {
             ZoomSliderContent(
                 spec = zoomSliderSpec,
                 value = sliderZoom,
-                slideDescription = context.getString(R.string.control_zoom_slider_description),
-                zoomInDescription = context.getString(R.string.control_zoom_in_description),
-                zoomOutDescription = context.getString(R.string.control_zoom_out_description),
+                slideDescription = slideDescription,
+                zoomInDescription = zoomInDescription,
+                zoomOutDescription = zoomOutDescription,
             )
         }
     // The pill reports an absolute zoom or a step; the camera still moves

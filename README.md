@@ -1863,12 +1863,22 @@ does not change. The app logs the values the request carried as
 `route-preferences` beside the existing route summary; values only, no points
 or labels.
 
+A ready route opens read-only (T-0612). The summary card over the map shows the
+route's ends, time, distance and arrival with Save, Start and Stops; the
+planner sheet stays closed until Stops opens it, so a planned route cannot be
+edited by accident. `routePlanSheetShown` in `MapScreen.kt` is that decision:
+the picking, planning and failed states keep the sheet, because they carry its
+hints and recovery actions, and a ready state composes it only while Stops is
+open. The card and the sheet read one published plan and share one Save and one
+Start lambda.
+
 A route preview frames the selected route in the map area above the planner
 sheet. `MapHost.fitBounds(bounds, bottomInsetDp)` pads the camera by the height
 the sheet covers: `BottomChrome.reachOf` for `BOTTOM_SHEET_KEY`, the key every
 bottom sheet over the map reports under, read once it has held for 150 ms, or 0
 after 1.5 s. The fit is skipped when the camera moved during that wait. A host
-without padding falls back to `fitBounds(bounds)`.
+without padding falls back to `fitBounds(bounds)`. With the sheet closed the
+reach is 0, so a ready route frames the whole map area below the card.
 
 `plugins/direct-engine` is the second `routing.engine` provider (T-0305), and
 the proof that the engine seam is real: the planner and the follower consume

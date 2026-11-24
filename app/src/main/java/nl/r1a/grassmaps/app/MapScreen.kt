@@ -363,11 +363,23 @@ internal fun routeCardInsets(
         end = if (arc) BAR_PADDING_DP.dp else topControlBarEndInset(controlBarWidth),
     )
 
-/** Whether the planner sheet is composed for the plan's state (T-0612). */
+/**
+ * Whether the planner sheet is composed for the plan's state (T-0612). A
+ * ready route is the read-only card over the map; the sheet opens only through
+ * the card's Stops action, so a planned route cannot be edited by accident.
+ * The picking, planning and failed states keep the sheet, because they carry
+ * its hints and recovery actions.
+ */
 internal fun routePlanSheetShown(
     status: RoutePlanStatus,
     stopsOpen: Boolean,
-): Boolean = status != RoutePlanStatus.Idle
+): Boolean = status != RoutePlanStatus.Idle && (status != RoutePlanStatus.Ready || stopsOpen)
+
+/** Whether the read-only route card is composed for the plan's state (T-0612). */
+internal fun routeSummaryCardShown(
+    status: RoutePlanStatus,
+    stopsOpen: Boolean,
+): Boolean = status == RoutePlanStatus.Ready && !stopsOpen
 
 private const val BANNER_CORNER_DP = 8
 private const val BANNER_HORIZONTAL_DP = 16
@@ -1302,7 +1314,7 @@ private fun MapContent(
         // plan as the planner sheet and shares its Save and Start lambdas. The
         // Stops action hands off to that sheet's existing stops section.
         val readyPlan = plan
-        if (!navigationActive && readyPlan.status == RoutePlanStatus.Ready && !stopsOpen) {
+        if (!navigationActive && routeSummaryCardShown(readyPlan.status, stopsOpen)) {
             val summary = routePlanPreview(readyPlan, container.strings, time = routePreviewTime, units = units)
             if (summary != null) {
                 val cardInsets = routeCardInsets(with(density) { controlBarWidthPx.toDp() }, layout.arc)

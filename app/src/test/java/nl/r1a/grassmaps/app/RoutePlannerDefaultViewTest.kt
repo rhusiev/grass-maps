@@ -21,6 +21,12 @@ class RoutePlannerDefaultViewTest {
     }
 
     @Test
+    fun aReadyRouteShowsTheReadOnlyCardUntilStopsOpens() {
+        assertTrue(routeSummaryCardShown(RoutePlanStatus.Ready, stopsOpen = false))
+        assertFalse("the sheet takes over while Stops is open", routeSummaryCardShown(RoutePlanStatus.Ready, stopsOpen = true))
+    }
+
+    @Test
     fun theStopsActionOpensTheSheetOnAReadyRoute() {
         assertTrue(routePlanSheetShown(RoutePlanStatus.Ready, stopsOpen = true))
     }

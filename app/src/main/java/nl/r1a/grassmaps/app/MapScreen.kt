@@ -44,6 +44,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -250,6 +251,7 @@ import nl.r1a.grassmaps.ui.shell.TrackMapCard
 import nl.r1a.grassmaps.ui.shell.TrackMapCardAction
 import nl.r1a.grassmaps.ui.shell.TrackMapCardHost
 import nl.r1a.grassmaps.ui.shell.TrackTap
+import nl.r1a.grassmaps.ui.shell.ZoomSliderContent
 import nl.r1a.grassmaps.ui.shell.aboveBottomSheet
 import nl.r1a.grassmaps.ui.shell.followTrackSheetDisplay
 import nl.r1a.grassmaps.ui.shell.navigationAnnouncement
@@ -264,6 +266,7 @@ import java.time.Clock
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -732,7 +735,14 @@ private fun MapContent(
     // The bar's buttons and labels are built from the layout, the mode and the
     // strings, so a camera frame, a fix or a banner does not rebuild them.
     val controlBarButtons =
-        remember(layout, context, cameraMode) { layoutControlButtons(layout.slots, context, cameraMode) }
+        remember(layout, context, cameraMode) {
+            // The slider replaces the placed zoom pair. The commands stay in the
+            // layout catalog and the quick-access choices; only their drawn
+            // buttons give way to the pill.
+            layoutControlButtons(layout.slots, context, cameraMode).map { button ->
+                if (button?.id == MapControlCommands.ZOOM_IN || button?.id == MapControlCommands.ZOOM_OUT) null else button
+            }
+        }
     val controlBarTexts = remember(context) { controlBarLabels(context) }
     val layoutSheetLabels = remember(container.strings) { layoutSheetLabels(container.strings) }
     var distance by remember { mutableStateOf<DistanceReadout?>(null) }
@@ -756,6 +766,47 @@ private fun MapContent(
     // moment an event needs it, so a pan does not recompose the map content;
     // only the search markers, which have to follow the map, collect it.
     val cameraNow: () -> Camera = remember(surface) { { surface.host.camera.value } }
+    // The slider keeps the last zoom it set. Reading the camera once here avoids
+    // recomposing the whole screen on every camera frame during a pan or pinch.
+    var sliderZoom by remember {
+        val start = cameraNow().zoom
+        mutableFloatStateOf(if (start.isFinite()) start.toFloat().coerceIn(zoomSliderSpec.min, zoomSliderSpec.max) else zoomSliderSpec.min)
+    }
+    val zoomSlider =
+        remember(sliderZoom, context) {
+            ZoomSliderContent(
+                spec = zoomSliderSpec,
+                value = sliderZoom,
+                slideDescription = context.getString(R.string.control_zoom_slider_description),
+                zoomInDescription = context.getString(R.string.control_zoom_in_description),
+                zoomOutDescription = context.getString(R.string.control_zoom_out_description),
+            )
+        }
+    // The pill reports an absolute zoom or a step; the camera still moves
+    // through the existing zoom commands, one named step at a time. Reading the
+    // camera at each gesture keeps the ends correct after a pinch or a replay.
+    val dispatchZoom: (Float) -> Unit = { target ->
+        val cameraZoom = cameraNow().zoom
+        val current = if (cameraZoom.isFinite()) cameraZoom.toFloat().coerceIn(zoomSliderSpec.min, zoomSliderSpec.max) else sliderZoom
+        val snapped = zoomSliderSpec.valueAt(zoomSliderSpec.indexOf(target))
+        sliderZoom = snapped
+        val steps = ((snapped - current) / ZOOM_STEP).roundToInt()
+        if (steps != 0) {
+            val id = if (steps > 0) MapControlCommands.ZOOM_IN else MapControlCommands.ZOOM_OUT
+            scope.launch {
+                repeat(abs(steps)) {
+                    container.commandBus.invoke(id, JsonObject(emptyMap())).onFailure { error ->
+                        Log.w(TAG, "zoom command $id failed: $error")
+                    }
+                }
+            }
+        }
+    }
+    val stepZoom: (Int) -> Unit = { delta ->
+        val cameraZoom = cameraNow().zoom
+        val current = if (cameraZoom.isFinite()) cameraZoom.toFloat().coerceIn(zoomSliderSpec.min, zoomSliderSpec.max) else sliderZoom
+        dispatchZoom(zoomSliderSpec.valueAt(zoomSliderSpec.indexOf(current) + delta))
+    }
     // The last fix is the walking origin; without one the camera centre stands in (T-0612).
     val lastFix by container.locationFixes.collectAsState(initial = null)
     val contoursSwitch by container.contoursSettings.enabled.collectAsState()
@@ -1491,6 +1542,9 @@ private fun MapContent(
                         layoutSheetTab = null
                     }
                 },
+                zoomSlider = zoomSlider,
+                onZoomChange = dispatchZoom,
+                onZoomStep = stepZoom,
                 modifier =
                     (
                         if (layout.arc) {
@@ -1595,6 +1649,11 @@ private fun MapContent(
                         }
                     },
                     onArc = { on -> layoutController.edit { current -> current.copy(arc = on) } },
+                    editing = isEditing,
+                    onEditingChange = { editing ->
+                        isEditing = editing
+                        layoutSheetTab = null
+                    },
                     onClose = { layoutSheetTab = null },
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )

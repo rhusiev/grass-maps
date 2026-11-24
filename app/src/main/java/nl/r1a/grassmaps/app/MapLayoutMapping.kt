@@ -117,4 +117,7 @@ internal fun layoutSheetLabels(strings: Strings): MapLayoutSheetLabels =
         arcDescription = strings.resolve(MapLayoutStrings.ARC_DESCRIPTION),
         placeDescription = { title -> strings.resolve(MapLayoutStrings.PLACE_DESCRIPTION, listOf(title)) },
         removeDescription = { title -> strings.resolve(MapLayoutStrings.REMOVE_DESCRIPTION, listOf(title)) },
+        editOnMap = strings.resolve(MapLayoutStrings.EDIT_ON_MAP),
+        doneEditing = strings.resolve(MapLayoutStrings.DONE_EDITING),
+        editOnMapDescription = strings.resolve(MapLayoutStrings.EDIT_ON_MAP_DESCRIPTION),
     )

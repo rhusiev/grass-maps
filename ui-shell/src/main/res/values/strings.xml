@@ -367,6 +367,9 @@
     <string name="map_layout_add_description">Add a button or widget</string>
     <string name="map_layout_place_description">Add %1$s to the layout</string>
     <string name="map_layout_remove_description">Remove %1$s from the layout</string>
+    <string name="map_layout_edit_on_map">Edit on map</string>
+    <string name="map_layout_done_editing">Finish editing on map</string>
+    <string name="map_layout_edit_on_map_description">Edit the map buttons and widgets in place</string>
     <string name="map_layout_button_zoom_in">Zoom in</string>
     <string name="map_layout_button_zoom_out">Zoom out</string>
     <string name="map_layout_button_compass">Compass</string>

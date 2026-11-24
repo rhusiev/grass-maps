@@ -21,6 +21,7 @@ import nl.r1a.grassmaps.plugin.api.manifest.GeneratedCommand
 import nl.r1a.grassmaps.plugin.api.model.CameraUpdate
 import nl.r1a.grassmaps.plugins.map.controls.CameraMode
 import nl.r1a.grassmaps.plugins.map.controls.CameraModeController
+import nl.r1a.grassmaps.ui.shell.ZoomSliderSpec
 
 /** The owner of host commands that have no plugin behind them. */
 internal val CORE_PLUGIN: PluginId = PluginId("core")
@@ -28,6 +29,10 @@ internal val CORE_PLUGIN: PluginId = PluginId("core")
 internal const val ZOOM_STEP: Double = 1.0
 internal const val MIN_ZOOM: Double = 1.0
 internal const val MAX_ZOOM: Double = 20.0
+
+/** The slider's discrete positions come from the same bounds and step as the zoom commands. */
+internal val zoomSliderSpec: ZoomSliderSpec =
+    ZoomSliderSpec(MIN_ZOOM.toFloat(), MAX_ZOOM.toFloat(), ZOOM_STEP.toFloat())
 
 /**
  * The process-level map commands. They hold a [MapSessionHolder], not a surface,

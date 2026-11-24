@@ -385,6 +385,9 @@
     <string name="map_layout_add_description">Додати кнопку або віджет</string>
     <string name="map_layout_place_description">Додати до розкладки: %1$s</string>
     <string name="map_layout_remove_description">Прибрати з розкладки: %1$s</string>
+    <string name="map_layout_edit_on_map">Змінити на карті</string>
+    <string name="map_layout_done_editing">Завершити редагування на карті</string>
+    <string name="map_layout_edit_on_map_description">Змінювати кнопки та віджети карти безпосередньо</string>
     <string name="map_layout_button_zoom_in">Наблизити</string>
     <string name="map_layout_button_zoom_out">Віддалити</string>
     <string name="map_layout_button_compass">Компас</string>

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -109,6 +110,9 @@ data class MapLayoutSheetLabels(
     val arcDescription: String,
     val placeDescription: (String) -> String,
     val removeDescription: (String) -> String,
+    val editOnMap: String,
+    val doneEditing: String,
+    val editOnMapDescription: String,
 )
 
 /**
@@ -133,6 +137,8 @@ fun MapLayoutSheet(
     onItem: (LayoutSheetItem) -> Unit,
     onQuickAccess: (String?) -> Unit,
     onArc: (Boolean) -> Unit,
+    editing: Boolean,
+    onEditingChange: (Boolean) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -176,6 +182,7 @@ fun MapLayoutSheet(
                     QuickAccessChoices(content.buttons, labels, onQuickAccess)
                 }
                 ArcRow(labels.arc, labels.arcDescription, arc, onArc)
+                EditOnMapRow(labels, editing, onEditingChange)
             }
 
             MapLayoutTab.Widgets -> {
@@ -189,6 +196,38 @@ fun MapLayoutSheet(
                 }
             }
         }
+    }
+}
+
+/**
+ * The entry to in-place editing, kept in the layout sheet after the round 9
+ * change retired the mid-stack "Edit layout" text button. A tap toggles edit
+ * mode and closes the sheet, so the same row also leaves edit mode.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun EditOnMapRow(
+    labels: MapLayoutSheetLabels,
+    editing: Boolean,
+    onEditingChange: (Boolean) -> Unit,
+) {
+    val colors = LocalShellColors.current
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
+                .clip(RoundedCornerShape(EDIT_ROW_CORNER_DP.dp))
+                .background(colors.soft)
+                .clickable(role = Role.Button) { onEditingChange(!editing) }
+                .semantics { contentDescription = labels.editOnMapDescription }
+                .padding(horizontal = EDIT_ROW_PADDING_DP.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BasicText(
+            text = if (editing) labels.doneEditing else labels.editOnMap,
+            style = TextStyle(color = colors.ink, fontSize = EDIT_ROW_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
+        )
     }
 }
 
@@ -625,3 +664,6 @@ private const val SWITCH_HEIGHT_DP = 28
 private const val SWITCH_RADIUS_DP = 14
 private const val SWITCH_BORDER_DP = 2
 private const val SWITCH_KNOB_DP = 20
+private const val EDIT_ROW_CORNER_DP = 8
+private const val EDIT_ROW_PADDING_DP = 12
+private const val EDIT_ROW_FONT_SP = 15f

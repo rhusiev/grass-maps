@@ -75,10 +75,12 @@ data class ControlBarLabels(
  * invokes through the supplied callbacks, so the app keeps the command bus and
  * the map host.
  *
- * The bar never moves a button while editing. Normal mode draws the placed
- * buttons in slot order; edit mode draws every slot in the same order, a free
- * slot as a dashed box, then Add and Done. The arc arrangement places the
- * placed buttons on [thumbArcOffsets]; the arc's order is the slot order.
+ * The bar never moves a button while editing. Normal mode draws the zoom
+ * slider pill above the placed buttons in slot order. Edit mode hides the
+ * pill and draws every slot in the same order, a free slot as a dashed box,
+ * then Add and Done. The round 9 "Edit layout" text button is not in the
+ * stack: the layout sheet owns that entry point. The arc arrangement places
+ * the placed buttons on [thumbArcOffsets]; the arc's order is the slot order.
  * Invoking is disabled while editing, so an edit cannot fire a command.
  */
 @Suppress("ktlint:standard:function-naming")
@@ -91,6 +93,9 @@ fun MapControlBar(
     onInvoke: (CommandId) -> Unit,
     onAdd: () -> Unit,
     onEditingChange: (Boolean) -> Unit,
+    zoomSlider: ZoomSliderContent?,
+    onZoomChange: (Float) -> Unit,
+    onZoomStep: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalShellColors.current
@@ -105,18 +110,19 @@ fun MapControlBar(
                 enabled = !isEditing,
                 onInvoke = onInvoke,
             )
+            if (!isEditing && zoomSlider != null) {
+                ZoomSliderPill(zoomSlider, onZoomChange, onZoomStep)
+            }
             if (isEditing) {
                 Row(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP_DP.dp)) {
                     AddBox(labels, onAdd)
                     EditBox(editing = true, labels, onEditingChange)
                 }
-            } else {
-                EditBox(editing = false, labels, onEditingChange)
             }
         }
         return
     }
-    val shape = RoundedCornerShape(BUTTON_CORNER_DP.dp)
+    val shape = CircleShape
     Column(
         modifier =
             modifier
@@ -126,6 +132,9 @@ fun MapControlBar(
         verticalArrangement = Arrangement.spacedBy(BUTTON_GAP_DP.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        if (!isEditing && zoomSlider != null) {
+            ZoomSliderPill(zoomSlider, onZoomChange, onZoomStep)
+        }
         if (isEditing) {
             slots.forEachIndexed { index, button ->
                 key(index) {
@@ -144,6 +153,7 @@ fun MapControlBar(
                 }
             }
             AddBox(labels, onAdd)
+            EditBox(editing = true, labels, onEditingChange)
         } else {
             slots.filterNotNull().forEach { button ->
                 ActionBox(
@@ -156,7 +166,6 @@ fun MapControlBar(
                 )
             }
         }
-        EditBox(editing = isEditing, labels, onEditingChange)
     }
 }
 
@@ -180,7 +189,7 @@ private fun ArcRow(
                         description = button.contentDescription,
                         enabled = enabled,
                         onClick = { onInvoke(button.id) },
-                        shape = RoundedCornerShape(BUTTON_CORNER_DP.dp),
+                        shape = CircleShape,
                     )
                 }
             }
@@ -249,8 +258,8 @@ private fun EmptySlot(
     Box(
         modifier =
             Modifier
-                .size(BUTTON_SIZE_DP.dp)
-                .dashedRing(colors.faint, BUTTON_CORNER_DP.dp)
+                .size(MapControlMetrics.TAP_TARGET_DP.dp)
+                .dashedRing(colors.faint, (MapControlMetrics.FAB_DP / 2).dp)
                 .clickable(role = Role.Button, onClick = onAdd)
                 .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
@@ -324,37 +333,50 @@ private fun ActionBox(
     wide: Boolean = false,
 ) {
     val colors = LocalShellColors.current
-    val size =
+    val drawnShape = if (wide) RoundedCornerShape(BUTTON_CORNER_DP.dp) else shape
+    val target =
         if (wide) {
-            Modifier.height(BUTTON_SIZE_DP.dp).width(WIDE_BUTTON_WIDTH_DP.dp)
+            Modifier.height(MapControlMetrics.TAP_TARGET_DP.dp).width(WIDE_BUTTON_WIDTH_DP.dp)
         } else {
-            Modifier.size(BUTTON_SIZE_DP.dp)
+            Modifier.size(MapControlMetrics.TAP_TARGET_DP.dp)
+        }
+    val drawn =
+        if (wide) {
+            Modifier.height(MapControlMetrics.FAB_DP.dp).width(WIDE_BUTTON_WIDTH_DP.dp)
+        } else {
+            Modifier.size(MapControlMetrics.FAB_DP.dp)
         }
     Box(
         modifier =
-            size
-                .alpha(if (enabled) 1f else DISABLED_ALPHA)
-                .background(colors.surface, shape)
-                .border(1.dp, colors.controlBorder, shape)
+            target
                 .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
                 .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
-        if (icon == ControlIcon.Text) {
-            BasicText(
-                text = label,
-                style =
-                    TextStyle(
-                        color = colors.ink,
-                        fontSize = BUTTON_FONT_SP.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    ),
-                // The description names the control; the drawn glyph is
-                // decoration and would otherwise be read as its own character.
-                modifier = Modifier.clearAndSetSemantics {},
-            )
-        } else {
-            ShellIcon(icon.imageVector(), colors.ink, Modifier.size(ICON_SIZE_DP.dp))
+        Box(
+            modifier =
+                drawn
+                    .alpha(if (enabled) 1f else DISABLED_ALPHA)
+                    .background(colors.surface, drawnShape)
+                    .border(1.dp, colors.controlBorder, drawnShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (icon == ControlIcon.Text) {
+                BasicText(
+                    text = label,
+                    style =
+                        TextStyle(
+                            color = colors.ink,
+                            fontSize = BUTTON_FONT_SP.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        ),
+                    // The description names the control; the drawn glyph is
+                    // decoration and would otherwise be read as its own character.
+                    modifier = Modifier.clearAndSetSemantics {},
+                )
+            } else {
+                ShellIcon(icon.imageVector(), colors.ink, Modifier.size(ICON_SIZE_DP.dp))
+            }
         }
     }
 }
@@ -371,7 +393,6 @@ private fun ControlIcon.imageVector(): ImageVector =
         ControlIcon.Route -> ShellIcons.Route
     }
 
-private const val BUTTON_SIZE_DP = 44
 private const val BUTTON_CORNER_DP = 8
 private const val BAR_CORNER_DP = 12
 private const val BUTTON_GAP_DP = 4

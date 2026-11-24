@@ -12,6 +12,7 @@ internal const val SETTINGS_INDEX_PROFILES_KEY = "settings.index.row.profiles"
 internal const val SETTINGS_INDEX_LANGUAGE_KEY = "settings.index.row.language"
 internal const val SETTINGS_INDEX_APPEARANCE_KEY = "settings.index.row.appearance"
 internal const val SETTINGS_INDEX_DOWNLOADS_KEY = "settings.index.row.downloads"
+internal const val SETTINGS_INDEX_SAVED_KEY = "settings.index.row.saved"
 
 internal enum class SettingsIndexGroup {
     USE,
@@ -23,6 +24,7 @@ internal enum class SettingsIndexTarget {
     PROFILES,
     APPEARANCE,
     DOWNLOADS,
+    SAVED,
 }
 
 internal data class SettingsIndexRow(
@@ -45,6 +47,7 @@ internal data class SettingsIndexContent(
  * destination are offered. Units, Gestures, Privacy, Storage and About have no
  * screen in this build, so they are not listed. Language opens the screen
  * settings subpage because the in-app language control lives there.
+ * Saved uses this index until the map bar has the approved widgets and Saved tray.
  */
 internal fun settingsIndexContent(strings: Strings): SettingsIndexContent {
     fun row(
@@ -68,6 +71,7 @@ internal fun settingsIndexContent(strings: Strings): SettingsIndexContent {
                 row(SETTINGS_INDEX_LANGUAGE_KEY, SettingsIndexGroup.USE, SettingsIndexTarget.APPEARANCE),
                 row(SETTINGS_INDEX_APPEARANCE_KEY, SettingsIndexGroup.USE, SettingsIndexTarget.APPEARANCE),
                 row(SETTINGS_INDEX_DOWNLOADS_KEY, SettingsIndexGroup.DATA_AND_PRIVACY, SettingsIndexTarget.DOWNLOADS),
+                row(SETTINGS_INDEX_SAVED_KEY, SettingsIndexGroup.DATA_AND_PRIVACY, SettingsIndexTarget.SAVED),
             ),
     )
 }

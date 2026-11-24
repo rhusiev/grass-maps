@@ -358,4 +358,5 @@
     <string name="settings.index.row.language">Мова</string>
     <string name="settings.index.row.appearance">Вигляд</string>
     <string name="settings.index.row.downloads">Завантаження карт</string>
+    <string name="settings.index.row.saved">Збережене</string>
 </resources>

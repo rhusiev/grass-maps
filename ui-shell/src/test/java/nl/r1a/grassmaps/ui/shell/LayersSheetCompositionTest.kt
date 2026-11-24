@@ -10,6 +10,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 /**
  * The composition fixes of T-0612: phone-size tap targets, a style row whose
@@ -78,4 +79,30 @@ class LayersSheetCompositionTest {
     fun theMoreRowReusesTheExistingAllProfilesEntryPoint() {
         assertEquals("all_profiles", LAYERS_MORE_ENTRY_POINT)
     }
+
+    @Test
+    fun switchUsesCheckedStateForSemanticsAndThumbPosition() {
+        val row = sheetSource().substringAfter("fun LayerToggle(").substringBefore("fun LayerMarkerShapeOptions(")
+        assertTrue(row.contains(".toggleable(value = checked, role = Role.Switch, onValueChange = onChange)"))
+        assertTrue(row.contains(".heightIn(min = LayerRowSpec.ROW_MIN_HEIGHT_DP.dp)"))
+        assertTrue(row.contains(".align(if (checked) Alignment.CenterEnd else Alignment.CenterStart)"))
+    }
+
+    @Test
+    fun markerShapeUsesSelectedFillAndMinimumTargets() {
+        val row = sheetSource().substringAfter("fun LayerMarkerShapeOptions(").substringBefore("fun LayerStyleChoices(")
+        assertTrue(row.contains("if (selected) colors.selectedChip else colors.soft"))
+        assertTrue(row.contains(".selectable(selected = selected, role = Role.RadioButton)"))
+        assertTrue(row.contains(".sizeIn(minWidth = target, minHeight = target)"))
+    }
+
+    @Test
+    fun styleRadioAlwaysDrawsARingAndAddsADotOnlyWhenSelected() {
+        val radio = sheetSource().substringAfter("private fun LayerStyleRadio(")
+        assertTrue(radio.contains(".border(CONTROL_STROKE_DP.dp, color, CircleShape)"))
+        assertTrue(radio.contains("if (selected)"))
+        assertTrue(radio.contains(".background(color, CircleShape)"))
+    }
+
+    private fun sheetSource(): String = File("src/main/java/nl/r1a/grassmaps/ui/shell/LayersSheet.kt").readText()
 }

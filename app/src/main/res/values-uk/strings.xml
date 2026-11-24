@@ -186,6 +186,8 @@
     <string name="route_preferences_profile_car">авто</string>
     <string name="route_preview_start">Старт</string>
     <string name="route_preview_save">Зберегти</string>
+    <string name="route_summary_from">Звідки: %1$s</string>
+    <string name="route_summary_to">Куди: %1$s</string>
     <string name="route_saved">Маршрут збережено в треках</string>
     <string name="route_save_failed">Маршрут не збережено: %1$s</string>
     <string name="route_preview_minutes">%1$s хв</string>

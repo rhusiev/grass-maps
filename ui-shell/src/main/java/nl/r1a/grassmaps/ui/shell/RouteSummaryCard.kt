@@ -22,16 +22,18 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanState
 import nl.r1a.grassmaps.plugin.api.service.Strings
 
 /**
- * The read-only route card over the map (T-0612). It shows the three values of
- * [RoutePreview] and offers Save, Start and Stops. It is the primary route
- * view: the planner sheet below composes no editable header until Stops opens.
+ * The read-only route card over the map (T-0612). It shows the route's ends,
+ * the three values of [RoutePreview] and offers Save, Start and Stops. It is
+ * the primary route view: a ready plan composes no planner sheet until Stops
+ * opens it, so the route cannot be edited by accident.
  *
- * The values come from [routePlanPreview], so the card cannot drift from the
- * sheet. Save and Start are not second action paths: the host passes the same
- * callbacks it passes to [RoutePlanPanel].
+ * The values come from [routePlanPreview] and the ends from the same published
+ * plan, so the card cannot drift from the sheet. Save and Start are not second
+ * action paths: the host passes the same callbacks it passes to [RoutePlanPanel].
  *
  * The design draws a separate Stops sheet. The app has none: the only stops
  * list is the planner sheet's own section, keyed by [ROUTE_STOPS_KEY]. The
@@ -39,6 +41,8 @@ import nl.r1a.grassmaps.plugin.api.service.Strings
  * duplicate list.
  */
 enum class RouteSummaryField {
+    From,
+    To,
     Time,
     Distance,
     Arrival,
@@ -68,25 +72,29 @@ enum class RouteStopsAction {
     val sheetView: RoutePlanSheetView = RoutePlanSheetView.Stops
 }
 
-/** The card's model. Construction fixes the list at its six entries. */
+/** The card's model. Construction fixes the list at its eight entries. */
 data class RouteSummaryCard(
     val entries: List<RouteSummaryEntry>,
     val stopsAction: RouteStopsAction,
 ) {
     init {
-        require(entries.map { it.field } == FIELDS) { "the card has exactly six fields" }
+        require(entries.map { it.field } == FIELDS) { "the card has exactly eight fields" }
     }
 
-    val time: String get() = entries[0].text
-    val distance: String get() = entries[1].text
-    val arrival: String get() = entries[2].text
-    val save: String get() = entries[3].text
-    val start: String get() = entries[4].text
-    val stops: String get() = entries[5].text
+    val from: String get() = entries[0].text
+    val to: String get() = entries[1].text
+    val time: String get() = entries[2].text
+    val distance: String get() = entries[3].text
+    val arrival: String get() = entries[4].text
+    val save: String get() = entries[5].text
+    val start: String get() = entries[6].text
+    val stops: String get() = entries[7].text
 
     private companion object {
         val FIELDS =
             listOf(
+                RouteSummaryField.From,
+                RouteSummaryField.To,
                 RouteSummaryField.Time,
                 RouteSummaryField.Distance,
                 RouteSummaryField.Arrival,
@@ -97,14 +105,21 @@ data class RouteSummaryCard(
     }
 }
 
-/** Builds the read-only card from the preview of one published plan. */
+/**
+ * Builds the read-only card from one published plan and its preview. The ends
+ * read the plan's own start and destination, with the stop list's label rule:
+ * a point without a label shows its coordinates.
+ */
 fun routeSummaryCard(
+    state: RoutePlanState,
     preview: RoutePreview,
     strings: Strings,
 ): RouteSummaryCard =
     RouteSummaryCard(
         entries =
             listOf(
+                RouteSummaryEntry(RouteSummaryField.From, ""),
+                RouteSummaryEntry(RouteSummaryField.To, ""),
                 RouteSummaryEntry(RouteSummaryField.Time, preview.time),
                 RouteSummaryEntry(RouteSummaryField.Distance, preview.distance),
                 RouteSummaryEntry(RouteSummaryField.Arrival, preview.arrival),

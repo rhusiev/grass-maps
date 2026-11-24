@@ -1319,7 +1319,7 @@ private fun MapContent(
             if (summary != null) {
                 val cardInsets = routeCardInsets(with(density) { controlBarWidthPx.toDp() }, layout.arc)
                 RouteSummaryCardContent(
-                    card = routeSummaryCard(summary, container.strings),
+                    card = routeSummaryCard(readyPlan, summary, container.strings),
                     onSave = planSave,
                     onStart = planStart,
                     onStops = { stopsOpen = true },

@@ -2846,6 +2846,7 @@ private fun SearchOverlay(
     onOpenDownloads: () -> Unit,
 ) {
     val camera by surface.host.camera.collectAsState()
+    val scope = rememberCoroutineScope()
     SearchScreenHost(
         hits = state.hits,
         expanded = expanded,
@@ -2860,13 +2861,26 @@ private fun SearchOverlay(
         onSubmit = onSubmit,
         onPick = onPick,
         onClear = onClear,
+        onShowOnMap = {
+            // All hits already draw as markers; centre the map on the best
+            // match so a tap on the count chip reaches the result area.
+            val first = state.hits.firstOrNull()
+            if (first != null) {
+                scope.launch {
+                    surface.host
+                        .animateCamera(CameraUpdate(center = first.position))
+                        .onFailure { error -> Log.w(TAG, "show results on map failed: $error") }
+                }
+            }
+        },
         modifier = Modifier.fillMaxSize(),
         cardModifier =
             if (expanded) {
-                // The open results list keeps the top anchor: it stays readable
-                // above the keyboard and never grows under the system IME.
+                // The host anchors the open card in the bottom thumb area and
+                // pads it clear of the keyboard; keep the bottom bar clearance
+                // so the count, chips and privacy actions stay reachable.
                 Modifier
-                    .statusBarsPadding()
+                    .navigationBarsPadding()
                     .padding(BAR_PADDING_DP.dp)
             } else {
                 Modifier

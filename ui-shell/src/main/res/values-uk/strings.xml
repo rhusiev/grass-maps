@@ -82,6 +82,12 @@
     <string name="search_online_stopped_no_results">Онлайн-пошук вимкнено. Офлайн-результатів немає.</string>
     <string name="search_position_allow">Надсилати мою позицію</string>
     <string name="search_position_stop">Припинити надсилати мою позицію</string>
+    <string name="search_result_count">%1$d результатів</string>
+    <string name="search_result_distance_metres">%1$d м</string>
+    <string name="search_result_distance_kilometres">%1$.1f км</string>
+    <string name="search_chip_show_on_map">Показати %1$d на карті</string>
+    <string name="search_chip_open_now">Відкрито зараз</string>
+    <string name="search_chip_open_now_unavailable">Години роботи для цих результатів недоступні</string>
 
     <string name="nav_screen_end">Завершити</string>
     <string name="nav_screen_pause">Пауза</string>

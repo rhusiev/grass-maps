@@ -80,6 +80,12 @@
     <string name="search_online_stopped_no_results">Online search was turned off. No offline results.</string>
     <string name="search_position_allow">Send my position</string>
     <string name="search_position_stop">Stop sending my position</string>
+    <string name="search_result_count">%1$d results</string>
+    <string name="search_result_distance_metres">%1$d m</string>
+    <string name="search_result_distance_kilometres">%1$.1f km</string>
+    <string name="search_chip_show_on_map">Show %1$d on map</string>
+    <string name="search_chip_open_now">Open now</string>
+    <string name="search_chip_open_now_unavailable">Hours are not available for these results</string>
 
     <string name="nav_screen_end">End</string>
     <string name="nav_screen_pause">Pause</string>

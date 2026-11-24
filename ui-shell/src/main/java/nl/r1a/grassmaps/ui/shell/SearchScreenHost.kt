@@ -10,15 +10,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,6 +52,12 @@ import nl.r1a.grassmaps.plugin.api.model.ScreenOffset
 import nl.r1a.grassmaps.plugin.api.provider.PlaceHit
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellColors
+import nl.r1a.grassmaps.plugin.ui.api.ShellIcon
+import nl.r1a.grassmaps.plugin.ui.api.ShellIcons
+import kotlin.math.roundToLong
+
+/** The expanded card opens in the bottom thumb area, just above the keyboard. */
+private val SEARCH_EXPANDED_ANCHOR: Alignment = Alignment.BottomCenter
 
 /**
  * The search screen (T-0203): one field for everything, the result list, and
@@ -94,6 +104,7 @@ fun SearchScreenHost(
     onSubmit: (String) -> Unit,
     onPick: (String) -> Unit,
     onClear: () -> Unit,
+    onShowOnMap: () -> Unit = {},
     modifier: Modifier = Modifier,
     cardModifier: Modifier = Modifier,
     collapsedAnchor: Alignment = Alignment.TopStart,
@@ -144,6 +155,7 @@ fun SearchScreenHost(
             labels = labels,
             online = onlineNotice,
             onlineStopped = onlineStopped,
+            origin = camera.center,
         )
     val focusRequester = remember { FocusRequester() }
 
@@ -171,92 +183,130 @@ fun SearchScreenHost(
             )
         } else {
             LaunchedEffect(Unit) { focusRequester.requestFocus() }
-            Column(
-                modifier =
-                    cardModifier
-                        .widthIn(max = PANEL_MAX_WIDTH_DP.dp)
-                        .background(colors.glass, RoundedCornerShape(PANEL_CORNER_DP.dp))
-                        .padding(PANEL_PADDING_DP.dp),
-                verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
+            // The wrapper reserves the keyboard's space; the card aligns inside
+            // it, so the query stays just above the keyboard while markers keep
+            // using the full map viewport in the outer Box.
+            Box(modifier = Modifier.fillMaxSize().imePadding()) {
+                Column(
+                    modifier =
+                        cardModifier
+                            .align(SEARCH_EXPANDED_ANCHOR)
+                            .widthIn(max = PANEL_MAX_WIDTH_DP.dp)
+                            .background(colors.surface, RoundedCornerShape(PANEL_CORNER_DP.dp))
+                            .border(1.dp, colors.controlBorder, RoundedCornerShape(PANEL_CORNER_DP.dp))
+                            .heightIn(max = PANEL_MAX_HEIGHT_DP.dp)
+                            .padding(PANEL_PADDING_DP.dp),
+                    verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
                 ) {
-                    BasicTextField(
-                        value = typed,
-                        onValueChange = {
-                            typed = it
-                            onQueryChange(it)
-                        },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = { onSubmit(typed) }),
-                        textStyle = TextStyle(color = colors.ink, fontSize = FIELD_FONT_SP.sp),
+                    // Only this part scrolls. The chips and the query are a
+                    // pinned footer, so a long result list never pushes them
+                    // out of the thumb area.
+                    Column(
                         modifier =
                             Modifier
-                                .weight(WEIGHT_ONE)
-                                .focusRequester(focusRequester)
-                                .background(colors.soft, RoundedCornerShape(FIELD_CORNER_DP.dp))
-                                .border(1.dp, colors.controlBorder, RoundedCornerShape(FIELD_CORNER_DP.dp))
-                                .padding(FIELD_PADDING_DP.dp)
-                                .semantics { contentDescription = content.labels.hint },
-                    )
-                    BasicText(
-                        text = CLOSE_GLYPH,
-                        style = TextStyle(color = colors.ink, fontSize = CLOSE_FONT_SP.sp),
-                        modifier =
-                            Modifier
-                                .clickable(role = Role.Button) {
-                                    onExpandedChange(false)
-                                    typed = ""
-                                    onClear()
-                                }.semantics { contentDescription = content.labels.close }
-                                .padding(CLOSE_PADDING_DP.dp),
-                    )
-                }
-                if (typed.isBlank()) {
-                    // The field already carries this hint as its label; the
-                    // drawn copy must not be a second announcement.
-                    BasicText(
-                        text = content.labels.hint,
-                        style = secondaryStyle(colors),
-                        modifier = Modifier.clearAndSetSemantics {},
-                    )
-                }
-                if (content.loading && content.rows.isEmpty()) {
-                    BasicText(text = content.labels.loading, style = secondaryStyle(colors))
-                }
-                content.online?.let { notice ->
-                    BasicText(text = notice.text, style = secondaryStyle(colors))
-                    notice.action?.let { action ->
-                        NoticeAction(action) {
-                            when (notice.actionKind) {
-                                SearchOnlineAction.ENABLE -> onEnableOnlineSearch()
-                                SearchOnlineAction.ALLOW_POSITION -> onAllowPosition(true)
-                                SearchOnlineAction.STOP_POSITION -> onAllowPosition(false)
+                                .weight(WEIGHT_ONE, fill = false)
+                                .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
+                    ) {
+                        if (content.count > 0) {
+                            BasicText(
+                                text = stringResource(R.string.search_result_count, content.count),
+                                style = secondaryStyle(colors),
+                            )
+                        }
+                        content.rows.forEach { row ->
+                            SearchResultRowContent(
+                                row = row,
+                                onlineBadge = content.labels.onlineBadge,
+                                onSelect = {
+                                    onSelect(row.id)
+                                    onPick(row.name)
+                                },
+                            )
+                        }
+                        if (content.loading && content.rows.isEmpty()) {
+                            BasicText(text = content.labels.loading, style = secondaryStyle(colors))
+                        }
+                        content.message?.let { message -> BasicText(text = message, style = secondaryStyle(colors)) }
+                        content.online?.let { notice ->
+                            BasicText(text = notice.text, style = secondaryStyle(colors))
+                            notice.action?.let { action ->
+                                NoticeActionButton(action) {
+                                    when (notice.actionKind) {
+                                        SearchOnlineAction.ENABLE -> onEnableOnlineSearch()
+                                        SearchOnlineAction.ALLOW_POSITION -> onAllowPosition(true)
+                                        SearchOnlineAction.STOP_POSITION -> onAllowPosition(false)
+                                    }
+                                }
+                            }
+                            notice.offAction?.let { action -> NoticeActionButton(action, onDisableOnlineSearch) }
+                        }
+                        content.notReady?.let { notice ->
+                            BasicText(text = notice.explanation, style = secondaryStyle(colors))
+                            NoticeActionButton(notice.action) {
+                                runNotReadyAction(notice.actionKind, onOpenDownloads)
                             }
                         }
                     }
-                    notice.offAction?.let { action -> NoticeAction(action, onDisableOnlineSearch) }
-                }
-                content.rows.forEach { row ->
-                    SearchResultRowContent(
-                        row = row,
-                        onlineBadge = content.labels.onlineBadge,
-                        onSelect = {
-                            onSelect(row.id)
-                            onPick(row.name)
-                        },
-                    )
-                }
-                content.notReady?.let { notice ->
-                    BasicText(text = notice.explanation, style = secondaryStyle(colors))
-                    NoticeAction(notice.action) {
-                        runNotReadyAction(notice.actionKind, onOpenDownloads)
+                    if (content.count > 0) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(CHIP_GAP_DP.dp)) {
+                            SearchChip(
+                                text = stringResource(R.string.search_chip_show_on_map, content.count),
+                                onClick = onShowOnMap,
+                            )
+                            SearchChip(
+                                text = stringResource(R.string.search_chip_open_now),
+                                enabled = content.rows.any { it.openState != null },
+                                description = stringResource(R.string.search_chip_open_now_unavailable),
+                            )
+                        }
+                    }
+                    if (typed.isBlank()) {
+                        // The field already carries this hint as its label; the
+                        // drawn copy must not be a second announcement.
+                        BasicText(
+                            text = content.labels.hint,
+                            style = secondaryStyle(colors),
+                            modifier = Modifier.clearAndSetSemantics {},
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        BasicTextField(
+                            value = typed,
+                            onValueChange = {
+                                typed = it
+                                onQueryChange(it)
+                            },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = { onSubmit(typed) }),
+                            textStyle = TextStyle(color = colors.ink, fontSize = FIELD_FONT_SP.sp),
+                            modifier =
+                                Modifier
+                                    .weight(WEIGHT_ONE)
+                                    .focusRequester(focusRequester)
+                                    .background(colors.soft, RoundedCornerShape(FIELD_CORNER_DP.dp))
+                                    .border(1.dp, colors.controlBorder, RoundedCornerShape(FIELD_CORNER_DP.dp))
+                                    .padding(FIELD_PADDING_DP.dp)
+                                    .semantics { contentDescription = content.labels.hint },
+                        )
+                        BasicText(
+                            text = CLOSE_GLYPH,
+                            style = TextStyle(color = colors.ink, fontSize = CLOSE_FONT_SP.sp),
+                            modifier =
+                                Modifier
+                                    .clickable(role = Role.Button) {
+                                        onExpandedChange(false)
+                                        typed = ""
+                                        onClear()
+                                    }.semantics { contentDescription = content.labels.close }
+                                    .padding(CLOSE_PADDING_DP.dp),
+                        )
                     }
                 }
-                content.message?.let { message -> BasicText(text = message, style = secondaryStyle(colors)) }
             }
         }
     }
@@ -312,33 +362,83 @@ private fun SearchResultRowContent(
     onSelect: () -> Unit,
 ) {
     val colors = LocalShellColors.current
-    Column(
+    Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clickable(role = Role.Button, onClick = onSelect)
                 .padding(ROW_PADDING_DP.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            BasicText(
-                text = row.name,
-                style = TextStyle(color = colors.ink, fontSize = ROW_FONT_SP.sp),
+        Box(
+            modifier =
+                Modifier
+                    .size(CATEGORY_ICON_DP.dp)
+                    .background(
+                        colors.categories.pin.copy(alpha = CATEGORY_ICON_TINT),
+                        RoundedCornerShape(CATEGORY_ICON_CORNER_DP.dp),
+                    ),
+            contentAlignment = Alignment.Center,
+        ) {
+            ShellIcon(
+                icon = ShellIcons.Pin,
+                tint = colors.categories.pin,
+                modifier = Modifier.size(CATEGORY_ICON_GLYPH_DP.dp),
             )
-            if (row.online) {
+        }
+        Column(
+            modifier =
+                Modifier
+                    .weight(WEIGHT_ONE)
+                    .padding(start = ROW_PADDING_DP.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 BasicText(
-                    text = ONLINE_BADGE_SEPARATOR + onlineBadge,
-                    style = secondaryStyle(colors),
+                    text = row.name,
+                    style = TextStyle(color = colors.ink, fontSize = ROW_FONT_SP.sp),
                 )
+                if (row.online) {
+                    BasicText(
+                        text = ONLINE_BADGE_SEPARATOR + onlineBadge,
+                        style = secondaryStyle(colors),
+                    )
+                }
+            }
+            val metadata = searchResultMetadata(row)
+            if (metadata != null) {
+                BasicText(text = metadata, style = secondaryStyle(colors))
+            } else {
+                row.detail?.let { detail -> BasicText(text = detail, style = secondaryStyle(colors)) }
             }
         }
-        row.detail?.let { detail -> BasicText(text = detail, style = secondaryStyle(colors)) }
+        Column(horizontalAlignment = Alignment.End) {
+            row.distanceMeters?.let { meters ->
+                BasicText(text = searchDistanceText(meters), style = secondaryStyle(colors))
+            }
+            row.openState?.let { state ->
+                BasicText(text = state.label, style = secondaryStyle(colors))
+            }
+        }
     }
 }
 
-/** One pressable line of the online-search notice, in the round 9 text token. */
+/** The canon's distance precision, from the same unit rules the map sheets use. */
+@Composable
+private fun searchDistanceText(meters: Double): String =
+    if (meters < METRES_PER_KILOMETRE) {
+        stringResource(R.string.search_result_distance_metres, meters.roundToLong())
+    } else {
+        stringResource(R.string.search_result_distance_kilometres, meters / METRES_PER_KILOMETRE)
+    }
+
+/**
+ * One privacy or region action, drawn as a filled, bordered button with a
+ * 48 dp target. The copy comes straight from the caller, so the data-transparency
+ * line is never rewritten to make it fit the chrome.
+ */
 @Suppress("ktlint:standard:function-naming")
 @Composable
-private fun NoticeAction(
+private fun NoticeActionButton(
     text: String,
     onClick: () -> Unit,
 ) {
@@ -348,9 +448,53 @@ private fun NoticeAction(
         style = TextStyle(color = colors.ink, fontSize = DETAIL_FONT_SP.sp),
         modifier =
             Modifier
+                .fillMaxWidth()
                 .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .background(colors.soft, RoundedCornerShape(ACTION_CORNER_DP.dp))
+                .border(1.dp, colors.controlBorder, RoundedCornerShape(ACTION_CORNER_DP.dp))
                 .clickable(role = Role.Button, onClick = onClick)
-                .padding(ROW_PADDING_DP.dp),
+                .padding(horizontal = ACTION_PADDING_DP.dp)
+                .wrapContentHeight(Alignment.CenterVertically),
+    )
+}
+
+/**
+ * One canon filter chip. A chip with no [onClick] is a quiet state indicator:
+ * it stays visible but cannot be pressed, so no dead control is offered when a
+ * result set carries no data for that filter.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun SearchChip(
+    text: String,
+    enabled: Boolean = true,
+    description: String? = null,
+    onClick: (() -> Unit)? = null,
+) {
+    val colors = LocalShellColors.current
+    val shape = RoundedCornerShape(ACTION_CORNER_DP.dp)
+    val chrome =
+        Modifier
+            .heightIn(min = CHIP_HEIGHT_DP.dp)
+            .background(colors.soft, shape)
+            .border(1.dp, colors.controlBorder, shape)
+            .padding(horizontal = ACTION_PADDING_DP.dp)
+            .wrapContentHeight(Alignment.CenterVertically)
+    val pressable =
+        if (onClick == null) {
+            chrome
+        } else {
+            chrome.clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+        }
+    BasicText(
+        text = text,
+        style = TextStyle(color = if (enabled) colors.ink else colors.muted, fontSize = DETAIL_FONT_SP.sp),
+        modifier =
+            if (description == null) {
+                pressable
+            } else {
+                pressable.semantics { contentDescription = description }
+            },
     )
 }
 
@@ -364,13 +508,23 @@ private const val WEIGHT_ONE = 1f
 private const val PANEL_CORNER_DP = 16
 private const val PANEL_PADDING_DP = 12
 private const val PANEL_MAX_WIDTH_DP = 420
+private const val PANEL_MAX_HEIGHT_DP = 560
 private const val FIELD_PADDING_DP = 8
 private const val FIELD_CORNER_DP = 6
 private const val ROW_GAP_DP = 4
 private const val ROW_PADDING_DP = 6
 
-// Shared by every notice link, including the no-index action.
+// Shared by every notice button, including the no-index action.
 private const val MIN_TAP_TARGET_DP = 48
+private const val CHIP_HEIGHT_DP = 48
+private const val CHIP_GAP_DP = 6
+private const val ACTION_CORNER_DP = 10
+private const val ACTION_PADDING_DP = 12
+private const val CATEGORY_ICON_DP = 28
+private const val CATEGORY_ICON_GLYPH_DP = 18
+private const val CATEGORY_ICON_CORNER_DP = 8
+private const val CATEGORY_ICON_TINT = 0.14f
+private const val METRES_PER_KILOMETRE = 1_000.0
 private const val CLOSE_PADDING_DP = 8
 private const val MARKER_SIZE_DP = 12
 private const val MARKER_CORNER_DP = 6

@@ -3,17 +3,37 @@ package nl.r1a.grassmaps.ui.shell
 import nl.r1a.grassmaps.plugin.api.model.GeoPoint
 import nl.r1a.grassmaps.plugin.api.provider.PlaceHit
 import nl.r1a.grassmaps.plugin.api.provider.PlaceSource
+import kotlin.math.asin
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 /**
  * One result row: the place's name and its address; without an address, the
  * brand or operator it carries; without a brand, its kind (T-0204). [online]
  * marks a row that came from the network (T-0212).
+ *
+ * The canon shows the kind, address, distance and open state as separate
+ * fields (T-0612). Each is null when the hit carries no value for it, so the
+ * screen omits the field rather than printing a guess. [detail] stays as the
+ * one-line fallback for surfaces that have no room for the separate fields.
  */
 data class SearchResultRow(
     val id: String,
     val name: String,
     val detail: String?,
     val online: Boolean = false,
+    val kind: String? = null,
+    val brand: String? = null,
+    val address: String? = null,
+    val distanceMeters: Double? = null,
+    val openState: SearchOpenState? = null,
+)
+
+/** The open state a hit carries, with the text already resolved for the locale. */
+data class SearchOpenState(
+    val label: String,
+    val isOpen: Boolean,
 )
 
 /** One map marker: the same result row's place, at its position. */
@@ -36,9 +56,14 @@ data class SearchResultView(
  * The one derivation from a provider result set to the screen (T-0203).
  *
  * Markers keep the provider order, so marker *n* belongs to row *n*. Styling
- * is a shell decision; nothing here reads a file or an index.
+ * is a shell decision; nothing here reads a file or an index. [origin] is the
+ * map centre, the only real point the shell can measure a row's distance from;
+ * without it a row has no distance field rather than a guessed number.
  */
-fun searchResultView(hits: List<PlaceHit>): SearchResultView =
+fun searchResultView(
+    hits: List<PlaceHit>,
+    origin: GeoPoint? = null,
+): SearchResultView =
     SearchResultView(
         rows =
             hits.map { hit ->
@@ -50,10 +75,49 @@ fun searchResultView(hits: List<PlaceHit>): SearchResultView =
                             ?: hit.brand?.takeIf { it.isNotBlank() }
                             ?: hit.kind.takeIf { it.isNotBlank() },
                     online = hit.source == PlaceSource.ONLINE,
+                    kind = hit.kind.takeIf { it.isNotBlank() },
+                    brand = hit.brand?.takeIf { it.isNotBlank() },
+                    address = hit.address?.takeIf { it.isNotBlank() },
+                    distanceMeters = origin?.let { searchDistanceMeters(it, hit.position) },
+                    // A PlaceHit carries no opening hours, so no row can claim
+                    // an open state. The field exists for a hit that has one.
+                    openState = null,
                 )
             },
         markers = hits.map { hit -> SearchMarker(id = hit.id, position = hit.position) },
     )
+
+/** The IUGG mean Earth radius, the same constant the map and track geometry use. */
+private const val EARTH_RADIUS_METERS = 6_371_008.8
+
+/** Great-circle ground distance between two positions, in metres. */
+fun searchDistanceMeters(
+    from: GeoPoint,
+    to: GeoPoint,
+): Double {
+    val fromLat = Math.toRadians(from.latitude)
+    val toLat = Math.toRadians(to.latitude)
+    val deltaLat = toLat - fromLat
+    val deltaLon = Math.toRadians(to.longitude - from.longitude)
+    val a =
+        sin(deltaLat / 2) * sin(deltaLat / 2) +
+            cos(fromLat) * cos(toLat) * sin(deltaLon / 2) * sin(deltaLon / 2)
+    return 2.0 * EARTH_RADIUS_METERS * asin(sqrt(a.coerceIn(0.0, 1.0)))
+}
+
+/**
+ * The canon's one metadata line: the kind, then the address. A brand stands in
+ * for the raw kind when the place has one, so a branch reads "АТБ" rather than
+ * "shop=supermarket" (T-0204). Null when neither field carries a value, so the
+ * screen never draws an empty line.
+ */
+fun searchResultMetadata(row: SearchResultRow): String? =
+    listOfNotNull(row.brand ?: row.kind, row.address)
+        .filter { it.isNotBlank() }
+        .joinToString(METADATA_SEPARATOR)
+        .takeIf { it.isNotBlank() }
+
+private const val METADATA_SEPARATOR = " · "
 
 /** The labels the screen draws, already resolved to the active language. */
 data class SearchScreenLabels(
@@ -163,6 +227,8 @@ data class SearchScreenContent(
     val markers: List<SearchMarker>,
     val message: String?,
     val loading: Boolean,
+    /** The count the header and the Show-on-map chip name; zero draws neither. */
+    val count: Int = rows.size,
     val online: SearchOnlineNotice? = null,
     val notReady: SearchNotReadyNotice? = null,
 )
@@ -184,8 +250,9 @@ fun searchScreenContent(
     labels: SearchScreenLabels,
     online: SearchOnlineNotice? = null,
     onlineStopped: Boolean = false,
+    origin: GeoPoint? = null,
 ): SearchScreenContent {
-    val view = searchResultView(hits)
+    val view = searchResultView(hits, origin = origin)
     val message =
         when {
             failed -> null

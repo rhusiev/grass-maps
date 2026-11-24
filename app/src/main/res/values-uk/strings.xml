@@ -158,13 +158,14 @@
     <string name="route_warnings_detail_private">access=private</string>
     <string name="route_warnings_detail_push_bike">пішки з велосипедом</string>
     <string name="route_preferences_title">Налаштування маршруту</string>
+    <string name="route_preferences_sheet_title">Змінити значення</string>
     <string name="route_preferences_set_count">Задано: %1$s</string>
     <string name="route_preferences_changed">змінено</string>
     <string name="route_preferences_open_description">Відкрити налаштування маршруту</string>
     <string name="route_preferences_close_description">Закрити налаштування маршруту</string>
     <string name="route_preferences_step_description">%1$s: %2$s</string>
     <string name="route_preferences_step_default_description">%1$s: %2$s, типове значення профілю</string>
-    <string name="route_preferences_scope">Лише цей маршрут. Профіль «%1$s» зберігає свої типові значення; крапка позначає їх.</string>
+    <string name="route_preferences_scope">Ці значення стосуються лише цього маршруту. Крапка позначає типові значення профілю «%1$s».</string>
     <string name="route_preferences_hills">Пагорби</string>
     <string name="route_preferences_hills_detail">Підйоми дорогою</string>
     <string name="route_preferences_busy_roads">Жваві дороги</string>

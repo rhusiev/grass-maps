@@ -45,6 +45,9 @@ private const val SEGMENT_PADDING_VERTICAL_DP = 7
 private const val SECTION_TOP_PADDING_DP = 4
 
 private const val PREF_TITLE_KEY = "route_preferences_title"
+
+// The sheet states its role; the collapse row above it already names the section (T-0612).
+private const val PREF_SHEET_TITLE_KEY = "route_preferences_sheet_title"
 private const val PREF_SET_COUNT_KEY = "route_preferences_set_count"
 private const val PREF_CHANGED_KEY = "route_preferences_changed"
 private const val PREF_SCOPE_KEY = "route_preferences_scope"
@@ -339,7 +342,7 @@ internal fun routePreferencesSheetContent(
     strings: Strings,
 ): RoutePreferencesSheetContent =
     RoutePreferencesSheetContent(
-        title = strings.resolve(PREF_TITLE_KEY),
+        title = strings.resolve(PREF_SHEET_TITLE_KEY),
         scope = strings.resolve(PREF_SCOPE_KEY, listOf(profileLabel(profile, strings))),
         rows =
             RouteAttribute.forProfile(profile).map { attribute ->

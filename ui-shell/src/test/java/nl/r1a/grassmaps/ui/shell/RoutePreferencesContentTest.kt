@@ -35,6 +35,16 @@ class RoutePreferencesContentTest {
     }
 
     @Test
+    fun theSheetTitleNamesItsRoleInsteadOfRepeatingTheSectionName() {
+        val strings = MapStrings(ENGLISH)
+        val entry = routePreferencesEntryContent(RouteProfile.Bike, RouteOptions(), null, expanded = false, strings = strings)
+        val sheet = routePreferencesSheetContent(RouteProfile.Bike, RouteOptions(), RouteOptions(), strings)
+
+        assertEquals("the collapse row keeps the section name", "Route preferences", entry.title)
+        assertEquals("the expanded sheet states its own role", "Edit values", sheet.title)
+    }
+
+    @Test
     fun theEntryShowsTheProfileSetCountWithoutARouteOverride() {
         val withSetAttributes =
             routePreferencesEntryContent(
@@ -67,8 +77,8 @@ class RoutePreferencesContentTest {
                 strings = MapStrings(ENGLISH),
             )
 
-        assertEquals("Route preferences", content.title)
-        assertEquals("This route only. The bike profile keeps its defaults; a dot marks them.", content.scope)
+        assertEquals("Edit values", content.title)
+        assertEquals("These apply to this route only. A dot marks the bike profile defaults.", content.scope)
         assertEquals("Reset to profile", content.reset)
         assertEquals("Apply", content.apply)
         assertEquals(
@@ -217,9 +227,10 @@ class RoutePreferencesContentTest {
         val ENGLISH =
             mapOf(
                 "route_preferences_title" to "Route preferences",
+                "route_preferences_sheet_title" to "Edit values",
                 "route_preferences_set_count" to "%1\$s set",
                 "route_preferences_changed" to "changed",
-                "route_preferences_scope" to "This route only. The %1\$s profile keeps its defaults; a dot marks them.",
+                "route_preferences_scope" to "These apply to this route only. A dot marks the %1\$s profile defaults.",
                 "route_preferences_open_description" to "Open route preferences",
                 "route_preferences_close_description" to "Close route preferences",
                 "route_preferences_hills" to "Hills",

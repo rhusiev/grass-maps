@@ -1246,7 +1246,15 @@ private fun MapContent(
                     navigationCamera.onManualPan()
                 }
             },
-            onTap = { point ->
+            onTap = tap@{ point ->
+                // The picking hint names a tap, so a normal tap sets the
+                // point just like the long press above (T-0612). A long press
+                // stays as an alternative and never reaches this handler.
+                val pickingRole = plan.pickingRole
+                if (pickingRole != null) {
+                    scope.launch { setPlanPoint(container, pickingRole, point, label = null) }
+                    return@tap
+                }
                 relationTapSequence += 1
                 val tapSequence = relationTapSequence
                 val scale = metresPerDp(point, cameraNow().zoom)

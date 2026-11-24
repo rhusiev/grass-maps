@@ -363,6 +363,12 @@ internal fun routeCardInsets(
         end = if (arc) BAR_PADDING_DP.dp else topControlBarEndInset(controlBarWidth),
     )
 
+/** Whether the planner sheet is composed for the plan's state (T-0612). */
+internal fun routePlanSheetShown(
+    status: RoutePlanStatus,
+    stopsOpen: Boolean,
+): Boolean = status != RoutePlanStatus.Idle
+
 private const val BANNER_CORNER_DP = 8
 private const val BANNER_HORIZONTAL_DP = 16
 private const val BANNER_VERTICAL_DP = 10
@@ -1320,7 +1326,7 @@ private fun MapContent(
         val bottomSheetShown =
             !navigationActive &&
                 (
-                    plan.status != RoutePlanStatus.Idle ||
+                    routePlanSheetShown(plan.status, stopsOpen) ||
                         selectedTrack != null ||
                         (selectedRelation != null && relationSummary != null) ||
                         (analysisTrack != null && analysisSummary != null) ||
@@ -1901,7 +1907,7 @@ private fun MapContent(
                 },
             )
         }
-        if (!navigationActive) {
+        if (!navigationActive && routePlanSheetShown(plan.status, stopsOpen)) {
             RoutePlanPanel(
                 state = plan,
                 strings = container.strings,

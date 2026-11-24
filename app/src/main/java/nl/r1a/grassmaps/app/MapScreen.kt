@@ -2287,6 +2287,15 @@ private fun MapContent(
                     }
                 },
                 onClose = { FavouritesListsSession.hide() },
+                onToggleGroupShown = { group, shown ->
+                    scope.launch {
+                        withContext(Dispatchers.IO) {
+                            container.favouritesLayerSettings.setGroupShown(group, shown)
+                        }.onFailure { error ->
+                            Log.w(TAG, "saved list visibility not saved: $error")
+                        }
+                    }
+                },
             )
         }
         if (libraryVisible && !navigationActive) {

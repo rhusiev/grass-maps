@@ -35,6 +35,32 @@
     <string name="favourites_lists_sort_list_then_name">List, then name</string>
     <string name="favourites_lists_no_matches">No matches</string>
 
+    <string name="saved_screen_title">Saved</string>
+    <string name="saved_screen_hint">Groups in your order · places nearest first</string>
+    <plurals name="saved_screen_places">
+        <item quantity="one">%1$s place</item>
+        <item quantity="other">%1$s places</item>
+    </plurals>
+    <plurals name="saved_screen_groups">
+        <item quantity="one">%1$s group</item>
+        <item quantity="other">%1$s groups</item>
+    </plurals>
+    <string name="saved_screen_subtitle">%1$s in %2$s</string>
+    <string name="saved_screen_on_map_summary">%1$s of %2$s on the map</string>
+    <string name="saved_screen_group_on_map">%1$s · on the map</string>
+    <string name="saved_screen_group_off_map">%1$s · off the map</string>
+    <string name="saved_screen_hide_group">Hide %1$s on the map</string>
+    <string name="saved_screen_show_group">Show %1$s on the map</string>
+    <string name="saved_screen_more">%1$s more in %2$s</string>
+    <string name="saved_screen_tab_places">Places</string>
+    <string name="saved_screen_tab_tracks">Tracks</string>
+    <string name="saved_screen_search">Search %1$s saved places</string>
+    <string name="saved_screen_map">Map</string>
+    <string name="saved_screen_sort">Sort</string>
+    <string name="saved_screen_add">Add</string>
+    <string name="saved_screen_tracks_empty">No saved tracks yet</string>
+    <string name="saved_screen_empty">No saved places yet</string>
+
     <string name="search_title">Search places</string>
     <string name="search_hint">Name, street or house number</string>
     <string name="search_close">Close search</string>

@@ -131,7 +131,7 @@ fun favouritesBrowseContent(
     )
 }
 
-private fun specialLabel(
+internal fun specialLabel(
     special: FavouriteSpecial?,
     strings: Strings,
 ): String? =

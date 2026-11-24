@@ -35,6 +35,34 @@
     <string name="favourites_lists_sort_list_then_name">Список, потім назва</string>
     <string name="favourites_lists_no_matches">Немає збігів</string>
 
+    <string name="saved_screen_title">Збережене</string>
+    <string name="saved_screen_hint">Групи у вашому порядку · найближчі місця спочатку</string>
+    <plurals name="saved_screen_places">
+        <item quantity="one">%1$s місце</item>
+        <item quantity="few">%1$s місця</item>
+        <item quantity="many">%1$s місць</item>
+    </plurals>
+    <plurals name="saved_screen_groups">
+        <item quantity="one">%1$s група</item>
+        <item quantity="few">%1$s групи</item>
+        <item quantity="many">%1$s груп</item>
+    </plurals>
+    <string name="saved_screen_subtitle">%1$s у %2$s</string>
+    <string name="saved_screen_on_map_summary">%1$s з %2$s на карті</string>
+    <string name="saved_screen_group_on_map">%1$s · на карті</string>
+    <string name="saved_screen_group_off_map">%1$s · не на карті</string>
+    <string name="saved_screen_hide_group">Приховати %1$s на карті</string>
+    <string name="saved_screen_show_group">Показати %1$s на карті</string>
+    <string name="saved_screen_more">Ще %1$s у %2$s</string>
+    <string name="saved_screen_tab_places">Місця</string>
+    <string name="saved_screen_tab_tracks">Маршрути</string>
+    <string name="saved_screen_search">Пошук серед %1$s збережених місць</string>
+    <string name="saved_screen_map">Карта</string>
+    <string name="saved_screen_sort">Сортування</string>
+    <string name="saved_screen_add">Додати</string>
+    <string name="saved_screen_tracks_empty">Збережених маршрутів ще немає</string>
+    <string name="saved_screen_empty">Збережених місць ще немає</string>
+
     <string name="search_title">Пошук місць</string>
     <string name="search_hint">Назва, вулиця або номер будинку</string>
     <string name="search_close">Закрити пошук</string>

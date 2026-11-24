@@ -79,12 +79,10 @@ internal fun profileSwitchPalette(colors: ShellColors): ProfileSwitchPalette =
 
 internal fun profileSwitchItems(
     active: ProfileId,
-    order: List<ProfileId>,
     labels: ProfileSwitchLabels,
     palette: ProfileSwitchPalette,
 ): List<ProfileSwitchItem> {
     val names = mapOf(BuiltInProfiles.WALK to labels.walk, BuiltInProfiles.BIKE to labels.bike, BuiltInProfiles.HIKE to labels.hike)
-    val nextLabel = names[nextProfile(order, active)] ?: labels.all
     return PINNED_SWITCH_PROFILES.map { id ->
         val selected = id == active
         val color = palette.profiles.colorOf(id)
@@ -93,7 +91,7 @@ internal fun profileSwitchItems(
             if (selected) {
                 String.format(Locale.getDefault(), labels.activeDescription, label)
             } else {
-                String.format(Locale.getDefault(), labels.switchDescription, label, nextLabel)
+                String.format(Locale.getDefault(), labels.switchDescription, label, label)
             }
         ProfileSwitchItem(
             id = id,

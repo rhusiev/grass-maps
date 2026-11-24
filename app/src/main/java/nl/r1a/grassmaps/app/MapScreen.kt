@@ -135,7 +135,6 @@ import nl.r1a.grassmaps.plugin.api.error.AppError
 import nl.r1a.grassmaps.plugin.api.error.Outcome
 import nl.r1a.grassmaps.plugin.api.error.onFailure
 import nl.r1a.grassmaps.plugin.api.host.MapEvent
-import nl.r1a.grassmaps.plugin.api.model.BuiltInProfiles
 import nl.r1a.grassmaps.plugin.api.model.Camera
 import nl.r1a.grassmaps.plugin.api.model.CameraUpdate
 import nl.r1a.grassmaps.plugin.api.model.DownloadsState
@@ -145,8 +144,6 @@ import nl.r1a.grassmaps.plugin.api.model.FavouritePointSummary
 import nl.r1a.grassmaps.plugin.api.model.FavouriteSort
 import nl.r1a.grassmaps.plugin.api.model.FavouriteSpecial
 import nl.r1a.grassmaps.plugin.api.model.GeoPoint
-import nl.r1a.grassmaps.plugin.api.model.ProfileId
-import nl.r1a.grassmaps.plugin.api.model.ProfilesState
 import nl.r1a.grassmaps.plugin.api.model.RouteHistoryEntry
 import nl.r1a.grassmaps.plugin.api.model.RoutePlanPoint
 import nl.r1a.grassmaps.plugin.api.model.RoutePlanRole
@@ -196,7 +193,6 @@ import nl.r1a.grassmaps.plugins.map.controls.ScaleBar
 import nl.r1a.grassmaps.plugins.map.controls.ScaleBarReading
 import nl.r1a.grassmaps.plugins.map.controls.ScaleBarUnit
 import nl.r1a.grassmaps.plugins.profiles.ui.ProfileSwitchBar
-import nl.r1a.grassmaps.plugins.profiles.ui.ProfilesUiContract
 import nl.r1a.grassmaps.plugins.raster.RasterAreaSectionActions
 import nl.r1a.grassmaps.plugins.raster.RasterAreaSectionModel
 import nl.r1a.grassmaps.plugins.raster.RasterLayerPanel
@@ -729,14 +725,6 @@ private fun MapContent(
     }
     val activeProfile by container.activeProfile.active.collectAsState()
     val profile = activeProfile.profileId
-    // The plugin's stream is the catalog order the switcher cycles. It keeps a
-    // profile created on another screen in the cycle without a file read here.
-    val profilesFlow = remember(container) { container.streamAccess.subscribe<ProfilesState>(ProfilesUiContract.stateStream) }
-    val profilesState by profilesFlow.collectAsState(initial = ProfilesState())
-    val profileOrder =
-        remember(profilesState.profiles) {
-            profilesState.profiles.map { ProfileId(it.id) }.ifEmpty { BuiltInProfiles.ALL }
-        }
     val profilesPage by ProfilesScreenSession.page.collectAsState()
     val layoutController = remember(container, profile) { container.buttonLayoutController(profile) }
     LaunchedEffect(layoutController) { layoutController.load() }
@@ -1203,6 +1191,31 @@ private fun MapContent(
             }
         }
     }
+    val plannerSheetShown = routePlanSheetShown(plan.status, stopsOpen)
+    val bottomSheetShown =
+        !navigationActive &&
+            (
+                plannerSheetShown ||
+                    selectedTrack != null ||
+                    (selectedRelation != null && relationSummary != null) ||
+                    (analysisTrack != null && analysisSummary != null) ||
+                    followSheet != null
+            )
+    val layersSheetShown = layersOpen && !bottomSheetShown
+    val dismissLayers: () -> Unit = { layersOpen = false }
+    val closePlan: () -> Unit = {
+        scope.launch {
+            invokePlannerCommand(container, RoutePlannerContract.clear, JsonObject(emptyMap()))
+        }
+    }
+    // Full-screen destinations are composed later, so their Back handlers win.
+    BackHandler(enabled = !navigationActive && (searchExpanded || plannerSheetShown || layersSheetShown)) {
+        when {
+            searchExpanded -> searchExpanded = false
+            plannerSheetShown -> closePlan()
+            layersSheetShown -> dismissLayers()
+        }
+    }
     Box(Modifier.fillMaxSize().onSizeChanged { viewport = it }) {
         MapSurfaceView(
             surface = surface,
@@ -1336,15 +1349,6 @@ private fun MapContent(
                 )
             }
         }
-        val bottomSheetShown =
-            !navigationActive &&
-                (
-                    routePlanSheetShown(plan.status, stopsOpen) ||
-                        selectedTrack != null ||
-                        (selectedRelation != null && relationSummary != null) ||
-                        (analysisTrack != null && analysisSummary != null) ||
-                        followSheet != null
-                )
         if (!navigationActive) {
             Column(
                 modifier =
@@ -1373,11 +1377,11 @@ private fun MapContent(
                 }
             }
         }
-        if (!navigationActive && layersOpen && !bottomSheetShown) {
+        if (!navigationActive && layersSheetShown) {
             LayersSheet(
                 paneTitle = stringResource(LayersStrings.string.layers_panel_button),
                 closeLabel = stringResource(ShellStrings.string.layers_sheet_close),
-                onDismiss = { layersOpen = false },
+                onDismiss = dismissLayers,
             ) {
                 MapStylePanel(
                     modifier = Modifier.fillMaxWidth(),
@@ -1627,8 +1631,7 @@ private fun MapContent(
                 ) {
                     ProfileSwitchBar(
                         active = profile,
-                        order = profileOrder,
-                        onNext = { container.quickProfileSwitch.next() },
+                        onSelect = container.activeProfile::activate,
                         onOpenAll = { ProfilesScreenSession.show() },
                     )
                     // No user-visible path to settings existed: every profile
@@ -1920,7 +1923,7 @@ private fun MapContent(
                 },
             )
         }
-        if (!navigationActive && routePlanSheetShown(plan.status, stopsOpen)) {
+        if (!navigationActive && plannerSheetShown) {
             RoutePlanPanel(
                 state = plan,
                 strings = container.strings,
@@ -2002,11 +2005,7 @@ private fun MapContent(
                 },
                 onStart = planStart,
                 onSave = planSave,
-                onClose = {
-                    scope.launch {
-                        invokePlannerCommand(container, RoutePlannerContract.clear, JsonObject(emptyMap()))
-                    }
-                },
+                onClose = closePlan,
                 onApplyPreferences = { options ->
                     logRoutePreferences(plan.profile, overridden = true, options)
                     scope.launch {

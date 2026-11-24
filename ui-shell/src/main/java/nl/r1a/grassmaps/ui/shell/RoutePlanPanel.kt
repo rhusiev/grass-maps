@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -66,6 +67,7 @@ private const val VALUE_FONT_SP = 16
 private const val ACTION_FONT_SP = 15
 private const val STATUS_FONT_SP = 13
 private const val CONTROL_FONT_SP = 20
+private const val CONTROL_TARGET_DP = 48
 private const val RECENT_LIMIT = 5
 
 /**
@@ -179,16 +181,18 @@ fun RoutePlanPanel(
                 .semantics { paneTitle = strings.resolve(PANE_TITLE_KEY) },
         verticalArrangement = Arrangement.spacedBy(PANEL_ROW_GAP_DP.dp),
     ) {
+        PanelControls(
+            state = state,
+            strings = strings,
+            editable = sections.editableHeader,
+            onUndo = onUndo,
+            onRedo = onRedo,
+            onSwap = onSwap,
+            onDone = onDoneStops,
+            onClose = onClose,
+            modifier = Modifier.align(Alignment.End),
+        )
         if (sections.editableHeader) {
-            PanelControls(
-                state = state,
-                strings = strings,
-                onUndo = onUndo,
-                onRedo = onRedo,
-                onSwap = onSwap,
-                onDone = onDoneStops,
-                onClose = onClose,
-            )
             CoordinateEntry(
                 strings = strings,
                 parseCoordinate = parseCoordinate,
@@ -336,42 +340,46 @@ fun RoutePlanPanel(
 private fun PanelControls(
     state: RoutePlanState,
     strings: Strings,
+    editable: Boolean,
     onUndo: () -> Unit,
     onRedo: () -> Unit,
     onSwap: () -> Unit,
     onDone: () -> Unit,
     onClose: () -> Unit,
+    modifier: Modifier,
 ) {
     Row(
-        modifier = Modifier,
+        modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(PANEL_ROW_GAP_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ControlGlyph(
-            glyph = UNDO_GLYPH,
-            description = strings.resolve(UNDO_DESCRIPTION_KEY),
-            enabled = state.undoAvailable,
-            onClick = onUndo,
-        )
-        ControlGlyph(
-            glyph = REDO_GLYPH,
-            description = strings.resolve(REDO_DESCRIPTION_KEY),
-            enabled = state.redoAvailable,
-            onClick = onRedo,
-        )
-        ControlGlyph(
-            glyph = SWAP_GLYPH,
-            description = strings.resolve(SWAP_KEY),
-            enabled = true,
-            onClick = onSwap,
-        )
-        Box(Modifier.weight(1f))
-        ControlGlyph(
-            glyph = DONE_GLYPH,
-            description = strings.resolve(STOPS_DONE_KEY),
-            enabled = true,
-            onClick = onDone,
-        )
+        if (editable) {
+            ControlGlyph(
+                glyph = UNDO_GLYPH,
+                description = strings.resolve(UNDO_DESCRIPTION_KEY),
+                enabled = state.undoAvailable,
+                onClick = onUndo,
+            )
+            ControlGlyph(
+                glyph = REDO_GLYPH,
+                description = strings.resolve(REDO_DESCRIPTION_KEY),
+                enabled = state.redoAvailable,
+                onClick = onRedo,
+            )
+            ControlGlyph(
+                glyph = SWAP_GLYPH,
+                description = strings.resolve(SWAP_KEY),
+                enabled = true,
+                onClick = onSwap,
+            )
+            Box(Modifier.weight(1f))
+            ControlGlyph(
+                glyph = DONE_GLYPH,
+                description = strings.resolve(STOPS_DONE_KEY),
+                enabled = true,
+                onClick = onDone,
+            )
+        }
         ControlGlyph(
             glyph = CLOSE_GLYPH,
             description = strings.resolve(PANEL_CLOSE_KEY),
@@ -394,7 +402,8 @@ private fun ControlGlyph(
             Modifier
                 .semantics { contentDescription = description }
                 .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-                .padding(SWAP_PADDING_DP.dp),
+                .sizeIn(minWidth = CONTROL_TARGET_DP.dp, minHeight = CONTROL_TARGET_DP.dp),
+        contentAlignment = Alignment.Center,
     ) {
         BasicText(
             text = glyph,
@@ -769,7 +778,6 @@ private const val DOWN_GLYPH = "\u2193"
 private const val REMOVE_GLYPH = "\u00D7"
 private const val PREVIOUS_TURN_GLYPH = "\u2039"
 private const val NEXT_TURN_GLYPH = "\u203A"
-private const val SWAP_PADDING_DP = 4
 private const val CHIP_CORNER_DP = 8
 private const val VALUE_GAP_DP = 12
 private const val ROW_GAP_DP = 4

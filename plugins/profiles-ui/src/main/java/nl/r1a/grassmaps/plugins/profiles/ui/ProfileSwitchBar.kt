@@ -34,7 +34,7 @@ import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
  * The round 8 profile bar: three pinned profile dots and a fourth button for
  * all profiles, in one pill (T-0604).
  *
- * A tap on any pinned dot moves to the next profile in [order]; a long press
+ * A tap on a pinned dot selects that profile; a long press
  * opens the full profiles screen, as the fourth button does. The active dot is
  * filled with its profile colour, so the map shows the active profile without
  * opening a screen. The bar only reports labels and calls back; the host owns
@@ -44,8 +44,7 @@ import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 @Composable
 fun ProfileSwitchBar(
     active: ProfileId,
-    order: List<ProfileId>,
-    onNext: () -> Unit,
+    onSelect: (ProfileId) -> Unit,
     onOpenAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -60,7 +59,7 @@ fun ProfileSwitchBar(
             activeDescription = stringResource(R.string.profiles_switch_active),
             switchDescription = stringResource(R.string.profiles_switch_to),
         )
-    val items = profileSwitchItems(active, order, labels, palette)
+    val items = profileSwitchItems(active, labels, palette)
     Row(
         modifier =
             modifier
@@ -77,8 +76,11 @@ fun ProfileSwitchBar(
                     Modifier
                         .size(DOT_SIZE_DP.dp)
                         .background(item.fill, CircleShape)
-                        .combinedClickable(role = Role.Button, onClick = onNext, onLongClick = onOpenAll)
-                        .semantics {
+                        .combinedClickable(
+                            role = Role.Button,
+                            onClick = { onSelect(item.id) },
+                            onLongClick = onOpenAll,
+                        ).semantics {
                             contentDescription = item.description
                             selected = item.selected
                         },

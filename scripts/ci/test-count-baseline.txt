@@ -28,7 +28,7 @@ plugins/online-search	23
 plugins/osm-places	50
 plugins/plugin-manager	19
 plugins/point-info	26
-plugins/profiles-ui	23
+plugins/profiles-ui	24
 plugins/proximity-alerts	22
 plugins/raster	51
 plugins/region-outlines	3
@@ -46,4 +46,4 @@ plugins/way-alerts	23
 regions	309
 routing	86
 tracks	177
-ui-shell	334
+ui-shell	337

@@ -43,8 +43,7 @@ class ProfileSwitchBarTest {
 
     @Test
     fun everyPinnedControlNamesItsProfileAndKeepsTheButtonRole() {
-        val items =
-            profileSwitchItems(BuiltInProfiles.BIKE, PINNED_SWITCH_PROFILES, labels, profileSwitchPalette(LightShellColors))
+        val items = profileSwitchItems(BuiltInProfiles.BIKE, labels, profileSwitchPalette(LightShellColors))
 
         assertEquals(listOf("Walk", "Bike", "Hike"), items.map { it.label })
         assertEquals(listOf(SWITCH_ROLE, SWITCH_ROLE, SWITCH_ROLE), items.map { it.role })
@@ -56,7 +55,6 @@ class ProfileSwitchBarTest {
         val items =
             profileSwitchItems(
                 active = BuiltInProfiles.WALK,
-                order = PINNED_SWITCH_PROFILES,
                 labels = labels,
                 palette = profileSwitchPalette(LightShellColors),
             )
@@ -68,17 +66,24 @@ class ProfileSwitchBarTest {
         descriptions.forEach { assertTrue("the label is blank", it.isNotBlank()) }
         assertEquals("Walk profile, active", descriptions[0])
         assertEquals("Bike profile, switch to Bike", descriptions[1])
-        assertEquals("Hike profile, switch to Bike", descriptions[2])
+        assertEquals("Hike profile, switch to Hike", descriptions[2])
         items.forEachIndexed { index, item ->
             assertTrue("${item.label} is missing from its own label", descriptions[index].startsWith(item.label))
         }
     }
 
     @Test
+    fun eachPinnedDotPassesItsOwnIdToTheSelectionCallback() {
+        val bar = File("src/main/java/nl/r1a/grassmaps/plugins/profiles/ui/ProfileSwitchBar.kt").readText()
+
+        assertTrue(bar.contains("onClick = { onSelect(item.id) }"))
+    }
+
+    @Test
     fun theActiveControlUsesTheProfileColorInBothThemes() {
         listOf(LightShellColors, DarkShellColors).forEach { colors ->
             val palette = profileSwitchPalette(colors)
-            val items = profileSwitchItems(BuiltInProfiles.WALK, PINNED_SWITCH_PROFILES, labels, palette)
+            val items = profileSwitchItems(BuiltInProfiles.WALK, labels, palette)
 
             assertEquals("bar", colors.glass, palette.bar)
             assertEquals("border", colors.ring, palette.border)
@@ -134,7 +139,7 @@ class ProfileSwitchBarTest {
                 present.getValue("profiles_switch_active").contains("%1\$s"),
             )
             assertEquals(
-                "the switch label names its own profile and the next one",
+                "the switch label names its own profile and the selection target",
                 2,
                 present.getValue("profiles_switch_to").let { text ->
                     listOf("%1\$s", "%2\$s").count { text.contains(it) }

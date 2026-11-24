@@ -335,4 +335,7 @@
     <string name="settings.index.row.appearance">Appearance</string>
     <string name="settings.index.row.downloads">Map downloads</string>
     <string name="settings.index.row.saved">Saved</string>
+    <string name="settings.index.row.tracks">Tracks</string>
+    <string name="settings.index.row.plugins">Plugins</string>
+    <string name="settings.index.row.backup">Backup</string>
 </resources>

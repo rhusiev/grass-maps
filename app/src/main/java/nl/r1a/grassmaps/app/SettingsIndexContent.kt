@@ -13,6 +13,9 @@ internal const val SETTINGS_INDEX_LANGUAGE_KEY = "settings.index.row.language"
 internal const val SETTINGS_INDEX_APPEARANCE_KEY = "settings.index.row.appearance"
 internal const val SETTINGS_INDEX_DOWNLOADS_KEY = "settings.index.row.downloads"
 internal const val SETTINGS_INDEX_SAVED_KEY = "settings.index.row.saved"
+internal const val SETTINGS_INDEX_TRACKS_KEY = "settings.index.row.tracks"
+internal const val SETTINGS_INDEX_PLUGINS_KEY = "settings.index.row.plugins"
+internal const val SETTINGS_INDEX_BACKUP_KEY = "settings.index.row.backup"
 
 internal enum class SettingsIndexGroup {
     USE,
@@ -25,6 +28,9 @@ internal enum class SettingsIndexTarget {
     APPEARANCE,
     DOWNLOADS,
     SAVED,
+    TRACKS,
+    PLUGINS,
+    BACKUP,
 }
 
 internal data class SettingsIndexRow(
@@ -48,6 +54,8 @@ internal data class SettingsIndexContent(
  * screen in this build, so they are not listed. Language opens the screen
  * settings subpage because the in-app language control lives there.
  * Saved uses this index until the map bar has the approved widgets and Saved tray.
+ * Network, online search and auto-update have no settings screen of their own:
+ * online search is a map-search action and auto-update lives inside downloads.
  */
 internal fun settingsIndexContent(strings: Strings): SettingsIndexContent {
     fun row(
@@ -70,8 +78,11 @@ internal fun settingsIndexContent(strings: Strings): SettingsIndexContent {
                 row(SETTINGS_INDEX_PROFILES_KEY, SettingsIndexGroup.USE, SettingsIndexTarget.PROFILES),
                 row(SETTINGS_INDEX_LANGUAGE_KEY, SettingsIndexGroup.USE, SettingsIndexTarget.APPEARANCE),
                 row(SETTINGS_INDEX_APPEARANCE_KEY, SettingsIndexGroup.USE, SettingsIndexTarget.APPEARANCE),
+                row(SETTINGS_INDEX_TRACKS_KEY, SettingsIndexGroup.USE, SettingsIndexTarget.TRACKS),
+                row(SETTINGS_INDEX_PLUGINS_KEY, SettingsIndexGroup.USE, SettingsIndexTarget.PLUGINS),
                 row(SETTINGS_INDEX_DOWNLOADS_KEY, SettingsIndexGroup.DATA_AND_PRIVACY, SettingsIndexTarget.DOWNLOADS),
                 row(SETTINGS_INDEX_SAVED_KEY, SettingsIndexGroup.DATA_AND_PRIVACY, SettingsIndexTarget.SAVED),
+                row(SETTINGS_INDEX_BACKUP_KEY, SettingsIndexGroup.DATA_AND_PRIVACY, SettingsIndexTarget.BACKUP),
             ),
     )
 }

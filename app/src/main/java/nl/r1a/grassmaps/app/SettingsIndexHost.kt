@@ -40,7 +40,6 @@ private const val SUBTITLE_SP = 12.5f
 private const val SECTION_SP = 12
 private const val ROW_TITLE_SP = 14.5f
 private const val CHEVRON_SP = 18
-private const val BACK_SP = 26
 
 private const val HORIZONTAL_DP = 16
 private const val ROW_MIN_DP = 48
@@ -56,7 +55,8 @@ private val CHEVRON_GLYPH = "\u203a"
 
 /**
  * The Settings index screen. A plain screen, not a sheet: the canon gives it a
- * full page with its own back header. Every row is a 48 dp press target and
+ * full page with its own back header. The back chevron shares the row chevron
+ * style and sits on the title baseline. Every row is a 48 dp press target and
  * hands off through [onOpen]; the screen owns no screen state of its own.
  */
 @Suppress("ktlint:standard:function-naming")
@@ -77,17 +77,19 @@ internal fun SettingsIndexHost(
             ) {
                 BasicText(
                     text = BACK_GLYPH,
-                    style = TextStyle(color = colors.accent, fontSize = BACK_SP.sp),
+                    style = TextStyle(color = colors.accent, fontSize = CHEVRON_SP.sp),
                     modifier =
                         Modifier
                             .size(BACK_DP.dp)
                             .clip(CircleShape)
                             .clickable(role = Role.Button, onClick = onBack)
+                            .alignByBaseline()
                             .semantics { contentDescription = content.back },
                 )
                 BasicText(
                     text = content.title,
                     style = TextStyle(color = colors.ink, fontSize = TITLE_SP.sp, fontWeight = FontWeight.Bold),
+                    modifier = Modifier.alignByBaseline(),
                 )
             }
             BasicText(
@@ -146,7 +148,7 @@ private fun IndexRow(
         BasicText(text = row.title, style = TextStyle(color = colors.ink, fontSize = ROW_TITLE_SP.sp))
         BasicText(
             text = CHEVRON_GLYPH,
-            style = TextStyle(color = colors.faint, fontSize = CHEVRON_SP.sp),
+            style = TextStyle(color = colors.accent, fontSize = CHEVRON_SP.sp),
             modifier = Modifier.clearAndSetSemantics {},
         )
     }

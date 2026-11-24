@@ -2292,6 +2292,9 @@ private fun MapContent(
                         SettingsIndexTarget.APPEARANCE -> ScreenSettingsSession.show()
                         SettingsIndexTarget.DOWNLOADS -> DownloadsScreenSession.show()
                         SettingsIndexTarget.SAVED -> FavouritesListsSession.show()
+                        SettingsIndexTarget.TRACKS -> TrackLibraryScreen.show()
+                        SettingsIndexTarget.PLUGINS -> PluginManagerScreenSession.show()
+                        SettingsIndexTarget.BACKUP -> BackupScreenSession.show()
                     }
                 },
                 modifier = Modifier.fillMaxSize(),

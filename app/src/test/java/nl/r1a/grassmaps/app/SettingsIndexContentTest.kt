@@ -2,6 +2,7 @@ package nl.r1a.grassmaps.app
 
 import nl.r1a.grassmaps.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -24,13 +25,16 @@ class SettingsIndexContentTest {
     fun rowsAndTargetsArePinned() {
         assertEquals(
             listOf(
-                SETTINGS_INDEX_PROFILES_KEY to SettingsIndexTarget.PROFILES,
-                SETTINGS_INDEX_LANGUAGE_KEY to SettingsIndexTarget.APPEARANCE,
-                SETTINGS_INDEX_APPEARANCE_KEY to SettingsIndexTarget.APPEARANCE,
-                SETTINGS_INDEX_DOWNLOADS_KEY to SettingsIndexTarget.DOWNLOADS,
-                SETTINGS_INDEX_SAVED_KEY to SettingsIndexTarget.SAVED,
+                "settings.index.row.profiles" to "PROFILES",
+                "settings.index.row.language" to "APPEARANCE",
+                "settings.index.row.appearance" to "APPEARANCE",
+                "settings.index.row.tracks" to "TRACKS",
+                "settings.index.row.plugins" to "PLUGINS",
+                "settings.index.row.downloads" to "DOWNLOADS",
+                "settings.index.row.saved" to "SAVED",
+                "settings.index.row.backup" to "BACKUP",
             ),
-            content().rows.map { it.key to it.target },
+            content().rows.map { it.key to it.target.name },
         )
     }
 
@@ -41,6 +45,9 @@ class SettingsIndexContentTest {
                 SettingsIndexGroup.USE,
                 SettingsIndexGroup.USE,
                 SettingsIndexGroup.USE,
+                SettingsIndexGroup.USE,
+                SettingsIndexGroup.USE,
+                SettingsIndexGroup.DATA_AND_PRIVACY,
                 SettingsIndexGroup.DATA_AND_PRIVACY,
                 SettingsIndexGroup.DATA_AND_PRIVACY,
             ),
@@ -70,5 +77,30 @@ class SettingsIndexContentTest {
         assertTrue("The default map must expose Settings", map.contains("onClick = SettingsIndexSession::show"))
         assertTrue("Saved must open above Settings", settings in 0 until savedHost)
         assertTrue(map.substring(settings, savedHost).contains("SettingsIndexTarget.SAVED -> FavouritesListsSession.show()"))
+    }
+
+    @Test
+    fun newRowsOpenTheirExistingScreens() {
+        val map = File("src/main/java/nl/r1a/grassmaps/app/MapScreen.kt").readText()
+        val index = map.indexOf("SettingsIndexHost(")
+        assertTrue("The map composes the Settings index", index >= 0)
+        for ((target, show, host) in listOf(
+            Triple("TRACKS", "TrackLibraryScreen.show()", "TrackLibraryHost("),
+            Triple("PLUGINS", "PluginManagerScreenSession.show()", "PluginManagerScreen("),
+            Triple("BACKUP", "BackupScreenSession.show()", "BackupScreenHost("),
+        )) {
+            assertTrue("MapScreen wires $target", map.contains("SettingsIndexTarget.$target -> $show"))
+            assertTrue("$target composes after the index", map.indexOf(host, index) > index)
+        }
+    }
+
+    @Test
+    fun backChevronMatchesRowChevronAndRowsMeetTouchTarget() {
+        val host = File("src/main/java/nl/r1a/grassmaps/app/SettingsIndexHost.kt").readText()
+        assertEquals("one shared chevron size", 2, Regex("CHEVRON_SP\\.sp").findAll(host).count())
+        assertEquals("back and title share a baseline", 2, Regex("alignByBaseline\\(\\)").findAll(host).count())
+        assertFalse("no second back size", host.contains("BACK_SP"))
+        assertEquals("48", Regex("ROW_MIN_DP = (\\d+)").find(host)?.groupValues?.get(1))
+        assertTrue("rows use the minimum height", host.contains("heightIn(min = ROW_MIN_DP.dp)"))
     }
 }

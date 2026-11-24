@@ -360,4 +360,7 @@
     <string name="settings.index.row.appearance">Вигляд</string>
     <string name="settings.index.row.downloads">Завантаження карт</string>
     <string name="settings.index.row.saved">Збережене</string>
+    <string name="settings.index.row.tracks">Треки</string>
+    <string name="settings.index.row.plugins">Плагіни</string>
+    <string name="settings.index.row.backup">Резервна копія</string>
 </resources>

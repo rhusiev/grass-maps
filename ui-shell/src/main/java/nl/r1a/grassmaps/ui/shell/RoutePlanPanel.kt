@@ -661,8 +661,11 @@ internal fun ActionChip(
     )
 }
 
-/** The label the stop list shows; a point without one shows its coordinates. */
-private fun stopText(stop: RoutePlanPoint): String =
+/**
+ * The label a stop shows; a point without one shows its coordinates. The stop
+ * list and the read-only card share it, so one stop reads the same in both.
+ */
+internal fun stopText(stop: RoutePlanPoint): String =
     stop.label.ifEmpty {
         String.format(Locale.US, "%.5f, %.5f", stop.position.latitude, stop.position.longitude)
     }

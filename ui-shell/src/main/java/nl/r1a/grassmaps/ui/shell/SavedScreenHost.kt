@@ -42,6 +42,9 @@ import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
  * creator and point rows stay below it, so a library can still be edited. The
  * map action is absent: the lists sheet has no "show saved on map" command, so
  * the resolver omits it rather than drawing a dead button.
+ *
+ * An eye tap sends [onToggleGroupShown] with the group and its new value. The
+ * local hidden set is only the optimistic reflection until the store confirms.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -53,6 +56,7 @@ fun SavedScreenSection(
     newListColor: String,
     onQueryChange: (String) -> Unit,
     onSortChange: (FavouriteSort) -> Unit,
+    onToggleGroupShown: (String, Boolean) -> Unit,
     onCreateList: (String, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -79,10 +83,14 @@ fun SavedScreenSection(
                         SavedGroup(
                             row = group,
                             expanded = group.name == expandedGroup,
-                            onToggleVisibility = {
-                                hiddenGroups =
-                                    if (group.shown) hiddenGroups + group.name else hiddenGroups - group.name
-                            },
+                            onToggleVisibility =
+                                groupVisibilityToggle(
+                                    groupName = group.name,
+                                    shown = group.shown,
+                                    hiddenGroups = hiddenGroups,
+                                    onHiddenChange = { hiddenGroups = it },
+                                    onToggleGroupShown = onToggleGroupShown,
+                                ),
                             onToggleExpanded = {
                                 expandedGroup = if (group.name == expandedGroup) null else group.name
                             },

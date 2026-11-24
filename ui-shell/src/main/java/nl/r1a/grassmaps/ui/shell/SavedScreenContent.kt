@@ -185,6 +185,25 @@ private fun savedActions(
         )
     }
 
+/**
+ * The eye's click handler as data. The composable runs the returned function;
+ * a JVM test can run it too and see which group and which value reach the app.
+ * The hidden set is the optimistic local reflection of the store change.
+ */
+internal fun groupVisibilityToggle(
+    groupName: String,
+    shown: Boolean,
+    hiddenGroups: Set<String>,
+    onHiddenChange: (Set<String>) -> Unit,
+    onToggleGroupShown: (String, Boolean) -> Unit,
+): () -> Unit {
+    val nextShown = !shown
+    return {
+        onHiddenChange(if (nextShown) hiddenGroups - groupName else hiddenGroups + groupName)
+        onToggleGroupShown(groupName, nextShown)
+    }
+}
+
 private fun placesPhrase(
     count: Int,
     strings: Strings,

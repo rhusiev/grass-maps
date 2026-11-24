@@ -52,6 +52,10 @@ import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
  * T-0214 adds the search field and the four-way sort control. Both ask the
  * plugin for a new derived view; this shell draws the rows it is given, so the
  * matching, ordering and description rendering stay in one place.
+ *
+ * [onToggleGroupShown] carries an eye tap to the caller. It defaults to a no-op
+ * because the app wiring waits on the owner of MapScreen; the app must pass the
+ * favourites-layer setter before the eyes change the map.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -66,6 +70,7 @@ fun FavouritesListsHost(
     onQueryChange: (String) -> Unit,
     onSortChange: (FavouriteSort) -> Unit,
     onClose: () -> Unit,
+    onToggleGroupShown: (String, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val content = favouritesListsContent(state, strings)
@@ -102,6 +107,7 @@ fun FavouritesListsHost(
                     onQueryChange(it)
                 },
                 onSortChange = onSortChange,
+                onToggleGroupShown = onToggleGroupShown,
                 onCreateList = { name, color ->
                     onCreateList(name, color)
                     newName = ""

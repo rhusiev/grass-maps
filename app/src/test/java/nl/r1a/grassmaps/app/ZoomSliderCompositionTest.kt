@@ -28,11 +28,12 @@ class ZoomSliderCompositionTest {
 
     @Test
     fun thePillAndTheRoundControlsUseTheDesignSizes() {
-        assertEquals(44, MapControlMetrics.SLIDER_WIDTH_DP)
-        assertEquals(140, MapControlMetrics.SLIDER_HEIGHT_DP)
-        assertEquals(42, MapControlMetrics.FAB_DP)
+        assertEquals(48, MapControlMetrics.SLIDER_WIDTH_DP)
+        assertEquals(144, MapControlMetrics.SLIDER_HEIGHT_DP)
+        assertEquals(48, MapControlMetrics.FAB_DP)
         assertEquals(48, MapControlMetrics.TAP_TARGET_DP)
         assertTrue("a round control must keep a 48 dp tap target", MapControlMetrics.TAP_TARGET_DP >= 48)
-        assertTrue("the pill must stay 44 dp wide", MapControlMetrics.SLIDER_WIDTH_DP <= MapControlMetrics.TAP_TARGET_DP)
+        assertTrue("the pill must be a full 48 dp target", MapControlMetrics.SLIDER_WIDTH_DP >= 48)
+        assertTrue("the slider must fit three 48 dp rows", MapControlMetrics.SLIDER_HEIGHT_DP >= 144)
     }
 }

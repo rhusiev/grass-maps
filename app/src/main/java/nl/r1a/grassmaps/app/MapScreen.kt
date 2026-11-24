@@ -286,12 +286,21 @@ internal val TRAIL_DARK = StyleId("trail-dark")
 private const val TAG = "GrassMapsMap"
 internal const val BAR_PADDING_DP = 16
 
+/** Clearance above the map credit and the Layers button when the arc is on. */
+private const val QUICK_ACCESS_BOTTOM_CLEARANCE_DP = 72
+
 // T-0612: the collapsed search field shares the bottom chrome with the profile
-// switcher. BottomStart puts it left of those buttons; the existing bottom-left
-// clearance keeps it above the bar and the map credit. 48 dp is the shell's tap
-// target, so the closed pill is as easy to open as any other control.
+// switcher. BottomStart puts it left of those buttons; it reports its own top
+// edge so the map credit clears it. 48 dp is the shell's tap target, so the
+// closed pill is as easy to open as any other control.
 private val SEARCH_COLLAPSED_ANCHOR: Alignment = Alignment.BottomStart
 private const val SEARCH_COLLAPSED_MIN_HEIGHT_DP = 48
+private const val SEARCH_PILL_BOTTOM_DP = QUICK_ACCESS_BOTTOM_CLEARANCE_DP
+private const val MAP_CREDIT_CLEARANCE_DP = 12
+
+/** The scale bar sits above Layers and clear of the Settings button. */
+private const val SCALE_BAR_GAP_DP = 24
+private val SEARCH_PILL_CHROME_KEY: Any = Any()
 
 /** How often a by-sun theme recomputes the day boundary (T-0111). */
 private const val SUN_REFRESH_MILLIS = 30_000L
@@ -329,8 +338,6 @@ private const val PROFILE_SWITCH_DROP_DP = 4
 private const val PROFILE_SWITCH_CREDIT_GAP_DP = 16
 private const val SETTINGS_ENTRY_GAP_DP = 8
 
-/** Clearance above the map credit and the Layers button when the arc is on. */
-private const val QUICK_ACCESS_BOTTOM_CLEARANCE_DP = 72
 private const val ARC_BOTTOM_CLEARANCE_DP = 120
 internal const val WIDGET_GRID_GAP_DP = 8
 
@@ -393,7 +400,6 @@ private const val DISTANCE_BADGE_MILLIS = 4_000L
 private const val TRACK_IMPORT_NOTICE_MILLIS = 8_000L
 private const val BANNER_STACK_GAP_DP = 8
 private const val BANNER_TICK_MILLIS = 1_000L
-private const val PANEL_GAP_DP = 8
 
 /** Keeps the layers cards below the control bar at the top end. */
 private const val LAYERS_COLUMN_HEIGHT_FRACTION = 0.5f
@@ -1228,7 +1234,10 @@ private fun MapContent(
         MapSurfaceView(
             surface = surface,
             modifier = Modifier.fillMaxSize(),
-            creditBottomInset = with(density) { (LocalBottomChrome.current?.insetPx ?: 0).toDp() },
+            creditBottomInset =
+                with(density) {
+                    (LocalBottomChrome.current?.insetPx ?: 0).toDp() + MAP_CREDIT_CLEARANCE_DP.dp
+                },
             distanceByTap = container.distanceByTap,
             onDistanceMeasured = { meters -> distance = MapDistance.readout(meters) },
             onPointSelected = { point ->
@@ -1374,17 +1383,8 @@ private fun MapContent(
                         .padding(BAR_PADDING_DP.dp)
                         .fillMaxHeight(LAYERS_COLUMN_HEIGHT_FRACTION),
                 horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp, Alignment.Bottom),
+                verticalArrangement = Arrangement.spacedBy(SCALE_BAR_GAP_DP.dp, Alignment.Bottom),
             ) {
-                if (!bottomSheetShown) {
-                    LayersButton(
-                        open = layersOpen,
-                        onToggle = {
-                            searchExpanded = false
-                            layersOpen = !layersOpen
-                        },
-                    )
-                }
                 // A sheet covers the map the bar measures, so the bar would only
                 // sit on the sheet's own controls. It returns when the sheet closes.
                 if ((bottomChrome?.reachOf(BOTTOM_SHEET_KEY) ?: 0) == 0) {
@@ -1392,6 +1392,15 @@ private fun MapContent(
                         surface = surface,
                         settings = unitStore,
                         modifier = Modifier,
+                    )
+                }
+                if (!bottomSheetShown) {
+                    LayersButton(
+                        open = layersOpen,
+                        onToggle = {
+                            searchExpanded = false
+                            layersOpen = !layersOpen
+                        },
                     )
                 }
             }
@@ -1601,11 +1610,13 @@ private fun MapContent(
         }
         val devToolsPanel = container.devToolsPanel
         if (devToolsVisible && !navigationActive && devToolsPanel != null) {
+            // A fixed middle-left anchor keeps the debug tools above the bottom
+            // controls and clear of their changing reach. Sheets compose later
+            // and cover it, so it never moves as they open (T-0612).
             devToolsPanel(
                 Modifier
-                    .align(Alignment.BottomStart)
-                    .aboveBottomSheet()
-                    .padding(BAR_PADDING_DP.dp),
+                    .align(Alignment.CenterStart)
+                    .padding(start = BAR_PADDING_DP.dp),
             )
         }
         if (!navigationActive) {
@@ -2896,9 +2907,10 @@ private fun SearchOverlay(
             } else {
                 Modifier
                     .navigationBarsPadding()
-                    .padding(bottom = QUICK_ACCESS_BOTTOM_CLEARANCE_DP.dp)
+                    .padding(bottom = SEARCH_PILL_BOTTOM_DP.dp)
                     .padding(BAR_PADDING_DP.dp)
                     .heightIn(min = SEARCH_COLLAPSED_MIN_HEIGHT_DP.dp)
+                    .reportsBottomChrome(key = SEARCH_PILL_CHROME_KEY)
             },
         collapsedAnchor = SEARCH_COLLAPSED_ANCHOR,
         onlineSearchEnabled = onlineSearchEnabled,

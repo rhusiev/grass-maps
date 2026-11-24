@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -31,12 +32,12 @@ import nl.r1a.grassmaps.plugin.ui.api.ShellIcon
 import nl.r1a.grassmaps.plugin.ui.api.ShellIcons
 import kotlin.math.roundToInt
 
-/** The drawn sizes of the round 9 map stack. A 42 dp FAB sits in a 48 dp target. */
+/** The drawn sizes of the round 9 map stack. Every face and gesture area is a full 48 dp target. */
 object MapControlMetrics {
-    const val SLIDER_WIDTH_DP = 44
-    const val SLIDER_HEIGHT_DP = 140
-    const val FAB_DP = 42
     const val TAP_TARGET_DP = 48
+    const val SLIDER_WIDTH_DP = TAP_TARGET_DP
+    const val SLIDER_HEIGHT_DP = TAP_TARGET_DP * 3
+    const val FAB_DP = TAP_TARGET_DP
 }
 
 /**
@@ -103,9 +104,8 @@ fun ZoomSliderPill(
         BoxWithConstraints(
             modifier =
                 Modifier
-                    .width(TRACK_WIDTH_DP.dp)
+                    .fillMaxWidth()
                     .weight(1f)
-                    .background(colors.soft, RoundedCornerShape(TRACK_WIDTH_DP.dp / 2))
                     .pointerInput(spec) {
                         detectTapGestures { offset -> onZoomChange(spec.valueAtFraction(offset.y / size.height)) }
                     }.pointerInput(spec) {
@@ -116,6 +116,12 @@ fun ZoomSliderPill(
                     }.semantics { contentDescription = content.slideDescription },
             contentAlignment = Alignment.TopCenter,
         ) {
+            Box(
+                Modifier
+                    .width(TRACK_WIDTH_DP.dp)
+                    .fillMaxHeight()
+                    .background(colors.soft, RoundedCornerShape(TRACK_WIDTH_DP.dp / 2)),
+            )
             Column(
                 modifier = Modifier.padding(top = DASH_TOP_DP.dp),
                 verticalArrangement = Arrangement.spacedBy(DASH_GAP_DP.dp),

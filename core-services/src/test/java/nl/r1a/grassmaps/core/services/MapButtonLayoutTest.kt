@@ -2,8 +2,8 @@ package nl.r1a.grassmaps.core.services
 
 import nl.r1a.grassmaps.plugin.api.contract.CommandId
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MapButtonLayoutTest {
@@ -27,8 +27,19 @@ class MapButtonLayoutTest {
     }
 
     @Test
-    fun theDefaultRailStaysAtTheTopEnd() {
-        assertFalse("a bottom default needs a proven clearance from the bottom chrome", MapButtonLayout.DEFAULT.arc)
+    fun theDefaultRailIsBottomAnchored() {
+        assertTrue(
+            "a top-end default is outside the bottom-reach rule (T-0612, final design-aware review P1 6)",
+            MapButtonLayout.DEFAULT.arc,
+        )
+    }
+
+    @Test
+    fun aBareLayoutUsesTheBottomArcToo() {
+        assertTrue(
+            "a layout built without an arc flag must stay in the bottom reach",
+            MapButtonLayout(MapControlCommands.DEFAULT_ORDER + null).arc,
+        )
     }
 
     @Test

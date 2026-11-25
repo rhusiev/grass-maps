@@ -1,43 +1,188 @@
 package nl.r1a.grassmaps.app
 
-import androidx.compose.ui.unit.dp
 import nl.r1a.grassmaps.core.services.MapButtonLayout
+import nl.r1a.grassmaps.core.services.MapControlCommands
+import nl.r1a.grassmaps.ui.shell.MapControlMetrics
+import nl.r1a.grassmaps.ui.shell.thumbArcOffsets
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Final blind review P2-3: frequent rail controls sit at the top by default.
- * A bottom default was evaluated instead of forced. With the five default
- * controls the bottom-end rail can reach the centred Layers button, and an
- * on-device clearance proof is not available here, so the default stays at the
- * top end. This is a recorded deviation, not a broken control.
+ * T-0612, final design-aware review P1 6: the default rail sat at the top end,
+ * outside the three approved exceptions to the bottom-reach rule. The default
+ * now uses the one-thumb arc. This test models the drawn elements of that arc
+ * and pins their clearance from every piece of bottom chrome. The earlier
+ * top-end reason is obsolete because the arc's faces fan up and left from the
+ * slider instead of forming a wide column that can reach Layers.
  */
 class MapRailDefaultTest {
-    private val screenWidth = 411.dp
+    @Test
+    fun theDefaultRailIsBottomAnchored() {
+        assertTrue("the default rail left the bottom thumb reach", MapButtonLayout.DEFAULT.arc)
+    }
 
     @Test
-    fun theDefaultRailStaysTopEndBecauseABottomRailIsNotProvenClear() {
-        assertFalse("the rail default changed without a clearance proof", MapButtonLayout.DEFAULT.arc)
+    fun theBottomRailClearsEveryBottomChromeElement() {
+        assertTrue("the clearance model only describes the arc rail", MapButtonLayout.DEFAULT.arc)
+        val rail = railRects()
+        val chrome =
+            listOf(
+                "the single bar" to bottomBar(),
+                "the sheet chevron" to chevron(),
+                "Layers" to layers(),
+                "the map credit" to credit(),
+                "the scale bar" to scaleBar(),
+            )
+        chrome.forEach { (name, rect) ->
+            rail.forEach { (part, face) ->
+                assertNoOverlap(part, name, face, rect)
+            }
+        }
+    }
 
-        val railWidth = 184.dp
-        val railLeft = screenWidth - BAR_PADDING_DP.dp - railWidth
-        val layersRight = screenWidth / 2 + LAYERS_HALF_WIDTH_DP.dp
-        val layersTop = mapBottomInsets(arc = false).layersDp + LAYERS_HEIGHT_DP
-
+    @Test
+    fun theBottomRailStaysWithinOneThumbReach() {
+        assertTrue("the clearance model only describes the arc rail", MapButtonLayout.DEFAULT.arc)
+        val slider = railRects().first().second
         assertTrue(
-            "a ${railWidth.value} dp rail starts at ${railLeft.value} dp and reaches Layers at ${layersRight.value} dp",
-            railLeft < layersRight,
+            "the slider sits ${slider.bottom} dp above the screen bottom, out of thumb reach",
+            slider.bottom <= MAP_BOTTOM_BAR_HEIGHT_DP * 2,
         )
-        assertTrue(
-            "a rail at $ARC_BOTTOM_CLEARANCE_DP dp crosses Layers ending at $layersTop dp",
-            ARC_BOTTOM_CLEARANCE_DP < layersTop,
+        assertTrue("the arc faces left the screen", railRects().minOf { it.second.left } >= 0)
+    }
+
+    /**
+     * The slider replaces the placed zoom pair, so only the other placed
+     * commands are drawn as arc faces. The order is the layout's slot order.
+     */
+    private fun drawnFaceCount(): Int {
+        val faces =
+            MapButtonLayout.DEFAULT.commands.count { id ->
+                id != MapControlCommands.ZOOM_IN && id != MapControlCommands.ZOOM_OUT
+            }
+        assertEquals("the default would draw more faces than the arc model allows", 3, faces)
+        return faces
+    }
+
+    /** The slider first, then one box per drawn face, all relative to the screen bottom. */
+    private fun railRects(): List<Pair<String, Rect>> {
+        val sliderRight = SCREEN_WIDTH_DP - BAR_PADDING_DP
+        val slider =
+            Rect(
+                left = sliderRight - MapControlMetrics.SLIDER_WIDTH_DP,
+                right = sliderRight,
+                bottom = ARC_BOTTOM_CLEARANCE_DP,
+                top = ARC_BOTTOM_CLEARANCE_DP + MapControlMetrics.SLIDER_HEIGHT_DP,
+            )
+        // ArcRow is stacked above the slider with MapControlBar's 4 dp gap. Its
+        // bottom-right corner is the anchor the thumb offsets are measured from.
+        val arcBoxBottom = slider.top + ARC_STACK_GAP_DP
+        val faces =
+            thumbArcOffsets(drawnFaceCount()).mapIndexed { index, offset ->
+                val right = sliderRight + offset.x.value.toInt()
+                val bottom = arcBoxBottom - offset.y.value.toInt()
+                "arc face $index" to
+                    Rect(
+                        left = right - MapControlMetrics.TAP_TARGET_DP,
+                        right = right,
+                        bottom = bottom,
+                        top = bottom + MapControlMetrics.TAP_TARGET_DP,
+                    )
+            }
+        return listOf("zoom slider" to slider) + faces
+    }
+
+    private fun bottomBar(): Rect =
+        Rect(
+            left = BAR_PADDING_DP,
+            right = SCREEN_WIDTH_DP - BAR_PADDING_DP,
+            bottom = BAR_PADDING_DP,
+            top = BAR_PADDING_DP + MAP_BOTTOM_BAR_HEIGHT_DP,
+        )
+
+    private fun chevron(): Rect =
+        Rect(
+            left = SCREEN_WIDTH_DP - BAR_PADDING_DP - SHEET_CHEVRON_TARGET_DP,
+            right = SCREEN_WIDTH_DP - BAR_PADDING_DP,
+            bottom = BAR_PADDING_DP,
+            top = BAR_PADDING_DP + MAP_BOTTOM_BAR_HEIGHT_DP,
+        )
+
+    private fun layers(): Rect {
+        val insets = mapBottomInsets(arc = true)
+        val centre = SCREEN_WIDTH_DP / 2
+        return Rect(
+            left = centre - LAYERS_HALF_WIDTH_DP,
+            right = centre + LAYERS_HALF_WIDTH_DP,
+            bottom = insets.layersDp,
+            top = insets.layersDp + LAYERS_HEIGHT_DP,
         )
     }
 
+    private fun credit(): Rect =
+        Rect(
+            left = BAR_PADDING_DP,
+            right = BAR_PADDING_DP + CREDIT_WIDTH_DP,
+            bottom = MAP_BOTTOM_BAR_HEIGHT_DP + MAP_CREDIT_GAP_DP,
+            top = MAP_BOTTOM_BAR_HEIGHT_DP + MAP_CREDIT_GAP_DP + CREDIT_HEIGHT_DP,
+        )
+
+    private fun scaleBar(): Rect {
+        val insets = mapBottomInsets(arc = true)
+        return Rect(
+            left = SCREEN_WIDTH_DP - BAR_PADDING_DP - SCALE_BAR_WIDTH_DP,
+            right = SCREEN_WIDTH_DP - BAR_PADDING_DP,
+            bottom = insets.scaleBarDp,
+            top = insets.scaleBarDp + SCALE_BAR_HEIGHT_DP,
+        )
+    }
+
+    private fun assertNoOverlap(
+        part: String,
+        chrome: String,
+        rail: Rect,
+        other: Rect,
+    ) {
+        val horizontal = rail.left < other.right && other.left < rail.right
+        val vertical = rail.bottom < other.top && other.bottom < rail.top
+        assertFalse(
+            "$part overlaps $chrome: rail $rail, chrome $other",
+            horizontal && vertical,
+        )
+    }
+
+    /** An inclusive-exclusive box: dp from the screen start and from its bottom. */
+    private data class Rect(
+        val left: Int,
+        val right: Int,
+        val bottom: Int,
+        val top: Int,
+    ) {
+        override fun toString(): String = "[$left..$right]x[$bottom..$top]"
+    }
+
     private companion object {
-        // The Moto g32 screen width and the measured Layers button footprint.
+        const val SCREEN_WIDTH_DP = 411
+        const val BAR_PADDING_DP = 16
+        const val MAP_BOTTOM_BAR_HEIGHT_DP = 60
+        const val SHEET_CHEVRON_TARGET_DP = 48
+        const val ARC_BOTTOM_CLEARANCE_DP = 120
+
+        // Mirrors MapControlBar's private 4 dp stack gap; the model must stay
+        // in step with the shell if that gap changes.
+        const val ARC_STACK_GAP_DP = 4
         const val LAYERS_HALF_WIDTH_DP = 32
         const val LAYERS_HEIGHT_DP = 48
+
+        // The credit sits above the bar's reach (MapScreen's 12 dp clearance).
+        const val MAP_CREDIT_GAP_DP = 12
+        const val CREDIT_WIDTH_DP = 180
+        const val CREDIT_HEIGHT_DP = 24
+
+        // Conservative glass box: the drawn value is narrower and shorter.
+        const val SCALE_BAR_WIDTH_DP = 120
+        const val SCALE_BAR_HEIGHT_DP = 40
     }
 }

@@ -401,9 +401,10 @@ internal data class MapBottomInsets(
 
 /**
  * Layers clears the permanent bottom bar: a 48 dp chevron plus its 16 dp credit
- * spacer, less the 4 dp drop, and an [LAYERS_GAP_DP] gap. The scale bar clears
- * Layers in the default layout. In arc mode the rail takes the bottom end, so
- * Layers centres above the bar and the scale bar keeps the end clear of it.
+ * spacer, less the 4 dp drop, and an [LAYERS_GAP_DP] gap. The default rail uses
+ * the one-thumb arc at the bottom end, so Layers centres above the bar and the
+ * scale bar keeps that end clear. A profile that switches the arc off puts the
+ * rail at the top end and stacks the scale bar above Layers instead.
  */
 internal fun mapBottomInsets(arc: Boolean): MapBottomInsets {
     val barReach = SHEET_CHEVRON_TARGET_DP + PROFILE_SWITCH_CREDIT_GAP_DP - PROFILE_SWITCH_DROP_DP
@@ -1461,8 +1462,9 @@ private fun MapContent(
             )
         }
         // The bar is composed below, so Layers must clear it through this inset
-        // instead of relying on draw order. The arc rail occupies the bottom end,
-        // so Layers centres over the bar in that mode.
+        // instead of relying on draw order. The default arc rail occupies the
+        // bottom end, so Layers centres over the bar; MapRailDefaultTest proves
+        // the rail's slider and faces clear this button and the other chrome.
         if (!navigationActive && !bottomSheetShown) {
             Box(
                 modifier =
@@ -1516,6 +1518,8 @@ private fun MapContent(
                 zoomSlider = zoomSlider,
                 onZoomChange = dispatchZoom,
                 onZoomStep = stepZoom,
+                // The default layout is the bottom thumb arc; only a profile
+                // that switches the arc off returns to the top-end column.
                 modifier =
                     (
                         if (layout.arc) {

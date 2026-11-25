@@ -21,13 +21,15 @@ data class QuickAccessButton(
  * own slot, so every other button keeps its index and its place on screen.
  *
  * [arc] arranges the placed commands along the one-thumb arc instead of the
- * top-end column. The arc reads [commands] from top to bottom, so the last
- * placed command sits nearest the bar.
+ * top-end column. It is on by default: the arc is the bottom-anchored, thumb
+ * arrangement required by the bottom-reach rule (T-0612). A stored profile that
+ * explicitly turns it off keeps the old top-end column. The arc reads
+ * [commands] from top to bottom, so the last placed command sits nearest the bar.
  */
 data class MapButtonLayout(
     val slots: List<CommandId?>,
     val quickAccess: QuickAccessButton? = null,
-    val arc: Boolean = false,
+    val arc: Boolean = true,
 ) {
     /** The placed commands in bar order. */
     val commands: List<CommandId> get() = slots.filterNotNull()
@@ -56,10 +58,17 @@ data class MapButtonLayout(
         const val SLOT_COUNT: Int = 6
 
         /**
-         * The layout a profile uses until it saves its own. The rail stays at
-         * the top end: a bottom default could not be proven clear of the bottom
-         * bar, Layers and the scale bar (T-0612, final blind review P2-3).
+         * The layout a profile uses until it saves its own. The rail is
+         * bottom-anchored through the one-thumb arc, so it stays inside the
+         * bottom-reach rule (T-0612, final design-aware review P1 6). The arc's
+         * faces fan up and left from the slider instead of forming a wide
+         * column: a bottom column with the full command set reaches the centred
+         * Layers button, while each arc element clears the bar, its chevron,
+         * Layers, the credit and the scale bar. The tested proof is in
+         * MapRailDefaultTest; every command stays in [MapControlCommands.CONFIGURABLE]
+         * and reachable from the layout sheet.
          */
-        val DEFAULT: MapButtonLayout = MapButtonLayout(MapControlCommands.DEFAULT_ORDER + null)
+        val DEFAULT: MapButtonLayout =
+            MapButtonLayout(MapControlCommands.DEFAULT_ORDER + null, arc = true)
     }
 }

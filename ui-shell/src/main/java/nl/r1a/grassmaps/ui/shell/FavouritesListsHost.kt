@@ -76,7 +76,8 @@ internal fun selectedPlacePosition(
  * this host nor the Saved section keeps a second visibility state.
  *
  * [embedded] drops the scrim and card: the combined widgets-and-Saved sheet
- * supplies that chrome and keeps only the list body.
+ * supplies that chrome and keeps only the list body. It also drops the Lists
+ * header title, because the saved section already supplies the one heading.
  *
  * [onShowOnMap] receives the selected place's coordinates. It has no default:
  * the app supplies the camera action, so an unwired sheet cannot compile.
@@ -116,6 +117,7 @@ fun FavouritesListsHost(
             onToggleGroupShown = onToggleGroupShown,
             onShowOnMap = onShowOnMap,
             showClose = false,
+            showTitle = false,
             scroll = false,
             modifier = modifier,
         )
@@ -156,7 +158,8 @@ fun FavouritesListsHost(
 /**
  * The saved lists without a scrim or a card. The standalone [FavouritesListsHost]
  * supplies that chrome; the combined widgets-and-Saved sheet supplies its own
- * [ShellBottomSheet] chrome and sets [showClose] and [scroll] to false.
+ * [ShellBottomSheet] chrome and sets [showClose], [showTitle] and [scroll] to
+ * false. The undo and close commands stay in [Header] either way.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -175,6 +178,7 @@ internal fun FavouritesListsBody(
     onToggleGroupShown: (String, Boolean) -> Unit = { _, _ -> },
     onShowOnMap: (GeoPoint) -> Unit,
     showClose: Boolean = true,
+    showTitle: Boolean = true,
     scroll: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
@@ -194,7 +198,7 @@ internal fun FavouritesListsBody(
         modifier = modifier.then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier),
         verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
     ) {
-        Header(content = content, onUndo = onUndo, onClose = onClose, showClose = showClose)
+        Header(content = content, onUndo = onUndo, onClose = onClose, showClose = showClose, showTitle = showTitle)
         SavedScreenSection(
             state = state,
             strings = strings,
@@ -289,16 +293,19 @@ private fun Header(
     onUndo: () -> Unit,
     onClose: () -> Unit,
     showClose: Boolean = true,
+    showTitle: Boolean = true,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BasicText(
-            text = content.title,
-            style = TextStyle(color = LocalShellColors.current.ink, fontSize = TITLE_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
-        )
+        if (showTitle) {
+            BasicText(
+                text = content.title,
+                style = TextStyle(color = LocalShellColors.current.ink, fontSize = TITLE_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
+            )
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp)) {
             if (content.undoAvailable) {
                 BasicText(

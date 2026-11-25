@@ -29,8 +29,10 @@ import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
  * The sheet adds no chrome of its own: [ShellBottomSheet] owns the scrim, the
  * handle, the close control and the one bottom-chrome reach. The hosts supply
  * both bodies as slots, so the app keeps its widget controller and saved-list
- * commands. The Settings row keeps the command the old bar's Settings button
- * carried; the canon bar itself has no Settings control.
+ * commands. The saved slot draws its own section heading, so this sheet does
+ * not draw [savedTitle] a second time; the parameter stays for the app caller.
+ * The Settings row keeps the command the old bar's Settings button carried;
+ * the canon bar itself has no Settings control.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -63,10 +65,6 @@ fun WidgetsSavedSheet(
                 style = TextStyle(color = colors.muted, fontSize = NOTE_SP.sp),
             )
             widgets()
-            BasicText(
-                text = savedTitle,
-                style = TextStyle(color = colors.ink, fontSize = TITLE_SP.sp, fontWeight = FontWeight.SemiBold),
-            )
             saved()
             // Settings stays at the end of the scrolling content. A pinned
             // footer can be squeezed to zero height on a tall widget grid,

@@ -82,7 +82,69 @@
     <string name="search_online_stopped_no_results">Онлайн-пошук вимкнено. Офлайн-результатів немає.</string>
     <string name="search_position_allow">Надсилати мою позицію</string>
     <string name="search_position_stop">Припинити надсилати мою позицію</string>
-    <string name="search_result_count">%1$d результатів</string>
+    <plurals name="search_result_count">
+        <item quantity="one">%1$s результат</item>
+        <item quantity="few">%1$s результати</item>
+        <item quantity="many">%1$s результатів</item>
+        <item quantity="other">%1$s результату</item>
+    </plurals>
+    <plurals name="search_count_pharmacy">
+        <item quantity="one">%1$s аптека</item>
+        <item quantity="few">%1$s аптеки</item>
+        <item quantity="many">%1$s аптек</item>
+        <item quantity="other">%1$s аптеки</item>
+    </plurals>
+    <plurals name="search_count_cafe">
+        <item quantity="one">%1$s кав\'ярня</item>
+        <item quantity="few">%1$s кав\'ярні</item>
+        <item quantity="many">%1$s кав\'ярень</item>
+        <item quantity="other">%1$s кав\'ярні</item>
+    </plurals>
+    <plurals name="search_count_supermarket">
+        <item quantity="one">%1$s супермаркет</item>
+        <item quantity="few">%1$s супермаркети</item>
+        <item quantity="many">%1$s супермаркетів</item>
+        <item quantity="other">%1$s супермаркети</item>
+    </plurals>
+    <plurals name="search_count_drinking_water">
+        <item quantity="one">%1$s джерело питної води</item>
+        <item quantity="few">%1$s джерела питної води</item>
+        <item quantity="many">%1$s джерел питної води</item>
+        <item quantity="other">%1$s джерела питної води</item>
+    </plurals>
+    <plurals name="search_count_toilets">
+        <item quantity="one">%1$s туалет</item>
+        <item quantity="few">%1$s туалети</item>
+        <item quantity="many">%1$s туалетів</item>
+        <item quantity="other">%1$s туалету</item>
+    </plurals>
+    <plurals name="search_count_shelter">
+        <item quantity="one">%1$s прихисток</item>
+        <item quantity="few">%1$s прихистки</item>
+        <item quantity="many">%1$s прихистків</item>
+        <item quantity="other">%1$s прихистку</item>
+    </plurals>
+    <plurals name="search_count_viewpoint">
+        <item quantity="one">%1$s оглядовий майданчик</item>
+        <item quantity="few">%1$s оглядові майданчики</item>
+        <item quantity="many">%1$s оглядових майданчиків</item>
+        <item quantity="other">%1$s оглядового майданчика</item>
+    </plurals>
+    <plurals name="search_count_campsite">
+        <item quantity="one">%1$s кемпінг</item>
+        <item quantity="few">%1$s кемпінги</item>
+        <item quantity="many">%1$s кемпінгів</item>
+        <item quantity="other">%1$s кемпінгу</item>
+    </plurals>
+    <plurals name="search_count_picnic_site">
+        <item quantity="one">%1$s місце для пікніка</item>
+        <item quantity="few">%1$s місця для пікніка</item>
+        <item quantity="many">%1$s місць для пікніка</item>
+        <item quantity="other">%1$s місця для пікніка</item>
+    </plurals>
+    <string name="search_online_chip_off">Онлайн · вимкнено</string>
+    <string name="search_online_chip_on">Онлайн · увімкнено</string>
+    <string name="search_online_chip_description">Стан онлайн-пошуку</string>
     <string name="search_result_distance_metres">%1$d м</string>
     <string name="search_result_distance_kilometres">%1$.1f км</string>
     <string name="search_chip_show_on_map">Показати %1$d на карті</string>

@@ -59,13 +59,66 @@ class SearchExpandedCardCompositionTest {
     fun theCountHeaderAndCanonChipsAreDrawn() {
         assertTrue(
             "no result count header",
-            source.contains("stringResource(R.string.search_result_count, content.count)"),
+            source.contains("count = searchResultCount(content.rows)"),
         )
         assertTrue(
             "no Show-on-map chip",
             source.contains("stringResource(R.string.search_chip_show_on_map, content.count)"),
         )
         assertTrue("no Open-now chip", source.contains("stringResource(R.string.search_chip_open_now)"))
+    }
+
+    @Test
+    fun theCountHeaderUsesPluralsAndNamesASharedKind() {
+        assertTrue(
+            "the header must derive its subject once",
+            source.contains("val count = searchResultCount(content.rows)"),
+        )
+        assertTrue(
+            "the count is not pluralised in both languages",
+            source.contains("pluralStringResource("),
+        )
+        assertTrue(
+            "a shared kind is never named",
+            source.contains("searchKindCountKey(kind)"),
+        )
+        assertTrue(
+            "the old generic count copy is still drawn",
+            !source.contains("stringResource(R.string.search_result_count, content.count)"),
+        )
+    }
+
+    @Test
+    fun theOnlineChipReadsTheLiveEnabledState() {
+        assertTrue(
+            "the chip copy is not derived from the switch",
+            source.contains("searchOnlineChipText(labels, onlineSearchEnabled)"),
+        )
+        assertTrue(
+            "the privacy notice action was removed",
+            source.contains("NoticeActionButton(action)"),
+        )
+    }
+
+    @Test
+    fun theRowAndTheMarkerDrawOneDerivedCategoryIcon() {
+        assertTrue(
+            "the row still hardcodes the pin",
+            source.contains("row.iconKey") && !source.contains("icon = ShellIcons.Pin"),
+        )
+        assertTrue(
+            "the marker does not use the row's icon derivation",
+            source.contains("marker.iconKey"),
+        )
+        val content = File(CONTENT_FILE).readText()
+        assertTrue(
+            "the icon is not derived once for rows and markers",
+            content.contains("iconKey = searchCategoryIconKey(hit.kind)"),
+        )
+        assertTrue(
+            "opening hours were invented",
+            content.contains("openState = null"),
+        )
     }
 
     @Test

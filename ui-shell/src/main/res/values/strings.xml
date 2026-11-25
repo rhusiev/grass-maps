@@ -80,7 +80,49 @@
     <string name="search_online_stopped_no_results">Online search was turned off. No offline results.</string>
     <string name="search_position_allow">Send my position</string>
     <string name="search_position_stop">Stop sending my position</string>
-    <string name="search_result_count">%1$d results</string>
+    <plurals name="search_result_count">
+        <item quantity="one">%1$s result</item>
+        <item quantity="other">%1$s results</item>
+    </plurals>
+    <plurals name="search_count_pharmacy">
+        <item quantity="one">%1$s pharmacy</item>
+        <item quantity="other">%1$s pharmacies</item>
+    </plurals>
+    <plurals name="search_count_cafe">
+        <item quantity="one">%1$s cafe</item>
+        <item quantity="other">%1$s cafes</item>
+    </plurals>
+    <plurals name="search_count_supermarket">
+        <item quantity="one">%1$s supermarket</item>
+        <item quantity="other">%1$s supermarkets</item>
+    </plurals>
+    <plurals name="search_count_drinking_water">
+        <item quantity="one">%1$s drinking water source</item>
+        <item quantity="other">%1$s drinking water sources</item>
+    </plurals>
+    <plurals name="search_count_toilets">
+        <item quantity="one">%1$s toilet</item>
+        <item quantity="other">%1$s toilets</item>
+    </plurals>
+    <plurals name="search_count_shelter">
+        <item quantity="one">%1$s shelter</item>
+        <item quantity="other">%1$s shelters</item>
+    </plurals>
+    <plurals name="search_count_viewpoint">
+        <item quantity="one">%1$s viewpoint</item>
+        <item quantity="other">%1$s viewpoints</item>
+    </plurals>
+    <plurals name="search_count_campsite">
+        <item quantity="one">%1$s campsite</item>
+        <item quantity="other">%1$s campsites</item>
+    </plurals>
+    <plurals name="search_count_picnic_site">
+        <item quantity="one">%1$s picnic site</item>
+        <item quantity="other">%1$s picnic sites</item>
+    </plurals>
+    <string name="search_online_chip_off">Online · off</string>
+    <string name="search_online_chip_on">Online · on</string>
+    <string name="search_online_chip_description">Online search state</string>
     <string name="search_result_distance_metres">%1$d m</string>
     <string name="search_result_distance_kilometres">%1$.1f km</string>
     <string name="search_chip_show_on_map">Show %1$d on map</string>

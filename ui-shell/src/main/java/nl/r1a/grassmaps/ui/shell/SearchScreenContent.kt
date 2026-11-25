@@ -28,7 +28,28 @@ data class SearchResultRow(
     val address: String? = null,
     val distanceMeters: Double? = null,
     val openState: SearchOpenState? = null,
+    /** The category glyph, derived once from the exact index kind (T-0612). */
+    val iconKey: SearchCategoryIconKey = SearchCategoryIconKey.Pin,
 )
+
+/**
+ * The shell's category glyphs. Only kinds the shell can draw name one here;
+ * every other kind uses [SearchCategoryIconKey.Pin], the existing pin.
+ */
+enum class SearchCategoryIconKey {
+    Pin,
+    Water,
+}
+
+/**
+ * One derivation from an exact index kind to a shell category glyph. A kind the
+ * shell cannot draw falls back to the pin instead of inventing a glyph.
+ */
+fun searchCategoryIconKey(kind: String?): SearchCategoryIconKey =
+    when (kind) {
+        "amenity=drinking_water", "natural=spring" -> SearchCategoryIconKey.Water
+        else -> SearchCategoryIconKey.Pin
+    }
 
 /** The open state a hit carries, with the text already resolved for the locale. */
 data class SearchOpenState(
@@ -36,10 +57,11 @@ data class SearchOpenState(
     val isOpen: Boolean,
 )
 
-/** One map marker: the same result row's place, at its position. */
+/** One map marker: the same result row's place, at its position and glyph. */
 data class SearchMarker(
     val id: String,
     val position: GeoPoint,
+    val iconKey: SearchCategoryIconKey = SearchCategoryIconKey.Pin,
 )
 
 /**
@@ -82,10 +104,62 @@ fun searchResultView(
                     // A PlaceHit carries no opening hours, so no row can claim
                     // an open state. The field exists for a hit that has one.
                     openState = null,
+                    iconKey = searchCategoryIconKey(hit.kind),
                 )
             },
-        markers = hits.map { hit -> SearchMarker(id = hit.id, position = hit.position) },
+        markers =
+            hits.map { hit ->
+                SearchMarker(
+                    id = hit.id,
+                    position = hit.position,
+                    iconKey = searchCategoryIconKey(hit.kind),
+                )
+            },
     )
+
+/**
+ * The header's one subject: the exact kind when every row carries the same
+ * non-blank one, or null for the generic result word. A kind is never guessed
+ * from a name or a brand, so a mixed or untyped set stays generic.
+ */
+data class SearchResultCount(
+    val count: Int,
+    val kind: String? = null,
+)
+
+/** The header's subject, derived from the rows the screen actually draws. */
+fun searchResultCount(rows: List<SearchResultRow>): SearchResultCount {
+    val shared = rows.firstOrNull()?.kind?.takeIf { it.isNotBlank() } ?: return SearchResultCount(rows.size)
+    return if (rows.all { it.kind == shared }) {
+        SearchResultCount(rows.size, kind = shared)
+    } else {
+        SearchResultCount(rows.size)
+    }
+}
+
+/**
+ * The known kinds the header can name, with the plural string key that carries
+ * both the count and the noun. A kind outside this table has no label in the
+ * shell, so the header keeps the generic result word instead of inventing one.
+ */
+private val SEARCH_KIND_COUNT_KEYS =
+    mapOf(
+        "amenity=pharmacy" to "search_count_pharmacy",
+        "shop=pharmacy" to "search_count_pharmacy",
+        "amenity=cafe" to "search_count_cafe",
+        "shop=cafe" to "search_count_cafe",
+        "shop=supermarket" to "search_count_supermarket",
+        "amenity=drinking_water" to "search_count_drinking_water",
+        "natural=spring" to "search_count_drinking_water",
+        "amenity=toilets" to "search_count_toilets",
+        "amenity=shelter" to "search_count_shelter",
+        "tourism=viewpoint" to "search_count_viewpoint",
+        "tourism=campsite" to "search_count_campsite",
+        "tourism=picnic_site" to "search_count_picnic_site",
+    )
+
+/** The plural resource key for an exact index kind, or null when unknown. */
+fun searchKindCountKey(kind: String?): String? = SEARCH_KIND_COUNT_KEYS[kind]
 
 /** The IUGG mean Earth radius, the same constant the map and track geometry use. */
 private const val EARTH_RADIUS_METERS = 6_371_008.8
@@ -140,7 +214,16 @@ data class SearchScreenLabels(
     val onlineStoppedNoResults: String = "",
     val positionAllow: String = "",
     val positionStop: String = "",
+    /** The state chip mirrors the online switch; neither copy claims the other state. */
+    val onlineChipOff: String = "",
+    val onlineChipOn: String = "",
 )
+
+/** The online state chip copy, taken from the same switch the notice reads. */
+fun searchOnlineChipText(
+    labels: SearchScreenLabels,
+    onlineEnabled: Boolean,
+): String = if (onlineEnabled) labels.onlineChipOn else labels.onlineChipOff
 
 /** The action the online-search notice offers. */
 enum class SearchOnlineAction {

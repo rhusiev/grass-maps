@@ -33,8 +33,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -142,6 +144,8 @@ fun SearchScreenHost(
             onlineStoppedNoResults = stringResource(R.string.search_online_stopped_no_results),
             positionAllow = stringResource(R.string.search_position_allow),
             positionStop = stringResource(R.string.search_position_stop),
+            onlineChipOff = stringResource(R.string.search_online_chip_off),
+            onlineChipOn = stringResource(R.string.search_online_chip_on),
         )
     val onlineNotice = searchOnlineNotice(labels, onlineSearchEnabled, positionAllowed)
     // The field keeps its own text. A keystroke travels to the session and back
@@ -214,8 +218,14 @@ fun SearchScreenHost(
                         verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
                     ) {
                         if (content.count > 0) {
+                            val count = searchResultCount(content.rows)
                             BasicText(
-                                text = stringResource(R.string.search_result_count, content.count),
+                                text =
+                                    pluralStringResource(
+                                        searchCountPlural(count.kind),
+                                        count.count,
+                                        count.count.toString(),
+                                    ),
                                 style = secondaryStyle(colors),
                             )
                         }
@@ -263,6 +273,10 @@ fun SearchScreenHost(
                                 text = stringResource(R.string.search_chip_open_now),
                                 enabled = content.rows.any { it.openState != null },
                                 description = stringResource(R.string.search_chip_open_now_unavailable),
+                            )
+                            SearchChip(
+                                text = searchOnlineChipText(labels, onlineSearchEnabled),
+                                description = stringResource(R.string.search_online_chip_description),
                             )
                         }
                     }
@@ -346,7 +360,11 @@ private fun SearchMarkerDot(
         return
     }
     val colors = LocalShellColors.current
-    Box(
+    // The marker draws the row's derived glyph, so a kind cannot read as one
+    // category in the list and another on the map.
+    ShellIcon(
+        icon = marker.iconKey.icon(),
+        tint = colors.categories.pin,
         modifier =
             Modifier
                 .offset {
@@ -354,8 +372,7 @@ private fun SearchMarkerDot(
                         x = offset.xDp.dp.roundToPx(),
                         y = offset.yDp.dp.roundToPx(),
                     )
-                }.size(MARKER_SIZE_DP.dp)
-                .background(colors.categories.pin, RoundedCornerShape(MARKER_CORNER_DP.dp)),
+                }.size(MARKER_SIZE_DP.dp),
     )
 }
 
@@ -386,7 +403,7 @@ private fun SearchResultRowContent(
             contentAlignment = Alignment.Center,
         ) {
             ShellIcon(
-                icon = ShellIcons.Pin,
+                icon = row.iconKey.icon(),
                 tint = colors.categories.pin,
                 modifier = Modifier.size(CATEGORY_ICON_GLYPH_DP.dp),
             )
@@ -503,6 +520,31 @@ private fun SearchChip(
     )
 }
 
+/**
+ * The plural resource for the count header. A shared kind the shell can name
+ * gets its own noun; every other set keeps the generic result word.
+ */
+private fun searchCountPlural(kind: String?): Int =
+    when (searchKindCountKey(kind)) {
+        "search_count_pharmacy" -> R.plurals.search_count_pharmacy
+        "search_count_cafe" -> R.plurals.search_count_cafe
+        "search_count_supermarket" -> R.plurals.search_count_supermarket
+        "search_count_drinking_water" -> R.plurals.search_count_drinking_water
+        "search_count_toilets" -> R.plurals.search_count_toilets
+        "search_count_shelter" -> R.plurals.search_count_shelter
+        "search_count_viewpoint" -> R.plurals.search_count_viewpoint
+        "search_count_campsite" -> R.plurals.search_count_campsite
+        "search_count_picnic_site" -> R.plurals.search_count_picnic_site
+        else -> R.plurals.search_result_count
+    }
+
+/** The drawn shell glyph for a derived category, with the pin as the fallback. */
+private fun SearchCategoryIconKey.icon(): ImageVector =
+    when (this) {
+        SearchCategoryIconKey.Pin -> ShellIcons.Pin
+        SearchCategoryIconKey.Water -> ShellIcons.Drop
+    }
+
 private fun secondaryStyle(colors: ShellColors): TextStyle = TextStyle(color = colors.muted, fontSize = DETAIL_FONT_SP.sp)
 
 private const val CLOSE_GLYPH = "×"
@@ -532,7 +574,6 @@ private const val CATEGORY_ICON_TINT = 0.14f
 private const val METRES_PER_KILOMETRE = 1_000.0
 private const val CLOSE_PADDING_DP = 8
 private const val MARKER_SIZE_DP = 12
-private const val MARKER_CORNER_DP = 6
 private const val TITLE_FONT_SP = 20
 private const val FIELD_FONT_SP = 16
 private const val ROW_FONT_SP = 15

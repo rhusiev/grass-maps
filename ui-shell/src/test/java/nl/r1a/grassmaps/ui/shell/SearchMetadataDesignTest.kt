@@ -10,7 +10,7 @@ import org.junit.Test
 
 /**
  * T-0612 final-review P1: the search header names what was found, the row and
- * its marker share one category icon, and the online chip reads the real
+ * its marker share one category icon, and the online notice reads the real
  * switch. A `PlaceHit` carries no hours, so no open state is claimed.
  */
 class SearchMetadataDesignTest {
@@ -77,7 +77,7 @@ class SearchMetadataDesignTest {
     }
 
     @Test
-    fun theOnlineChipReadsTheEnabledSwitchAndKeepsTheNoticeAction() {
+    fun theOnlineNoticeKeepsItsEnableAction() {
         val labels =
             SearchScreenLabels(
                 title = "Search places",
@@ -86,13 +86,8 @@ class SearchMetadataDesignTest {
                 noMatches = "No matches",
                 notReady = "No index",
                 loading = "Searching",
-                onlineChipOff = "Online · off",
-                onlineChipOn = "Online · on",
                 onlineEnable = "Enable online search",
             )
-
-        assertEquals("Online · off", searchOnlineChipText(labels, onlineEnabled = false))
-        assertEquals("Online · on", searchOnlineChipText(labels, onlineEnabled = true))
 
         val notice = searchOnlineNotice(labels, onlineEnabled = false, positionAllowed = false)
         assertEquals("Enable online search", notice.action)

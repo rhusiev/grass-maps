@@ -4,6 +4,7 @@ import nl.r1a.grassmaps.plugin.api.model.GeoPoint
 import nl.r1a.grassmaps.plugin.api.provider.PlaceHit
 import nl.r1a.grassmaps.plugin.api.provider.PlaceSource
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -83,10 +84,23 @@ class SearchResultMetadataTest {
     }
 
     @Test
-    fun theMetadataLineLeadsWithKindThenAddress() {
+    fun theMetadataLineOmitsTheMachineTagAndKeepsTheAddress() {
         val row = searchResultView(listOf(hit("a", "Аптека", address = "Львів"))).rows.single()
 
-        assertEquals("place=square · Львів", searchResultMetadata(row))
+        assertEquals("Львів", searchResultMetadata(row))
+    }
+
+    @Test
+    fun noRawOsmTagReachesTheMetadataLine() {
+        val row =
+            searchResultView(
+                listOf(hit("a", "Cafe", kind = "amenity=cafe", address = "вул. Стрийська 45")),
+            ).rows.single()
+
+        val metadata = searchResultMetadata(row)
+
+        assertFalse("a machine tag must not reach the screen", metadata!!.contains('='))
+        assertEquals("вул. Стрийська 45", metadata)
     }
 
     @Test

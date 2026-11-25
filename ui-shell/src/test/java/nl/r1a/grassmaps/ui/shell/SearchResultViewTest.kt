@@ -27,10 +27,10 @@ class SearchResultViewTest {
     }
 
     @Test
-    fun aResultWithoutAnAddressFallsBackToItsKind() {
+    fun noRawOsmTagFallsBackToTheDetailLine() {
         val view = searchResultView(listOf(hit("a", "Площа Ринок", 49.8413, 24.0312, address = null)))
 
-        assertEquals("place=square", view.rows.single().detail)
+        assertNull("a raw OSM kind is not a human-readable fallback", view.rows.single().detail)
     }
 
     @Test

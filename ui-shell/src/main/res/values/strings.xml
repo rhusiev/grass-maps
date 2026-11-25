@@ -124,9 +124,6 @@
         <item quantity="one">%1$s picnic site</item>
         <item quantity="other">%1$s picnic sites</item>
     </plurals>
-    <string name="search_online_chip_off">Online · off</string>
-    <string name="search_online_chip_on">Online · on</string>
-    <string name="search_online_chip_description">Online search state</string>
     <string name="search_result_distance_metres">%1$d m</string>
     <string name="search_result_distance_kilometres">%1$.1f km</string>
     <string name="search_chip_show_on_map">Show %1$d on map</string>

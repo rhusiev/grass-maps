@@ -146,9 +146,6 @@
         <item quantity="many">%1$s місць для пікніка</item>
         <item quantity="other">%1$s місця для пікніка</item>
     </plurals>
-    <string name="search_online_chip_off">Онлайн · вимкнено</string>
-    <string name="search_online_chip_on">Онлайн · увімкнено</string>
-    <string name="search_online_chip_description">Стан онлайн-пошуку</string>
     <string name="search_result_distance_metres">%1$d м</string>
     <string name="search_result_distance_kilometres">%1$.1f км</string>
     <string name="search_chip_show_on_map">Показати %1$d на карті</string>

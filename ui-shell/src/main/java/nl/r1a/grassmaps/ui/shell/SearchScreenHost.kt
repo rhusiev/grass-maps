@@ -144,8 +144,6 @@ fun SearchScreenHost(
             onlineStoppedNoResults = stringResource(R.string.search_online_stopped_no_results),
             positionAllow = stringResource(R.string.search_position_allow),
             positionStop = stringResource(R.string.search_position_stop),
-            onlineChipOff = stringResource(R.string.search_online_chip_off),
-            onlineChipOn = stringResource(R.string.search_online_chip_on),
         )
     val onlineNotice = searchOnlineNotice(labels, onlineSearchEnabled, positionAllowed)
     // The field keeps its own text. A keystroke travels to the session and back
@@ -273,10 +271,6 @@ fun SearchScreenHost(
                                 text = stringResource(R.string.search_chip_open_now),
                                 enabled = content.rows.any { it.openState != null },
                                 description = stringResource(R.string.search_chip_open_now_unavailable),
-                            )
-                            SearchChip(
-                                text = searchOnlineChipText(labels, onlineSearchEnabled),
-                                description = stringResource(R.string.search_online_chip_description),
                             )
                         }
                     }

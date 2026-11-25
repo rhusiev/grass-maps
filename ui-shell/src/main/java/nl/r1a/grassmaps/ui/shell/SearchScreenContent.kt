@@ -9,14 +9,16 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * One result row: the place's name and its address; without an address, the
- * brand or operator it carries; without a brand, its kind (T-0204). [online]
+ * One result row: the place's name and its human-readable address or brand. An
+ * exact index kind is a machine tag such as `amenity=cafe`, so it stays in
+ * [kind] for the header and glyph but never becomes a displayed label. [online]
  * marks a row that came from the network (T-0212).
  *
  * The canon shows the kind, address, distance and open state as separate
  * fields (T-0612). Each is null when the hit carries no value for it, so the
  * screen omits the field rather than printing a guess. [detail] stays as the
- * one-line fallback for surfaces that have no room for the separate fields.
+ * one-line human-readable fallback for surfaces that have no room for the
+ * separate fields.
  */
 data class SearchResultRow(
     val id: String,
@@ -94,8 +96,7 @@ fun searchResultView(
                     name = hit.name,
                     detail =
                         hit.address?.takeIf { it.isNotBlank() }
-                            ?: hit.brand?.takeIf { it.isNotBlank() }
-                            ?: hit.kind.takeIf { it.isNotBlank() },
+                            ?: hit.brand?.takeIf { it.isNotBlank() },
                     online = hit.source == PlaceSource.ONLINE,
                     kind = hit.kind.takeIf { it.isNotBlank() },
                     brand = hit.brand?.takeIf { it.isNotBlank() },
@@ -180,18 +181,21 @@ fun searchDistanceMeters(
 }
 
 /**
- * The canon's one metadata line: the kind, then the address. A brand stands in
- * for the raw kind when the place has one, so a branch reads "АТБ" rather than
- * "shop=supermarket" (T-0204). Null when neither field carries a value, so the
- * screen never draws an empty line.
+ * The canon's one metadata line: a human-readable brand, then the address. An
+ * exact index kind is a machine tag such as `amenity=cafe`, so it never appears
+ * here; the header already names the category in plain words. Any machine tag
+ * is dropped rather than printed, so no raw `=` key reaches the screen. Null
+ * when neither field carries a human-readable value, so the screen never draws
+ * an empty line.
  */
 fun searchResultMetadata(row: SearchResultRow): String? =
-    listOfNotNull(row.brand ?: row.kind, row.address)
-        .filter { it.isNotBlank() }
+    listOfNotNull(row.brand, row.address)
+        .filter { it.isNotBlank() && !it.contains(MACHINE_TAG_SEPARATOR) }
         .joinToString(METADATA_SEPARATOR)
         .takeIf { it.isNotBlank() }
 
 private const val METADATA_SEPARATOR = " · "
+private const val MACHINE_TAG_SEPARATOR = '='
 
 /** The labels the screen draws, already resolved to the active language. */
 data class SearchScreenLabels(
@@ -214,16 +218,7 @@ data class SearchScreenLabels(
     val onlineStoppedNoResults: String = "",
     val positionAllow: String = "",
     val positionStop: String = "",
-    /** The state chip mirrors the online switch; neither copy claims the other state. */
-    val onlineChipOff: String = "",
-    val onlineChipOn: String = "",
 )
-
-/** The online state chip copy, taken from the same switch the notice reads. */
-fun searchOnlineChipText(
-    labels: SearchScreenLabels,
-    onlineEnabled: Boolean,
-): String = if (onlineEnabled) labels.onlineChipOn else labels.onlineChipOff
 
 /** The action the online-search notice offers. */
 enum class SearchOnlineAction {

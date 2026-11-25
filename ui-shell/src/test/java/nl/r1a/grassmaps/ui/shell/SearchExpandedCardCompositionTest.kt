@@ -89,18 +89,6 @@ class SearchExpandedCardCompositionTest {
     }
 
     @Test
-    fun theOnlineChipReadsTheLiveEnabledState() {
-        assertTrue(
-            "the chip copy is not derived from the switch",
-            source.contains("searchOnlineChipText(labels, onlineSearchEnabled)"),
-        )
-        assertTrue(
-            "the privacy notice action was removed",
-            source.contains("NoticeActionButton(action)"),
-        )
-    }
-
-    @Test
     fun theRowAndTheMarkerDrawOneDerivedCategoryIcon() {
         assertTrue(
             "the row still hardcodes the pin",
@@ -147,8 +135,24 @@ class SearchExpandedCardCompositionTest {
         assertTrue("no separate distance field", source.contains("row.distanceMeters"))
         assertTrue("no separate open-state field", source.contains("row.openState"))
         assertTrue("no category icon", source.contains("ShellIcons.Pin"))
-        assertTrue("no separate kind field", content.contains("row.brand ?: row.kind"))
+        assertTrue("a raw OSM tag must not reach the metadata line", !content.contains("row.brand ?: row.kind"))
         assertTrue("no separate address field", content.contains("row.address"))
+    }
+
+    @Test
+    fun theOnlineStateIsStatedOnceNotByADuplicateChip() {
+        assertTrue(
+            "a non-clickable chip repeats the notice's online state",
+            !source.contains("searchOnlineChipText("),
+        )
+        assertTrue(
+            "no duplicate online-state chip string is drawn",
+            !source.contains("R.string.search_online_chip_"),
+        )
+        assertTrue(
+            "the data-transparency notice action must stay",
+            source.contains("NoticeActionButton(action)"),
+        )
     }
 
     private companion object {

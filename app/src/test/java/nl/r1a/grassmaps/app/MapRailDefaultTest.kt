@@ -81,6 +81,32 @@ class MapRailDefaultTest {
         )
     }
 
+    /**
+     * Final blind review round 6 P2-4: the engine's pale logo sat at the window
+     * bottom, over the bottom bar's Search control. It must follow the same
+     * bottom-chrome reach the credit line reads, with its own clearance, so it
+     * rises above the bar instead of hiding behind it.
+     */
+    @Test
+    fun theLogoInsetFollowsTheBottomChrome() {
+        val source = File(HOST_FILE).readText()
+        val wiring = source.substringAfter("logoBottomInset =").substringBefore("distanceByTap")
+        assertTrue(
+            "the logo still sits at the window bottom under the bar",
+            wiring.contains("LocalBottomChrome.current?.insetPx") && wiring.contains("LOGO_CLEARANCE_DP"),
+        )
+    }
+
+    @Test
+    fun theMapLibreLogoClearsTheBarAndTheCreditLine() {
+        val logo = logo()
+        assertNoOverlap("the MapLibre logo", "the bottom bar", logo, bottomBar())
+        assertNoOverlap("the MapLibre logo", "the map credit", logo, credit())
+        assertNoOverlap("the MapLibre logo", "Layers", logo, layers())
+        assertNoOverlap("the MapLibre logo", "the scale bar", logo, scaleBar())
+        assertNoOverlap("the MapLibre logo", "the sheet chevron", logo, chevron())
+    }
+
     @Test
     fun theBottomRailStaysWithinOneThumbReach() {
         assertTrue("the clearance model only describes the arc rail", MapButtonLayout.DEFAULT.arc)
@@ -181,6 +207,28 @@ class MapRailDefaultTest {
         )
     }
 
+    /** The logo rises past the bar by the clearance the host declares. */
+    private fun logo(): Rect {
+        val bottom = bottomBar().top + sourceConstant("LOGO_CLEARANCE_DP")
+        return Rect(
+            left = ATTRIBUTION_MARGIN_DP,
+            right = ATTRIBUTION_MARGIN_DP + LOGO_WIDTH_DP,
+            bottom = bottom,
+            top = bottom + LOGO_HEIGHT_DP,
+        )
+    }
+
+    private fun sourceConstant(name: String): Int {
+        val declaration =
+            File(HOST_FILE)
+                .readText()
+                .lines()
+                .firstOrNull { it.trimStart().startsWith("private const val $name =") }
+                ?: throw AssertionError("MapScreen does not declare $name")
+        return declaration.substringAfter("=").trim().toIntOrNull()
+            ?: throw AssertionError("$name is not an integer dp constant")
+    }
+
     private fun assertNoOverlap(
         part: String,
         chrome: String,
@@ -227,6 +275,10 @@ class MapRailDefaultTest {
         const val CREDIT_LIFT_DP = 56
         const val CREDIT_WIDTH_DP = 190
         const val CREDIT_HEIGHT_DP = 24
+
+        // The engine's mark is drawn about 88x43 dp; bound it generously.
+        const val LOGO_WIDTH_DP = 96
+        const val LOGO_HEIGHT_DP = 48
 
         // Conservative glass box: the drawn value is narrower and shorter.
         const val SCALE_BAR_WIDTH_DP = 120

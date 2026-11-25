@@ -167,6 +167,7 @@ fun RoutePlanPanel(
     onApplyPreferences: (RouteOptions) -> Unit,
     onResetPreferences: () -> Unit,
     onDownloadMissing: () -> Unit = {},
+    onOpenDownloads: () -> Unit = {},
     preferUkrainian: Boolean = false,
     warnings: List<RouteWarningRow> = emptyList(),
     chart: ElevationChartState = ElevationChartState(),
@@ -263,7 +264,7 @@ fun RoutePlanPanel(
                 StatusLine(text, live = true)
                 when (failureNextStep(state.failure, state.missing != null)) {
                     FailureNextStep.DownloadAndRoute -> DownloadAndRouteButton(strings, onDownloadMissing)
-                    FailureNextStep.OpenDownloads -> StatusLine(routePlanDownloadGuidance(strings))
+                    FailureNextStep.OpenDownloads -> OpenDownloadsButton(strings, onOpenDownloads)
                     FailureNextStep.TextOnly -> Unit
                 }
             }
@@ -897,6 +898,37 @@ private fun StatusLine(
         style = TextStyle(color = ROUTE_STATUS_COLOR, fontSize = STATUS_FONT_SP.sp),
         // A planning status change is worth saying once, without interrupting.
         modifier = if (live) Modifier.semantics { liveRegion = LiveRegionMode.Polite } else Modifier,
+    )
+}
+
+/**
+ * The no-prompt pack failure's next step. It opens the Map downloads screen
+ * the Settings index row opens; it never calls the planner's download command,
+ * which needs a missing-region prompt the failure does not have (round-6 P2-5).
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun OpenDownloadsButton(
+    strings: Strings,
+    onClick: () -> Unit,
+) {
+    val label = routePlanDownloadGuidance(strings)
+    BasicText(
+        text = label,
+        style =
+            TextStyle(
+                color = ROUTE_VALUE_COLOR,
+                fontSize = ACTION_FONT_SP.sp,
+                fontWeight = FontWeight.Bold,
+            ),
+        modifier =
+            Modifier
+                .background(ROUTE_CHIP_COLOR, RoundedCornerShape(CHIP_CORNER_DP.dp))
+                .border(1.dp, ROUTE_CONTROL_BORDER, RoundedCornerShape(CHIP_CORNER_DP.dp))
+                .semantics { contentDescription = label }
+                .clickable(role = Role.Button, onClick = onClick)
+                .sizeIn(minHeight = CONTROL_TARGET_DP.dp)
+                .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp),
     )
 }
 

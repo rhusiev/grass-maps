@@ -347,6 +347,7 @@ fun MapSurfaceView(
     onManualPan: () -> Unit = {},
     onTap: (GeoPoint) -> Unit = {},
     creditBottomInset: Dp = 0.dp,
+    logoBottomInset: Dp = 0.dp,
 ) {
     val interactions = remember { MapGestures.interactions() }
     val uiOptions = remember { MapGestures.uiOptions() }
@@ -410,7 +411,16 @@ fun MapSurfaceView(
             state = surface.state,
             interactions = interactions,
             uiOptions = uiOptions,
-            overlay = { MaplibreLogo(Modifier.align(Alignment.BottomStart).padding(MapOverlay.Spacing)) },
+            // The logo follows the bottom chrome too: a fixed bottom-start
+            // placement put the pale mark over the bar's Search control.
+            overlay = {
+                MaplibreLogo(
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(MapOverlay.Spacing)
+                        .padding(bottom = logoBottomInset),
+                )
+            },
         )
         MapAttributionOverlay(
             style = surface.state.style,

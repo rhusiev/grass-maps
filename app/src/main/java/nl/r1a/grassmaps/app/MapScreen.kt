@@ -329,6 +329,13 @@ internal fun searchOverlayMode(
 internal const val MAP_BOTTOM_BAR_HEIGHT_DP = 60
 private const val MAP_CREDIT_CLEARANCE_DP = 12
 
+/**
+ * The gap between the MapLibre logo and the bottom chrome it must clear. The
+ * logo is about 43 dp tall, so it still sits below the credit line, which rises
+ * further by the arc lift, and above the bar's Search control.
+ */
+private const val LOGO_CLEARANCE_DP = 16
+
 /** The scale bar sits above Layers and clear of the Settings button. */
 private const val SCALE_BAR_GAP_DP = 24
 
@@ -1327,6 +1334,10 @@ private fun MapContent(
                             }
                         ).dp
                 },
+            logoBottomInset =
+                with(density) {
+                    (LocalBottomChrome.current?.insetPx ?: 0).toDp() + LOGO_CLEARANCE_DP.dp
+                },
             distanceByTap = container.distanceByTap,
             onDistanceMeasured = { meters -> distance = MapDistance.readout(meters) },
             onPointSelected = { point ->
@@ -2150,6 +2161,12 @@ private fun MapContent(
                     scope.launch {
                         invokePlannerCommand(container, RoutePlannerContract.resetPreferences, JsonObject(emptyMap()))
                     }
+                },
+                // The bare pack failure opens the same Map downloads screen
+                // the Settings index row opens. It never calls the planner's
+                // download command, which needs a region prompt it lacks.
+                onOpenDownloads = {
+                    DownloadsScreenSession.show()
                 },
                 onDownloadMissing = {
                     scope.launch {

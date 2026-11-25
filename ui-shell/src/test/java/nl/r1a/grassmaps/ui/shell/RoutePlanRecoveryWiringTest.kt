@@ -60,8 +60,47 @@ class RoutePlanRecoveryWiringTest {
         )
     }
 
+    /**
+     * Final blind review round 6 P2-5: naming Map downloads is not enough. The
+     * no-prompt pack failure must offer the same navigation the Settings index
+     * Map downloads row offers, as a full-height button, never the download
+     * command that the planner rejects without a region prompt.
+     */
+    @Test
+    fun aBarePackFailureDrawsARealOpenDownloadsButton() {
+        assertTrue(
+            "the bare pack failure still names Map downloads as plain text",
+            failed.contains("FailureNextStep.OpenDownloads -> OpenDownloadsButton(strings, onOpenDownloads)"),
+        )
+    }
+
+    @Test
+    fun theOpenDownloadsButtonKeepsThePanels48DpTouchTarget() {
+        val panel = File(PANEL_FILE).readText()
+        assertTrue("the panel has no Open downloads button", panel.contains("fun OpenDownloadsButton("))
+        val button = panel.substringAfter("fun OpenDownloadsButton(")
+        assertTrue(
+            "the Open downloads button is under 48 dp",
+            button.substringBefore("\n}").contains("CONTROL_TARGET_DP.dp"),
+        )
+    }
+
+    @Test
+    fun theRecoveryButtonOpensTheDownloadsScreenTheSettingsRowOpens() {
+        val plannerCall = File(MAP_FILE).readText().substringAfter("RoutePlanPanel(")
+        assertTrue(
+            "the panel is not given the downloads callback",
+            plannerCall.substringBefore("onDownloadMissing =").contains("onOpenDownloads = {"),
+        )
+        assertTrue(
+            "the downloads callback does not open the Map downloads screen",
+            plannerCall.substringAfter("onOpenDownloads = {").substringBefore("},").contains("DownloadsScreenSession.show()"),
+        )
+    }
+
     private companion object {
         const val PANEL_FILE = "src/main/java/nl/r1a/grassmaps/ui/shell/RoutePlanPanel.kt"
+        const val MAP_FILE = "../app/src/main/java/nl/r1a/grassmaps/app/MapScreen.kt"
         const val APP_ENGLISH = "../app/src/main/res/values/strings.xml"
         const val APP_UKRAINIAN = "../app/src/main/res/values-uk/strings.xml"
         const val GUIDANCE_KEY = "route_planner_open_downloads"

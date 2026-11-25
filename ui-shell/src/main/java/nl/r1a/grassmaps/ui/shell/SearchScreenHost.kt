@@ -81,7 +81,9 @@ private val SEARCH_EXPANDED_ANCHOR: Alignment = Alignment.BottomCenter
  * [cardModifier] adds edge padding to the field and the list; the app gives the
  * open list a top anchor and the closed field bottom-bar padding.
  * [collapsedAnchor] places only the closed field in this Box, so the open list
- * keeps its readable position above the keyboard.
+ * keeps its readable position above the keyboard. A host with
+ * [showCollapsedField] false draws no closed field at all; the app's single
+ * bottom bar supplies that entry point, and only the markers stay over the map.
  * The markers always use the full map viewport.
  * [onCollapsedCardSize] receives the size of the closed field, so a screen can
  * place its own elements below it at any font scale. When no offline index is
@@ -93,6 +95,7 @@ private val SEARCH_EXPANDED_ANCHOR: Alignment = Alignment.BottomCenter
 fun SearchScreenHost(
     hits: List<PlaceHit>,
     expanded: Boolean,
+    showCollapsedField: Boolean = true,
     onExpandedChange: (Boolean) -> Unit,
     loading: Boolean,
     failed: Boolean,
@@ -169,18 +172,20 @@ fun SearchScreenHost(
             )
         }
         if (!expanded) {
-            BasicText(
-                text = content.labels.title,
-                style = TextStyle(color = colors.ink, fontSize = FIELD_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
-                modifier =
-                    Modifier
-                        .align(collapsedAnchor)
-                        .then(cardModifier)
-                        .onSizeChanged(onCollapsedCardSize)
-                        .background(colors.glass, RoundedCornerShape(PANEL_CORNER_DP.dp))
-                        .clickable(role = Role.Button) { onExpandedChange(true) }
-                        .padding(FIELD_PADDING_DP.dp),
-            )
+            if (showCollapsedField) {
+                BasicText(
+                    text = content.labels.title,
+                    style = TextStyle(color = colors.ink, fontSize = FIELD_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
+                    modifier =
+                        Modifier
+                            .align(collapsedAnchor)
+                            .then(cardModifier)
+                            .onSizeChanged(onCollapsedCardSize)
+                            .background(colors.glass, RoundedCornerShape(PANEL_CORNER_DP.dp))
+                            .clickable(role = Role.Button) { onExpandedChange(true) }
+                            .padding(FIELD_PADDING_DP.dp),
+                )
+            }
         } else {
             LaunchedEffect(Unit) { focusRequester.requestFocus() }
             // The wrapper reserves the keyboard's space; the card aligns inside

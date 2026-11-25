@@ -301,6 +301,29 @@ private const val QUICK_ACCESS_BOTTOM_CLEARANCE_DP = 72
 // 48 dp tap target so opening search is as easy as pressing any other control.
 private const val SEARCH_COLLAPSED_MIN_HEIGHT_DP = 48
 
+/**
+ * What the map composes for search. The overlay stays alive after the expanded
+ * card closes, because its result markers must remain on the map until the
+ * results are cleared or replaced (train 101 follow-up). Only navigation hides
+ * the overlay. The collapsed mode draws no card and no old search pill: the
+ * single bottom bar owns the way back into search.
+ */
+internal enum class SearchOverlayMode {
+    HIDDEN,
+    MARKERS_ONLY,
+    EXPANDED,
+}
+
+internal fun searchOverlayMode(
+    navigationActive: Boolean,
+    searchExpanded: Boolean,
+): SearchOverlayMode =
+    when {
+        navigationActive -> SearchOverlayMode.HIDDEN
+        searchExpanded -> SearchOverlayMode.EXPANDED
+        else -> SearchOverlayMode.MARKERS_ONLY
+    }
+
 /** The single bar's height: its 48 dp dots sit inside a 60 dp pill. */
 internal const val MAP_BOTTOM_BAR_HEIGHT_DP = 60
 private const val MAP_CREDIT_CLEARANCE_DP = 12
@@ -1654,7 +1677,8 @@ private fun MapContent(
                     .padding(start = BAR_PADDING_DP.dp),
             )
         }
-        if (!navigationActive && searchExpanded) {
+        val searchMode = searchOverlayMode(navigationActive, searchExpanded)
+        if (searchMode != SearchOverlayMode.HIDDEN) {
             val setOnlineSearch: (Boolean) -> Unit = { enabled ->
                 scope.launch {
                     container.setOnlineSearchEnabled(enabled).onFailure { error ->
@@ -1666,7 +1690,8 @@ private fun MapContent(
             SearchOverlay(
                 surface = surface,
                 state = searchState,
-                expanded = searchExpanded,
+                expanded = searchMode == SearchOverlayMode.EXPANDED,
+                showCollapsedField = false,
                 onExpandedChange = { searchExpanded = it },
                 viewport = viewport,
                 anchorOffset = screenOffset,
@@ -3017,7 +3042,8 @@ private fun BottomBarChevron(
 /**
  * The search field and its result markers. The markers are projected from the
  * map's own camera, so this leaf is the one place that collects it: a pan
- * re-runs the markers, not the map content behind them.
+ * re-runs the markers, not the map content behind them. It is composed after a
+ * collapse too, so the markers stay on the map until the results change.
  */
 @Composable
 private fun MapStyleChoice.layerStyleRow(active: MapStyleChoice): LayerStyleRow {
@@ -3046,6 +3072,7 @@ private fun SearchOverlay(
     surface: MapSurface,
     state: SearchScreenState,
     expanded: Boolean,
+    showCollapsedField: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     viewport: IntSize,
     anchorOffset: ScreenOffset,
@@ -3066,6 +3093,7 @@ private fun SearchOverlay(
     SearchScreenHost(
         hits = state.hits,
         expanded = expanded,
+        showCollapsedField = showCollapsedField,
         onExpandedChange = onExpandedChange,
         loading = state.status == SearchScreenStatus.LOADING,
         failed = state.status == SearchScreenStatus.FAILED,
@@ -3092,7 +3120,8 @@ private fun SearchOverlay(
         modifier = Modifier.fillMaxSize(),
         // The host anchors the open card in the bottom thumb area and pads it
         // clear of the keyboard. The closed field belongs to the single bottom
-        // bar, so this overlay is composed only while search is expanded.
+        // bar, so the host suppresses its own collapsed pill; only the markers
+        // remain while the card is closed.
         cardModifier =
             Modifier
                 .navigationBarsPadding()

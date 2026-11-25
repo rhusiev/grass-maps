@@ -113,36 +113,29 @@ class SavedScreenContentTest {
     }
 
     @Test
-    fun anEyeTapSendsTheGroupAndTheNewShownValue() {
+    fun anEyeTapOnlySendsTheGroupAndTheNewShownValueToTheStore() {
         val received = mutableListOf<Pair<String, Boolean>>()
-        var hidden = setOf("Coffee")
         val show =
             groupVisibilityToggle(
                 groupName = "Coffee",
                 shown = false,
-                hiddenGroups = hidden,
-                onHiddenChange = { hidden = it },
                 onToggleGroupShown = { group, shown -> received += group to shown },
             )
 
         show()
 
         assertEquals(listOf("Coffee" to true), received)
-        assertEquals(emptySet<String>(), hidden)
 
         val hide =
             groupVisibilityToggle(
                 groupName = "Home & work",
                 shown = true,
-                hiddenGroups = hidden,
-                onHiddenChange = { hidden = it },
                 onToggleGroupShown = { group, shown -> received += group to shown },
             )
 
         hide()
 
         assertEquals(listOf("Coffee" to true, "Home & work" to false), received)
-        assertEquals(setOf("Home & work"), hidden)
     }
 
     @Test

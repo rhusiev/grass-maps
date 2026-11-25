@@ -2340,6 +2340,7 @@ private fun MapContent(
             FavouritesListsHost(
                 state = listsState,
                 strings = container.strings,
+                hiddenGroups = favouritesLayerSettings.hiddenGroups,
                 onCreateList = { name, color ->
                     scope.launch {
                         invokeListsCommand(container, FavouritesUiContract.createList, listParams("name" to name, "color" to color))

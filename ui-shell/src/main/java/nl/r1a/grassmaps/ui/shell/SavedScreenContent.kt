@@ -76,8 +76,9 @@ data class SavedScreenContent(
 
 /**
  * Derives the Saved screen from the one favourites state. The plugin owns the
- * lists and the browse view; this resolver only groups the points, applies the
- * local visibility choice and resolves labels. It never reads a file or a GPX.
+ * lists and the browse view; the caller supplies [hiddenGroups] from the
+ * persisted layer settings. This resolver groups the points, applies that
+ * visibility and resolves labels. It never reads a file or a GPX.
  */
 fun savedScreenContent(
     state: FavouriteListsState,
@@ -188,21 +189,14 @@ private fun savedActions(
 /**
  * The eye's click handler as data. The composable runs the returned function;
  * a JVM test can run it too and see which group and which value reach the app.
- * The hidden set is the optimistic local reflection of the store change.
+ * The persisted store is the only visibility state, so the eye only sends the
+ * new value to its setter and keeps no local copy that could drift.
  */
 internal fun groupVisibilityToggle(
     groupName: String,
     shown: Boolean,
-    hiddenGroups: Set<String>,
-    onHiddenChange: (Set<String>) -> Unit,
     onToggleGroupShown: (String, Boolean) -> Unit,
-): () -> Unit {
-    val nextShown = !shown
-    return {
-        onHiddenChange(if (nextShown) hiddenGroups - groupName else hiddenGroups + groupName)
-        onToggleGroupShown(groupName, nextShown)
-    }
-}
+): () -> Unit = { onToggleGroupShown(groupName, !shown) }
 
 private fun placesPhrase(
     count: Int,

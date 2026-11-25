@@ -53,15 +53,16 @@ import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
  * plugin for a new derived view; this shell draws the rows it is given, so the
  * matching, ordering and description rendering stay in one place.
  *
- * [onToggleGroupShown] carries an eye tap to the caller. It defaults to a no-op
- * because the app wiring waits on the owner of MapScreen; the app must pass the
- * favourites-layer setter before the eyes change the map.
+ * [hiddenGroups] is read from the persisted layer settings on every open, and
+ * [onToggleGroupShown] writes an eye tap back through the same store. Neither
+ * this host nor the Saved section keeps a second visibility state.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 fun FavouritesListsHost(
     state: FavouriteListsState,
     strings: Strings,
+    hiddenGroups: Set<String>,
     onCreateList: (name: String, color: String) -> Unit,
     onMovePoint: (pointId: String, list: String) -> Unit,
     onRecolourList: (list: String, color: String) -> Unit,
@@ -99,6 +100,7 @@ fun FavouritesListsHost(
             SavedScreenSection(
                 state = state,
                 strings = strings,
+                hiddenGroups = hiddenGroups,
                 query = query,
                 newListName = newName,
                 newListColor = newColor,

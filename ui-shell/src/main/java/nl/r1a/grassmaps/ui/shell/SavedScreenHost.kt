@@ -43,14 +43,17 @@ import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
  * map action is absent: the lists sheet has no "show saved on map" command, so
  * the resolver omits it rather than drawing a dead button.
  *
- * An eye tap sends [onToggleGroupShown] with the group and its new value. The
- * local hidden set is only the optimistic reflection until the store confirms.
+ * [hiddenGroups] comes from the persisted layer settings on every composition,
+ * so closing and reopening the sheet cannot reset the eyes. An eye tap sends
+ * [onToggleGroupShown] with the group and its new value; the store writes it
+ * and the next composition reads it back. There is no local visibility copy.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 fun SavedScreenSection(
     state: FavouriteListsState,
     strings: Strings,
+    hiddenGroups: Set<String>,
     query: String,
     newListName: String,
     newListColor: String,
@@ -60,7 +63,6 @@ fun SavedScreenSection(
     onCreateList: (String, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var hiddenGroups by remember { mutableStateOf(emptySet<String>()) }
     var expandedGroup by remember { mutableStateOf<String?>(null) }
     var segment by remember { mutableStateOf(SavedSegment.PLACES) }
     var searchOpen by remember { mutableStateOf(false) }
@@ -87,8 +89,6 @@ fun SavedScreenSection(
                                 groupVisibilityToggle(
                                     groupName = group.name,
                                     shown = group.shown,
-                                    hiddenGroups = hiddenGroups,
-                                    onHiddenChange = { hiddenGroups = it },
                                     onToggleGroupShown = onToggleGroupShown,
                                 ),
                             onToggleExpanded = {

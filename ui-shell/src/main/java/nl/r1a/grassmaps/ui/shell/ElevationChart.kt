@@ -239,11 +239,14 @@ fun ElevationChart(
     zone: ZoneId = ZoneId.systemDefault(),
     onRange: ((ElevationChartRange?) -> Unit)? = null,
     units: UnitSystem = UnitSystem.Metric,
+    showColour: Boolean = true,
+    showAlong: Boolean = false,
+    summary: String? = null,
 ) {
     var colour by remember { mutableStateOf(ElevationChartColour.Slope) }
     val content =
-        remember(state, strings, locale, zone, colour, units) {
-            elevationChartContent(state, strings, locale, zone, colour, units)
+        remember(state, strings, locale, zone, colour, units, showColour) {
+            elevationChartContent(state, strings, locale, zone, colour, units, showColour)
         }
     if (content == null) {
         return
@@ -259,41 +262,76 @@ fun ElevationChart(
                 .padding(CHART_PADDING_DP.dp),
         verticalArrangement = Arrangement.spacedBy(CHART_GAP_DP.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(CHIP_GAP_DP.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            BasicText(
-                text = content.title.uppercase(locale),
-                style =
-                    TextStyle(
-                        color = palette.label,
-                        fontSize = TITLE_FONT_SP.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = TITLE_LETTER_SPACING_SP.sp,
-                    ),
-            )
-            Box(Modifier.weight(1f))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(CHIP_GAP_DP.dp, Alignment.End),
-                verticalArrangement = Arrangement.spacedBy(CHIP_GAP_DP.dp),
+        if (showAlong) {
+            // The round-10 route details puts the axis chips under SHOW ALONG and
+            // the engine's up/down/steepest summary beside the Elevation title.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(CHIP_GAP_DP.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                content.axes.forEach { chip ->
-                    ElevationChip(
-                        label = chip.label,
-                        selected = chip.selected,
-                        palette = palette,
-                        onClick = { onAxis(chip.axis) },
+                BasicText(
+                    text = strings.resolve(SHOW_ALONG_KEY).uppercase(locale),
+                    style = sectionStyle(palette),
+                )
+                Box(Modifier.weight(1f))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(CHIP_GAP_DP.dp, Alignment.End),
+                    verticalArrangement = Arrangement.spacedBy(CHIP_GAP_DP.dp),
+                ) {
+                    content.axes.forEach { chip ->
+                        ElevationChip(
+                            label = chip.label,
+                            selected = chip.selected,
+                            palette = palette,
+                            onClick = { onAxis(chip.axis) },
+                        )
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BasicText(text = content.title.uppercase(locale), style = sectionStyle(palette))
+                if (summary != null) {
+                    Box(Modifier.weight(1f))
+                    BasicText(
+                        text = summary,
+                        style = TextStyle(color = palette.label, fontSize = SUMMARY_FONT_SP.sp),
                     )
                 }
-                content.colours.forEach { chip ->
-                    ElevationChip(
-                        label = chip.label,
-                        selected = chip.selected,
-                        palette = palette,
-                        onClick = { colour = chip.colour },
-                    )
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(CHIP_GAP_DP.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BasicText(text = content.title.uppercase(locale), style = sectionStyle(palette))
+                Box(Modifier.weight(1f))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(CHIP_GAP_DP.dp, Alignment.End),
+                    verticalArrangement = Arrangement.spacedBy(CHIP_GAP_DP.dp),
+                ) {
+                    content.axes.forEach { chip ->
+                        ElevationChip(
+                            label = chip.label,
+                            selected = chip.selected,
+                            palette = palette,
+                            onClick = { onAxis(chip.axis) },
+                        )
+                    }
+                    if (showColour) {
+                        content.colours.forEach { chip ->
+                            ElevationChip(
+                                label = chip.label,
+                                selected = chip.selected,
+                                palette = palette,
+                                onClick = { colour = chip.colour },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -781,6 +819,7 @@ private const val PLOT_HEIGHT_DP = 140
 private const val Y_LABEL_WIDTH_DP = 34
 private const val LABEL_GAP_DP = 6
 private const val TITLE_FONT_SP = 11
+private const val SUMMARY_FONT_SP = 11
 private const val TITLE_LETTER_SPACING_SP = 0.5f
 private const val LABEL_FONT_SP = 10
 private const val CHIP_FONT_SP = 12
@@ -820,6 +859,18 @@ private const val STRIP_SUMMARY_PADDING_HORIZONTAL_DP = 11
 private const val STRIP_SUMMARY_PADDING_VERTICAL_DP = 8
 private const val STRIP_SUMMARY_LINE_GAP_DP = 2
 private const val STRIP_SUMMARY_FONT_SP = 10.5f
+
+/** The section label above the axis chips in the route-details composition. */
+private const val SHOW_ALONG_KEY = "route_details_show_along"
+
+/** The section label style shared by SHOW ALONG and Elevation. */
+private fun sectionStyle(palette: ElevationChartPalette): TextStyle =
+    TextStyle(
+        color = palette.label,
+        fontSize = TITLE_FONT_SP.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = TITLE_LETTER_SPACING_SP.sp,
+    )
 
 /** A drag shorter than this share of the plot is a tap, not a range. */
 private const val MINIMUM_RANGE_SHARE = 0.02f

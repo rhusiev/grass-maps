@@ -52,6 +52,7 @@ import nl.r1a.grassmaps.plugin.api.provider.RouteOptions
 import nl.r1a.grassmaps.plugin.api.service.Strings
 import nl.r1a.grassmaps.plugin.api.unit.UnitText
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartAxis
+import nl.r1a.grassmaps.plugin.ui.api.ElevationChartRange
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartState
 import nl.r1a.grassmaps.plugin.ui.api.RouteTurnStep
 import java.util.Locale
@@ -169,6 +170,11 @@ fun RoutePlanPanel(
     val sections = routePlanSheetSections(view)
     val preview = routePlanPreview(state, strings, time = time, units = units)
     var detailsExpanded by remember(state.selected) { mutableStateOf(false) }
+    var selectedRange by remember(chart) { mutableStateOf<ElevationChartRange?>(null) }
+    // The drag reports distances; the chart's own engine samples supply the
+    // range statistics and the header, so no second range model is introduced.
+    val detailsChart = remember(chart, selectedRange) { chart.copy(selection = elevationRangeStats(chart, selectedRange)) }
+    val detailsSummary = remember(detailsChart, strings, units) { routeElevationSummary(detailsChart, strings, units = units)?.text }
     var preferencesVisible by remember { mutableStateOf(false) }
     var warningsVisible by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
@@ -258,15 +264,22 @@ fun RoutePlanPanel(
                     AnalysisDetailsToggle(
                         expanded = detailsExpanded,
                         strings = strings,
-                        onClick = { detailsExpanded = !detailsExpanded },
+                        onClick = {
+                            detailsExpanded = !detailsExpanded
+                            if (!detailsExpanded) selectedRange = null
+                        },
                     )
                     if (detailsExpanded) {
                         ElevationChart(
-                            state = chart,
+                            state = detailsChart,
                             strings = strings,
                             dark = dark,
                             onAxis = onChartAxis,
+                            onRange = { range -> selectedRange = range },
                             units = units,
+                            showColour = false,
+                            showAlong = true,
+                            summary = detailsSummary,
                         )
                     }
                 }

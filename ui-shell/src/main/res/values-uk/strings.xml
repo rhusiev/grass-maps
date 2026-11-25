@@ -202,6 +202,9 @@
     <string name="elevation_chart_way_steps">Сходи</string>
     <string name="elevation_chart_strip_share">%1$s%% %2$s</string>
 
+    <string name="route_details_show_along">Вздовж маршруту</string>
+    <string name="route_details_steepest">максимальний нахил %1$s%%</string>
+
     <string name="relation_analysis_untitled">Маршрут</string>
     <string name="relation_analysis_ref">№ %1$s</string>
     <string name="relation_analysis_close">Закрити графік маршруту</string>

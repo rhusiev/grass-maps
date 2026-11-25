@@ -6,6 +6,8 @@ import nl.r1a.grassmaps.plugin.api.unit.UnitStrings
 import nl.r1a.grassmaps.plugin.api.unit.UnitText
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartPoint
+import nl.r1a.grassmaps.plugin.ui.api.ElevationChartRange
+import nl.r1a.grassmaps.plugin.ui.api.ElevationChartRangeStats
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartState
 import java.time.Instant
 import java.time.ZoneId
@@ -13,6 +15,8 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.ceil
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToLong
 
 /*
@@ -123,6 +127,7 @@ fun elevationChartContent(
     zone: ZoneId = ZoneId.systemDefault(),
     colour: ElevationChartColour = ElevationChartColour.Slope,
     units: UnitSystem = UnitSystem.Metric,
+    showColour: Boolean = true,
 ): ElevationChartContent? {
     if (!state.isDrawable) {
         return null
@@ -149,7 +154,9 @@ fun elevationChartContent(
         axis = axis,
         colour = colour,
         axes = axisChips(state, strings),
-        colours = colourChips(strings, colour),
+        // The round-10 route details draws no colour selector; track analysis
+        // keeps the chips. An empty list draws none without a second chip type.
+        colours = if (showColour) colourChips(strings, colour) else emptyList(),
         line = line,
         fills = fills(state, line, colour, minElevation, maxElevation),
         legend = legend(colour, minElevation, maxElevation, strings, units),
@@ -270,6 +277,194 @@ private fun band(state: ElevationChartState): ElevationChartBand? {
         return null
     }
     return ElevationChartBand(startFraction = start, endFraction = end)
+}
+
+/**
+ * The route-details header of round 10: the engine's gain, loss and steepest
+ * grade over the selected range, or over the whole profile when no range is
+ * selected. A value the engine did not measure is left out, never invented.
+ */
+data class RouteElevationSummary(
+    val up: String?,
+    val down: String?,
+    val steepest: String?,
+) {
+    /** The single line drawn beside the Elevation title, or null when empty. */
+    val text: String?
+        get() {
+            val base = listOfNotNull(up, down).joinToString(SUMMARY_GAP)
+            return when {
+                base.isEmpty() -> steepest
+                steepest == null -> base
+                else -> "$base$SUMMARY_SEPARATOR$steepest"
+            }
+        }
+}
+
+/**
+ * The header for [state]. A selection only bounds the samples it reads; the
+ * gain, the loss and the steepest step all come from the same engine samples the
+ * chart drew, so the header cannot disagree with the line or use a net average
+ * grade where the design asks for the steepest one.
+ */
+fun routeElevationSummary(
+    state: ElevationChartState,
+    strings: Strings,
+    locale: Locale = Locale.getDefault(),
+    units: UnitSystem = UnitSystem.Metric,
+): RouteElevationSummary? {
+    val points = state.points
+    if (points.size < MINIMUM_POINTS) {
+        return null
+    }
+    val range = state.selection?.range
+    val start = range?.startMeters ?: points.first().distanceMeters
+    val end = range?.endMeters ?: points.last().distanceMeters
+    val gains = elevationGains(state, start, end) ?: return null
+    val up =
+        gains.ascentMeters.takeIf { it.isFinite() && it > 0.0 }?.let { metres ->
+            UnitText.elevationLabel(metres, units, strings, UP_KEY, UP_FEET_KEY)
+        }
+    val down =
+        gains.descentMeters.takeIf { it.isFinite() && it > 0.0 }?.let { metres ->
+            UnitText.elevationLabel(metres, units, strings, DOWN_KEY, DOWN_FEET_KEY)
+        }
+    val steepest =
+        gains.steepestGradePercent.takeIf { it.isFinite() && it > 0.0 }?.let { percent ->
+            strings.resolve(STEEPEST_KEY, listOf(percent.roundToLong().toString()))
+        }
+    return RouteElevationSummary(up, down, steepest)
+}
+
+/**
+ * The engine's statistics for a range dragged on the chart, in the chart's
+ * vocabulary. The chart reports distances; the shell reads the samples it drew
+ * between those distances, so the selection keeps one source of truth.
+ */
+fun elevationRangeStats(
+    state: ElevationChartState,
+    range: ElevationChartRange?,
+): ElevationChartRangeStats? {
+    val points = state.points
+    if (points.size < MINIMUM_POINTS) {
+        return null
+    }
+    val first = points.first().distanceMeters
+    val last = points.last().distanceMeters
+    val start = if (range == null) first else min(range.startMeters, range.endMeters).coerceIn(first, last)
+    val end = if (range == null) last else max(range.startMeters, range.endMeters).coerceIn(first, last)
+    val gains = elevationGains(state, start, end) ?: return null
+    return ElevationChartRangeStats(
+        range = ElevationChartRange(start, end),
+        distanceMeters = end - start,
+        ascentMeters = gains.ascentMeters,
+        descentMeters = gains.descentMeters,
+        averageGradePercent = (gains.ascentMeters - gains.descentMeters) / (end - start) * PERCENT,
+        durationMillis =
+            elapsedAt(points, start)?.let { from ->
+                elapsedAt(points, end)?.let { to -> (to - from).takeIf { it > 0L } }
+            },
+    )
+}
+
+/** The engine samples' gain, loss and steepest step between two distances. */
+private data class ElevationGains(
+    val ascentMeters: Double,
+    val descentMeters: Double,
+    val steepestGradePercent: Double,
+)
+
+private fun elevationGains(
+    state: ElevationChartState,
+    start: Double,
+    end: Double,
+): ElevationGains? {
+    if (end - start <= MINIMUM_RANGE_METERS) {
+        return null
+    }
+    val startElevation = elevationAt(state.points, start) ?: return null
+    val endElevation = elevationAt(state.points, end) ?: return null
+    var ascent = 0.0
+    var descent = 0.0
+    var steepest = 0.0
+    var previousDistance = start
+    var previousElevation = startElevation
+    val steps =
+        state.points.filter { it.distanceMeters > start && it.distanceMeters < end } +
+            listOf(ElevationChartPoint(distanceMeters = end, elevationMeters = endElevation))
+    for (step in steps) {
+        val span = step.distanceMeters - previousDistance
+        if (span > 0.0) {
+            val delta = step.elevationMeters - previousElevation
+            if (delta > 0.0) {
+                ascent += delta
+            } else {
+                descent -= delta
+            }
+            val grade = abs(delta / span * PERCENT)
+            if (grade > steepest) {
+                steepest = grade
+            }
+        }
+        previousDistance = step.distanceMeters
+        previousElevation = step.elevationMeters
+    }
+    return ElevationGains(ascent, descent, steepest)
+}
+
+/** The engine's elevation at [distanceMeters], interpolated between its samples. */
+private fun elevationAt(
+    points: List<ElevationChartPoint>,
+    distanceMeters: Double,
+): Double? {
+    val first = points.firstOrNull() ?: return null
+    if (distanceMeters <= first.distanceMeters) {
+        return first.elevationMeters
+    }
+    for (index in 1 until points.size) {
+        val before = points[index - 1]
+        val after = points[index]
+        if (distanceMeters > after.distanceMeters) {
+            continue
+        }
+        val span = after.distanceMeters - before.distanceMeters
+        if (span <= 0.0) {
+            return after.elevationMeters
+        }
+        val share = ((distanceMeters - before.distanceMeters) / span).coerceIn(0.0, 1.0)
+        return before.elevationMeters + (after.elevationMeters - before.elevationMeters) * share
+    }
+    return points.last().elevationMeters
+}
+
+/** The engine's elapsed time at [distanceMeters], or null when a sample has no time. */
+private fun elapsedAt(
+    points: List<ElevationChartPoint>,
+    distanceMeters: Double,
+): Long? {
+    if (points.any { it.elapsedMillis == null }) {
+        return null
+    }
+    val first = points.first()
+    if (distanceMeters <= first.distanceMeters) {
+        return first.elapsedMillis
+    }
+    for (index in 1 until points.size) {
+        val before = points[index - 1]
+        val after = points[index]
+        if (distanceMeters > after.distanceMeters) {
+            continue
+        }
+        val span = after.distanceMeters - before.distanceMeters
+        val beforeTime = requireNotNull(before.elapsedMillis)
+        val afterTime = requireNotNull(after.elapsedMillis)
+        if (span <= 0.0) {
+            return afterTime
+        }
+        val share = ((distanceMeters - before.distanceMeters) / span).coerceIn(0.0, 1.0)
+        return beforeTime + ((afterTime - beforeTime) * share).toLong()
+    }
+    return points.last().elapsedMillis
 }
 
 /** The first and last value of [state]'s effective axis, null when one is missing. */
@@ -721,6 +916,14 @@ private const val LEGEND_ALTITUDE_FEET_KEY = "elevation_chart_legend_altitude_fe
 private const val MINUTES_KEY = "elevation_chart_minutes"
 private const val HOURS_KEY = "elevation_chart_hours"
 private const val HOURS_MINUTES_KEY = "elevation_chart_hours_minutes"
+private const val UP_KEY = "elevation_chart_range_ascent"
+private const val UP_FEET_KEY = "elevation_chart_range_ascent_feet"
+private const val DOWN_KEY = "elevation_chart_range_descent"
+private const val DOWN_FEET_KEY = "elevation_chart_range_descent_feet"
+private const val STEEPEST_KEY = "route_details_steepest"
+private const val SUMMARY_GAP = "  "
+private const val SUMMARY_SEPARATOR = " · "
+private const val MINIMUM_RANGE_METERS = 0.001
 
 private const val COUNT_BETWEEN_TICKS = 3
 private const val MAXIMUM_TICKS = 6

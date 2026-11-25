@@ -26,10 +26,21 @@ class SavedVisibilityWiringTest {
 
     @Test
     fun theSavedSheetReadsVisibilityFromThePersistedStore() {
-        val hostCall = callBlock(mapScreen, "FavouritesListsHost(")
+        // The two sheet call sites pass the store to one shared helper, which
+        // forwards it to the list host. Assert the whole chain, not one call.
+        val helper = callBlock(mapScreen, "FavouritesListsHost(")
+        assertTrue(
+            "the shared helper does not forward hidden groups to Saved",
+            helper.contains("hiddenGroups = hiddenGroups"),
+        )
+        val legacyCall = callBlock(mapScreen, "MapSavedListsHost(")
         assertTrue(
             "the map does not pass the persisted hidden groups to Saved",
-            hostCall.contains("hiddenGroups = favouritesLayerSettings.hiddenGroups"),
+            legacyCall.contains("hiddenGroups = favouritesLayerSettings.hiddenGroups"),
+        )
+        assertTrue(
+            "the chevron sheet does not pass the persisted hidden groups to Saved",
+            mapScreen.substringAfter("if (widgetsSavedSheetOpen").contains("hiddenGroups = favouritesLayerSettings.hiddenGroups"),
         )
         assertTrue(
             "the lists host does not accept the persisted hidden groups",

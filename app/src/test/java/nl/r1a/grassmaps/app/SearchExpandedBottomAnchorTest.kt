@@ -17,7 +17,7 @@ class SearchExpandedBottomAnchorTest {
 
     @Test
     fun theExpandedCardNoLongerUsesTopStatusBarPadding() {
-        val expanded = source.substringAfter("if (expanded) {").substringBefore("collapsedAnchor =")
+        val expanded = source.substringAfter("cardModifier =").substringBefore("onlineSearchEnabled =")
         assertFalse(
             "the expanded card still opens below the status bar",
             expanded.contains(".statusBarsPadding()"),

@@ -53,9 +53,14 @@ class RoutePlanPanelViewTest {
 
         assertTrue("Map Back is enabled only while a map overlay is visible", handler != null)
         val (enabled, actions) = requireNotNull(handler).destructured
-        assertEquals("searchExpanded || plannerSheetShown || layersSheetShown", enabled)
+        assertEquals("widgetsSavedSheetOpen || searchExpanded || plannerSheetShown || layersSheetShown", enabled)
         assertEquals(
-            listOf("searchExpanded -> searchExpanded = false", "plannerSheetShown -> closePlan()", "layersSheetShown -> dismissLayers()"),
+            listOf(
+                "widgetsSavedSheetOpen -> widgetsSavedSheetOpen = false",
+                "searchExpanded -> searchExpanded = false",
+                "plannerSheetShown -> closePlan()",
+                "layersSheetShown -> dismissLayers()",
+            ),
             actions.trim().lines().map { it.trim() },
         )
     }

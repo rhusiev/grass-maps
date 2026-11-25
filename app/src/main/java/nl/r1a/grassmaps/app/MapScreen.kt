@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -76,6 +77,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -146,6 +148,7 @@ import nl.r1a.grassmaps.plugin.api.model.FavouritePointSummary
 import nl.r1a.grassmaps.plugin.api.model.FavouriteSort
 import nl.r1a.grassmaps.plugin.api.model.FavouriteSpecial
 import nl.r1a.grassmaps.plugin.api.model.GeoPoint
+import nl.r1a.grassmaps.plugin.api.model.ProfileId
 import nl.r1a.grassmaps.plugin.api.model.RouteHistoryEntry
 import nl.r1a.grassmaps.plugin.api.model.RoutePlanPoint
 import nl.r1a.grassmaps.plugin.api.model.RoutePlanRole
@@ -257,6 +260,7 @@ import nl.r1a.grassmaps.ui.shell.TrackMapCard
 import nl.r1a.grassmaps.ui.shell.TrackMapCardAction
 import nl.r1a.grassmaps.ui.shell.TrackMapCardHost
 import nl.r1a.grassmaps.ui.shell.TrackTap
+import nl.r1a.grassmaps.ui.shell.WidgetsSavedSheet
 import nl.r1a.grassmaps.ui.shell.ZoomSliderContent
 import nl.r1a.grassmaps.ui.shell.aboveBottomSheet
 import nl.r1a.grassmaps.ui.shell.followTrackSheetDisplay
@@ -293,18 +297,16 @@ internal const val BAR_PADDING_DP = 16
 /** Clearance above the map credit and the Layers button when the arc is on. */
 private const val QUICK_ACCESS_BOTTOM_CLEARANCE_DP = 72
 
-// T-0612: the collapsed search field shares the bottom chrome with the profile
-// switcher. BottomStart puts it left of those buttons; it reports its own top
-// edge so the map credit clears it. 48 dp is the shell's tap target, so the
-// closed pill is as easy to open as any other control.
-private val SEARCH_COLLAPSED_ANCHOR: Alignment = Alignment.BottomStart
+// T-0612: Search is the first child of the one bottom bar. It keeps its own
+// 48 dp tap target so opening search is as easy as pressing any other control.
 private const val SEARCH_COLLAPSED_MIN_HEIGHT_DP = 48
-private const val SEARCH_PILL_BOTTOM_DP = QUICK_ACCESS_BOTTOM_CLEARANCE_DP
+
+/** The single bar's height: its 48 dp dots sit inside a 60 dp pill. */
+internal const val MAP_BOTTOM_BAR_HEIGHT_DP = 60
 private const val MAP_CREDIT_CLEARANCE_DP = 12
 
 /** The scale bar sits above Layers and clear of the Settings button. */
 private const val SCALE_BAR_GAP_DP = 24
-private val SEARCH_PILL_CHROME_KEY: Any = Any()
 
 /** How often a by-sun theme recomputes the day boundary (T-0111). */
 private const val SUN_REFRESH_MILLIS = 30_000L
@@ -340,7 +342,6 @@ private val PROFILE_SWITCH_KEY: Any = Any()
  */
 internal const val PROFILE_SWITCH_DROP_DP = 4
 internal const val PROFILE_SWITCH_CREDIT_GAP_DP = 16
-private const val SETTINGS_ENTRY_GAP_DP = 8
 
 /**
  * The chevron at the right end of the bottom bar opens the widgets and Saved
@@ -348,6 +349,13 @@ private const val SETTINGS_ENTRY_GAP_DP = 8
  */
 internal const val SHEET_CHEVRON_TARGET_DP = 48
 private const val SHEET_CHEVRON_GLYPH_DP = 24
+private const val BAR_INSET_DP = 6
+private const val BAR_SLOT_GAP_DP = 8
+private const val BAR_SEARCH_GAP_DP = 8
+private const val BAR_SEARCH_MIN_WIDTH_DP = 104
+private const val BAR_SEARCH_FONT_SP = 16
+private const val DIVIDER_WIDTH_DP = 1
+private const val DIVIDER_HEIGHT_DP = 28
 
 internal const val ARC_BOTTOM_CLEARANCE_DP = 120
 internal const val WIDGET_GRID_GAP_DP = 8
@@ -786,7 +794,6 @@ private fun MapContent(
     // from the sheet and one from the grid see the same layout.
     val widgetController = remember(container, profile) { container.widgetLayoutController(profile) }
     val widgetState by widgetController.state.collectAsState()
-    var searchCardHeightPx by remember { mutableIntStateOf(0) }
     var controlBarWidthPx by remember { mutableIntStateOf(0) }
     // The bar's buttons and labels are built from the layout, the mode and the
     // strings, so a camera frame, a fix or a banner does not rebuild them.
@@ -811,6 +818,7 @@ private fun MapContent(
     val searchState by container.searchScreen.state.collectAsState()
     val searchSequence = remember { longArrayOf(0L) }
     var searchExpanded by remember { mutableStateOf(false) }
+    var widgetsSavedSheetOpen by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { MapChromeSession.search.collect { searchExpanded = it } }
     var onlineSearchEnabled by remember { mutableStateOf(container.onlineSearchEnabled) }
     val positionAllowed by
@@ -1260,8 +1268,9 @@ private fun MapContent(
         }
     }
     // Full-screen destinations are composed later, so their Back handlers win.
-    BackHandler(enabled = !navigationActive && (searchExpanded || plannerSheetShown || layersSheetShown)) {
+    BackHandler(enabled = !navigationActive && (widgetsSavedSheetOpen || searchExpanded || plannerSheetShown || layersSheetShown)) {
         when {
+            widgetsSavedSheetOpen -> widgetsSavedSheetOpen = false
             searchExpanded -> searchExpanded = false
             plannerSheetShown -> closePlan()
             layersSheetShown -> dismissLayers()
@@ -1380,7 +1389,7 @@ private fun MapContent(
                         .statusBarsPadding()
                         .padding(
                             start = BAR_PADDING_DP.dp,
-                            top = (BAR_PADDING_DP + WIDGET_GRID_GAP_DP).dp + with(density) { searchCardHeightPx.toDp() },
+                            top = (BAR_PADDING_DP + WIDGET_GRID_GAP_DP + MAP_BOTTOM_BAR_HEIGHT_DP).dp,
                             end = topControlBarEndInset(with(density) { controlBarWidthPx.toDp() }),
                         ),
             )
@@ -1515,52 +1524,30 @@ private fun MapContent(
                         .padding(start = BAR_PADDING_DP.dp, bottom = QUICK_ACCESS_BOTTOM_CLEARANCE_DP.dp),
             )
         }
-        // The prototype's profile bar sits in the bottom control area, centred
-        // between the quick-access button at the start and Layers at the end.
-        // It stays clear of an open sheet and of the full profiles screen.
+        // The approved single bar: Search, the three pinned dots and the grid,
+        // then the chevron. It owns the one bottom-chrome reach. Settings moved
+        // to the chevron's sheet footer, so no second bottom row is composed.
         if (!navigationActive && profilesPage == null && (bottomChrome?.reachOf(BOTTOM_SHEET_KEY) ?: 0) == 0) {
-            Column(
+            MapBottomBar(
+                chromeKey = PROFILE_SWITCH_KEY,
+                searchLabel = stringResource(ShellStrings.string.search_title),
+                sheetLabel = sheetOpenLabel,
+                active = profile,
+                onOpenSearch = { searchExpanded = true },
+                onSelectProfile = container.activeProfile::activate,
+                onOpenAllProfiles = { ProfilesScreenSession.show() },
+                onOpenSheet = {
+                    FavouritesListsSession.hide()
+                    widgetsSavedSheetOpen = true
+                },
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
                         .padding(horizontal = BAR_PADDING_DP.dp)
+                        .padding(bottom = BAR_PADDING_DP.dp)
                         .offset(y = PROFILE_SWITCH_DROP_DP.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                // The credit reads the tallest bottom-chrome reach. Reporting
-                // this spacer lifts it clear without moving the bar again.
-                Spacer(
-                    Modifier
-                        .height(PROFILE_SWITCH_CREDIT_GAP_DP.dp)
-                        .reportsBottomChrome(key = PROFILE_SWITCH_KEY),
-                )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(SETTINGS_ENTRY_GAP_DP.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    ProfileSwitchBar(
-                        active = profile,
-                        onSelect = container.activeProfile::activate,
-                        onOpenAll = { ProfilesScreenSession.show() },
-                    )
-                    // No user-visible path to settings existed: every profile
-                    // control and the Layers More row open all profiles, and the
-                    // only ScreenSettingsSession.show() caller was a debug
-                    // command. This button is the smallest honest UI entry.
-                    SettingsEntryButton(
-                        label = settingsEntryLabel,
-                        onClick = SettingsIndexSession::show,
-                    )
-                    // The right end of the bar opens the widgets and Saved sheet.
-                    // This slice reuses the saved-lists host; the widgets tray
-                    // is not added here and is recorded as a deviation.
-                    BottomBarChevron(
-                        label = sheetOpenLabel,
-                        onClick = { FavouritesListsSession.show() },
-                    )
-                }
-            }
+            )
         }
         if (!navigationActive) {
             layoutSheetTab?.let { tab ->
@@ -1667,7 +1654,7 @@ private fun MapContent(
                     .padding(start = BAR_PADDING_DP.dp),
             )
         }
-        if (!navigationActive) {
+        if (!navigationActive && searchExpanded) {
             val setOnlineSearch: (Boolean) -> Unit = { enabled ->
                 scope.launch {
                     container.setOnlineSearchEnabled(enabled).onFailure { error ->
@@ -1784,7 +1771,6 @@ private fun MapContent(
                 positionAllowed = positionAllowed,
                 onEnableOnlineSearch = { setOnlineSearch(true) },
                 onDisableOnlineSearch = { setOnlineSearch(false) },
-                onCollapsedCardSize = { size -> searchCardHeightPx = size.height },
                 onAllowPosition = { allowed ->
                     scope.launch {
                         withContext(Dispatchers.IO) {
@@ -2359,72 +2345,51 @@ private fun MapContent(
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        if (listsVisible && !navigationActive) {
+        if (listsVisible && !navigationActive && !widgetsSavedSheetOpen) {
             BackHandler { FavouritesListsSession.hide() }
-            val listsFlow =
-                remember(container) {
-                    container.streamAccess.subscribe<FavouriteListsState>(FavouritesUiContract.listsStream)
-                }
-            val listsState by listsFlow.collectAsState(initial = FavouriteListsState())
-            FavouritesListsHost(
-                state = listsState,
-                strings = container.strings,
+            MapSavedListsHost(
+                container = container,
+                scope = scope,
+                querySequence = listsQuerySequence,
                 hiddenGroups = favouritesLayerSettings.hiddenGroups,
-                onCreateList = { name, color ->
-                    scope.launch {
-                        invokeListsCommand(container, FavouritesUiContract.createList, listParams("name" to name, "color" to color))
-                    }
-                },
-                onMovePoint = { pointId, list ->
-                    scope.launch {
-                        invokeListsCommand(container, FavouritesUiContract.movePoint, listParams("pointId" to pointId, "list" to list))
-                    }
-                },
-                onRecolourList = { list, color ->
-                    scope.launch {
-                        invokeListsCommand(container, FavouritesUiContract.recolourList, listParams("list" to list, "color" to color))
-                    }
-                },
-                onSetSpecial = { pointId, special ->
-                    val command =
-                        when (special) {
-                            FavouriteSpecial.HOME -> FavouritesUiContract.setHome
-                            FavouriteSpecial.WORK -> FavouritesUiContract.setWork
-                        }
-                    scope.launch {
-                        invokeListsCommand(container, command, listParams("pointId" to pointId))
-                    }
-                },
-                onUndo = {
-                    scope.launch {
-                        invokeListsCommand(container, FavouritesUiContract.undo, JsonObject(emptyMap()))
-                    }
-                },
-                onQueryChange = { query ->
-                    listsQuerySequence[0] += 1
-                    val sequence = listsQuerySequence[0]
-                    scope.launch {
-                        invokeListsCommand(
-                            container,
-                            FavouritesUiContract.setQuery,
-                            listParams("query" to query, "sequence" to sequence.toString()),
-                        )
-                    }
-                },
-                onSortChange = { sort ->
-                    scope.launch {
-                        invokeListsCommand(container, FavouritesUiContract.setSort, listParams("sort" to sort.wireName))
-                    }
-                },
+                embedded = false,
                 onClose = { FavouritesListsSession.hide() },
-                onToggleGroupShown = { group, shown ->
-                    scope.launch {
-                        withContext(Dispatchers.IO) {
-                            container.favouritesLayerSettings.setGroupShown(group, shown)
-                        }.onFailure { error ->
-                            Log.w(TAG, "saved list visibility not saved: $error")
-                        }
-                    }
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        // The chevron's sheet holds the live widgets above the saved lists. The
+        // widget grid stays read-only here: the layout sheet owns editing, and a
+        // second editable grid would give the same controller two owners.
+        if (widgetsSavedSheetOpen && !navigationActive) {
+            WidgetsSavedSheet(
+                sheetTitle = sheetOpenLabel,
+                widgetsTitle = stringResource(ShellStrings.string.map_sheet_widgets_title),
+                savedTitle = stringResource(ShellStrings.string.map_sheet_saved_title),
+                widgetsNote = stringResource(ShellStrings.string.map_sheet_widgets_read_only),
+                settingsLabel = settingsEntryLabel,
+                closeLabel = stringResource(ShellStrings.string.search_close),
+                onOpenSettings = {
+                    widgetsSavedSheetOpen = false
+                    SettingsIndexSession.show()
+                },
+                onDismiss = { widgetsSavedSheetOpen = false },
+                widgets = {
+                    WidgetGridHost(
+                        container = container,
+                        units = units,
+                        isEditing = false,
+                        onOpenPicker = {},
+                    )
+                },
+                saved = {
+                    MapSavedListsHost(
+                        container = container,
+                        scope = scope,
+                        querySequence = listsQuerySequence,
+                        hiddenGroups = favouritesLayerSettings.hiddenGroups,
+                        embedded = true,
+                        onClose = { widgetsSavedSheetOpen = false },
+                    )
                 },
             )
         }
@@ -2869,7 +2834,162 @@ private fun MapContent(
 }
 
 /**
- * The chevron at the right end of the map's bottom bar. It opens the widgets
+ * The saved-list body shared by the standalone Saved sheet and the combined
+ * widgets-and-Saved sheet. Both paths drive the same commands and the same
+ * persisted visibility store; only the surrounding chrome differs.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun MapSavedListsHost(
+    container: AppContainer,
+    scope: CoroutineScope,
+    querySequence: LongArray,
+    hiddenGroups: Set<String>,
+    embedded: Boolean,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val listsFlow =
+        remember(container) {
+            container.streamAccess.subscribe<FavouriteListsState>(FavouritesUiContract.listsStream)
+        }
+    val listsState by listsFlow.collectAsState(initial = FavouriteListsState())
+    FavouritesListsHost(
+        state = listsState,
+        strings = container.strings,
+        hiddenGroups = hiddenGroups,
+        onCreateList = { name, color ->
+            scope.launch {
+                invokeListsCommand(container, FavouritesUiContract.createList, listParams("name" to name, "color" to color))
+            }
+        },
+        onMovePoint = { pointId, list ->
+            scope.launch {
+                invokeListsCommand(container, FavouritesUiContract.movePoint, listParams("pointId" to pointId, "list" to list))
+            }
+        },
+        onRecolourList = { list, color ->
+            scope.launch {
+                invokeListsCommand(container, FavouritesUiContract.recolourList, listParams("list" to list, "color" to color))
+            }
+        },
+        onSetSpecial = { pointId, special ->
+            val command =
+                when (special) {
+                    FavouriteSpecial.HOME -> FavouritesUiContract.setHome
+                    FavouriteSpecial.WORK -> FavouritesUiContract.setWork
+                }
+            scope.launch {
+                invokeListsCommand(container, command, listParams("pointId" to pointId))
+            }
+        },
+        onUndo = {
+            scope.launch {
+                invokeListsCommand(container, FavouritesUiContract.undo, JsonObject(emptyMap()))
+            }
+        },
+        onQueryChange = { query ->
+            querySequence[0] += 1
+            val sequence = querySequence[0]
+            scope.launch {
+                invokeListsCommand(
+                    container,
+                    FavouritesUiContract.setQuery,
+                    listParams("query" to query, "sequence" to sequence.toString()),
+                )
+            }
+        },
+        onSortChange = { sort ->
+            scope.launch {
+                invokeListsCommand(container, FavouritesUiContract.setSort, listParams("sort" to sort.wireName))
+            }
+        },
+        onClose = onClose,
+        onToggleGroupShown = { group, shown ->
+            scope.launch {
+                withContext(Dispatchers.IO) {
+                    container.favouritesLayerSettings.setGroupShown(group, shown)
+                }.onFailure { error ->
+                    Log.w(TAG, "saved list visibility not saved: $error")
+                }
+            }
+        },
+        embedded = embedded,
+        modifier = modifier,
+    )
+}
+
+/**
+ * The approved round-9 bottom bar in one chrome: Search, a divider, the three
+ * pinned profile dots with the grid button, and the chevron at the right end.
+ * The bar reports one bottom-chrome reach, so the credit, Layers, the scale bar
+ * and the banners all read a single owner. [onSelectProfile] keeps the train 90
+ * fix: each dot selects its own profile rather than cycling to the next one.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun MapBottomBar(
+    chromeKey: Any,
+    searchLabel: String,
+    sheetLabel: String,
+    active: ProfileId,
+    onOpenSearch: () -> Unit,
+    onSelectProfile: (ProfileId) -> Unit,
+    onOpenAllProfiles: () -> Unit,
+    onOpenSheet: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalShellColors.current
+    val shape = RoundedCornerShape((MAP_BOTTOM_BAR_HEIGHT_DP / 2).dp)
+    Row(
+        modifier =
+            modifier
+                .height(MAP_BOTTOM_BAR_HEIGHT_DP.dp)
+                .background(colors.glass, shape)
+                .border(1.dp, colors.ring, shape)
+                .padding(horizontal = BAR_INSET_DP.dp)
+                .reportsBottomChrome(key = chromeKey),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Search is the first child. Its 48 dp target matches every other
+        // control in the bar, and the label is both drawn and spoken.
+        Row(
+            modifier =
+                Modifier
+                    .heightIn(min = SEARCH_COLLAPSED_MIN_HEIGHT_DP.dp)
+                    .widthIn(min = BAR_SEARCH_MIN_WIDTH_DP.dp)
+                    .clickable(role = Role.Button, onClick = onOpenSearch)
+                    .semantics { contentDescription = searchLabel },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ShellIcon(ShellIcons.Search, colors.ink, Modifier.size(SHEET_CHEVRON_GLYPH_DP.dp))
+            BasicText(
+                text = searchLabel,
+                style = TextStyle(color = colors.ink, fontSize = BAR_SEARCH_FONT_SP.sp),
+                modifier = Modifier.padding(start = BAR_SEARCH_GAP_DP.dp),
+            )
+        }
+        // Divider between the search field and the profile cluster.
+        Spacer(
+            Modifier
+                .size(DIVIDER_WIDTH_DP.dp, DIVIDER_HEIGHT_DP.dp)
+                .background(colors.ring)
+                .clearAndSetSemantics {},
+        )
+        ProfileSwitchBar(
+            active = active,
+            onSelect = onSelectProfile,
+            onOpenAll = onOpenAllProfiles,
+        )
+        Spacer(Modifier.width(BAR_SLOT_GAP_DP.dp))
+        BottomBarChevron(
+            label = sheetLabel,
+            onClick = onOpenSheet,
+        )
+    }
+}
+
+/** The chevron at the right end of the map's bottom bar. It opens the widgets
  * and Saved sheet. The drawn glyph is decoration; [label] is its spoken name.
  */
 @Suppress("ktlint:standard:function-naming")
@@ -2939,7 +3059,6 @@ private fun SearchOverlay(
     onEnableOnlineSearch: () -> Unit,
     onDisableOnlineSearch: () -> Unit,
     onAllowPosition: (Boolean) -> Unit,
-    onCollapsedCardSize: (IntSize) -> Unit,
     onOpenDownloads: () -> Unit,
 ) {
     val camera by surface.host.camera.collectAsState()
@@ -2971,30 +3090,19 @@ private fun SearchOverlay(
             }
         },
         modifier = Modifier.fillMaxSize(),
+        // The host anchors the open card in the bottom thumb area and pads it
+        // clear of the keyboard. The closed field belongs to the single bottom
+        // bar, so this overlay is composed only while search is expanded.
         cardModifier =
-            if (expanded) {
-                // The host anchors the open card in the bottom thumb area and
-                // pads it clear of the keyboard; keep the bottom bar clearance
-                // so the count, chips and privacy actions stay reachable.
-                Modifier
-                    .navigationBarsPadding()
-                    .padding(BAR_PADDING_DP.dp)
-            } else {
-                Modifier
-                    .navigationBarsPadding()
-                    .padding(bottom = SEARCH_PILL_BOTTOM_DP.dp)
-                    .padding(BAR_PADDING_DP.dp)
-                    .heightIn(min = SEARCH_COLLAPSED_MIN_HEIGHT_DP.dp)
-                    .reportsBottomChrome(key = SEARCH_PILL_CHROME_KEY)
-            },
-        collapsedAnchor = SEARCH_COLLAPSED_ANCHOR,
+            Modifier
+                .navigationBarsPadding()
+                .padding(BAR_PADDING_DP.dp),
         onlineSearchEnabled = onlineSearchEnabled,
         positionAllowed = positionAllowed,
         onEnableOnlineSearch = onEnableOnlineSearch,
         onDisableOnlineSearch = onDisableOnlineSearch,
         onAllowPosition = onAllowPosition,
         onlineStopped = state.onlineStopped != null,
-        onCollapsedCardSize = onCollapsedCardSize,
         onOpenDownloads = onOpenDownloads,
     )
 }

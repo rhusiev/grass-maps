@@ -28,15 +28,19 @@ class MapBottomChromePlacementTest {
     }
 
     @Test
-    fun theCollapsedPillReportsItsTopEdgeToTheChrome() {
-        val collapsed = source.substringAfter("if (expanded) {").substringBefore("collapsedAnchor =")
+    fun theOneBarReportsItsTopEdgeToTheChrome() {
+        val bar = source.substringAfter("private fun MapBottomBar(").substringBefore("\n}\n")
         assertTrue(
-            "the search pill is invisible to the map credit",
-            collapsed.contains("reportsBottomChrome(key = SEARCH_PILL_CHROME_KEY)"),
+            "the single bar is invisible to the map credit",
+            bar.contains(".reportsBottomChrome(key = chromeKey)"),
         )
         assertTrue(
-            "the pill lost its named bottom lane",
-            collapsed.contains("SEARCH_PILL_BOTTOM_DP.dp"),
+            "the bar lost its navigation-bar clearance",
+            source.contains("MapBottomBar("),
+        )
+        assertTrue(
+            "a second collapsed search chrome still competes with the bar",
+            !source.contains("SEARCH_PILL_CHROME_KEY"),
         )
     }
 

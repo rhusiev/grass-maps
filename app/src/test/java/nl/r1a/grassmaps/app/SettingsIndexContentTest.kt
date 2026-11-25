@@ -74,7 +74,7 @@ class SettingsIndexContentTest {
         val map = File("src/main/java/nl/r1a/grassmaps/app/MapScreen.kt").readText()
         val settings = map.indexOf("SettingsIndexHost(")
         val savedHost = map.indexOf("FavouritesListsHost(")
-        assertTrue("The default map must expose Settings", map.contains("onClick = SettingsIndexSession::show"))
+        assertTrue("The default map must expose Settings", map.contains("SettingsIndexSession.show()"))
         assertTrue("Saved must open above Settings", settings in 0 until savedHost)
         assertTrue(map.substring(settings, savedHost).contains("SettingsIndexTarget.SAVED -> FavouritesListsSession.show()"))
     }

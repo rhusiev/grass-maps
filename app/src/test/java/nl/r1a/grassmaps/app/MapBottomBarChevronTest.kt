@@ -7,34 +7,56 @@ import org.junit.Test
 import java.io.File
 
 /**
- * T-0612 final-review defect: the map bar had no chevron at its right end, so
- * the approved widgets-and-Saved sheet had no entry point. The chevron is a
- * permanent part of the default bottom bar, has a 48 dp target and opens the
- * existing saved-lists sheet. Mappers are Composables a JVM test cannot render,
- * so pin the composition and the label from source and resources.
+ * T-0612 final-review defect: the map bar's chevron opened the saved-lists
+ * sheet alone, while its label promised widgets and Saved. The chevron is a
+ * permanent part of the single bottom bar, has a 48 dp target and now opens a
+ * sheet with both the widgets and the saved lists. Mappers are Composables a
+ * JVM test cannot render, so pin the composition and the label from source and
+ * resources.
  */
 class MapBottomBarChevronTest {
     private val source = File(HOST_FILE).readText()
 
     @Test
-    fun theDefaultBarEndsWithAChevronThatOpensTheSavedSheet() {
-        val bar =
-            source
-                .substringAfter("// The prototype's profile bar sits")
-                .substringBefore("layoutSheetTab?.let {")
+    fun theBarEndsWithAChevronThatOpensTheWidgetsAndSavedSheet() {
+        val bar = source.substringAfter("private fun MapBottomBar(").substringBefore("\n}\n")
 
         assertTrue("the default bottom bar has no chevron", bar.contains("BottomBarChevron("))
         assertTrue(
             "the chevron is not at the right end of the bar",
-            bar.indexOf("BottomBarChevron(") > bar.indexOf("SettingsEntryButton("),
+            bar.indexOf("BottomBarChevron(") > bar.indexOf("ProfileSwitchBar("),
         )
         assertTrue(
-            "the chevron does not open the sheet",
-            bar.substringAfter("BottomBarChevron(").contains("FavouritesListsSession.show()"),
+            "the chevron still opens Saved alone",
+            !bar.substringAfter("BottomBarChevron(").contains("FavouritesListsSession.show()"),
         )
         assertTrue(
-            "the app no longer hosts the reused saved-lists sheet",
-            source.contains("FavouritesListsHost("),
+            "the chevron does not open the combined sheet",
+            bar.substringAfter("BottomBarChevron(").contains("onClick = onOpenSheet"),
+        )
+        assertTrue(
+            "the app no longer hosts the combined sheet",
+            source.contains("WidgetsSavedSheet("),
+        )
+    }
+
+    @Test
+    fun theSheetContainsWidgetsAndSavedLists() {
+        val sheet =
+            source
+                .substringAfter("if (widgetsSavedSheetOpen && !navigationActive) {")
+                .substringBefore("\n        }")
+
+        assertTrue("the sheet has no widgets section", sheet.contains("widgets = {"))
+        assertTrue("the widgets section does not compose the widget model", sheet.contains("WidgetGridHost("))
+        assertTrue("widgets are not read-only in the sheet", sheet.contains("isEditing = false"))
+        assertTrue("the sheet has no saved section", sheet.contains("saved = {"))
+        assertTrue("the saved section does not compose the lists body", sheet.contains("MapSavedListsHost("))
+        assertTrue("the saved section kept the standalone chrome", sheet.contains("embedded = true"))
+        assertTrue("the saved-only sheet was not kept as a separate chevron target", !sheet.contains("FavouritesListsSession.show()"))
+        assertTrue(
+            "the sheet lost its route to Settings",
+            sheet.contains("onOpenSettings =") && sheet.contains("SettingsIndexSession.show()"),
         )
     }
 

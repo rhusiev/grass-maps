@@ -57,6 +57,9 @@ import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
  * [hiddenGroups] is read from the persisted layer settings on every open, and
  * [onToggleGroupShown] writes an eye tap back through the same store. Neither
  * this host nor the Saved section keeps a second visibility state.
+ *
+ * [embedded] drops the scrim and card: the combined widgets-and-Saved sheet
+ * supplies that chrome and keeps only the list body.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -73,15 +76,29 @@ fun FavouritesListsHost(
     onSortChange: (FavouriteSort) -> Unit,
     onClose: () -> Unit,
     onToggleGroupShown: (String, Boolean) -> Unit = { _, _ -> },
+    embedded: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    val content = favouritesListsContent(state, strings)
-    val browse = favouritesBrowseContent(state, strings)
-    var selectedPoint by remember { mutableStateOf<String?>(null) }
-    var newName by remember { mutableStateOf("") }
-    var newColor by remember { mutableStateOf(PRESET_COLOURS.first()) }
-    var query by remember { mutableStateOf(state.browse.query) }
-
+    if (embedded) {
+        FavouritesListsBody(
+            state = state,
+            strings = strings,
+            hiddenGroups = hiddenGroups,
+            onCreateList = onCreateList,
+            onMovePoint = onMovePoint,
+            onRecolourList = onRecolourList,
+            onSetSpecial = onSetSpecial,
+            onUndo = onUndo,
+            onQueryChange = onQueryChange,
+            onSortChange = onSortChange,
+            onClose = onClose,
+            onToggleGroupShown = onToggleGroupShown,
+            showClose = false,
+            scroll = false,
+            modifier = modifier,
+        )
+        return
+    }
     Box(
         modifier = modifier.fillMaxSize().background(LocalShellColors.current.scrim).clickable(onClick = onClose),
         contentAlignment = Alignment.Center,
@@ -93,80 +110,130 @@ fun FavouritesListsHost(
                     .widthIn(max = SHEET_MAX_WIDTH_DP.dp)
                     .background(LocalShellColors.current.surface, RoundedCornerShape(SHEET_CORNER_DP.dp))
                     .pointerInput(Unit) { detectTapGestures(onTap = {}) }
-                    .padding(SHEET_PADDING_DP.dp)
-                    .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
+                    .padding(SHEET_PADDING_DP.dp),
         ) {
-            Header(content = content, onUndo = onUndo, onClose = onClose)
-            SavedScreenSection(
+            FavouritesListsBody(
                 state = state,
                 strings = strings,
                 hiddenGroups = hiddenGroups,
+                onCreateList = onCreateList,
+                onMovePoint = onMovePoint,
+                onRecolourList = onRecolourList,
+                onSetSpecial = onSetSpecial,
+                onUndo = onUndo,
+                onQueryChange = onQueryChange,
+                onSortChange = onSortChange,
+                onClose = onClose,
+                onToggleGroupShown = onToggleGroupShown,
+            )
+        }
+    }
+}
+
+/**
+ * The saved lists without a scrim or a card. The standalone [FavouritesListsHost]
+ * supplies that chrome; the combined widgets-and-Saved sheet supplies its own
+ * [ShellBottomSheet] chrome and sets [showClose] and [scroll] to false.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+internal fun FavouritesListsBody(
+    state: FavouriteListsState,
+    strings: Strings,
+    hiddenGroups: Set<String>,
+    onCreateList: (name: String, color: String) -> Unit,
+    onMovePoint: (pointId: String, list: String) -> Unit,
+    onRecolourList: (list: String, color: String) -> Unit,
+    onSetSpecial: (pointId: String, special: FavouriteSpecial) -> Unit,
+    onUndo: () -> Unit,
+    onQueryChange: (String) -> Unit,
+    onSortChange: (FavouriteSort) -> Unit,
+    onClose: () -> Unit,
+    onToggleGroupShown: (String, Boolean) -> Unit = { _, _ -> },
+    showClose: Boolean = true,
+    scroll: Boolean = true,
+    modifier: Modifier = Modifier,
+) {
+    val content = favouritesListsContent(state, strings)
+    val browse = favouritesBrowseContent(state, strings)
+    var selectedPoint by remember { mutableStateOf<String?>(null) }
+    var newName by remember { mutableStateOf("") }
+    var newColor by remember { mutableStateOf(PRESET_COLOURS.first()) }
+    var query by remember { mutableStateOf(state.browse.query) }
+
+    Column(
+        modifier = modifier.then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier),
+        verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
+    ) {
+        Header(content = content, onUndo = onUndo, onClose = onClose, showClose = showClose)
+        SavedScreenSection(
+            state = state,
+            strings = strings,
+            hiddenGroups = hiddenGroups,
+            query = query,
+            newListName = newName,
+            newListColor = newColor,
+            onQueryChange = {
+                query = it
+                onQueryChange(it)
+            },
+            onSortChange = onSortChange,
+            onToggleGroupShown = onToggleGroupShown,
+            onCreateList = { name, color ->
+                onCreateList(name, color)
+                newName = ""
+            },
+        )
+        SectionTitle(text = strings.resolve(NEW_LIST_KEY))
+        ListCreator(
+            name = newName,
+            strings = strings,
+            onNameChange = { newName = it },
+            onColorChange = { newColor = it },
+            onCreate = {
+                val name = newName.trim()
+                if (name.isNotEmpty()) {
+                    onCreateList(name, newColor)
+                    newName = ""
+                }
+            },
+        )
+        content.empty?.let { empty -> Line(text = empty, style = secondaryStyle()) }
+        content.lists.forEach { list ->
+            ListRow(
+                row = list,
+                canMove = selectedPoint != null,
+                moveLabel = strings.resolve(MOVE_KEY),
+                onRecolour = { color -> onRecolourList(list.name, color) },
+                onMove = { selectedPoint?.let { pointId -> onMovePoint(pointId, list.name) } },
+            )
+        }
+        if (content.points.isNotEmpty() || state.browse.query.isNotBlank()) {
+            SectionTitle(text = strings.resolve(POINTS_KEY))
+            SearchField(
+                label = browse.search,
+                hint = browse.searchHint,
                 query = query,
-                newListName = newName,
-                newListColor = newColor,
                 onQueryChange = {
                     query = it
                     onQueryChange(it)
                 },
-                onSortChange = onSortChange,
-                onToggleGroupShown = onToggleGroupShown,
-                onCreateList = { name, color ->
-                    onCreateList(name, color)
-                    newName = ""
-                },
             )
-            SectionTitle(text = strings.resolve(NEW_LIST_KEY))
-            ListCreator(
-                name = newName,
-                strings = strings,
-                onNameChange = { newName = it },
-                onColorChange = { newColor = it },
-                onCreate = {
-                    val name = newName.trim()
-                    if (name.isNotEmpty()) {
-                        onCreateList(name, newColor)
-                        newName = ""
-                    }
-                },
+            SortChooser(
+                title = browse.sort,
+                sorts = browse.sorts,
+                onChoose = onSortChange,
             )
-            content.empty?.let { empty -> Line(text = empty, style = secondaryStyle()) }
-            content.lists.forEach { list ->
-                ListRow(
-                    row = list,
-                    canMove = selectedPoint != null,
-                    moveLabel = strings.resolve(MOVE_KEY),
-                    onRecolour = { color -> onRecolourList(list.name, color) },
-                    onMove = { selectedPoint?.let { pointId -> onMovePoint(pointId, list.name) } },
+            browse.points.forEach { point ->
+                PointRow(
+                    row = point,
+                    selected = point.id == selectedPoint,
+                    onSelect = { selectedPoint = if (selectedPoint == point.id) null else point.id },
+                    onSetSpecial = { special -> onSetSpecial(point.id, special) },
+                    strings = strings,
                 )
             }
-            if (content.points.isNotEmpty() || state.browse.query.isNotBlank()) {
-                SectionTitle(text = strings.resolve(POINTS_KEY))
-                SearchField(
-                    label = browse.search,
-                    hint = browse.searchHint,
-                    query = query,
-                    onQueryChange = {
-                        query = it
-                        onQueryChange(it)
-                    },
-                )
-                SortChooser(
-                    title = browse.sort,
-                    sorts = browse.sorts,
-                    onChoose = onSortChange,
-                )
-                browse.points.forEach { point ->
-                    PointRow(
-                        row = point,
-                        selected = point.id == selectedPoint,
-                        onSelect = { selectedPoint = if (selectedPoint == point.id) null else point.id },
-                        onSetSpecial = { special -> onSetSpecial(point.id, special) },
-                        strings = strings,
-                    )
-                }
-                browse.noMatches?.let { message -> Line(text = message, style = secondaryStyle()) }
-            }
+            browse.noMatches?.let { message -> Line(text = message, style = secondaryStyle()) }
         }
     }
 }
@@ -177,6 +244,7 @@ private fun Header(
     content: FavouritesListsContent,
     onUndo: () -> Unit,
     onClose: () -> Unit,
+    showClose: Boolean = true,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -195,15 +263,17 @@ private fun Header(
                     modifier = Modifier.clickable(onClick = onUndo).padding(CLOSE_PADDING_DP.dp),
                 )
             }
-            BasicText(
-                text = CLOSE_GLYPH,
-                style = TextStyle(color = LocalShellColors.current.ink, fontSize = TITLE_FONT_SP.sp),
-                modifier =
-                    Modifier
-                        .clickable(onClick = onClose)
-                        .semantics { contentDescription = content.close }
-                        .padding(CLOSE_PADDING_DP.dp),
-            )
+            if (showClose) {
+                BasicText(
+                    text = CLOSE_GLYPH,
+                    style = TextStyle(color = LocalShellColors.current.ink, fontSize = TITLE_FONT_SP.sp),
+                    modifier =
+                        Modifier
+                            .clickable(onClick = onClose)
+                            .semantics { contentDescription = content.close }
+                            .padding(CLOSE_PADDING_DP.dp),
+                )
+            }
         }
     }
 }

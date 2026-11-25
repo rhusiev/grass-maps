@@ -927,7 +927,7 @@ private fun OpenDownloadsButton(
                 .border(1.dp, ROUTE_CONTROL_BORDER, RoundedCornerShape(CHIP_CORNER_DP.dp))
                 .semantics { contentDescription = label }
                 .clickable(role = Role.Button, onClick = onClick)
-                .sizeIn(minHeight = CONTROL_TARGET_DP.dp)
+                .sizeIn(minWidth = CONTROL_TARGET_DP.dp, minHeight = CONTROL_TARGET_DP.dp)
                 .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp),
     )
 }

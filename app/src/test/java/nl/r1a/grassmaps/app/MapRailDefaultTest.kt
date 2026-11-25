@@ -1,5 +1,6 @@
 package nl.r1a.grassmaps.app
 
+import androidx.compose.ui.unit.dp
 import nl.r1a.grassmaps.core.services.MapButtonLayout
 import nl.r1a.grassmaps.core.services.MapControlCommands
 import nl.r1a.grassmaps.ui.shell.MapControlMetrics
@@ -73,12 +74,79 @@ class MapRailDefaultTest {
 
     @Test
     fun theCreditIsLiftedAboveTheCentredLayersButton() {
+        val marks = bottomMarkInsets(arc = true, navigationActive = false, bottomSheetShown = false)
+        assertEquals(ARC_CREDIT_LIFT_DP.dp, marks.credit)
+        assertEquals(
+            "the lift no longer clears Layers, the logo and its overlay padding",
+            LAYERS_HEIGHT_DP + LAYERS_GAP_DP + CREDIT_LOGO_GAP_DP,
+            ARC_CREDIT_LIFT_DP,
+        )
+    }
+
+    /**
+     * Final blind review 7 P1: the credit lift was gated on the arc and sheet
+     * state while the logo inset was not. A suppressed credit then sat on the
+     * logo, by 95 px in the route-failed and navigation screenshots. Both marks
+     * must read one decision; a private gate on either one breaks the stack.
+     */
+    @Test
+    fun theCreditAndTheLogoReadOneSharedLiftDecision() {
         val source = File(HOST_FILE).readText()
         val wiring = source.substringAfter("creditBottomInset =").substringBefore("distanceByTap")
         assertTrue(
-            "the credit keeps its old bottom inset and still sits under Layers",
-            wiring.contains("ARC_CREDIT_LIFT_DP"),
+            "the credit still computes its own conditional lift",
+            wiring.contains("bottomMarks.credit"),
         )
+        assertFalse(
+            "a state gate on the credit separates it from the logo",
+            wiring.contains("navigationActive") || wiring.contains("bottomSheetShown"),
+        )
+        val logoWiring = source.substringAfter("logoBottomInset =").substringBefore("distanceByTap")
+        assertTrue(
+            "the logo still ignores the shared lift decision",
+            logoWiring.contains("bottomMarks.logo"),
+        )
+        assertFalse(
+            "a state gate on the logo separates it from the credit",
+            logoWiring.contains("navigationActive") || logoWiring.contains("bottomSheetShown"),
+        )
+    }
+
+    /**
+     * The shared decision raises exactly one mark, so neither state branch can
+     * put the credit on the logo. This models the four states the blind review
+     * captured: idle, bottom sheet, navigation and failed route planning.
+     */
+    @Test
+    fun theSharedLiftKeepsTheMarksApartInEveryState() {
+        val states =
+            listOf(
+                Triple(true, false, false), // idle arc
+                Triple(true, false, true), // bottom sheet, including a failed plan
+                Triple(true, true, false), // navigation
+                Triple(false, false, false), // a profile with the arc off
+            )
+        states.forEach { (arc, navigationActive, bottomSheetShown) ->
+            val marks = bottomMarkInsets(arc, navigationActive, bottomSheetShown)
+            val base = bottomBar().top
+            val credit =
+                Rect(
+                    left = ATTRIBUTION_MARGIN_DP,
+                    right = ATTRIBUTION_MARGIN_DP + CREDIT_WIDTH_DP,
+                    bottom = base + MAP_CREDIT_CLEARANCE_DP + ATTRIBUTION_CLEARANCE_DP + marks.credit.value.toInt(),
+                    top = base + MAP_CREDIT_CLEARANCE_DP + ATTRIBUTION_CLEARANCE_DP + marks.credit.value.toInt() + CREDIT_HEIGHT_DP,
+                )
+            val logo =
+                Rect(
+                    left = ATTRIBUTION_MARGIN_DP,
+                    right = ATTRIBUTION_MARGIN_DP + LOGO_WIDTH_DP,
+                    bottom = base + sourceConstant("LOGO_CLEARANCE_DP") + marks.logo.value.toInt(),
+                    top = base + sourceConstant("LOGO_CLEARANCE_DP") + marks.logo.value.toInt() + LOGO_HEIGHT_DP,
+                )
+            assertNoOverlap("the credit in arc=$arc nav=$navigationActive sheet=$bottomSheetShown", "the MapLibre logo", credit, logo)
+            assertTrue("the credit fell behind the bottom chrome", credit.bottom >= base)
+            assertTrue("the logo fell behind the bottom chrome", logo.bottom >= base)
+        }
     }
 
     /**
@@ -187,8 +255,9 @@ class MapRailDefaultTest {
     }
 
     private fun credit(): Rect {
+        val lift = bottomMarkInsets(arc = true, navigationActive = false, bottomSheetShown = false).credit.value.toInt()
         val bottom =
-            bottomBar().top + MAP_CREDIT_CLEARANCE_DP + ATTRIBUTION_CLEARANCE_DP + CREDIT_LIFT_DP
+            bottomBar().top + MAP_CREDIT_CLEARANCE_DP + ATTRIBUTION_CLEARANCE_DP + lift
         return Rect(
             left = ATTRIBUTION_MARGIN_DP,
             right = ATTRIBUTION_MARGIN_DP + CREDIT_WIDTH_DP,
@@ -223,7 +292,7 @@ class MapRailDefaultTest {
             File(HOST_FILE)
                 .readText()
                 .lines()
-                .firstOrNull { it.trimStart().startsWith("private const val $name =") }
+                .firstOrNull { Regex("""(?:private |internal )?const val $name =""").containsMatchIn(it) }
                 ?: throw AssertionError("MapScreen does not declare $name")
         return declaration.substringAfter("=").trim().toIntOrNull()
             ?: throw AssertionError("$name is not an integer dp constant")
@@ -266,13 +335,14 @@ class MapRailDefaultTest {
         const val ARC_STACK_GAP_DP = 4
         const val LAYERS_HALF_WIDTH_DP = 32
         const val LAYERS_HEIGHT_DP = 48
+        const val LAYERS_GAP_DP = 8
+        const val CREDIT_LOGO_GAP_DP = 8
 
         // The credit sits above the bar's reach and, in arc mode, above the
         // centred Layers target: its 48 dp height plus an 8 dp gap.
         const val MAP_CREDIT_CLEARANCE_DP = 12
         const val ATTRIBUTION_CLEARANCE_DP = 4
         const val ATTRIBUTION_MARGIN_DP = 4
-        const val CREDIT_LIFT_DP = 56
         const val CREDIT_WIDTH_DP = 190
         const val CREDIT_HEIGHT_DP = 24
 

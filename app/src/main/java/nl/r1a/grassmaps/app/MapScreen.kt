@@ -397,8 +397,40 @@ private const val LAYERS_GAP_DP = 8
 /** The measured height of LayersButton, used to stack the scale bar above it. */
 private const val LAYERS_BUTTON_HEIGHT_DP = 48
 
-/** The credit rises by the centred Layers target plus one gap when the arc is on. */
-internal const val ARC_CREDIT_LIFT_DP = LAYERS_BUTTON_HEIGHT_DP + LAYERS_GAP_DP
+/**
+ * Extra gap so the lifted credit also clears the MapLibre mark and the overlay
+ * padding under it. The Layers-only lift left a sliver of the credit over the
+ * logo in the idle state (final blind review 7 P1).
+ */
+private const val CREDIT_LOGO_GAP_DP = 8
+
+/** The credit rises by the centred Layers target, one gap and the logo's box. */
+internal const val ARC_CREDIT_LIFT_DP = LAYERS_BUTTON_HEIGHT_DP + LAYERS_GAP_DP + CREDIT_LOGO_GAP_DP
+
+/**
+ * The two bottom-start marks share one lift decision. Exactly one mark takes
+ * the raised slot, so a state change can never drop the credit onto the logo
+ * (final blind review 7 P1). The chrome inset already reports the tallest
+ * bottom element, so the unraised mark still sits above the bar, a sheet or the
+ * navigation panel.
+ */
+internal data class BottomMarkInsets(
+    val credit: Dp,
+    val logo: Dp,
+)
+
+internal fun bottomMarkInsets(
+    arc: Boolean,
+    navigationActive: Boolean,
+    bottomSheetShown: Boolean,
+): BottomMarkInsets {
+    val arcLift = arc && !navigationActive && !bottomSheetShown
+    val lift = ARC_CREDIT_LIFT_DP.dp
+    return BottomMarkInsets(
+        credit = if (arcLift) lift else 0.dp,
+        logo = if (arcLift) 0.dp else lift,
+    )
+}
 
 /**
  * Bottom insets, in dp, for Layers and the scale bar. Both are measured inside
@@ -1319,24 +1351,18 @@ private fun MapContent(
             layersSheetShown -> dismissLayers()
         }
     }
+    val bottomMarks = bottomMarkInsets(layout.arc, navigationActive, bottomSheetShown)
     Box(Modifier.fillMaxSize().onSizeChanged { viewport = it }) {
         MapSurfaceView(
             surface = surface,
             modifier = Modifier.fillMaxSize(),
             creditBottomInset =
                 with(density) {
-                    (LocalBottomChrome.current?.insetPx ?: 0).toDp() + MAP_CREDIT_CLEARANCE_DP.dp +
-                        (
-                            if (layout.arc && !navigationActive && !bottomSheetShown) {
-                                ARC_CREDIT_LIFT_DP
-                            } else {
-                                0
-                            }
-                        ).dp
+                    (LocalBottomChrome.current?.insetPx ?: 0).toDp() + MAP_CREDIT_CLEARANCE_DP.dp + bottomMarks.credit
                 },
             logoBottomInset =
                 with(density) {
-                    (LocalBottomChrome.current?.insetPx ?: 0).toDp() + LOGO_CLEARANCE_DP.dp
+                    (LocalBottomChrome.current?.insetPx ?: 0).toDp() + LOGO_CLEARANCE_DP.dp + bottomMarks.logo
                 },
             distanceByTap = container.distanceByTap,
             onDistanceMeasured = { meters -> distance = MapDistance.readout(meters) },

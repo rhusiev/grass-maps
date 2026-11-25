@@ -85,6 +85,22 @@ class RoutePlanRecoveryWiringTest {
         )
     }
 
+    /**
+     * Final blind review 7 P2: `minHeight` alone let the long label size the
+     * button to 45.7 dp at 420 dpi while the neighbouring controls measured
+     * 48 dp. Both dimensions need the panel's named minimum.
+     */
+    @Test
+    fun theOpenDownloadsButtonMeets48DpInBothDimensions() {
+        val panel = File(PANEL_FILE).readText()
+        val button = panel.substringAfter("fun OpenDownloadsButton(").substringBefore("\n}")
+        assertTrue(
+            "the recovery button still lets its label decide the width",
+            Regex("""sizeIn\(\s*minWidth\s*=\s*CONTROL_TARGET_DP\.dp,\s*minHeight\s*=\s*CONTROL_TARGET_DP\.dp\s*\)""")
+                .containsMatchIn(button),
+        )
+    }
+
     @Test
     fun theRecoveryButtonOpensTheDownloadsScreenTheSettingsRowOpens() {
         val plannerCall = File(MAP_FILE).readText().substringAfter("RoutePlanPanel(")

@@ -9,6 +9,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 import java.util.Locale
 
 /** The route preference entry and sheet resolvers (T-0421). */
@@ -193,6 +194,27 @@ class RoutePreferencesContentTest {
                 row.steps.single { step -> step.selected }.preference,
             )
         }
+    }
+
+    /**
+     * Final blind review 8 P2-2: the collapsed row rendered at 27 dp because
+     * vertical padding gives it no height. It must take the module's shared
+     * 48 dp tap target as an exact height, not a minimum. A JVM source test
+     * cannot measure rendering, so a device pass must confirm 126 px at
+     * 420 dpi.
+     */
+    @Test
+    fun theCollapsedPreferencesRowSetsAnExactTargetHeight() {
+        val source = File("src/main/java/nl/r1a/grassmaps/ui/shell/RoutePreferencesContent.kt").readText()
+        val entry = source.substringAfter("fun RoutePreferencesEntry(").substringBefore("\n}")
+        assertTrue(
+            "the collapsed row still has no exact 48 dp height",
+            Regex("""\.height\(MapControlMetrics\.TAP_TARGET_DP\.dp\)""").containsMatchIn(entry),
+        )
+        assertTrue(
+            "the collapsed row still relies on a minimum-only size modifier",
+            !Regex("""sizeIn\s*\(|heightIn\s*\(""").containsMatchIn(entry),
+        )
     }
 
     private class MapStrings(

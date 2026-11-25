@@ -75,16 +75,20 @@ internal fun SettingsIndexHost(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = HORIZONTAL_DP.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                BasicText(
-                    text = BACK_GLYPH,
-                    style = TextStyle(color = colors.accent, fontSize = CHEVRON_SP.sp),
+                Box(
                     modifier =
                         Modifier
                             .size(BACK_DP.dp)
                             .clip(CircleShape)
                             .clickable(role = Role.Button, onClick = onBack)
                             .semantics { contentDescription = content.back },
-                )
+                    contentAlignment = Alignment.Center,
+                ) {
+                    BasicText(
+                        text = BACK_GLYPH,
+                        style = TextStyle(color = colors.accent, fontSize = CHEVRON_SP.sp),
+                    )
+                }
                 BasicText(
                     text = content.title,
                     style = TextStyle(color = colors.ink, fontSize = TITLE_SP.sp, fontWeight = FontWeight.Bold),

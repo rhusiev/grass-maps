@@ -7,45 +7,50 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Final blind review 3 P1: the Settings back glyph was clipped to a sliver in
- * both themes. The 18 sp glyph sat in a 48 dp box clipped to a circle, but the
- * box also used alignByBaseline() against a larger baseline-aligned title. The
- * baseline alignment moved the box so the glyph fell outside the clip. The
- * header now centers both children vertically, keeping the glyph inside its
- * clipped target. Mappers are Composables a JVM test cannot render, so pin the
- * modifier arrangement from source.
+ * Final blind review 4 P1: the Settings back glyph was still a 5x6 px sliver in
+ * both themes. Train 105 removed alignByBaseline() but never centered the glyph
+ * inside its 48 dp circle, so the clip still cut almost all of it. The glyph is
+ * now a BasicText child of a centered Box that owns the fixed size, circular
+ * clip, button role and spoken name. Mappers are Composables a JVM test cannot
+ * render, so pin the modifier and composable shape from source.
  */
 class SettingsBackGlyphTest {
     private val source = File(HOST_FILE).readText()
-    private val back = source.substringAfter("text = BACK_GLYPH,").substringBefore("\n                )")
+    private val header =
+        source
+            .substringAfter("verticalAlignment = Alignment.CenterVertically,")
+            .substringBefore("text = content.title,")
+    private val boxHeader = header.substringAfter("Box(").substringBefore(") {")
+    private val boxBody = header.substringAfter("Box(").substringAfter(") {")
 
     @Test
-    fun backGlyphHasNoBaselineAlignmentOnItsFixedClippedBox() {
-        assertTrue("the back glyph is gone", back.isNotBlank())
-        assertFalse(
-            "a fixed-size clipped box still aligns by baseline and clips the glyph",
-            back.contains("alignByBaseline()"),
-        )
-        val title = source.substringAfter("text = content.title,").substringBefore("\n                )")
-        assertFalse(
-            "the title still drags the back box off center",
-            title.contains("alignByBaseline()"),
-        )
-        assertTrue(
-            "the header must center back and title vertically",
-            source.contains("verticalAlignment = Alignment.CenterVertically"),
-        )
+    fun backGlyphIsCenteredAsAChildOfTheFixedClippedBox() {
+        assertTrue("the back header has no Box", header.contains("Box("))
+        assertTrue("the fixed size is not on the Box", boxHeader.contains(".size(BACK_DP.dp)"))
+        assertTrue("the circular clip is not on the Box", boxHeader.contains(".clip(CircleShape)"))
+        assertTrue("the button role is not on the Box", boxHeader.contains("role = Role.Button"))
+        assertTrue("the spoken name is not on the Box", boxHeader.contains("contentDescription = content.back"))
+        assertTrue("the clipped Box does not center its content", boxHeader.contains("contentAlignment = Alignment.Center"))
+
+        assertTrue("the glyph is not a child of the Box", boxBody.contains("text = BACK_GLYPH,"))
+        val glyph = boxBody.substringAfter("text = BACK_GLYPH,")
+        assertFalse("the glyph itself is still the clipped sized text", glyph.contains(".size("))
+        assertFalse("the glyph itself still carries the clip", glyph.contains(".clip("))
+        assertTrue("the glyph lost its accent color", glyph.contains("color = colors.accent"))
     }
 
     @Test
     fun backGlyphKeepsIts48DpTargetRoleNameAndColor() {
         assertEquals("48", Regex("""const val BACK_DP = (\d+)""").find(source)?.groupValues?.get(1))
-        assertTrue("the back glyph lost its 48 dp target", back.contains(".size(BACK_DP.dp)"))
-        assertTrue("the back glyph lost its circular clip", back.contains(".clip(CircleShape)"))
-        assertTrue("the back glyph lost its button role", back.contains("role = Role.Button"))
-        assertTrue("the back glyph lost its spoken name", back.contains("contentDescription = content.back"))
-        assertTrue("the back glyph lost its accent color", back.contains("color = colors.accent"))
+        assertTrue("the header lost its vertical centering", source.contains("verticalAlignment = Alignment.CenterVertically"))
         assertTrue("the title is gone from the header", source.contains("text = content.title,"))
+        assertTrue("the glyph target lost its button role", boxHeader.contains("role = Role.Button"))
+        assertTrue("the glyph target lost its spoken name", boxHeader.contains("contentDescription = content.back"))
+    }
+
+    @Test
+    fun backGlyphHasNoBaselineAlignment() {
+        assertFalse("a fixed-size clipped box still aligns by baseline", header.contains("alignByBaseline()"))
     }
 
     private companion object {

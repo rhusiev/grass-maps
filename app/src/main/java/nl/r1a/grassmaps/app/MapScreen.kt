@@ -33,8 +33,10 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -174,6 +176,8 @@ import nl.r1a.grassmaps.plugin.ui.api.LayerStyleRow
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenState
 import nl.r1a.grassmaps.plugin.ui.api.ShellColors
+import nl.r1a.grassmaps.plugin.ui.api.ShellIcon
+import nl.r1a.grassmaps.plugin.ui.api.ShellIcons
 import nl.r1a.grassmaps.plugins.downloads.ui.DownloadsScreenContent
 import nl.r1a.grassmaps.plugins.downloads.ui.DownloadsUiContract
 import nl.r1a.grassmaps.plugins.favourites.layer.FavouritesLayerController
@@ -337,6 +341,13 @@ private val PROFILE_SWITCH_KEY: Any = Any()
 private const val PROFILE_SWITCH_DROP_DP = 4
 private const val PROFILE_SWITCH_CREDIT_GAP_DP = 16
 private const val SETTINGS_ENTRY_GAP_DP = 8
+
+/**
+ * The chevron at the right end of the bottom bar opens the widgets and Saved
+ * sheet. It is permanent, so it is a named constant rather than a bar slot.
+ */
+private const val SHEET_CHEVRON_TARGET_DP = 48
+private const val SHEET_CHEVRON_GLYPH_DP = 24
 
 private const val ARC_BOTTOM_CLEARANCE_DP = 120
 internal const val WIDGET_GRID_GAP_DP = 8
@@ -859,6 +870,7 @@ private fun MapContent(
     val settingsVisible by ScreenSettingsSession.visible.collectAsState()
     val settingsIndexVisible by SettingsIndexSession.visible.collectAsState()
     val settingsEntryLabel = remember(container.strings) { container.strings.resolve(SETTINGS_INDEX_TITLE_KEY) }
+    val sheetOpenLabel = stringResource(R.string.map_bottom_bar_open_sheet)
     val settingsIndexPage = remember(container.strings) { settingsIndexContent(container.strings) }
     val styleChoice by container.mapStyleSettings.active.collectAsState()
     val dark = LocalShellColors.current.dark
@@ -1510,6 +1522,13 @@ private fun MapContent(
                     SettingsEntryButton(
                         label = settingsEntryLabel,
                         onClick = SettingsIndexSession::show,
+                    )
+                    // The right end of the bar opens the widgets and Saved sheet.
+                    // This slice reuses the saved-lists host; the widgets tray
+                    // is not added here and is recorded as a deviation.
+                    BottomBarChevron(
+                        label = sheetOpenLabel,
+                        onClick = { FavouritesListsSession.show() },
                     )
                 }
             }
@@ -2816,6 +2835,32 @@ private fun MapContent(
                 Log.w(TAG, "online tiles not applied: ${installed.error}")
             }
         }
+    }
+}
+
+/**
+ * The chevron at the right end of the map's bottom bar. It opens the widgets
+ * and Saved sheet. The drawn glyph is decoration; [label] is its spoken name.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun BottomBarChevron(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalShellColors.current
+    Box(
+        modifier =
+            modifier
+                .size(SHEET_CHEVRON_TARGET_DP.dp)
+                .clip(CircleShape)
+                .background(colors.soft)
+                .clickable(role = Role.Button, onClick = onClick)
+                .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        ShellIcon(ShellIcons.ChevronUp, colors.ink, Modifier.size(SHEET_CHEVRON_GLYPH_DP.dp))
     }
 }
 

@@ -363,4 +363,7 @@
     <string name="settings.index.row.tracks">Треки</string>
     <string name="settings.index.row.plugins">Плагіни</string>
     <string name="settings.index.row.backup">Резервна копія</string>
+
+    <!-- T-0612: шеврон на правому кінці нижньої панелі мапи -->
+    <string name="map_bottom_bar_open_sheet">Відкрити віджети та Збережене</string>
 </resources>

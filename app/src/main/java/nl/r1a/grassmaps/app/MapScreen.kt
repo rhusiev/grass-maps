@@ -73,6 +73,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -2950,6 +2951,8 @@ private fun MapSavedListsHost(
  * The bar reports one bottom-chrome reach, so the credit, Layers, the scale bar
  * and the banners all read a single owner. [onSelectProfile] keeps the train 90
  * fix: each dot selects its own profile rather than cycling to the next one.
+ * Search has a bounded slot and the profile cluster takes the remaining width,
+ * so the fixed-width chevron is never squeezed off the right end.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -2977,12 +2980,13 @@ private fun MapBottomBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Search is the first child. Its 48 dp target matches every other
-        // control in the bar, and the label is both drawn and spoken.
+        // control in the bar, and the label is both drawn and spoken. The slot
+        // is bounded so the label cannot push the chevron off the bar.
         Row(
             modifier =
                 Modifier
                     .heightIn(min = SEARCH_COLLAPSED_MIN_HEIGHT_DP.dp)
-                    .widthIn(min = BAR_SEARCH_MIN_WIDTH_DP.dp)
+                    .width(BAR_SEARCH_MIN_WIDTH_DP.dp)
                     .clickable(role = Role.Button, onClick = onOpenSearch)
                     .semantics { contentDescription = searchLabel },
             verticalAlignment = Alignment.CenterVertically,
@@ -2991,7 +2995,12 @@ private fun MapBottomBar(
             BasicText(
                 text = searchLabel,
                 style = TextStyle(color = colors.ink, fontSize = BAR_SEARCH_FONT_SP.sp),
-                modifier = Modifier.padding(start = BAR_SEARCH_GAP_DP.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .padding(start = BAR_SEARCH_GAP_DP.dp),
             )
         }
         // Divider between the search field and the profile cluster.
@@ -3005,6 +3014,7 @@ private fun MapBottomBar(
             active = active,
             onSelect = onSelectProfile,
             onOpenAll = onOpenAllProfiles,
+            modifier = Modifier.weight(1f, fill = false),
         )
         Spacer(Modifier.width(BAR_SLOT_GAP_DP.dp))
         BottomBarChevron(

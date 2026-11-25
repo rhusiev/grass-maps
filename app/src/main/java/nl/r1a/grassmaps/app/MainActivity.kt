@@ -11,6 +11,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -81,6 +82,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The expanded search card pads itself with imePadding. Fitting the
+        // decor to system windows would make the keyboard resize the window
+        // instead of delivering an inset, so the query would sit under it
+        // (T-0612 P1-2). The map already pads for the status and navigation
+        // bars, so the content still clears the system chrome.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         val application = application as GrassMapsApplication
         val harness = application.mapHarness(this)
         intent

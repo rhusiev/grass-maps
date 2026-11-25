@@ -240,6 +240,9 @@ fun RoutePlanPanel(
                 }
                 val text = routePlanFailureText(state, strings, units = units)
                 StatusLine(text, live = true)
+                if (failureNextStep(state.failure) == FailureNextStep.DownloadAndRoute) {
+                    DownloadAndRouteButton(strings, onDownloadMissing)
+                }
             }
 
             RoutePlanStatus.Ready -> {
@@ -835,6 +838,32 @@ private const val NEXT_TURN_KEY = "route_planner_next_turn"
 private const val TURN_COUNTER_KEY = "route_planner_turn_counter"
 private const val RECENT_KEY = "route_planner_recent"
 private const val REUSE_KEY = "route_planner_reuse"
+
+/**
+ * The visible next step under a failed plan's status line (T-0612 P1-3).
+ * [DownloadAndRoute] reuses the action the missing-regions card already uses;
+ * [TextOnly] keeps the honest failure text and offers no action that cannot
+ * help, such as a download for a broken engine.
+ */
+enum class FailureNextStep {
+    DownloadAndRoute,
+    TextOnly,
+}
+
+/** Maps a planner failure to its next step without inventing a destination. */
+internal fun failureNextStep(failure: RoutePlanFailure?): FailureNextStep =
+    when (failure) {
+        RoutePlanFailure.PackMissing,
+        RoutePlanFailure.PackUnusable,
+        RoutePlanFailure.RegionsMissing,
+        -> FailureNextStep.DownloadAndRoute
+
+        RoutePlanFailure.EngineUnavailable,
+        RoutePlanFailure.NoRoute,
+        RoutePlanFailure.TooFar,
+        null,
+        -> FailureNextStep.TextOnly
+    }
 
 /**
  * The status line for a failed plan. A [RoutePlanFailure.TooFar] failure names

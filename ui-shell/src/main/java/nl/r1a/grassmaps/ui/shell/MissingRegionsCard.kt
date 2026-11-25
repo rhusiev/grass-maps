@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -40,6 +41,7 @@ private const val BODY_FONT_SP = 13
 private const val BYTES_PER_KB = 1024.0
 private const val BYTES_PER_MB = BYTES_PER_KB * 1024.0
 private const val BYTES_PER_GB = BYTES_PER_MB * 1024.0
+private const val MIN_TAP_TARGET_DP = 48
 private const val SMALL_SIZE_LIMIT = 10.0
 private const val PERCENT = 100L
 
@@ -101,7 +103,7 @@ internal fun MissingRegionsCard(
                 CardText(strings.resolve(MISSING_PROBLEM_KEY), ROUTE_WARNING_TITLE_COLOR, BODY_FONT_SP)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(CARD_GAP_DP.dp)) {
-                CardButton(strings.resolve(MISSING_DOWNLOAD_KEY), ROUTE_ACTION_COLOR, onDownload)
+                DownloadAndRouteButton(strings, onDownload)
                 val toggle = strings.resolve(if (detailsVisible) MISSING_HIDE_DETAILS_KEY else MISSING_DETAILS_KEY)
                 CardButton(toggle, ROUTE_CHIP_COLOR) { detailsVisible = !detailsVisible }
             }
@@ -183,6 +185,20 @@ private fun CardText(
     )
 }
 
+/**
+ * The download-and-route action shared with the bare pack failures (T-0612
+ * P1-3). Both callers use the planner's existing download flow, so the button
+ * never starts a second download path.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+internal fun DownloadAndRouteButton(
+    strings: Strings,
+    onClick: () -> Unit,
+) {
+    CardButton(strings.resolve(MISSING_DOWNLOAD_KEY), ROUTE_ACTION_COLOR, onClick)
+}
+
 @Suppress("ktlint:standard:function-naming")
 @Composable
 private fun CardButton(
@@ -201,6 +217,7 @@ private fun CardButton(
             ),
         modifier =
             Modifier
+                .heightIn(min = MIN_TAP_TARGET_DP.dp)
                 .background(background, RoundedCornerShape(BUTTON_CORNER_DP.dp))
                 .border(
                     1.dp,

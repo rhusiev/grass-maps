@@ -38,8 +38,25 @@ import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.api.model.FavouriteListsState
 import nl.r1a.grassmaps.plugin.api.model.FavouriteSort
 import nl.r1a.grassmaps.plugin.api.model.FavouriteSpecial
+import nl.r1a.grassmaps.plugin.api.model.GeoPoint
 import nl.r1a.grassmaps.plugin.api.service.Strings
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+
+/**
+ * The stored coordinates of the selected place, or null when it has none. The
+ * browse rows carry the position through from the persisted point (T-0304);
+ * the full library is the fallback for a point a query has filtered out.
+ */
+internal fun selectedPlacePosition(
+    state: FavouriteListsState,
+    selectedPoint: String?,
+): GeoPoint? {
+    if (selectedPoint == null) return null
+    return state.browse.rows
+        .firstOrNull { it.id == selectedPoint }
+        ?.position
+        ?: state.points.firstOrNull { it.id == selectedPoint }?.position
+}
 
 /**
  * The lists sheet (T-0213). The plugin owns the state and the actions; this
@@ -61,9 +78,8 @@ import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
  * [embedded] drops the scrim and card: the combined widgets-and-Saved sheet
  * supplies that chrome and keeps only the list body.
  *
- * [onShowOnMap] is the existing map-command callback the bottom bar fires for a
- * selected place. It defaults to a no-op here; the app supplies the camera
- * action when it wires this sheet.
+ * [onShowOnMap] receives the selected place's coordinates. It has no default:
+ * the app supplies the camera action, so an unwired sheet cannot compile.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -80,7 +96,7 @@ fun FavouritesListsHost(
     onSortChange: (FavouriteSort) -> Unit,
     onClose: () -> Unit,
     onToggleGroupShown: (String, Boolean) -> Unit = { _, _ -> },
-    onShowOnMap: () -> Unit = {},
+    onShowOnMap: (GeoPoint) -> Unit,
     embedded: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -157,7 +173,7 @@ internal fun FavouritesListsBody(
     onSortChange: (FavouriteSort) -> Unit,
     onClose: () -> Unit,
     onToggleGroupShown: (String, Boolean) -> Unit = { _, _ -> },
-    onShowOnMap: () -> Unit = {},
+    onShowOnMap: (GeoPoint) -> Unit,
     showClose: Boolean = true,
     scroll: Boolean = true,
     modifier: Modifier = Modifier,
@@ -172,6 +188,7 @@ internal fun FavouritesListsBody(
     var savedSearchOpen by remember { mutableStateOf(false) }
     val commands = SAVED_COMMANDS
     val savedContent = savedScreenContent(state, strings, commands, hiddenGroups, segment)
+    val selectedPosition = selectedPlacePosition(state, selectedPoint)
 
     Column(
         modifier = modifier.then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier),
@@ -241,7 +258,7 @@ internal fun FavouritesListsBody(
             query = query,
             searchOpen = savedSearchOpen,
             newListName = newName,
-            placeSelected = selectedPoint != null,
+            placeSelected = selectedPosition != null,
             onChooseSegment = { chosen -> segment = chosen },
             onToggleSearch = { savedSearchOpen = !savedSearchOpen },
             onQueryChange = {
@@ -260,7 +277,7 @@ internal fun FavouritesListsBody(
                     newName = ""
                 }
             },
-            onShowOnMap = onShowOnMap,
+            onShowOnMap = { selectedPosition?.let(onShowOnMap) },
         )
     }
 }

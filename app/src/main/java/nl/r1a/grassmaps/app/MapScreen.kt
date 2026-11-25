@@ -2379,6 +2379,7 @@ private fun MapContent(
             MapSavedListsHost(
                 container = container,
                 scope = scope,
+                surface = surface,
                 querySequence = listsQuerySequence,
                 hiddenGroups = favouritesLayerSettings.hiddenGroups,
                 embedded = false,
@@ -2414,6 +2415,7 @@ private fun MapContent(
                     MapSavedListsHost(
                         container = container,
                         scope = scope,
+                        surface = surface,
                         querySequence = listsQuerySequence,
                         hiddenGroups = favouritesLayerSettings.hiddenGroups,
                         embedded = true,
@@ -2872,6 +2874,7 @@ private fun MapContent(
 private fun MapSavedListsHost(
     container: AppContainer,
     scope: CoroutineScope,
+    surface: MapSurface,
     querySequence: LongArray,
     hiddenGroups: Set<String>,
     embedded: Boolean,
@@ -2941,6 +2944,13 @@ private fun MapSavedListsHost(
                 }.onFailure { error ->
                     Log.w(TAG, "saved list visibility not saved: $error")
                 }
+            }
+        },
+        onShowOnMap = { point ->
+            scope.launch {
+                surface.host
+                    .animateCamera(CameraUpdate(center = point))
+                    .onFailure { error -> Log.w(TAG, "show saved place on map failed: $error") }
             }
         },
         embedded = embedded,

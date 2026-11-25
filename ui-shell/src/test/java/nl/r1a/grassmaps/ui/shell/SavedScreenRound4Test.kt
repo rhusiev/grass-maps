@@ -69,7 +69,7 @@ class SavedScreenRound4Test {
         )
         assertTrue(
             "the map command does not follow the selected point",
-            listsHost.contains("placeSelected = selectedPoint != null"),
+            listsHost.contains("placeSelected = selectedPosition != null"),
         )
     }
 
@@ -90,6 +90,6 @@ class SavedScreenRound4Test {
         const val ENGLISH_STRINGS = "src/main/res/values/strings.xml"
         const val UKRAINIAN_STRINGS = "src/main/res/values-uk/strings.xml"
         val SAVED_COMMANDS_PATTERN = Regex("SavedCommands\\([^)]*map = true")
-        val FORWARD_PATTERN = Regex("onShowOnMap: \\(\\) -> Unit = \\{\\}")
+        val FORWARD_PATTERN = Regex("onShowOnMap: \\(GeoPoint\\) -> Unit")
     }
 }

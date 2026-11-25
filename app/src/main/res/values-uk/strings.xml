@@ -367,6 +367,8 @@
     <string name="settings.index.row.tracks">Треки</string>
     <string name="settings.index.row.plugins">Плагіни</string>
     <string name="settings.index.row.backup">Резервна копія</string>
+    <string name="settings.index.search">Пошук налаштувань</string>
+    <string name="settings.index.search.empty">За вашим запитом налаштувань не знайдено</string>
 
     <!-- T-0612: шеврон на правому кінці нижньої панелі мапи -->
     <string name="map_bottom_bar_open_sheet">Відкрити віджети та Збережене</string>

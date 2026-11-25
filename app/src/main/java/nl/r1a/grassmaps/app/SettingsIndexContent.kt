@@ -5,6 +5,8 @@ import nl.r1a.grassmaps.plugin.api.service.Strings
 internal const val SETTINGS_INDEX_TITLE_KEY = "settings.screen_title"
 internal const val SETTINGS_INDEX_SUBTITLE_KEY = "settings.index.subtitle"
 internal const val SETTINGS_INDEX_BACK_KEY = "settings.screen_back"
+internal const val SETTINGS_INDEX_SEARCH_KEY = "settings.index.search"
+internal const val SETTINGS_INDEX_EMPTY_KEY = "settings.index.search.empty"
 internal const val SETTINGS_INDEX_USE_KEY = "settings.index.group.use"
 internal const val SETTINGS_INDEX_DATA_KEY = "settings.index.group.data"
 
@@ -44,16 +46,25 @@ internal data class SettingsIndexContent(
     val title: String,
     val subtitle: String,
     val back: String,
+    val search: String,
+    val empty: String,
     val groupTitles: Map<SettingsIndexGroup, String>,
     val rows: List<SettingsIndexRow>,
 )
 
+/** Returns the rows whose resolved title contains [query], ignoring case. */
+internal fun SettingsIndexContent.filtered(query: String): SettingsIndexContent {
+    val needle = query.trim().lowercase()
+    return if (needle.isEmpty()) this else copy(rows = rows.filter { it.title.lowercase().contains(needle) })
+}
+
 /**
  * The Settings index of round 4/settings.html. Only rows with a real
  * destination are offered. Units, Gestures, Privacy, Storage and About have no
- * screen in this build, so they are not listed. Language opens the screen
- * settings subpage because the in-app language control lives there.
- * Saved uses this index until the map bar has the approved widgets and Saved tray.
+ * screen in this build, so they are not listed and each needs its own
+ * destination before an index row can be added. Language opens the screen
+ * settings subpage because the in-app language control lives there. The map bar
+ * already opens the widgets and Saved sheet, so Saved keeps its own row here.
  * Network, online search and auto-update have no settings screen of their own:
  * online search is a map-search action and auto-update lives inside downloads.
  */
@@ -68,6 +79,8 @@ internal fun settingsIndexContent(strings: Strings): SettingsIndexContent {
         title = strings.resolve(SETTINGS_INDEX_TITLE_KEY),
         subtitle = strings.resolve(SETTINGS_INDEX_SUBTITLE_KEY),
         back = strings.resolve(SETTINGS_INDEX_BACK_KEY),
+        search = strings.resolve(SETTINGS_INDEX_SEARCH_KEY),
+        empty = strings.resolve(SETTINGS_INDEX_EMPTY_KEY),
         groupTitles =
             mapOf(
                 SettingsIndexGroup.USE to strings.resolve(SETTINGS_INDEX_USE_KEY),

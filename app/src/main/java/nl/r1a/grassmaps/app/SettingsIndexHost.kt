@@ -19,8 +19,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,8 +61,10 @@ private val CHEVRON_GLYPH = "\u203a"
 /**
  * The Settings index screen. A plain screen, not a sheet: the canon gives it a
  * full page with its own back header. The back chevron shares the row chevron
- * style and is centered beside the title. Every row is a 48 dp press target and
- * hands off through [onOpen]; the screen owns no screen state of its own.
+ * style and is centered beside the title. A search field filters the rows by
+ * their resolved titles and shows an empty message when nothing matches.
+ * Every row is a 48 dp press target and hands off through [onOpen]; the screen
+ * keeps only the search query as its own state.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -69,6 +76,8 @@ internal fun SettingsIndexHost(
     modifier: Modifier = Modifier,
 ) {
     val colors = shellColors(dark)
+    var query by remember { mutableStateOf("") }
+    val visible = content.filtered(query)
     Box(modifier = modifier.fillMaxSize().background(colors.surface)) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             Row(
@@ -99,6 +108,12 @@ internal fun SettingsIndexHost(
                 style = TextStyle(color = colors.muted, fontSize = SUBTITLE_SP.sp),
                 modifier = Modifier.padding(horizontal = HORIZONTAL_DP.dp).padding(top = SUBTITLE_TOP_DP.dp),
             )
+            BasicText(
+                text = content.search,
+                style = TextStyle(color = colors.muted, fontSize = SECTION_SP.sp),
+                modifier = Modifier.padding(horizontal = HORIZONTAL_DP.dp).padding(top = SECTION_TOP_DP.dp),
+            )
+            SettingsSearchField(content, colors, query) { query = it }
             Column(
                 modifier =
                     Modifier
@@ -107,25 +122,57 @@ internal fun SettingsIndexHost(
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = HORIZONTAL_DP.dp),
             ) {
-                SettingsIndexGroup.entries.forEach { group ->
+                if (visible.rows.isEmpty()) {
                     BasicText(
-                        text = content.groupTitles.getValue(group),
-                        style =
-                            TextStyle(
-                                color = colors.muted,
-                                fontSize = SECTION_SP.sp,
-                                fontWeight = FontWeight.Bold,
-                            ),
-                        modifier = Modifier.padding(top = SECTION_TOP_DP.dp, bottom = SECTION_BOTTOM_DP.dp),
+                        text = content.empty,
+                        style = TextStyle(color = colors.muted, fontSize = ROW_TITLE_SP.sp),
+                        modifier = Modifier.padding(top = SECTION_TOP_DP.dp),
                     )
-                    content.rows.filter { it.group == group }.forEach { row ->
-                        IndexRow(row, colors, onOpen)
+                } else {
+                    SettingsIndexGroup.entries.forEach { group ->
+                        BasicText(
+                            text = content.groupTitles.getValue(group),
+                            style =
+                                TextStyle(
+                                    color = colors.muted,
+                                    fontSize = SECTION_SP.sp,
+                                    fontWeight = FontWeight.Bold,
+                                ),
+                            modifier = Modifier.padding(top = SECTION_TOP_DP.dp, bottom = SECTION_BOTTOM_DP.dp),
+                        )
+                        visible.rows.filter { it.group == group }.forEach { row ->
+                            IndexRow(row, colors, onOpen)
+                        }
                     }
                 }
                 Spacer(Modifier.height(ROW_MIN_DP.dp))
             }
         }
     }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun SettingsSearchField(
+    content: SettingsIndexContent,
+    colors: ShellColors,
+    query: String,
+    onQueryChange: (String) -> Unit,
+) {
+    BasicTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        singleLine = true,
+        textStyle = TextStyle(color = colors.ink, fontSize = ROW_TITLE_SP.sp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = HORIZONTAL_DP.dp)
+                .heightIn(min = ROW_MIN_DP.dp)
+                .background(colors.soft, RoundedCornerShape(ROW_CORNER_DP.dp))
+                .padding(horizontal = ROW_PADDING_DP.dp)
+                .semantics { contentDescription = content.search },
+    )
 }
 
 @Suppress("ktlint:standard:function-naming")

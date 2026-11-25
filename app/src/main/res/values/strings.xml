@@ -342,6 +342,8 @@
     <string name="settings.index.row.tracks">Tracks</string>
     <string name="settings.index.row.plugins">Plugins</string>
     <string name="settings.index.row.backup">Backup</string>
+    <string name="settings.index.search">Search settings</string>
+    <string name="settings.index.search.empty">No settings match your search</string>
 
     <!-- T-0612: the chevron at the right end of the map's bottom bar -->
     <string name="map_bottom_bar_open_sheet">Open widgets and Saved</string>

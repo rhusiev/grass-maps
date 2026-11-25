@@ -1,6 +1,7 @@
 package nl.r1a.grassmaps.app
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -19,6 +20,21 @@ class SettingsIndexStringsTest {
     fun bothLocalesHaveTheSameIndexRowCount() {
         assertEquals("locale row counts match", indexRowCount(ENGLISH), indexRowCount(UKRAINIAN))
         assertEquals("eight index rows", 8, indexRowCount(ENGLISH))
+    }
+
+    @Test
+    fun searchAndEmptyCopyAreTranslatedInBothLocales() {
+        for (key in SEARCH_KEYS) {
+            assertTrue("$key in English", string(ENGLISH, key).isNotBlank())
+            assertTrue("$key in Ukrainian", string(UKRAINIAN, key).isNotBlank())
+        }
+    }
+
+    @Test
+    fun noCopyClaimsTheWidgetsAndSavedSheetIsMissing() {
+        for (path in listOf(ENGLISH, UKRAINIAN)) {
+            assertFalse("$path has stale tray copy", File(path).readText().contains("widgets and Saved tray"))
+        }
     }
 
     private fun indexRowCount(path: String): Int =
@@ -44,6 +60,11 @@ class SettingsIndexStringsTest {
                 "settings.index.row.tracks",
                 "settings.index.row.plugins",
                 "settings.index.row.backup",
+            )
+        val SEARCH_KEYS =
+            listOf(
+                "settings.index.search",
+                "settings.index.search.empty",
             )
     }
 }

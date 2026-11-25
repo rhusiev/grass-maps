@@ -198,22 +198,21 @@ class RoutePreferencesContentTest {
 
     /**
      * Final blind review 8 P2-2: the collapsed row rendered at 27 dp because
-     * vertical padding gives it no height. It must take the module's shared
-     * 48 dp tap target as an exact height, not a minimum. A JVM source test
-     * cannot measure rendering, so a device pass must confirm 126 px at
-     * 420 dpi.
+     * vertical padding gave it no minimum. It takes the shared 48 dp tap
+     * target as a minimum, so a wrapped title at a large font scale still
+     * fits. Rendered size is checked on the AVD, not by this test.
      */
     @Test
-    fun theCollapsedPreferencesRowSetsAnExactTargetHeight() {
+    fun theCollapsedPreferencesRowHasATapTargetMinimum() {
         val source = File("src/main/java/nl/r1a/grassmaps/ui/shell/RoutePreferencesContent.kt").readText()
         val entry = source.substringAfter("fun RoutePreferencesEntry(").substringBefore("\n}")
         assertTrue(
-            "the collapsed row still has no exact 48 dp height",
-            Regex("""\.height\(MapControlMetrics\.TAP_TARGET_DP\.dp\)""").containsMatchIn(entry),
+            "the collapsed row has no 48 dp minimum height",
+            Regex("""\.heightIn\(min\s*=\s*MapControlMetrics\.TAP_TARGET_DP\.dp\)""").containsMatchIn(entry),
         )
         assertTrue(
-            "the collapsed row still relies on a minimum-only size modifier",
-            !Regex("""sizeIn\s*\(|heightIn\s*\(""").containsMatchIn(entry),
+            "a fixed height clips the title at large font scales",
+            !Regex("""\.height\(""").containsMatchIn(entry),
         )
     }
 

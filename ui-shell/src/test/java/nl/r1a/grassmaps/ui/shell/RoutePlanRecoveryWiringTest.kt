@@ -86,27 +86,23 @@ class RoutePlanRecoveryWiringTest {
     }
 
     /**
-     * Final blind review 8 P2-1: a `sizeIn` minimum still rendered 45.7 dp at
-     * 420 dpi while neighbouring controls measured 48 dp. An exact height
-     * makes the rendered node deterministic; the long label keeps a minimum
-     * width. A JVM source test cannot measure rendering, so a device pass must
-     * confirm 126 px at 420 dpi.
+     * Final blind review 8 P2-1: the button rendered 45.7 dp at 420 dpi. It
+     * needs the 48 dp minimum in both dimensions, and its height must grow
+     * with the label: an exact height clipped the wrapped label at font
+     * scale 2.0. Rendered size is checked on the AVD, not by this test.
      */
     @Test
-    fun theOpenDownloadsButtonSetsAnExact48DpHeight() {
+    fun theOpenDownloadsButtonHasA48DpMinimumThatGrowsWithItsLabel() {
         val panel = File(PANEL_FILE).readText()
         val button = panel.substringAfter("fun OpenDownloadsButton(").substringBefore("\n}")
         assertTrue(
-            "the recovery button still relies on a minimum-only height",
-            Regex("""\.height\(CONTROL_TARGET_DP\.dp\)""").containsMatchIn(button),
+            "the recovery button lost its 48 dp minimum",
+            Regex("""sizeIn\(\s*minWidth\s*=\s*CONTROL_TARGET_DP\.dp,\s*minHeight\s*=\s*CONTROL_TARGET_DP\.dp\s*\)""")
+                .containsMatchIn(button),
         )
         assertTrue(
-            "the recovery button lost its minimum width",
-            Regex("""\.widthIn\(min\s*=\s*CONTROL_TARGET_DP\.dp\)""").containsMatchIn(button),
-        )
-        assertTrue(
-            "the recovery button still carries a minimum-only size modifier",
-            !Regex("""sizeIn\s*\(""").containsMatchIn(button),
+            "a fixed height clips the wrapped label at large font scales",
+            !Regex("""\.height\(""").containsMatchIn(button),
         )
     }
 

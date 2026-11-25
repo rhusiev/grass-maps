@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.widthIn
@@ -929,10 +928,9 @@ private fun OpenDownloadsButton(
                 .border(1.dp, ROUTE_CONTROL_BORDER, RoundedCornerShape(CHIP_CORNER_DP.dp))
                 .semantics { contentDescription = label }
                 .clickable(role = Role.Button, onClick = onClick)
-                .widthIn(min = CONTROL_TARGET_DP.dp)
-                .height(CONTROL_TARGET_DP.dp)
+                .sizeIn(minWidth = CONTROL_TARGET_DP.dp, minHeight = CONTROL_TARGET_DP.dp)
                 .wrapContentHeight(Alignment.CenterVertically)
-                .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp),
+                .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp, vertical = CHIP_PADDING_VERTICAL_DP.dp),
     )
 }
 

@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -151,7 +151,8 @@ internal fun RoutePreferencesEntry(
                 .fillMaxWidth()
                 .semantics { contentDescription = content.description }
                 .clickable(role = Role.Button, onClick = onClick)
-                .height(MapControlMetrics.TAP_TARGET_DP.dp),
+                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
+                .padding(vertical = TIGHT_GAP_DP.dp),
         horizontalArrangement = Arrangement.spacedBy(GAP_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

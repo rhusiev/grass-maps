@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -773,6 +774,7 @@ private fun ElevationChip(
                 .border(CHIP_BORDER_DP.dp, if (selected) palette.chipSelected else palette.chipBorder, CHIP_SHAPE)
                 .background(background, CHIP_SHAPE)
                 .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+                .sizeIn(minWidth = MIN_TAP_TARGET_DP.dp, minHeight = MIN_TAP_TARGET_DP.dp)
                 .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp, vertical = CHIP_PADDING_VERTICAL_DP.dp),
     )
 }
@@ -802,6 +804,7 @@ fun AnalysisDetailsToggle(
         modifier =
             modifier
                 .clickable(role = Role.Button, onClick = onClick)
+                .sizeIn(minWidth = MIN_TAP_TARGET_DP.dp, minHeight = MIN_TAP_TARGET_DP.dp)
                 // The chevron is decoration; the spoken label is the action.
                 .semantics { contentDescription = strings.resolve(key) },
     )
@@ -827,6 +830,7 @@ private const val CHIP_GAP_DP = 6
 private const val CHIP_BORDER_DP = 1
 private const val CHIP_PADDING_HORIZONTAL_DP = 10
 private const val CHIP_PADDING_VERTICAL_DP = 5
+private const val MIN_TAP_TARGET_DP = 48
 private const val DETAILS_FONT_SP = 14
 private const val GRID_STROKE_PX = 1f
 private const val LINE_STROKE_PX = 1.6f

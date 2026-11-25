@@ -692,6 +692,7 @@ internal fun ActionChip(
                 .background(background, shape)
                 .border(1.dp, if (primary) ROUTE_ACTION_COLOR else ROUTE_CONTROL_BORDER, shape)
                 .clickable(role = Role.Button, onClick = onClick)
+                .sizeIn(minWidth = CONTROL_TARGET_DP.dp, minHeight = CONTROL_TARGET_DP.dp)
                 .padding(
                     horizontal = CHIP_PADDING_HORIZONTAL_DP.dp,
                     vertical = CHIP_PADDING_VERTICAL_DP.dp,
@@ -767,6 +768,7 @@ private fun StartChip(
             Modifier
                 .background(ROUTE_ACTION_COLOR, RoundedCornerShape(CHIP_CORNER_DP.dp))
                 .clickable(role = Role.Button, onClick = onClick)
+                .sizeIn(minWidth = CONTROL_TARGET_DP.dp, minHeight = CONTROL_TARGET_DP.dp)
                 .padding(
                     horizontal = CHIP_PADDING_HORIZONTAL_DP.dp,
                     vertical = CHIP_PADDING_VERTICAL_DP.dp,

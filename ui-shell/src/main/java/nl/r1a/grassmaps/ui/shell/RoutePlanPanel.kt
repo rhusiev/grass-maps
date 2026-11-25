@@ -116,8 +116,11 @@ fun routePlanSheetSections(view: RoutePlanSheetView): RoutePlanSheetSections =
  * The elevation chart (T-0404) sits under the preview, behind the Details
  * toggle, with its axis chips beside it. It plots the analysis engine's profile
  * of the selected route and never samples the terrain again. [time] is the
- * slope-aware estimate (T-0407); when present, the preview names its model and
- * moves the arrival with it.
+ * slope-aware estimate (T-0407); when present, the preview names its model,
+ * moves the arrival with it, and is the one duration the mode chip and the
+ * selected alternative card read. [alternativeAscentMeters] carries an engine
+ * ascent per option when one exists; a missing value leaves the card's ascent
+ * and climb benefit out instead of inventing them.
  *
  * The design also draws a warning marker on the route line. That marker is not
  * built: the map host has no marker set, and the composed-layers compiler
@@ -155,6 +158,7 @@ fun RoutePlanPanel(
     chart: ElevationChartState = ElevationChartState(),
     onChartAxis: (ElevationChartAxis) -> Unit = {},
     time: RoutePreviewTime? = null,
+    alternativeAscentMeters: Map<Int, Double> = emptyMap(),
     units: UnitSystem = UnitSystem.Metric,
     dark: Boolean = false,
     view: RoutePlanSheetView = DEFAULT_ROUTE_PLAN_SHEET_VIEW,
@@ -233,8 +237,15 @@ fun RoutePlanPanel(
             }
 
             RoutePlanStatus.Ready -> {
-                RouteModeChipsRow(chips = routeModeChips(state, strings))
-                val cards = routeAlternativeCards(state, strings)
+                RouteModeChipsRow(chips = routeModeChips(state, strings, time))
+                val cards =
+                    routeAlternativeCards(
+                        state = state,
+                        strings = strings,
+                        time = time,
+                        ascentMeters = alternativeAscentMeters,
+                        units = units,
+                    )
                 if (cards.isNotEmpty()) {
                     RouteAlternativeCards(cards = cards, onSelectAlternative = onSelectAlternative)
                 } else {

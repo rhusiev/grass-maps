@@ -23,8 +23,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.api.model.RoutePlanState
+import nl.r1a.grassmaps.plugin.api.model.UnitSystem
 import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
 import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.api.unit.UnitText
 
 /**
  * One travel mode the engine actually computed, with that route's time. The
@@ -42,12 +44,13 @@ data class RouteModeChip(
 /**
  * The modes with a computed option. The plan publishes one profile and the
  * engine's options for that profile, so exactly one mode has a time to show.
- * The chip borrows the engine's own duration text through
- * [routePlanAlternativeText], so it agrees with the alternative cards.
+ * The chip reads [canonicalDurationSeconds], the same time the preview card
+ * reads, so one route never shows two durations in the same view.
  */
 fun routeModeChips(
     state: RoutePlanState,
     strings: Strings,
+    time: RoutePreviewTime? = null,
 ): List<RouteModeChip> {
     val selected = state.selected ?: return emptyList()
     val profile = state.profile
@@ -55,40 +58,102 @@ fun routeModeChips(
         RouteModeChip(
             profile = profile,
             label = profileLabel(profile, strings),
-            time = routePlanAlternativeText(selected.durationSeconds, strings),
+            time = routePlanAlternativeText(canonicalDurationSeconds(selected, time), strings),
         ),
     )
 }
 
-/** One returned route as a card. Only the selected card carries the label. */
+/**
+ * One returned route as a card, in the engine's own order. [label] is the bold
+ * line: the selected route keeps its selected label, and another route names
+ * the time or climb it saves over the selected one. [ascent] is null when the
+ * engine supplied no ascent, so the field is left out rather than invented.
+ * [index] is kept so a card reuses the planner's selection command.
+ */
 data class RouteAlternativeCard(
     val index: Int,
-    val description: String,
     val selected: Boolean,
     val label: String,
-)
+    val time: String,
+    val ascent: String?,
+) {
+    /** The value line: the duration, with ascent beside it only when measured. */
+    val description: String
+        get() = if (ascent.isNullOrEmpty()) time else time + VALUE_SEPARATOR + ascent
+}
 
 /**
- * The engine's options in their own order. The description is the existing
- * alternative string with the option's number and its formatted time; index is
- * kept so a card reuses the planner's selection command without a second path.
+ * The engine's options as benefit cards. The benefit is always relative to the
+ * selected route: a faster alternative says how many minutes it saves, and a
+ * slower alternative with less climb says how many metres of climb it saves.
+ * An alternative that saves neither leaves the label empty, because a benefit
+ * that is not in the data must not be shown.
+ *
+ * [ascentMeters] is keyed by option index. A missing index or a non-positive
+ * value means the engine gave no ascent for that route; neither the ascent
+ * field nor a climb benefit is then invented.
  */
 fun routeAlternativeCards(
     state: RoutePlanState,
     strings: Strings,
-): List<RouteAlternativeCard> =
-    state.options.mapIndexed { index, option ->
+    time: RoutePreviewTime? = null,
+    ascentMeters: Map<Int, Double> = emptyMap(),
+    units: UnitSystem = UnitSystem.Metric,
+): List<RouteAlternativeCard> {
+    val selected = state.selected ?: return emptyList()
+    val selectedSeconds = canonicalDurationSeconds(selected, time)
+    val selectedAscent = ascentMeters[state.selectedIndex]
+    return state.options.mapIndexed { index, option ->
+        val seconds = if (index == state.selectedIndex) selectedSeconds else option.durationSeconds
+        val climb = ascentMeters[index]?.takeIf { it.isFinite() && it > 0.0 }
         RouteAlternativeCard(
             index = index,
-            description =
-                strings.resolve(
-                    ALTERNATIVE_DESCRIPTION_KEY,
-                    listOf((index + 1).toString(), routePlanAlternativeText(option.durationSeconds, strings)),
-                ),
             selected = index == state.selectedIndex,
-            label = if (index == state.selectedIndex) strings.resolve(SELECTED_KEY) else "",
+            label =
+                if (index == state.selectedIndex) {
+                    strings.resolve(SELECTED_KEY)
+                } else {
+                    benefitLabel(selectedSeconds, selectedAscent, option.durationSeconds, climb, strings)
+                },
+            time = routePlanAlternativeText(seconds, strings),
+            ascent = climb?.let { strings.resolve(ASCENT_KEY, listOf(UnitText.elevation(it, units, strings))) },
         )
     }
+}
+
+/**
+ * The truthful saving one alternative has over the selected route. Whole
+ * minutes are floored, so a 59-second saving never reads as "1 min faster".
+ * Climb is only named when both routes have an engine-supplied ascent and the
+ * alternative is at least one metre lower.
+ */
+private fun benefitLabel(
+    selectedSeconds: Double,
+    selectedAscent: Double?,
+    optionSeconds: Double,
+    optionAscent: Double?,
+    strings: Strings,
+): String {
+    val savedMinutes = Math.floor((selectedSeconds - optionSeconds) / SECONDS_PER_MINUTE).toLong()
+    if (savedMinutes >= 1L) {
+        return strings.resolve(FASTER_KEY, listOf(savedMinutes.toString()))
+    }
+    if (selectedAscent != null && optionAscent != null) {
+        val savedClimb = selectedAscent - optionAscent
+        if (savedClimb >= 1.0) {
+            return strings.resolve(
+                LESS_CLIMB_KEY,
+                listOf(
+                    kotlin.math
+                        .round(savedClimb)
+                        .toLong()
+                        .toString(),
+                ),
+            )
+        }
+    }
+    return ""
+}
 
 /** The computed mode chips, from the same shell tokens as the planner sheet. */
 @Suppress("ktlint:standard:function-naming")
@@ -179,8 +244,12 @@ internal fun RouteAlternativeCards(
 }
 
 private const val MODE_SEPARATOR = " · "
-private const val ALTERNATIVE_DESCRIPTION_KEY = "route_planner_alternative_description"
+private const val VALUE_SEPARATOR = " · "
+private const val SECONDS_PER_MINUTE = 60.0
 private const val SELECTED_KEY = "route_alternative_selected"
+private const val FASTER_KEY = "route_alternative_faster"
+private const val LESS_CLIMB_KEY = "route_alternative_less_climb"
+private const val ASCENT_KEY = "route_alternative_ascent"
 private const val MIN_TAP_TARGET_DP = 48
 private const val CHIP_CORNER_DP = 8
 private const val CARD_CORNER_DP = 10

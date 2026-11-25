@@ -118,8 +118,10 @@
     <string name="route_planner_missing_part_routing">Маршрутизація</string>
     <string name="route_planner_missing_part_contours">Ізолінії</string>
     <string name="route_planner_no_alternatives">Для цих картографічних даних немає альтернативних маршрутів</string>
-    <string name="route_planner_alternative_description">Альтернативний маршрут %1$s, %2$s</string>
     <string name="route_alternative_selected">Вибрано</string>
+    <string name="route_alternative_faster">%1$s хв швидше</string>
+    <string name="route_alternative_less_climb">%1$s м менше підйому</string>
+    <string name="route_alternative_ascent">\u2191%1$s</string>
     <string name="route_planner_start_unavailable">Навігація ще недоступна в цій збірці</string>
     <string name="route_planner_undo">Скасувати останню зміну плану</string>
     <string name="route_planner_redo">Повторити скасовану зміну плану</string>

@@ -93,7 +93,7 @@ fun routePlanPreview(
     units: UnitSystem = UnitSystem.Metric,
 ): RoutePreview? {
     val option = state.selected ?: return null
-    val seconds = time?.seconds ?: option.durationSeconds
+    val seconds = canonicalDurationSeconds(option, time)
     return RoutePreview(
         entries =
             listOf(
@@ -135,7 +135,19 @@ private fun timeText(
     return if (model == null) duration else duration + MODEL_SEPARATOR + model
 }
 
-/** The text for one alternative, so the chips use the same duration rule. */
+/**
+ * The one duration a route shows everywhere. The terrain-adjusted preview time
+ * wins when it exists, because the app computes it for the selected route; the
+ * engine's own duration is the fallback for every other route and for a plan
+ * without an estimate. The summary, the mode chip and the selected alternative
+ * card all read this value, so one route never shows two durations.
+ */
+internal fun canonicalDurationSeconds(
+    option: RoutePlanOption,
+    time: RoutePreviewTime?,
+): Double = time?.seconds ?: option.durationSeconds
+
+/** The text for one alternative, so the chips and cards use the same duration rule. */
 fun routePlanAlternativeText(
     durationSeconds: Double,
     strings: Strings,

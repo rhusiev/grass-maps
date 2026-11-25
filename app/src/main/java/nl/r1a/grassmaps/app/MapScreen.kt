@@ -338,19 +338,47 @@ private val PROFILE_SWITCH_KEY: Any = Any()
  * it reports 16 dp more chrome, so the map credit stays above the bar without
  * moving any other control.
  */
-private const val PROFILE_SWITCH_DROP_DP = 4
-private const val PROFILE_SWITCH_CREDIT_GAP_DP = 16
+internal const val PROFILE_SWITCH_DROP_DP = 4
+internal const val PROFILE_SWITCH_CREDIT_GAP_DP = 16
 private const val SETTINGS_ENTRY_GAP_DP = 8
 
 /**
  * The chevron at the right end of the bottom bar opens the widgets and Saved
  * sheet. It is permanent, so it is a named constant rather than a bar slot.
  */
-private const val SHEET_CHEVRON_TARGET_DP = 48
+internal const val SHEET_CHEVRON_TARGET_DP = 48
 private const val SHEET_CHEVRON_GLYPH_DP = 24
 
-private const val ARC_BOTTOM_CLEARANCE_DP = 120
+internal const val ARC_BOTTOM_CLEARANCE_DP = 120
 internal const val WIDGET_GRID_GAP_DP = 8
+
+/** Gap between the permanent bar and the Layers button. */
+private const val LAYERS_GAP_DP = 8
+
+/** The measured height of LayersButton, used to stack the scale bar above it. */
+private const val LAYERS_BUTTON_HEIGHT_DP = 48
+
+/**
+ * Bottom insets, in dp, for Layers and the scale bar. Both are measured inside
+ * navigationBarsPadding, so they compare directly with the bar's own reach.
+ */
+internal data class MapBottomInsets(
+    val layersDp: Int,
+    val scaleBarDp: Int,
+)
+
+/**
+ * Layers clears the permanent bottom bar: a 48 dp chevron plus its 16 dp credit
+ * spacer, less the 4 dp drop, and an [LAYERS_GAP_DP] gap. The scale bar clears
+ * Layers in the default layout. In arc mode the rail takes the bottom end, so
+ * Layers centres above the bar and the scale bar keeps the end clear of it.
+ */
+internal fun mapBottomInsets(arc: Boolean): MapBottomInsets {
+    val barReach = SHEET_CHEVRON_TARGET_DP + PROFILE_SWITCH_CREDIT_GAP_DP - PROFILE_SWITCH_DROP_DP
+    val layers = BAR_PADDING_DP + barReach + LAYERS_GAP_DP
+    val scaleBar = BAR_PADDING_DP + if (arc) 0 else layers - BAR_PADDING_DP + LAYERS_BUTTON_HEIGHT_DP + SCALE_BAR_GAP_DP
+    return MapBottomInsets(layersDp = layers, scaleBarDp = scaleBar)
+}
 
 /** The read-only route card sits just below the status bar, over the map. */
 private const val ROUTE_CARD_TOP_DP = 8
@@ -411,9 +439,6 @@ private const val DISTANCE_BADGE_MILLIS = 4_000L
 private const val TRACK_IMPORT_NOTICE_MILLIS = 8_000L
 private const val BANNER_STACK_GAP_DP = 8
 private const val BANNER_TICK_MILLIS = 1_000L
-
-/** Keeps the layers cards below the control bar at the top end. */
-private const val LAYERS_COLUMN_HEIGHT_FRACTION = 0.5f
 
 private const val METRE_DECIMALS = 1
 private const val KILOMETRE_DECIMALS = 2
@@ -1386,35 +1411,39 @@ private fun MapContent(
                 )
             }
         }
-        if (!navigationActive) {
-            Column(
+        val bottomInsets = mapBottomInsets(layout.arc)
+        // A sheet covers the map the bar measures, so the scale bar would only
+        // sit on the sheet's own controls. It returns when the sheet closes.
+        if (!navigationActive && (bottomChrome?.reachOf(BOTTOM_SHEET_KEY) ?: 0) == 0) {
+            MapScaleOverlay(
+                surface = surface,
+                settings = unitStore,
                 modifier =
                     Modifier
                         .align(Alignment.BottomEnd)
                         .navigationBarsPadding()
-                        .padding(BAR_PADDING_DP.dp)
-                        .fillMaxHeight(LAYERS_COLUMN_HEIGHT_FRACTION),
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(SCALE_BAR_GAP_DP.dp, Alignment.Bottom),
+                        .padding(end = BAR_PADDING_DP.dp, bottom = bottomInsets.scaleBarDp.dp),
+            )
+        }
+        // The bar is composed below, so Layers must clear it through this inset
+        // instead of relying on draw order. The arc rail occupies the bottom end,
+        // so Layers centres over the bar in that mode.
+        if (!navigationActive && !bottomSheetShown) {
+            Box(
+                modifier =
+                    Modifier
+                        .align(if (layout.arc) Alignment.BottomCenter else Alignment.BottomEnd)
+                        .navigationBarsPadding()
+                        .padding(horizontal = BAR_PADDING_DP.dp)
+                        .padding(bottom = bottomInsets.layersDp.dp),
             ) {
-                // A sheet covers the map the bar measures, so the bar would only
-                // sit on the sheet's own controls. It returns when the sheet closes.
-                if ((bottomChrome?.reachOf(BOTTOM_SHEET_KEY) ?: 0) == 0) {
-                    MapScaleOverlay(
-                        surface = surface,
-                        settings = unitStore,
-                        modifier = Modifier,
-                    )
-                }
-                if (!bottomSheetShown) {
-                    LayersButton(
-                        open = layersOpen,
-                        onToggle = {
-                            searchExpanded = false
-                            layersOpen = !layersOpen
-                        },
-                    )
-                }
+                LayersButton(
+                    open = layersOpen,
+                    onToggle = {
+                        searchExpanded = false
+                        layersOpen = !layersOpen
+                    },
+                )
             }
         }
         if (!navigationActive) {

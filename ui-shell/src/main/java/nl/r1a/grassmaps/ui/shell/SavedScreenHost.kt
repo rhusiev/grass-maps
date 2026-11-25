@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
@@ -307,6 +308,7 @@ private fun TapIcon(
             ),
         modifier =
             Modifier
+                .widthIn(min = MIN_TAP_TARGET_DP.dp)
                 .heightIn(min = MIN_TAP_TARGET_DP.dp)
                 .background(LocalShellColors.current.soft, RoundedCornerShape(ICON_CORNER_DP.dp))
                 .padding(horizontal = ROW_GAP_DP.dp, vertical = CENTRE_PADDING_DP.dp)

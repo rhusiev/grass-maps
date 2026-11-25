@@ -42,22 +42,32 @@ class MapBottomChromePlacementTest {
 
     @Test
     fun theScaleBarSitsAboveLayersWithAClearGap() {
-        assertTrue(
-            "the scale bar has no named gap above the Settings button",
-            constant("SCALE_BAR_GAP_DP") >= 16,
-        )
+        val scaleGap = constant("SCALE_BAR_GAP_DP")
+        assertTrue("the scale bar has no named gap above the Settings button", scaleGap >= 16)
         val rail = source.substringAfter("val dismissLayers").substringBefore("MapControlBar(")
         assertTrue(
             "the scale bar no longer sits above Layers",
             rail.indexOf("MapScaleOverlay(") < rail.indexOf("LayersButton("),
         )
         assertTrue(
-            "the rail does not use the named gap",
-            rail.contains("spacedBy(SCALE_BAR_GAP_DP.dp, Alignment.Bottom)"),
+            "the scale bar does not use the derived inset above Layers",
+            rail.contains(".padding(end = BAR_PADDING_DP.dp, bottom = bottomInsets.scaleBarDp.dp)"),
         )
         assertTrue(
-            "the rail left the screen-edge lane and now hits the arc",
-            rail.contains(".padding(BAR_PADDING_DP.dp)"),
+            "Layers does not use its own derived inset",
+            rail.contains(".padding(bottom = bottomInsets.layersDp.dp)"),
+        )
+
+        val default = mapBottomInsets(arc = false)
+        val barReach =
+            constant("SHEET_CHEVRON_TARGET_DP") + constant("PROFILE_SWITCH_CREDIT_GAP_DP") - constant("PROFILE_SWITCH_DROP_DP")
+        assertTrue(
+            "Layers at ${default.layersDp} dp must clear the $barReach dp bar reach",
+            default.layersDp > barReach,
+        )
+        assertTrue(
+            "the scale bar at ${default.scaleBarDp} dp clears Layers at ${default.layersDp} dp by only ${default.scaleBarDp - default.layersDp} dp",
+            default.scaleBarDp - default.layersDp >= constant("LAYERS_BUTTON_HEIGHT_DP") + scaleGap,
         )
     }
 

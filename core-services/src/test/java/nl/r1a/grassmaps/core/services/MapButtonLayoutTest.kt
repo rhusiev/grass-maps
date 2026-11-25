@@ -2,6 +2,7 @@ package nl.r1a.grassmaps.core.services
 
 import nl.r1a.grassmaps.plugin.api.contract.CommandId
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Test
 
@@ -23,6 +24,11 @@ class MapButtonLayoutTest {
         assertEquals(MapButtonLayout.SLOT_COUNT, MapButtonLayout.DEFAULT.slots.size)
         assertEquals(1, MapButtonLayout.DEFAULT.slots.count { it == null })
         assertEquals(MapControlCommands.DEFAULT_ORDER, MapButtonLayout.DEFAULT.commands)
+    }
+
+    @Test
+    fun theDefaultRailStaysAtTheTopEnd() {
+        assertFalse("a bottom default needs a proven clearance from the bottom chrome", MapButtonLayout.DEFAULT.arc)
     }
 
     @Test

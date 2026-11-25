@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -406,6 +407,8 @@ private fun GlyphButton(
         style = TextStyle(color = LocalShellColors.current.ink, fontSize = ACTION_FONT_SP.sp),
         modifier =
             Modifier
+                .widthIn(min = MIN_TAP_TARGET_DP.dp)
+                .heightIn(min = MIN_TAP_TARGET_DP.dp)
                 .clickable(onClick = onClick)
                 .semantics { contentDescription = description }
                 .padding(CLOSE_PADDING_DP.dp),
@@ -421,7 +424,12 @@ private fun ActionButton(
     BasicText(
         text = text,
         style = TextStyle(color = LocalShellColors.current.ink, fontSize = ACTION_FONT_SP.sp),
-        modifier = Modifier.clickable(onClick = onClick).padding(CLOSE_PADDING_DP.dp),
+        modifier =
+            Modifier
+                .widthIn(min = MIN_TAP_TARGET_DP.dp)
+                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .clickable(onClick = onClick)
+                .padding(CLOSE_PADDING_DP.dp),
     )
 }
 
@@ -458,10 +466,11 @@ private const val SHEET_MAX_WIDTH_DP = 560
 private const val SHEET_CORNER_DP = 12
 private const val SHEET_PADDING_DP = 16
 private const val ROW_GAP_DP = 8
+private const val MIN_TAP_TARGET_DP = 48
 private const val CLOSE_PADDING_DP = 4
 private const val FIELD_PADDING_DP = 8
 private const val FIELD_CORNER_DP = 6
-private const val CHIP_SIZE_DP = 20
+private const val CHIP_SIZE_DP = 48
 private const val CHIP_CORNER_DP = 4
 private const val CHIP_GAP_DP = 6
 private const val SWATCH_SIZE_DP = 16

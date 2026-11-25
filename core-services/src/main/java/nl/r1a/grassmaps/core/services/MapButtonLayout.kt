@@ -55,7 +55,11 @@ data class MapButtonLayout(
         /** The number of bar slots: the five default controls and one free slot. */
         const val SLOT_COUNT: Int = 6
 
-        /** The layout a profile uses until it saves its own. */
+        /**
+         * The layout a profile uses until it saves its own. The rail stays at
+         * the top end: a bottom default could not be proven clear of the bottom
+         * bar, Layers and the scale bar (T-0612, final blind review P2-3).
+         */
         val DEFAULT: MapButtonLayout = MapButtonLayout(MapControlCommands.DEFAULT_ORDER + null)
     }
 }

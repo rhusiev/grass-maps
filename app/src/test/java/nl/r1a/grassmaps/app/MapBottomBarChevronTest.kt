@@ -42,7 +42,7 @@ class MapBottomBarChevronTest {
     fun theChevronIsAFullTouchTargetWithASpokenName() {
         assertTrue(
             "the 48 dp chevron target is not a named constant",
-            source.contains("private const val SHEET_CHEVRON_TARGET_DP = 48"),
+            Regex("""(?:private |internal )const val SHEET_CHEVRON_TARGET_DP = 48""").containsMatchIn(source),
         )
         val button = source.substringAfter("private fun BottomBarChevron(").substringBefore("\n}\n")
         assertTrue("the chevron target is smaller than 48 dp", button.contains(".size(SHEET_CHEVRON_TARGET_DP.dp)"))
@@ -51,6 +51,22 @@ class MapBottomBarChevronTest {
         assertTrue(
             "the bar does not pass the translated label",
             source.contains("stringResource(R.string.map_bottom_bar_open_sheet)"),
+        )
+    }
+
+    @Test
+    fun theChevronTargetClearsThe48DpRuleAndFitsBelowLayers() {
+        val target =
+            Regex("""(?:private |internal )const val SHEET_CHEVRON_TARGET_DP = (\d+)""")
+                .find(source)
+                ?.groupValues
+                ?.get(1)
+                ?.toInt()
+                ?: throw AssertionError("the chevron has no numeric target")
+        assertTrue("the chevron target is under 48 dp", target >= 48)
+        assertTrue(
+            "Layers at ${mapBottomInsets(arc = false).layersDp} dp does not clear the $target dp chevron",
+            mapBottomInsets(arc = false).layersDp > target,
         )
     }
 

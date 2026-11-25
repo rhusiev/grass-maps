@@ -28,6 +28,16 @@ class RoutePlanPanelViewTest {
     }
 
     @Test
+    fun detailsOpensTheExistingChartSectionWithoutTheEditableHeader() {
+        val sections = routePlanSheetSections(RouteDetailsAction.OpenPlannerDetailsSection.sheetView)
+
+        assertTrue("Details opens the planner's chart section", sections.details)
+        assertFalse("Details keeps the read-only header", sections.editableHeader)
+        assertFalse("Details does not open the stop list", sections.stopList)
+        assertFalse("the read-only card keeps its chart section closed", routePlanSheetSections(DEFAULT_ROUTE_PLAN_SHEET_VIEW).details)
+    }
+
+    @Test
     fun plannerCloseIsComposedBeforeTheEditableHeaderAndStatusBranches() {
         val source =
             File("src/main/java/nl/r1a/grassmaps/ui/shell/RoutePlanPanel.kt")

@@ -33,13 +33,14 @@ class RouteSummaryCardTest {
                 RouteSummaryField.Distance,
                 RouteSummaryField.Arrival,
                 RouteSummaryField.Save,
-                RouteSummaryField.Start,
                 RouteSummaryField.Stops,
+                RouteSummaryField.Details,
+                RouteSummaryField.Start,
             ),
             card.entries.map { it.field },
         )
         assertEquals(
-            listOf("Pidzamche", "Stryiskyi Park", "25 min", "7.1 km", "22:38", "Save", "Start", "Stops"),
+            listOf("Pidzamche", "Stryiskyi Park", "25 min", "7.1 km", "22:38", "Save", "Stops", "Details", "Start"),
             card.entries.map { it.text },
         )
         assertEquals("Pidzamche", card.from)
@@ -57,9 +58,22 @@ class RouteSummaryCardTest {
 
         assertEquals(RouteStopsAction.OpenPlannerStopsSection, card.stopsAction)
         assertEquals("route_planner_stops", card.stopsAction.targetKey)
-        assertEquals(RouteSummaryField.Stops, card.entries.last().field)
+        assertEquals(RouteSummaryField.Stops, card.entries[6].field)
         assertEquals("Stops", card.stops)
         assertNotNull("the card reads one published plan", preview)
+    }
+
+    @Test
+    fun theDetailsActionTargetsThePlannerSheetsExistingDetailsSection() {
+        val preview = routePlanPreview(READY, strings(), Locale.US, ZoneId.of("UTC")) ?: error("no preview")
+
+        val card = routeSummaryCard(READY, preview, strings())
+
+        assertEquals(RouteDetailsAction.OpenPlannerDetailsSection, card.detailsAction)
+        assertEquals("route_summary_details", card.detailsAction.targetKey)
+        assertEquals(RoutePlanSheetView.Details, card.detailsAction.sheetView)
+        assertEquals("Details", card.details)
+        assertEquals(RouteSummaryField.Details, card.entries[7].field)
     }
 
     @Test
@@ -102,6 +116,7 @@ class RouteSummaryCardTest {
                     "route_preview_start" to "Start",
                     "route_preview_save" to "Save",
                     "route_planner_stops" to "Stops",
+                    "route_summary_details" to "Details",
                 )
 
             override fun resolve(

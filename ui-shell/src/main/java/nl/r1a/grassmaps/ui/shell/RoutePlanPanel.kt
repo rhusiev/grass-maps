@@ -75,17 +75,20 @@ private const val RECENT_LIMIT = 5
  * Which surface the planner sheet composes. [Summary] is the read-only route
  * view: the card over the map is primary, and the sheet has no editable header.
  * [Stops] is the existing editable header and stop list, opened by the card's
- * Stops action.
+ * Stops action. [Details] is the existing elevation-chart section, opened by
+ * the card's Details action; it composes no editable header and no stop list.
  */
 enum class RoutePlanSheetView {
     Summary,
     Stops,
+    Details,
 }
 
 /** The sections a planner-sheet view composes. */
 data class RoutePlanSheetSections(
     val editableHeader: Boolean,
     val stopList: Boolean,
+    val details: Boolean,
 )
 
 /** The view the planner sheet opens with: the read-only card is primary. */
@@ -94,8 +97,9 @@ val DEFAULT_ROUTE_PLAN_SHEET_VIEW: RoutePlanSheetView = RoutePlanSheetView.Summa
 /** Maps a sheet view to the sections its Composable composes. */
 fun routePlanSheetSections(view: RoutePlanSheetView): RoutePlanSheetSections =
     when (view) {
-        RoutePlanSheetView.Summary -> RoutePlanSheetSections(editableHeader = false, stopList = false)
-        RoutePlanSheetView.Stops -> RoutePlanSheetSections(editableHeader = true, stopList = true)
+        RoutePlanSheetView.Summary -> RoutePlanSheetSections(editableHeader = false, stopList = false, details = false)
+        RoutePlanSheetView.Stops -> RoutePlanSheetSections(editableHeader = true, stopList = true, details = false)
+        RoutePlanSheetView.Details -> RoutePlanSheetSections(editableHeader = false, stopList = false, details = true)
     }
 
 /**
@@ -112,7 +116,13 @@ fun routePlanSheetSections(view: RoutePlanSheetView): RoutePlanSheetSections =
  * rows - lives only in [RoutePlanSheetView.Stops]. The default view composes no
  * editable header, so the read-only card over the map is the route UI. The
  * card's Stops action opens this sheet in [RoutePlanSheetView.Stops], which
- * runs the same commands and the same [StopList] as before (T-0612).
+ * runs the same commands and the same [StopList] as before. The card's Details
+ * action opens [RoutePlanSheetView.Details], the chart section below, with the
+ * chart already expanded (round-4 P1 1, T-0612).
+ *
+ * The engine publishes one profile and supplies no ascent, so the sheet draws
+ * one mode chip and leaves the ascent field out instead of inventing a mode or
+ * a climb figure; that stays a known limitation of the current engine.
  *
  * The elevation chart (T-0404) sits under the preview, behind the Details
  * toggle, with its axis chips beside it. It plots the analysis engine's profile
@@ -169,7 +179,10 @@ fun RoutePlanPanel(
     if (state.status == RoutePlanStatus.Idle) return
     val sections = routePlanSheetSections(view)
     val preview = routePlanPreview(state, strings, time = time, units = units)
-    var detailsExpanded by remember(state.selected) { mutableStateOf(false) }
+    // The card's Details action opens this existing section expanded. A new
+    // plan or a different sheet view restarts the section from the view, while
+    // its own toggle still controls it once the sheet is open.
+    var detailsExpanded by remember(state.selected, view) { mutableStateOf(sections.details) }
     var selectedRange by remember(chart) { mutableStateOf<ElevationChartRange?>(null) }
     // The drag reports distances; the chart's own engine samples supply the
     // range statistics and the header, so no second range model is introduced.

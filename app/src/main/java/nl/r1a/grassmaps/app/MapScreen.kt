@@ -448,20 +448,20 @@ internal fun routeCardInsets(
 /**
  * Whether the planner sheet is composed for the plan's state (T-0612). A
  * ready route is the read-only card over the map; the sheet opens only through
- * the card's Stops action, so a planned route cannot be edited by accident.
- * The picking, planning and failed states keep the sheet, because they carry
- * its hints and recovery actions.
+ * the card's Stops or Details action, so a planned route cannot be edited by
+ * accident. The picking, planning and failed states keep the sheet, because
+ * they carry its hints and recovery actions.
  */
 internal fun routePlanSheetShown(
     status: RoutePlanStatus,
-    stopsOpen: Boolean,
-): Boolean = status != RoutePlanStatus.Idle && (status != RoutePlanStatus.Ready || stopsOpen)
+    view: RoutePlanSheetView,
+): Boolean = status != RoutePlanStatus.Idle && (status != RoutePlanStatus.Ready || view != RoutePlanSheetView.Summary)
 
 /** Whether the read-only route card is composed for the plan's state (T-0612). */
 internal fun routeSummaryCardShown(
     status: RoutePlanStatus,
-    stopsOpen: Boolean,
-): Boolean = status == RoutePlanStatus.Ready && !stopsOpen
+    view: RoutePlanSheetView,
+): Boolean = status == RoutePlanStatus.Ready && view == RoutePlanSheetView.Summary
 
 private const val BANNER_CORNER_DP = 8
 private const val BANNER_HORIZONTAL_DP = 16
@@ -951,15 +951,16 @@ private fun MapContent(
             container.streamAccess.subscribe<RoutePlanState>(RoutePlannerContract.stateStream)
         }
     val plan by planFlow.collectAsState(initial = RoutePlanState())
-    // T-0612: the read-only card is the route view and its Stops action opens
-    // the planner sheet's existing stops section. The sheet composes the
-    // editable header only while that section is in use; a cleared plan closes it.
-    var stopsOpen by remember { mutableStateOf(false) }
+    // T-0612: the read-only card is the route view. Its Stops and Details
+    // actions open their own sections of the existing planner sheet; the sheet
+    // composes the editable header only while Stops is in use. A cleared plan
+    // closes either section.
+    var routeSheetView by remember { mutableStateOf(RoutePlanSheetView.Summary) }
     // A reroute keeps the Stops sheet open: adding a via or undoing an edit
     // passes through Planning, and closing the editor there would break the
     // edit. A cleared plan closes it (T-0612).
     LaunchedEffect(plan.status) {
-        if (plan.status == RoutePlanStatus.Idle) stopsOpen = false
+        if (plan.status == RoutePlanStatus.Idle) routeSheetView = RoutePlanSheetView.Summary
     }
     val historyFlow =
         remember(container) {
@@ -1274,7 +1275,7 @@ private fun MapContent(
             }
         }
     }
-    val plannerSheetShown = routePlanSheetShown(plan.status, stopsOpen)
+    val plannerSheetShown = routePlanSheetShown(plan.status, routeSheetView)
     val bottomSheetShown =
         !navigationActive &&
             (
@@ -1419,10 +1420,10 @@ private fun MapContent(
             )
         }
         // T-0612: the read-only card over the map. It reads the same published
-        // plan as the planner sheet and shares its Save and Start lambdas. The
-        // Stops action hands off to that sheet's existing stops section.
+        // plan as the planner sheet and shares its Save and Start lambdas. Its
+        // bottom bar hands Stops and Details off to that sheet's own sections.
         val readyPlan = plan
-        if (!navigationActive && routeSummaryCardShown(readyPlan.status, stopsOpen)) {
+        if (!navigationActive && routeSummaryCardShown(readyPlan.status, routeSheetView)) {
             val summary = routePlanPreview(readyPlan, container.strings, time = routePreviewTime, units = units)
             if (summary != null) {
                 val cardInsets = routeCardInsets(with(density) { controlBarWidthPx.toDp() }, layout.arc)
@@ -1431,7 +1432,8 @@ private fun MapContent(
                     strings = container.strings,
                     onSave = planSave,
                     onStart = planStart,
-                    onStops = { stopsOpen = true },
+                    onStops = { routeSheetView = RoutePlanSheetView.Stops },
+                    onDetails = { routeSheetView = RoutePlanSheetView.Details },
                     modifier =
                         Modifier
                             .align(Alignment.TopCenter)
@@ -2140,10 +2142,11 @@ private fun MapContent(
                 time = routePreviewTime,
                 units = units,
                 dark = dark,
-                // The card over the map is the route view. Only its Stops
-                // action opens the editable header and the existing stop list.
-                view = if (stopsOpen) RoutePlanSheetView.Stops else RoutePlanSheetView.Summary,
-                onDoneStops = { stopsOpen = false },
+                // The card over the map is the route view. Its Stops action
+                // opens the editable header and stop list; Details opens the
+                // existing chart section. Neither is the default view.
+                view = routeSheetView,
+                onDoneStops = { routeSheetView = RoutePlanSheetView.Summary },
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)

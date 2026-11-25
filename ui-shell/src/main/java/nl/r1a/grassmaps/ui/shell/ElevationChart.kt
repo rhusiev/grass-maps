@@ -243,6 +243,7 @@ fun ElevationChart(
     showColour: Boolean = true,
     showAlong: Boolean = false,
     summary: String? = null,
+    onClearRange: (() -> Unit)? = null,
 ) {
     var colour by remember { mutableStateOf(ElevationChartColour.Slope) }
     val content =
@@ -438,6 +439,18 @@ fun ElevationChart(
                     .fillMaxWidth()
                     .padding(start = Y_LABEL_WIDTH_DP.dp + LABEL_GAP_DP.dp),
         )
+        // The round-10 details carry the range row under the legend and above
+        // the strips. A chart without a Clear action draws no row: the track
+        // analysis view composes its own from the same engine statistics.
+        if (onClearRange != null) {
+            val rangeRow =
+                remember(state, strings, locale, units) {
+                    trackAnalysisRangeRow(state, strings, locale, units)
+                }
+            if (rangeRow != null) {
+                ElevationRangeRow(row = rangeRow, onClear = onClearRange)
+            }
+        }
         val strips = remember(state, strings, locale) { elevationStripRows(state, strings, locale) }
         if (strips.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(STRIP_ROW_GAP_DP.dp)) {
@@ -447,6 +460,45 @@ fun ElevationChart(
                 StripSummary(rows = strips, dark = dark)
             }
         }
+    }
+}
+
+/**
+ * The selected range's line and its Clear action, as the round-10 route
+ * details draw them. The text is the engine's own range statistics; the only
+ * thing this row adds is the action that drops the user's drag selection.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun ElevationRangeRow(
+    row: TrackRangeRow,
+    onClear: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(CHIP_GAP_DP.dp),
+    ) {
+        BasicText(
+            text = row.text,
+            modifier = Modifier.weight(1f),
+            style = TextStyle(color = ROUTE_STATUS_COLOR, fontSize = CHIP_FONT_SP.sp),
+        )
+        BasicText(
+            text = row.clearLabel,
+            style =
+                TextStyle(
+                    color = ROUTE_ACTION_COLOR,
+                    fontSize = CHIP_FONT_SP.sp,
+                    fontWeight = FontWeight.SemiBold,
+                ),
+            modifier =
+                Modifier
+                    .clickable(role = Role.Button, onClick = onClear)
+                    .sizeIn(minWidth = MIN_TAP_TARGET_DP.dp, minHeight = MIN_TAP_TARGET_DP.dp)
+                    .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp)
+                    .semantics { contentDescription = row.clearLabel },
+        )
     }
 }
 
@@ -812,6 +864,9 @@ fun AnalysisDetailsToggle(
 
 private const val DETAILS_SHOW_KEY = "elevation_chart_details_show"
 private const val DETAILS_HIDE_KEY = "elevation_chart_details_hide"
+
+/** Shared with the details sheet's pinned Hide details action. */
+internal const val ROUTE_DETAILS_HIDE_KEY = DETAILS_HIDE_KEY
 private const val EXPAND_GLYPH = "\u25BE"
 private const val COLLAPSE_GLYPH = "\u25B4"
 

@@ -71,6 +71,9 @@ private const val CONTROL_FONT_SP = 20
 private const val CONTROL_TARGET_DP = 48
 private const val RECENT_LIMIT = 5
 
+/** Start is the primary action, so it takes the wider share of the pinned bar. */
+private const val START_CHIP_WEIGHT = 1.4f
+
 /**
  * Which surface the planner sheet composes. [Summary] is the read-only route
  * view: the card over the map is primary, and the sheet has no editable header.
@@ -186,7 +189,12 @@ fun RoutePlanPanel(
     var selectedRange by remember(chart) { mutableStateOf<ElevationChartRange?>(null) }
     // The drag reports distances; the chart's own engine samples supply the
     // range statistics and the header, so no second range model is introduced.
-    val detailsChart = remember(chart, selectedRange) { chart.copy(selection = elevationRangeStats(chart, selectedRange)) }
+    // With no drag the selection stays absent, so Clear removes the band and
+    // the range row instead of falling back to a whole-track selection.
+    val detailsChart =
+        remember(chart, selectedRange) {
+            chart.copy(selection = selectedRange?.let { elevationRangeStats(chart, it) })
+        }
     val detailsSummary = remember(detailsChart, strings, units) { routeElevationSummary(detailsChart, strings, units = units)?.text }
     var preferencesVisible by remember { mutableStateOf(false) }
     var warningsVisible by remember { mutableStateOf(false) }
@@ -279,14 +287,19 @@ fun RoutePlanPanel(
                     PreviewCard(preview = preview, onSave = onSave, onStart = onStart)
                 }
                 if (chart.isDrawable) {
-                    AnalysisDetailsToggle(
-                        expanded = detailsExpanded,
-                        strings = strings,
-                        onClick = {
-                            detailsExpanded = !detailsExpanded
-                            if (!detailsExpanded) selectedRange = null
-                        },
-                    )
+                    // The details view opens with the chart already expanded and
+                    // hides it from its pinned bar. Only the card's own inline
+                    // expansion keeps this toggle.
+                    if (!sections.details) {
+                        AnalysisDetailsToggle(
+                            expanded = detailsExpanded,
+                            strings = strings,
+                            onClick = {
+                                detailsExpanded = !detailsExpanded
+                                if (!detailsExpanded) selectedRange = null
+                            },
+                        )
+                    }
                     if (detailsExpanded) {
                         ElevationChart(
                             state = detailsChart,
@@ -298,6 +311,7 @@ fun RoutePlanPanel(
                             showColour = false,
                             showAlong = true,
                             summary = detailsSummary,
+                            onClearRange = { selectedRange = null },
                         )
                     }
                 }
@@ -374,6 +388,16 @@ fun RoutePlanPanel(
             visible = state.status == RoutePlanStatus.PickingStart || state.status == RoutePlanStatus.PickingDestination,
             onReuse = onReuse,
         )
+        // The details sheet's last child is the pinned action bar: Hide details
+        // only returns to the read-only card, Start runs the planner's command.
+        if (view == RoutePlanSheetView.Details && preview != null) {
+            RouteDetailsBottomBar(
+                hideLabel = strings.resolve(ROUTE_DETAILS_HIDE_KEY),
+                startLabel = preview.start,
+                onHide = onDoneStops,
+                onStart = onStart,
+            )
+        }
     }
 }
 
@@ -787,6 +811,70 @@ private fun StartChip(
                     vertical = CHIP_PADDING_VERTICAL_DP.dp,
                 ),
     )
+}
+
+/**
+ * The route-details pinned bar (round-10 canon): Hide details returns to the
+ * read-only card, and Start reuses the planner's own command. Both faces keep
+ * the panel's 48 dp touch target and speak their own label.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun RouteDetailsBottomBar(
+    hideLabel: String,
+    startLabel: String,
+    onHide: () -> Unit,
+    onStart: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(PANEL_ROW_GAP_DP.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .background(ROUTE_CHIP_COLOR, RoundedCornerShape(CHIP_CORNER_DP.dp))
+                    .border(1.dp, ROUTE_CONTROL_BORDER, RoundedCornerShape(CHIP_CORNER_DP.dp))
+                    .semantics { contentDescription = hideLabel }
+                    .clickable(role = Role.Button, onClick = onHide)
+                    .sizeIn(minHeight = CONTROL_TARGET_DP.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            BasicText(
+                text = hideLabel,
+                style =
+                    TextStyle(
+                        color = ROUTE_VALUE_COLOR,
+                        fontSize = ACTION_FONT_SP.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                modifier = Modifier.clearAndSetSemantics {},
+            )
+        }
+        Box(
+            modifier =
+                Modifier
+                    .weight(START_CHIP_WEIGHT)
+                    .background(ROUTE_ACTION_COLOR, RoundedCornerShape(CHIP_CORNER_DP.dp))
+                    .semantics { contentDescription = startLabel }
+                    .clickable(role = Role.Button, onClick = onStart)
+                    .sizeIn(minHeight = CONTROL_TARGET_DP.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            BasicText(
+                text = startLabel,
+                style =
+                    TextStyle(
+                        color = ROUTE_ACTION_INK,
+                        fontSize = ACTION_FONT_SP.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                modifier = Modifier.clearAndSetSemantics {},
+            )
+        }
+    }
 }
 
 @Suppress("ktlint:standard:function-naming")

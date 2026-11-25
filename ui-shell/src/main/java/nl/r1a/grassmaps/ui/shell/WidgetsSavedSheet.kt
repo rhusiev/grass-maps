@@ -68,8 +68,9 @@ fun WidgetsSavedSheet(
                 style = TextStyle(color = colors.ink, fontSize = TITLE_SP.sp, fontWeight = FontWeight.SemiBold),
             )
             saved()
-        },
-        footer = {
+            // Settings stays at the end of the scrolling content. A pinned
+            // footer can be squeezed to zero height on a tall widget grid,
+            // which leaves the only Settings entry unreachable.
             Box(
                 modifier =
                     Modifier

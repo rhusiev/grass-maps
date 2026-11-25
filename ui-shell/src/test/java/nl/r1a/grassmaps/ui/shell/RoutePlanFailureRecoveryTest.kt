@@ -7,40 +7,73 @@ import org.junit.Test
 import java.io.File
 
 /**
- * T-0612 final-review defect P1-3: pack-related planner failures fall through
- * to an actionless status line. Every failure kind must declare its next step,
- * and the download step must reuse the action that already works for missing
- * regions. Engine-unavailable keeps its honest text and gets no download.
+ * T-0612 final-review defect P1-3: pack-related planner failures must have a
+ * next step that works. The download button needs a missing-region prompt;
+ * without one the panel names Map downloads instead of showing a no-op.
  */
 class RoutePlanFailureRecoveryTest {
     @Test
-    fun packMissingOffersTheDownloadNextStep() {
-        assertEquals(FailureNextStep.DownloadAndRoute, failureNextStep(RoutePlanFailure.PackMissing))
+    fun packMissingWithAPromptOffersTheDownloadNextStep() {
+        assertEquals(
+            FailureNextStep.DownloadAndRoute,
+            failureNextStep(RoutePlanFailure.PackMissing, hasMissingPrompt = true),
+        )
     }
 
     @Test
-    fun packUnusableOffersTheDownloadNextStep() {
-        assertEquals(FailureNextStep.DownloadAndRoute, failureNextStep(RoutePlanFailure.PackUnusable))
+    fun packUnusableWithAPromptOffersTheDownloadNextStep() {
+        assertEquals(
+            FailureNextStep.DownloadAndRoute,
+            failureNextStep(RoutePlanFailure.PackUnusable, hasMissingPrompt = true),
+        )
     }
 
     @Test
-    fun regionsMissingOffersTheDownloadNextStep() {
-        assertEquals(FailureNextStep.DownloadAndRoute, failureNextStep(RoutePlanFailure.RegionsMissing))
+    fun regionsMissingWithAPromptOffersTheDownloadNextStep() {
+        assertEquals(
+            FailureNextStep.DownloadAndRoute,
+            failureNextStep(RoutePlanFailure.RegionsMissing, hasMissingPrompt = true),
+        )
+    }
+
+    @Test
+    fun barePackMissingNamesTheDownloadsScreen() {
+        assertEquals(
+            FailureNextStep.OpenDownloads,
+            failureNextStep(RoutePlanFailure.PackMissing, hasMissingPrompt = false),
+        )
+    }
+
+    @Test
+    fun barePackUnusableNamesTheDownloadsScreen() {
+        assertEquals(
+            FailureNextStep.OpenDownloads,
+            failureNextStep(RoutePlanFailure.PackUnusable, hasMissingPrompt = false),
+        )
     }
 
     @Test
     fun engineUnavailableKeepsHonestTextWithoutADownload() {
-        assertEquals(FailureNextStep.TextOnly, failureNextStep(RoutePlanFailure.EngineUnavailable))
+        assertEquals(
+            FailureNextStep.TextOnly,
+            failureNextStep(RoutePlanFailure.EngineUnavailable, hasMissingPrompt = true),
+        )
     }
 
     @Test
     fun noRouteKeepsHonestTextWithoutADownload() {
-        assertEquals(FailureNextStep.TextOnly, failureNextStep(RoutePlanFailure.NoRoute))
+        assertEquals(
+            FailureNextStep.TextOnly,
+            failureNextStep(RoutePlanFailure.NoRoute, hasMissingPrompt = true),
+        )
     }
 
     @Test
     fun tooFarKeepsHonestTextWithoutADownload() {
-        assertEquals(FailureNextStep.TextOnly, failureNextStep(RoutePlanFailure.TooFar))
+        assertEquals(
+            FailureNextStep.TextOnly,
+            failureNextStep(RoutePlanFailure.TooFar, hasMissingPrompt = true),
+        )
     }
 
     @Test

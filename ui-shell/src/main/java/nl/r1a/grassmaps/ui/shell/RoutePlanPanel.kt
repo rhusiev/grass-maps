@@ -240,8 +240,10 @@ fun RoutePlanPanel(
                 }
                 val text = routePlanFailureText(state, strings, units = units)
                 StatusLine(text, live = true)
-                if (failureNextStep(state.failure) == FailureNextStep.DownloadAndRoute) {
-                    DownloadAndRouteButton(strings, onDownloadMissing)
+                when (failureNextStep(state.failure, state.missing != null)) {
+                    FailureNextStep.DownloadAndRoute -> DownloadAndRouteButton(strings, onDownloadMissing)
+                    FailureNextStep.OpenDownloads -> StatusLine(routePlanDownloadGuidance(strings))
+                    FailureNextStep.TextOnly -> Unit
                 }
             }
 
@@ -818,6 +820,7 @@ private const val TOO_FAR_KEY = "route_planner_too_far"
 private const val PACK_MISSING_KEY = "route_planner_pack_missing"
 private const val PACK_UNUSABLE_KEY = "route_planner_pack_unusable"
 private const val ENGINE_UNAVAILABLE_KEY = "route_planner_engine_unavailable"
+private const val DOWNLOAD_GUIDANCE_KEY = "route_planner_open_downloads"
 private const val NO_ALTERNATIVES_KEY = "route_planner_no_alternatives"
 private const val SWAP_KEY = "route_planner_swap"
 private const val PANEL_CLOSE_KEY = "route_planner_close"
@@ -842,28 +845,35 @@ private const val REUSE_KEY = "route_planner_reuse"
 /**
  * The visible next step under a failed plan's status line (T-0612 P1-3).
  * [DownloadAndRoute] reuses the action the missing-regions card already uses;
- * [TextOnly] keeps the honest failure text and offers no action that cannot
- * help, such as a download for a broken engine.
+ * [OpenDownloads] names the exact screen when no prompt exists; [TextOnly]
+ * keeps the honest failure text and offers no action that cannot help.
  */
 enum class FailureNextStep {
     DownloadAndRoute,
+    OpenDownloads,
     TextOnly,
 }
 
-/** Maps a planner failure to its next step without inventing a destination. */
-internal fun failureNextStep(failure: RoutePlanFailure?): FailureNextStep =
-    when (failure) {
-        RoutePlanFailure.PackMissing,
-        RoutePlanFailure.PackUnusable,
-        RoutePlanFailure.RegionsMissing,
-        -> FailureNextStep.DownloadAndRoute
+/**
+ * The download command needs a region prompt. A pack failure without one gets
+ * the path to Map downloads instead of a button that does nothing.
+ */
+internal fun failureNextStep(
+    failure: RoutePlanFailure?,
+    hasMissingPrompt: Boolean,
+): FailureNextStep =
+    when {
+        failure != RoutePlanFailure.PackMissing &&
+            failure != RoutePlanFailure.PackUnusable &&
+            failure != RoutePlanFailure.RegionsMissing -> FailureNextStep.TextOnly
 
-        RoutePlanFailure.EngineUnavailable,
-        RoutePlanFailure.NoRoute,
-        RoutePlanFailure.TooFar,
-        null,
-        -> FailureNextStep.TextOnly
+        hasMissingPrompt -> FailureNextStep.DownloadAndRoute
+
+        else -> FailureNextStep.OpenDownloads
     }
+
+/** The next-step line for a pack failure with no prompt to download. */
+internal fun routePlanDownloadGuidance(strings: Strings): String = strings.resolve(DOWNLOAD_GUIDANCE_KEY)
 
 /**
  * The status line for a failed plan. A [RoutePlanFailure.TooFar] failure names

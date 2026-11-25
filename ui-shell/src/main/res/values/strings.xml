@@ -62,7 +62,7 @@
     <string name="saved_screen_map">Map</string>
     <string name="saved_screen_sort">Sort</string>
     <string name="saved_screen_add">Add</string>
-    <string name="saved_screen_tracks_empty">No saved tracks yet</string>
+    <string name="saved_screen_tracks_empty">Saved tracks are shown in the Tracks screen</string>
     <string name="saved_screen_empty">No saved places yet</string>
 
     <string name="search_title">Search places</string>

@@ -64,7 +64,7 @@
     <string name="saved_screen_map">Карта</string>
     <string name="saved_screen_sort">Сортування</string>
     <string name="saved_screen_add">Додати</string>
-    <string name="saved_screen_tracks_empty">Збережених маршрутів ще немає</string>
+    <string name="saved_screen_tracks_empty">Збережені маршрути відображаються на екрані «Маршрути»</string>
     <string name="saved_screen_empty">Збережених місць ще немає</string>
 
     <string name="search_title">Пошук місць</string>

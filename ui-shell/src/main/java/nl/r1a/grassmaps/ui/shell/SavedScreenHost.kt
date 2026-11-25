@@ -34,15 +34,25 @@ import nl.r1a.grassmaps.plugin.api.service.Strings
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 
 /**
- * The Saved screen section (T-0612, round 9 `k-saved`). It draws the state the
- * [savedScreenContent] resolver derives: group eyes, expanded place rows, the
- * Places|Tracks segments and a bottom bar. Every control is a 48 dp target and
- * the colours come from the round 9/10 shell tokens.
+ * The commands the Saved sheet can actually send. The Map command is exposed
+ * so the bar can draw it; the bar enables it only while a saved place is
+ * selected, which is the state [SavedBottomControls] receives.
+ */
+internal val SAVED_COMMANDS: SavedCommands =
+    SavedCommands(search = true, map = true, sort = true, add = true, visibility = true)
+
+/**
+ * The Saved screen's reading area (T-0612, round 9 `k-saved`). It draws the
+ * heading, the group eyes and the expanded place rows the [savedScreenContent]
+ * resolver derives. The Places|Tracks switch and the action bar are drawn by
+ * [SavedBottomControls] after the whole list, so the controls stay in thumb
+ * reach at the bottom of the sheet. Every control is a 48 dp target and the
+ * colours come from the round 9/10 shell tokens.
  *
- * The section is additive inside the existing lists sheet. The sheet's list
- * creator and point rows stay below it, so a library can still be edited. The
- * map action is absent: the lists sheet has no "show saved on map" command, so
- * the resolver omits it rather than drawing a dead button.
+ * The Tracks branch is a notice on purpose. The track library's state stream
+ * and its thirteen commands are owned by `app/MapScreen.kt`, outside this
+ * module; this section receives only [FavouriteListsState]. It cannot show the
+ * real library without inventing a state, so it keeps the notice honest.
  *
  * [hiddenGroups] comes from the persisted layer settings on every composition,
  * so closing and reopening the sheet cannot reset the eyes. An eye tap sends
@@ -55,28 +65,17 @@ fun SavedScreenSection(
     state: FavouriteListsState,
     strings: Strings,
     hiddenGroups: Set<String>,
-    query: String,
-    newListName: String,
-    newListColor: String,
-    onQueryChange: (String) -> Unit,
-    onSortChange: (FavouriteSort) -> Unit,
+    segment: SavedSegment,
     onToggleGroupShown: (String, Boolean) -> Unit,
-    onCreateList: (String, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var expandedGroup by remember { mutableStateOf<String?>(null) }
-    var segment by remember { mutableStateOf(SavedSegment.PLACES) }
-    var searchOpen by remember { mutableStateOf(false) }
 
-    val commands = SavedCommands(search = true, map = false, sort = true, add = true, visibility = true)
+    val commands = SAVED_COMMANDS
     val content = savedScreenContent(state, strings, commands, hiddenGroups, segment)
 
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp)) {
         SavedHeading(content = content)
-        SegmentedRow(
-            rows = content.segments,
-            onChoose = { chosen -> segment = chosen },
-        )
         when (segment) {
             SavedSegment.PLACES -> {
                 if (content.empty != null) {
@@ -104,22 +103,45 @@ fun SavedScreenSection(
                 SecondaryLine(text = content.tracksNotice)
             }
         }
+    }
+}
+
+/**
+ * The bottom of the Saved sheet: the Places|Tracks switch above the action
+ * bar, both after every list row. The chosen segment is owned by the caller so
+ * it survives the move out of the reading area. [onShowOnMap] reuses the
+ * existing map-command callback contract of `SearchScreenHost`; the host
+ * supplies the camera action when it wires the sheet.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+internal fun SavedBottomControls(
+    content: SavedScreenContent,
+    query: String,
+    searchOpen: Boolean,
+    newListName: String,
+    placeSelected: Boolean,
+    onChooseSegment: (SavedSegment) -> Unit,
+    onToggleSearch: () -> Unit,
+    onQueryChange: (String) -> Unit,
+    onSort: () -> Unit,
+    onAdd: () -> Unit,
+    onShowOnMap: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp)) {
+        SegmentedRow(rows = content.segments, onChoose = onChooseSegment)
         SavedBar(
             content = content,
             query = query,
             searchOpen = searchOpen,
             newListName = newListName,
-            onToggleSearch = { searchOpen = !searchOpen },
+            placeSelected = placeSelected,
+            onToggleSearch = onToggleSearch,
             onQueryChange = onQueryChange,
-            onSort = {
-                val sorts = FavouriteSort.entries
-                val next = sorts[(sorts.indexOf(state.browse.sort) + 1) % sorts.size]
-                onSortChange(next)
-            },
-            onAdd = {
-                val name = newListName.trim()
-                if (name.isNotEmpty()) onCreateList(name, newListColor)
-            },
+            onSort = onSort,
+            onAdd = onAdd,
+            onShowOnMap = onShowOnMap,
         )
     }
 }
@@ -243,10 +265,12 @@ private fun SavedBar(
     query: String,
     searchOpen: Boolean,
     newListName: String,
+    placeSelected: Boolean,
     onToggleSearch: () -> Unit,
     onQueryChange: (String) -> Unit,
     onSort: () -> Unit,
     onAdd: () -> Unit,
+    onShowOnMap: () -> Unit,
 ) {
     val colors = LocalShellColors.current
     Row(
@@ -275,6 +299,14 @@ private fun SavedBar(
             content.actions.firstOrNull { it.action == SavedBarAction.SEARCH }?.let { action ->
                 TapIcon(glyph = SEARCH_GLYPH, label = action.label, onClick = onToggleSearch)
             }
+        }
+        content.actions.firstOrNull { it.action == SavedBarAction.MAP }?.let { action ->
+            TapIcon(
+                glyph = MAP_GLYPH,
+                label = action.label,
+                enabled = placeSelected,
+                onClick = onShowOnMap,
+            )
         }
         content.actions.firstOrNull { it.action == SavedBarAction.SORT }?.let { action ->
             TapIcon(glyph = SORT_GLYPH, label = action.label, onClick = onSort)
@@ -335,6 +367,7 @@ private const val EYE_OFF = "○"
 private const val CHEVRON_DOWN = "⌄"
 private const val CHEVRON_UP = "⌃"
 private const val SEARCH_GLYPH = "⌕"
+private const val MAP_GLYPH = "▤"
 private const val SORT_GLYPH = "↕"
 private const val ADD_GLYPH = "+"
 

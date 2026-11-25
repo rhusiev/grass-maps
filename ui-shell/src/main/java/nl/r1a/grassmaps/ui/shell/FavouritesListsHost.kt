@@ -60,6 +60,10 @@ import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
  *
  * [embedded] drops the scrim and card: the combined widgets-and-Saved sheet
  * supplies that chrome and keeps only the list body.
+ *
+ * [onShowOnMap] is the existing map-command callback the bottom bar fires for a
+ * selected place. It defaults to a no-op here; the app supplies the camera
+ * action when it wires this sheet.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -76,6 +80,7 @@ fun FavouritesListsHost(
     onSortChange: (FavouriteSort) -> Unit,
     onClose: () -> Unit,
     onToggleGroupShown: (String, Boolean) -> Unit = { _, _ -> },
+    onShowOnMap: () -> Unit = {},
     embedded: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -93,6 +98,7 @@ fun FavouritesListsHost(
             onSortChange = onSortChange,
             onClose = onClose,
             onToggleGroupShown = onToggleGroupShown,
+            onShowOnMap = onShowOnMap,
             showClose = false,
             scroll = false,
             modifier = modifier,
@@ -125,6 +131,7 @@ fun FavouritesListsHost(
                 onSortChange = onSortChange,
                 onClose = onClose,
                 onToggleGroupShown = onToggleGroupShown,
+                onShowOnMap = onShowOnMap,
             )
         }
     }
@@ -150,6 +157,7 @@ internal fun FavouritesListsBody(
     onSortChange: (FavouriteSort) -> Unit,
     onClose: () -> Unit,
     onToggleGroupShown: (String, Boolean) -> Unit = { _, _ -> },
+    onShowOnMap: () -> Unit = {},
     showClose: Boolean = true,
     scroll: Boolean = true,
     modifier: Modifier = Modifier,
@@ -160,6 +168,10 @@ internal fun FavouritesListsBody(
     var newName by remember { mutableStateOf("") }
     var newColor by remember { mutableStateOf(PRESET_COLOURS.first()) }
     var query by remember { mutableStateOf(state.browse.query) }
+    var segment by remember { mutableStateOf(SavedSegment.PLACES) }
+    var savedSearchOpen by remember { mutableStateOf(false) }
+    val commands = SAVED_COMMANDS
+    val savedContent = savedScreenContent(state, strings, commands, hiddenGroups, segment)
 
     Column(
         modifier = modifier.then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier),
@@ -170,19 +182,8 @@ internal fun FavouritesListsBody(
             state = state,
             strings = strings,
             hiddenGroups = hiddenGroups,
-            query = query,
-            newListName = newName,
-            newListColor = newColor,
-            onQueryChange = {
-                query = it
-                onQueryChange(it)
-            },
-            onSortChange = onSortChange,
+            segment = segment,
             onToggleGroupShown = onToggleGroupShown,
-            onCreateList = { name, color ->
-                onCreateList(name, color)
-                newName = ""
-            },
         )
         SectionTitle(text = strings.resolve(NEW_LIST_KEY))
         ListCreator(
@@ -235,6 +236,32 @@ internal fun FavouritesListsBody(
             }
             browse.noMatches?.let { message -> Line(text = message, style = secondaryStyle()) }
         }
+        SavedBottomControls(
+            content = savedContent,
+            query = query,
+            searchOpen = savedSearchOpen,
+            newListName = newName,
+            placeSelected = selectedPoint != null,
+            onChooseSegment = { chosen -> segment = chosen },
+            onToggleSearch = { savedSearchOpen = !savedSearchOpen },
+            onQueryChange = {
+                query = it
+                onQueryChange(it)
+            },
+            onSort = {
+                val sorts = FavouriteSort.entries
+                val next = sorts[(sorts.indexOf(state.browse.sort) + 1) % sorts.size]
+                onSortChange(next)
+            },
+            onAdd = {
+                val name = newName.trim()
+                if (name.isNotEmpty()) {
+                    onCreateList(name, newColor)
+                    newName = ""
+                }
+            },
+            onShowOnMap = onShowOnMap,
+        )
     }
 }
 

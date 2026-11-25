@@ -55,7 +55,7 @@ class SavedScreenContentTest {
 
         assertEquals(listOf(SavedSegment.PLACES, SavedSegment.TRACKS), tracks.segments.map { it.segment })
         assertEquals(SavedSegment.TRACKS, tracks.segments.single { it.selected }.segment)
-        assertEquals("No saved tracks yet", tracks.tracksNotice)
+        assertEquals("Saved tracks are shown in the Tracks screen", tracks.tracksNotice)
         assertEquals(
             listOf(SavedBarAction.SEARCH, SavedBarAction.SORT, SavedBarAction.ADD),
             tracks.actions.map { it.action },

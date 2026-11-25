@@ -56,7 +56,7 @@ private val CHEVRON_GLYPH = "\u203a"
 /**
  * The Settings index screen. A plain screen, not a sheet: the canon gives it a
  * full page with its own back header. The back chevron shares the row chevron
- * style and sits on the title baseline. Every row is a 48 dp press target and
+ * style and is centered beside the title. Every row is a 48 dp press target and
  * hands off through [onOpen]; the screen owns no screen state of its own.
  */
 @Suppress("ktlint:standard:function-naming")
@@ -83,13 +83,11 @@ internal fun SettingsIndexHost(
                             .size(BACK_DP.dp)
                             .clip(CircleShape)
                             .clickable(role = Role.Button, onClick = onBack)
-                            .alignByBaseline()
                             .semantics { contentDescription = content.back },
                 )
                 BasicText(
                     text = content.title,
                     style = TextStyle(color = colors.ink, fontSize = TITLE_SP.sp, fontWeight = FontWeight.Bold),
-                    modifier = Modifier.alignByBaseline(),
                 )
             }
             BasicText(

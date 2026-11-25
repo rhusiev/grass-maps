@@ -98,7 +98,11 @@ class SettingsIndexContentTest {
     fun backChevronMatchesRowChevronAndRowsMeetTouchTarget() {
         val host = File("src/main/java/nl/r1a/grassmaps/app/SettingsIndexHost.kt").readText()
         assertEquals("one shared chevron size", 2, Regex("CHEVRON_SP\\.sp").findAll(host).count())
-        assertEquals("back and title share a baseline", 2, Regex("alignByBaseline\\(\\)").findAll(host).count())
+        assertEquals("no baseline alignment in the header", 0, Regex("alignByBaseline\\(\\)").findAll(host).count())
+        assertTrue(
+            "the header centers back and title vertically",
+            host.contains("verticalAlignment = Alignment.CenterVertically"),
+        )
         assertFalse("no second back size", host.contains("BACK_SP"))
         assertEquals("48", Regex("ROW_MIN_DP = (\\d+)").find(host)?.groupValues?.get(1))
         assertTrue("rows use the minimum height", host.contains("heightIn(min = ROW_MIN_DP.dp)"))

@@ -8,6 +8,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 /**
  * T-0612, final design-aware review P1 6: the default rail sat at the top end,
@@ -40,6 +41,44 @@ class MapRailDefaultTest {
                 assertNoOverlap(part, name, face, rect)
             }
         }
+    }
+
+    /**
+     * The first clearance model only checked the rail against the chrome. Train
+     * 114's bottom-centred Layers and bottom-end scale bar then covered the
+     * credit and the chevron. This pins the four visible elements of that arc
+     * against each other, plus the bar that holds the chevron.
+     */
+    @Test
+    fun theArcBottomChromeElementsDoNotOverlapEachOther() {
+        assertTrue("the clearance model only describes the arc rail", MapButtonLayout.DEFAULT.arc)
+        val chrome =
+            listOf(
+                "the map credit" to credit(),
+                "Layers" to layers(),
+                "the scale bar" to scaleBar(),
+                "the sheet chevron" to chevron(),
+            )
+        chrome.indices.forEach { first ->
+            (first + 1 until chrome.size).forEach { second ->
+                val (firstName, firstRect) = chrome[first]
+                val (secondName, secondRect) = chrome[second]
+                assertNoOverlap(firstName, secondName, firstRect, secondRect)
+            }
+        }
+        listOf("the map credit" to credit(), "Layers" to layers(), "the scale bar" to scaleBar()).forEach { (name, rect) ->
+            assertNoOverlap(name, "the bottom bar", rect, bottomBar())
+        }
+    }
+
+    @Test
+    fun theCreditIsLiftedAboveTheCentredLayersButton() {
+        val source = File(HOST_FILE).readText()
+        val wiring = source.substringAfter("creditBottomInset =").substringBefore("distanceByTap")
+        assertTrue(
+            "the credit keeps its old bottom inset and still sits under Layers",
+            wiring.contains("ARC_CREDIT_LIFT_DP"),
+        )
     }
 
     @Test
@@ -121,13 +160,16 @@ class MapRailDefaultTest {
         )
     }
 
-    private fun credit(): Rect =
-        Rect(
-            left = BAR_PADDING_DP,
-            right = BAR_PADDING_DP + CREDIT_WIDTH_DP,
-            bottom = MAP_BOTTOM_BAR_HEIGHT_DP + MAP_CREDIT_GAP_DP,
-            top = MAP_BOTTOM_BAR_HEIGHT_DP + MAP_CREDIT_GAP_DP + CREDIT_HEIGHT_DP,
+    private fun credit(): Rect {
+        val bottom =
+            bottomBar().top + MAP_CREDIT_CLEARANCE_DP + ATTRIBUTION_CLEARANCE_DP + CREDIT_LIFT_DP
+        return Rect(
+            left = ATTRIBUTION_MARGIN_DP,
+            right = ATTRIBUTION_MARGIN_DP + CREDIT_WIDTH_DP,
+            bottom = bottom,
+            top = bottom + CREDIT_HEIGHT_DP,
         )
+    }
 
     private fun scaleBar(): Rect {
         val insets = mapBottomInsets(arc = true)
@@ -172,13 +214,18 @@ class MapRailDefaultTest {
 
         // Mirrors MapControlBar's private 4 dp stack gap; the model must stay
         // in step with the shell if that gap changes.
+        const val HOST_FILE = "src/main/java/nl/r1a/grassmaps/app/MapScreen.kt"
         const val ARC_STACK_GAP_DP = 4
         const val LAYERS_HALF_WIDTH_DP = 32
         const val LAYERS_HEIGHT_DP = 48
 
-        // The credit sits above the bar's reach (MapScreen's 12 dp clearance).
-        const val MAP_CREDIT_GAP_DP = 12
-        const val CREDIT_WIDTH_DP = 180
+        // The credit sits above the bar's reach and, in arc mode, above the
+        // centred Layers target: its 48 dp height plus an 8 dp gap.
+        const val MAP_CREDIT_CLEARANCE_DP = 12
+        const val ATTRIBUTION_CLEARANCE_DP = 4
+        const val ATTRIBUTION_MARGIN_DP = 4
+        const val CREDIT_LIFT_DP = 56
+        const val CREDIT_WIDTH_DP = 190
         const val CREDIT_HEIGHT_DP = 24
 
         // Conservative glass box: the drawn value is narrower and shorter.

@@ -390,6 +390,9 @@ private const val LAYERS_GAP_DP = 8
 /** The measured height of LayersButton, used to stack the scale bar above it. */
 private const val LAYERS_BUTTON_HEIGHT_DP = 48
 
+/** The credit rises by the centred Layers target plus one gap when the arc is on. */
+internal const val ARC_CREDIT_LIFT_DP = LAYERS_BUTTON_HEIGHT_DP + LAYERS_GAP_DP
+
 /**
  * Bottom insets, in dp, for Layers and the scale bar. Both are measured inside
  * navigationBarsPadding, so they compare directly with the bar's own reach.
@@ -403,13 +406,20 @@ internal data class MapBottomInsets(
  * Layers clears the permanent bottom bar: a 48 dp chevron plus its 16 dp credit
  * spacer, less the 4 dp drop, and an [LAYERS_GAP_DP] gap. The default rail uses
  * the one-thumb arc at the bottom end, so Layers centres above the bar and the
- * scale bar keeps that end clear. A profile that switches the arc off puts the
- * rail at the top end and stacks the scale bar above Layers instead.
+ * scale bar rises above the bar's top edge to stay readable beside the chevron.
+ * A profile that switches the arc off puts the rail at the top end and stacks
+ * the scale bar above Layers instead.
  */
 internal fun mapBottomInsets(arc: Boolean): MapBottomInsets {
     val barReach = SHEET_CHEVRON_TARGET_DP + PROFILE_SWITCH_CREDIT_GAP_DP - PROFILE_SWITCH_DROP_DP
     val layers = BAR_PADDING_DP + barReach + LAYERS_GAP_DP
-    val scaleBar = BAR_PADDING_DP + if (arc) 0 else layers - BAR_PADDING_DP + LAYERS_BUTTON_HEIGHT_DP + SCALE_BAR_GAP_DP
+    val barTop = BAR_PADDING_DP - PROFILE_SWITCH_DROP_DP + MAP_BOTTOM_BAR_HEIGHT_DP
+    val scaleBar =
+        if (arc) {
+            barTop + LAYERS_GAP_DP
+        } else {
+            layers + LAYERS_BUTTON_HEIGHT_DP + SCALE_BAR_GAP_DP
+        }
     return MapBottomInsets(layersDp = layers, scaleBarDp = scaleBar)
 }
 
@@ -1308,7 +1318,14 @@ private fun MapContent(
             modifier = Modifier.fillMaxSize(),
             creditBottomInset =
                 with(density) {
-                    (LocalBottomChrome.current?.insetPx ?: 0).toDp() + MAP_CREDIT_CLEARANCE_DP.dp
+                    (LocalBottomChrome.current?.insetPx ?: 0).toDp() + MAP_CREDIT_CLEARANCE_DP.dp +
+                        (
+                            if (layout.arc && !navigationActive && !bottomSheetShown) {
+                                ARC_CREDIT_LIFT_DP
+                            } else {
+                                0
+                            }
+                        ).dp
                 },
             distanceByTap = container.distanceByTap,
             onDistanceMeasured = { meters -> distance = MapDistance.readout(meters) },

@@ -1,6 +1,5 @@
 package nl.r1a.grassmaps.app
 
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -38,7 +37,7 @@ class MapLayersPlacementTest {
         assertTrue("the inset ignores the chevron", host.contains("SHEET_CHEVRON_TARGET_DP"))
         assertTrue("the inset ignores the bar's credit spacer", host.contains("PROFILE_SWITCH_CREDIT_GAP_DP"))
         assertTrue("the inset ignores the bar's drop", host.contains("PROFILE_SWITCH_DROP_DP"))
-        assertTrue("the arc mode does not keep the scale bar low", host.contains("if (arc) 0 else"))
+        assertTrue("the arc mode does not raise the scale bar above the bar", host.contains("barTop + LAYERS_GAP_DP"))
         assertTrue(
             "Layers does not use the derived inset",
             source.contains(".padding(bottom = bottomInsets.layersDp.dp)"),
@@ -62,7 +61,12 @@ class MapLayersPlacementTest {
             "the scale bar at ${default.scaleBarDp} dp must sit above Layers",
             default.scaleBarDp >= default.layersDp + LAYERS_HEIGHT_DP + SCALE_GAP_DP,
         )
-        assertEquals(BAR_PADDING_DP, mapBottomInsets(arc = true).scaleBarDp)
+        val arc = mapBottomInsets(arc = true)
+        val arcBarTop = BAR_PADDING_DP - PROFILE_SWITCH_DROP_DP + MAP_BOTTOM_BAR_HEIGHT_DP
+        assertTrue(
+            "the arc scale bar at ${arc.scaleBarDp} dp still sits under the bar at $arcBarTop dp",
+            arc.scaleBarDp >= arcBarTop + ARC_SCALE_BAR_GAP_DP,
+        )
     }
 
     private companion object {
@@ -71,5 +75,6 @@ class MapLayersPlacementTest {
         // The measured Layers button height and the existing scale-bar gap.
         const val LAYERS_HEIGHT_DP = 48
         const val SCALE_GAP_DP = 24
+        const val ARC_SCALE_BAR_GAP_DP = 8
     }
 }

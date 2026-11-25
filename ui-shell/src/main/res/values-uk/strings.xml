@@ -12,7 +12,11 @@
     <string name="place_card_close">Закрити картку місця</string>
     <string name="place_card_pane_title">Деталі місця</string>
     <string name="place_card_route">Маршрут</string>
+    <string name="place_card_route_eta">Маршрут · %1$s</string>
     <string name="place_card_save">Зберегти</string>
+    <string name="place_card_share">Поділитися</string>
+    <string name="place_card_open_action">Відкрити</string>
+    <string name="place_card_copy">Копіювати</string>
     <string name="place_card_walk_estimate">орієнтовно %1$s пішки</string>
 
     <string name="favourites_lists_title">Списки</string>

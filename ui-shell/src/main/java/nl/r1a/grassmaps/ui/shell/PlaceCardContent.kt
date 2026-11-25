@@ -2,6 +2,7 @@ package nl.r1a.grassmaps.ui.shell
 
 import nl.r1a.grassmaps.plugin.api.model.GeoPoint
 import nl.r1a.grassmaps.plugin.api.model.PlaceCard
+import nl.r1a.grassmaps.plugin.api.model.PlaceCardAction
 import nl.r1a.grassmaps.plugin.api.model.PlaceCardEntry
 import nl.r1a.grassmaps.plugin.api.model.PlaceCardLink
 import nl.r1a.grassmaps.plugin.api.model.PlaceCardShortcut
@@ -69,10 +70,28 @@ enum class PlaceCardPrimaryAction {
     Route,
 }
 
+/** What one tile in the sheet's single action row launches (review 4 P1 2). */
+enum class PlaceCardTileAction {
+    Save,
+    Share,
+    Open,
+}
+
+/**
+ * One tile in the action row. Save keeps the host callback; Share and Open keep
+ * the link the card model supplied, so the row draws nothing the card cannot do.
+ */
+data class PlaceCardTile(
+    val action: PlaceCardTileAction,
+    val label: String,
+    val link: PlaceCardLink? = null,
+)
+
 /**
  * The sheet structure the host draws, resolved here so a JVM test can check it
  * without a Compose renderer (T-0612). The host lays out every part from this
- * value: the anchor, the handle, the pinned action and the tiles.
+ * value: the anchor, the handle, the pinned action, the tile row and the copy
+ * action that sits beside the decimal coordinate row.
  */
 data class PlaceCardSheet(
     val anchor: SheetAnchor,
@@ -80,6 +99,8 @@ data class PlaceCardSheet(
     val subtitle: String?,
     val coordinates: List<PlaceCardRow>,
     val shortcuts: List<PlaceCardShortcutRow>,
+    val tiles: List<PlaceCardTile>,
+    val copyLink: PlaceCardLink?,
     val saveLabel: String,
     val routeLabel: String,
     val primaryAction: PlaceCardPrimaryAction,
@@ -92,18 +113,40 @@ fun placeCardSheet(
     origin: GeoPoint? = null,
     units: UnitSystem = UnitSystem.Metric,
     locale: Locale = Locale.getDefault(),
-): PlaceCardSheet =
-    PlaceCardSheet(
+): PlaceCardSheet {
+    val eta = placeCardEta(origin, content.position, units, strings, locale)
+    val shortcutLink = { action: PlaceCardAction ->
+        content.shortcuts.firstOrNull { it.link.action == action }?.link
+    }
+    val tiles =
+        buildList {
+            add(PlaceCardTile(PlaceCardTileAction.Save, strings.resolve(SAVE_ACTION_LABEL)))
+            shortcutLink(PlaceCardAction.SHARE)?.let { link ->
+                add(PlaceCardTile(PlaceCardTileAction.Share, strings.resolve(SHARE_ACTION_LABEL), link))
+            }
+            shortcutLink(PlaceCardAction.OPEN_IN)?.let { link ->
+                add(PlaceCardTile(PlaceCardTileAction.Open, strings.resolve(OPEN_ACTION_LABEL), link))
+            }
+        }
+    return PlaceCardSheet(
         anchor = SheetAnchor.Bottom,
         hasHandle = true,
         subtitle =
             placeCardSubtitle(content.kind, origin, content.position, units, strings, locale),
         coordinates = content.coordinates,
         shortcuts = content.shortcuts,
+        tiles = tiles,
+        copyLink = shortcutLink(PlaceCardAction.COPY_COORDINATES),
         saveLabel = strings.resolve(SAVE_ACTION_LABEL),
-        routeLabel = strings.resolve(ROUTE_ACTION_LABEL),
+        routeLabel =
+            if (eta == null) {
+                strings.resolve(ROUTE_ACTION_LABEL)
+            } else {
+                strings.resolve(PLACE_CARD_ROUTE_ETA, listOf(eta.walkText))
+            },
         primaryAction = PlaceCardPrimaryAction.Route,
     )
+}
 
 /** Runs the sheet's pinned action through its caller. */
 fun invokePlaceCardPrimary(
@@ -189,6 +232,18 @@ internal const val ROUTE_ACTION_LABEL = "place_card_route"
 
 /** The save tile beside Share and Open. */
 internal const val SAVE_ACTION_LABEL = "place_card_save"
+
+/** The share tile beside Save and Open. */
+internal const val SHARE_ACTION_LABEL = "place_card_share"
+
+/** The open-in tile beside Save and Share. */
+internal const val OPEN_ACTION_LABEL = "place_card_open_action"
+
+/** The label of the copy action beside the decimal coordinate row. */
+internal const val COPY_ACTION_LABEL = "place_card_copy"
+
+/** The pinned Route label, timed from the same straight-line estimate as the subtitle. */
+internal const val PLACE_CARD_ROUTE_ETA = "place_card_route_eta"
 
 /** The i18n key for one open state. */
 internal fun openingStateKey(state: PlaceOpeningState): String =

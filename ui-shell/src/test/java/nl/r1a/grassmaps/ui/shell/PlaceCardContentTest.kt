@@ -229,6 +229,25 @@ class PlaceCardContentTest {
         assertEquals(3, sheet.coordinates.size)
         assertTrue(sheet.shortcuts.any { it.label == "Share place" })
         assertTrue(sheet.shortcuts.any { it.label == "Open in another app" })
+        assertEquals(
+            listOf(PlaceCardTileAction.Save, PlaceCardTileAction.Share, PlaceCardTileAction.Open),
+            sheet.tiles.map { it.action },
+        )
+        assertEquals(listOf("Save", "Share", "Open"), sheet.tiles.map { it.label })
+        assertNull(sheet.tiles.first().link)
+        assertEquals(PlaceCardAction.SHARE, sheet.tiles[1].link?.action)
+        assertEquals(PlaceCardAction.OPEN_IN, sheet.tiles[2].link?.action)
+    }
+
+    @Test
+    fun theCopyShortcutMovesBesideTheCoordinateRow() {
+        val content = placeCardContent(cardWithCoordinatesAndActions(), MapStrings(RESOLVED))
+
+        val sheet = placeCardSheet(content, MapStrings(RESOLVED))
+
+        assertEquals(PlaceCardAction.COPY_COORDINATES, sheet.copyLink?.action)
+        assertEquals("https://www.openstreetmap.org/node/42", sheet.tiles[1].link?.target)
+        assertEquals(3, sheet.tiles.size)
     }
 
     @Test
@@ -252,6 +271,10 @@ class PlaceCardContentTest {
                 ),
             shortcuts =
                 listOf(
+                    PlaceCardShortcut(
+                        labelKey = "share.copy_coordinates",
+                        link = PlaceCardLink(PlaceCardAction.COPY_COORDINATES, "49.821740, 24.023910"),
+                    ),
                     PlaceCardShortcut(
                         labelKey = "share.share_place",
                         link = PlaceCardLink(PlaceCardAction.SHARE, "https://www.openstreetmap.org/node/42"),
@@ -298,7 +321,11 @@ class PlaceCardContentTest {
                 "place_card_unknown" to "Hours unknown",
                 "place_card_coordinates" to "Coordinates",
                 "place_card_route" to "Route",
+                "place_card_route_eta" to "Route · %1\$s",
                 "place_card_save" to "Save",
+                "place_card_share" to "Share",
+                "place_card_open_action" to "Open",
+                "place_card_copy" to "Copy",
                 "share.coordinate_decimal" to "Decimal degrees",
                 "share.coordinate_dms" to "DMS",
                 "share.coordinate_ddm" to "DDM",

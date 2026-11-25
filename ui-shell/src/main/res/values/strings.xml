@@ -12,7 +12,11 @@
     <string name="place_card_close">Close the place card</string>
     <string name="place_card_pane_title">Place details</string>
     <string name="place_card_route">Route</string>
+    <string name="place_card_route_eta">Route · %1$s</string>
     <string name="place_card_save">Save</string>
+    <string name="place_card_share">Share</string>
+    <string name="place_card_open_action">Open</string>
+    <string name="place_card_copy">Copy</string>
     <string name="place_card_walk_estimate">estimated %1$s on foot</string>
 
     <string name="favourites_lists_title">Lists</string>

@@ -104,5 +104,33 @@ class LayersSheetCompositionTest {
         assertTrue(radio.contains(".background(color, CircleShape)"))
     }
 
+    @Test
+    fun styleChoicesAreHorizontalThumbnailsWithADashedMoreAndFortyEightDpTargets() {
+        val source = sheetSource()
+        val choices = source.substringAfter("fun LayerStyleChoices(").substringBefore("private fun LayerStyleRadio(")
+
+        assertFalse("full-width radio rows are gone", choices.contains("Column(Modifier.selectableGroup())"))
+        assertTrue("the choices sit in one horizontal row", choices.contains("Row("))
+        assertTrue(choices.contains("horizontalArrangement = Arrangement.spacedBy"))
+        assertTrue("the More tile has a dashed outline", choices.contains("dashedRing("))
+        assertTrue("the preview draws a dashed trail", choices.contains("PathEffect.dashPathEffect"))
+        assertTrue("the selection command survives the layout", choices.contains("onSelect(index)"))
+        assertTrue("the selected ring and dot survive the layout", choices.contains("LayerStyleRadio(row.selected)"))
+        assertTrue("the name stays visible", choices.contains("row.name"))
+        assertTrue("the one-line hint stays visible", choices.contains("row.hint"))
+        assertTrue(
+            "each style keeps its token swatch",
+            choices.contains("if (row.swatch == StyleSwatch.MEADOW) colors.accent else colors.amber"),
+        )
+
+        val minWidth =
+            Regex("STYLE_TILE_MIN_WIDTH_DP = (\\d+)")
+                .find(source)!!
+                .groupValues[1]
+                .toInt()
+        assertTrue("each tile must be at least 48 dp wide", minWidth >= 48)
+        assertTrue("each tile keeps the 48 dp height floor", choices.contains("minHeight = LayerRowSpec.ROW_MIN_HEIGHT_DP.dp"))
+    }
+
     private fun sheetSource(): String = File("src/main/java/nl/r1a/grassmaps/ui/shell/LayersSheet.kt").readText()
 }

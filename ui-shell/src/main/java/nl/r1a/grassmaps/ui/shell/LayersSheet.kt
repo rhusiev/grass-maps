@@ -1,5 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,7 +11,10 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -25,7 +29,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -34,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.ui.api.LayerRowSpec
 import nl.r1a.grassmaps.plugin.ui.api.LayerStyleRow
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.ShellColors
 import nl.r1a.grassmaps.plugin.ui.api.StyleSwatch
 import nl.r1a.grassmaps.plugin.ui.api.inkOn
 
@@ -46,10 +54,25 @@ private const val CONTROL_STROKE_DP = 2
 private const val SWITCH_WIDTH_DP = 38
 private const val SWITCH_HEIGHT_DP = 22
 private const val SWITCH_THUMB_DP = 16
-private const val SWATCH_SIZE_DP = 20
-private const val SWATCH_CORNER_DP = 5
 private const val RADIO_SIZE_DP = 20
 private const val RADIO_DOT_DP = 10
+private const val STYLE_TILE_MIN_WIDTH_DP = 76
+private const val THUMB_HEIGHT_DP = 64
+private const val TILE_CORNER_DP = 12
+private const val BADGE_INSET_DP = 4
+private const val MORE_PLUS_FONT_SP = 24
+private const val PARK_WIDTH_FRACTION = 0.58f
+private const val PARK_TOP_FRACTION = 0.12f
+private const val PARK_HEIGHT_FRACTION = 0.88f
+private const val ROAD_LEFT_FRACTION = 0.74f
+private const val ROAD_WIDTH_DP = 9
+private const val TRAIL_STROKE_DP = 2
+private const val TRAIL_DASH_ON_DP = 5
+private const val TRAIL_DASH_OFF_DP = 4
+private const val TRAIL_START_X_FRACTION = 0.1f
+private const val TRAIL_START_Y_FRACTION = 0.7f
+private const val TRAIL_END_X_FRACTION = 0.5f
+private const val TRAIL_END_Y_FRACTION = 0.18f
 
 /**
  * The Layers card's sheet anchor and chrome.
@@ -212,49 +235,136 @@ fun LayerStyleChoices(
     onSelect: (Int) -> Unit,
     onMore: () -> Unit,
 ) {
-    val colors = LocalShellColors.current
-    Column(Modifier.selectableGroup()) {
-        rows.forEachIndexed { index, row -> LayerStyleChoice(row) { onSelect(index) } }
+    Row(
+        modifier = Modifier.fillMaxWidth().selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        rows.forEachIndexed { index, row ->
+            LayerStyleThumbnail(row = row) { onSelect(index) }
+        }
+        MoreStyleTile(label = moreLabel, onClick = onMore)
     }
-    val shape = RoundedCornerShape(SECTION_CORNER_DP.dp)
-    LayerLabel(
-        text = moreLabel,
-        color = colors.ink,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = LayerRowSpec.ROW_MIN_HEIGHT_DP.dp)
-                .clip(shape)
-                .border(1.dp, colors.controlBorder, shape)
-                .clickable(role = Role.Button, onClick = onMore)
-                .padding(SECTION_PADDING_DP.dp),
-    )
 }
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
-private fun LayerStyleChoice(
+private fun RowScope.LayerStyleThumbnail(
     row: LayerStyleRow,
     onSelect: () -> Unit,
 ) {
     val colors = LocalShellColors.current
-    Row(
+    Box(
+        modifier =
+            Modifier
+                .weight(1f)
+                .sizeIn(minWidth = STYLE_TILE_MIN_WIDTH_DP.dp, minHeight = LayerRowSpec.ROW_MIN_HEIGHT_DP.dp)
+                .selectable(selected = row.selected, role = Role.RadioButton, onClick = onSelect),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(THUMB_HEIGHT_DP.dp)
+                        .clip(RoundedCornerShape(TILE_CORNER_DP.dp)),
+            ) {
+                StylePreview(row, colors)
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .border(
+                            CONTROL_STROKE_DP.dp,
+                            if (row.selected) colors.accent else colors.controlBorder,
+                            RoundedCornerShape(TILE_CORNER_DP.dp),
+                        ),
+                )
+                Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(BADGE_INSET_DP.dp)
+                        .background(colors.surface, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    LayerStyleRadio(row.selected)
+                }
+            }
+            LayerLabel(row.name, colors.ink)
+            LayerLabel(row.hint, colors.muted)
+        }
+    }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun StylePreview(
+    row: LayerStyleRow,
+    colors: ShellColors,
+) {
+    // The app ships no preview artwork. The style's own token fills the park,
+    // and shell tokens draw the road and trail, so the preview follows the theme.
+    val park = if (row.swatch == StyleSwatch.MEADOW) colors.accent else colors.amber
+    Canvas(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .heightIn(min = LayerRowSpec.ROW_MIN_HEIGHT_DP.dp)
-                .clip(RoundedCornerShape(SECTION_CORNER_DP.dp))
-                .selectable(selected = row.selected, role = Role.RadioButton, onClick = onSelect)
-                .padding(ROW_GAP_DP.dp),
-        horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
-        verticalAlignment = Alignment.CenterVertically,
+                .height(THUMB_HEIGHT_DP.dp)
+                .clip(RoundedCornerShape(TILE_CORNER_DP.dp)),
     ) {
-        LayerStyleRadio(row.selected)
-        val swatch = if (row.swatch == StyleSwatch.MEADOW) colors.accent else colors.amber
-        Box(Modifier.size(SWATCH_SIZE_DP.dp).background(swatch, RoundedCornerShape(SWATCH_CORNER_DP.dp)))
-        Column {
-            LayerLabel(row.name, colors.ink)
-            LayerLabel(row.hint, colors.muted)
+        drawRect(colors.soft)
+        drawRect(
+            color = park,
+            topLeft = Offset(0f, size.height * PARK_TOP_FRACTION),
+            size = Size(size.width * PARK_WIDTH_FRACTION, size.height * PARK_HEIGHT_FRACTION),
+        )
+        drawRect(
+            color = colors.offSwitchKnob,
+            topLeft = Offset(size.width * ROAD_LEFT_FRACTION, 0f),
+            size = Size(ROAD_WIDTH_DP.dp.toPx(), size.height),
+        )
+        drawLine(
+            color = colors.onAccent,
+            start = Offset(size.width * TRAIL_START_X_FRACTION, size.height * TRAIL_START_Y_FRACTION),
+            end = Offset(size.width * TRAIL_END_X_FRACTION, size.height * TRAIL_END_Y_FRACTION),
+            strokeWidth = TRAIL_STROKE_DP.dp.toPx(),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(TRAIL_DASH_ON_DP.dp.toPx(), TRAIL_DASH_OFF_DP.dp.toPx())),
+        )
+    }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun RowScope.MoreStyleTile(
+    label: String,
+    onClick: () -> Unit,
+) {
+    val colors = LocalShellColors.current
+    Box(
+        modifier =
+            Modifier
+                .weight(1f)
+                .sizeIn(minWidth = STYLE_TILE_MIN_WIDTH_DP.dp, minHeight = LayerRowSpec.ROW_MIN_HEIGHT_DP.dp)
+                .clickable(role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(THUMB_HEIGHT_DP.dp)
+                        .clip(RoundedCornerShape(TILE_CORNER_DP.dp))
+                        .background(colors.surface)
+                        .dashedRing(colors.controlBorder, TILE_CORNER_DP.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                BasicText(
+                    text = "+",
+                    style = TextStyle(color = colors.ink, fontSize = MORE_PLUS_FONT_SP.sp),
+                )
+            }
+            LayerLabel(label, colors.ink)
         }
     }
 }

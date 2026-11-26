@@ -101,7 +101,7 @@ class TrackSaveTest {
                     ),
                 ),
             providers = GeneratedPlugins.providers,
-            tracksRoot = null,
+            tracksRootProvider = null,
         )
 
     private suspend fun import(

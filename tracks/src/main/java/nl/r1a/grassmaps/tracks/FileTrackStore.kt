@@ -47,7 +47,9 @@ import java.nio.file.StandardCopyOption
  * loads. Removing a record deletes its document only when no sidecar on disk
  * still names it, including one a load skipped, and the trash undo restores a
  * document whichever of its records is undone first. No call throws, and file
- * I/O runs on [Dispatchers.IO].
+ * I/O runs on [Dispatchers.IO]. The constructor touches no file: [rootProvider]
+ * is resolved on the first read or write, because an Android files directory
+ * is itself a disk read.
  *
  * The store is the single writer. [reload] re-reads the directory after another
  * component replaced it, such as a backup restore.
@@ -59,13 +61,14 @@ import java.nio.file.StandardCopyOption
  * therefore samples the DEM once per point without a height.
  */
 class FileTrackStore(
-    private val root: File,
+    rootProvider: () -> File,
     private val reader: TrackDocumentReader,
     private val analyzer: TrackAnalyzer = TrackAnalyzer(),
     private val clock: () -> Long = System::currentTimeMillis,
     private val log: (String) -> Unit = {},
     private val elevationCorrection: TrackElevationCorrection = TrackElevationCorrection(),
 ) : TrackStore {
+    private val root: File by lazy(rootProvider)
     private val mutex = Mutex()
     private val records = LinkedHashMap<TrackId, StoredTrack>()
     private val sidecars = LinkedHashMap<TrackId, TrackSidecar>()

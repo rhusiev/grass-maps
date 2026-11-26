@@ -32,10 +32,16 @@ import java.nio.file.StandardCopyOption
  * array of five command ids) is read as the first five slots of the six-slot
  * layout. A newer schema version reads as the default instead of being
  * overwritten. A null file keeps the layout in memory only.
+ *
+ * The file is resolved through [fileProvider] on each read and write, never in
+ * the constructor, because resolving `filesDir` on the Main thread is a disk
+ * read that StrictMode forbids.
  */
 class ButtonLayoutStore(
-    private val file: File?,
+    private val fileProvider: () -> File?,
 ) {
+    constructor(file: File?) : this({ file })
+
     @Synchronized
     fun load(profileId: ProfileId): MapButtonLayout = readProfiles()[profileId.value] ?: MapButtonLayout.DEFAULT
 
@@ -71,7 +77,7 @@ class ButtonLayoutStore(
         }
 
     private fun readProfilesOrNull(): Map<String, MapButtonLayout>? {
-        val target = file ?: return null
+        val target = fileProvider() ?: return null
         if (!target.isFile) {
             return null
         }
@@ -88,7 +94,7 @@ class ButtonLayoutStore(
     }
 
     private fun hasNewerSchema(): Boolean {
-        val target = file ?: return false
+        val target = fileProvider() ?: return false
         if (!target.isFile) {
             return false
         }
@@ -166,7 +172,7 @@ class ButtonLayoutStore(
     }
 
     private fun writeProfiles(profiles: Map<String, MapButtonLayout>): Outcome<Unit> {
-        val target = file ?: return Outcome.Success(Unit)
+        val target = fileProvider() ?: return Outcome.Success(Unit)
         val parent = target.parentFile ?: return failure("no parent directory")
         return try {
             if (!parent.isDirectory && !parent.mkdirs()) {

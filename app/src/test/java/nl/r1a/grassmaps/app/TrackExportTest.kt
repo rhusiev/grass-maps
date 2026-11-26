@@ -138,7 +138,7 @@ class TrackExportTest {
                     ),
                 ),
             providers = GeneratedPlugins.providers,
-            tracksRoot = null,
+            tracksRootProvider = null,
         )
 
     private suspend fun import(

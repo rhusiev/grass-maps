@@ -102,7 +102,7 @@ class TrackTrashRetentionTest {
 
     private fun store(): FileTrackStore =
         FileTrackStore(
-            root = root,
+            rootProvider = { root },
             reader = reader(),
             clock = { now },
         )

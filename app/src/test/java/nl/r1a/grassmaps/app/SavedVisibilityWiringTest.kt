@@ -91,7 +91,7 @@ class SavedVisibilityWiringTest {
         assertFalse(first.groups.single { it.name == "Coffee" }.shown)
 
         // Closing drops Compose state; a new open reads the persisted store again.
-        val secondOpen = FavouritesLayerSettingsStore(file)
+        val secondOpen = FavouritesLayerSettingsStore(file).also { it.ensureLoaded() }
         val second = savedScreenContent(sampleState(), KeyOnlyStrings, COMMANDS, secondOpen.current().hiddenGroups)
 
         assertEquals(setOf("Coffee"), secondOpen.current().hiddenGroups)

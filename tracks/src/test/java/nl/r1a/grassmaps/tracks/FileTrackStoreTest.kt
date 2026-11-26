@@ -354,7 +354,7 @@ class FileTrackStoreTest {
             val timedReader = TrackDocumentReader { Outcome.Success(ImportedEntities(tracks = listOf(timedTrack))) }
             success(
                 FileTrackStore(
-                    root = root,
+                    rootProvider = { root },
                     reader = timedReader,
                     clock = { SAVED_AT_MILLIS },
                     log = { message -> logs += message },
@@ -365,7 +365,7 @@ class FileTrackStoreTest {
 
             val reopened =
                 FileTrackStore(
-                    root = root,
+                    rootProvider = { root },
                     reader = timedReader,
                     clock = { SAVED_AT_MILLIS },
                     log = { message -> logs += message },
@@ -399,7 +399,7 @@ class FileTrackStoreTest {
 
             val reopened =
                 FileTrackStore(
-                    root = root,
+                    rootProvider = { root },
                     reader = reader,
                     clock = { SAVED_AT_MILLIS },
                     log = { message -> logs += message },
@@ -438,11 +438,11 @@ class FileTrackStoreTest {
                     analysis = TrackAnalyzer().analyze(stripped),
                     style = TrackPalette.styleFor(id),
                 )
-            success(FileTrackStore(root = root, reader = reader, log = { message -> logs += message }).save(record, source))
+            success(FileTrackStore(rootProvider = { root }, reader = reader, log = { message -> logs += message }).save(record, source))
 
             val reopened =
                 FileTrackStore(
-                    root = root,
+                    rootProvider = { root },
                     reader = reader,
                     clock = { SAVED_AT_MILLIS },
                     log = { message -> logs += message },
@@ -455,6 +455,20 @@ class FileTrackStoreTest {
             assertEquals(ElevationSource.NoDem, loaded.elevation?.source)
             assertEquals(2, loaded.elevation?.unfilledPoints)
             assertTrue(logs.none { message -> message.contains("elevation source=") })
+        }
+
+    @Test
+    fun theConstructorResolvesNoRootAndTheFirstReadResolvesItOnce() =
+        runTest {
+            var resolved = 0
+            val store = FileTrackStore(rootProvider = { root.also { resolved += 1 } }, reader = reader())
+
+            assertEquals(0, resolved)
+            assertEquals(emptyList<MapTrack>(), store.drawn.value)
+
+            assertEquals(Outcome.Success(Unit), store.reload())
+            assertEquals(Outcome.Success(Unit), store.reload())
+            assertEquals(1, resolved)
         }
 
     private fun strippedTrack(): Track =
@@ -515,7 +529,7 @@ class FileTrackStoreTest {
 
     private fun store(reader: TrackDocumentReader): FileTrackStore =
         FileTrackStore(
-            root = root,
+            rootProvider = { root },
             reader = reader,
             clock = { SAVED_AT_MILLIS },
             log = { message -> logs += message },

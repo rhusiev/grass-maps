@@ -26,18 +26,33 @@ import java.io.IOException
  *
  * They live in the host, not in the plugin, because a layer choice outlives a
  * plugin activation. The contents of `settings/favourites-layer.json` are the
- * persisted state. Construction reads the file, so resolve it off Main.
- * A missing or corrupt file reads as the shipped defaults.
+ * persisted state. The constructor reads nothing and [active] holds the
+ * shipped defaults until [ensureLoaded] reads the file, so the map screen can
+ * build the store while it composes. A missing or corrupt file reads as the
+ * shipped defaults.
  */
 class FavouritesLayerSettingsStore(
-    private val file: File? = null,
+    private val fileProvider: () -> File?,
 ) {
-    private val state = MutableStateFlow(load(file) ?: FavouriteLayerSettings())
+    constructor(file: File? = null) : this({ file })
+
+    private val state = MutableStateFlow(FavouriteLayerSettings())
+    private var isLoaded = false
 
     /** One value per redraw, so a control change never mixes two settings. */
     val active: StateFlow<FavouriteLayerSettings> = state.asStateFlow()
 
     fun current(): FavouriteLayerSettings = state.value
+
+    /** Reads the file once; a later call returns at once. It reads the disk, so call it off Main. */
+    @Synchronized
+    fun ensureLoaded() {
+        if (isLoaded) {
+            return
+        }
+        isLoaded = true
+        load(fileProvider())?.let { loaded -> state.value = loaded }
+    }
 
     fun setIconsPerPoint(enabled: Boolean): Outcome<Unit> = update { it.copy(iconsPerPoint = enabled) }
 
@@ -55,10 +70,13 @@ class FavouritesLayerSettingsStore(
             settings.copy(hiddenGroups = hidden)
         }
 
+    /** Loads first, so a change made before the first read cannot overwrite the other stored controls. */
+    @Synchronized
     private fun update(next: (FavouriteLayerSettings) -> FavouriteLayerSettings): Outcome<Unit> {
+        ensureLoaded()
         val updated = next(state.value)
         state.value = updated
-        val target = file ?: return Outcome.Success(Unit)
+        val target = fileProvider() ?: return Outcome.Success(Unit)
         return try {
             writeAtomically(target, encode(updated))
             Outcome.Success(Unit)

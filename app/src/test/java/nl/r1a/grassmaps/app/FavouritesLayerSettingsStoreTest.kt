@@ -35,7 +35,7 @@ class FavouritesLayerSettingsStoreTest {
         assertEquals(Outcome.Success(Unit), first.setGroupShown("Home", false))
         assertEquals(Outcome.Success(Unit), first.setGroupShown("Work", true))
 
-        val second = FavouritesLayerSettingsStore(file).current()
+        val second = FavouritesLayerSettingsStore(file).also { it.ensureLoaded() }.current()
         assertFalse(second.iconsPerPoint)
         assertEquals(MarkerShape.Octagon, second.markerShape)
         assertTrue(second.showNames)
@@ -47,7 +47,40 @@ class FavouritesLayerSettingsStoreTest {
         val file = File.createTempFile("favourites-layer", ".json").also { it.deleteOnExit() }
         file.writeText("{not json")
 
-        assertEquals(FavouriteLayerSettings(), FavouritesLayerSettingsStore(file).current())
+        val store = FavouritesLayerSettingsStore(file)
+        store.ensureLoaded()
+
+        assertEquals(FavouriteLayerSettings(), store.current())
+    }
+
+    @Test
+    fun theConstructorReadsNothingAndTheLoadPublishesTheStoredControls() {
+        val file = File.createTempFile("favourites-layer", ".json").also { it.deleteOnExit() }
+        FavouritesLayerSettingsStore(file).setShowNames(true)
+        var resolved = 0
+        val store = FavouritesLayerSettingsStore { file.also { resolved += 1 } }
+
+        assertEquals(0, resolved)
+        assertEquals(FavouriteLayerSettings(), store.active.value)
+
+        store.ensureLoaded()
+        store.ensureLoaded()
+
+        assertEquals(1, resolved)
+        assertTrue(store.active.value.showNames)
+    }
+
+    @Test
+    fun aChangeBeforeTheFirstReadKeepsTheOtherStoredControls() {
+        val file = File.createTempFile("favourites-layer", ".json").also { it.deleteOnExit() }
+        FavouritesLayerSettingsStore(file).setGroupShown("Home", false)
+
+        val store = FavouritesLayerSettingsStore(file)
+        assertEquals(Outcome.Success(Unit), store.setShowNames(true))
+
+        val reopened = FavouritesLayerSettingsStore(file).also { it.ensureLoaded() }.current()
+        assertTrue(reopened.showNames)
+        assertEquals(setOf("Home"), reopened.hiddenGroups)
     }
 
     @Test

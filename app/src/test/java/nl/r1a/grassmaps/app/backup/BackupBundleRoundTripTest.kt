@@ -364,7 +364,7 @@ class BackupBundleRoundTripTest {
             TrackAccess(
                 registry = ProviderRegistry(trackHost),
                 providers = GeneratedPlugins.providers,
-                tracksRoot = File(root, "tracks"),
+                tracksRootProvider = { File(root, "tracks") },
             )
         val profileCatalog =
             ProfileCatalog(

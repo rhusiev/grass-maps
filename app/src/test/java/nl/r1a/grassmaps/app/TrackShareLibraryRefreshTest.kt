@@ -114,7 +114,7 @@ class TrackShareLibraryRefreshTest {
                     ),
                 ),
             providers = GeneratedPlugins.providers,
-            tracksRoot = root,
+            tracksRootProvider = { root },
         )
 
     private fun temporaryRoot(): File = Files.createTempDirectory("track-share-refresh").toFile().also { root -> roots += root }

@@ -270,7 +270,7 @@ class TrackFixturesTest {
                     ),
                 ),
             providers = GeneratedPlugins.providers,
-            tracksRoot = root,
+            tracksRootProvider = { root },
         )
 
     private suspend fun storedStyle(

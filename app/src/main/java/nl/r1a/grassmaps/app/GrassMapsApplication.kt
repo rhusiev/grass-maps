@@ -123,6 +123,7 @@ open class GrassMapsApplication : Application() {
             // first composition does not see a default widget layout.
             container.activeProfile.activate(container.activeProfile.activeProfileId())
         }
+        maintenanceScope.launch { container.favouritesLayerSettings.ensureLoaded() }
         maintenanceScope.launch {
             TrackTrash.purge(
                 File(filesDir, UserDataLayout.TRACKS_DIRECTORY),

@@ -40,9 +40,11 @@ import java.io.File
  * generated provider registry, so a missing or failing plugin is a typed value
  * and never an exception.
  *
- * With a [tracksRoot] the library lives on disk under that directory (T-0401):
- * `<hash>.gpx` documents with `<id>.json` sidecars, written atomically. Without
- * one, such as in a unit test, it is process-scoped memory. [elevation] is the
+ * With a [tracksRootProvider] the library lives on disk under that directory
+ * (T-0401): `<hash>.gpx` documents with `<id>.json` sidecars, written
+ * atomically. The directory is resolved on the first library read, off Main, so
+ * the map screen can build this handle while it composes. Without a provider,
+ * such as in a unit test, the library is process-scoped memory. [elevation] is the
  * mounted region's DEM of T-0403; null means no region is mounted, so a track
  * keeps the heights it arrived with. The library UI is T-0414; the debug
  * command and the map layer are its callers for now.
@@ -50,14 +52,14 @@ import java.io.File
 class TrackAccess internal constructor(
     private val registry: ProviderRegistry,
     private val providers: List<GeneratedProvider>,
-    tracksRoot: File? = null,
+    tracksRootProvider: (() -> File)? = null,
     elevation: ElevationAccess? = null,
 ) {
     private val reader = TrackDocumentReader { bytes -> readDocument(bytes) }
     private val correction = TrackElevationCorrection(elevation)
     private val store: TrackStore =
-        tracksRoot?.let { root ->
-            FileTrackStore(root, reader, elevationCorrection = correction)
+        tracksRootProvider?.let { provider ->
+            FileTrackStore(provider, reader, elevationCorrection = correction)
         } ?: InMemoryTrackStore()
     private val importer =
         TrackImporter(

@@ -281,7 +281,7 @@ class TrackLibraryStoreTest {
 
     private fun store(): FileTrackStore =
         FileTrackStore(
-            root = root,
+            rootProvider = { root },
             reader = reader(),
             clock = { SAVED_AT_MILLIS },
             log = { message -> logs += message },

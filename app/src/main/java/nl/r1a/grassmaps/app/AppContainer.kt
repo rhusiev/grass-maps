@@ -168,7 +168,7 @@ class AppContainer(
     private val searchFilesProvider: () -> File? = { null },
     private val assetReader: (String) -> ByteArray? = { null },
     private val regionsRootProvider: () -> File? = { null },
-    private val tracksRootProvider: () -> File? = { null },
+    private val tracksRootProvider: (() -> File)? = null,
     private val diagnosticsRootProvider: () -> File? = { null },
     private val deviceInfoProvider: () -> DeviceInfo = { DeviceInfo.UNKNOWN },
     private val debuggable: () -> Boolean = { false },
@@ -339,11 +339,12 @@ class AppContainer(
     }
 
     /**
-     * The four saved-place layer controls (T-0215). Construction reads the
-     * settings file, so this is resolved once when the map screen composes.
+     * The four saved-place layer controls (T-0215). The map screen builds the
+     * store while it composes; the file is read on IO, by the application start
+     * and before the first marker draw.
      */
     val favouritesLayerSettings: FavouritesLayerSettingsStore by lazy {
-        FavouritesLayerSettingsStore(favouritesLayerSettingsFileProvider())
+        FavouritesLayerSettingsStore(favouritesLayerSettingsFileProvider)
     }
 
     /** One signal per successful favourites mutation, including a rename. */
@@ -621,7 +622,7 @@ class AppContainer(
      * order-only editor used, so a saved layout and its location survive.
      */
     val buttonLayoutStore: ButtonLayoutStore by lazy {
-        ButtonLayoutStore(userDataRootProvider()?.let { root -> File(root, UserDataLayout.BUTTON_LAYOUT_PATH) })
+        ButtonLayoutStore { userDataRootProvider()?.let { root -> File(root, UserDataLayout.BUTTON_LAYOUT_PATH) } }
     }
 
     private val buttonControllers = ConcurrentHashMap<ProfileId, ButtonLayoutController>()
@@ -1041,7 +1042,7 @@ class AppContainer(
 
     /**
      * The track library over the generated `file.gpx` provider (T-0401). Under
-     * [tracksRootProvider] the store persists; without a root it is memory-only.
+     * [tracksRootProvider] the store persists; without a provider it is memory-only.
      * A stripped height is filled from the mounted DEM when there is one
      * (T-0403).
      */
@@ -1049,7 +1050,7 @@ class AppContainer(
         TrackAccess(
             providerRegistry,
             GeneratedPlugins.providers,
-            tracksRoot = tracksRootProvider(),
+            tracksRootProvider = tracksRootProvider,
             elevation = mountedElevation,
         )
     }
@@ -1105,6 +1106,8 @@ class AppContainer(
         FavouritesLayerController(
             library = {
                 withContext(Dispatchers.IO) {
+                    // The first draw then uses the stored controls, not the defaults.
+                    favouritesLayerSettings.ensureLoaded()
                     when (val loaded = favourites.load()) {
                         is Outcome.Failure -> {
                             loaded
@@ -1144,7 +1147,7 @@ class AppContainer(
      */
     val trackFolders: TrackFolderStore by lazy {
         TrackFolderStore(
-            file = tracksRootProvider()?.let { root -> File(root, TRACK_LIBRARY_INDEX) },
+            file = tracksRootProvider?.let { provider -> File(provider(), TRACK_LIBRARY_INDEX) },
         )
     }
 

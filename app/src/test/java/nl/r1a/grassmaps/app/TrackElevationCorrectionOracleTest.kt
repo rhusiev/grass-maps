@@ -114,7 +114,7 @@ class TrackElevationCorrectionOracleTest {
                     ),
                 ),
             providers = GeneratedPlugins.providers,
-            tracksRoot = root,
+            tracksRootProvider = { root },
             elevation = elevation,
         )
 

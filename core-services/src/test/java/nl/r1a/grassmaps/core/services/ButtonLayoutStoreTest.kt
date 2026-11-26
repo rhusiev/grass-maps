@@ -31,6 +31,16 @@ class ButtonLayoutStoreTest {
     }
 
     @Test
+    fun theConstructorResolvesNoFile() {
+        var resolved = 0
+        val store = ButtonLayoutStore { file.also { resolved += 1 } }
+
+        assertEquals(0, resolved)
+        assertEquals(MapButtonLayout.DEFAULT, store.load(ProfileId("default")))
+        assertTrue(resolved > 0)
+    }
+
+    @Test
     fun savedLayoutRoundTrips() {
         val store = ButtonLayoutStore(file)
         val layout =

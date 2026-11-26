@@ -373,7 +373,7 @@ class TrackLibraryAccessTest {
                     ),
                 ),
             providers = GeneratedPlugins.providers,
-            tracksRoot = tracksRoot,
+            tracksRootProvider = tracksRoot?.let { root -> { root } },
         )
 
     private suspend fun import(

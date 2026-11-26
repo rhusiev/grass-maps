@@ -245,7 +245,7 @@ class PlannedRouteSaveTest {
                     ),
                 ),
             providers = GeneratedPlugins.providers,
-            tracksRoot = root,
+            tracksRootProvider = { root },
         )
 
     private fun readyPlan(): RoutePlanState =

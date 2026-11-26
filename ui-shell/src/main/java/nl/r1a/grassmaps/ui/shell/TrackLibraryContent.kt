@@ -53,7 +53,27 @@ data class TrackSortRow(
     val selected: Boolean,
 )
 
-/** The whole library screen's text, ready to draw. */
+/**
+ * The actions of the library's bottom bar (round 8 `x-tracks`) in their fixed
+ * order. The canon's map action is not offered: the library has no command
+ * that shows a folder on the map.
+ */
+enum class TrackBarAction {
+    SEARCH,
+    SORT,
+    ADD,
+}
+
+data class TrackBarActionRow(
+    val action: TrackBarAction,
+    val label: String,
+)
+
+/**
+ * The whole library screen's text, ready to draw. [sortSummary] names the
+ * order in use for the read-only line above the rows; [barActions] are the
+ * bottom bar's controls, which hold search, sort and new folder.
+ */
 data class TrackLibraryContent(
     val title: String,
     val subtitle: String,
@@ -65,6 +85,8 @@ data class TrackLibraryContent(
     val renameFolder: String,
     val sort: String,
     val sorts: List<TrackSortRow>,
+    val sortSummary: String,
+    val barActions: List<TrackBarActionRow>,
     val search: String,
     val searchHint: String,
     val listTitle: String,
@@ -172,6 +194,7 @@ fun trackLibraryContent(
         )
     val folderCount = state.folders.size
     val foldersPhrase = strings.resolveQuantity(TRACK_LIBRARY_FOLDERS_KEY, folderCount, listOf(folderCount.toString()))
+    val searchHint = strings.resolveQuantity(TRACK_LIBRARY_SEARCH_HINT_KEY, state.tracks.size, listOf(state.tracks.size.toString()))
     return TrackLibraryContent(
         title = strings.resolve(TRACK_LIBRARY_TITLE_KEY),
         subtitle =
@@ -195,8 +218,15 @@ fun trackLibraryContent(
                     selected = sort == browse.sort,
                 )
             },
+        sortSummary = strings.resolve(trackSortKey(browse.sort)),
+        barActions =
+            listOf(
+                TrackBarActionRow(TrackBarAction.SEARCH, searchHint),
+                TrackBarActionRow(TrackBarAction.SORT, strings.resolve(TRACK_LIBRARY_SORT_KEY)),
+                TrackBarActionRow(TrackBarAction.ADD, strings.resolve(TRACK_LIBRARY_NEW_FOLDER_KEY)),
+            ),
         search = strings.resolve(TRACK_LIBRARY_SEARCH_KEY),
-        searchHint = strings.resolveQuantity(TRACK_LIBRARY_SEARCH_HINT_KEY, state.tracks.size, listOf(state.tracks.size.toString())),
+        searchHint = searchHint,
         listTitle = listTitle,
         listSummary = listSummary,
         empty = if (state.tracks.isEmpty()) strings.resolve(TRACK_LIBRARY_EMPTY_KEY) else null,

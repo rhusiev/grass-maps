@@ -377,6 +377,90 @@ object ShellIcons {
             stroked { circle(4f, 18f, 1.6f) }
         }
 
+    // The list screens' icons, traced from round 8 `x-saved` and `x-tracks`
+    // (round4/_build/r4base.py:20 and round8/_build/s_cleanup8.py:20).
+    val Eye =
+        icon("eye") {
+            stroked {
+                moveTo(2.5f, 12f)
+                curveTo(2.5f, 12f, 6f, 5.5f, 12f, 5.5f)
+                curveTo(18f, 5.5f, 21.5f, 12f, 21.5f, 12f)
+                curveTo(21.5f, 12f, 18f, 18.5f, 12f, 18.5f)
+                curveTo(6f, 18.5f, 2.5f, 12f, 2.5f, 12f)
+                close()
+            }
+            stroked { circle(12f, 12f, 2.8f) }
+        }
+
+    val EyeOff =
+        icon("eye_off") {
+            stroked {
+                moveTo(4f, 4f)
+                lineTo(20f, 20f)
+                moveTo(9.8f, 6f)
+                arcTo(10f, 10f, 0f, false, true, 12f, 5.5f)
+                curveTo(18f, 5.5f, 21.5f, 12f, 21.5f, 12f)
+                arcTo(17f, 17f, 0f, false, true, 18.9f, 15.4f)
+                moveTo(6.4f, 7.6f)
+                arcTo(17f, 17f, 0f, false, false, 2.5f, 12f)
+                curveTo(2.5f, 12f, 6f, 18.5f, 12f, 18.5f)
+                arcTo(9.6f, 9.6f, 0f, false, false, 16.4f, 17.4f)
+            }
+        }
+
+    val MapFolded =
+        icon("map") {
+            stroked {
+                moveTo(9f, 4.5f)
+                lineTo(3.5f, 6.5f)
+                lineTo(3.5f, 19.5f)
+                lineTo(9f, 17.5f)
+                lineTo(15f, 19.5f)
+                lineTo(20.5f, 17.5f)
+                lineTo(20.5f, 4.5f)
+                lineTo(15f, 6.5f)
+                close()
+                moveTo(9f, 4.5f)
+                lineTo(9f, 17.5f)
+                moveTo(15f, 6.5f)
+                lineTo(15f, 19.5f)
+            }
+        }
+
+    val Sort =
+        icon("sort") {
+            stroked {
+                moveTo(7f, 5f)
+                lineTo(7f, 19f)
+                lineTo(4f, 16f)
+                moveTo(7f, 19f)
+                lineTo(10f, 16f)
+                moveTo(13f, 6f)
+                lineTo(20f, 6f)
+                moveTo(13f, 11f)
+                lineTo(18f, 11f)
+                moveTo(13f, 16f)
+                lineTo(16f, 16f)
+            }
+        }
+
+    val Folder =
+        icon("folder") {
+            stroked {
+                moveTo(3.5f, 6.5f)
+                arcTo(2f, 2f, 0f, false, true, 5.5f, 4.5f)
+                lineTo(9.5f, 4.5f)
+                lineTo(11.5f, 7f)
+                lineTo(18.5f, 7f)
+                arcTo(2f, 2f, 0f, false, true, 20.5f, 9f)
+                lineTo(20.5f, 18f)
+                arcTo(2f, 2f, 0f, false, true, 18.5f, 20f)
+                lineTo(5.5f, 20f)
+                arcTo(2f, 2f, 0f, false, true, 3.5f, 18f)
+                close()
+            }
+        }
+
     // The guidance card's manoeuvre arrows. The four first kinds are traced
     // from `turn_arrow` in round5/_build/ui.py:108; the rest use the same
     // 64 px grid, stroked shaft and filled triangular head for the other

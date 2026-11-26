@@ -86,8 +86,8 @@ class SavedScreenContentTest {
             listOf("Home", "Work"),
             content.groups[0].places.map { it.special },
         )
-        assertEquals(
-            "Home & work",
+        assertNull(
+            "a place repeats its group name instead of its description",
             content.groups[0]
                 .places
                 .first()
@@ -99,6 +99,7 @@ class SavedScreenContentTest {
         )
         assertEquals("1 more in Coffee", content.groups[1].moreLabel)
         assertEquals(1, content.groups[1].more)
+        assertEquals(listOf("Coffee 3"), content.groups[1].remaining.map { it.name })
         assertNull(content.groups[0].moreLabel)
     }
 
@@ -108,8 +109,8 @@ class SavedScreenContentTest {
 
         assertTrue(content.groups.isEmpty())
         assertEquals("No saved places yet", content.empty)
-        assertEquals("0 places in 0 groups", content.subtitle)
-        assertEquals("0 of 0 on the map", content.onMapSummary)
+        assertEquals("0 places", content.subtitle)
+        assertNull("there is no group to count on the map", content.onMapSummary)
     }
 
     @Test
@@ -183,7 +184,6 @@ class SavedScreenContentTest {
         val NEW_KEYS =
             setOf(
                 "saved_screen_title",
-                "saved_screen_hint",
                 "saved_screen_places",
                 "saved_screen_groups",
                 "saved_screen_subtitle",
@@ -201,6 +201,16 @@ class SavedScreenContentTest {
                 "saved_screen_add",
                 "saved_screen_tracks_empty",
                 "saved_screen_empty",
+                "saved_screen_new_group",
+                "saved_screen_group_name",
+                "saved_screen_create",
+                "saved_screen_cancel",
+                "saved_screen_recolour",
+                "saved_screen_show_on_map",
+                "saved_screen_set_home",
+                "saved_screen_set_work",
+                "saved_screen_move_to",
+                "saved_screen_storage",
             )
     }
 }

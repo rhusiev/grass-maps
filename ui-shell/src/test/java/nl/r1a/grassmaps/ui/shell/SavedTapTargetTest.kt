@@ -6,43 +6,36 @@ import java.io.File
 
 /**
  * Final blind review P2-1: the Saved search and sort icons measured 35x48 dp
- * because TapIcon set only a minimum height. The commands and labels stay as
- * they are; only the touch target gains the shell's minimum width. Mappers are
+ * because they set only a minimum height. The round 8 bar keeps the commands
+ * and labels, and every icon is a 48 dp square. Mappers are
  * Composables a JVM test cannot render, so pin the source shape.
  */
 class SavedTapTargetTest {
     private val source = File(HOST_FILE).readText()
+    private val bar = File(BAR_FILE).readText()
 
     @Test
-    fun tapIconsHaveA48DpMinimumInBothDimensions() {
-        val tapIcon = source.substringAfter("private fun TapIcon(").substringBefore("\n}\n")
+    fun barIconsAre48DpInBothDimensions() {
+        val button = bar.substringAfter("internal fun RoundIconButton(").substringBefore("\n}\n")
 
-        assertTrue(
-            "TapIcon has no minimum width",
-            tapIcon.contains(".widthIn(min = MIN_TAP_TARGET_DP.dp)"),
-        )
-        assertTrue(
-            "TapIcon has no minimum height",
-            tapIcon.contains(".heightIn(min = MIN_TAP_TARGET_DP.dp)"),
-        )
-        assertTrue(
-            "the shell tap target is not 48 dp",
-            source.contains("private const val MIN_TAP_TARGET_DP = 48"),
-        )
+        assertTrue("the round icon button is not a 48 dp square", button.contains(".size(MIN_TAP_TARGET_DP.dp)"))
+        assertTrue("the round icon button lost its spoken label", button.contains("contentDescription = label"))
+        assertTrue("the bar tap target is not 48 dp", bar.contains("private const val MIN_TAP_TARGET_DP = 48"))
+        assertTrue("the bar search field is not 48 dp high", bar.contains(".heightIn(min = MIN_TAP_TARGET_DP.dp)"))
     }
 
     @Test
-    fun searchAndSortKeepTheirGlyphsLabelsAndCommands() {
-        val bar = source.substringAfter("private fun SavedBar(").substringBefore("private fun TapIcon(")
+    fun searchAndSortKeepTheirIconsLabelsAndCommands() {
+        val savedBar = source.substringAfter("private fun SavedBar(").substringBefore("private fun IconButton(")
 
-        assertTrue("search lost its TapIcon", bar.contains("TapIcon(glyph = SEARCH_GLYPH"))
-        assertTrue("sort lost its TapIcon", bar.contains("TapIcon(glyph = SORT_GLYPH"))
-        assertTrue("the search command changed", bar.contains("onToggleSearch"))
-        assertTrue("the sort command changed", bar.contains("onSort"))
-        assertTrue("the spoken labels are no longer passed", bar.contains("label = action.label"))
+        assertTrue("search lost its field", savedBar.contains("placeholder = search.label"))
+        assertTrue("search lost its command", savedBar.contains("onQueryChange = onQueryChange"))
+        assertTrue("sort lost its icon", savedBar.contains("ListBarButton(ShellIcons.Sort, action.label, onClick = onSort)"))
+        assertTrue("the shared bar is not used", savedBar.contains("ListBottomBar("))
     }
 
     private companion object {
         const val HOST_FILE = "src/main/java/nl/r1a/grassmaps/ui/shell/SavedScreenHost.kt"
+        const val BAR_FILE = "src/main/java/nl/r1a/grassmaps/ui/shell/ListBottomBar.kt"
     }
 }

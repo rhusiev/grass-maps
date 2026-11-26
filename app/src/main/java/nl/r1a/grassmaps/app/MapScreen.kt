@@ -3017,6 +3017,10 @@ private fun MapSavedListsHost(
                     .onFailure { error -> Log.w(TAG, "show saved place on map failed: $error") }
             }
         },
+        onOpenTracks = {
+            onClose()
+            TrackLibraryScreen.show()
+        },
         embedded = embedded,
         modifier = modifier,
     )

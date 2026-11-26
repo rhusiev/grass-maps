@@ -7,8 +7,8 @@ import java.io.File
 
 /**
  * Final design-aware review round 4, P1 4 (T-0612 reopened). The Saved sheet
- * keeps the Places|Tracks switch above the list, shows only a notice for tracks,
- * and hides the Map command. Composables cannot render on the JVM, so these
+ * keeps the Places|Tracks switch below the list, shows only a notice for tracks
+ * when it cannot open the library, and ties the Map command to a selection. Composables cannot render on the JVM, so these
  * tests pin the source shape and the string a reviewer would see.
  */
 class SavedScreenRound4Test {
@@ -19,12 +19,11 @@ class SavedScreenRound4Test {
 
     @Test
     fun theSegmentAndBarFollowTheWholeListAtTheBottomOfTheSheet() {
-        val sectionCall = listsHost.indexOf("SavedScreenSection(")
-        val legacy = listsHost.indexOf("PointRow(")
-        val bottom = listsHost.indexOf("SavedBottomControls(")
+        val body = listsHost.substringAfter("internal fun FavouritesListsBody(")
+        val sectionCall = body.indexOf("SavedScreenSection(")
+        val bottom = body.indexOf("SavedBottomControls(")
         assertTrue("the Saved section is missing", sectionCall >= 0)
-        assertTrue("the legacy point rows are missing", legacy >= 0)
-        assertTrue("there is no bottom control block after the list", bottom > legacy && bottom > sectionCall)
+        assertTrue("there is no bottom control block after the list", bottom > sectionCall)
 
         val bottomBlock = section.substringAfter("internal fun SavedBottomControls(")
         val segment = bottomBlock.indexOf("SegmentedRow(")
@@ -57,11 +56,12 @@ class SavedScreenRound4Test {
     @Test
     fun theMapCommandIsEnabledOnlyForASelectedPlace() {
         assertTrue("the Map command is still disabled in the model", SAVED_COMMANDS_PATTERN.containsMatchIn(section))
-        val bar = section.substringAfter("private fun SavedBar(").substringBefore("private fun TapIcon(")
-        assertTrue("the bar does not draw the map action", bar.contains("glyph = MAP_GLYPH"))
-        assertTrue("the map action is not tied to a selection", bar.contains("enabled = placeSelected"))
-        assertTrue("the map action lost its command", bar.contains("onClick = onShowOnMap"))
-        assertTrue("the map action lost its spoken label", bar.contains("label = action.label"))
+        val bar = section.substringAfter("private fun SavedBar(").substringBefore("private fun IconButton(")
+        val map = bar.substringAfter("SavedBarAction.MAP ->").substringBefore("\n")
+        assertTrue("the bar does not draw the map action", map.contains("ShellIcons.MapFolded"))
+        assertTrue("the map action is not tied to a selection", map.contains("enabled = placeSelected"))
+        assertTrue("the map action lost its command", map.contains("onClick = onShowOnMap"))
+        assertTrue("the map action lost its spoken label", map.contains("action.label"))
 
         assertTrue(
             "the sheet does not expose the existing map command callback",

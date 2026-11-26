@@ -40,7 +40,6 @@
     <string name="favourites_lists_no_matches">No matches</string>
 
     <string name="saved_screen_title">Saved</string>
-    <string name="saved_screen_hint">Groups in your order · places nearest first</string>
     <plurals name="saved_screen_places">
         <item quantity="one">%1$s place</item>
         <item quantity="other">%1$s places</item>
@@ -64,6 +63,16 @@
     <string name="saved_screen_add">Add</string>
     <string name="saved_screen_tracks_empty">Saved tracks are shown in the Tracks screen</string>
     <string name="saved_screen_empty">No saved places yet</string>
+    <string name="saved_screen_new_group">New group</string>
+    <string name="saved_screen_group_name">Name</string>
+    <string name="saved_screen_create">Create</string>
+    <string name="saved_screen_cancel">Cancel</string>
+    <string name="saved_screen_recolour">Color for %1$s</string>
+    <string name="saved_screen_show_on_map">Show on map</string>
+    <string name="saved_screen_set_home">Set as Home</string>
+    <string name="saved_screen_set_work">Set as Work</string>
+    <string name="saved_screen_move_to">Move to %1$s</string>
+    <string name="saved_screen_storage">Saved as GPX on this phone</string>
 
     <string name="search_title">Search places</string>
     <string name="search_hint">Name, street or house number</string>

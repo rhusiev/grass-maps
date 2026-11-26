@@ -40,7 +40,6 @@
     <string name="favourites_lists_no_matches">Немає збігів</string>
 
     <string name="saved_screen_title">Збережене</string>
-    <string name="saved_screen_hint">Групи у вашому порядку · найближчі місця спочатку</string>
     <plurals name="saved_screen_places">
         <item quantity="one">%1$s місце</item>
         <item quantity="few">%1$s місця</item>
@@ -66,6 +65,16 @@
     <string name="saved_screen_add">Додати</string>
     <string name="saved_screen_tracks_empty">Збережені маршрути відображаються на екрані «Маршрути»</string>
     <string name="saved_screen_empty">Збережених місць ще немає</string>
+    <string name="saved_screen_new_group">Нова група</string>
+    <string name="saved_screen_group_name">Назва</string>
+    <string name="saved_screen_create">Створити</string>
+    <string name="saved_screen_cancel">Скасувати</string>
+    <string name="saved_screen_recolour">Колір для %1$s</string>
+    <string name="saved_screen_show_on_map">Показати на карті</string>
+    <string name="saved_screen_set_home">Позначити як дім</string>
+    <string name="saved_screen_set_work">Позначити як роботу</string>
+    <string name="saved_screen_move_to">Перемістити в %1$s</string>
+    <string name="saved_screen_storage">Збережено як GPX на цьому телефоні</string>
 
     <string name="search_title">Пошук місць</string>
     <string name="search_hint">Назва, вулиця або номер будинку</string>

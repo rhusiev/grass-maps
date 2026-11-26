@@ -70,6 +70,30 @@ class TrackLibraryContentTest {
     }
 
     @Test
+    fun theBottomBarHoldsSearchSortAndNewFolderAndTheSortLineNamesTheOrder() {
+        val content = content()
+
+        assertEquals(
+            listOf(TrackBarAction.SEARCH, TrackBarAction.SORT, TrackBarAction.ADD),
+            content.barActions.map { action -> action.action },
+        )
+        assertEquals(
+            listOf("Search ${STATE.tracks.size} tracks", "Sort tracks", "New folder"),
+            content.barActions.map { action -> action.label },
+        )
+        assertEquals("Newest first", content.sortSummary)
+        assertTrue("the folder tiles still offer a New folder tile", content.folders.none { folder -> folder.name == "New folder" })
+
+        val byName =
+            trackLibraryContent(
+                STATE.copy(browse = STATE.browse.copy(sort = TrackSort.NAME)),
+                strings(ENGLISH, APP_ENGLISH),
+                Locale.ENGLISH,
+            )
+        assertEquals("Name A-Z", byName.sortSummary)
+    }
+
+    @Test
     fun aSearchWithNoMatchSaysSoButAnEmptyLibraryDoesNot() {
         assertNull(content().noMatches)
 

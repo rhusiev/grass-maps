@@ -13,7 +13,7 @@ class TrackLibraryTokensTest {
     @Test
     fun theLightPaletteIsTheLightTokenSet() {
         val palette = trackLibraryPalette(dark = false)
-        assertEquals(LightShellColors.map, palette.background)
+        assertEquals("round 8 x-tracks draws the light list on white", LightShellColors.surface, palette.background)
         assertEquals(LightShellColors.surface, palette.surface)
         assertEquals(LightShellColors.soft, palette.field)
         assertEquals(LightShellColors.selectedChip, palette.selectedSurface)

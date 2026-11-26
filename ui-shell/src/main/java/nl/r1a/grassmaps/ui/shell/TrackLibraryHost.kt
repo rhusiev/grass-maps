@@ -10,13 +10,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -65,6 +68,9 @@ import nl.r1a.grassmaps.plugin.api.model.TrackLibraryState
 import nl.r1a.grassmaps.plugin.api.model.TrackSort
 import nl.r1a.grassmaps.plugin.api.service.Strings
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.ShellColors
+import nl.r1a.grassmaps.plugin.ui.api.ShellIcon
+import nl.r1a.grassmaps.plugin.ui.api.ShellIcons
 import nl.r1a.grassmaps.plugin.ui.api.inkOn
 import nl.r1a.grassmaps.plugin.ui.api.shellColors
 
@@ -74,10 +80,12 @@ import nl.r1a.grassmaps.plugin.ui.api.shellColors
  * tiles, list rows and action sheets and sends taps back. It never reads a
  * sidecar or a GPX document.
  *
- * Every control is reachable from the screen itself: a folder tile filters, the
- * pencil renames, the new-folder tile creates, the sort chips reorder, the
- * search field matches names, and pressing a track selects it. The bottom bar of
- * the selected track offers Move, Rename, Share, Save and Delete; Delete happens
+ * The layout is round 8 `x-tracks`: read at the top, press at the bottom. The
+ * header, the folder tiles and the read-only sort line sit above the rows; the
+ * bottom bar holds search, sort and +, which creates a folder. A folder tile
+ * filters and the pencil on the selected one renames it, because both act on
+ * that tile. Pressing a track selects it, and the bar of the selected track
+ * replaces the bottom bar with Move, Rename, Share, Save and Delete; Delete happens
  * at once and Undo reverses it, while Save hands the track to the system
  * document picker (T-0410). A link in a description shows its full address
  * before the host opens it in the system browser. The edit sheet also carries
@@ -123,7 +131,7 @@ fun TrackLibraryHost(
     var showOnMapField by remember { mutableStateOf(true) }
     var query by remember { mutableStateOf(state.browse.query) }
     val selectedRow = selectedLibraryRow(content.rows, selectedTrackId)
-    val navigationInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val shell = shellColors(dark)
 
     LaunchedEffect(selectedTrackId, state.tracks.size) {
         if (sheet == LibrarySheet.EDIT || sheet == LibrarySheet.MOVE) {
@@ -140,94 +148,70 @@ fun TrackLibraryHost(
                 Modifier
                     .fillMaxSize()
                     .statusBarsPadding()
-                    .verticalScroll(rememberScrollState())
-                    .padding(
-                        start = SCREEN_PADDING_DP.dp,
-                        end = SCREEN_PADDING_DP.dp,
-                        top = SCREEN_TOP_DP.dp,
-                        bottom =
-                            trackLibraryBarReserveDp(
-                                selectionVisible = selectedRow != null,
-                                undoVisible = content.undoMessage != null,
-                                navigationInsetDp = navigationInset.value,
-                            ).dp,
-                    ),
-            verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
+                    .navigationBarsPadding()
+                    .imePadding(),
         ) {
-            Header(
-                content = content,
-                colors = colors,
-                selectionTitle = selection.title.takeIf { selectedRow != null },
-                onClose = onClose,
-            )
-            FolderTiles(
-                content = content,
-                colors = colors,
-                onSelect = onSelectFolder,
-                onRename = { folderId ->
-                    val folder = state.folders.firstOrNull { folder -> folder.id == folderId }
-                    if (folder != null) {
-                        renameFolderId = folder.id
-                        nameField = folder.name
-                        folderSheetMode = FolderSheetMode.RENAME
-                        sheet = LibrarySheet.FOLDER
-                    }
-                },
-                onNewFolder = {
-                    renameFolderId = null
-                    nameField = ""
-                    folderSheetMode = FolderSheetMode.CREATE
-                    sheet = LibrarySheet.FOLDER
-                },
-            )
-            SectionHeader(content = content, colors = colors, onSortChange = onSortChange)
-            SearchField(
-                content = content,
-                colors = colors,
-                query = query,
-                onQueryChange = {
-                    query = it
-                    onQueryChange(it)
-                },
-            )
-            content.empty?.let { empty -> Line(text = empty, colors = colors, secondary = true) }
-            content.rows.forEach { row ->
-                TrackRow(
-                    row = row,
+            Column(
+                modifier =
+                    Modifier
+                        .weight(WEIGHT_ONE)
+                        .verticalScroll(rememberScrollState())
+                        .padding(start = SCREEN_PADDING_DP.dp, end = SCREEN_PADDING_DP.dp, top = SCREEN_TOP_DP.dp),
+                verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
+            ) {
+                Header(
+                    content = content,
                     colors = colors,
-                    selected = row.id == selectedTrackId,
-                    onSelect = {
-                        selectedTrackId = row.id
-                        sheet = LibrarySheet.NONE
-                    },
-                    onLink = { url ->
-                        linkToOpen = url
-                        sheet = LibrarySheet.LINK
+                    shell = shell,
+                    selectionTitle = selection.title.takeIf { selectedRow != null },
+                    onClose = onClose,
+                )
+                FolderTiles(
+                    content = content,
+                    colors = colors,
+                    onSelect = onSelectFolder,
+                    onRename = { folderId ->
+                        val folder = state.folders.firstOrNull { folder -> folder.id == folderId }
+                        if (folder != null) {
+                            renameFolderId = folder.id
+                            nameField = folder.name
+                            folderSheetMode = FolderSheetMode.RENAME
+                            sheet = LibrarySheet.FOLDER
+                        }
                     },
                 )
+                ListHeading(content = content, colors = colors)
+                content.empty?.let { empty -> Line(text = empty, colors = colors, secondary = true) }
+                content.rows.forEach { row ->
+                    TrackRow(
+                        row = row,
+                        colors = colors,
+                        selected = row.id == selectedTrackId,
+                        onSelect = {
+                            selectedTrackId = row.id
+                            sheet = LibrarySheet.NONE
+                        },
+                        onLink = { url ->
+                            linkToOpen = url
+                            sheet = LibrarySheet.LINK
+                        },
+                    )
+                }
+                content.noMatches?.let { message -> Line(text = message, colors = colors, secondary = true) }
             }
-            content.noMatches?.let { message -> Line(text = message, colors = colors, secondary = true) }
-        }
-        if (content.undoMessage != null || selectedRow != null) {
             Column(
-                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
             ) {
                 if (content.undoMessage != null) {
-                    UndoBar(
-                        message = content.undoMessage,
-                        undo = content.undo,
-                        colors = colors,
-                        onUndo = onUndo,
-                        // The action bar below carries the inset when it is shown.
-                        modifier = if (selectedRow != null) Modifier else Modifier.navigationBarsPadding(),
-                    )
+                    UndoBar(message = content.undoMessage, undo = content.undo, colors = colors, onUndo = onUndo)
                 }
                 if (selectedRow != null) {
                     SelectionBar(
                         content = selection,
                         colors = colors,
+                        shell = shell,
                         onClose = { selectedTrackId = null },
                         onAction = { kind ->
                             when (kind) {
@@ -261,6 +245,23 @@ fun TrackLibraryHost(
                                     onDeleteTrack(selectedRow.id)
                                 }
                             }
+                        },
+                    )
+                } else {
+                    TrackLibraryBar(
+                        content = content,
+                        shell = shell,
+                        query = query,
+                        onQueryChange = {
+                            query = it
+                            onQueryChange(it)
+                        },
+                        onSort = { sheet = LibrarySheet.SORT },
+                        onAdd = {
+                            renameFolderId = null
+                            nameField = ""
+                            folderSheetMode = FolderSheetMode.CREATE
+                            sheet = LibrarySheet.FOLDER
                         },
                     )
                 }
@@ -337,6 +338,20 @@ fun TrackLibraryHost(
                     )
                 }
 
+                LibrarySheet.SORT -> {
+                    SortSheet(
+                        title = content.sort,
+                        sorts = content.sorts,
+                        cancel = strings.resolve(TRACK_LIBRARY_CANCEL_KEY),
+                        colors = colors,
+                        onChoose = { sort ->
+                            sheet = LibrarySheet.NONE
+                            onSortChange(sort)
+                        },
+                        onCancel = { sheet = LibrarySheet.NONE },
+                    )
+                }
+
                 LibrarySheet.LINK -> {
                     val address = linkToOpen
                     if (address != null) {
@@ -369,23 +384,15 @@ fun TrackLibraryHost(
 private fun Header(
     content: TrackLibraryContent,
     colors: TrackLibraryPalette,
+    shell: ShellColors,
     selectionTitle: String?,
     onClose: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BasicText(
-            text = BACK_GLYPH,
-            style = TextStyle(color = colors.textPrimary, fontSize = TITLE_FONT_SP.sp),
-            modifier =
-                Modifier
-                    .clickable(role = Role.Button, onClick = onClose)
-                    .semantics { contentDescription = content.close }
-                    .padding(ACTION_PADDING_DP.dp),
-        )
+        RoundIconButton(colors = shell, icon = ShellIcons.ChevronLeft, label = content.close, filled = false, onClick = onClose)
         Column(modifier = Modifier.weight(WEIGHT_ONE)) {
             Line(text = selectionTitle ?: content.title, colors = colors, bold = true, size = TITLE_FONT_SP)
             Line(text = content.subtitle, colors = colors, secondary = true)
@@ -393,6 +400,10 @@ private fun Header(
     }
 }
 
+/**
+ * The folder tiles in two columns, as round 8 `x-tracks` draws them. A tile
+ * filters the list; the selected folder's pencil renames that folder.
+ */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 private fun FolderTiles(
@@ -400,125 +411,136 @@ private fun FolderTiles(
     colors: TrackLibraryPalette,
     onSelect: (String?) -> Unit,
     onRename: (String) -> Unit,
-    onNewFolder: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(TILE_GAP_DP.dp),
-    ) {
-        content.folders.forEach { folder ->
-            Column(
-                modifier =
-                    Modifier
-                        .background(
-                            if (folder.selected) colors.selectedSurface else colors.surface,
-                            RoundedCornerShape(TILE_CORNER_DP.dp),
-                        ).clickable(role = Role.Button) { onSelect(folder.id) }
-                        .semantics { selected = folder.selected }
-                        .padding(TILE_PADDING_DP.dp),
+    Column(verticalArrangement = Arrangement.spacedBy(TILE_GAP_DP.dp)) {
+        content.folders.chunked(TILE_COLUMNS).forEach { pair ->
+            Row(
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(TILE_GAP_DP.dp),
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(ACTION_PADDING_DP.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Line(
-                        text = folder.name,
+                pair.forEach { folder ->
+                    FolderTile(
+                        folder = folder,
+                        renameLabel = content.renameFolder,
                         colors = colors,
-                        bold = true,
-                        colour = if (folder.selected) colors.selectedText else colors.textPrimary,
+                        onSelect = onSelect,
+                        onRename = onRename,
+                        modifier = Modifier.weight(WEIGHT_ONE).fillMaxHeight(),
                     )
-                    if (folder.id != null && folder.selected) {
-                        BasicText(
-                            text = RENAME_GLYPH,
-                            style = TextStyle(color = colors.selectedText, fontSize = ROW_FONT_SP.sp),
-                            modifier =
-                                Modifier
-                                    .clickable(role = Role.Button) { folder.id?.let(onRename) }
-                                    .semantics { contentDescription = content.renameFolder }
-                                    .padding(ACTION_PADDING_DP.dp),
-                        )
-                    }
                 }
-                Line(
-                    text = folder.summary,
-                    colors = colors,
-                    secondary = !folder.selected,
-                    colour = if (folder.selected) colors.selectedText else colors.textSecondary,
-                )
+                if (pair.size < TILE_COLUMNS) {
+                    Box(modifier = Modifier.weight(WEIGHT_ONE))
+                }
             }
         }
-        Column(
-            modifier =
-                Modifier
-                    .background(colors.surface, RoundedCornerShape(TILE_CORNER_DP.dp))
-                    .clickable(onClick = onNewFolder)
-                    .padding(TILE_PADDING_DP.dp),
-        ) {
-            Line(text = content.newFolder, colors = colors, bold = true)
-        }
     }
 }
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
-private fun SectionHeader(
-    content: TrackLibraryContent,
+private fun FolderTile(
+    folder: TrackFolderRow,
+    renameLabel: String,
     colors: TrackLibraryPalette,
-    onSortChange: (TrackSort) -> Unit,
+    onSelect: (String?) -> Unit,
+    onRename: (String) -> Unit,
+    modifier: Modifier,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(modifier = Modifier.weight(WEIGHT_ONE)) {
-            Line(text = content.listTitle, colors = colors, bold = true)
-            Line(text = content.listSummary, colors = colors, secondary = true)
-        }
-    }
-    Line(text = content.sort, colors = colors, secondary = true)
+    val ink = if (folder.selected) colors.selectedText else colors.textPrimary
     Row(
-        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(CHIP_GAP_DP.dp),
+        modifier =
+            modifier
+                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .background(
+                    if (folder.selected) colors.selectedSurface else colors.field,
+                    RoundedCornerShape(TILE_CORNER_DP.dp),
+                ).selectable(selected = folder.selected, role = Role.Tab) { onSelect(folder.id) }
+                .padding(TILE_PADDING_DP.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
     ) {
-        content.sorts.forEach { row ->
-            BasicText(
-                text = row.label,
-                style =
-                    TextStyle(
-                        color = if (row.selected) colors.selectedText else colors.textSecondary,
-                        fontSize = ROW_FONT_SP.sp,
-                        fontWeight = if (row.selected) FontWeight.SemiBold else FontWeight.Normal,
-                    ),
+        ShellIcon(icon = ShellIcons.Folder, tint = ink, modifier = Modifier.size(TILE_ICON_DP.dp))
+        Column(modifier = Modifier.weight(WEIGHT_ONE)) {
+            Line(text = folder.name, colors = colors, bold = true, colour = ink)
+            Line(text = folder.summary, colors = colors, size = NOTE_FONT_SP, colour = if (folder.selected) ink else colors.textSecondary)
+        }
+        val folderId = folder.id
+        if (folderId != null && folder.selected) {
+            Box(
                 modifier =
                     Modifier
-                        .background(
-                            if (row.selected) colors.selectedSurface else colors.surface,
-                            RoundedCornerShape(CHIP_CORNER_DP.dp),
-                        ).selectable(selected = row.selected, role = Role.RadioButton) { onSortChange(row.sort) }
-                        .padding(CHIP_PADDING_DP.dp),
-            )
+                        .size(MIN_TAP_TARGET_DP.dp)
+                        .clickable(role = Role.Button) { onRename(folderId) }
+                        .semantics { contentDescription = renameLabel },
+                contentAlignment = Alignment.Center,
+            ) {
+                BasicText(text = RENAME_GLYPH, style = TextStyle(color = ink, fontSize = ROW_FONT_SP.sp))
+            }
         }
     }
 }
 
+/**
+ * The read-only lines above the rows: the shown folder, the order in use and
+ * the folder's totals. Sorting itself is in the bottom bar.
+ */
 @Suppress("ktlint:standard:function-naming")
 @Composable
-private fun SearchField(
+private fun ListHeading(
     content: TrackLibraryContent,
     colors: TrackLibraryPalette,
+) {
+    Row(
+        modifier = Modifier.padding(top = ROW_GAP_DP.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(ACTION_PADDING_DP.dp),
+    ) {
+        ShellIcon(icon = ShellIcons.Folder, tint = colors.textSecondary, modifier = Modifier.size(INFO_ICON_DP.dp))
+        Line(text = content.listTitle.uppercase(), colors = colors, secondary = true, bold = true, size = NOTE_FONT_SP)
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(ACTION_PADDING_DP.dp)) {
+        ShellIcon(icon = ShellIcons.Sort, tint = colors.textSecondary, modifier = Modifier.size(INFO_ICON_DP.dp))
+        BasicText(
+            text = content.sortSummary,
+            style = TextStyle(color = colors.textSecondary, fontSize = NOTE_FONT_SP.sp),
+            modifier = Modifier.weight(WEIGHT_ONE),
+        )
+        BasicText(
+            text = content.listSummary,
+            style = TextStyle(color = colors.textSecondary, fontSize = NOTE_FONT_SP.sp, textAlign = TextAlign.End),
+            modifier = Modifier.weight(WEIGHT_ONE),
+        )
+    }
+}
+
+/** The library's bottom bar: search, sort and + (a new folder), from the content's bar actions. */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun TrackLibraryBar(
+    content: TrackLibraryContent,
+    shell: ShellColors,
     query: String,
     onQueryChange: (String) -> Unit,
+    onSort: () -> Unit,
+    onAdd: () -> Unit,
 ) {
-    Line(text = content.search, colors = colors, secondary = true)
-    BasicTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        singleLine = true,
-        textStyle = TextStyle(color = colors.textPrimary, fontSize = ROW_FONT_SP.sp),
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(colors.surface, RoundedCornerShape(FIELD_CORNER_DP.dp))
-                .border(1.dp, colors.border, RoundedCornerShape(FIELD_CORNER_DP.dp))
-                .padding(FIELD_PADDING_DP.dp),
+    val search = content.barActions.firstOrNull { it.action == TrackBarAction.SEARCH } ?: return
+    val buttons =
+        content.barActions.mapNotNull { action ->
+            when (action.action) {
+                TrackBarAction.SEARCH -> null
+                TrackBarAction.SORT -> ListBarButton(ShellIcons.Sort, action.label, onClick = onSort)
+                TrackBarAction.ADD -> ListBarButton(ShellIcons.Plus, action.label, onClick = onAdd)
+            }
+        }
+    ListBottomBar(
+        colors = shell,
+        placeholder = search.label,
+        query = query,
+        onQueryChange = onQueryChange,
+        buttons = buttons,
+        modifier = Modifier.padding(horizontal = BAR_MARGIN_DP.dp, vertical = ROW_GAP_DP.dp),
     )
-    if (query.isEmpty()) {
-        Line(text = content.searchHint, colors = colors, secondary = true)
-    }
 }
 
 @Suppress("ktlint:standard:function-naming")
@@ -541,8 +563,9 @@ private fun TrackRow(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .heightIn(min = MIN_TAP_TARGET_DP.dp)
                 .background(
-                    if (selected) colors.selection else colors.surface,
+                    if (selected) colors.selection else Color.Transparent,
                     RoundedCornerShape(TILE_CORNER_DP.dp),
                 ).combinedClickable(
                     role = Role.Button,
@@ -649,18 +672,27 @@ private fun UndoBar(
     Row(
         modifier =
             modifier
-                .padding(SCREEN_PADDING_DP.dp)
+                .padding(horizontal = SCREEN_PADDING_DP.dp)
                 .widthIn(max = SHEET_MAX_WIDTH_DP.dp)
                 .background(colors.undoBackground, RoundedCornerShape(UNDO_CORNER_DP.dp))
                 .padding(FIELD_PADDING_DP.dp),
         horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Line(text = message, colors = colors, colour = colors.undoText)
+        BasicText(
+            text = message,
+            style = TextStyle(color = colors.undoText, fontSize = ROW_FONT_SP.sp),
+            modifier = Modifier.weight(WEIGHT_ONE, fill = false),
+        )
         BasicText(
             text = undo,
             style = TextStyle(color = colors.undoAction, fontSize = ROW_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
-            modifier = Modifier.clickable(role = Role.Button, onClick = onUndo).padding(ACTION_PADDING_DP.dp),
+            modifier =
+                Modifier
+                    .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                    .widthIn(min = MIN_TAP_TARGET_DP.dp)
+                    .clickable(role = Role.Button, onClick = onUndo)
+                    .padding(ACTION_PADDING_DP.dp),
         )
     }
 }
@@ -681,52 +713,98 @@ private fun Scrim(onClose: () -> Unit) {
  * The bar of the selected track: a close control that leaves the selection and
  * the five fixed actions Move, Rename, Share, Save and Delete. Delete happens at
  * once and the library's Undo bar reverses it; Save opens the system picker. It
- * is a bottom action bar, so its surface reaches the screen edge and its content
- * clears the navigation inset.
+ * takes the bottom bar's place while a track is selected, and its actions wrap
+ * onto a second line at large font scales instead of clipping.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Suppress("ktlint:standard:function-naming")
 @Composable
 private fun SelectionBar(
     content: TrackSelectionBarContent,
     colors: TrackLibraryPalette,
+    shell: ShellColors,
     onClose: () -> Unit,
     onAction: (TrackSelectionActionKind) -> Unit,
 ) {
     Row(
         modifier =
             Modifier
+                .padding(horizontal = BAR_MARGIN_DP.dp, vertical = ROW_GAP_DP.dp)
                 .fillMaxWidth()
-                .background(colors.surface)
-                .navigationBarsPadding()
-                .padding(horizontal = SCREEN_PADDING_DP.dp, vertical = SELECTION_BAR_PADDING_DP.dp),
-        horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
+                .floating(shell, RoundedCornerShape(SELECTION_CORNER_DP.dp))
+                .background(colors.surface, RoundedCornerShape(SELECTION_CORNER_DP.dp))
+                .padding(SELECTION_BAR_PADDING_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BasicText(
-            text = CLOSE_GLYPH,
-            style = TextStyle(color = colors.textPrimary, fontSize = TITLE_FONT_SP.sp),
-            modifier =
-                Modifier
-                    .clickable(role = Role.Button, onClick = onClose)
-                    .semantics { contentDescription = content.close }
-                    .padding(ACTION_PADDING_DP.dp),
-        )
-        content.actions.forEach { action ->
-            BasicText(
-                text = action.label,
-                style =
-                    TextStyle(
-                        color = if (action.kind == TrackSelectionActionKind.DELETE) colors.danger else colors.textPrimary,
-                        fontSize = ROW_FONT_SP.sp,
-                        textAlign = TextAlign.Center,
-                    ),
+        RoundIconButton(colors = shell, icon = ShellIcons.Close, label = content.close, onClick = onClose)
+        FlowRow(
+            modifier = Modifier.weight(WEIGHT_ONE),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            content.actions.forEach { action ->
+                Box(
+                    modifier =
+                        Modifier
+                            .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                            .widthIn(min = MIN_TAP_TARGET_DP.dp)
+                            .clickable(role = Role.Button) { onAction(action.kind) }
+                            .padding(horizontal = ACTION_PADDING_DP.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    BasicText(
+                        text = action.label,
+                        style =
+                            TextStyle(
+                                color = if (action.kind == TrackSelectionActionKind.DELETE) colors.danger else colors.textPrimary,
+                                fontSize = ROW_FONT_SP.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                textAlign = TextAlign.Center,
+                            ),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** The sort choices of the library, the current one checked. */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun SortSheet(
+    title: String,
+    sorts: List<TrackSortRow>,
+    cancel: String,
+    colors: TrackLibraryPalette,
+    onChoose: (TrackSort) -> Unit,
+    onCancel: () -> Unit,
+) {
+    SheetFrame(colors = colors) {
+        Line(text = title, colors = colors, bold = true, size = TITLE_FONT_SP)
+        sorts.forEach { row ->
+            Row(
                 modifier =
                     Modifier
-                        .weight(WEIGHT_ONE)
-                        .clickable(role = Role.Button) { onAction(action.kind) }
-                        .padding(ACTION_PADDING_DP.dp),
-            )
+                        .fillMaxWidth()
+                        .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                        .selectable(selected = row.selected, role = Role.RadioButton) { onChoose(row.sort) },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BasicText(
+                    text = row.label,
+                    style =
+                        TextStyle(
+                            color = colors.textPrimary,
+                            fontSize = ROW_FONT_SP.sp,
+                            fontWeight = if (row.selected) FontWeight.SemiBold else FontWeight.Normal,
+                        ),
+                    modifier = Modifier.weight(WEIGHT_ONE),
+                )
+                if (row.selected) {
+                    ShellIcon(icon = ShellIcons.Check, tint = colors.accent, modifier = Modifier.size(TILE_ICON_DP.dp))
+                }
+            }
         }
+        CancelButton(text = cancel, colors = colors, onClick = onCancel)
     }
 }
 
@@ -897,7 +975,8 @@ private fun MoveSheet(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .clickable { onMove(folder.id) }
+                        .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                        .clickable(role = Role.Button) { onMove(folder.id) }
                         .padding(SHEET_ROW_PADDING_DP.dp),
             )
         }
@@ -986,6 +1065,7 @@ private fun Chip(
             ),
         modifier =
             Modifier
+                .heightIn(min = MIN_TAP_TARGET_DP.dp)
                 .background(
                     if (selected) colors.selectedSurface else colors.field,
                     RoundedCornerShape(CHIP_CORNER_DP.dp),
@@ -1012,8 +1092,9 @@ private fun PrimaryButton(
         style = TextStyle(color = colors.selectedText, fontSize = ROW_FONT_SP.sp, fontWeight = FontWeight.Bold),
         modifier =
             Modifier
+                .heightIn(min = MIN_TAP_TARGET_DP.dp)
                 .background(colors.selectedSurface, RoundedCornerShape(BUTTON_CORNER_DP.dp))
-                .clickable(onClick = onClick)
+                .clickable(role = Role.Button, onClick = onClick)
                 .padding(BUTTON_PADDING_DP.dp),
     )
 }
@@ -1030,9 +1111,10 @@ private fun SecondaryButton(
         style = TextStyle(color = colors.textPrimary, fontSize = ROW_FONT_SP.sp),
         modifier =
             Modifier
+                .heightIn(min = MIN_TAP_TARGET_DP.dp)
                 .background(colors.field, RoundedCornerShape(BUTTON_CORNER_DP.dp))
                 .border(1.dp, colors.border, RoundedCornerShape(BUTTON_CORNER_DP.dp))
-                .clickable(onClick = onClick)
+                .clickable(role = Role.Button, onClick = onClick)
                 .padding(BUTTON_PADDING_DP.dp),
     )
 }
@@ -1050,7 +1132,8 @@ private fun CancelButton(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
+                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .clickable(role = Role.Button, onClick = onClick)
                 .padding(SHEET_ROW_PADDING_DP.dp),
     )
 }
@@ -1097,7 +1180,7 @@ internal data class TrackLibraryPalette(
 internal fun trackLibraryPalette(dark: Boolean): TrackLibraryPalette {
     val tokens = shellColors(dark)
     return TrackLibraryPalette(
-        background = tokens.map,
+        background = listScreenBackground(tokens),
         surface = tokens.surface,
         field = tokens.soft,
         selectedSurface = tokens.selectedChip,
@@ -1122,6 +1205,7 @@ private enum class LibrarySheet {
     EDIT,
     MOVE,
     FOLDER,
+    SORT,
     LINK,
 }
 
@@ -1130,30 +1214,10 @@ private enum class FolderSheetMode {
     RENAME,
 }
 
-/**
- * The bottom padding the scrolling rows must clear for the overlay bars, in dp:
- * the height of the bar stack, plus the window's navigation-bar inset, because
- * the lowest bar draws its surface over that inset. Returns zero when no bar is
- * shown, so the plain list reserves nothing.
- */
-internal fun trackLibraryBarReserveDp(
-    selectionVisible: Boolean,
-    undoVisible: Boolean,
-    navigationInsetDp: Float,
-): Float =
-    when {
-        selectionVisible && undoVisible -> SELECTION_RESERVED_DP + UNDO_RESERVED_DP + ROW_GAP_DP + navigationInsetDp
-        selectionVisible -> SELECTION_RESERVED_DP + navigationInsetDp
-        undoVisible -> UNDO_RESERVED_DP + navigationInsetDp
-        else -> 0f
-    }
-
 private const val MOVE_TITLE_KEY = "track_library_action_move"
 private const val RENAME_FOLDER_TITLE_KEY = "track_library_rename_folder_title"
 private const val CREATE_FOLDER_TITLE_KEY = "track_library_create_folder_title"
 
-private const val BACK_GLYPH = "‹"
-private const val CLOSE_GLYPH = "✕"
 private const val RENAME_GLYPH = "✎"
 
 private const val SCREEN_PADDING_DP = 16
@@ -1161,24 +1225,28 @@ private const val SCREEN_TOP_DP = 20
 private const val SHEET_MAX_WIDTH_DP = 560
 private const val SHEET_CORNER_DP = 22
 private const val SHEET_PADDING_DP = 16
-private const val SHEET_ROW_PADDING_DP = 10
+private const val SHEET_ROW_PADDING_DP = 14
 private const val ROW_GAP_DP = 8
 private const val TILE_GAP_DP = 8
-private const val TILE_CORNER_DP = 12
-private const val TILE_PADDING_DP = 10
+private const val TILE_CORNER_DP = 14
+private const val TILE_PADDING_DP = 12
 private const val CHIP_GAP_DP = 6
 private const val CHIP_CORNER_DP = 12
-private const val CHIP_PADDING_DP = 9
+private const val CHIP_PADDING_DP = 14
 private const val FIELD_CORNER_DP = 10
 private const val FIELD_PADDING_DP = 10
 private const val BUTTON_CORNER_DP = 14
-private const val BUTTON_PADDING_DP = 12
+private const val BUTTON_PADDING_DP = 14
 private const val UNDO_CORNER_DP = 12
 private const val DOT_SIZE_DP = 12
 private const val DESCRIPTION_HEIGHT_DP = 120
-private const val UNDO_RESERVED_DP = 72
-private const val SELECTION_RESERVED_DP = 96
-private const val SELECTION_BAR_PADDING_DP = 8
+private const val SELECTION_BAR_PADDING_DP = 5
+private const val SELECTION_CORNER_DP = 29
+private const val BAR_MARGIN_DP = 12
+private const val MIN_TAP_TARGET_DP = 48
+private const val TILE_COLUMNS = 2
+private const val TILE_ICON_DP = 22
+private const val INFO_ICON_DP = 16
 private const val ACTION_PADDING_DP = 6
 private const val TITLE_FONT_SP = 21
 private const val ROW_FONT_SP = 15

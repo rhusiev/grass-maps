@@ -7,54 +7,49 @@ import java.io.File
 
 /**
  * Final blind review P2-1: the colour swatches were 20 dp squares and Create
- * list had no minimum height. The colours and commands stay as they are; the
- * clickable boxes gain the shell's 48 dp minimum. Mappers are Composables a JVM
- * test cannot render, so pin the source shape and the preset values.
+ * list had no minimum height. Round 8 moves both into the + panel and the
+ * group's colour row; the colours and commands stay, and every target keeps the
+ * shell's 48 dp minimum. Composables cannot render in a JVM test, so pin the
+ * source shape and the preset values.
  */
 class FavouritesListsTapTargetTest {
-    private val source = File(HOST_FILE).readText()
+    private val source = File(SECTION_FILE).readText()
+    private val host = File(HOST_FILE).readText()
 
     @Test
     fun colourSwatchesAreFullTouchTargets() {
-        val chooser = source.substringAfter("private fun ColourChooser(").substringBefore("\n}\n")
+        val swatches = source.substringAfter("private fun Swatches(").substringBefore("\n}\n")
 
-        assertTrue("the swatch size is not the tap target", chooser.contains(".size(CHIP_SIZE_DP.dp)"))
-        assertTrue("the swatch is still under 48 dp", source.contains("private const val CHIP_SIZE_DP = 48"))
-        assertTrue("the colour command changed", chooser.contains("onChoose(preset)"))
+        assertTrue("the swatch size is not the tap target", swatches.contains(".size(MIN_TAP_TARGET_DP.dp)"))
+        assertTrue("the shell tap target is not 48 dp", source.contains("private const val MIN_TAP_TARGET_DP = 48"))
+        assertTrue("the colour command changed", swatches.contains("onChoose(preset)"))
         assertEquals(6, PRESET_COLOURS.size)
     }
 
     @Test
-    fun createListIsA48DpTargetWithItsOriginalCommand() {
-        val action = source.substringAfter("private fun ActionButton(").substringBefore("\n}\n")
+    fun createIsAFullWidthButtonWithItsOriginalCommand() {
+        val pill = source.substringAfter("private fun PillButton(").substringBefore("\n}\n")
 
+        assertTrue("the button has no minimum height", pill.contains(".heightIn(min = BUTTON_DP.dp)"))
+        assertTrue("the button is under 48 dp", source.contains("private const val BUTTON_DP = 50"))
         assertTrue(
-            "ActionButton has no minimum width",
-            action.contains(".widthIn(min = MIN_TAP_TARGET_DP.dp)"),
+            "Create lost its command",
+            source.contains("PillButton(text = text.create, primary = true, enabled = name.isNotBlank(), onClick = onCreate)"),
         )
-        assertTrue(
-            "ActionButton has no minimum height",
-            action.contains(".heightIn(min = MIN_TAP_TARGET_DP.dp)"),
-        )
-        assertTrue(
-            "the shell tap target is not 48 dp",
-            source.contains("private const val MIN_TAP_TARGET_DP = 48"),
-        )
-        assertTrue(
-            "Create list lost its command",
-            source.contains("ActionButton(text = strings.resolve(CREATE_KEY), onClick = onCreate)"),
-        )
+        assertTrue("the host no longer creates the list", host.contains("actions.onCreateList(name, newColor)"))
     }
 
     @Test
-    fun glyphActionsAreFullTouchTargetsToo() {
-        val glyph = source.substringAfter("private fun GlyphButton(").substringBefore("\n}\n")
+    fun rowActionsAreFullTouchTargetsToo() {
+        val action = source.substringAfter("private fun ActionRow(").substringBefore("\n}\n")
+        val more = source.substringAfter("private fun MoreLink(").substringBefore("\n}\n")
 
-        assertTrue("GlyphButton has no minimum width", glyph.contains(".widthIn(min = MIN_TAP_TARGET_DP.dp)"))
-        assertTrue("GlyphButton has no minimum height", glyph.contains(".heightIn(min = MIN_TAP_TARGET_DP.dp)"))
+        assertTrue("a place action has no minimum height", action.contains(".heightIn(min = MIN_TAP_TARGET_DP.dp)"))
+        assertTrue("the more line has no minimum height", more.contains(".heightIn(min = MIN_TAP_TARGET_DP.dp)"))
     }
 
     private companion object {
+        const val SECTION_FILE = "src/main/java/nl/r1a/grassmaps/ui/shell/SavedScreenHost.kt"
         const val HOST_FILE = "src/main/java/nl/r1a/grassmaps/ui/shell/FavouritesListsHost.kt"
     }
 }

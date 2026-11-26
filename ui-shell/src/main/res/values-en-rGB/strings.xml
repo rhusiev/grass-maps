@@ -2,4 +2,5 @@
 <resources>
     <string name="track_card_colour">Colour</string>
     <string name="track_card_colour_choice">Colour %1$s</string>
+    <string name="saved_screen_recolour">Colour for %1$s</string>
 </resources>

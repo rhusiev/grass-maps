@@ -3389,6 +3389,15 @@ decodes known entities, drops every tag with its attributes, drops `script` and
 `style` content whole, and caps both the scanned input and the rendered output.
 The sheet never sees markup.
 
+The Saved screen draws that state as round 8 `x-saved`: a header with the place
+and group counts, a read-only line with the sort in use and the groups on the
+map, then one row per group. The groups are the declared lists, then any group
+name a point carries without a definition, then one "No list" row for points
+without a group, which the map always draws and which has no eye. The eye, the
+colour disc of a declared list and a tapped place's own actions (Show on map,
+Home, Work, move to another list) stay on their rows; search, Show on map, sort
+and + (a new group) are in the bottom bar under the Places|Tracks switch.
+
 A list is an OsmAnd group. Moving a point changes its `<type>`; if the point's
 appearance matched its old list's, it adopts the destination's appearance.
 Recolouring a list changes the group colour and every member's
@@ -3569,7 +3578,10 @@ and for a hidden track producing no feature; `TrackLayerTest` and
 The library screen (T-0414) is `TrackLibraryHost` in `ui-shell`, drawn from the
 `track.library` plugin's state. `plugins/track-library` owns the folder filter,
 the name search and the four fixed orders (newest, nearest, name, longest), and
-the screen draws its rows and the selected track's bottom bar. Nearest measures
+the screen draws its rows and the selected track's bottom bar. As round 8
+`x-tracks` draws it, the folder tiles and a read-only line with the order in use
+sit above the rows, and the bottom bar holds search, sort and + (a new folder);
+the selected track's bar takes its place. Nearest measures
 from the map centre to the first point of each track; a track without a start
 goes last and no origin falls back to name order. A description keeps only
 `b`, `i`, `em`, `strong`, `p`, `br`, `ul`, `ol`, `li` and `a` as native styled

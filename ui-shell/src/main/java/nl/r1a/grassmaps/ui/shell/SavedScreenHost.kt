@@ -1,16 +1,21 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
@@ -22,6 +27,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -32,70 +39,110 @@ import nl.r1a.grassmaps.plugin.api.model.FavouriteListsState
 import nl.r1a.grassmaps.plugin.api.model.FavouriteSort
 import nl.r1a.grassmaps.plugin.api.service.Strings
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.ShellColors
+import nl.r1a.grassmaps.plugin.ui.api.ShellIcon
+import nl.r1a.grassmaps.plugin.ui.api.ShellIcons
 
 /**
- * The commands the Saved sheet can actually send. The Map command is exposed
+ * The commands the Saved screen can actually send. The Map command is exposed
  * so the bar can draw it; the bar enables it only while a saved place is
  * selected, which is the state [SavedBottomControls] receives.
  */
 internal val SAVED_COMMANDS: SavedCommands =
     SavedCommands(search = true, map = true, sort = true, add = true, visibility = true)
 
+/** What a tap on a saved row asks the host to do. */
+internal class SavedRowActions(
+    val selectedPlace: String?,
+    val onSelectPlace: (SavedPlaceRow) -> Unit,
+    val onRecolour: (list: String, color: String) -> Unit,
+    val placeActions: @Composable (SavedPlaceRow) -> Unit,
+)
+
 /**
- * The Saved screen's reading area (T-0612, round 9 `k-saved`). It draws the
- * heading, the group eyes and the expanded place rows the [savedScreenContent]
- * resolver derives. The Places|Tracks switch and the action bar are drawn by
- * [SavedBottomControls] after the whole list, so the controls stay in thumb
- * reach at the bottom of the sheet. Every control is a 48 dp target and the
- * colours come from the round 9/10 shell tokens.
+ * The Saved screen's reading area (round 8 `x-saved`, round 9 `k-saved`): the
+ * header, the read-only sort and on-map line, and the groups with their eyes,
+ * colours and places. Every press that is not attached to one row - search,
+ * Show on map, sort and + - is in [SavedBottomControls].
  *
- * The Tracks branch is a notice on purpose. The track library's state stream
- * and its thirteen commands are owned by `app/MapScreen.kt`, outside this
- * module; this section receives only [FavouriteListsState]. It cannot show the
- * real library without inventing a state, so it keeps the notice honest.
+ * The Tracks branch is a notice on purpose when the host cannot open the track
+ * library. The library's state stream and its commands are owned by
+ * `app/MapScreen.kt`, outside this module; this section receives only
+ * [FavouriteListsState] and does not invent a second library.
  *
  * [hiddenGroups] comes from the persisted layer settings on every composition,
- * so closing and reopening the sheet cannot reset the eyes. An eye tap sends
+ * so closing and reopening the screen cannot reset the eyes. An eye tap sends
  * [onToggleGroupShown] with the group and its new value; the store writes it
  * and the next composition reads it back. There is no local visibility copy.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
-fun SavedScreenSection(
+internal fun SavedScreenSection(
     state: FavouriteListsState,
     strings: Strings,
     hiddenGroups: Set<String>,
     segment: SavedSegment,
     onToggleGroupShown: (String, Boolean) -> Unit,
+    rowActions: SavedRowActions,
+    onBack: (() -> Unit)?,
+    backLabel: String,
     modifier: Modifier = Modifier,
 ) {
     var expandedGroup by remember { mutableStateOf<String?>(null) }
+    var recolourGroup by remember { mutableStateOf<String?>(null) }
+    var allPlacesGroup by remember { mutableStateOf<String?>(null) }
 
     val commands = SAVED_COMMANDS
     val content = savedScreenContent(state, strings, commands, hiddenGroups, segment)
 
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp)) {
-        SavedHeading(content = content)
+    Column(modifier = modifier.fillMaxWidth()) {
+        SavedHeading(content = content, onBack = onBack, backLabel = backLabel)
         when (segment) {
             SavedSegment.PLACES -> {
-                if (content.empty != null) {
-                    SecondaryLine(text = content.empty)
-                } else {
-                    content.groups.forEach { group ->
-                        SavedGroup(
-                            row = group,
-                            expanded = group.name == expandedGroup,
-                            onToggleVisibility =
-                                groupVisibilityToggle(
-                                    groupName = group.name,
-                                    shown = group.shown,
-                                    onToggleGroupShown = onToggleGroupShown,
-                                ),
-                            onToggleExpanded = {
-                                expandedGroup = if (group.name == expandedGroup) null else group.name
+                SavedInfoLine(hint = content.hint, onMap = content.onMapSummary)
+                content.empty?.let { empty -> SecondaryLine(text = empty) }
+                content.noMatches?.let { message -> SecondaryLine(text = message) }
+                content.groups.forEach { group ->
+                    val expanded = content.searching || group.name == expandedGroup
+                    SavedGroup(
+                        row = group,
+                        expanded = expanded,
+                        onToggleVisibility =
+                            groupVisibilityToggle(
+                                groupName = group.list ?: group.name,
+                                shown = group.shown,
+                                onToggleGroupShown = onToggleGroupShown,
+                            ),
+                        onToggleExpanded = {
+                            expandedGroup = if (group.name == expandedGroup) null else group.name
+                        },
+                        onToggleRecolour = {
+                            recolourGroup = if (group.name == recolourGroup) null else group.name
+                        },
+                    )
+                    if (group.canRecolour && group.name == recolourGroup) {
+                        ColourRow(
+                            label = group.recolourLabel.orEmpty(),
+                            selected = group.color,
+                            onChoose = { colour ->
+                                recolourGroup = null
+                                group.list?.let { list -> rowActions.onRecolour(list, colour) }
                             },
                         )
                     }
+                    if (expanded) {
+                        val showAll = content.searching || group.name == allPlacesGroup
+                        val places = if (showAll) group.places + group.remaining else group.places
+                        places.forEach { place -> SavedPlace(place, group.color, rowActions) }
+                        if (!showAll) {
+                            group.moreLabel?.let { more ->
+                                MoreLink(text = more, onClick = { allPlacesGroup = group.name })
+                            }
+                        }
+                    }
+                }
+                if (content.empty == null) {
+                    NoteLine(text = strings.resolve(SAVED_STORAGE_KEY))
                 }
             }
 
@@ -107,22 +154,20 @@ fun SavedScreenSection(
 }
 
 /**
- * The bottom of the Saved sheet: the Places|Tracks switch above the action
- * bar, both after every list row. The chosen segment is owned by the caller so
- * it survives the move out of the reading area. [onShowOnMap] reuses the
- * existing map-command callback contract of `SearchScreenHost`; the host
- * supplies the camera action when it wires the sheet.
+ * The bottom of the Saved screen: the Undo pill after a change, the
+ * Places|Tracks switch and the bar with search, Show on map, sort and +.
+ * [onShowOnMap] reuses the map-command callback contract of `SearchScreenHost`;
+ * the host supplies the camera action when it wires the screen.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 internal fun SavedBottomControls(
     content: SavedScreenContent,
     query: String,
-    searchOpen: Boolean,
-    newListName: String,
+    undo: String?,
     placeSelected: Boolean,
+    onUndo: () -> Unit,
     onChooseSegment: (SavedSegment) -> Unit,
-    onToggleSearch: () -> Unit,
     onQueryChange: (String) -> Unit,
     onSort: () -> Unit,
     onAdd: () -> Unit,
@@ -130,14 +175,12 @@ internal fun SavedBottomControls(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp)) {
+        undo?.let { label -> UndoPill(label = label, onClick = onUndo) }
         SegmentedRow(rows = content.segments, onChoose = onChooseSegment)
         SavedBar(
             content = content,
             query = query,
-            searchOpen = searchOpen,
-            newListName = newListName,
             placeSelected = placeSelected,
-            onToggleSearch = onToggleSearch,
             onQueryChange = onQueryChange,
             onSort = onSort,
             onAdd = onAdd,
@@ -146,13 +189,147 @@ internal fun SavedBottomControls(
     }
 }
 
+/**
+ * The + panel of round 8 `x-saved-add`: the one add action the app has, a new
+ * group with a name and a colour.
+ */
 @Suppress("ktlint:standard:function-naming")
 @Composable
-private fun SavedHeading(content: SavedScreenContent) {
-    BasicText(text = content.title, style = headingStyle())
-    SecondaryLine(text = content.subtitle)
-    SecondaryLine(text = content.hint)
-    SecondaryLine(text = content.onMapSummary)
+internal fun NewGroupPanel(
+    text: SavedSheetText,
+    name: String,
+    colour: String,
+    onNameChange: (String) -> Unit,
+    onColourChange: (String) -> Unit,
+    onCreate: () -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalShellColors.current
+    SavedPanelFrame(title = text.newGroup, cancel = text.cancel, onCancel = onCancel, modifier = modifier) {
+        SecondaryLine(text = text.name)
+        BasicTextField(
+            value = name,
+            onValueChange = onNameChange,
+            singleLine = true,
+            textStyle = TextStyle(color = colors.ink, fontSize = LABEL_FONT_SP.sp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                    .background(colors.soft, RoundedCornerShape(FIELD_CORNER_DP.dp))
+                    .border(1.dp, colors.controlBorder, RoundedCornerShape(FIELD_CORNER_DP.dp))
+                    .padding(horizontal = FIELD_PADDING_DP.dp, vertical = CENTRE_PADDING_DP.dp)
+                    .semantics { contentDescription = text.name },
+        )
+        Swatches(selected = favouriteColour(colour), onChoose = onColourChange)
+        PillButton(text = text.create, primary = true, enabled = name.isNotBlank(), onClick = onCreate)
+    }
+}
+
+/** The sort panel: the plugin's four orders, the current one checked. */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+internal fun SortPanel(
+    title: String,
+    cancel: String,
+    sorts: List<FavouritesSortRow>,
+    onChoose: (FavouriteSort) -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalShellColors.current
+    SavedPanelFrame(title = title, cancel = cancel, onCancel = onCancel, modifier = modifier) {
+        sorts.forEach { row ->
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                        .selectable(selected = row.selected, role = Role.RadioButton) { onChoose(row.sort) }
+                        .padding(vertical = SMALL_GAP_DP.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
+            ) {
+                BasicText(
+                    text = row.label,
+                    style = bodyStyle().copy(fontWeight = if (row.selected) FontWeight.SemiBold else FontWeight.Normal),
+                    modifier = Modifier.weight(WEIGHT_ONE),
+                )
+                if (row.selected) {
+                    ShellIcon(icon = ShellIcons.Check, tint = colors.accent, modifier = Modifier.size(ICON_DP.dp))
+                }
+            }
+        }
+    }
+}
+
+/** A sheet body for the + and sort panels: a title, its rows and Cancel. */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun SavedPanelFrame(
+    title: String,
+    cancel: String,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val colors = LocalShellColors.current
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(colors.surface, RoundedCornerShape(topStart = PANEL_CORNER_DP.dp, topEnd = PANEL_CORNER_DP.dp))
+                .padding(PANEL_PADDING_DP.dp),
+        verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
+    ) {
+        BasicText(text = title, style = headingStyle())
+        content()
+        PillButton(text = cancel, primary = false, enabled = true, onClick = onCancel)
+    }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun SavedHeading(
+    content: SavedScreenContent,
+    onBack: (() -> Unit)?,
+    backLabel: String,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = SMALL_GAP_DP.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (onBack != null) {
+            IconButton(icon = ShellIcons.ChevronLeft, label = backLabel, filled = false, onClick = onBack)
+        }
+        Column(modifier = Modifier.weight(WEIGHT_ONE)) {
+            BasicText(text = content.title, style = headingStyle())
+            SecondaryLine(text = content.subtitle)
+        }
+    }
+}
+
+/** The read-only line under the header: the sort in use and how many groups the map draws. */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun SavedInfoLine(
+    hint: String,
+    onMap: String?,
+) {
+    val colors = LocalShellColors.current
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = SMALL_GAP_DP.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(SMALL_GAP_DP.dp),
+    ) {
+        ShellIcon(icon = ShellIcons.Sort, tint = colors.muted, modifier = Modifier.size(INFO_ICON_DP.dp))
+        BasicText(text = hint, style = noteStyle(), modifier = Modifier.weight(WEIGHT_ONE))
+        if (onMap != null) {
+            ShellIcon(icon = ShellIcons.Eye, tint = colors.muted, modifier = Modifier.size(INFO_ICON_DP.dp))
+            BasicText(text = onMap, style = noteStyle(), modifier = Modifier.weight(WEIGHT_ONE))
+        }
+    }
 }
 
 @Suppress("ktlint:standard:function-naming")
@@ -161,35 +338,38 @@ private fun SegmentedRow(
     rows: List<SavedSegmentRow>,
     onChoose: (SavedSegment) -> Unit,
 ) {
+    val colors = LocalShellColors.current
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(LocalShellColors.current.soft, RoundedCornerShape(SEGMENT_CORNER_DP.dp))
+                .floating(colors, RoundedCornerShape(SEGMENT_CORNER_DP.dp))
+                .background(colors.soft, RoundedCornerShape(SEGMENT_CORNER_DP.dp))
                 .padding(SEGMENT_PADDING_DP.dp),
-        horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
     ) {
         rows.forEach { row ->
-            val colors = LocalShellColors.current
-            BasicText(
-                text = row.label,
-                style =
-                    TextStyle(
-                        color = if (row.selected) colors.onAccent else colors.muted,
-                        fontSize = LABEL_FONT_SP.sp,
-                        fontWeight = if (row.selected) FontWeight.SemiBold else FontWeight.Normal,
-                    ),
+            Box(
                 modifier =
                     Modifier
-                        .heightIn(min = MIN_TAP_TARGET_DP.dp)
                         .weight(WEIGHT_ONE)
+                        .heightIn(min = MIN_TAP_TARGET_DP.dp)
                         .background(
-                            if (row.selected) colors.accent else Color.Transparent,
+                            if (row.selected) selectedSegment(colors) else Color.Transparent,
                             RoundedCornerShape(SEGMENT_CORNER_DP.dp),
-                        ).clickable { onChoose(row.segment) }
-                        .padding(horizontal = ROW_GAP_DP.dp, vertical = CENTRE_PADDING_DP.dp)
-                        .semantics { contentDescription = row.label },
-            )
+                        ).selectable(selected = row.selected, role = Role.Tab) { onChoose(row.segment) }
+                        .padding(horizontal = ROW_GAP_DP.dp, vertical = SMALL_GAP_DP.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                BasicText(
+                    text = row.label,
+                    style =
+                        TextStyle(
+                            color = if (row.selected) colors.ink else colors.muted,
+                            fontSize = LABEL_FONT_SP.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        ),
+                )
+            }
         }
     }
 }
@@ -201,60 +381,241 @@ private fun SavedGroup(
     expanded: Boolean,
     onToggleVisibility: () -> Unit,
     onToggleExpanded: () -> Unit,
+    onToggleRecolour: () -> Unit,
 ) {
     val colors = LocalShellColors.current
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
+    val textColour = if (row.shown) colors.ink else colors.muted
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = GROUP_ROW_DP.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
+    ) {
+        GroupBadge(row = row, onClick = onToggleRecolour.takeIf { row.canRecolour })
+        // The name opens the places too, the larger target for the same toggle as the chevron.
+        Column(
+            modifier =
+                Modifier
+                    .weight(WEIGHT_ONE)
+                    .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                    .clickable(role = Role.Button, onClick = onToggleExpanded),
+            verticalArrangement = Arrangement.Center,
         ) {
+            BasicText(text = row.name, style = bodyStyle().copy(color = textColour, fontWeight = FontWeight.SemiBold))
+            BasicText(text = row.summary, style = noteStyle())
+        }
+        if (row.canToggleVisibility) {
+            IconButton(
+                icon = if (row.shown) ShellIcons.Eye else ShellIcons.EyeOff,
+                label = row.visibilityLabel ?: row.name,
+                filled = row.shown,
+                tint = textColour,
+                onClick = onToggleVisibility,
+            )
+        }
+        IconButton(
+            icon = if (expanded) ShellIcons.ChevronUp else ShellIcons.ChevronDown,
+            label = row.name,
+            filled = false,
+            tint = colors.muted,
+            onClick = onToggleExpanded,
+        )
+    }
+}
+
+/**
+ * The group's colour as a tinted disc. On a declared list it is the control
+ * that opens the colour row, because the colour is the thing it changes.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun GroupBadge(
+    row: SavedGroupRow,
+    onClick: (() -> Unit)?,
+) {
+    val colors = LocalShellColors.current
+    val colour = row.color?.let { Color(it) } ?: colors.faint
+    val label = row.recolourLabel.orEmpty()
+    Box(
+        modifier =
+            Modifier
+                .size(MIN_TAP_TARGET_DP.dp)
+                .background(colour.copy(alpha = BADGE_TINT_ALPHA), CircleShape)
+                .then(
+                    if (onClick != null) {
+                        Modifier.clickable(role = Role.Button, onClick = onClick).semantics { contentDescription = label }
+                    } else {
+                        Modifier
+                    },
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(modifier = Modifier.size(BADGE_DOT_DP.dp).background(colour, CircleShape))
+    }
+}
+
+/** The six preset colours as 48 dp targets, the group's current one ringed. */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun ColourRow(
+    label: String,
+    selected: Long?,
+    onChoose: (String) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(start = PLACE_INDENT_DP.dp, bottom = SMALL_GAP_DP.dp),
+        verticalArrangement = Arrangement.spacedBy(SMALL_GAP_DP.dp),
+    ) {
+        BasicText(text = label, style = noteStyle())
+        Swatches(selected = selected, onChoose = onChoose)
+    }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun Swatches(
+    selected: Long?,
+    onChoose: (String) -> Unit,
+) {
+    val colors = LocalShellColors.current
+    Row(horizontalArrangement = Arrangement.spacedBy(SWATCH_GAP_DP.dp)) {
+        PRESET_COLOURS.forEach { preset ->
+            val argb = favouriteColour(preset)
+            val isSelected = argb != null && argb == selected
             Box(
                 modifier =
                     Modifier
-                        .size(SWATCH_DP.dp)
-                        .background(
-                            row.color?.let { Color(it) } ?: colors.faint,
-                            RoundedCornerShape(SWATCH_DP.dp),
-                        ),
-            )
-            Column(modifier = Modifier.weight(WEIGHT_ONE)) {
-                BasicText(text = row.name, style = bodyStyle())
-                SecondaryLine(text = row.summary)
-            }
-            if (row.canToggleVisibility) {
-                TapIcon(
-                    glyph = if (row.shown) EYE_ON else EYE_OFF,
-                    label = row.visibilityLabel,
-                    onClick = onToggleVisibility,
-                )
-            }
-            TapIcon(
-                glyph = if (expanded) CHEVRON_UP else CHEVRON_DOWN,
-                label = row.name,
-                onClick = onToggleExpanded,
+                        .size(MIN_TAP_TARGET_DP.dp)
+                        .then(if (isSelected) Modifier.border(SWATCH_RING_DP.dp, colors.ink, CircleShape) else Modifier)
+                        .padding(SWATCH_INSET_DP.dp)
+                        .background(argb?.let { Color(it) } ?: colors.faint, CircleShape)
+                        .selectable(selected = isSelected, role = Role.RadioButton) { onChoose(preset) }
+                        .semantics { contentDescription = preset },
             )
         }
-        if (expanded) {
-            row.places.forEach { place ->
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = MIN_TAP_TARGET_DP.dp)
-                            .padding(start = PLACE_INDENT_DP.dp)
-                            .padding(vertical = CENTRE_PADDING_DP.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(WEIGHT_ONE)) {
-                        BasicText(text = place.name, style = bodyStyle())
-                        SecondaryLine(text = place.detail)
-                    }
-                    place.special?.let { special -> SecondaryLine(text = special) }
-                }
-            }
-            row.moreLabel?.let { more -> SecondaryLine(text = more) }
+    }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun SavedPlace(
+    place: SavedPlaceRow,
+    colour: Long?,
+    actions: SavedRowActions,
+) {
+    val colors = LocalShellColors.current
+    val selected = place.id == actions.selectedPlace
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .background(
+                    if (selected) colors.accent.copy(alpha = SELECTED_ALPHA) else Color.Transparent,
+                    RoundedCornerShape(FIELD_CORNER_DP.dp),
+                ).selectable(selected = selected, role = Role.Button) { actions.onSelectPlace(place) }
+                .padding(start = PLACE_INDENT_DP.dp, end = SMALL_GAP_DP.dp, top = SMALL_GAP_DP.dp, bottom = SMALL_GAP_DP.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(PLACE_DOT_DP.dp)
+                    .background(colour?.let { Color(it) } ?: colors.muted, CircleShape),
+        )
+        Column(modifier = Modifier.weight(WEIGHT_ONE)) {
+            BasicText(text = place.name, style = bodyStyle())
+            place.detail?.let { detail -> BasicText(text = detail, style = noteStyle()) }
         }
+        place.special?.let { special -> BasicText(text = special, style = bodyStyle().copy(fontWeight = FontWeight.SemiBold)) }
+    }
+    if (selected) {
+        actions.placeActions(place)
+    }
+}
+
+/**
+ * The selected place's own actions, under its row: Show on map, Home, Work and
+ * a move to each other declared list.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+internal fun PlaceActions(
+    text: SavedSheetText,
+    place: SavedPlaceRow,
+    moveTargets: List<SavedMoveTarget>,
+    onShowOnMap: () -> Unit,
+    onSetHome: () -> Unit,
+    onSetWork: () -> Unit,
+    onMove: (String) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(start = PLACE_INDENT_DP.dp + PLACE_DOT_DP.dp + ROW_GAP_DP.dp)) {
+        if (place.position != null) {
+            ActionRow(text = text.showOnMap, onClick = onShowOnMap)
+        }
+        ActionRow(text = text.setHome, onClick = onSetHome)
+        ActionRow(text = text.setWork, onClick = onSetWork)
+        moveTargets.forEach { target -> ActionRow(text = target.label, onClick = { onMove(target.list) }) }
+    }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun ActionRow(
+    text: String,
+    onClick: () -> Unit,
+) {
+    BasicText(
+        text = text,
+        style = bodyStyle().copy(color = LocalShellColors.current.accent, fontWeight = FontWeight.SemiBold),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .clickable(role = Role.Button, onClick = onClick)
+                .padding(vertical = CENTRE_PADDING_DP.dp),
+    )
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun MoreLink(
+    text: String,
+    onClick: () -> Unit,
+) {
+    BasicText(
+        text = text,
+        style = noteStyle().copy(color = LocalShellColors.current.accent, fontWeight = FontWeight.SemiBold),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .clickable(role = Role.Button, onClick = onClick)
+                .padding(start = PLACE_INDENT_DP.dp, top = CENTRE_PADDING_DP.dp, bottom = CENTRE_PADDING_DP.dp),
+    )
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun UndoPill(
+    label: String,
+    onClick: () -> Unit,
+) {
+    val colors = LocalShellColors.current
+    Box(
+        modifier =
+            Modifier
+                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .widthIn(min = MIN_TAP_TARGET_DP.dp)
+                .background(colors.snackbarBackground, RoundedCornerShape(SEGMENT_CORNER_DP.dp))
+                .clickable(role = Role.Button, onClick = onClick)
+                .padding(horizontal = PANEL_PADDING_DP.dp, vertical = SMALL_GAP_DP.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        BasicText(
+            text = label,
+            style = TextStyle(color = colors.snackbarAction, fontSize = LABEL_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
+        )
     }
 }
 
@@ -263,91 +624,90 @@ private fun SavedGroup(
 private fun SavedBar(
     content: SavedScreenContent,
     query: String,
-    searchOpen: Boolean,
-    newListName: String,
     placeSelected: Boolean,
-    onToggleSearch: () -> Unit,
     onQueryChange: (String) -> Unit,
     onSort: () -> Unit,
     onAdd: () -> Unit,
     onShowOnMap: () -> Unit,
 ) {
-    val colors = LocalShellColors.current
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(colors.surface, RoundedCornerShape(BAR_CORNER_DP.dp))
-                .padding(BAR_PADDING_DP.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
-    ) {
-        if (searchOpen) {
-            BasicTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                singleLine = true,
-                textStyle = TextStyle(color = colors.ink, fontSize = LABEL_FONT_SP.sp),
-                modifier =
-                    Modifier
-                        .heightIn(min = MIN_TAP_TARGET_DP.dp)
-                        .weight(WEIGHT_ONE)
-                        .background(colors.soft, RoundedCornerShape(BAR_CORNER_DP.dp))
-                        .padding(horizontal = ROW_GAP_DP.dp, vertical = CENTRE_PADDING_DP.dp),
-            )
-        } else {
-            content.actions.firstOrNull { it.action == SavedBarAction.SEARCH }?.let { action ->
-                TapIcon(glyph = SEARCH_GLYPH, label = action.label, onClick = onToggleSearch)
+    val search = content.actions.firstOrNull { it.action == SavedBarAction.SEARCH } ?: return
+    val buttons =
+        content.actions.mapNotNull { action ->
+            when (action.action) {
+                SavedBarAction.SEARCH -> null
+                SavedBarAction.MAP -> ListBarButton(ShellIcons.MapFolded, action.label, enabled = placeSelected, onClick = onShowOnMap)
+                SavedBarAction.SORT -> ListBarButton(ShellIcons.Sort, action.label, onClick = onSort)
+                SavedBarAction.ADD -> ListBarButton(ShellIcons.Plus, action.label, onClick = onAdd)
             }
         }
-        content.actions.firstOrNull { it.action == SavedBarAction.MAP }?.let { action ->
-            TapIcon(
-                glyph = MAP_GLYPH,
-                label = action.label,
-                enabled = placeSelected,
-                onClick = onShowOnMap,
-            )
-        }
-        content.actions.firstOrNull { it.action == SavedBarAction.SORT }?.let { action ->
-            TapIcon(glyph = SORT_GLYPH, label = action.label, onClick = onSort)
-        }
-        content.actions.firstOrNull { it.action == SavedBarAction.ADD }?.let { action ->
-            TapIcon(
-                glyph = ADD_GLYPH,
-                label = action.label,
-                enabled = newListName.isNotBlank(),
-                onClick = onAdd,
-            )
-        }
-    }
+    ListBottomBar(
+        colors = LocalShellColors.current,
+        placeholder = search.label,
+        query = query,
+        onQueryChange = onQueryChange,
+        buttons = buttons,
+    )
+}
+
+/** A 48 dp round icon control in the Saved rows and header. */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun IconButton(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    filled: Boolean = true,
+    tint: Color? = null,
+) {
+    RoundIconButton(
+        colors = LocalShellColors.current,
+        icon = icon,
+        label = label,
+        onClick = onClick,
+        filled = filled,
+        tint = tint,
+    )
 }
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
-private fun TapIcon(
-    glyph: String,
-    label: String,
+private fun PillButton(
+    text: String,
+    primary: Boolean,
+    enabled: Boolean,
     onClick: () -> Unit,
-    enabled: Boolean = true,
 ) {
-    BasicText(
-        text = glyph,
-        style =
-            TextStyle(
-                color = if (enabled) LocalShellColors.current.ink else LocalShellColors.current.muted,
-                fontSize = ICON_FONT_SP.sp,
-                fontWeight = FontWeight.SemiBold,
-            ),
+    val colors = LocalShellColors.current
+    Box(
         modifier =
             Modifier
-                .widthIn(min = MIN_TAP_TARGET_DP.dp)
-                .heightIn(min = MIN_TAP_TARGET_DP.dp)
-                .background(LocalShellColors.current.soft, RoundedCornerShape(ICON_CORNER_DP.dp))
-                .padding(horizontal = ROW_GAP_DP.dp, vertical = CENTRE_PADDING_DP.dp)
-                .clickable(enabled = enabled, onClick = onClick)
-                .semantics { contentDescription = label },
-    )
+                .fillMaxWidth()
+                .heightIn(min = BUTTON_DP.dp)
+                .background(
+                    when {
+                        !primary -> colors.soft
+                        enabled -> colors.accent
+                        else -> colors.accent.copy(alpha = DISABLED_ALPHA)
+                    },
+                    RoundedCornerShape(BUTTON_DP.dp),
+                ).clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+                .padding(horizontal = PANEL_PADDING_DP.dp, vertical = SMALL_GAP_DP.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        BasicText(
+            text = text,
+            style =
+                TextStyle(
+                    color = if (primary) colors.onAccent else colors.ink,
+                    fontSize = LABEL_FONT_SP.sp,
+                    fontWeight = FontWeight.SemiBold,
+                ),
+        )
+    }
 }
+
+/** The selected segment: white on the light theme, the line grey on the dark one. */
+private fun selectedSegment(colors: ShellColors): Color = if (colors.dark) colors.line else colors.surface
 
 @Composable
 private fun headingStyle(): TextStyle =
@@ -356,32 +716,51 @@ private fun headingStyle(): TextStyle =
 @Composable
 private fun bodyStyle(): TextStyle = TextStyle(color = LocalShellColors.current.ink, fontSize = LABEL_FONT_SP.sp)
 
+@Composable
+private fun noteStyle(): TextStyle = TextStyle(color = LocalShellColors.current.muted, fontSize = NOTE_FONT_SP.sp)
+
 @Suppress("ktlint:standard:function-naming")
 @Composable
 private fun SecondaryLine(text: String) {
-    BasicText(text = text, style = TextStyle(color = LocalShellColors.current.muted, fontSize = LABEL_FONT_SP.sp))
+    BasicText(
+        text = text,
+        style = TextStyle(color = LocalShellColors.current.muted, fontSize = LABEL_FONT_SP.sp),
+        modifier = Modifier.padding(vertical = SMALL_GAP_DP.dp),
+    )
 }
 
-private const val EYE_ON = "◉"
-private const val EYE_OFF = "○"
-private const val CHEVRON_DOWN = "⌄"
-private const val CHEVRON_UP = "⌃"
-private const val SEARCH_GLYPH = "⌕"
-private const val MAP_GLYPH = "▤"
-private const val SORT_GLYPH = "↕"
-private const val ADD_GLYPH = "+"
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun NoteLine(text: String) {
+    BasicText(text = text, style = noteStyle(), modifier = Modifier.padding(vertical = CENTRE_PADDING_DP.dp))
+}
+
+internal const val SAVED_STORAGE_KEY = "saved_screen_storage"
 
 private const val MIN_TAP_TARGET_DP = 48
-private const val SWATCH_DP = 38
+private const val GROUP_ROW_DP = 56
+private const val BUTTON_DP = 50
+private const val ICON_DP = 22
+private const val INFO_ICON_DP = 16
+private const val BADGE_DOT_DP = 16
+private const val PLACE_DOT_DP = 12
 private const val ROW_GAP_DP = 8
-private const val PLACE_INDENT_DP = 24
-private const val CENTRE_PADDING_DP = 14
+private const val SMALL_GAP_DP = 4
+private const val SWATCH_GAP_DP = 6
+private const val SWATCH_RING_DP = 2
+private const val SWATCH_INSET_DP = 5
+private const val PLACE_INDENT_DP = 56
+private const val CENTRE_PADDING_DP = 12
+private const val FIELD_PADDING_DP = 12
+private const val FIELD_CORNER_DP = 10
 private const val SEGMENT_PADDING_DP = 4
-private const val BAR_PADDING_DP = 7
-private const val BAR_CORNER_DP = 29
 private const val SEGMENT_CORNER_DP = 24
-private const val ICON_CORNER_DP = 20
-private const val TITLE_FONT_SP = 21
-private const val LABEL_FONT_SP = 15
-private const val ICON_FONT_SP = 20
+private const val PANEL_CORNER_DP = 22
+private const val PANEL_PADDING_DP = 16
+private const val TITLE_FONT_SP = 24
+private const val LABEL_FONT_SP = 16
+private const val NOTE_FONT_SP = 13
 private const val WEIGHT_ONE = 1f
+private const val BADGE_TINT_ALPHA = 0.16f
+private const val SELECTED_ALPHA = 0.14f
+private const val DISABLED_ALPHA = 0.5f

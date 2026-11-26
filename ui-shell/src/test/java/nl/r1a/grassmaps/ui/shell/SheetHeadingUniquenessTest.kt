@@ -15,6 +15,7 @@ import java.io.File
 class SheetHeadingUniquenessTest {
     private val sheet = File(SHEET_FILE).readText()
     private val host = File(HOST_FILE).readText()
+    private val section = File(SECTION_FILE).readText()
 
     @Test
     fun theSavedHeadingIsComposedOnceInTheCombinedSheet() {
@@ -24,15 +25,13 @@ class SheetHeadingUniquenessTest {
             Regex("""text\s*=\s*savedTitle""").findAll(sheet).count(),
         )
 
-        val embeddedBody =
-            host.substringAfter("if (embedded) {").substringBefore("return")
         assertTrue(
-            "the embedded lists body still draws its Lists header title",
-            embeddedBody.contains("showTitle = false"),
+            "the embedded body still draws the back chevron of the full screen",
+            host.contains("onBack = actions.onClose.takeIf { !embedded }"),
         )
         assertTrue(
-            "the standalone lists sheet lost its own header title",
-            host.contains("showTitle: Boolean = true"),
+            "a second Lists header title came back",
+            !host.contains("text = content.title"),
         )
         assertEquals(
             "the saved section heading is not composed exactly once",
@@ -50,17 +49,18 @@ class SheetHeadingUniquenessTest {
         assertTrue("the Settings command is gone", sheet.contains("onClick = onOpenSettings"))
 
         assertTrue("the saved section is gone", host.contains("SavedScreenSection("))
-        assertTrue("the list creator is gone", host.contains("ListCreator("))
+        assertTrue("the new group panel is gone", host.contains("NewGroupPanel("))
         assertTrue("the bottom controls are gone", host.contains("SavedBottomControls("))
-        assertTrue("group visibility is not wired", host.contains("onToggleGroupShown = onToggleGroupShown"))
+        assertTrue("group visibility is not wired", host.contains("onToggleGroupShown = actions.onToggleGroupShown"))
         assertTrue("the map command is not wired", host.contains("onShowOnMap = onShowOnMap"))
-        assertTrue("the undo command is not wired", host.contains("Header(content = content, onUndo = onUndo"))
-        assertTrue("the 48 dp tap target is gone", host.contains("private const val MIN_TAP_TARGET_DP = 48"))
-        assertTrue("the colour tap target is gone", host.contains("private const val CHIP_SIZE_DP = 48"))
+        assertTrue("the undo command is not wired", host.contains("onUndo = actions.onUndo"))
+        assertTrue("the 48 dp tap target is gone", section.contains("private const val MIN_TAP_TARGET_DP = 48"))
+        assertTrue("the colour swatch is not a 48 dp target", section.contains(".size(MIN_TAP_TARGET_DP.dp)"))
     }
 
     private companion object {
         const val SHEET_FILE = "src/main/java/nl/r1a/grassmaps/ui/shell/WidgetsSavedSheet.kt"
         const val HOST_FILE = "src/main/java/nl/r1a/grassmaps/ui/shell/FavouritesListsHost.kt"
+        const val SECTION_FILE = "src/main/java/nl/r1a/grassmaps/ui/shell/SavedScreenHost.kt"
     }
 }

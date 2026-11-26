@@ -598,7 +598,7 @@ internal fun MapScreen(
         remember(baseContext, currentConfiguration, locale) {
             val configuration = Configuration(currentConfiguration)
             configuration.setLocale(locale)
-            baseContext.createConfigurationContext(configuration)
+            LocalizedContext(baseContext, baseContext.createConfigurationContext(configuration).resources)
         }
     val mutableStrings = remember(baseContext) { (baseContext.applicationContext as GrassMapsApplication).mutableStrings }
     // Swap before the content composes, so key-based strings use the new locale

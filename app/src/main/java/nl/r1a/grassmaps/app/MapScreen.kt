@@ -267,7 +267,7 @@ import nl.r1a.grassmaps.ui.shell.aboveBottomSheet
 import nl.r1a.grassmaps.ui.shell.followTrackSheetDisplay
 import nl.r1a.grassmaps.ui.shell.navigationAnnouncement
 import nl.r1a.grassmaps.ui.shell.reportsBottomChrome
-import nl.r1a.grassmaps.ui.shell.routePlanPreview
+import nl.r1a.grassmaps.ui.shell.routePlanBackView
 import nl.r1a.grassmaps.ui.shell.routePlanTurns
 import nl.r1a.grassmaps.ui.shell.routeSummaryCard
 import nl.r1a.grassmaps.ui.shell.routeTurnStep
@@ -463,7 +463,7 @@ internal fun mapBottomInsets(arc: Boolean): MapBottomInsets {
 }
 
 /** The read-only route card sits just below the status bar, over the map. */
-private const val ROUTE_CARD_TOP_DP = 8
+internal const val ROUTE_CARD_TOP_DP = 8
 
 /**
  * The top-anchored control bar is measured in pixels. Leave its width, its own
@@ -496,22 +496,26 @@ internal fun routeCardInsets(
     )
 
 /**
- * Whether the planner sheet is composed for the plan's state (T-0612). A
- * ready route is the read-only card over the map; the sheet opens only through
- * the card's Stops or Details action, so a planned route cannot be edited by
- * accident. The picking, planning and failed states keep the sheet, because
- * they carry its hints and recovery actions.
+ * Whether the planner sheet is composed for the plan's state (T-0612). A ready
+ * route is round 8 `x-route-preview`: the sheet holds the preview and every
+ * press, and the read-only card at the top holds the route's ends. The picking,
+ * planning and failed states keep the sheet for their hints and recovery.
  */
-internal fun routePlanSheetShown(
-    status: RoutePlanStatus,
-    view: RoutePlanSheetView,
-): Boolean = status != RoutePlanStatus.Idle && (status != RoutePlanStatus.Ready || view != RoutePlanSheetView.Summary)
+internal fun routePlanSheetShown(status: RoutePlanStatus): Boolean = status != RoutePlanStatus.Idle
 
 /** Whether the read-only route card is composed for the plan's state (T-0612). */
-internal fun routeSummaryCardShown(
-    status: RoutePlanStatus,
-    view: RoutePlanSheetView,
-): Boolean = status == RoutePlanStatus.Ready && view == RoutePlanSheetView.Summary
+internal fun routeSummaryCardShown(status: RoutePlanStatus): Boolean = status == RoutePlanStatus.Ready
+
+/**
+ * The widget grid's top inset under the status bar. A shown route card sits at
+ * the top too, so the grid moves below its measured height and the card never
+ * hides a widget at any font scale (round 9 review).
+ */
+internal fun widgetGridTopInset(routeCardHeight: Dp?): Dp {
+    val base = (BAR_PADDING_DP + WIDGET_GRID_GAP_DP + MAP_BOTTOM_BAR_HEIGHT_DP).dp
+    val card = routeCardHeight ?: return base
+    return maxOf(base, ROUTE_CARD_TOP_DP.dp + card + WIDGET_GRID_GAP_DP.dp)
+}
 
 private const val BANNER_CORNER_DP = 8
 private const val BANNER_HORIZONTAL_DP = 16
@@ -1001,11 +1005,11 @@ private fun MapContent(
             container.streamAccess.subscribe<RoutePlanState>(RoutePlannerContract.stateStream)
         }
     val plan by planFlow.collectAsState(initial = RoutePlanState())
-    // T-0612: the read-only card is the route view. Its Stops and Details
-    // actions open their own sections of the existing planner sheet; the sheet
-    // composes the editable header only while Stops is in use. A cleared plan
-    // closes either section.
+    // T-0612: the planner sheet opens on the route preview. Its pinned bar moves
+    // it to Stops, Details or Preferences and back; the sheet composes the
+    // editable header only while Stops is in use. A cleared plan closes them.
     var routeSheetView by remember { mutableStateOf(RoutePlanSheetView.Summary) }
+    var routeCardHeightPx by remember { mutableStateOf<Int?>(null) }
     // A reroute keeps the Stops sheet open: adding a via or undoing an edit
     // passes through Planning, and closing the editor there would break the
     // edit. A cleared plan closes it (T-0612).
@@ -1325,7 +1329,8 @@ private fun MapContent(
             }
         }
     }
-    val plannerSheetShown = routePlanSheetShown(plan.status, routeSheetView)
+    val plannerSheetShown = routePlanSheetShown(plan.status)
+    val routeCardShown = !navigationActive && routeSummaryCardShown(plan.status)
     val bottomSheetShown =
         !navigationActive &&
             (
@@ -1342,11 +1347,13 @@ private fun MapContent(
             invokePlannerCommand(container, RoutePlannerContract.clear, JsonObject(emptyMap()))
         }
     }
+    val plannerBackView = routePlanBackView(routeSheetView)
     // Full-screen destinations are composed later, so their Back handlers win.
     BackHandler(enabled = !navigationActive && (widgetsSavedSheetOpen || searchExpanded || plannerSheetShown || layersSheetShown)) {
         when {
             widgetsSavedSheetOpen -> widgetsSavedSheetOpen = false
             searchExpanded -> searchExpanded = false
+            plannerSheetShown && plannerBackView != null -> routeSheetView = plannerBackView
             plannerSheetShown -> closePlan()
             layersSheetShown -> dismissLayers()
         }
@@ -1469,37 +1476,28 @@ private fun MapContent(
                         .statusBarsPadding()
                         .padding(
                             start = BAR_PADDING_DP.dp,
-                            top = (BAR_PADDING_DP + WIDGET_GRID_GAP_DP + MAP_BOTTOM_BAR_HEIGHT_DP).dp,
+                            top = widgetGridTopInset(routeCardHeightPx.takeIf { routeCardShown }?.let { with(density) { it.toDp() } }),
                             end = topControlBarEndInset(with(density) { controlBarWidthPx.toDp() }),
                         ),
             )
         }
-        // T-0612: the read-only card over the map. It reads the same published
-        // plan as the planner sheet and shares its Save and Start lambdas. Its
-        // bottom bar hands Stops and Details off to that sheet's own sections.
-        val readyPlan = plan
-        if (!navigationActive && routeSummaryCardShown(readyPlan.status, routeSheetView)) {
-            val summary = routePlanPreview(readyPlan, container.strings, time = routePreviewTime, units = units)
-            if (summary != null) {
-                val cardInsets = routeCardInsets(with(density) { controlBarWidthPx.toDp() }, layout.arc)
-                RouteSummaryCardContent(
-                    card = routeSummaryCard(readyPlan, summary, container.strings),
-                    strings = container.strings,
-                    onSave = planSave,
-                    onStart = planStart,
-                    onStops = { routeSheetView = RoutePlanSheetView.Stops },
-                    onDetails = { routeSheetView = RoutePlanSheetView.Details },
-                    modifier =
-                        Modifier
-                            .align(Alignment.TopCenter)
-                            .statusBarsPadding()
-                            .padding(
-                                start = cardInsets.start,
-                                top = ROUTE_CARD_TOP_DP.dp,
-                                end = cardInsets.end,
-                            ),
-                )
-            }
+        // T-0612: the read-only card over the map holds the route's ends only.
+        // Its measured height moves the widget grid below it.
+        if (routeCardShown) {
+            val cardInsets = routeCardInsets(with(density) { controlBarWidthPx.toDp() }, layout.arc)
+            RouteSummaryCardContent(
+                card = routeSummaryCard(plan),
+                strings = container.strings,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                        .padding(
+                            start = cardInsets.start,
+                            top = ROUTE_CARD_TOP_DP.dp,
+                            end = cardInsets.end,
+                        ).onSizeChanged { routeCardHeightPx = it.height },
+            )
         }
         val bottomInsets = mapBottomInsets(layout.arc)
         // A sheet covers the map the bar measures, so the scale bar would only
@@ -2206,16 +2204,10 @@ private fun MapContent(
                 time = routePreviewTime,
                 units = units,
                 dark = dark,
-                // The card over the map is the route view. Its Stops action
-                // opens the editable header and stop list; Details opens the
-                // existing chart section. Neither is the default view.
+                // The preview is the default view; the sheet's pinned bar
+                // moves it to Stops, Details or Preferences and back.
                 view = routeSheetView,
-                onDoneStops = { routeSheetView = RoutePlanSheetView.Summary },
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .navigationBarsPadding()
-                        .reportsBottomChrome(key = BOTTOM_SHEET_KEY),
+                onViewChange = { routeSheetView = it },
             )
         }
         val trackCardTrack = selectedTrack

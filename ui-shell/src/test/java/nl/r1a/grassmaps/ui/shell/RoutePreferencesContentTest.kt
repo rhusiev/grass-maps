@@ -80,8 +80,8 @@ class RoutePreferencesContentTest {
 
         assertEquals("Edit values", content.title)
         assertEquals("These apply to this route only. A dot marks the bike profile defaults.", content.scope)
-        assertEquals("Reset to profile", content.reset)
-        assertEquals("Apply", content.apply)
+        assertEquals("Reset to profile", routePlanBarLabel(RoutePlanBarAction.Reset, MapStrings(ENGLISH)))
+        assertEquals("Apply", routePlanBarLabel(RoutePlanBarAction.Apply, MapStrings(ENGLISH)))
         assertEquals(
             listOf(RouteAttribute.Hills, RouteAttribute.BusyRoads, RouteAttribute.RoughSurfaces),
             content.rows.map { row -> row.attribute },
@@ -214,6 +214,36 @@ class RoutePreferencesContentTest {
             "a fixed height clips the title at large font scales",
             !Regex("""\.height\(""").containsMatchIn(entry),
         )
+    }
+
+    /**
+     * Round 9 review P2: a choice chip measured about 34 dp tall. Each step
+     * takes the shared 48 dp minimum and grows with its label. Rendered size
+     * is checked on the AVD.
+     */
+    @Test
+    fun everyPreferenceStepHasATapTargetMinimum() {
+        val source = File("src/main/java/nl/r1a/grassmaps/ui/shell/RoutePreferencesContent.kt").readText()
+        val segment = source.substringAfter("private fun Segment(").substringBefore("\n}")
+
+        assertTrue(
+            "a step has no 48 dp minimum height",
+            Regex("""\.heightIn\(min\s*=\s*MapControlMetrics\.TAP_TARGET_DP\.dp\)""").containsMatchIn(segment),
+        )
+        assertTrue("a step label is not centred in its target", segment.contains(".wrapContentHeight(Alignment.CenterVertically)"))
+    }
+
+    /**
+     * Round 9 review P1: at font scale 2.0 Reset and Apply scrolled off the
+     * screen. They are the sheet's pinned bar now, so the rows draw neither.
+     */
+    @Test
+    fun theRowsLeaveResetAndApplyToThePinnedBar() {
+        val source = File("src/main/java/nl/r1a/grassmaps/ui/shell/RoutePreferencesContent.kt").readText()
+        val content = source.substringAfter("internal fun RoutePreferencesContent(").substringBefore("\n}")
+
+        assertTrue("the rows still draw their own actions", "ActionChip(" !in content)
+        assertTrue("the rows must edit the hoisted draft", "onDraftChange(" in content)
     }
 
     private class MapStrings(

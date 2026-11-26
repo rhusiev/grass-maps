@@ -45,7 +45,7 @@ class RouteDetailsCompositionTest {
     private fun detailsCall(): String =
         File("src/main/java/nl/r1a/grassmaps/ui/shell/RoutePlanPanel.kt")
             .readText()
-            .substringAfter("if (detailsExpanded) {")
+            .substringAfter("private fun RouteChartSection(")
             .substringAfter("ElevationChart(")
-            .substringBefore("\n                    )")
+            .substringBefore("\n    )")
 }

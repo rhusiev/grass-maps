@@ -93,7 +93,10 @@ fun SheetCloseButton(
  * It owns the scrim, the foot alignment, the rounded surface, the drag handle,
  * the close control, the focus request and the bottom-chrome inset. A host
  * supplies its header, its scrolling rows and its pinned footer; no host draws
- * the chrome again. A tap on the scrim dismisses the sheet.
+ * the chrome again. A tap on the scrim dismisses the sheet. Without [scrim] the
+ * sheet lies over the map without dimming it and the map above stays usable.
+ * The scrolling rows yield to the footer, so a tall header or footer at a
+ * large font scale never pushes the footer off the sheet.
  *
  * [closeLabel] is null when the host's own header carries the close control.
  * [chromeHeight] is the height of the host's header and footer above the
@@ -106,6 +109,7 @@ fun ShellBottomSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     anchor: Alignment = Alignment.BottomCenter,
+    scrim: Boolean = true,
     showHandle: Boolean = true,
     closeLabel: String? = null,
     chromeHeight: Dp = DEFAULT_CHROME_HEIGHT,
@@ -118,10 +122,18 @@ fun ShellBottomSheet(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(colors.scrim)
-                // The scrim is not a control: a screen reader user closes the
-                // sheet with a close button instead of a full-screen button.
-                .pointerInput(Unit) { detectTapGestures { onDismiss() } },
+                .then(
+                    if (scrim) {
+                        // The scrim is not a control: a screen reader user closes
+                        // the sheet with a close button instead of a full-screen
+                        // button.
+                        Modifier
+                            .background(colors.scrim)
+                            .pointerInput(Unit) { detectTapGestures { onDismiss() } }
+                    } else {
+                        Modifier
+                    },
+                ),
     ) {
         BoxWithConstraints(
             modifier =
@@ -174,6 +186,7 @@ fun ShellBottomSheet(
                 Column(
                     modifier =
                         Modifier
+                            .weight(1f, fill = false)
                             .heightIn(max = contentMaxHeight)
                             .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(SHEET_SECTION_GAP_DP.dp),

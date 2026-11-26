@@ -1,69 +1,59 @@
 package nl.r1a.grassmaps.ui.shell
 
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanState
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanStatus
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
 /**
- * Round-4 design-aware P1 3, second slice: route details end in the canon's
- * pinned Hide details / Start bar. The JVM suite cannot render the sheet, so
- * the actions, their wiring and their touch targets are pinned in source.
+ * Round-4 design-aware P1 3, second slice, and round 10 `c-route-details`:
+ * route details end in the canon's pinned Hide details / Start bar. The JVM
+ * suite cannot render the sheet, so the actions, their wiring and their touch
+ * targets are pinned in the model and the source.
  */
 class RouteDetailsBottomBarTest {
     @Test
     fun theDetailsViewPinsAHideDetailsStartBar() {
-        val panel = routePanel()
-        val call = panel.substringAfter("RouteDetailsBottomBar(").substringBefore("\n        }")
+        val layout = routePlanSheetLayout(RoutePlanSheetView.Details, RoutePlanState(status = RoutePlanStatus.Ready))
 
-        assertTrue("no pinned details bar", "private fun RouteDetailsBottomBar(" in panel)
-        assertTrue("Hide details must return to the read-only card", "onHide = onDoneStops" in call)
-        assertTrue("Start must reuse the planner's command", "onStart = onStart" in call)
-        assertTrue("the bar reuses the Hide details copy", "strings.resolve(ROUTE_DETAILS_HIDE_KEY)" in call)
-        assertTrue("the bar reuses the preview's Start copy", "startLabel = preview.start" in call)
-        assertTrue("the bar must be last in the sheet", panel.indexOf("RouteDetailsBottomBar(") > panel.indexOf("RecentRoutes("))
+        assertEquals(listOf(RoutePlanBarAction.HideDetails, RoutePlanBarAction.Start), layout.bar)
+        assertTrue("the bar reuses the Hide details copy", "RoutePlanBarAction.HideDetails -> ROUTE_DETAILS_HIDE_KEY" in panel())
+        assertTrue("the bar reuses the preview's Start copy", "RoutePlanBarAction.Start -> START_KEY" in panel())
     }
 
     @Test
-    fun hideDetailsReturnsToTheCardWithoutChangingThePlan() {
-        val panel = routePanel()
-        val call = panel.substringAfter("RouteDetailsBottomBar(").substringBefore("\n        }")
+    fun hideDetailsReturnsToThePreviewWithoutChangingThePlan() {
+        assertEquals(RoutePlanSheetView.Summary, RoutePlanBarAction.HideDetails.next)
+        val onAction = panel().substringAfter("val onBarAction:").substringBefore("\n    }\n")
 
-        assertTrue("Hide details changed the plan", "onHide = onClose" !in call)
-        assertTrue("Hide details must not clear the plan", "RoutePlannerContract.clear" !in call)
-        assertTrue(
-            "the app's Done action returns to the read-only card",
-            "onDoneStops = { routeSheetView = RoutePlanSheetView.Summary }" in mapScreen(),
+        assertFalse("Hide details must not clear the plan", "onClose" in onAction)
+        assertTrue("the app's view change is the only effect of Hide details", "onViewChange = { routeSheetView = it }" in mapScreen())
+    }
+
+    @Test
+    fun theDetailsViewHasNoInlineToggle() {
+        assertFalse(
+            "the details view must not compose a second Hide details action",
+            "AnalysisDetailsToggle(" in panel(),
         )
-    }
-
-    @Test
-    fun theDetailsViewHasOneHideDetailsAction() {
-        val panel = routePanel()
-        val toggle = panel.substringAfter("if (!sections.details)").substringBefore("if (detailsExpanded)")
-
-        assertTrue("the inline toggle moved out of the details view", "AnalysisDetailsToggle(" in toggle)
-        val expanded = panel.substringAfter("if (detailsExpanded) {").substringBefore("RouteDetailsBottomBar(")
-        assertTrue("the details view must not compose a second inline toggle", "AnalysisDetailsToggle(" !in expanded)
     }
 
     @Test
     fun theBottomBarKeeps48DpTargetsAndThePrimaryStartFace() {
-        val bar = routePanel().substringAfter("private fun RouteDetailsBottomBar(").substringBefore("\n}\n")
+        val bar = panel().substringAfter("internal fun RoutePlanBottomBar(").substringBefore("\n}\n")
 
-        assertTrue(
-            "the bottom bar lost a 48 dp minimum",
-            Regex("""\.sizeIn\(minHeight = CONTROL_TARGET_DP\.dp\)""").findAll(bar).count() == 2,
-        )
-        assertTrue("Hide details lost its command", "role = Role.Button, onClick = onHide" in bar)
-        assertTrue("Start lost its command", "role = Role.Button, onClick = onStart" in bar)
-        assertTrue("Start lost its primary colour", "background(ROUTE_ACTION_COLOR" in bar)
-        assertTrue("Hide details lost its spoken label", "contentDescription = hideLabel" in bar)
-        assertTrue("Start lost its spoken label", "contentDescription = startLabel" in bar)
+        assertTrue("the bottom bar lost its 48 dp minimum", ".heightIn(min = BAR_BUTTON_HEIGHT_DP.dp)" in bar)
+        assertTrue("a bar button lost its command", "role = Role.Button, onClick = { onAction(action) }" in bar)
+        assertTrue("Start lost its primary colour", "if (action.primary) ROUTE_ACTION_COLOR else ROUTE_CHIP_COLOR" in bar)
+        assertTrue("a bar button lost its spoken label", "contentDescription = label" in bar)
     }
 
     @Test
     fun theJourneyHeaderGroupingAndWarningRowsAreUntouched() {
-        val panel = routePanel()
+        val panel = panel()
 
         assertTrue("SHOW ALONG grouping was removed", "showAlong = true" in panel)
         assertTrue("the up/down/steepest header was removed", "summary = detailsSummary" in panel)
@@ -73,7 +63,7 @@ class RouteDetailsBottomBarTest {
         assertTrue("colour selection returned to route details", "showColour = true" !in panel)
     }
 
-    private fun routePanel(): String = File("src/main/java/nl/r1a/grassmaps/ui/shell/RoutePlanPanel.kt").readText()
+    private fun panel(): String = File("src/main/java/nl/r1a/grassmaps/ui/shell/RoutePlanPanel.kt").readText()
 
     private fun mapScreen(): String = File("../app/src/main/java/nl/r1a/grassmaps/app/MapScreen.kt").readText()
 }

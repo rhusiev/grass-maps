@@ -38,6 +38,7 @@ class ControlTargetMinimumTest {
             chip.contains(".sizeIn(minWidth = CONTROL_TARGET_DP.dp, minHeight = CONTROL_TARGET_DP.dp)"),
         )
         assertTrue("ActionChip lost its command", chip.contains("Role.Button, onClick = onClick"))
+        assertTrue("ActionChip draws its label at the top of the target", chip.contains("contentAlignment = Alignment.Center"))
         assertTrue(
             "ActionChip lost its primary colour branch",
             chip.contains("if (primary) ROUTE_ACTION_INK else ROUTE_VALUE_COLOR"),
@@ -45,15 +46,12 @@ class ControlTargetMinimumTest {
     }
 
     @Test
-    fun startChipHasA48DpMinimumInBothDimensions() {
-        val chip = routePlan.substringAfter("private fun StartChip(").substringBefore("\n}\n")
+    fun startIsThePrimaryButtonOfThePinnedBar() {
+        val bar = routePlan.substringAfter("internal fun RoutePlanBottomBar(").substringBefore("\n}\n")
 
-        assertTrue(
-            "StartChip has no 48 dp minimum in both dimensions",
-            chip.contains(".sizeIn(minWidth = CONTROL_TARGET_DP.dp, minHeight = CONTROL_TARGET_DP.dp)"),
-        )
-        assertTrue("StartChip lost its command", chip.contains("Role.Button, onClick = onClick"))
-        assertTrue("StartChip lost its primary colour", chip.contains("background(ROUTE_ACTION_COLOR"))
+        assertTrue("Start lost its primary face", RoutePlanBarAction.Start.primary)
+        assertTrue("the bar has no 48 dp minimum", bar.contains(".heightIn(min = BAR_BUTTON_HEIGHT_DP.dp)"))
+        assertTrue("the primary face lost its colour", bar.contains("if (action.primary) ROUTE_ACTION_COLOR else ROUTE_CHIP_COLOR"))
     }
 
     @Test

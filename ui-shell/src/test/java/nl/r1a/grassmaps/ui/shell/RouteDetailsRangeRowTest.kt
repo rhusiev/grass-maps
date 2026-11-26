@@ -121,9 +121,9 @@ class RouteDetailsRangeRowTest {
     private fun detailsCall(): String =
         File("src/main/java/nl/r1a/grassmaps/ui/shell/RoutePlanPanel.kt")
             .readText()
-            .substringAfter("if (detailsExpanded) {")
+            .substringAfter("private fun RouteChartSection(")
             .substringAfter("ElevationChart(")
-            .substringBefore("\n                    )")
+            .substringBefore("\n    )")
 
     private fun values(dir: String): String = File("src/main/res/$dir/strings.xml").readText()
 

@@ -3,7 +3,6 @@ package nl.r1a.grassmaps.ui.shell
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,11 +19,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.TextStyle
@@ -37,34 +33,13 @@ import nl.r1a.grassmaps.plugin.api.model.RoutePlanState
 import nl.r1a.grassmaps.plugin.api.service.Strings
 
 /**
- * The read-only route card over the map (T-0612). It shows the route's ends,
- * the three values of [RoutePreview] and pins Stops, Details and Start in one
- * bottom action bar. Save stays a separate non-primary action. It is the
- * primary route view: a ready plan composes no planner sheet until one of those
- * two handoff actions opens it, so the route cannot be edited by accident.
- *
- * The values come from [routePlanPreview] and the ends from the same published
- * plan, so the card cannot drift from the sheet. Save and Start are not second
- * action paths: the host passes the same callbacks it passes to [RoutePlanPanel].
- *
- * The design draws a separate Stops sheet. The app has none: the only stops
- * list is the planner sheet's own section, keyed by [ROUTE_STOPS_KEY]. The
- * Stops action opens that section in [RoutePlanSheetView.Stops], not a
- * duplicate list. Details opens the planner's existing chart section in
- * [RoutePlanSheetView.Details]; it does not expand the map or build a second
- * chart. The engine publishes one profile and supplies no ascent, so the card
- * invents neither another mode chip nor a climb figure.
+ * The read-only route card over the map (T-0612, round 8 `x-route-preview`).
+ * It shows only the route's ends. Every press, and the route's values, sit in
+ * the planner's bottom sheet within thumb reach, so the card holds no control.
  */
 enum class RouteSummaryField {
     From,
     To,
-    Time,
-    Distance,
-    Arrival,
-    Save,
-    Stops,
-    Details,
-    Start,
 }
 
 /** One item on the read-only card. */
@@ -73,177 +48,52 @@ data class RouteSummaryEntry(
     val text: String,
 )
 
-/**
- * The only stops action: hand off to the planner sheet's existing stops
- * section. [targetKey] names that section's string, so a second stops UI cannot
- * be introduced without changing this value.
- */
-enum class RouteStopsAction {
-    OpenPlannerStopsSection,
-    ;
-
-    val targetKey: String = ROUTE_STOPS_KEY
-
-    /** The planner-sheet view this action opens. */
-    val sheetView: RoutePlanSheetView = RoutePlanSheetView.Stops
-}
-
-/**
- * The only details action: hand off to the planner sheet's existing chart
- * section. [targetKey] names that section's string, so a second chart cannot
- * be introduced without changing this value.
- */
-enum class RouteDetailsAction {
-    OpenPlannerDetailsSection,
-    ;
-
-    val targetKey: String = ROUTE_DETAILS_KEY
-
-    /** The planner-sheet view this action opens. */
-    val sheetView: RoutePlanSheetView = RoutePlanSheetView.Details
-}
-
-/** The card's model. Construction fixes the list at its nine entries. */
+/** The card's model. Construction fixes the list at its two ends. */
 data class RouteSummaryCard(
     val entries: List<RouteSummaryEntry>,
-    val stopsAction: RouteStopsAction,
-    val detailsAction: RouteDetailsAction,
 ) {
     init {
-        require(entries.map { it.field } == FIELDS) { "the card has exactly nine fields" }
+        require(entries.map { it.field } == RouteSummaryField.entries) { "the card has exactly its two ends" }
     }
 
-    private fun text(field: RouteSummaryField): String = entries.first { it.field == field }.text
-
-    val from: String get() = text(RouteSummaryField.From)
-    val to: String get() = text(RouteSummaryField.To)
-    val time: String get() = text(RouteSummaryField.Time)
-    val distance: String get() = text(RouteSummaryField.Distance)
-    val arrival: String get() = text(RouteSummaryField.Arrival)
-    val save: String get() = text(RouteSummaryField.Save)
-    val stops: String get() = text(RouteSummaryField.Stops)
-    val details: String get() = text(RouteSummaryField.Details)
-    val start: String get() = text(RouteSummaryField.Start)
-
-    /** The one pinned bottom bar, in the canon order. Save is not in it. */
-    val bottomActions: List<RouteSummaryField> =
-        listOf(RouteSummaryField.Stops, RouteSummaryField.Details, RouteSummaryField.Start)
-
-    /** Save stays separate and non-primary, outside the bottom bar. */
-    val secondaryAction: RouteSummaryField = RouteSummaryField.Save
-
-    private companion object {
-        val FIELDS =
-            listOf(
-                RouteSummaryField.From,
-                RouteSummaryField.To,
-                RouteSummaryField.Time,
-                RouteSummaryField.Distance,
-                RouteSummaryField.Arrival,
-                RouteSummaryField.Save,
-                RouteSummaryField.Stops,
-                RouteSummaryField.Details,
-                RouteSummaryField.Start,
-            )
-    }
+    val from: String get() = entries[0].text
+    val to: String get() = entries[1].text
 }
 
 /**
- * Builds the read-only card from one published plan and its preview. The ends
- * read the plan's own start and destination, with the stop list's label rule:
- * a point without a label shows its coordinates.
+ * Builds the read-only card from one published plan. The ends use the stop
+ * list's label rule: a point without a label shows its coordinates.
  */
-fun routeSummaryCard(
-    state: RoutePlanState,
-    preview: RoutePreview,
-    strings: Strings,
-): RouteSummaryCard =
+fun routeSummaryCard(state: RoutePlanState): RouteSummaryCard =
     RouteSummaryCard(
         entries =
             listOf(
                 RouteSummaryEntry(RouteSummaryField.From, state.start?.let(::stopText).orEmpty()),
                 RouteSummaryEntry(RouteSummaryField.To, state.destination?.let(::stopText).orEmpty()),
-                RouteSummaryEntry(RouteSummaryField.Time, preview.time),
-                RouteSummaryEntry(RouteSummaryField.Distance, preview.distance),
-                RouteSummaryEntry(RouteSummaryField.Arrival, preview.arrival),
-                RouteSummaryEntry(RouteSummaryField.Save, preview.save),
-                RouteSummaryEntry(RouteSummaryField.Stops, strings.resolve(ROUTE_STOPS_KEY)),
-                RouteSummaryEntry(RouteSummaryField.Details, strings.resolve(ROUTE_DETAILS_KEY)),
-                RouteSummaryEntry(RouteSummaryField.Start, preview.start),
             ),
-        stopsAction = RouteStopsAction.OpenPlannerStopsSection,
-        detailsAction = RouteDetailsAction.OpenPlannerDetailsSection,
     )
 
 /**
- * The card as drawn over the map. Every chip is a 48 dp tap target and every
- * colour and corner comes from the shared round 9/10 shell tokens, so the card
- * agrees with the planner sheet below it in both themes.
+ * The card as drawn over the map. Every colour and corner comes from the
+ * shared round 9/10 shell tokens, so the card agrees with the planner sheet in
+ * both themes.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 fun RouteSummaryCardContent(
     card: RouteSummaryCard,
     strings: Strings,
-    onSave: () -> Unit,
-    onStart: () -> Unit,
-    onStops: () -> Unit,
-    onDetails: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    Box(
         modifier =
             modifier
                 .widthIn(max = CARD_MAX_WIDTH_DP.dp)
                 .background(ROUTE_PANEL_BACKGROUND, RoundedCornerShape(CARD_CORNER_DP.dp))
                 .border(1.dp, ROUTE_CONTROL_BORDER, RoundedCornerShape(CARD_CORNER_DP.dp))
                 .padding(CARD_PADDING_DP.dp),
-        verticalArrangement = Arrangement.spacedBy(CARD_ROW_GAP_DP.dp),
     ) {
         RouteEnds(card = card, strings = strings)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(VALUE_GAP_DP.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            ValueText(card.time, Modifier.weight(1f))
-            ValueText(card.distance)
-            ValueText(card.arrival)
-        }
-        // Save stays outside the bar: it shares the planner's command but is
-        // not one of the three frequent route actions.
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            CardChip(text = card.save, background = ROUTE_CHIP_COLOR, onClick = onSave)
-        }
-        // One pinned bottom bar: Stops, Details and Start only.
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(CARD_ROW_GAP_DP.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            CardChip(
-                text = card.stops,
-                background = ROUTE_CHIP_COLOR,
-                onClick = onStops,
-                modifier = Modifier.weight(1f),
-            )
-            CardChip(
-                text = card.details,
-                background = ROUTE_CHIP_COLOR,
-                onClick = onDetails,
-                modifier = Modifier.weight(1f),
-            )
-            CardChip(
-                text = card.start,
-                background = ROUTE_ACTION_COLOR,
-                primary = true,
-                onClick = onStart,
-                modifier = Modifier.weight(1f),
-            )
-        }
     }
 }
 
@@ -367,65 +217,11 @@ private fun ConnectorGlyph() {
     }
 }
 
-@Suppress("ktlint:standard:function-naming")
-@Composable
-private fun CardChip(
-    text: String,
-    background: Color,
-    onClick: () -> Unit,
-    primary: Boolean = false,
-    modifier: Modifier = Modifier,
-) {
-    val shape = RoundedCornerShape(CHIP_CORNER_DP.dp)
-    Box(
-        modifier =
-            modifier
-                .sizeIn(minWidth = MIN_TAP_TARGET_DP.dp, minHeight = MIN_TAP_TARGET_DP.dp)
-                .background(background, shape)
-                .border(1.dp, if (primary) ROUTE_ACTION_COLOR else ROUTE_CONTROL_BORDER, shape)
-                .clickable(role = Role.Button, onClick = onClick)
-                .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        BasicText(
-            text = text,
-            style =
-                TextStyle(
-                    color = if (primary) ROUTE_ACTION_INK else ROUTE_VALUE_COLOR,
-                    fontSize = ACTION_FONT_SP.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
-        )
-    }
-}
-
-@Suppress("ktlint:standard:function-naming")
-@Composable
-private fun ValueText(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    BasicText(
-        text = text,
-        style = TextStyle(color = ROUTE_VALUE_COLOR, fontSize = VALUE_FONT_SP.sp),
-        modifier = modifier,
-    )
-}
-
-private const val ROUTE_STOPS_KEY = "route_planner_stops"
-private const val ROUTE_DETAILS_KEY = "route_summary_details"
 private const val FROM_DESCRIPTION_KEY = "route_summary_from"
 private const val TO_DESCRIPTION_KEY = "route_summary_to"
-private const val MIN_TAP_TARGET_DP = 48
 private const val CARD_CORNER_DP = 10
-private const val CHIP_CORNER_DP = 8
 private const val CARD_PADDING_DP = 12
-private const val CARD_ROW_GAP_DP = 8
-private const val VALUE_GAP_DP = 12
-private const val CHIP_PADDING_HORIZONTAL_DP = 10
 private const val CARD_MAX_WIDTH_DP = 360
-private const val VALUE_FONT_SP = 15
-private const val ACTION_FONT_SP = 14
 private const val ENDS_FONT_SP = 14
 private const val ENDS_ROW_GAP_DP = 2
 private const val ENDS_GAP_DP = 10

@@ -127,7 +127,7 @@
     <string name="route_planner_role_via">Stop</string>
     <string name="route_planner_role_destination">Destination</string>
     <string name="route_planner_stops">Stops</string>
-    <string name="route_planner_stops_done">Finish editing stops</string>
+    <string name="route_planner_done">Done</string>
     <string name="route_planner_move_up">Move the stop earlier</string>
     <string name="route_planner_move_down">Move the stop later</string>
     <string name="route_planner_remove_via">Remove the stop</string>

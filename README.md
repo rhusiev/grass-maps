@@ -1863,22 +1863,25 @@ does not change. The app logs the values the request carried as
 `route-preferences` beside the existing route summary; values only, no points
 or labels.
 
-A ready route opens read-only (T-0612). The summary card over the map shows the
-route's ends, time, distance and arrival with Save, Start and Stops; the
-planner sheet stays closed until Stops opens it, so a planned route cannot be
-edited by accident. `routePlanSheetShown` in `MapScreen.kt` is that decision:
-the picking, planning and failed states keep the sheet, because they carry its
-hints and recovery actions, and a ready state composes it only while Stops is
-open. The card and the sheet read one published plan and share one Save and one
-Start lambda.
+A ready route is the round 8 route preview (T-0612). A read-only card at the
+top shows the route's ends, and the widget grid moves below its measured height
+(`widgetGridTopInset`). The planner sheet at the bottom is the shared
+`ShellBottomSheet` without a scrim: it scrolls the mode chip, the time,
+distance and arrival with Save, the alternatives, the warnings row and the
+Route preferences row, and pins Stops, Details and Start in a bar at its foot.
+`routePlanSheetLayout` is that decision for each view: Stops is the stop editor
+with Done, Details the chart and turns with Hide details and Start, and
+Preferences the one-route rows with Reset and Apply pinned, so they stay
+reachable at any font scale. The picking, planning and failed states show their
+status, hints and recovery actions with the preferences row. Back returns an
+open view to the preview before it clears the plan (`routePlanBackView`).
 
 A route preview frames the selected route in the map area above the planner
 sheet. `MapHost.fitBounds(bounds, bottomInsetDp)` pads the camera by the height
 the sheet covers: `BottomChrome.reachOf` for `BOTTOM_SHEET_KEY`, the key every
 bottom sheet over the map reports under, read once it has held for 150 ms, or 0
 after 1.5 s. The fit is skipped when the camera moved during that wait. A host
-without padding falls back to `fitBounds(bounds)`. With the sheet closed the
-reach is 0, so a ready route frames the whole map area below the card.
+without padding falls back to `fitBounds(bounds)`.
 
 `plugins/direct-engine` is the second `routing.engine` provider (T-0305), and
 the proof that the engine seam is real: the planner and the follower consume

@@ -4,20 +4,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -69,8 +65,8 @@ private const val PREF_NORMAL_KEY = "route_preferences_normal"
 private const val PREF_DONT_MIND_KEY = "route_preferences_dont_mind"
 private const val PREF_STEP_KEY = "route_preferences_step_description"
 private const val PREF_STEP_DEFAULT_KEY = "route_preferences_step_default_description"
-private const val PREF_RESET_KEY = "route_preferences_reset"
-private const val PREF_APPLY_KEY = "route_preferences_apply"
+internal const val PREF_RESET_KEY = "route_preferences_reset"
+internal const val PREF_APPLY_KEY = "route_preferences_apply"
 private const val PREF_PROFILE_WALK_KEY = "route_preferences_profile_walk"
 private const val PREF_PROFILE_BIKE_KEY = "route_preferences_profile_bike"
 private const val PREF_PROFILE_HIKE_KEY = "route_preferences_profile_hike"
@@ -102,13 +98,11 @@ internal data class RoutePreferencesEntryContent(
     val description: String,
 )
 
-/** The sheet's resolved text, rows and actions. */
+/** The sheet's resolved text and rows; Reset and Apply are the planner's pinned bar. */
 internal data class RoutePreferencesSheetContent(
     val title: String,
     val scope: String,
     val rows: List<RoutePreferenceRowContent>,
-    val reset: String,
-    val apply: String,
 )
 
 /** One attribute row; a changed row marks the profile default with a dot. */
@@ -175,24 +169,20 @@ internal fun RoutePreferencesEntry(
 }
 
 /**
- * The one-route preferences sheet from the round6 design: three independent
- * steps, the profile default marked with a dot on every changed row, and the
- * Reset and Apply actions. The draft lives here, so a tap changes nothing until
- * Apply; Reset goes straight back to the profile (T-0421).
+ * The one-route preferences rows from the round 6 design: three independent
+ * steps, and the profile default marked with a dot on every changed row. The
+ * planner holds the [draft], so a tap changes nothing until the pinned Apply;
+ * Reset goes straight back to the profile (T-0421).
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 internal fun RoutePreferencesContent(
     profile: RouteProfile,
     profilePreferences: RouteOptions,
-    overridePreferences: RouteOptions?,
+    draft: RouteOptions,
     strings: Strings,
-    onApply: (RouteOptions) -> Unit,
-    onReset: () -> Unit,
+    onDraftChange: (RouteOptions) -> Unit,
 ) {
-    var draft by remember(profilePreferences, overridePreferences) {
-        mutableStateOf(overridePreferences ?: profilePreferences)
-    }
     val content = routePreferencesSheetContent(profile, profilePreferences, draft, strings)
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = SECTION_TOP_PADDING_DP.dp),
@@ -210,17 +200,8 @@ internal fun RoutePreferencesContent(
             PreferenceRow(
                 row = row,
                 strings = strings,
-                onChange = { preference -> draft = draft.with(row.attribute, preference) },
+                onChange = { preference -> onDraftChange(draft.with(row.attribute, preference)) },
             )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = TIGHT_GAP_DP.dp),
-            horizontalArrangement = Arrangement.spacedBy(GAP_DP.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            ActionChip(content.reset, onReset)
-            Box(Modifier.weight(1f))
-            ActionChip(content.apply, { onApply(draft) }, ROUTE_ACTION_COLOR)
         }
     }
 }
@@ -299,7 +280,9 @@ private fun Segment(
                     selected = step.selected,
                     role = Role.RadioButton,
                     onClick = onClick,
-                ).padding(
+                ).heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
+                .wrapContentHeight(Alignment.CenterVertically)
+                .padding(
                     horizontal = SEGMENT_PADDING_HORIZONTAL_DP.dp,
                     vertical = SEGMENT_PADDING_VERTICAL_DP.dp,
                 ),
@@ -350,8 +333,6 @@ internal fun routePreferencesSheetContent(
             RouteAttribute.forProfile(profile).map { attribute ->
                 row(attribute, draft[attribute], profilePreferences[attribute], strings)
             },
-        reset = strings.resolve(PREF_RESET_KEY),
-        apply = strings.resolve(PREF_APPLY_KEY),
     )
 
 private fun row(

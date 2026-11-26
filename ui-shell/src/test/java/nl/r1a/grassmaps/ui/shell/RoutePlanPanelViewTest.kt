@@ -1,5 +1,7 @@
 package nl.r1a.grassmaps.ui.shell
 
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanState
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -8,33 +10,36 @@ import java.io.File
 
 /**
  * The JVM suite cannot render the planner (T-0612). These tests check the
- * section model and the dismissal wiring, not the rendered controls.
+ * layout model and the dismissal wiring, not the rendered controls.
  */
 class RoutePlanPanelViewTest {
     @Test
     fun theDefaultPlannerViewDoesNotComposeTheEditableHeader() {
-        val sections = routePlanSheetSections(DEFAULT_ROUTE_PLAN_SHEET_VIEW)
+        val sections = routePlanSheetLayout(DEFAULT_ROUTE_PLAN_SHEET_VIEW, READY).sections
 
-        assertFalse("the default view has no undo, redo, swap or coordinate field", sections.editableHeader)
-        assertFalse("the default view has no editable stop list", sections.stopList)
+        assertFalse("the default view has no undo, redo, swap or coordinate field", RoutePlanSection.EditableHeader in sections)
+        assertFalse("the default view has no editable stop list", RoutePlanSection.StopList in sections)
     }
 
     @Test
     fun stopsStillReachesTheExistingEditableHeaderAndStopList() {
-        val sections = routePlanSheetSections(RouteStopsAction.OpenPlannerStopsSection.sheetView)
+        val sections = routePlanSheetLayout(RoutePlanBarAction.Stops.next ?: error("no view"), READY).sections
 
-        assertTrue("Stops reaches undo, redo, swap and the coordinate field", sections.editableHeader)
-        assertTrue("Stops reaches the planner's existing stop list", sections.stopList)
+        assertTrue("Stops reaches undo, redo, swap and the coordinate field", RoutePlanSection.EditableHeader in sections)
+        assertTrue("Stops reaches the planner's existing stop list", RoutePlanSection.StopList in sections)
     }
 
     @Test
     fun detailsOpensTheExistingChartSectionWithoutTheEditableHeader() {
-        val sections = routePlanSheetSections(RouteDetailsAction.OpenPlannerDetailsSection.sheetView)
+        val sections = routePlanSheetLayout(RoutePlanBarAction.Details.next ?: error("no view"), READY).sections
 
-        assertTrue("Details opens the planner's chart section", sections.details)
-        assertFalse("Details keeps the read-only header", sections.editableHeader)
-        assertFalse("Details does not open the stop list", sections.stopList)
-        assertFalse("the read-only card keeps its chart section closed", routePlanSheetSections(DEFAULT_ROUTE_PLAN_SHEET_VIEW).details)
+        assertTrue("Details opens the planner's chart section", RoutePlanSection.Chart in sections)
+        assertFalse("Details keeps the read-only header", RoutePlanSection.EditableHeader in sections)
+        assertFalse("Details does not open the stop list", RoutePlanSection.StopList in sections)
+        assertFalse(
+            "the preview keeps its chart section closed",
+            RoutePlanSection.Chart in routePlanSheetLayout(DEFAULT_ROUTE_PLAN_SHEET_VIEW, READY).sections,
+        )
     }
 
     @Test
@@ -45,8 +50,8 @@ class RoutePlanPanelViewTest {
         val panel = source.substringBefore("private fun PanelControls(")
         val controls = panel.indexOf("PanelControls(")
 
-        assertTrue("Summary and Stops both draw the controls", controls in 0 until panel.indexOf("if (sections.editableHeader)"))
-        assertTrue("Even an early return in the failure branch leaves Close visible", controls < panel.indexOf("when (state.status)"))
+        assertTrue("Every view draws the controls before its sections", controls in 0 until panel.indexOf("layout.sections.forEach"))
+        assertTrue("The controls are the sheet's fixed header", panel.contains("header = {"))
         assertTrue("The header forwards the Close action", panel.contains("onClose = onClose"))
         val header = source.substringAfter("private fun PanelControls(").substringBefore("private fun ControlGlyph(")
         assertTrue(
@@ -68,6 +73,7 @@ class RoutePlanPanelViewTest {
             listOf(
                 "widgetsSavedSheetOpen -> widgetsSavedSheetOpen = false",
                 "searchExpanded -> searchExpanded = false",
+                "plannerSheetShown && plannerBackView != null -> routeSheetView = plannerBackView",
                 "plannerSheetShown -> closePlan()",
                 "layersSheetShown -> dismissLayers()",
             ),
@@ -85,5 +91,19 @@ class RoutePlanPanelViewTest {
         assertTrue("Dismissal clears the plan instead of only hiding the sheet", close.contains("RoutePlannerContract.clear"))
     }
 
+    @Test
+    fun mapBackCollapsesAnOpenPlannerViewBeforeItClearsThePlan() {
+        val map = mapScreen()
+
+        assertTrue(
+            "Back does not read the planner's back view",
+            map.contains("val plannerBackView = routePlanBackView(routeSheetView)"),
+        )
+    }
+
     private fun mapScreen(): String = File("../app/src/main/java/nl/r1a/grassmaps/app/MapScreen.kt").readText()
+
+    private companion object {
+        val READY = RoutePlanState(status = RoutePlanStatus.Ready)
+    }
 }

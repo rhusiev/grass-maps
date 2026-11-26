@@ -19,6 +19,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,11 +30,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.api.model.FavouriteListsState
@@ -206,12 +210,16 @@ internal fun NewGroupPanel(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalShellColors.current
+    val focus = LocalFocusManager.current
     SavedPanelFrame(title = text.newGroup, cancel = text.cancel, onCancel = onCancel, modifier = modifier) {
         SecondaryLine(text = text.name)
+        // Done closes the keyboard: where the window pans instead of resizing (API 29), the keyboard covers Create.
         BasicTextField(
             value = name,
             onValueChange = onNameChange,
             singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
             textStyle = TextStyle(color = colors.ink, fontSize = LABEL_FONT_SP.sp),
             modifier =
                 Modifier

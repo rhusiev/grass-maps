@@ -315,7 +315,12 @@ internal fun FavouritesListsBody(
                         .pointerInput(Unit) { detectTapGestures(onTap = { panel = SavedPanel.NONE }) },
                 contentAlignment = Alignment.BottomCenter,
             ) {
-                panelContent(Modifier.pointerInput(Unit) { detectTapGestures(onTap = {}) })
+                // The panel scrolls when the keyboard or a large font leaves it less height than it needs.
+                panelContent(
+                    Modifier
+                        .pointerInput(Unit) { detectTapGestures(onTap = {}) }
+                        .verticalScroll(rememberScrollState()),
+                )
             }
         }
     }

@@ -169,6 +169,11 @@ fun RoutePlanPanel(
         onDismiss = onClose,
         modifier = modifier,
         scrim = false,
+        chromeHeight =
+            sheetChromeHeight(
+                header = CONTROL_TARGET_DP.dp,
+                footer = if (layout.bar.isEmpty()) 0.dp else BAR_BUTTON_HEIGHT_DP.dp,
+            ),
         header = {
             PanelControls(
                 state = state,

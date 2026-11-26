@@ -1,5 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
+import androidx.compose.ui.unit.dp
 import nl.r1a.grassmaps.plugin.api.model.GeoPoint
 import nl.r1a.grassmaps.plugin.api.model.MissingRegions
 import nl.r1a.grassmaps.plugin.api.model.RoutePlanFailure
@@ -185,6 +186,22 @@ class RoutePlanSheetLayoutTest {
                     ?.get(1)
                     ?.toInt() ?: 0
             ) >= 48,
+        )
+    }
+
+    /**
+     * AVD, font scale 2.0: the planner's 48 dp header row and 50 dp bar were
+     * missing from the sheet's height bound, so only about 190 dp scrolled
+     * between them. The bound now counts the handle, both rows, the three gaps
+     * and the foot padding.
+     */
+    @Test
+    fun theSheetBoundCountsThePlannersHeaderAndBar() {
+        assertEquals(167.dp, sheetChromeHeight(header = 48.dp, footer = 50.dp))
+        assertEquals(117.dp, sheetChromeHeight(header = 48.dp, footer = 0.dp))
+        assertTrue(
+            "the planner does not pass its own header and bar to the sheet bound",
+            Regex("""chromeHeight =\s*sheetChromeHeight\(\s*header = CONTROL_TARGET_DP\.dp""").containsMatchIn(panel()),
         )
     }
 

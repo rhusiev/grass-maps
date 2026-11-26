@@ -57,6 +57,16 @@ private val DEFAULT_CHROME_HEIGHT =
     (HANDLE_TOP_DP + HANDLE_HEIGHT_DP + HANDLE_BOTTOM_DP + CLOSE_SIZE_DP + SHEET_SECTION_GAP_DP * 2).dp
 
 /**
+ * The fixed height around a sheet's scrolling rows: the handle, [header],
+ * [footer], the three gaps between them and the foot padding. A host passes it
+ * as `chromeHeight`, so its rows keep their share of the screen.
+ */
+fun sheetChromeHeight(
+    header: Dp,
+    footer: Dp,
+): Dp = (HANDLE_TOP_DP + HANDLE_HEIGHT_DP + HANDLE_BOTTOM_DP + SHEET_SECTION_GAP_DP * 3 + SHEET_PADDING_DP).dp + header + footer
+
+/**
  * The close control a sheet shares with its own header.
  *
  * It is a full 48 dp target, and the label is the only thing a screen reader

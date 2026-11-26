@@ -30,6 +30,8 @@ private const val SUMMARY_KEY = "settings.screen_summary"
 private const val APP_THEME_DETAIL_KEY = "settings.row.app_theme_detail"
 private const val NIGHT_FOLLOW_DETAIL_KEY = "settings.row.night_follow_detail"
 private const val NIGHT_SUN_DETAIL_KEY = "settings.row.night_sun_detail"
+private const val NIGHT_SUN_DETAIL_UNKNOWN_KEY = "settings.row.night_sun_detail_unknown"
+private const val SUN_UNKNOWN_PLACEHOLDER = "\u2014"
 private const val KEEP_SCREEN_ON_DETAIL_KEY = "settings.row.keep_screen_on_detail"
 private const val ANIMATIONS_DETAIL_KEY = "settings.row.disable_animations_detail"
 private const val LANGUAGE_DETAIL_KEY = "settings.row.language_detail"
@@ -124,7 +126,12 @@ internal fun screenSettingsContent(
                 ScreenSettingsRow(
                     key = SCREEN_ROW_NIGHT_SUN,
                     title = strings.resolve(SCREEN_ROW_NIGHT_SUN),
-                    detail = strings.resolve(NIGHT_SUN_DETAIL_KEY, listOf(state.sunSummary)),
+                    detail =
+                        if (state.sunSummary.isBlank() || state.sunSummary == SUN_UNKNOWN_PLACEHOLDER) {
+                            strings.resolve(NIGHT_SUN_DETAIL_UNKNOWN_KEY)
+                        } else {
+                            strings.resolve(NIGHT_SUN_DETAIL_KEY, listOf(state.sunSummary))
+                        },
                     kind = ScreenRowKind.SWITCH,
                     checked = values.nightMap == NightMapMode.BY_SUN,
                 ),

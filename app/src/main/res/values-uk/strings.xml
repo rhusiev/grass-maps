@@ -341,6 +341,7 @@
     <string name="settings.row.night_follow_detail">Використовувати темний режим телефону</string>
     <string name="settings.row.night_sun">Нічна мапа за сходом і заходом сонця</string>
     <string name="settings.row.night_sun_detail">Залежить від сонця біля вашого місця · %1$s</string>
+    <string name="settings.row.night_sun_detail_unknown">Залежить від сонця біля вашого місця</string>
     <string name="settings.row.keep_screen_on">Не вимикати екран</string>
     <string name="settings.row.keep_screen_on_detail">Екран не гасне, поки застосунок відкрито</string>
     <string name="settings.row.disable_animations">Вимкнути анімацію мапи</string>

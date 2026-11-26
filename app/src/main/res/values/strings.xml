@@ -316,6 +316,7 @@
     <string name="settings.row.night_follow_detail">Use the phone\&apos;s dark mode</string>
     <string name="settings.row.night_sun">Night map by sunrise and sunset</string>
     <string name="settings.row.night_sun_detail">Follows the sun near your position · %1$s</string>
+    <string name="settings.row.night_sun_detail_unknown">Follows the sun near your position</string>
     <string name="settings.row.keep_screen_on">Keep screen on</string>
     <string name="settings.row.keep_screen_on_detail">The map stays lit while the app is open</string>
     <string name="settings.row.disable_animations">Disable map animations</string>

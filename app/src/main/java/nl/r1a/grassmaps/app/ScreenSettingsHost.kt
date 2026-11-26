@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -28,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.ui.api.inkOn
@@ -44,8 +48,9 @@ private const val BACK_SP = 26
 private const val HORIZONTAL_DP = 16
 private const val ROW_VERTICAL_DP = 10
 private const val SECTION_TOP_DP = 18
-private const val BACK_DP = 40
-private const val CHIP_HEIGHT_DP = 36
+private const val BACK_DP = 48
+private const val TARGET_MIN_DP = 48
+private const val CHIP_PADDING_DP = 12
 private const val SWITCH_WIDTH_DP = 46
 private const val SWITCH_HEIGHT_DP = 28
 private const val SWITCH_KNOB_DP = 20
@@ -75,24 +80,24 @@ internal fun ScreenSettingsHost(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = HORIZONTAL_DP.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                BasicText(
-                    text = BACK_GLYPH,
-                    style = TextStyle(color = colors.accent, fontSize = BACK_SP.sp),
+                Box(
                     modifier =
                         Modifier
-                            .size(BACK_DP.dp)
+                            .sizeIn(minWidth = BACK_DP.dp, minHeight = BACK_DP.dp)
                             .clip(CircleShape)
                             .clickable(role = Role.Button, onClick = onBack),
-                )
+                    contentAlignment = Alignment.Center,
+                ) {
+                    BasicText(text = BACK_GLYPH, style = TextStyle(color = colors.accent, fontSize = BACK_SP.sp))
+                }
                 BasicText(text = content.title, style = TextStyle(color = colors.ink, fontSize = TITLE_SP.sp, fontWeight = FontWeight.Bold))
             }
             ReadOnlySummary(content = content, colors = colors)
-            Spacer(Modifier.weight(1f))
             Column(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .weight(2f)
+                        .weight(1f)
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = HORIZONTAL_DP.dp),
             ) {
@@ -134,6 +139,7 @@ private fun ReadOnlySummary(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Suppress("ktlint:standard:function-naming")
 @Composable
 private fun ChoiceRow(
@@ -145,25 +151,33 @@ private fun ChoiceRow(
         BasicText(text = row.title, style = TextStyle(color = colors.ink, fontSize = ROW_TITLE_SP.sp))
         BasicText(text = row.detail, style = TextStyle(color = colors.muted, fontSize = DETAIL_SP.sp))
         Spacer(Modifier.height(ROW_VERTICAL_DP.dp / 2))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
             row.options.forEachIndexed { index, option ->
                 val selected = index == row.selected
-                BasicText(
-                    text = option.label,
-                    style =
-                        TextStyle(
-                            color = if (selected) inkOn(colors.selectedChip) else colors.ink,
-                            fontSize = CHIP_SP.sp,
-                        ),
+                Box(
                     modifier =
                         Modifier
-                            .weight(1f)
-                            .height(CHIP_HEIGHT_DP.dp)
+                            .sizeIn(minWidth = TARGET_MIN_DP.dp, minHeight = TARGET_MIN_DP.dp)
                             .clip(RoundedCornerShape(CHIP_CORNER_DP.dp))
                             .background(if (selected) colors.selectedChip else colors.soft)
                             .clickable(role = Role.RadioButton, onClick = { onChoice(row.key, index) })
-                            .padding(horizontal = 4.dp, vertical = 8.dp),
-                )
+                            .padding(horizontal = CHIP_PADDING_DP.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    BasicText(
+                        text = option.label,
+                        style =
+                            TextStyle(
+                                color = if (selected) inkOn(colors.selectedChip) else colors.ink,
+                                fontSize = CHIP_SP.sp,
+                                textAlign = TextAlign.Center,
+                            ),
+                    )
+                }
             }
         }
     }

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -64,14 +65,14 @@ import nl.r1a.grassmaps.plugin.ui.api.shellColors
 
 private const val SCREEN_EDGE_DP = 10
 private const val BAR_EDGE_DP = 12
-internal const val NAV_BAR_HEIGHT_DP = 58
+internal const val NAV_BAR_MIN_HEIGHT_DP = 58
+internal const val NAV_TARGET_MIN_DP = 48
 private const val BAR_BOTTOM_DP = 12
 internal const val NAV_BAR_CORNER_DP = 29
 private const val CHIP_CORNER_DP = 18
 private const val CHIP_HEIGHT_DP = 36
 private const val CHIP_PADDING_HORIZONTAL_DP = 11
 private const val ALERT_CHIP_TINT_ALPHA = 0.16f
-private const val END_HEIGHT_DP = 40
 private const val END_CORNER_DP = 20
 private const val DONE_HEIGHT_DP = 52
 private const val ROUND_BUTTON_DP = 40
@@ -148,35 +149,34 @@ fun NavigationScreenHost(
                 AlertBanners(state.alerts.take(MAX_BANNERS), colors)
             }
         }
-        if (NavigationControl.Recentre in controls && sheet == NavigationSheet.Collapsed) {
-            RecentreButton(
-                buttonLabel = strings.resolve(NavigationScreenStrings.RECENTER),
-                colors = colors,
-                onClick = onRecentre,
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .navigationBarsPadding()
-                        .padding(end = 14.dp, bottom = (NAV_BAR_HEIGHT_DP + BAR_BOTTOM_DP * 2 + 12).dp),
-            )
-        }
         if (sheet == NavigationSheet.Collapsed || state.status == NavigationScreenStatus.Arrived) {
-            Bar(
-                state = state,
-                strings = strings,
-                colors = colors,
-                controls = controls,
-                onEnd = onEnd,
-                onResume = onResume,
-                onDone = onDone,
-                onExpand = { onSheetChange(NavigationSheet.Trip) },
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .navigationBarsPadding()
-                        .padding(horizontal = BAR_EDGE_DP.dp, vertical = BAR_BOTTOM_DP.dp)
-                        .reportsBottomChrome(),
-            )
+            Column(
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding(),
+                horizontalAlignment = Alignment.End,
+            ) {
+                if (NavigationControl.Recentre in controls && sheet == NavigationSheet.Collapsed) {
+                    RecentreButton(
+                        buttonLabel = strings.resolve(NavigationScreenStrings.RECENTER),
+                        colors = colors,
+                        onClick = onRecentre,
+                        modifier = Modifier.padding(end = 14.dp, bottom = 12.dp),
+                    )
+                }
+                Bar(
+                    state = state,
+                    strings = strings,
+                    colors = colors,
+                    controls = controls,
+                    onEnd = onEnd,
+                    onResume = onResume,
+                    onDone = onDone,
+                    onExpand = { onSheetChange(NavigationSheet.Trip) },
+                    modifier =
+                        Modifier
+                            .padding(horizontal = BAR_EDGE_DP.dp, vertical = BAR_BOTTOM_DP.dp)
+                            .reportsBottomChrome(),
+                )
+            }
         } else if (sheet == NavigationSheet.Trip) {
             TripSheet(
                 state = state,
@@ -395,10 +395,10 @@ private fun Bar(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(NAV_BAR_HEIGHT_DP.dp)
+                .heightIn(min = NAV_BAR_MIN_HEIGHT_DP.dp)
                 .border(1.dp, colors.muted.copy(alpha = 0.18f), RoundedCornerShape(NAV_BAR_CORNER_DP.dp))
                 .background(colors.surface, RoundedCornerShape(NAV_BAR_CORNER_DP.dp))
-                .padding(horizontal = 7.dp),
+                .padding(horizontal = 7.dp, vertical = 5.dp),
         contentAlignment = Alignment.Center,
     ) {
         if (NavigationControl.Done in controls) {
@@ -409,7 +409,7 @@ private fun Bar(
                 ink = colors.onAccent,
                 outline = colors.accent,
                 onClick = onDone,
-                modifier = Modifier.fillMaxWidth().height(DONE_HEIGHT_DP.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = DONE_HEIGHT_DP.dp),
             )
             return@Box
         }
@@ -433,7 +433,7 @@ private fun Bar(
                     ink = colors.onAccent,
                     outline = colors.accent,
                     onClick = onResume,
-                    modifier = Modifier.weight(1f).height(END_HEIGHT_DP.dp),
+                    modifier = Modifier.weight(1f).heightIn(min = NAV_TARGET_MIN_DP.dp),
                 )
             } else {
                 Eta(state, colors, Modifier.weight(1f))
@@ -559,7 +559,7 @@ private fun TripSheet(
                     label = strings.resolve(NavigationScreenStrings.END),
                     colors = colors,
                     onClick = onEnd,
-                    modifier = Modifier.weight(1f).height(50.dp),
+                    modifier = Modifier.weight(1f).heightIn(min = 50.dp),
                 )
             }
             PrimaryPill(
@@ -576,7 +576,7 @@ private fun TripSheet(
                 ink = colors.ink,
                 outline = colors.controlBorder,
                 onClick = if (NavigationControl.Resume in controls) onResume else onPause,
-                modifier = Modifier.weight(1f).height(50.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 50.dp),
             )
             RoundButton(
                 icon = ShellIcons.ChevronDown,
@@ -724,7 +724,7 @@ private fun SettingsSheet(
                     ink = colors.ink,
                     outline = colors.controlBorder,
                     onClick = onReset,
-                    modifier = Modifier.weight(1f).height(50.dp),
+                    modifier = Modifier.weight(1f).heightIn(min = 50.dp),
                 )
             }
         }
@@ -834,7 +834,7 @@ private fun AlertChips(
             Box(
                 modifier =
                     Modifier
-                        .height(CHIP_HEIGHT_DP.dp)
+                        .heightIn(min = NAV_TARGET_MIN_DP.dp)
                         .background(
                             if (on) colors.accent.copy(alpha = ALERT_CHIP_TINT_ALPHA) else colors.soft,
                             shape,
@@ -959,7 +959,7 @@ private fun EndPill(
     Row(
         modifier =
             modifier
-                .height(END_HEIGHT_DP.dp)
+                .heightIn(min = NAV_TARGET_MIN_DP.dp)
                 // The fill alone was 1.12:1 against the dark bar and 1.14:1 in
                 // light (T-0636); the danger outline makes the pill a control.
                 .background(colors.dangerSoft, shape)
@@ -1053,7 +1053,7 @@ private fun RecentreButton(
 
 private fun glassChip(colors: ShellColors): Modifier =
     Modifier
-        .height(CHIP_HEIGHT_DP.dp)
+        .heightIn(min = CHIP_HEIGHT_DP.dp)
         .background(colors.glass, RoundedCornerShape(CHIP_CORNER_DP.dp))
         .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp)
 

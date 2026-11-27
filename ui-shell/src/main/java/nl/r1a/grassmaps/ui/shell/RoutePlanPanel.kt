@@ -145,6 +145,8 @@ fun RoutePlanPanel(
     dark: Boolean = false,
     view: RoutePlanSheetView = DEFAULT_ROUTE_PLAN_SHEET_VIEW,
     onViewChange: (RoutePlanSheetView) -> Unit = {},
+    warningsVisible: Boolean = false,
+    onWarningsVisibleChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     if (state.status == RoutePlanStatus.Idle) return
@@ -155,7 +157,6 @@ fun RoutePlanPanel(
     var draft by remember(state.profilePreferences, state.overridePreferences, view) {
         mutableStateOf(state.overridePreferences ?: state.profilePreferences)
     }
-    var warningsVisible by remember { mutableStateOf(false) }
     val onBarAction: (RoutePlanBarAction) -> Unit = { action ->
         when (action) {
             RoutePlanBarAction.Start -> onStart()
@@ -261,7 +262,7 @@ fun RoutePlanPanel(
                         strings = strings,
                         units = units,
                         expanded = warningsVisible,
-                        onToggle = { warningsVisible = !warningsVisible },
+                        onToggle = { onWarningsVisibleChange(!warningsVisible) },
                     )
                 }
 
@@ -717,6 +718,7 @@ private fun RecentRoutes(
                 modifier =
                     Modifier
                         .clickable(role = Role.Button) { onReuse(entry) }
+                        .heightIn(min = CONTROL_TARGET_DP.dp)
                         .semantics { contentDescription = strings.resolve(REUSE_KEY, listOf(row)) },
             )
         }
@@ -820,6 +822,7 @@ internal fun RoutePlanBottomBar(
     ) {
         for (action in actions) {
             val label = routePlanBarLabel(action, strings)
+            val description = routePlanBarDescription(action, strings, label)
             val shape = RoundedCornerShape(BAR_BUTTON_CORNER_DP.dp)
             Box(
                 modifier =
@@ -827,7 +830,7 @@ internal fun RoutePlanBottomBar(
                         .weight(if (action.primary) START_CHIP_WEIGHT else 1f)
                         .heightIn(min = BAR_BUTTON_HEIGHT_DP.dp)
                         .background(if (action.primary) ROUTE_ACTION_COLOR else ROUTE_CHIP_COLOR, shape)
-                        .semantics { contentDescription = label }
+                        .semantics { contentDescription = description }
                         .clickable(role = Role.Button, onClick = { onAction(action) })
                         .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp, vertical = CHIP_PADDING_VERTICAL_DP.dp),
                 contentAlignment = Alignment.Center,
@@ -864,6 +867,13 @@ internal fun routePlanBarLabel(
     action: RoutePlanBarAction,
     strings: Strings,
 ): String = strings.resolve(routePlanBarLabelKey(action))
+
+/** Done says what it ends; the other bar buttons are named by their own label. */
+internal fun routePlanBarDescription(
+    action: RoutePlanBarAction,
+    strings: Strings,
+    label: String,
+): String = if (action == RoutePlanBarAction.Done) strings.resolve(DONE_DESCRIPTION_KEY) else label
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -937,6 +947,7 @@ private const val NO_ALTERNATIVES_KEY = "route_planner_no_alternatives"
 private const val SWAP_KEY = "route_planner_swap"
 private const val PANEL_CLOSE_KEY = "route_planner_close"
 private const val DONE_KEY = "route_planner_done"
+private const val DONE_DESCRIPTION_KEY = "route_planner_done_description"
 private const val DETAILS_KEY = "route_summary_details"
 private const val UNDO_DESCRIPTION_KEY = "route_planner_undo"
 private const val REDO_DESCRIPTION_KEY = "route_planner_redo"

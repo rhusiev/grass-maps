@@ -1035,12 +1035,16 @@ private fun MapContent(
     // it to Stops, Details or Preferences and back; the sheet composes the
     // editable header only while Stops is in use. A cleared plan closes them.
     var routeSheetView by remember { mutableStateOf(RoutePlanSheetView.Summary) }
+    var plannerWarningsVisible by remember { mutableStateOf(false) }
     var routeCardHeightPx by remember { mutableStateOf<Int?>(null) }
     // A reroute keeps the Stops sheet open: adding a via or undoing an edit
     // passes through Planning, and closing the editor there would break the
     // edit. A cleared plan closes it (T-0612).
     LaunchedEffect(plan.status) {
-        if (plan.status == RoutePlanStatus.Idle) routeSheetView = RoutePlanSheetView.Summary
+        if (plan.status == RoutePlanStatus.Idle) {
+            routeSheetView = RoutePlanSheetView.Summary
+            plannerWarningsVisible = false
+        }
     }
     val historyFlow =
         remember(container) {
@@ -1422,6 +1426,7 @@ private fun MapContent(
             layoutSheet != null -> backFromLayoutSheet()
             widgetsSavedSheetOpen -> widgetsSavedSheetOpen = false
             searchExpanded -> searchExpanded = false
+            plannerSheetShown && plannerWarningsVisible -> plannerWarningsVisible = false
             plannerSheetShown && plannerBackView != null -> routeSheetView = plannerBackView
             plannerSheetShown -> closePlan()
             layersSheetShown -> dismissLayers()
@@ -2258,6 +2263,8 @@ private fun MapContent(
                 // moves it to Stops, Details or Preferences and back.
                 view = routeSheetView,
                 onViewChange = { routeSheetView = it },
+                warningsVisible = plannerWarningsVisible,
+                onWarningsVisibleChange = { plannerWarningsVisible = it },
             )
         }
         val trackCardTrack = selectedTrack

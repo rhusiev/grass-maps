@@ -78,6 +78,7 @@ class RoutePlanPanelViewTest {
                 "layoutSheet != null -> backFromLayoutSheet()",
                 "widgetsSavedSheetOpen -> widgetsSavedSheetOpen = false",
                 "searchExpanded -> searchExpanded = false",
+                "plannerSheetShown && plannerWarningsVisible -> plannerWarningsVisible = false",
                 "plannerSheetShown && plannerBackView != null -> routeSheetView = plannerBackView",
                 "plannerSheetShown -> closePlan()",
                 "layersSheetShown -> dismissLayers()",

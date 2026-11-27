@@ -48,7 +48,8 @@ class RouteDetailsBottomBarTest {
         assertTrue("the bottom bar lost its 48 dp minimum", ".heightIn(min = BAR_BUTTON_HEIGHT_DP.dp)" in bar)
         assertTrue("a bar button lost its command", "role = Role.Button, onClick = { onAction(action) }" in bar)
         assertTrue("Start lost its primary colour", "if (action.primary) ROUTE_ACTION_COLOR else ROUTE_CHIP_COLOR" in bar)
-        assertTrue("a bar button lost its spoken label", "contentDescription = label" in bar)
+        assertTrue("a bar button lost its spoken label", "contentDescription = description" in bar)
+        assertTrue("Done lost its own description", "routePlanBarDescription(action, strings, label)" in panel())
     }
 
     @Test

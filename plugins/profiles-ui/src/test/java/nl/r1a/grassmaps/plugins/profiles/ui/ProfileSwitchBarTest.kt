@@ -99,6 +99,37 @@ class ProfileSwitchBarTest {
     }
 
     @Test
+    fun theCanonFacesSitInFullTouchTargets() {
+        val bar = File("src/main/java/nl/r1a/grassmaps/plugins/profiles/ui/ProfileSwitchBar.kt").readText()
+
+        assertEquals(
+            58,
+            Regex("""private const val BAR_HEIGHT_DP = (\d+)""")
+                .find(bar)
+                ?.groupValues
+                ?.get(1)
+                ?.toInt(),
+        )
+        assertEquals(
+            42,
+            Regex("""private const val DOT_SIZE_DP = (\d+)""")
+                .find(bar)
+                ?.groupValues
+                ?.get(1)
+                ?.toInt(),
+        )
+        assertEquals(
+            48,
+            Regex("""private const val TOUCH_TARGET_DP = (\d+)""")
+                .find(bar)
+                ?.groupValues
+                ?.get(1)
+                ?.toInt(),
+        )
+        assertEquals(2, Regex("""\.sizeIn\(minWidth = TOUCH_TARGET_DP\.dp, minHeight = TOUCH_TARGET_DP\.dp\)""").findAll(bar).count())
+    }
+
+    @Test
     fun theBarDrawsTheRoundNineVectorPictogramsInsteadOfLetters() {
         val bar = File("src/main/java/nl/r1a/grassmaps/plugins/profiles/ui/ProfileSwitchBar.kt").readText()
         val pictograms =

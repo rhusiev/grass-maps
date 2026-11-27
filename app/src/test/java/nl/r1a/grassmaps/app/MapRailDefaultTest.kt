@@ -179,9 +179,11 @@ class MapRailDefaultTest {
     fun theBottomRailStaysWithinOneThumbReach() {
         assertTrue("the clearance model only describes the arc rail", MapButtonLayout.DEFAULT.arc)
         val slider = railRects().first().second
+        // One bar height above the bar's top edge, not twice the bar's height
+        // measured from the screen bottom: the 16 dp bottom inset is separate.
         assertTrue(
             "the slider sits ${slider.bottom} dp above the screen bottom, out of thumb reach",
-            slider.bottom <= MAP_BOTTOM_BAR_HEIGHT_DP * 2,
+            slider.bottom <= BAR_PADDING_DP + MAP_BOTTOM_BAR_HEIGHT_DP * 2,
         )
         assertTrue("the arc faces left the screen", railRects().minOf { it.second.left } >= 0)
     }
@@ -325,7 +327,7 @@ class MapRailDefaultTest {
     private companion object {
         const val SCREEN_WIDTH_DP = 411
         const val BAR_PADDING_DP = 16
-        const val MAP_BOTTOM_BAR_HEIGHT_DP = 60
+        const val MAP_BOTTOM_BAR_HEIGHT_DP = 58
         const val SHEET_CHEVRON_TARGET_DP = 48
         const val ARC_BOTTOM_CLEARANCE_DP = 120
 

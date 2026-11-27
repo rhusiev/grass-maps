@@ -327,8 +327,8 @@ internal fun searchOverlayMode(
         else -> SearchOverlayMode.MARKERS_ONLY
     }
 
-/** The single bar's height: its 48 dp dots sit inside a 60 dp pill. */
-internal const val MAP_BOTTOM_BAR_HEIGHT_DP = 60
+/** The canon bottom bar: 58 dp high, with 42 dp profile faces in 48 dp targets. */
+internal const val MAP_BOTTOM_BAR_HEIGHT_DP = 58
 private const val MAP_CREDIT_CLEARANCE_DP = 12
 
 /**

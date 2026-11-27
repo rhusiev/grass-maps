@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -72,8 +73,7 @@ fun ProfileSwitchBar(
             Box(
                 modifier =
                     Modifier
-                        .size(DOT_SIZE_DP.dp)
-                        .background(item.fill, CircleShape)
+                        .sizeIn(minWidth = TOUCH_TARGET_DP.dp, minHeight = TOUCH_TARGET_DP.dp)
                         .combinedClickable(
                             role = Role.Button,
                             onClick = { onSelect(item.id) },
@@ -84,7 +84,12 @@ fun ProfileSwitchBar(
                         },
                 contentAlignment = Alignment.Center,
             ) {
-                ProfilePictogram(id = item.id, content = item.content)
+                Box(
+                    modifier = Modifier.size(DOT_SIZE_DP.dp).background(item.fill, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    ProfilePictogram(id = item.id, content = item.content)
+                }
             }
         }
         Box(
@@ -98,16 +103,23 @@ fun ProfileSwitchBar(
         Box(
             modifier =
                 Modifier
-                    .size(DOT_SIZE_DP.dp)
-                    .background(if (allSelected) palette.ink else palette.quiet, CircleShape)
+                    .sizeIn(minWidth = TOUCH_TARGET_DP.dp, minHeight = TOUCH_TARGET_DP.dp)
                     .clickable(role = Role.Button, onClick = onOpenAll)
                     .semantics { contentDescription = labels.all },
             contentAlignment = Alignment.Center,
         ) {
-            ProfilePictogram(
-                id = null,
-                content = if (allSelected) palette.onAccent else palette.ink,
-            )
+            Box(
+                modifier =
+                    Modifier
+                        .size(DOT_SIZE_DP.dp)
+                        .background(if (allSelected) palette.ink else palette.quiet, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                ProfilePictogram(
+                    id = null,
+                    content = if (allSelected) palette.onAccent else palette.ink,
+                )
+            }
         }
     }
 }
@@ -140,16 +152,16 @@ private fun ProfilePictogram(
 }
 
 // The canon bottom bar is 58 dp high and fully round (radius 29): round 5's
-// BAR_H = 58 and border-radius BAR_H / 2 in r3.py. The dots grow to the 48 dp
-// accessibility target, so the bar grows by the same 2 dp and keeps its pill.
-// The host bounds this cluster to the width left by Search and the chevron.
-// Four 48 dp dots and the divider use 193 dp, so the end insets and gaps stay
-// small enough to fit the remaining slot without shrinking a touch target.
-private const val BAR_HEIGHT_DP = 60
-private const val BAR_CORNER_DP = 30
+// BAR_H = 58 and border-radius BAR_H / 2 in r3.py. The drawn faces are 42 dp.
+// Each face sits in a 48 dp clickable box, so the touch target keeps the shell
+// minimum without growing the bar away from the canon. The host bounds this
+// cluster to the width left by Search and the chevron.
+private const val BAR_HEIGHT_DP = 58
+private const val BAR_CORNER_DP = 29
 private const val BAR_INSET_DP = 2
-private const val DOT_INSET_DP = 6
-private const val DOT_SIZE_DP = 48
+private const val DOT_INSET_DP = 8
+private const val TOUCH_TARGET_DP = 48
+private const val DOT_SIZE_DP = 42
 private const val DOT_GAP_DP = 1
 private const val DIVIDER_WIDTH_DP = 1
 private const val DIVIDER_HEIGHT_DP = 28

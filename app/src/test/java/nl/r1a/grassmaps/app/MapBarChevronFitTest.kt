@@ -42,9 +42,10 @@ class MapBarChevronFitTest {
         val chevron = intConstant(map, "SHEET_CHEVRON_TARGET_DP")
         val profileRoom = content - search - divider - slotGap - chevron
 
+        // The row is as wide as its clickable boxes, not as the 42 dp faces.
         val profile =
             2 * intConstant(switch, "BAR_INSET_DP") +
-                intConstant(switch, "DOT_SIZE_DP") * (PINNED_DOTS + 1) +
+                intConstant(switch, "TOUCH_TARGET_DP") * (PINNED_DOTS + 1) +
                 intConstant(switch, "DIVIDER_WIDTH_DP") +
                 intConstant(switch, "DOT_GAP_DP") * (PINNED_DOTS + 1)
 
@@ -73,7 +74,14 @@ class MapBarChevronFitTest {
             "the profile cluster does not take the remaining bar width",
             call.contains("modifier = Modifier.weight(1f, fill = false)"),
         )
-        assertEquals(48, intConstant(switch, "DOT_SIZE_DP"))
+        assertEquals(42, intConstant(switch, "DOT_SIZE_DP"))
+        assertEquals(58, intConstant(switch, "BAR_HEIGHT_DP"))
+        assertEquals(29, intConstant(switch, "BAR_CORNER_DP"))
+        assertTrue(
+            "a 42 dp face lost its 48 dp clickable box",
+            switch.contains(".sizeIn(minWidth = TOUCH_TARGET_DP.dp, minHeight = TOUCH_TARGET_DP.dp)") &&
+                intConstant(switch, "TOUCH_TARGET_DP") == 48,
+        )
         assertTrue(
             "a dot no longer selects its own profile",
             switch.contains("onClick = { onSelect(item.id) }"),

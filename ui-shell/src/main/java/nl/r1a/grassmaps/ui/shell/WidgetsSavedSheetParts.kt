@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -65,9 +66,10 @@ internal fun SheetSectionHeading(
     action: String,
     actionDescription: String,
     onAction: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colors = LocalShellColors.current
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         BasicText(
             text = title.uppercase(),
             style =
@@ -188,11 +190,16 @@ private fun AddWidgetTile(
 internal fun SavedTileGrid(
     tiles: List<SavedTile>,
     onOpen: (SavedTile) -> Unit,
+    onRowHeight: (index: Int, heightPx: Int) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(TILE_GAP_DP.dp)) {
-        tiles.chunked(SAVED_TILES_PER_ROW).forEach { row ->
+    Column(verticalArrangement = Arrangement.spacedBy(SAVED_TILE_ROW_GAP_DP.dp)) {
+        tiles.chunked(SAVED_TILES_PER_ROW).forEachIndexed { index, row ->
             Row(
-                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Min)
+                        .onSizeChanged { size -> onRowHeight(index, size.height) },
                 horizontalArrangement = Arrangement.spacedBy(TILE_GAP_DP.dp),
             ) {
                 row.forEach { tile -> SavedTileView(tile, { onOpen(tile) }, Modifier.weight(1f).fillMaxHeight()) }
@@ -272,11 +279,12 @@ internal fun SheetSettingsRow(
 }
 
 private const val WIDGET_CARDS_PER_ROW = 2
-private const val SAVED_TILES_PER_ROW = 3
+internal const val SAVED_TILES_PER_ROW = 3
+internal const val SAVED_TILE_ROW_GAP_DP = 8
 private const val HEADING_SP = 12
 private const val HEADING_SPACING_SP = 0.5f
 private const val ACTION_SP = 13
-private const val TILE_GAP_DP = 8
+private const val TILE_GAP_DP = SAVED_TILE_ROW_GAP_DP
 private const val CARD_CORNER_DP = 14
 private const val CARD_PADDING_H_DP = 11
 private const val CARD_PADDING_V_DP = 9

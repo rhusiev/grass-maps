@@ -1,5 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
+import androidx.compose.ui.unit.dp
 import nl.r1a.grassmaps.plugin.api.model.FavouriteListSummary
 import nl.r1a.grassmaps.plugin.api.model.FavouriteListsState
 import nl.r1a.grassmaps.plugin.api.model.FavouritePointSummary
@@ -91,6 +92,24 @@ class WidgetsSavedSheetContentTest {
         assertTrue(dragDismissesSheet(draggedPx = 150f, thresholdPx = 150f))
         assertFalse(dragDismissesSheet(draggedPx = 149f, thresholdPx = 150f))
         assertFalse("an upward drag closes the sheet", dragDismissesSheet(draggedPx = -400f, thresholdPx = 150f))
+    }
+
+    @Test
+    fun theHalfViewEndsAfterAWholeTileRow() {
+        val gaps = HalfSheetGaps(section = 10, row = 5)
+
+        assertEquals(listOf(150, 255), halfSheetStops(headsPx = 40, rowHeights = listOf(100, 100), halfPx = 255, gaps = gaps))
+        assertEquals("without tiles the half view is the stop", listOf(80), halfSheetStops(40, emptyList(), 80, gaps))
+    }
+
+    @Test
+    fun theSheetOpensAtTheTallestStopThatFits() {
+        val stops = listOf(150.dp, 255.dp)
+
+        assertEquals(255.dp, sheetScrollLimit(stops, max = 300.dp))
+        assertEquals("a half row is never shown", 150.dp, sheetScrollLimit(stops, max = 200.dp))
+        assertEquals("no stop fits: the bound wins", 100.dp, sheetScrollLimit(stops, max = 100.dp))
+        assertEquals("no stops: the bound wins", 300.dp, sheetScrollLimit(emptyList(), max = 300.dp))
     }
 
     private fun input(

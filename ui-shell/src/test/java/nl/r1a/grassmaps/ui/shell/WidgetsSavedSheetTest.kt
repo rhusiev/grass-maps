@@ -53,8 +53,8 @@ class WidgetsSavedSheetTest {
             "Settings must follow the widgets and Saved sections",
             content.indexOf("SheetSettingsRow(") > content.indexOf("SavedSection("),
         )
-        assertTrue("the half view is not measured apart from Settings", content.contains("halfHeight ="))
-        assertTrue("the sheet does not open at the half view", sheet.contains("peekHeight = halfHeight"))
+        assertTrue("the half view is not measured apart from Settings", content.contains("heights.half = size.height"))
+        assertTrue("the sheet does not open at a whole tile row", sheet.contains("peekStops = heights.stops(rowCount, density)"))
     }
 
     @Test

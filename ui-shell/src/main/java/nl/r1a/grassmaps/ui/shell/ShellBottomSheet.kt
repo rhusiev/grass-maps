@@ -39,7 +39,6 @@ import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.coerceAtMost
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
@@ -77,6 +76,12 @@ fun sheetChromeHeight(
  * gaps between them and the foot padding.
  */
 fun dismissHandleChromeHeight(footer: Dp): Dp = (MapControlMetrics.TAP_TARGET_DP + SHEET_SECTION_GAP_DP * 2 + SHEET_PADDING_DP).dp + footer
+
+/** The tallest of [stops] that fits in [max], or [max] when none fits. */
+internal fun sheetScrollLimit(
+    stops: List<Dp>,
+    max: Dp,
+): Dp = stops.filter { it <= max }.maxOrNull() ?: max
 
 /** Whether a handle drag of [draggedPx], positive downward, is long enough to close the sheet. */
 internal fun dragDismissesSheet(
@@ -168,8 +173,8 @@ fun SheetCloseButton(
  *
  * [closeLabel] is null when the host's own header carries the close control.
  * [handleLabel] turns the drag handle into the dismiss control instead.
- * [peekHeight] limits the scrolling rows to the part a host shows when the
- * sheet opens; the rest scrolls into view.
+ * [peekStops] are the heights where the scrolling rows may end when the sheet
+ * opens, so a host never shows a row cut in half; the rest scrolls into view.
  * [chromeHeight] is the height of the host's header and footer above the
  * scrolling area, so a sheet with pinned actions can bound its own content.
  */
@@ -184,7 +189,7 @@ fun ShellBottomSheet(
     showHandle: Boolean = true,
     closeLabel: String? = null,
     handleLabel: String? = null,
-    peekHeight: Dp? = null,
+    peekStops: List<Dp> = emptyList(),
     chromeHeight: Dp = DEFAULT_CHROME_HEIGHT,
     header: @Composable ColumnScope.() -> Unit = {},
     footer: @Composable ColumnScope.() -> Unit = {},
@@ -266,7 +271,7 @@ fun ShellBottomSheet(
                     modifier =
                         Modifier
                             .weight(1f, fill = false)
-                            .heightIn(max = peekHeight?.coerceAtMost(contentMaxHeight) ?: contentMaxHeight)
+                            .heightIn(max = sheetScrollLimit(peekStops, contentMaxHeight))
                             .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(SHEET_SECTION_GAP_DP.dp),
                     content = content,

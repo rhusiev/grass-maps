@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -480,6 +482,8 @@ private fun ColourRow(
     }
 }
 
+/** Six 48 dp choices in a wrapping row: 56 indent plus 318 dp of swatches clipped below 406 dp screens. */
+@OptIn(ExperimentalLayoutApi::class)
 @Suppress("ktlint:standard:function-naming")
 @Composable
 private fun Swatches(
@@ -487,7 +491,7 @@ private fun Swatches(
     onChoose: (String) -> Unit,
 ) {
     val colors = LocalShellColors.current
-    Row(horizontalArrangement = Arrangement.spacedBy(SWATCH_GAP_DP.dp)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(SWATCH_GAP_DP.dp)) {
         PRESET_COLOURS.forEach { preset ->
             val argb = favouriteColour(preset)
             val isSelected = argb != null && argb == selected

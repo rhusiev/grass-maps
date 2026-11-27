@@ -33,6 +33,17 @@ class FavouritesListsTapTargetTest {
     }
 
     @Test
+    fun theColourSwatchesWrapInsteadOfClippingOnNarrowScreens() {
+        val swatches = source.substringAfter("private fun Swatches(").substringBefore("\n}\n")
+
+        assertTrue("the swatches still use one fixed row", swatches.contains("FlowRow("))
+        val swatchGap = Regex("""SWATCH_GAP_DP = (\d+)""").find(source)?.groupValues?.get(1)?.toInt() ?: 0
+        val indent = Regex("""PLACE_INDENT_DP = (\d+)""").find(source)?.groupValues?.get(1)?.toInt() ?: 0
+        val unwrappedWidth = indent + PRESET_COLOURS.size * 48 + (PRESET_COLOURS.size - 1) * swatchGap
+        assertEquals("the single-row width the narrow screen clipped", 374, unwrappedWidth)
+    }
+
+    @Test
     fun createIsAFullWidthButtonWithItsOriginalCommand() {
         val pill = source.substringAfter("private fun PillButton(").substringBefore("\n}\n")
 

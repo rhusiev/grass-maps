@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.plugins.contours
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -65,7 +64,6 @@ fun ContoursLayerPanel(
             modifier
                 .clip(shape)
                 .background(PANEL_BACKGROUND)
-                .border(1.dp, LocalShellColors.current.ring, shape)
                 .padding(horizontal = PANEL_HORIZONTAL_DP.dp, vertical = PANEL_VERTICAL_DP.dp),
         verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
     ) {

@@ -12,7 +12,7 @@ class ElevationChartTokensTest {
             val palette = elevationChartPalette(dark)
             assertTrue(
                 "the axis chip outline on the chart card in the ${if (dark) "dark" else "light"} theme",
-                contrastRatio(palette.chipBorder, palette.surface) >= UI_COMPONENT_CONTRAST,
+                contrastRatio(palette.tokens.outline.chip, palette.surface) >= UI_COMPONENT_CONTRAST,
             )
         }
     }

@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.plugins.profiles.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +29,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import nl.r1a.grassmaps.plugin.api.model.ProfilesState
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.fieldOutline
+import nl.r1a.grassmaps.plugin.ui.api.sheetSurface
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -50,6 +52,7 @@ private fun SheetFrame(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .sheetSurface(RoundedCornerShape(topStart = SHEET_CORNER_DP.dp, topEnd = SHEET_CORNER_DP.dp))
                     .clip(RoundedCornerShape(topStart = SHEET_CORNER_DP.dp, topEnd = SHEET_CORNER_DP.dp))
                     .background(SURFACE)
                     // Swallow taps on the sheet body; a disabled clickable
@@ -119,7 +122,7 @@ fun NewProfileSheet(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(FIELD_CORNER_DP.dp))
                     .background(FIELD)
-                    .border(1.dp, CONTROL_LINE, RoundedCornerShape(FIELD_CORNER_DP.dp))
+                    .fieldOutline(LocalShellColors.current, RoundedCornerShape(FIELD_CORNER_DP.dp))
                     .padding(ROW_PADDING_DP.dp),
         )
         BasicText(text = stringResource(R.string.profiles_start_from), style = LABEL_STYLE)

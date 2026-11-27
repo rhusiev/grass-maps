@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.plugins.manager
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.api.contract.PluginId
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.switchOutline
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -151,7 +151,7 @@ internal fun PluginSwitch(
                 .height(SWITCH_HEIGHT_DP.dp)
                 .clip(CircleShape)
                 .background(if (checked) ACCENT else SWITCH_OFF)
-                .border(SWITCH_BORDER_DP.dp, if (checked) ACCENT else SWITCH_LINE, CircleShape)
+                .switchOutline(LocalShellColors.current, checked, CircleShape)
                 .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
                 .semantics { contentDescription = label },
     ) {
@@ -189,7 +189,6 @@ internal fun SearchPill(
                 .padding(SCREEN_PADDING_DP.dp)
                 .clip(RoundedCornerShape(PILL_CORNER_DP.dp))
                 .background(CARD)
-                .border(1.dp, FIELD_LINE, RoundedCornerShape(PILL_CORNER_DP.dp))
                 .padding(horizontal = CARD_PADDING_DP.dp, vertical = ROW_PADDING_DP.dp),
     ) {
         if (query.isEmpty()) {

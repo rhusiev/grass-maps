@@ -51,7 +51,7 @@ class TrackLibraryTokensTest {
             )
             assertTrue(
                 "the track library field outline",
-                contrastRatio(palette.border, palette.field) >= UI_COMPONENT_CONTRAST,
+                contrastRatio(palette.tokens.outline.field, palette.field) >= UI_COMPONENT_CONTRAST,
             )
         }
     }

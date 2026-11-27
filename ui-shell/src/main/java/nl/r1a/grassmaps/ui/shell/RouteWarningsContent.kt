@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +24,8 @@ import nl.r1a.grassmaps.plugin.api.model.UnitSystem
 import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
 import nl.r1a.grassmaps.plugin.api.service.Strings
 import nl.r1a.grassmaps.plugin.api.unit.UnitText
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.alertOutline
 import java.util.Locale
 
 private const val ENTRY_TITLE_FONT_SP = 14
@@ -34,7 +35,6 @@ private const val ROW_KIND_FONT_SP = 15
 private const val ROW_DETAIL_FONT_SP = 12
 private const val ROW_DISTANCE_FONT_SP = 15
 private const val ENTRY_CORNER_DP = 14
-private const val ENTRY_BORDER_DP = 1
 private const val ENTRY_PADDING_HORIZONTAL_DP = 10
 private const val ENTRY_PADDING_VERTICAL_DP = 7
 private const val ENTRY_ICON_SIZE_DP = 32
@@ -129,11 +129,8 @@ internal fun RouteWarningsEntry(
             Modifier
                 .fillMaxWidth()
                 .background(ROUTE_WARNING_BACKGROUND, RoundedCornerShape(ENTRY_CORNER_DP.dp))
-                .border(
-                    ENTRY_BORDER_DP.dp,
-                    ROUTE_WARNING_BORDER,
-                    RoundedCornerShape(ENTRY_CORNER_DP.dp),
-                ).clickable(onClick = onClick)
+                .alertOutline(LocalShellColors.current, RoundedCornerShape(ENTRY_CORNER_DP.dp))
+                .clickable(onClick = onClick)
                 .padding(
                     horizontal = ENTRY_PADDING_HORIZONTAL_DP.dp,
                     vertical = ENTRY_PADDING_VERTICAL_DP.dp,

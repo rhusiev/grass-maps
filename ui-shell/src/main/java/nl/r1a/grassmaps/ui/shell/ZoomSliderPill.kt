@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -30,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellIcon
 import nl.r1a.grassmaps.plugin.ui.api.ShellIcons
+import nl.r1a.grassmaps.plugin.ui.api.floatingSurface
 import kotlin.math.roundToInt
 
 /** The drawn sizes of the round 9 map stack. Every face and gesture area is a full 48 dp target. */
@@ -88,6 +88,7 @@ fun ZoomSliderPill(
     onZoomChange: (Float) -> Unit,
     onZoomStep: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    floating: Boolean = false,
 ) {
     val colors = LocalShellColors.current
     val spec = content.spec
@@ -96,8 +97,8 @@ fun ZoomSliderPill(
         modifier =
             modifier
                 .size(MapControlMetrics.SLIDER_WIDTH_DP.dp, MapControlMetrics.SLIDER_HEIGHT_DP.dp)
-                .background(colors.glass, corner)
-                .border(1.dp, colors.ring, corner),
+                .then(if (floating) Modifier.floatingSurface(colors, corner) else Modifier)
+                .background(colors.glass, corner),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         SliderEnd(ShellIcons.Plus, content.zoomInDescription) { onZoomStep(1) }

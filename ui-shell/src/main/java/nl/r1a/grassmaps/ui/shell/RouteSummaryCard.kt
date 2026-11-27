@@ -2,7 +2,6 @@ package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +30,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.api.model.RoutePlanState
 import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.floatingSurface
 
 /**
  * The read-only route card over the map (T-0612, round 8 `x-route-preview`).
@@ -89,8 +90,8 @@ fun RouteSummaryCardContent(
         modifier =
             modifier
                 .widthIn(max = CARD_MAX_WIDTH_DP.dp)
+                .floatingSurface(LocalShellColors.current, RoundedCornerShape(CARD_CORNER_DP.dp))
                 .background(ROUTE_PANEL_BACKGROUND, RoundedCornerShape(CARD_CORNER_DP.dp))
-                .border(1.dp, ROUTE_CONTROL_BORDER, RoundedCornerShape(CARD_CORNER_DP.dp))
                 .padding(CARD_PADDING_DP.dp),
     ) {
         RouteEnds(card = card, strings = strings)

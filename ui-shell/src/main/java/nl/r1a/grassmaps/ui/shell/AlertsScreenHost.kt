@@ -3,7 +3,6 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -46,7 +45,10 @@ import nl.r1a.grassmaps.plugin.ui.api.AlertsPageChannel
 import nl.r1a.grassmaps.plugin.ui.api.AlertsPageState
 import nl.r1a.grassmaps.plugin.ui.api.AlertsPageSwitch
 import nl.r1a.grassmaps.plugin.ui.api.ShellColors
+import nl.r1a.grassmaps.plugin.ui.api.chipOutline
+import nl.r1a.grassmaps.plugin.ui.api.sheetSurface
 import nl.r1a.grassmaps.plugin.ui.api.shellColors
+import nl.r1a.grassmaps.plugin.ui.api.switchOutline
 
 private const val PAGE_TITLE_SP = 21
 private const val PAGE_SUBTITLE_SP = 12.5f
@@ -288,11 +290,7 @@ private fun Switch(
             Modifier
                 .size(SWITCH_WIDTH_DP.dp, SWITCH_HEIGHT_DP.dp)
                 .background(if (on) colors.accent else colors.soft, RoundedCornerShape(14.dp))
-                .border(
-                    SWITCH_BORDER_DP.dp,
-                    if (on) colors.accent else colors.controlBorder,
-                    RoundedCornerShape(14.dp),
-                ),
+                .switchOutline(colors, on, RoundedCornerShape(14.dp)),
     ) {
         Box(
             modifier =
@@ -344,7 +342,7 @@ private fun ChannelChip(
             modifier
                 .height(CHANNEL_HEIGHT_DP.dp)
                 .background(if (channel.on) colors.accent.copy(alpha = CHANNEL_TINT_ALPHA) else colors.soft, shape)
-                .border(1.dp, if (channel.on) colors.accent else colors.controlBorder, shape)
+                .chipOutline(colors, shape, selection = if (channel.on) colors.accent else null)
                 .semantics { contentDescription = channel.description }
                 .toggleable(value = channel.on, role = Role.Switch, onValueChange = { onClick() })
                 .padding(horizontal = 8.dp),
@@ -427,6 +425,7 @@ private fun PlacePicker(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .sheetSurface(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
                     .background(colors.surface, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
                     .navigationBarsPadding()
                     .padding(horizontal = CONTENT_HORIZONTAL_DP.dp, vertical = 14.dp),

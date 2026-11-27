@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +30,9 @@ import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.api.model.UnitSystem
 import nl.r1a.grassmaps.plugin.api.service.Strings
 import nl.r1a.grassmaps.plugin.api.unit.UnitText
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.choiceOutline
+import nl.r1a.grassmaps.plugin.ui.api.floatingSurface
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -182,6 +184,7 @@ fun TrackMapCardHost(
                 .padding(CARD_MARGIN_DP.dp)
                 .widthIn(max = CARD_MAX_WIDTH_DP.dp)
                 .fillMaxWidth()
+                .floatingSurface(LocalShellColors.current, RoundedCornerShape(CARD_CORNER_DP.dp))
                 .background(ROUTE_PANEL_BACKGROUND, RoundedCornerShape(CARD_CORNER_DP.dp))
                 .padding(CARD_PADDING_DP.dp),
         verticalArrangement = Arrangement.spacedBy(CARD_GAP_DP.dp),
@@ -244,7 +247,7 @@ fun TrackMapCardHost(
                             .background(Color(favouriteColour(choice.colour) ?: DEFAULT_DOT_COLOUR), CircleShape)
                             .then(
                                 if (choice.selected) {
-                                    Modifier.border(SWATCH_RING_DP.dp, ROUTE_VALUE_COLOR, CircleShape)
+                                    Modifier.choiceOutline(LocalShellColors.current, CircleShape, selection = ROUTE_VALUE_COLOR)
                                 } else {
                                     Modifier
                                 },
@@ -292,10 +295,6 @@ private fun ActionButton(
                 .background(
                     if (filled) ROUTE_ACTION_COLOR else ROUTE_CHIP_COLOR,
                     RoundedCornerShape(BUTTON_CORNER_DP.dp),
-                ).border(
-                    1.dp,
-                    if (filled) ROUTE_ACTION_COLOR else ROUTE_CONTROL_BORDER,
-                    RoundedCornerShape(BUTTON_CORNER_DP.dp),
                 ).clickable(onClick = onClick)
                 .padding(horizontal = BUTTON_HORIZONTAL_DP.dp, vertical = BUTTON_VERTICAL_DP.dp),
         contentAlignment = Alignment.Center,
@@ -338,7 +337,6 @@ private const val META_FONT_SP = 12
 private const val STATS_FONT_SP = 15
 private const val SWATCH_SIZE_DP = 30
 private const val SWATCH_GAP_DP = 12
-private const val SWATCH_RING_DP = 2
 private const val SWATCH_ROW_GAP_DP = 8
 private const val ACTION_ROW_GAP_DP = 8
 private const val ACTION_GAP_DP = 8

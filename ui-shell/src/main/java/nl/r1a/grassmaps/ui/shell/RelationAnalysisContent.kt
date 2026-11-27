@@ -26,6 +26,8 @@ import nl.r1a.grassmaps.plugin.api.service.Strings
 import nl.r1a.grassmaps.plugin.api.unit.UnitText
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartState
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.floatingSurface
 import java.util.Locale
 
 /**
@@ -114,6 +116,7 @@ fun RelationAnalysisPanel(
             modifier
                 .padding(RELATION_PANEL_PADDING_DP.dp)
                 .widthIn(max = RELATION_PANEL_MAX_WIDTH_DP.dp)
+                .floatingSurface(LocalShellColors.current, RoundedCornerShape(RELATION_PANEL_CORNER_DP.dp))
                 .background(ROUTE_PANEL_BACKGROUND, RoundedCornerShape(RELATION_PANEL_CORNER_DP.dp))
                 .padding(RELATION_PANEL_PADDING_DP.dp),
         verticalArrangement = Arrangement.spacedBy(RELATION_PANEL_ROW_GAP_DP.dp),

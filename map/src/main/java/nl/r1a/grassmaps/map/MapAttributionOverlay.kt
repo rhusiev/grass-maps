@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.map
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.api.model.MapCredits
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellColors
+import nl.r1a.grassmaps.plugin.ui.api.sheetSurface
 import org.maplibre.compose.map.MapStyleState
 import org.maplibre.compose.overlay.AttributionLinks
 import org.maplibre.compose.overlay.attributions
@@ -138,8 +138,8 @@ private fun creditTextStyle(colors: ShellColors) = TextStyle(color = colors.ink,
 
 private fun creditSurface(colors: ShellColors): Modifier =
     Modifier
+        .sheetSurface(RoundedCornerShape(ATTRIBUTION_CORNER_DP.dp))
         .background(colors.glass, RoundedCornerShape(ATTRIBUTION_CORNER_DP.dp))
-        .border(1.dp, colors.ring, RoundedCornerShape(ATTRIBUTION_CORNER_DP.dp))
         .padding(horizontal = ATTRIBUTION_HORIZONTAL_PADDING_DP.dp, vertical = ATTRIBUTION_VERTICAL_PADDING_DP.dp)
 
 private const val OPENSTREETMAP_NAME = "OpenStreetMap"

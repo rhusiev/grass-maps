@@ -40,6 +40,7 @@ import nl.r1a.grassmaps.plugin.ui.api.ElevationChartClimb
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartRange
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartState
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.floatingSurface
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToLong
@@ -324,6 +325,7 @@ fun TrackAnalysisPanel(
             modifier
                 .padding(PANEL_PADDING_DP.dp)
                 .widthIn(max = PANEL_MAX_WIDTH_DP.dp)
+                .floatingSurface(LocalShellColors.current, RoundedCornerShape(PANEL_CORNER_DP.dp))
                 .background(ROUTE_PANEL_BACKGROUND, RoundedCornerShape(PANEL_CORNER_DP.dp))
                 .padding(PANEL_PADDING_DP.dp),
         verticalArrangement = Arrangement.spacedBy(PANEL_ROW_GAP_DP.dp),

@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +30,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellColors
+import nl.r1a.grassmaps.plugin.ui.api.dashedOutline
+import nl.r1a.grassmaps.plugin.ui.api.floatingSurface
 
 /** One line of a widget: the value and the short label that names it, for example "296 m" and "alt". */
 data class WidgetLine(
@@ -138,7 +139,7 @@ private fun EmptyWidgetSlot(
             Modifier
                 .height(EMPTY_SLOT_HEIGHT_DP.dp)
                 .padding(horizontal = GLYPH_PADDING_DP.dp)
-                .dashedRing(colors.faint, GRID_CORNER_DP.dp)
+                .dashedOutline(colors, GRID_CORNER_DP.dp)
                 .clickable(role = Role.Button, onClick = onOpenPicker)
                 .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
@@ -252,8 +253,8 @@ private fun GridGlyph(
 
 private fun Modifier.glass(colors: ShellColors): Modifier =
     this
+        .floatingSurface(colors, RoundedCornerShape(GRID_CORNER_DP.dp))
         .background(colors.glass, RoundedCornerShape(GRID_CORNER_DP.dp))
-        .border(1.dp, colors.ring, RoundedCornerShape(GRID_CORNER_DP.dp))
 
 private const val MOVE_EARLIER_GLYPH = "‹"
 private const val MOVE_LATER_GLYPH = "›"

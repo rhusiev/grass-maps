@@ -86,7 +86,7 @@ class ProfileSwitchBarTest {
             val items = profileSwitchItems(BuiltInProfiles.WALK, labels, palette)
 
             assertEquals("bar", colors.glass, palette.bar)
-            assertEquals("border", colors.ring, palette.border)
+            assertEquals("divider", colors.line, palette.divider)
             assertEquals("active fill", colors.profiles.walk, items.first().fill)
             assertEquals("active icon", inkOn(colors.profiles.walk, colors), items.first().content)
             assertEquals("quiet fill", colors.soft, items[1].fill)

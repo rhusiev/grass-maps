@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellIcon
 import nl.r1a.grassmaps.plugin.ui.api.ShellIcons
+import nl.r1a.grassmaps.plugin.ui.api.dashedOutline
 
 /** The glyph a widget card draws beside its title. */
 internal fun widgetIcon(widget: GridWidget): ImageVector =
@@ -172,7 +173,7 @@ private fun AddWidgetTile(
             modifier
                 .sizeIn(minWidth = ADD_TILE_MIN_WIDTH_DP.dp, minHeight = MapControlMetrics.TAP_TARGET_DP.dp)
                 .clip(RoundedCornerShape(CARD_CORNER_DP.dp))
-                .dashedRing(colors.handle, CARD_CORNER_DP.dp, ADD_TILE_STROKE_DP.dp)
+                .dashedOutline(colors, CARD_CORNER_DP.dp)
                 .clickable(role = Role.Button, onClick = onAdd)
                 .semantics { contentDescription = description }
                 .padding(CARD_PADDING_V_DP.dp),
@@ -293,7 +294,6 @@ private const val CARD_ICON_GAP_DP = 4
 private const val CARD_LABEL_SP = 11
 private const val CARD_VALUE_SP = 20
 private const val ADD_TILE_MIN_WIDTH_DP = 56
-private const val ADD_TILE_STROKE_DP = 1.5f
 private const val ADD_ICON_DP = 16
 private const val SAVED_TILE_CORNER_DP = 16
 private const val SAVED_TILE_PADDING_V_DP = 10

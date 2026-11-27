@@ -31,7 +31,7 @@ class ShellColorsTest {
         assertEquals(Color(0xFF413B27), dark.warning.surface)
         assertEquals(Color(0xFFC99A12), dark.warning.border)
         assertEquals(Color(0xFFFFD970), dark.warning.title)
-        assertEquals(Color(0xFF80868B), dark.controlBorder)
+        assertEquals(Color(0xFF80868B), dark.outline.switchOff)
         assertEquals(Color(0xFFC99A12), dark.amberIcon)
         assertEquals(Color(0xFF15181C), dark.keyboard)
         assertEquals(Color(0xFF31363C), dark.key)
@@ -92,10 +92,10 @@ class ShellColorsTest {
     }
 
     @Test
-    fun theOffSwitchUsesTheControlBorder() {
-        assertEquals(Color(0xFF80868B), DarkShellColors.controlBorder)
+    fun theOffSwitchUsesTheCanonDarkOutline() {
+        assertEquals(Color(0xFF80868B), DarkShellColors.outline.switchOff)
         assertTrue(
-            contrastRatio(DarkShellColors.controlBorder, DarkShellColors.soft) >= QUIET_CONTROL_CONTRAST,
+            contrastRatio(DarkShellColors.outline.switchOff, DarkShellColors.soft) >= QUIET_CONTROL_CONTRAST,
         )
     }
 
@@ -124,9 +124,25 @@ class ShellColorsTest {
     }
 
     @Test
-    fun theFloatingRingIsFaintInBothThemes() {
-        assertEquals(Color(0x12000000), LightShellColors.ring)
-        assertEquals(Color(0x12FFFFFF), DarkShellColors.ring)
+    fun onlyTheDarkThemeRingsAFloatingSurface() {
+        assertEquals(Color.Transparent, LightShellColors.outline.floatRing)
+        assertEquals(Color(0x12FFFFFF), DarkShellColors.outline.floatRing)
+        assertEquals(0.07f, DarkShellColors.outline.floatRing.alpha, ALPHA_TOLERANCE)
+    }
+
+    @Test
+    fun theOutlineRowsTakeTheCanonOrTheMeasuredBoundary() {
+        val light = LightShellColors.outline
+        assertEquals(Color(0xFF857F77), light.chip)
+        assertEquals(Color(0xFF857F77), light.field)
+        assertEquals(Color(0xFF857F77), light.switchOff)
+        assertEquals(Color(0xFFEBE8E3), light.choice)
+        assertEquals(Color(0xFFCFCCC6), light.dashed)
+        val dark = DarkShellColors.outline
+        assertEquals(Color(0xFF80868B), dark.chip)
+        assertEquals(Color(0xFF80868B), dark.field)
+        assertEquals(Color(0xFF3A3F45), dark.choice)
+        assertEquals(Color(0xFF55595E), dark.dashed)
     }
 
     @Test
@@ -141,7 +157,7 @@ class ShellColorsTest {
         assertEquals(Color(0xFFB3261E), light.danger)
         assertEquals(Color(0xFFF2F1EE), light.soft)
         assertEquals(Color(0xFFFFFFFF), light.surface)
-        assertEquals(Color(0xFF857F77), light.controlBorder)
+        assertEquals(Color(0xFF857F77), light.outline.switchOff)
         assertEquals(Color(0xFF807A72), light.faint)
         assertEquals(Color(0xFF8A5A00), light.amber)
         assertEquals(Color(0xFFB87800), light.amberIcon)

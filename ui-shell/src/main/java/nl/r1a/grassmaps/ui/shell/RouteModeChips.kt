@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +26,9 @@ import nl.r1a.grassmaps.plugin.api.model.UnitSystem
 import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
 import nl.r1a.grassmaps.plugin.api.service.Strings
 import nl.r1a.grassmaps.plugin.api.unit.UnitText
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.chipOutline
+import nl.r1a.grassmaps.plugin.ui.api.choiceOutline
 
 /**
  * One travel mode the engine actually computed, with that route's time. The
@@ -175,7 +177,7 @@ internal fun RouteModeChipsRow(
                     Modifier
                         .heightIn(min = MIN_TAP_TARGET_DP.dp)
                         .background(ROUTE_CHIP_COLOR, shape)
-                        .border(1.dp, ROUTE_CONTROL_BORDER, shape)
+                        .chipOutline(LocalShellColors.current, shape)
                         .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -214,7 +216,7 @@ internal fun RouteAlternativeCards(
                         .fillMaxWidth()
                         .heightIn(min = MIN_TAP_TARGET_DP.dp)
                         .background(if (card.selected) ROUTE_CHIP_SELECTED_COLOR else ROUTE_CHIP_COLOR, shape)
-                        .border(1.dp, if (card.selected) ROUTE_CHIP_SELECTED_COLOR else ROUTE_CONTROL_BORDER, shape)
+                        .choiceOutline(LocalShellColors.current, shape, selection = if (card.selected) ROUTE_CHIP_SELECTED_COLOR else null)
                         .selectable(
                             selected = card.selected,
                             role = Role.RadioButton,

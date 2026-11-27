@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.plugins.favourites.layer
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -69,7 +68,6 @@ fun FavouritesLayerPanel(
             modifier
                 .clip(shape)
                 .background(colors.surface)
-                .border(1.dp, colors.ring, shape)
                 .padding(horizontal = HORIZONTAL_DP.dp, vertical = VERTICAL_DP.dp),
         verticalArrangement = Arrangement.spacedBy(GAP_DP.dp),
     ) {

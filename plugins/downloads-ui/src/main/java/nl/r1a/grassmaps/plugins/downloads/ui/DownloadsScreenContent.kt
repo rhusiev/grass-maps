@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.plugins.downloads.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,6 +58,9 @@ import nl.r1a.grassmaps.plugin.api.model.FirstRunOffer
 import nl.r1a.grassmaps.plugin.api.model.FirstRunOfferKind
 import nl.r1a.grassmaps.plugin.api.model.MobileDataPolicy
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.chipOutline
+import nl.r1a.grassmaps.plugin.ui.api.fieldOutline
+import nl.r1a.grassmaps.plugin.ui.api.switchOutline
 
 private val SURFACE: Color
     @Composable get() = LocalShellColors.current.map
@@ -84,9 +86,6 @@ private val DANGER: Color
 private val BORDER: Color
     @Composable get() = LocalShellColors.current.line
 
-private val CONTROL_BORDER: Color
-    @Composable get() = LocalShellColors.current.controlBorder
-
 private const val CARD_CORNER_DP = 16
 private const val CARD_PADDING_DP = 14
 private const val SCREEN_PADDING_DP = 16
@@ -106,7 +105,6 @@ private const val SWITCH_TRACK_WIDTH_DP = 52
 private const val SWITCH_TRACK_HEIGHT_DP = 32
 private const val SWITCH_KNOB_DP = 24
 private const val SWITCH_INSET_DP = 4
-private const val SWITCH_BORDER_DP = 1
 private const val LEGEND_SWATCH_DP = 9
 private const val LEGEND_SWATCH_CORNER_DP = 2
 private const val LEGEND_FONT_SP = 11
@@ -343,7 +341,7 @@ private fun MiniMapLegend() {
                             .size(LEGEND_SWATCH_DP.dp)
                             .clip(swatch)
                             .background(entry.paint.color(colors))
-                            .border(1.dp, CONTROL_BORDER, swatch),
+                            .chipOutline(colors, swatch),
                 )
                 BasicText(
                     text = legendLabel(entry.labelKey),
@@ -499,7 +497,6 @@ private fun SearchField(
                 .heightIn(min = ACTION_MIN_HEIGHT_DP.dp)
                 .clip(RoundedCornerShape(CARD_CORNER_DP.dp))
                 .background(CARD)
-                .border(1.dp, CONTROL_BORDER, RoundedCornerShape(CARD_CORNER_DP.dp))
                 .padding(CARD_PADDING_DP.dp)
                 .semantics { contentDescription = hint },
         decorationBox = { innerTextField ->
@@ -893,7 +890,7 @@ private fun ActionButton(
     val background =
         when {
             !enabled || quiet -> SOFT
-            destructive -> CARD
+            destructive -> LocalShellColors.current.dangerSoft
             else -> ACCENT
         }
     val ink =
@@ -903,13 +900,6 @@ private fun ActionButton(
             quiet -> INK
             else -> LocalShellColors.current.onAccent
         }
-    val outline =
-        when {
-            !enabled -> BORDER
-            quiet -> CONTROL_BORDER
-            destructive -> DANGER
-            else -> ACCENT
-        }
     Box(
         modifier =
             modifier
@@ -917,7 +907,6 @@ private fun ActionButton(
                 .widthIn(min = ACTION_MIN_HEIGHT_DP.dp)
                 .clip(shape)
                 .background(background, shape)
-                .border(1.dp, outline, shape)
                 .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
                 .padding(horizontal = CARD_PADDING_DP.dp, vertical = GAP_DP.dp),
         contentAlignment = Alignment.Center,
@@ -969,7 +958,6 @@ private fun SettingsSwitch(
                 .heightIn(min = SWITCH_ROW_HEIGHT_DP.dp)
                 .clip(shape)
                 .background(CARD)
-                .border(SWITCH_BORDER_DP.dp, if (checked) ACCENT else CONTROL_BORDER, shape)
                 .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
                 .padding(CARD_PADDING_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -997,7 +985,7 @@ private fun DownloadsSwitchTrack(checked: Boolean) {
                 .size(SWITCH_TRACK_WIDTH_DP.dp, SWITCH_TRACK_HEIGHT_DP.dp)
                 .clip(shape)
                 .background(if (checked) ACCENT else SOFT, shape)
-                .border(SWITCH_BORDER_DP.dp, if (checked) ACCENT else CONTROL_BORDER, shape),
+                .switchOutline(LocalShellColors.current, checked, shape),
     ) {
         Box(
             modifier =
@@ -1062,7 +1050,7 @@ private fun ServerForm(
                     .heightIn(min = ACTION_MIN_HEIGHT_DP.dp)
                     .clip(RoundedCornerShape(CARD_CORNER_DP.dp))
                     .background(SURFACE)
-                    .border(1.dp, CONTROL_BORDER, RoundedCornerShape(CARD_CORNER_DP.dp))
+                    .fieldOutline(LocalShellColors.current, RoundedCornerShape(CARD_CORNER_DP.dp))
                     .padding(CARD_PADDING_DP.dp),
         )
         SectionLabel(stringResource(R.string.downloads_token_field))
@@ -1077,7 +1065,7 @@ private fun ServerForm(
                     .heightIn(min = ACTION_MIN_HEIGHT_DP.dp)
                     .clip(RoundedCornerShape(CARD_CORNER_DP.dp))
                     .background(SURFACE)
-                    .border(1.dp, CONTROL_BORDER, RoundedCornerShape(CARD_CORNER_DP.dp))
+                    .fieldOutline(LocalShellColors.current, RoundedCornerShape(CARD_CORNER_DP.dp))
                     .padding(CARD_PADDING_DP.dp),
             decorationBox = { innerTextField ->
                 Box {
@@ -1121,7 +1109,6 @@ private fun PartPills(kinds: List<CatalogPartKind>) {
                         .height(PILL_HEIGHT_DP.dp)
                         .clip(shape)
                         .background(SOFT)
-                        .border(1.dp, CONTROL_BORDER, shape)
                         .padding(horizontal = GAP_DP.dp),
                 contentAlignment = Alignment.Center,
             ) {

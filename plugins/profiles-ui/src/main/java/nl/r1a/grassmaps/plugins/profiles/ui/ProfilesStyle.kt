@@ -45,14 +45,6 @@ internal val SCRIM: Color
     @Composable @ReadOnlyComposable
     get() = LocalShellColors.current.scrim
 
-internal val RADIO_OFF: Color
-    @Composable @ReadOnlyComposable
-    get() = LocalShellColors.current.controlBorder
-
-internal val CONTROL_LINE: Color
-    @Composable @ReadOnlyComposable
-    get() = LocalShellColors.current.controlBorder
-
 /** The snackbar's inverse-surface fill, shared by both themes. */
 internal val SNACKBAR: Color
     @Composable @ReadOnlyComposable

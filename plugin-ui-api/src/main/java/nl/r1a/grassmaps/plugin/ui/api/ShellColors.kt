@@ -19,9 +19,10 @@ import kotlin.math.pow
  * its old value, new value and measured ratio in its own KDoc. A value that
  * passes is left at the handoff's figure.
  *
- * Floating surfaces take [ring] instead of a shadow, because a shadow vanishes
- * on the dark map. [selectedChip] is the inverted fill of a selected chip and
- * [inkOn] picks its text. [warning] is the amber card and its list.
+ * Every stroke comes from [outline], one token per row of the design
+ * language's "Outlines and shadows" table; [OutlineColors] says which canon
+ * value each row keeps. [selectedChip] is the inverted fill of a selected chip
+ * and [inkOn] picks its text. [warning] is the amber card and its list.
  */
 data class ShellColors(
     /** The screen background behind the map: `#1b1f24` in dark, the sand page in light. */
@@ -66,23 +67,10 @@ data class ShellColors(
     /** The End button's fill. */
     val dangerSoft: Color,
     val warning: WarningColors,
-    /**
-     * The outline of a control whose fill alone is not its boundary: the off
-     * switch's track, a quiet button, a text field. `#80868b` in dark. It must
-     * reach 3:1 against [surface], [soft], [map] and [glass].
-     *
-     * Light is `#857f77`, not the light canon `#b9b4ac`: that value reached only
-     * 2.06:1 on [surface] and 1.66:1 on [map], below the 3:1 boundary target.
-     */
-    val controlBorder: Color,
     /** The off switch's knob. */
     val offSwitchKnob: Color,
-    /**
-     * The faint 1 px ring around a floating surface: light in dark, where a
-     * shadow vanishes; a faint dark ring in light, where this shell draws no
-     * shadow.
-     */
-    val ring: Color,
+    /** The stroke of every outlined row: chip, field, choice, switch, dashed add tile, floating ring. */
+    val outline: OutlineColors,
     /** The dim layer behind a modal card. */
     val scrim: Color,
     /**
@@ -194,9 +182,8 @@ val LightShellColors: ShellColors =
         danger = Color(0xFFB3261E),
         dangerSoft = Color(0xFFFDECEA),
         warning = LIGHT_WARNING,
-        controlBorder = Color(0xFF857F77),
         offSwitchKnob = Color(0xFF8F8A82),
-        ring = Color(0x12000000),
+        outline = LIGHT_OUTLINE,
         scrim = Color(0x66000000),
         snackbarBackground = Color(0xFF323437),
         snackbarAction = Color(0xFF8FD5A8),
@@ -247,9 +234,8 @@ val DarkShellColors: ShellColors =
         danger = Color(0xFFF28B82),
         dangerSoft = Color(0xFF4A2524),
         warning = DARK_WARNING,
-        controlBorder = Color(0xFF80868B),
         offSwitchKnob = Color(0xFF80868B),
-        ring = Color(0x12FFFFFF),
+        outline = DARK_OUTLINE,
         scrim = Color(0x66000000),
         snackbarBackground = Color(0xFF323437),
         snackbarAction = Color(0xFF8FD5A8),

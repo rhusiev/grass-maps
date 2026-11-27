@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,6 +45,11 @@ import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellIcon
 import nl.r1a.grassmaps.plugin.ui.api.ShellIcons
+import nl.r1a.grassmaps.plugin.ui.api.choiceOutline
+import nl.r1a.grassmaps.plugin.ui.api.fieldOutline
+import nl.r1a.grassmaps.plugin.ui.api.floatingSurface
+import nl.r1a.grassmaps.plugin.ui.api.selectedSegment
+import nl.r1a.grassmaps.plugin.ui.api.sheetSurface
 
 /**
  * The commands the Saved screen can actually send. The Map command is exposed
@@ -226,7 +230,7 @@ internal fun NewGroupPanel(
                     .fillMaxWidth()
                     .heightIn(min = MIN_TAP_TARGET_DP.dp)
                     .background(colors.soft, RoundedCornerShape(FIELD_CORNER_DP.dp))
-                    .border(1.dp, colors.controlBorder, RoundedCornerShape(FIELD_CORNER_DP.dp))
+                    .fieldOutline(colors, RoundedCornerShape(FIELD_CORNER_DP.dp))
                     .padding(horizontal = FIELD_PADDING_DP.dp, vertical = CENTRE_PADDING_DP.dp)
                     .semantics { contentDescription = text.name },
         )
@@ -287,6 +291,7 @@ private fun SavedPanelFrame(
         modifier =
             modifier
                 .fillMaxWidth()
+                .sheetSurface(RoundedCornerShape(topStart = PANEL_CORNER_DP.dp, topEnd = PANEL_CORNER_DP.dp))
                 .background(colors.surface, RoundedCornerShape(topStart = PANEL_CORNER_DP.dp, topEnd = PANEL_CORNER_DP.dp))
                 .padding(PANEL_PADDING_DP.dp),
         verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
@@ -351,7 +356,7 @@ private fun SegmentedRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .floating(colors, RoundedCornerShape(SEGMENT_CORNER_DP.dp))
+                .floatingSurface(colors, RoundedCornerShape(SEGMENT_CORNER_DP.dp))
                 .background(colors.soft, RoundedCornerShape(SEGMENT_CORNER_DP.dp))
                 .padding(SEGMENT_PADDING_DP.dp),
     ) {
@@ -361,6 +366,7 @@ private fun SegmentedRow(
                     Modifier
                         .weight(WEIGHT_ONE)
                         .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                        .then(if (row.selected) Modifier.selectedSegment(RoundedCornerShape(SEGMENT_CORNER_DP.dp)) else Modifier)
                         .background(
                             if (row.selected) selectedSegment(colors) else Color.Transparent,
                             RoundedCornerShape(SEGMENT_CORNER_DP.dp),
@@ -495,7 +501,7 @@ private fun Swatches(
                         .size(MIN_TAP_TARGET_DP.dp)
                         .selectable(selected = isSelected, role = Role.RadioButton) { onChoose(preset) }
                         .semantics { contentDescription = preset }
-                        .then(if (isSelected) Modifier.border(SWATCH_RING_DP.dp, colors.ink, CircleShape) else Modifier)
+                        .then(if (isSelected) Modifier.choiceOutline(colors, CircleShape, selection = colors.ink) else Modifier)
                         .padding(SWATCH_INSET_DP.dp)
                         .background(argb?.let { Color(it) } ?: colors.faint, CircleShape),
             )
@@ -755,7 +761,6 @@ private const val PLACE_DOT_DP = 12
 private const val ROW_GAP_DP = 8
 private const val SMALL_GAP_DP = 4
 private const val SWATCH_GAP_DP = 6
-private const val SWATCH_RING_DP = 2
 private const val SWATCH_INSET_DP = 5
 private const val PLACE_INDENT_DP = 56
 private const val CENTRE_PADDING_DP = 12

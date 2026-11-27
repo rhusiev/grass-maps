@@ -18,8 +18,9 @@ import java.util.Locale
  * The table also holds the round 5 turn-card and info-banner colours, which do
  * not change with the theme. A card is not a boundary pair: its content
  * identifies it. The outline entries cover the controls whose fill alone was
- * not a boundary: quiet buttons, tonal chips, fields and off switches, plus the
- * End and primary fills. The scrim only dims the map behind a modal card, so it
+ * not a boundary: tonal chips, fields and off switches, plus the primary fill.
+ * Buttons have no outline (design language "Outlines and shadows"): their
+ * label identifies them. The scrim only dims the map behind a modal card, so it
  * has no foreground of its own; ink over it is recorded as the only plausible
  * pair.
  */
@@ -119,12 +120,13 @@ class ShellContrastTest {
                 BODY_TEXT,
             ),
             // Boundaries and icons.
-            ShellPair("End pill outline on the bar", colors.danger, colors.surface, UI_COMPONENT),
             ShellPair("primary fill on the card", colors.accent, colors.surface, UI_COMPONENT),
-            ShellPair("quiet button and field outline on a card", colors.controlBorder, colors.surface, UI_COMPONENT),
-            ShellPair("off switch outline on its soft track", colors.controlBorder, colors.soft, UI_COMPONENT),
-            ShellPair("search field outline on the map page", colors.controlBorder, colors.map, UI_COMPONENT),
-            ShellPair("search field outline on the glass panel", colors.controlBorder, glassOnMap, UI_COMPONENT),
+            ShellPair("field outline on a card", colors.outline.field, colors.surface, UI_COMPONENT),
+            ShellPair("chip outline on a card", colors.outline.chip, colors.surface, UI_COMPONENT),
+            ShellPair("chip outline on its soft fill", colors.outline.chip, colors.soft, UI_COMPONENT),
+            ShellPair("off switch outline on its soft track", colors.outline.switchOff, colors.soft, UI_COMPONENT),
+            ShellPair("field outline on the map page", colors.outline.field, colors.map, UI_COMPONENT),
+            ShellPair("field outline on the glass panel (token floor)", colors.outline.field, glassOnMap, UI_COMPONENT),
             ShellPair("alerts off-switch knob on the soft track", colors.offSwitchKnob, colors.soft, UI_COMPONENT),
             ShellPair("navigation off-switch knob on the soft track", colors.faint, colors.soft, UI_COMPONENT),
             ShellPair("chevron on a card", colors.faint, colors.surface, UI_COMPONENT),

@@ -37,7 +37,8 @@ internal data class ProfileSwitchItem(
 /** The round 9 tokens the bar uses, resolved once so both themes can be tested. */
 internal data class ProfileSwitchPalette(
     val bar: Color,
-    val border: Color,
+    /** The divider before the all-profiles button, the bar divider of the canon. */
+    val divider: Color,
     val ink: Color,
     val muted: Color,
     val quiet: Color,
@@ -68,7 +69,7 @@ fun nextProfile(
 internal fun profileSwitchPalette(colors: ShellColors): ProfileSwitchPalette =
     ProfileSwitchPalette(
         bar = colors.glass,
-        border = colors.ring,
+        divider = colors.line,
         ink = colors.ink,
         muted = colors.muted,
         quiet = colors.soft,

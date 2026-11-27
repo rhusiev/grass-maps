@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -286,7 +285,6 @@ private fun Tile(
             modifier
                 .heightIn(min = TILE_TARGET_DP.dp)
                 .background(colors.soft, RoundedCornerShape(ACTION_CORNER_DP.dp))
-                .border(1.dp, colors.controlBorder, RoundedCornerShape(ACTION_CORNER_DP.dp))
                 .clickable(role = Role.Button, onClick = onClick),
         horizontalArrangement = Arrangement.spacedBy(TILE_ICON_GAP_DP.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,

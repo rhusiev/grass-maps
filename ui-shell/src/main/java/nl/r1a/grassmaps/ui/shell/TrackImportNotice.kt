@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.api.service.Strings
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.floatingSurface
+import nl.r1a.grassmaps.plugin.ui.api.sheetSurface
 
 private const val TITLE_FONT_SP = 15
 private const val DETAIL_FONT_SP = 13
@@ -209,6 +210,7 @@ fun TrackImportConfirmSheet(
                     .align(Alignment.BottomCenter)
                     .padding(SHEET_SCREEN_PADDING_DP.dp)
                     .widthIn(max = SHEET_MAX_WIDTH_DP.dp)
+                    .sheetSurface(RoundedCornerShape(NOTICE_CORNER_DP.dp))
                     .background(ROUTE_PANEL_BACKGROUND, RoundedCornerShape(NOTICE_CORNER_DP.dp))
                     .pointerInput(Unit) { detectTapGestures(onTap = {}) }
                     .padding(SHEET_PADDING_DP.dp),
@@ -254,11 +256,7 @@ private fun ConfirmButton(
             Modifier
                 .clip(RoundedCornerShape(NOTICE_CORNER_DP.dp))
                 .background(colors, RoundedCornerShape(NOTICE_CORNER_DP.dp))
-                .border(
-                    1.dp,
-                    if (primary) ROUTE_ACTION_COLOR else ROUTE_CONTROL_BORDER,
-                    RoundedCornerShape(NOTICE_CORNER_DP.dp),
-                ).clickable(onClick = onClick)
+                .clickable(onClick = onClick)
                 .semantics { contentDescription = text }
                 .padding(
                     horizontal = BUTTON_PADDING_HORIZONTAL_DP.dp,
@@ -282,6 +280,7 @@ fun TrackImportNoticeBar(
         modifier =
             modifier
                 .fillMaxWidth()
+                .floatingSurface(LocalShellColors.current, RoundedCornerShape(NOTICE_CORNER_DP.dp))
                 .background(ROUTE_PANEL_BACKGROUND, RoundedCornerShape(NOTICE_CORNER_DP.dp))
                 .padding(
                     horizontal = NOTICE_PADDING_HORIZONTAL_DP.dp,

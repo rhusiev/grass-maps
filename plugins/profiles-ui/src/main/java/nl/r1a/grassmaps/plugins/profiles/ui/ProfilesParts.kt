@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.plugins.profiles.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +30,8 @@ import androidx.compose.ui.unit.dp
 import nl.r1a.grassmaps.plugin.api.model.BuiltInProfiles
 import nl.r1a.grassmaps.plugin.api.model.ProfileSummary
 import nl.r1a.grassmaps.plugin.api.service.ProfileSettingsGroup
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.switchOutline
 
 /** The name the screen shows: a user profile's own name, or a built-in's string. */
 @Suppress("ktlint:standard:function-naming")
@@ -88,11 +89,7 @@ internal fun ActionButton(
                 .height(BUTTON_HEIGHT_DP.dp)
                 .clip(RoundedCornerShape(BUTTON_CORNER_DP.dp))
                 .background(if (enabled) background else NEUTRAL_BUTTON)
-                .border(
-                    1.dp,
-                    if (filled && enabled) ACCENT else CONTROL_LINE,
-                    RoundedCornerShape(BUTTON_CORNER_DP.dp),
-                ).clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+                .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         BasicText(text = text, style = BUTTON_STYLE.copy(color = if (enabled) color else alpha))
@@ -156,7 +153,7 @@ private fun RadioMark(selected: Boolean) {
         modifier =
             Modifier
                 .size(RADIO_SIZE_DP.dp)
-                .border(RADIO_STROKE_DP.dp, if (selected) ACCENT else RADIO_OFF, CircleShape),
+                .switchOutline(LocalShellColors.current, selected, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         if (selected) {
@@ -174,7 +171,7 @@ private fun CheckMark(checked: Boolean) {
                 .size(RADIO_SIZE_DP.dp)
                 .clip(RoundedCornerShape(RADIO_STROKE_DP.dp * 2))
                 .background(if (checked) ACCENT else Color.Transparent)
-                .border(RADIO_STROKE_DP.dp, if (checked) ACCENT else RADIO_OFF, RoundedCornerShape(RADIO_STROKE_DP.dp * 2)),
+                .switchOutline(LocalShellColors.current, checked, RoundedCornerShape(RADIO_STROKE_DP.dp * 2)),
         contentAlignment = Alignment.Center,
     ) {
         if (checked) {

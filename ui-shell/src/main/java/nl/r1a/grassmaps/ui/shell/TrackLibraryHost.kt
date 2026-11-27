@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -71,8 +70,13 @@ import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellIcon
 import nl.r1a.grassmaps.plugin.ui.api.ShellIcons
+import nl.r1a.grassmaps.plugin.ui.api.chipOutline
+import nl.r1a.grassmaps.plugin.ui.api.fieldOutline
+import nl.r1a.grassmaps.plugin.ui.api.floatingSurface
 import nl.r1a.grassmaps.plugin.ui.api.inkOn
+import nl.r1a.grassmaps.plugin.ui.api.sheetSurface
 import nl.r1a.grassmaps.plugin.ui.api.shellColors
+import nl.r1a.grassmaps.plugin.ui.api.switchOutline
 
 /**
  * The track library screen (T-0414). The plugin owns the state, the four fixed
@@ -731,7 +735,7 @@ private fun SelectionBar(
             Modifier
                 .padding(horizontal = BAR_MARGIN_DP.dp, vertical = ROW_GAP_DP.dp)
                 .fillMaxWidth()
-                .floating(shell, RoundedCornerShape(SELECTION_CORNER_DP.dp))
+                .floatingSurface(shell, RoundedCornerShape(SELECTION_CORNER_DP.dp))
                 .background(colors.surface, RoundedCornerShape(SELECTION_CORNER_DP.dp))
                 .padding(SELECTION_BAR_PADDING_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -871,7 +875,7 @@ private fun EditSheet(
                     .fillMaxWidth()
                     .height(DESCRIPTION_HEIGHT_DP.dp)
                     .background(colors.surface, RoundedCornerShape(FIELD_CORNER_DP.dp))
-                    .border(1.dp, colors.border, RoundedCornerShape(FIELD_CORNER_DP.dp))
+                    .fieldOutline(colors.tokens, RoundedCornerShape(FIELD_CORNER_DP.dp))
                     .padding(FIELD_PADDING_DP.dp),
         )
         Line(text = content.descriptionNote, colors = colors, secondary = true)
@@ -935,11 +939,8 @@ private fun VisibilitySwitch(
                 .background(
                     if (checked) colors.accent else colors.field,
                     RoundedCornerShape(SWITCH_HEIGHT_DP.dp),
-                ).border(
-                    1.dp,
-                    if (checked) colors.accent else colors.border,
-                    RoundedCornerShape(SWITCH_HEIGHT_DP.dp),
-                ).padding(horizontal = SWITCH_INSET_DP.dp),
+                ).switchOutline(colors.tokens, checked, RoundedCornerShape(SWITCH_HEIGHT_DP.dp))
+                .padding(horizontal = SWITCH_INSET_DP.dp),
         contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart,
     ) {
         Box(
@@ -1017,6 +1018,7 @@ private fun SheetFrame(
                 Modifier
                     .padding(SCREEN_PADDING_DP.dp)
                     .widthIn(max = SHEET_MAX_WIDTH_DP.dp)
+                    .sheetSurface(RoundedCornerShape(SHEET_CORNER_DP.dp))
                     .background(colors.surface, RoundedCornerShape(SHEET_CORNER_DP.dp))
                     .pointerInput(Unit) { detectTapGestures(onTap = {}) }
                     .padding(SHEET_PADDING_DP.dp),
@@ -1042,7 +1044,7 @@ private fun SheetTextField(
             Modifier
                 .fillMaxWidth()
                 .background(colors.field, RoundedCornerShape(FIELD_CORNER_DP.dp))
-                .border(1.dp, colors.border, RoundedCornerShape(FIELD_CORNER_DP.dp))
+                .fieldOutline(colors.tokens, RoundedCornerShape(FIELD_CORNER_DP.dp))
                 .padding(FIELD_PADDING_DP.dp),
     )
 }
@@ -1069,12 +1071,10 @@ private fun Chip(
                 .background(
                     if (selected) colors.selectedSurface else colors.field,
                     RoundedCornerShape(CHIP_CORNER_DP.dp),
-                ).then(
-                    if (selected) {
-                        Modifier
-                    } else {
-                        Modifier.border(1.dp, colors.border, RoundedCornerShape(CHIP_CORNER_DP.dp))
-                    },
+                ).chipOutline(
+                    colors.tokens,
+                    RoundedCornerShape(CHIP_CORNER_DP.dp),
+                    selection = if (selected) colors.selectedSurface else null,
                 ).clickable(onClick = onClick)
                 .padding(CHIP_PADDING_DP.dp),
     )
@@ -1113,7 +1113,6 @@ private fun SecondaryButton(
             Modifier
                 .heightIn(min = MIN_TAP_TARGET_DP.dp)
                 .background(colors.field, RoundedCornerShape(BUTTON_CORNER_DP.dp))
-                .border(1.dp, colors.border, RoundedCornerShape(BUTTON_CORNER_DP.dp))
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(BUTTON_PADDING_DP.dp),
     )
@@ -1174,7 +1173,8 @@ internal data class TrackLibraryPalette(
     val undoBackground: Color,
     val undoText: Color,
     val undoAction: Color,
-    val border: Color,
+    /** The shell tokens, for the shared outline modifiers. */
+    val tokens: ShellColors,
 )
 
 internal fun trackLibraryPalette(dark: Boolean): TrackLibraryPalette {
@@ -1193,7 +1193,7 @@ internal fun trackLibraryPalette(dark: Boolean): TrackLibraryPalette {
         undoBackground = tokens.snackbarBackground,
         undoText = inkOn(tokens.snackbarBackground, tokens),
         undoAction = tokens.snackbarAction,
-        border = tokens.controlBorder,
+        tokens = tokens,
     )
 }
 

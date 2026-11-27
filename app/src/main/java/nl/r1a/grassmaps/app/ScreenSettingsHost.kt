@@ -34,8 +34,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.r1a.grassmaps.plugin.ui.api.chipOutline
 import nl.r1a.grassmaps.plugin.ui.api.inkOn
 import nl.r1a.grassmaps.plugin.ui.api.shellColors
+import nl.r1a.grassmaps.plugin.ui.api.switchOutline
 
 private const val TITLE_SP = 21
 private const val SUBTITLE_SP = 12.5f
@@ -164,7 +166,11 @@ private fun ChoiceRow(
                             .sizeIn(minWidth = TARGET_MIN_DP.dp, minHeight = TARGET_MIN_DP.dp)
                             .clip(RoundedCornerShape(CHIP_CORNER_DP.dp))
                             .background(if (selected) colors.selectedChip else colors.soft)
-                            .clickable(role = Role.RadioButton, onClick = { onChoice(row.key, index) })
+                            .chipOutline(
+                                colors,
+                                RoundedCornerShape(CHIP_CORNER_DP.dp),
+                                selection = if (selected) colors.selectedChip else null,
+                            ).clickable(role = Role.RadioButton, onClick = { onChoice(row.key, index) })
                             .padding(horizontal = CHIP_PADDING_DP.dp, vertical = 8.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -219,7 +225,8 @@ private fun Switch(
             Modifier
                 .size(SWITCH_WIDTH_DP.dp, SWITCH_HEIGHT_DP.dp)
                 .clip(RoundedCornerShape(SWITCH_HEIGHT_DP.dp / 2))
-                .background(if (checked) colors.accent else colors.controlBorder),
+                .background(if (checked) colors.accent else colors.soft)
+                .switchOutline(colors, checked, RoundedCornerShape(SWITCH_HEIGHT_DP.dp / 2)),
     ) {
         Box(
             modifier =

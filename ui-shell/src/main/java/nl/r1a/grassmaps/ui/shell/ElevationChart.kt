@@ -2,7 +2,6 @@ package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -53,10 +52,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.api.model.UnitSystem
 import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.ui.api.DarkShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartRange
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartState
 import nl.r1a.grassmaps.plugin.ui.api.LightShellColors
+import nl.r1a.grassmaps.plugin.ui.api.OutlineColors
+import nl.r1a.grassmaps.plugin.ui.api.ShellColors
+import nl.r1a.grassmaps.plugin.ui.api.chipOutline
 import java.time.ZoneId
 import java.util.Locale
 import kotlin.math.max
@@ -90,7 +93,8 @@ internal data class ElevationChartPalette(
     val label: Color,
     val slope: List<Color>,
     val chip: Color,
-    val chipBorder: Color,
+    /** The shell tokens: the chips stroke with [OutlineColors.chip]. */
+    val tokens: ShellColors,
     val chipText: Color,
     val chipSelected: Color,
     val chipSelectedText: Color,
@@ -186,9 +190,7 @@ private val LIGHT_PALETTE =
                 Color(0xFF8F1D1A),
             ),
         chip = Color(0xFFFFFFFF),
-        // The shell's control border: the light chip outline is a control
-        // boundary and needs 3:1 on the white card (T-0636).
-        chipBorder = Color(0xFF857F77),
+        tokens = LightShellColors,
         chipText = Color(0xFF202124),
         chipSelected = Color(0xFF202124),
         chipSelectedText = Color(0xFFFFFFFF),
@@ -214,7 +216,7 @@ private val DARK_PALETTE =
                 Color(0xFFFFC4BC),
             ),
         chip = Color(0x00000000),
-        chipBorder = Color(0xFF80868B),
+        tokens = DarkShellColors,
         chipText = Color(0xFFE8EAED),
         chipSelected = Color(0xFFFFFFFF),
         chipSelectedText = Color(0xFF202124),
@@ -823,7 +825,7 @@ private fun ElevationChip(
         style = TextStyle(color = text, fontSize = CHIP_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
         modifier =
             Modifier
-                .border(CHIP_BORDER_DP.dp, if (selected) palette.chipSelected else palette.chipBorder, CHIP_SHAPE)
+                .chipOutline(palette.tokens, CHIP_SHAPE, selection = if (selected) palette.chipSelected else null)
                 .background(background, CHIP_SHAPE)
                 .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
                 .sizeIn(minWidth = MIN_TAP_TARGET_DP.dp, minHeight = MIN_TAP_TARGET_DP.dp)
@@ -882,7 +884,6 @@ private const val TITLE_LETTER_SPACING_SP = 0.5f
 private const val LABEL_FONT_SP = 10
 private const val CHIP_FONT_SP = 12
 private const val CHIP_GAP_DP = 6
-private const val CHIP_BORDER_DP = 1
 private const val CHIP_PADDING_HORIZONTAL_DP = 10
 private const val CHIP_PADDING_VERTICAL_DP = 5
 private const val MIN_TAP_TARGET_DP = 48

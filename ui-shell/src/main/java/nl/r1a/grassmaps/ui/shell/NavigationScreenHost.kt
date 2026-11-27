@@ -3,7 +3,6 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -62,7 +61,12 @@ import nl.r1a.grassmaps.plugin.ui.api.NavigationTripSummary
 import nl.r1a.grassmaps.plugin.ui.api.ShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellIcon
 import nl.r1a.grassmaps.plugin.ui.api.ShellIcons
+import nl.r1a.grassmaps.plugin.ui.api.alertOutline
+import nl.r1a.grassmaps.plugin.ui.api.chipOutline
+import nl.r1a.grassmaps.plugin.ui.api.floatingSurface
+import nl.r1a.grassmaps.plugin.ui.api.sheetSurface
 import nl.r1a.grassmaps.plugin.ui.api.shellColors
+import nl.r1a.grassmaps.plugin.ui.api.switchOutline
 
 private const val SCREEN_EDGE_DP = 10
 private const val BAR_EDGE_DP = 12
@@ -340,11 +344,19 @@ private fun Banner(
     val line = if (warning) colors.warning.border else Color(NavigationScreenColors.INFO_LINE)
     val ink = if (warning) colors.warning.title else Color(NavigationScreenColors.INFO_INK)
     val sub = if (warning) colors.warning.text else Color(NavigationScreenColors.INFO_SUB)
+    val bannerShape = RoundedCornerShape(BANNER_CORNER_DP.dp)
+    val bannerEdge =
+        if (warning) {
+            Modifier.floatingSurface(colors, bannerShape).alertOutline(colors, bannerShape)
+        } else {
+            Modifier.floatingSurface(colors, bannerShape)
+        }
     if (slim) {
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .then(bannerEdge)
                     .background(background, RoundedCornerShape(BANNER_CORNER_DP.dp))
                     .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -366,6 +378,7 @@ private fun Banner(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .then(bannerEdge)
                 .background(background, RoundedCornerShape(BANNER_CORNER_DP.dp))
                 .padding(horizontal = 12.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -409,7 +422,7 @@ private fun Bar(
             modifier
                 .fillMaxWidth()
                 .heightIn(min = NAV_BAR_MIN_HEIGHT_DP.dp)
-                .border(1.dp, colors.muted.copy(alpha = 0.18f), RoundedCornerShape(NAV_BAR_CORNER_DP.dp))
+                .floatingSurface(colors, RoundedCornerShape(NAV_BAR_CORNER_DP.dp))
                 .background(colors.surface, RoundedCornerShape(NAV_BAR_CORNER_DP.dp))
                 .padding(horizontal = 7.dp, vertical = 5.dp),
         contentAlignment = Alignment.Center,
@@ -420,7 +433,6 @@ private fun Bar(
                 icon = ShellIcons.Check,
                 background = colors.accent,
                 ink = colors.onAccent,
-                outline = colors.accent,
                 onClick = onDone,
                 modifier = Modifier.fillMaxWidth().heightIn(min = DONE_HEIGHT_DP.dp),
             )
@@ -444,7 +456,6 @@ private fun Bar(
                     icon = ShellIcons.Play,
                     background = colors.accent,
                     ink = colors.onAccent,
-                    outline = colors.accent,
                     onClick = onResume,
                     modifier = Modifier.weight(1f).heightIn(min = NAV_TARGET_MIN_DP.dp),
                 )
@@ -507,11 +518,8 @@ private fun TripSheet(
         modifier =
             modifier
                 .fillMaxWidth()
-                .border(
-                    1.dp,
-                    colors.muted.copy(alpha = 0.12f),
-                    RoundedCornerShape(topStart = SHEET_CORNER_DP.dp, topEnd = SHEET_CORNER_DP.dp),
-                ).background(
+                .sheetSurface(RoundedCornerShape(topStart = SHEET_CORNER_DP.dp, topEnd = SHEET_CORNER_DP.dp))
+                .background(
                     colors.surface,
                     RoundedCornerShape(topStart = SHEET_CORNER_DP.dp, topEnd = SHEET_CORNER_DP.dp),
                 ).padding(horizontal = SHEET_PADDING_DP.dp)
@@ -587,7 +595,6 @@ private fun TripSheet(
                 icon = if (NavigationControl.Resume in controls) ShellIcons.Play else ShellIcons.Pause,
                 background = colors.soft,
                 ink = colors.ink,
-                outline = colors.controlBorder,
                 onClick = if (NavigationControl.Resume in controls) onResume else onPause,
                 modifier = Modifier.weight(1f).heightIn(min = 50.dp),
             )
@@ -650,11 +657,8 @@ private fun SettingsSheet(
         modifier =
             modifier
                 .fillMaxWidth()
-                .border(
-                    1.dp,
-                    colors.muted.copy(alpha = 0.12f),
-                    RoundedCornerShape(topStart = SHEET_CORNER_DP.dp, topEnd = SHEET_CORNER_DP.dp),
-                ).background(
+                .sheetSurface(RoundedCornerShape(topStart = SHEET_CORNER_DP.dp, topEnd = SHEET_CORNER_DP.dp))
+                .background(
                     colors.surface,
                     RoundedCornerShape(topStart = SHEET_CORNER_DP.dp, topEnd = SHEET_CORNER_DP.dp),
                 ).padding(horizontal = SHEET_PADDING_DP.dp)
@@ -735,7 +739,6 @@ private fun SettingsSheet(
                     icon = null,
                     background = colors.soft,
                     ink = colors.ink,
-                    outline = colors.controlBorder,
                     onClick = onReset,
                     modifier = Modifier.weight(1f).heightIn(min = 50.dp),
                 )
@@ -851,7 +854,7 @@ private fun AlertChips(
                         .background(
                             if (on) colors.accent.copy(alpha = ALERT_CHIP_TINT_ALPHA) else colors.soft,
                             shape,
-                        ).border(1.dp, if (on) colors.accent else colors.controlBorder, shape)
+                        ).chipOutline(colors, shape, selection = if (on) colors.accent else null)
                         .toggleable(value = on, role = Role.Switch) { onChange(switch, !on) }
                         .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp),
                 contentAlignment = Alignment.Center,
@@ -916,11 +919,8 @@ private fun Switch(
                 .background(
                     if (checked) colors.accent else colors.soft,
                     shape,
-                ).border(
-                    1.dp,
-                    if (checked) colors.accent else colors.controlBorder,
-                    shape,
-                ).padding(horizontal = 3.dp),
+                ).switchOutline(colors, checked, shape)
+                .padding(horizontal = 3.dp),
         contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart,
     ) {
         Box(
@@ -973,10 +973,7 @@ private fun EndPill(
         modifier =
             modifier
                 .heightIn(min = NAV_TARGET_MIN_DP.dp)
-                // The fill alone was 1.12:1 against the dark bar and 1.14:1 in
-                // light (T-0636); the danger outline makes the pill a control.
                 .background(colors.dangerSoft, shape)
-                .border(1.dp, colors.danger, shape)
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -996,7 +993,6 @@ private fun PrimaryPill(
     icon: ImageVector?,
     background: Color,
     ink: Color,
-    outline: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1005,7 +1001,6 @@ private fun PrimaryPill(
         modifier =
             modifier
                 .background(background, shape)
-                .border(1.dp, outline, shape)
                 .clickable(role = Role.Button, onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
@@ -1034,7 +1029,6 @@ private fun RoundButton(
             Modifier
                 .size(size.dp)
                 .background(colors.soft, RoundedCornerShape((size / 2).dp))
-                .border(1.dp, colors.controlBorder, RoundedCornerShape((size / 2).dp))
                 .clickable(role = Role.Button, onClick = onClick)
                 .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
@@ -1054,7 +1048,7 @@ private fun RecentreButton(
         modifier =
             modifier
                 .size(RECENTRE_DP.dp)
-                .border(1.dp, colors.muted.copy(alpha = 0.18f), RoundedCornerShape((RECENTRE_DP / 2).dp))
+                .floatingSurface(colors, RoundedCornerShape((RECENTRE_DP / 2).dp))
                 .background(colors.surface, RoundedCornerShape((RECENTRE_DP / 2).dp))
                 .clickable(role = Role.Button, onClick = onClick)
                 .semantics { contentDescription = buttonLabel },
@@ -1067,6 +1061,7 @@ private fun RecentreButton(
 private fun glassChip(colors: ShellColors): Modifier =
     Modifier
         .heightIn(min = CHIP_HEIGHT_DP.dp)
+        .sheetSurface(RoundedCornerShape(CHIP_CORNER_DP.dp))
         .background(colors.glass, RoundedCornerShape(CHIP_CORNER_DP.dp))
         .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp)
 

@@ -20,11 +20,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenColors
 import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenStatus
 import nl.r1a.grassmaps.plugin.ui.api.NavigationTurnArrow
 import nl.r1a.grassmaps.plugin.ui.api.NavigationTurnCard
 import nl.r1a.grassmaps.plugin.ui.api.ShellIcon
+import nl.r1a.grassmaps.plugin.ui.api.floatingSurface
 import nl.r1a.grassmaps.plugin.ui.api.turnArrowIcon
 
 private const val CARD_CORNER_DP = 18
@@ -76,7 +78,13 @@ fun GuidancePanelContent(
         } else {
             RoundedCornerShape(CARD_CORNER_DP.dp)
         }
-    Column(modifier = modifier.fillMaxWidth().widthIn(max = CARD_MAX_WIDTH_DP.dp)) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .widthIn(max = CARD_MAX_WIDTH_DP.dp)
+                .floatingSurface(LocalShellColors.current, RoundedCornerShape(CARD_CORNER_DP.dp)),
+    ) {
         Row(
             modifier =
                 Modifier

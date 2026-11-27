@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.sheetSurface
 
 /**
  * The map scale bar (T-0107).
@@ -42,8 +42,8 @@ fun MapScaleBar(
     Column(
         modifier =
             modifier
+                .sheetSurface(RoundedCornerShape(BAR_CORNER_DP.dp))
                 .background(colors.glass, RoundedCornerShape(BAR_CORNER_DP.dp))
-                .border(1.dp, colors.ring, RoundedCornerShape(BAR_CORNER_DP.dp))
                 .padding(horizontal = BAR_PADDING_HORIZONTAL_DP.dp, vertical = BAR_PADDING_VERTICAL_DP.dp)
                 // One node: TalkBack otherwise reads the name and the value as
                 // two separate stops, and never as one scale.

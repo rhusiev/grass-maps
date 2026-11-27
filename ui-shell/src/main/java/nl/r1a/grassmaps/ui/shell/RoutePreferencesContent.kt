@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,6 +28,7 @@ import nl.r1a.grassmaps.plugin.api.provider.RouteOptions
 import nl.r1a.grassmaps.plugin.api.provider.RoutePreference
 import nl.r1a.grassmaps.plugin.api.provider.RouteProfile
 import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.ui.api.selectedSegment
 
 private const val ENTRY_FONT_SP = 15
 private const val TITLE_FONT_SP = 16
@@ -269,12 +269,9 @@ private fun Segment(
         modifier =
             modifier
                 .semantics { contentDescription = step.description }
+                .then(if (step.selected) Modifier.selectedSegment(RoundedCornerShape(SEGMENT_CORNER_DP.dp)) else Modifier)
                 .background(
                     if (step.selected) ROUTE_CHIP_SELECTED_COLOR else ROUTE_CHIP_COLOR,
-                    RoundedCornerShape(SEGMENT_CORNER_DP.dp),
-                ).border(
-                    1.dp,
-                    if (step.selected) ROUTE_CHIP_SELECTED_COLOR else ROUTE_CONTROL_BORDER,
                     RoundedCornerShape(SEGMENT_CORNER_DP.dp),
                 ).selectable(
                     selected = step.selected,

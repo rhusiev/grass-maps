@@ -41,14 +41,6 @@ internal val SWITCH_OFF: Color
     @Composable @ReadOnlyComposable
     get() = LocalShellColors.current.soft
 
-internal val SWITCH_LINE: Color
-    @Composable @ReadOnlyComposable
-    get() = LocalShellColors.current.controlBorder
-
-internal val FIELD_LINE: Color
-    @Composable @ReadOnlyComposable
-    get() = LocalShellColors.current.controlBorder
-
 internal val SCRIM: Color
     @Composable @ReadOnlyComposable
     get() = LocalShellColors.current.scrim
@@ -73,6 +65,5 @@ internal const val SWITCH_WIDTH_DP = 48
 internal const val SWITCH_HEIGHT_DP = 28
 internal const val SWITCH_KNOB_DP = 22
 internal const val SWITCH_INSET_DP = 3
-internal const val SWITCH_BORDER_DP = 2
 internal const val PILL_CORNER_DP = 24
 internal const val SHEET_CORNER_DP = 24

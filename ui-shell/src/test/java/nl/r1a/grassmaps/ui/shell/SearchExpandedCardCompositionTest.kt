@@ -1,5 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -111,13 +112,14 @@ class SearchExpandedCardCompositionTest {
 
     @Test
     fun bothPrivacyAndRegionActionsUseVisibleButtonChrome() {
+        val button = source.substringAfter("private fun NoticeActionButton(").substringBefore("@Suppress")
         assertTrue(
-            "no bordered, filled notice button",
+            "no filled notice button",
             source.contains("private fun NoticeActionButton(") &&
-                source.contains(".background(colors.soft, RoundedCornerShape(ACTION_CORNER_DP.dp))") &&
-                source.contains(".border(1.dp, colors.controlBorder, RoundedCornerShape(ACTION_CORNER_DP.dp))") &&
-                source.contains(".heightIn(min = MIN_TAP_TARGET_DP.dp)"),
+                button.contains(".background(colors.soft, RoundedCornerShape(ACTION_CORNER_DP.dp))") &&
+                button.contains(".heightIn(min = MIN_TAP_TARGET_DP.dp)"),
         )
+        assertFalse("a button that acts has no outline (design language, Outlines and shadows)", button.contains(".border("))
         assertTrue(
             "the online privacy action is still plain text",
             source.contains("NoticeActionButton(action)"),

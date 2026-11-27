@@ -2,7 +2,6 @@ package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,7 +42,11 @@ import nl.r1a.grassmaps.plugin.ui.api.LayerStyleRow
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellColors
 import nl.r1a.grassmaps.plugin.ui.api.StyleSwatch
+import nl.r1a.grassmaps.plugin.ui.api.chipOutline
+import nl.r1a.grassmaps.plugin.ui.api.choiceOutline
+import nl.r1a.grassmaps.plugin.ui.api.dashedOutline
 import nl.r1a.grassmaps.plugin.ui.api.inkOn
+import nl.r1a.grassmaps.plugin.ui.api.switchOutline
 
 private const val SECTION_CORNER_DP = 8
 private const val SECTION_PADDING_DP = 12
@@ -132,12 +135,10 @@ fun LayerSection(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = LocalShellColors.current
-    val shape = RoundedCornerShape(SECTION_CORNER_DP.dp)
     Column(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .border(1.dp, colors.ring, shape)
                 .padding(horizontal = SECTION_PADDING_DP.dp, vertical = ROW_GAP_DP.dp),
         verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
     ) {
@@ -179,7 +180,7 @@ private fun LayerSwitch(checked: Boolean) {
             Modifier
                 .size(SWITCH_WIDTH_DP.dp, SWITCH_HEIGHT_DP.dp)
                 .background(if (checked) colors.accent else colors.soft, CircleShape)
-                .border(CONTROL_STROKE_DP.dp, if (checked) colors.accent else colors.controlBorder, CircleShape),
+                .switchOutline(colors, checked, CircleShape),
     ) {
         Box(
             Modifier
@@ -217,6 +218,7 @@ fun LayerMarkerShapeOptions(
                         .sizeIn(minWidth = target, minHeight = target)
                         .clip(CircleShape)
                         .background(fill)
+                        .chipOutline(colors, CircleShape, selection = if (selected) colors.selectedChip else null)
                         .selectable(selected = selected, role = Role.RadioButton) { onSelect(index) }
                         .padding(ROW_GAP_DP.dp),
                 contentAlignment = Alignment.Center,
@@ -274,10 +276,10 @@ private fun RowScope.LayerStyleThumbnail(
                 Box(
                     Modifier
                         .fillMaxSize()
-                        .border(
-                            CONTROL_STROKE_DP.dp,
-                            if (row.selected) colors.accent else colors.controlBorder,
+                        .choiceOutline(
+                            colors,
                             RoundedCornerShape(TILE_CORNER_DP.dp),
+                            selection = if (row.selected) colors.accent else null,
                         ),
                 )
                 Box(
@@ -356,7 +358,7 @@ private fun RowScope.MoreStyleTile(
                         .height(THUMB_HEIGHT_DP.dp)
                         .clip(RoundedCornerShape(TILE_CORNER_DP.dp))
                         .background(colors.surface)
-                        .dashedRing(colors.controlBorder, TILE_CORNER_DP.dp),
+                        .dashedOutline(colors, TILE_CORNER_DP.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 BasicText(
@@ -373,13 +375,12 @@ private fun RowScope.MoreStyleTile(
 @Composable
 private fun LayerStyleRadio(selected: Boolean) {
     val colors = LocalShellColors.current
-    val color = if (selected) colors.accent else colors.controlBorder
     Box(
-        modifier = Modifier.size(RADIO_SIZE_DP.dp).border(CONTROL_STROKE_DP.dp, color, CircleShape),
+        modifier = Modifier.size(RADIO_SIZE_DP.dp).switchOutline(colors, selected, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         if (selected) {
-            Box(Modifier.size(RADIO_DOT_DP.dp).background(color, CircleShape))
+            Box(Modifier.size(RADIO_DOT_DP.dp).background(colors.accent, CircleShape))
         }
     }
 }

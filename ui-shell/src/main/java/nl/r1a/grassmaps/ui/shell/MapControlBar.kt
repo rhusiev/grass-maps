@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +33,8 @@ import nl.r1a.grassmaps.plugin.api.contract.CommandId
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellIcon
 import nl.r1a.grassmaps.plugin.ui.api.ShellIcons
+import nl.r1a.grassmaps.plugin.ui.api.dashedOutline
+import nl.r1a.grassmaps.plugin.ui.api.floatingSurface
 
 /**
  * The drawn icon of one control. [Text] means the control has no drawn
@@ -111,12 +112,12 @@ fun MapControlBar(
                 onInvoke = onInvoke,
             )
             if (!isEditing && zoomSlider != null) {
-                ZoomSliderPill(zoomSlider, onZoomChange, onZoomStep)
+                ZoomSliderPill(zoomSlider, onZoomChange, onZoomStep, floating = true)
             }
             if (isEditing) {
                 Row(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP_DP.dp)) {
-                    AddBox(labels, onAdd)
-                    EditBox(editing = true, labels, onEditingChange)
+                    AddBox(labels, onAdd, floating = true)
+                    EditBox(editing = true, labels, onEditingChange, floating = true)
                 }
             }
         }
@@ -126,8 +127,8 @@ fun MapControlBar(
     Column(
         modifier =
             modifier
+                .floatingSurface(colors, RoundedCornerShape(BAR_CORNER_DP.dp))
                 .background(colors.glass, RoundedCornerShape(BAR_CORNER_DP.dp))
-                .border(1.dp, colors.ring, RoundedCornerShape(BAR_CORNER_DP.dp))
                 .padding(BUTTON_GAP_DP.dp),
         verticalArrangement = Arrangement.spacedBy(BUTTON_GAP_DP.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -190,6 +191,7 @@ private fun ArcRow(
                         enabled = enabled,
                         onClick = { onInvoke(button.id) },
                         shape = CircleShape,
+                        floating = true,
                     )
                 }
             }
@@ -219,6 +221,7 @@ private fun EditBox(
     editing: Boolean,
     labels: ControlBarLabels,
     onEditingChange: (Boolean) -> Unit,
+    floating: Boolean = false,
 ) {
     ActionBox(
         label = if (editing) labels.editDone else labels.edit,
@@ -228,6 +231,7 @@ private fun EditBox(
         onClick = { onEditingChange(!editing) },
         shape = RoundedCornerShape(BUTTON_CORNER_DP.dp),
         wide = true,
+        floating = floating,
     )
 }
 
@@ -236,6 +240,7 @@ private fun EditBox(
 private fun AddBox(
     labels: ControlBarLabels,
     onAdd: () -> Unit,
+    floating: Boolean = false,
 ) {
     ActionBox(
         label = labels.add,
@@ -245,6 +250,7 @@ private fun AddBox(
         onClick = onAdd,
         shape = RoundedCornerShape(BUTTON_CORNER_DP.dp),
         wide = true,
+        floating = floating,
     )
 }
 
@@ -259,7 +265,7 @@ private fun EmptySlot(
         modifier =
             Modifier
                 .size(MapControlMetrics.TAP_TARGET_DP.dp)
-                .dashedRing(colors.faint, (MapControlMetrics.FAB_DP / 2).dp)
+                .dashedOutline(colors, (MapControlMetrics.FAB_DP / 2).dp)
                 .clickable(role = Role.Button, onClick = onAdd)
                 .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
@@ -286,14 +292,15 @@ fun MapQuickAccessButton(
     val base =
         modifier
             .size(QUICK_ACCESS_SIZE_DP.dp)
+            .then(if (isEditing) Modifier else Modifier.floatingSurface(colors, shape))
             .background(if (button == null) colors.glass else colors.surface, shape)
     Box(
         modifier =
             (
                 if (isEditing) {
-                    base.dashedRing(colors.faint, QUICK_ACCESS_SIZE_DP.dp / 2)
+                    base.dashedOutline(colors, QUICK_ACCESS_SIZE_DP.dp / 2)
                 } else {
-                    base.border(1.dp, colors.ring, shape)
+                    base
                 }
             ).clickable(role = Role.Button, onClick = onClick)
                 .semantics { contentDescription = button?.contentDescription ?: emptyDescription },
@@ -331,6 +338,7 @@ private fun ActionBox(
     onClick: () -> Unit,
     shape: RoundedCornerShape,
     wide: Boolean = false,
+    floating: Boolean = false,
 ) {
     val colors = LocalShellColors.current
     val drawnShape = if (wide) RoundedCornerShape(BUTTON_CORNER_DP.dp) else shape
@@ -356,9 +364,9 @@ private fun ActionBox(
         Box(
             modifier =
                 drawn
+                    .then(if (floating) Modifier.floatingSurface(colors, drawnShape) else Modifier)
                     .alpha(if (enabled) 1f else DISABLED_ALPHA)
-                    .background(colors.surface, drawnShape)
-                    .border(1.dp, colors.controlBorder, drawnShape),
+                    .background(colors.surface, drawnShape),
             contentAlignment = Alignment.Center,
         ) {
             if (icon == ControlIcon.Text) {

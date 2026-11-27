@@ -15,7 +15,6 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -182,6 +181,8 @@ import nl.r1a.grassmaps.plugin.ui.api.NavigationScreenState
 import nl.r1a.grassmaps.plugin.ui.api.ShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellIcon
 import nl.r1a.grassmaps.plugin.ui.api.ShellIcons
+import nl.r1a.grassmaps.plugin.ui.api.floatingSurface
+import nl.r1a.grassmaps.plugin.ui.api.sheetSurface
 import nl.r1a.grassmaps.plugins.downloads.ui.DownloadsScreenContent
 import nl.r1a.grassmaps.plugins.downloads.ui.DownloadsUiContract
 import nl.r1a.grassmaps.plugins.favourites.layer.FavouritesLayerController
@@ -3093,7 +3094,7 @@ private fun MapBottomBar(
                     if (inSheet) {
                         Modifier.background(colors.soft, shape)
                     } else {
-                        Modifier.background(colors.glass, shape).border(1.dp, colors.ring, shape)
+                        Modifier.floatingSurface(colors, shape).background(colors.glass, shape)
                     },
                 ).padding(horizontal = BAR_INSET_DP.dp)
                 .reportsBottomChrome(key = chromeKey),
@@ -3127,7 +3128,7 @@ private fun MapBottomBar(
         Spacer(
             Modifier
                 .size(DIVIDER_WIDTH_DP.dp, DIVIDER_HEIGHT_DP.dp)
-                .background(colors.ring)
+                .background(colors.line)
                 .clearAndSetSemantics {},
         )
         ProfileSwitchBar(
@@ -3689,9 +3690,9 @@ private fun DistanceBadge(
     Box(
         modifier =
             modifier
+                .sheetSurface(RoundedCornerShape(BANNER_CORNER_DP.dp))
                 .clip(RoundedCornerShape(BANNER_CORNER_DP.dp))
                 .background(colors.glass)
-                .border(1.dp, colors.ring, RoundedCornerShape(BANNER_CORNER_DP.dp))
                 .padding(horizontal = BANNER_HORIZONTAL_DP.dp, vertical = BANNER_VERTICAL_DP.dp)
                 // The badge appears once per two-finger tap, so a polite
                 // announcement cannot repeat with a camera frame.
@@ -3744,6 +3745,7 @@ private fun RegionProblemBanner(
     Box(
         modifier =
             modifier
+                .floatingSurface(colors, RoundedCornerShape(BANNER_CORNER_DP.dp))
                 .clip(RoundedCornerShape(BANNER_CORNER_DP.dp))
                 .background(colors.dangerSoft)
                 .padding(horizontal = BANNER_HORIZONTAL_DP.dp, vertical = BANNER_VERTICAL_DP.dp)
@@ -4028,8 +4030,8 @@ private fun NavigationPermissionNotice(
         modifier =
             modifier
                 .fillMaxWidth()
+                .floatingSurface(colors, RoundedCornerShape(12.dp))
                 .background(colors.surface, RoundedCornerShape(12.dp))
-                .border(1.dp, colors.muted.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
                 .padding(horizontal = 14.dp, vertical = 12.dp)
                 .semantics { liveRegion = LiveRegionMode.Polite },
         verticalArrangement = Arrangement.spacedBy(6.dp),

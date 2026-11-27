@@ -2,7 +2,6 @@ package nl.r1a.grassmaps.plugins.raster
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.drag
@@ -45,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.ui.api.LayerRowSpec
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.fieldOutline
 import kotlin.math.roundToInt
 
 internal val PANEL_BACKGROUND: Color
@@ -63,9 +63,6 @@ internal val FIELD_BACKGROUND: Color
     @Composable @ReadOnlyComposable
     get() = LocalShellColors.current.soft
 
-internal val FIELD_LINE: Color
-    @Composable @ReadOnlyComposable
-    get() = LocalShellColors.current.controlBorder
 internal const val PANEL_CORNER_DP = 8
 internal const val PANEL_HORIZONTAL_DP = 12
 internal const val PANEL_VERTICAL_DP = 8
@@ -116,7 +113,6 @@ fun RasterLayerPanel(
             modifier
                 .clip(shape)
                 .background(PANEL_BACKGROUND)
-                .border(1.dp, LocalShellColors.current.ring, shape)
                 .padding(horizontal = PANEL_HORIZONTAL_DP.dp, vertical = PANEL_VERTICAL_DP.dp),
         verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
     ) {
@@ -166,7 +162,7 @@ fun RasterLayerPanel(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(PANEL_CORNER_DP.dp))
                         .background(FIELD_BACKGROUND)
-                        .border(1.dp, FIELD_LINE, RoundedCornerShape(PANEL_CORNER_DP.dp))
+                        .fieldOutline(LocalShellColors.current, RoundedCornerShape(PANEL_CORNER_DP.dp))
                         .padding(horizontal = PANEL_GAP_DP.dp, vertical = PANEL_GAP_DP.dp),
                 textStyle = TextStyle(color = PANEL_FOREGROUND, fontSize = PANEL_FONT_SP.sp),
                 singleLine = true,

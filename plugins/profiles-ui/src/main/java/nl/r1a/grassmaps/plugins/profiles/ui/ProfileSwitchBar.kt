@@ -2,7 +2,6 @@ package nl.r1a.grassmaps.plugins.profiles.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -65,7 +64,6 @@ fun ProfileSwitchBar(
             modifier
                 .height(BAR_HEIGHT_DP.dp)
                 .background(palette.bar, RoundedCornerShape(BAR_CORNER_DP.dp))
-                .border(1.dp, palette.border, RoundedCornerShape(BAR_CORNER_DP.dp))
                 .padding(horizontal = BAR_INSET_DP.dp, vertical = DOT_INSET_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(DOT_GAP_DP.dp),
@@ -93,7 +91,7 @@ fun ProfileSwitchBar(
             modifier =
                 Modifier
                     .size(DIVIDER_WIDTH_DP.dp, DIVIDER_HEIGHT_DP.dp)
-                    .background(palette.border)
+                    .background(palette.divider)
                     .clearAndSetSemantics {},
         )
         val allSelected = items.none { it.selected }

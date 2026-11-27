@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -53,6 +53,9 @@ import nl.r1a.grassmaps.app.backup.BackupUiState
 import nl.r1a.grassmaps.core.services.backup.BundleConflictChoice
 import nl.r1a.grassmaps.plugin.api.error.AppError
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.fieldOutline
+import nl.r1a.grassmaps.plugin.ui.api.floatingSurface
+import nl.r1a.grassmaps.plugin.ui.api.switchOutline
 
 private val SURFACE: Color
     @Composable get() = LocalShellColors.current.map
@@ -65,9 +68,6 @@ private val MUTED: Color
 
 private val ACCENT: Color
     @Composable get() = LocalShellColors.current.accent
-
-private val BORDER: Color
-    @Composable get() = LocalShellColors.current.line
 
 private val DANGER: Color
     @Composable get() = LocalShellColors.current.danger
@@ -344,8 +344,8 @@ private fun ConflictCard(
                 Modifier
                     .fillMaxWidth()
                     .height(CARD_MAX_HEIGHT_DP.dp)
+                    .floatingSurface(LocalShellColors.current, RectangleShape)
                     .background(CARD)
-                    .border(1.dp, BORDER)
                     .padding(16.dp),
         ) {
             BasicText(
@@ -370,7 +370,7 @@ private fun ConflictCard(
                     modifier =
                         Modifier
                             .size(20.dp)
-                            .border(1.dp, if (applyAll) ACCENT else MUTED)
+                            .switchOutline(LocalShellColors.current, applyAll, RectangleShape)
                             .background(if (applyAll) ACCENT else CARD),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -438,7 +438,7 @@ private fun ValueBlock(
                     .fillMaxWidth()
                     .padding(top = 4.dp)
                     .background(SURFACE)
-                    .border(1.dp, BORDER)
+                    .fieldOutline(LocalShellColors.current, RectangleShape)
                     .padding(8.dp)
                     .verticalScroll(rememberScrollState()),
         ) {

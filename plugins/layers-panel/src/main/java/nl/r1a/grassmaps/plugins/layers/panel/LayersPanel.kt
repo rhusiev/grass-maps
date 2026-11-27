@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.plugins.layers.panel
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +31,7 @@ import nl.r1a.grassmaps.plugin.ui.api.LayerStyleRow
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellColors
 import nl.r1a.grassmaps.plugin.ui.api.StyleSwatch
+import nl.r1a.grassmaps.plugin.ui.api.floatingSurface
 import nl.r1a.grassmaps.plugin.ui.api.layerStyleRows
 
 private const val BUTTON_CORNER_DP = 8
@@ -71,9 +71,9 @@ fun LayersButton(
         style = TextStyle(color = colors.ink, fontSize = BUTTON_FONT_SP.sp),
         modifier =
             modifier
+                .floatingSurface(colors, shape)
                 .clip(shape)
                 .background(colors.glass)
-                .border(1.dp, colors.ring, shape)
                 .toggleable(
                     value = open,
                     role = Role.Button,
@@ -105,7 +105,6 @@ fun MapStylePanel(
             modifier
                 .clip(shape)
                 .background(colors.surface)
-                .border(1.dp, colors.ring, shape)
                 .padding(horizontal = PANEL_HORIZONTAL_DP.dp, vertical = PANEL_VERTICAL_DP.dp),
         verticalArrangement = Arrangement.spacedBy(PANEL_GAP_DP.dp),
     ) {
@@ -197,7 +196,6 @@ private fun MoreRow(
             Modifier
                 .fillMaxWidth()
                 .clip(shape)
-                .border(1.dp, colors.controlBorder, shape)
                 .clickable(role = Role.Button, onClick = onClick)
                 .heightIn(min = LayerRowSpec.ROW_MIN_HEIGHT_DP.dp)
                 .padding(horizontal = PANEL_GAP_DP.dp),

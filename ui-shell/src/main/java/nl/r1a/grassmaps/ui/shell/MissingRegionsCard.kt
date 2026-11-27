@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,6 +27,8 @@ import nl.r1a.grassmaps.plugin.api.model.MissingRegion
 import nl.r1a.grassmaps.plugin.api.model.MissingRegions
 import nl.r1a.grassmaps.plugin.api.model.MissingRegionsDownload
 import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.alertOutline
 import java.util.Locale
 
 private const val CARD_CORNER_DP = 10
@@ -86,6 +87,7 @@ internal fun MissingRegionsCard(
             Modifier
                 .fillMaxWidth()
                 .background(ROUTE_WARNING_BACKGROUND, RoundedCornerShape(CARD_CORNER_DP.dp))
+                .alertOutline(LocalShellColors.current, RoundedCornerShape(CARD_CORNER_DP.dp))
                 .padding(CARD_PADDING_DP.dp),
         verticalArrangement = Arrangement.spacedBy(CARD_GAP_DP.dp),
     ) {
@@ -219,11 +221,7 @@ private fun CardButton(
             Modifier
                 .heightIn(min = MIN_TAP_TARGET_DP.dp)
                 .background(background, RoundedCornerShape(BUTTON_CORNER_DP.dp))
-                .border(
-                    1.dp,
-                    if (primary) ROUTE_ACTION_COLOR else ROUTE_CONTROL_BORDER,
-                    RoundedCornerShape(BUTTON_CORNER_DP.dp),
-                ).clickable(onClick = onClick)
+                .clickable(onClick = onClick)
                 .padding(horizontal = BUTTON_PADDING_HORIZONTAL_DP.dp, vertical = BUTTON_PADDING_VERTICAL_DP.dp),
     )
 }

@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,7 +42,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.chipOutline
 import nl.r1a.grassmaps.plugin.ui.api.inkOn
+import nl.r1a.grassmaps.plugin.ui.api.selectedSegment
+import nl.r1a.grassmaps.plugin.ui.api.sheetSurface
+import nl.r1a.grassmaps.plugin.ui.api.switchOutline
 
 /** The two tabs of the map layout sheet (T-0606). */
 enum class MapLayoutTab {
@@ -148,8 +151,8 @@ fun MapLayoutSheet(
         modifier =
             modifier
                 .fillMaxWidth()
+                .sheetSurface(RoundedCornerShape(topStart = SHEET_CORNER_DP.dp, topEnd = SHEET_CORNER_DP.dp))
                 .background(colors.surface, RoundedCornerShape(topStart = SHEET_CORNER_DP.dp, topEnd = SHEET_CORNER_DP.dp))
-                .border(1.dp, colors.ring, RoundedCornerShape(topStart = SHEET_CORNER_DP.dp, topEnd = SHEET_CORNER_DP.dp))
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = SHEET_PADDING_DP.dp)
@@ -266,6 +269,7 @@ private fun TabButton(
         modifier =
             modifier
                 .height(TAB_HEIGHT_DP.dp)
+                .then(if (selected) Modifier.selectedSegment(shape) else Modifier)
                 .clip(shape)
                 .background(if (selected) colors.selectedChip else colors.soft, shape)
                 .selectable(selected = selected, role = Role.Tab, onClick = onClick)
@@ -426,6 +430,7 @@ private fun WidgetChip(
                 .height(CHIP_HEIGHT_DP.dp)
                 .clip(shape)
                 .background(colors.soft, shape)
+                .chipOutline(colors, shape)
                 .alpha(if (item.shown) SHOWN_ALPHA else 1f)
                 .clickable(role = Role.Button) { onItem(item) }
                 .semantics {
@@ -538,6 +543,7 @@ private fun QuickAccessChoice(
             Modifier
                 .height(CHIP_HEIGHT_DP.dp)
                 .background(colors.soft, shape)
+                .chipOutline(colors, shape)
                 .clip(shape)
                 .clickable(role = Role.Button, onClick = onClick)
                 .semantics { contentDescription = description }
@@ -594,11 +600,7 @@ private fun ShellSwitch(on: Boolean) {
             Modifier
                 .size(SWITCH_WIDTH_DP.dp, SWITCH_HEIGHT_DP.dp)
                 .background(if (on) colors.accent else colors.soft, RoundedCornerShape(SWITCH_RADIUS_DP.dp))
-                .border(
-                    SWITCH_BORDER_DP.dp,
-                    if (on) colors.accent else colors.controlBorder,
-                    RoundedCornerShape(SWITCH_RADIUS_DP.dp),
-                ),
+                .switchOutline(colors, on, RoundedCornerShape(SWITCH_RADIUS_DP.dp)),
     ) {
         Box(
             modifier =

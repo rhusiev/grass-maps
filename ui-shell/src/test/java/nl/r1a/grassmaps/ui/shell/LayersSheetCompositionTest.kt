@@ -5,6 +5,7 @@ import nl.r1a.grassmaps.plugin.ui.api.LayerRowSpec
 import nl.r1a.grassmaps.plugin.ui.api.LayerStyleOption
 import nl.r1a.grassmaps.plugin.ui.api.StyleSwatch
 import nl.r1a.grassmaps.plugin.ui.api.layerStyleRows
+import nl.r1a.grassmaps.plugin.ui.api.switchOutline
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -99,9 +100,9 @@ class LayersSheetCompositionTest {
     @Test
     fun styleRadioAlwaysDrawsARingAndAddsADotOnlyWhenSelected() {
         val radio = sheetSource().substringAfter("private fun LayerStyleRadio(")
-        assertTrue(radio.contains(".border(CONTROL_STROKE_DP.dp, color, CircleShape)"))
+        assertTrue(radio.contains(".switchOutline(colors, selected, CircleShape)"))
         assertTrue(radio.contains("if (selected)"))
-        assertTrue(radio.contains(".background(color, CircleShape)"))
+        assertTrue(radio.contains(".background(colors.accent, CircleShape)"))
     }
 
     @Test
@@ -112,7 +113,7 @@ class LayersSheetCompositionTest {
         assertFalse("full-width radio rows are gone", choices.contains("Column(Modifier.selectableGroup())"))
         assertTrue("the choices sit in one horizontal row", choices.contains("Row("))
         assertTrue(choices.contains("horizontalArrangement = Arrangement.spacedBy"))
-        assertTrue("the More tile has a dashed outline", choices.contains("dashedRing("))
+        assertTrue("the More tile has a dashed outline", choices.contains("dashedOutline("))
         assertTrue("the preview draws a dashed trail", choices.contains("PathEffect.dashPathEffect"))
         assertTrue("the selection command survives the layout", choices.contains("onSelect(index)"))
         assertTrue("the selected ring and dot survive the layout", choices.contains("LayerStyleRadio(row.selected)"))

@@ -2,16 +2,7 @@ package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.inkOn
 
@@ -41,11 +32,6 @@ internal val ROUTE_DISABLED_COLOR: Color
 internal val ROUTE_CHIP_COLOR: Color
     @Composable @ReadOnlyComposable
     get() = LocalShellColors.current.soft
-
-/** The outline of a quiet chip, field or button whose fill is only tonal. */
-internal val ROUTE_CONTROL_BORDER: Color
-    @Composable @ReadOnlyComposable
-    get() = LocalShellColors.current.controlBorder
 
 /** A selected chip inverts to the ink fill. */
 internal val ROUTE_CHIP_SELECTED_COLOR: Color
@@ -80,10 +66,6 @@ internal val ROUTE_WARNING_BACKGROUND: Color
     @Composable @ReadOnlyComposable
     get() = LocalShellColors.current.warning.surface
 
-internal val ROUTE_WARNING_BORDER: Color
-    @Composable @ReadOnlyComposable
-    get() = LocalShellColors.current.warning.border
-
 internal val ROUTE_WARNING_TITLE_COLOR: Color
     @Composable @ReadOnlyComposable
     get() = LocalShellColors.current.warning.title
@@ -101,30 +83,5 @@ internal val ROUTE_WARNING_ICON_BACKGROUND: Color
 internal val ROUTE_WARNING_ICON_COLOR: Color
     @Composable @ReadOnlyComposable
     get() = LocalShellColors.current.warning.title
-
-/**
- * A dashed rounded outline for a free layout slot (T-0606). It draws inside
- * the element's bounds, so the slot keeps its measured size.
- */
-internal fun Modifier.dashedRing(
-    color: Color,
-    corner: Dp,
-    stroke: Dp = 1.dp,
-): Modifier =
-    drawBehind {
-        val strokePx = stroke.toPx()
-        val half = strokePx / 2f
-        drawRoundRect(
-            color = color,
-            topLeft = Offset(half, half),
-            size = Size(size.width - strokePx, size.height - strokePx),
-            cornerRadius = CornerRadius(corner.toPx().coerceAtMost(size.minDimension / 2f)),
-            style =
-                Stroke(
-                    width = strokePx,
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(strokePx * 3f, strokePx * 2f)),
-                ),
-        )
-    }
 
 private const val WARNING_ICON_ALPHA = 0.2f

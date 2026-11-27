@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,7 +53,9 @@ import nl.r1a.grassmaps.plugin.api.unit.UnitText
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartAxis
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartRange
 import nl.r1a.grassmaps.plugin.ui.api.ElevationChartState
+import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.RouteTurnStep
+import nl.r1a.grassmaps.plugin.ui.api.fieldOutline
 import java.util.Locale
 
 private const val PANEL_ROW_GAP_DP = 8
@@ -524,7 +525,7 @@ private fun CoordinateEntry(
                 Modifier
                     .fillMaxWidth()
                     .background(ROUTE_CHIP_COLOR, RoundedCornerShape(CHIP_CORNER_DP.dp))
-                    .border(1.dp, ROUTE_CONTROL_BORDER, RoundedCornerShape(CHIP_CORNER_DP.dp))
+                    .fieldOutline(LocalShellColors.current, RoundedCornerShape(CHIP_CORNER_DP.dp))
                     .padding(FIELD_PADDING_DP.dp)
                     .widthIn(min = FIELD_MIN_WIDTH_DP.dp),
         ) {
@@ -735,7 +736,6 @@ internal fun ActionChip(
         modifier =
             Modifier
                 .background(background, shape)
-                .border(1.dp, if (primary) ROUTE_ACTION_COLOR else ROUTE_CONTROL_BORDER, shape)
                 .clickable(role = Role.Button, onClick = onClick)
                 .sizeIn(minWidth = CONTROL_TARGET_DP.dp, minHeight = CONTROL_TARGET_DP.dp)
                 .padding(
@@ -827,7 +827,6 @@ internal fun RoutePlanBottomBar(
                         .weight(if (action.primary) START_CHIP_WEIGHT else 1f)
                         .heightIn(min = BAR_BUTTON_HEIGHT_DP.dp)
                         .background(if (action.primary) ROUTE_ACTION_COLOR else ROUTE_CHIP_COLOR, shape)
-                        .border(1.dp, if (action.primary) ROUTE_ACTION_COLOR else ROUTE_CONTROL_BORDER, shape)
                         .semantics { contentDescription = label }
                         .clickable(role = Role.Button, onClick = { onAction(action) })
                         .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp, vertical = CHIP_PADDING_VERTICAL_DP.dp),
@@ -903,7 +902,6 @@ private fun OpenDownloadsButton(
         modifier =
             Modifier
                 .background(ROUTE_CHIP_COLOR, RoundedCornerShape(CHIP_CORNER_DP.dp))
-                .border(1.dp, ROUTE_CONTROL_BORDER, RoundedCornerShape(CHIP_CORNER_DP.dp))
                 .semantics { contentDescription = label }
                 .clickable(role = Role.Button, onClick = onClick)
                 .sizeIn(minWidth = CONTROL_TARGET_DP.dp, minHeight = CONTROL_TARGET_DP.dp)

@@ -1,7 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,6 +55,8 @@ import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellColors
 import nl.r1a.grassmaps.plugin.ui.api.ShellIcon
 import nl.r1a.grassmaps.plugin.ui.api.ShellIcons
+import nl.r1a.grassmaps.plugin.ui.api.chipOutline
+import nl.r1a.grassmaps.plugin.ui.api.floatingSurface
 import kotlin.math.roundToLong
 
 /** The expanded card opens in the bottom thumb area, just above the keyboard. */
@@ -199,8 +200,8 @@ fun SearchScreenHost(
                         cardModifier
                             .align(SEARCH_EXPANDED_ANCHOR)
                             .widthIn(max = PANEL_MAX_WIDTH_DP.dp)
+                            .floatingSurface(colors, RoundedCornerShape(PANEL_CORNER_DP.dp))
                             .background(colors.surface, RoundedCornerShape(PANEL_CORNER_DP.dp))
-                            .border(1.dp, colors.controlBorder, RoundedCornerShape(PANEL_CORNER_DP.dp))
                             .heightIn(max = PANEL_MAX_HEIGHT_DP.dp)
                             .padding(PANEL_PADDING_DP.dp),
                     verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
@@ -302,7 +303,6 @@ fun SearchScreenHost(
                                     .weight(WEIGHT_ONE)
                                     .focusRequester(focusRequester)
                                     .background(colors.soft, RoundedCornerShape(FIELD_CORNER_DP.dp))
-                                    .border(1.dp, colors.controlBorder, RoundedCornerShape(FIELD_CORNER_DP.dp))
                                     .padding(FIELD_PADDING_DP.dp)
                                     .semantics { contentDescription = content.labels.hint },
                         )
@@ -467,7 +467,6 @@ private fun NoticeActionButton(
                 .fillMaxWidth()
                 .heightIn(min = MIN_TAP_TARGET_DP.dp)
                 .background(colors.soft, RoundedCornerShape(ACTION_CORNER_DP.dp))
-                .border(1.dp, colors.controlBorder, RoundedCornerShape(ACTION_CORNER_DP.dp))
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(horizontal = ACTION_PADDING_DP.dp)
                 .wrapContentHeight(Alignment.CenterVertically),
@@ -493,7 +492,7 @@ private fun SearchChip(
         Modifier
             .heightIn(min = CHIP_HEIGHT_DP.dp)
             .background(colors.soft, shape)
-            .border(1.dp, colors.controlBorder, shape)
+            .chipOutline(colors, shape)
             .padding(horizontal = ACTION_PADDING_DP.dp)
             .wrapContentHeight(Alignment.CenterVertically)
     val pressable =

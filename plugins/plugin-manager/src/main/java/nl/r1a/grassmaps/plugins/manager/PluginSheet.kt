@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.api.contract.PluginId
 import nl.r1a.grassmaps.plugin.api.manifest.LocationNeed
+import nl.r1a.grassmaps.plugin.ui.api.sheetSurface
 
 /**
  * The sheet of one plugin: what it is, what it adds, what it needs, and the
@@ -45,6 +46,7 @@ internal fun PluginSheet(
                 Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
+                    .sheetSurface(RoundedCornerShape(topStart = SHEET_CORNER_DP.dp, topEnd = SHEET_CORNER_DP.dp))
                     .clip(RoundedCornerShape(topStart = SHEET_CORNER_DP.dp, topEnd = SHEET_CORNER_DP.dp))
                     .background(CARD)
                     .navigationBarsPadding()

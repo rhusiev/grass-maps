@@ -1,6 +1,5 @@
 package nl.r1a.grassmaps.ui.shell
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -42,6 +41,8 @@ import nl.r1a.grassmaps.plugin.api.model.UnitSystem
 import nl.r1a.grassmaps.plugin.api.service.Strings
 import nl.r1a.grassmaps.plugin.api.unit.UnitText
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.sheetSurface
+import nl.r1a.grassmaps.plugin.ui.api.switchOutline
 import java.util.Locale
 import kotlin.math.roundToLong
 
@@ -162,6 +163,7 @@ fun FollowTrackSheet(
                     .fillMaxWidth()
                     .widthIn(max = SHEET_MAX_WIDTH_DP.dp)
                     .reportsBottomChrome(key = BOTTOM_SHEET_KEY)
+                    .sheetSurface(RoundedCornerShape(SHEET_CORNER_DP.dp))
                     .background(colors.surface, RoundedCornerShape(SHEET_CORNER_DP.dp))
                     .navigationBarsPadding()
                     .padding(horizontal = SHEET_PADDING_DP.dp)
@@ -284,16 +286,11 @@ private fun StartRow(
             modifier =
                 Modifier
                     .size(RADIO_DP.dp)
+                    .switchOutline(LocalShellColors.current, row.selected, CircleShape)
                     .semantics { contentDescription = row.label },
             contentAlignment = Alignment.Center,
         ) {
             Canvas(Modifier.fillMaxSize()) {
-                val radius = size.minDimension / 2f - RADIO_BORDER / 2f
-                drawCircle(
-                    color = if (row.selected) colors.accent else colors.textSecondary,
-                    radius = radius,
-                    style = Stroke(width = RADIO_BORDER),
-                )
                 if (row.selected) {
                     drawCircle(color = colors.accent, radius = size.minDimension * RADIO_DOT_RATIO)
                 }
@@ -401,7 +398,6 @@ private const val ROW_LABEL_FONT_SP = 15
 private const val ROW_HINT_FONT_SP = 13
 private const val RADIO_DP = 22
 private const val RADIO_DOT_RATIO = 0.22f
-private const val RADIO_BORDER = 2f
 private const val START_TOP_DP = 10
 private const val START_CORNER_DP = 25
 private const val START_PADDING_VERTICAL_DP = 14

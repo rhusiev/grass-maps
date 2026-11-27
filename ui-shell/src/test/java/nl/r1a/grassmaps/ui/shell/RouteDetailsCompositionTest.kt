@@ -33,6 +33,16 @@ class RouteDetailsCompositionTest {
     }
 
     @Test
+    fun elevationAxisLabelsGrowWithoutWrappingAtFontTwo() {
+        val chart = File("src/main/java/nl/r1a/grassmaps/ui/shell/ElevationChart.kt").readText()
+        val yLabels = chart.substringAfter("content.yTicks.forEach { tick ->").substringBefore("\n                }")
+
+        assertTrue("the y-axis column is fixed", chart.contains(".widthIn(min = Y_LABEL_WIDTH_DP.dp)"))
+        assertTrue("the y-axis label still wraps at font 2.0", yLabels.contains("softWrap = false"))
+        assertTrue("an exact y-axis width came back", !chart.contains(".width(Y_LABEL_WIDTH_DP.dp)"))
+    }
+
+    @Test
     fun colourSelectionStaysInTheGenericChartForTrackAnalysis() {
         val chart = File("src/main/java/nl/r1a/grassmaps/ui/shell/ElevationChart.kt").readText()
         assertTrue("the generic chart still draws its colour chips", "content.colours.forEach" in chart)

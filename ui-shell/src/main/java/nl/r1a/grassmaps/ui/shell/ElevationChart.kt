@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -343,14 +344,18 @@ fun ElevationChart(
             Column(
                 modifier =
                     Modifier
-                        .width(Y_LABEL_WIDTH_DP.dp)
+                        .widthIn(min = Y_LABEL_WIDTH_DP.dp)
                         .height(PLOT_HEIGHT_DP.dp)
                         .padding(end = LABEL_GAP_DP.dp),
                 verticalArrangement = Arrangement.SpaceBetween,
                 horizontalAlignment = Alignment.End,
             ) {
                 content.yTicks.forEach { tick ->
-                    BasicText(text = tick.label, style = TextStyle(color = palette.label, fontSize = LABEL_FONT_SP.sp))
+                    BasicText(
+                        text = tick.label,
+                        style = TextStyle(color = palette.label, fontSize = LABEL_FONT_SP.sp),
+                        softWrap = false,
+                    )
                 }
             }
             val drag =

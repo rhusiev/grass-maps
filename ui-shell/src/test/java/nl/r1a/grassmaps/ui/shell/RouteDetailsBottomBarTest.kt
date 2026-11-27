@@ -53,6 +53,18 @@ class RouteDetailsBottomBarTest {
     }
 
     @Test
+    fun theBarLabelsDoNotWrapAtFontTwo() {
+        val bar = panel().substringAfter("internal fun RoutePlanBottomBar(").substringBefore("\n}\n")
+
+        assertTrue(
+            "Hide details still takes a fixed share of the bar",
+            bar.contains("Modifier.widthIn(min = MapControlMetrics.TAP_TARGET_DP.dp)"),
+        )
+        assertTrue("the primary no longer fills the remaining width", bar.contains("Modifier.weight(1f)"))
+        assertTrue("the bar lost its 48 dp minimum", ".heightIn(min = BAR_BUTTON_HEIGHT_DP.dp)" in bar)
+    }
+
+    @Test
     fun theJourneyHeaderGroupingAndWarningRowsAreUntouched() {
         val panel = panel()
 

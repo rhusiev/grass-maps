@@ -69,9 +69,6 @@ private const val CONTROL_FONT_SP = 20
 private const val CONTROL_TARGET_DP = 48
 private const val RECENT_LIMIT = 5
 
-/** A primary action takes the wider share of its row in the pinned bar. */
-private const val START_CHIP_WEIGHT = 1.4f
-
 /** The design language's button: 50 dp high and fully round. */
 private const val BAR_BUTTON_HEIGHT_DP = 50
 private const val BAR_BUTTON_CORNER_DP = BAR_BUTTON_HEIGHT_DP / 2
@@ -827,8 +824,16 @@ internal fun RoutePlanBottomBar(
             Box(
                 modifier =
                     Modifier
-                        .weight(if (action.primary) START_CHIP_WEIGHT else 1f)
-                        .heightIn(min = BAR_BUTTON_HEIGHT_DP.dp)
+                        // Only the primary fills the rest. A secondary action
+                        // sizes to its label, so "Hide details" stays on one
+                        // line when the font scale doubles.
+                        .then(
+                            if (action.primary) {
+                                Modifier.weight(1f)
+                            } else {
+                                Modifier.widthIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
+                            },
+                        ).heightIn(min = BAR_BUTTON_HEIGHT_DP.dp)
                         .background(if (action.primary) ROUTE_ACTION_COLOR else ROUTE_CHIP_COLOR, shape)
                         .semantics { contentDescription = description }
                         .clickable(role = Role.Button, onClick = { onAction(action) })

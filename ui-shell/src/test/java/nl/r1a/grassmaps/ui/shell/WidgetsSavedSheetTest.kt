@@ -20,7 +20,6 @@ class WidgetsSavedSheetTest {
     fun theSheetReusesTheOneShellChrome() {
         assertTrue("the sheet does not use the shared bottom-sheet chrome", sheet.contains("ShellBottomSheet("))
         assertTrue("the sheet draws its own scrim", !sheet.contains("colors.scrim"))
-
         assertTrue(
             "the handle is not the sheet's dismiss control",
             sheet.contains("handleLabel = stringResource(R.string.map_sheet_close)"),

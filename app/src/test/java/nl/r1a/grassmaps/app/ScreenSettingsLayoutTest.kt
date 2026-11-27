@@ -69,7 +69,7 @@ class ScreenSettingsLayoutTest {
                 override fun contains(key: String): Boolean = true
             }
 
-        fun detail(sun: String) =
+        fun detail(sun: String?) =
             screenSettingsContent(
                 nl.r1a.grassmaps.core.services.ScreenSettingsPageState(
                     values =
@@ -83,7 +83,7 @@ class ScreenSettingsLayoutTest {
             ).rows.first { it.key == SCREEN_ROW_NIGHT_SUN }.detail
 
         assertEquals("[settings.row.night_sun_detail|20:12]", detail("20:12"))
-        assertEquals("[settings.row.night_sun_detail_unknown|]", detail("—"))
+        assertEquals("[settings.row.night_sun_detail_unknown|]", detail(null))
         assertEquals("[settings.row.night_sun_detail_unknown|]", detail(""))
     }
 

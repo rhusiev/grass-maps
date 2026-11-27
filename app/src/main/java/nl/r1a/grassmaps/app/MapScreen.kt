@@ -2682,7 +2682,7 @@ private fun MapContent(
                 remember(sunTimes) {
                     sunTimes?.let {
                         DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()).format(it.sunset)
-                    } ?: "—"
+                    }
                 }
             val pageState =
                 remember(screenSettings, systemDark, sunSummary) {

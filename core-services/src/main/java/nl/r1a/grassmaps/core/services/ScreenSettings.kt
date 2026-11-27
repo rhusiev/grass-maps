@@ -117,12 +117,15 @@ fun uiLocale(
     systemLocale: Locale,
 ): Locale = language.localeTag?.let(Locale::forLanguageTag) ?: systemLocale
 
-/** What the settings page shows; it holds no state and never writes a store. */
+/**
+ * What the settings page shows; it holds no state and never writes a store.
+ * [sunSummary] is null when no sunset time is available, not a sentinel string.
+ */
 data class ScreenSettingsPageState(
     val values: ScreenSettingsValues,
     val systemDark: Boolean,
     val profileLabel: String,
-    val sunSummary: String,
+    val sunSummary: String?,
 )
 
 /**

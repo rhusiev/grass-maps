@@ -47,6 +47,10 @@ class SavedVisibilityWiringTest {
             "the lists host does not accept the persisted hidden groups",
             Regex("hiddenGroups: Set<String>").containsMatchIn(signature(listsHost, "FavouritesListsHost(")),
         )
+        assertFalse(
+            "the lists host silently ignores an eye tap",
+            signature(listsHost, "FavouritesListsHost(").contains("onToggleGroupShown: (String, Boolean) -> Unit ="),
+        )
 
         val sectionCall = callBlock(listsHost, "SavedScreenSection(")
         assertTrue(

@@ -67,8 +67,9 @@ internal fun selectedPlacePosition(
  * The screen fills the window with a back chevron and opens the panels over
  * a scrim.
  *
- * [onShowOnMap] receives the selected place's coordinates. It has no default:
- * the app supplies the camera action, so an unwired screen cannot compile.
+ * [onShowOnMap] receives the selected place's coordinates and
+ * [onToggleGroupShown] writes an eye tap to the persisted store. Neither has a
+ * default: the app supplies both actions, so an unwired screen cannot compile.
  * [onOpenTracks] opens the track library from the Tracks segment; without it
  * the segment shows where saved tracks are.
  */
@@ -86,7 +87,7 @@ fun FavouritesListsHost(
     onQueryChange: (String) -> Unit,
     onSortChange: (FavouriteSort) -> Unit,
     onClose: () -> Unit,
-    onToggleGroupShown: (String, Boolean) -> Unit = { _, _ -> },
+    onToggleGroupShown: (String, Boolean) -> Unit,
     onShowOnMap: (GeoPoint) -> Unit,
     onOpenTracks: (() -> Unit)? = null,
     modifier: Modifier = Modifier,

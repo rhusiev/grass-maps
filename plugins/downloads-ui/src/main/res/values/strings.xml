@@ -4,6 +4,7 @@
     <string name="plugin.downloads_ui.description">Shows the map server, its regions and their parts, and downloads them.</string>
 
     <string name="downloads_title">Map downloads</string>
+    <string name="downloads_switch_label">Use map downloads</string>
     <string name="downloads_first_run_title">Download to start</string>
     <string name="downloads_on_this_phone">On this phone</string>
     <string name="downloads_available">Available</string>

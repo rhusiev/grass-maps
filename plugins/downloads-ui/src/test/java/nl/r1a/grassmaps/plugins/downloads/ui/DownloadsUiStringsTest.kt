@@ -81,6 +81,19 @@ class DownloadsUiStringsTest {
     }
 
     @Test
+    fun theScreenTitleIsDrawnOnceAndTheSwitchNamesItsOwnAction() {
+        val screen = File("src/main/java/nl/r1a/grassmaps/plugins/downloads/ui/DownloadsScreenContent.kt").readText()
+
+        assertEquals(1, Regex("""stringResource\(R\.string\.downloads_title\)""").findAll(screen).count())
+        assertTrue("the switch still reuses the screen title", screen.contains("label = stringResource(R.string.downloads_switch_label)"))
+        for (path in listOf(ENGLISH, UKRAINIAN)) {
+            val value = resources(path).getValue("downloads_switch_label")
+            assertTrue("$path: the switch label is blank", value.isNotBlank())
+            assertFalse("$path: the switch repeats the screen title", value == resources(path).getValue("downloads_title"))
+        }
+    }
+
+    @Test
     fun theMapOverviewIsNotAButton() {
         for (path in listOf(ENGLISH, UKRAINIAN)) {
             val description = resources(path).getValue("downloads_map_description")
@@ -110,6 +123,7 @@ class DownloadsUiStringsTest {
                 "plugin.downloads_ui.name",
                 "plugin.downloads_ui.description",
                 "downloads_title",
+                "downloads_switch_label",
                 "downloads_first_run_title",
                 "downloads_world_overview",
                 "downloads_region_detail",

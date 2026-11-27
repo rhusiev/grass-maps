@@ -925,7 +925,7 @@ private fun DownloadsSwitchRow(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     SettingsSwitch(
-        label = stringResource(R.string.downloads_title),
+        label = stringResource(R.string.downloads_switch_label),
         checked = checked,
         onCheckedChange = onCheckedChange,
     ) {

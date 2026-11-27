@@ -4,6 +4,7 @@
     <string name="plugin.downloads_ui.description">Показує сервер карт, його регіони та їхні частини й завантажує їх.</string>
 
     <string name="downloads_title">Завантаження карт</string>
+    <string name="downloads_switch_label">Використовувати завантаження карт</string>
     <string name="downloads_first_run_title">Завантажити для початку</string>
     <string name="downloads_on_this_phone">На цьому телефоні</string>
     <string name="downloads_available">Доступні</string>

@@ -70,7 +70,7 @@ cd "$ROOT"
 
 if [[ -z "${GRASS_MAPS_IN_BUILD_SLOT:-}" && -z "${CI:-}" ]] && command -v agent-lock >/dev/null 2>&1; then
     export GRASS_MAPS_IN_BUILD_SLOT=1
-    exec agent-lock run gm-build --timeout 30m -- "$0" "$@"
+    exec agent-lock run gm-build --timeout 55m -- "$0" "$@"
 fi
 
 script_start=$SECONDS

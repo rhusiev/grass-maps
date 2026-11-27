@@ -13,7 +13,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The T-0214 browse resolver: search, sort labels and rendered description rows. */
+/** The T-0214 browse resolver: sort labels and rendered description rows. */
 class FavouritesBrowseContentTest {
     @Test
     fun theControlsAndRowsUseTheActiveLanguage() {
@@ -40,8 +40,6 @@ class FavouritesBrowseContentTest {
 
         val content = favouritesBrowseContent(state, MapStrings(UKRAINIAN))
 
-        assertEquals("Пошук у збереженому", content.search)
-        assertEquals("Назва або опис", content.searchHint)
         assertEquals("Сортування", content.sort)
         assertEquals(4, content.sorts.size)
         assertEquals("Назва А-Я", content.sorts.single { it.selected }.label)
@@ -120,8 +118,6 @@ class FavouritesBrowseContentTest {
     private companion object {
         val ENGLISH =
             mapOf(
-                SEARCH_KEY to "Search saved",
-                SEARCH_HINT_KEY to "Name or description",
                 SORT_KEY to "Sort",
                 SORT_INSERTION_KEY to "File order",
                 SORT_NAME_ASCENDING_KEY to "Name A-Z",
@@ -135,8 +131,6 @@ class FavouritesBrowseContentTest {
 
         val UKRAINIAN =
             mapOf(
-                SEARCH_KEY to "Пошук у збереженому",
-                SEARCH_HINT_KEY to "Назва або опис",
                 SORT_KEY to "Сортування",
                 SORT_INSERTION_KEY to "Порядок файлу",
                 SORT_NAME_ASCENDING_KEY to "Назва А-Я",

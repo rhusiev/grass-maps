@@ -5,14 +5,6 @@ import nl.r1a.grassmaps.plugin.api.model.FavouriteSort
 import nl.r1a.grassmaps.plugin.api.model.FavouriteSpecial
 import nl.r1a.grassmaps.plugin.api.service.Strings
 
-/** One list row: its name, swatch colour, icon and member count. */
-data class FavouritesListRow(
-    val name: String,
-    val color: Long?,
-    val icon: String?,
-    val pointCount: Int,
-)
-
 /**
  * One point row: its list, its Home or Work label when it has one, and its
  * sanitised description when the note is not empty (T-0214).
@@ -40,8 +32,6 @@ data class FavouritesSortRow(
  * description arrives as plain text and draws exactly as before.
  */
 data class FavouritesBrowseContent(
-    val search: String,
-    val searchHint: String,
     val sort: String,
     val sorts: List<FavouritesSortRow>,
     val points: List<FavouritesPointRow>,
@@ -49,20 +39,14 @@ data class FavouritesBrowseContent(
 )
 
 /**
- * The lists sheet with every label resolved (T-0213).
- *
- * The sheet is a shell screen over `favourites.ui`'s stream; this resolver keeps
- * the language decision out of the composable so a JVM test can prove each row
- * uses the active language and that a point with no list still reads sensibly.
+ * The close and undo controls of the lists sheet (T-0213). The sheet draws the
+ * list and its points from the browse resolver; this resolver only keeps the
+ * language decision for the controls out of the composable.
  */
 data class FavouritesListsContent(
-    val title: String,
     val close: String,
     val undo: String,
     val undoAvailable: Boolean,
-    val empty: String?,
-    val lists: List<FavouritesListRow>,
-    val points: List<FavouritesPointRow>,
 )
 
 fun favouritesListsContent(
@@ -70,29 +54,9 @@ fun favouritesListsContent(
     strings: Strings,
 ): FavouritesListsContent =
     FavouritesListsContent(
-        title = strings.resolve(TITLE_KEY),
         close = strings.resolve(CLOSE_KEY),
         undo = strings.resolve(UNDO_KEY),
         undoAvailable = state.undoAvailable,
-        empty = if (state.lists.isEmpty()) strings.resolve(EMPTY_KEY) else null,
-        lists =
-            state.lists.map { list ->
-                FavouritesListRow(
-                    name = list.name,
-                    color = favouriteColour(list.color),
-                    icon = list.icon,
-                    pointCount = list.pointCount,
-                )
-            },
-        points =
-            state.points.map { point ->
-                FavouritesPointRow(
-                    id = point.id,
-                    name = point.name,
-                    list = point.list ?: strings.resolve(NO_LIST_KEY),
-                    special = specialLabel(point.special, strings),
-                )
-            },
     )
 
 /**
@@ -106,8 +70,6 @@ fun favouritesBrowseContent(
 ): FavouritesBrowseContent {
     val browse = state.browse
     return FavouritesBrowseContent(
-        search = strings.resolve(SEARCH_KEY),
-        searchHint = strings.resolve(SEARCH_HINT_KEY),
         sort = strings.resolve(SORT_KEY),
         sorts =
             FavouriteSort.entries.map { sort ->
@@ -166,15 +128,11 @@ internal fun favouriteColour(value: String): Long? {
     return argb.toLongOrNull(HEX_RADIX)
 }
 
-internal const val TITLE_KEY = "favourites_lists_title"
 internal const val CLOSE_KEY = "favourites_lists_close"
 internal const val UNDO_KEY = "favourites_lists_undo"
-internal const val EMPTY_KEY = "favourites_lists_empty"
 internal const val NO_LIST_KEY = "favourites_lists_no_list"
 internal const val HOME_KEY = "favourites_lists_home"
 internal const val WORK_KEY = "favourites_lists_work"
-internal const val SEARCH_KEY = "favourites_lists_search"
-internal const val SEARCH_HINT_KEY = "favourites_lists_search_hint"
 internal const val SORT_KEY = "favourites_lists_sort"
 internal const val SORT_INSERTION_KEY = "favourites_lists_sort_insertion"
 internal const val SORT_NAME_ASCENDING_KEY = "favourites_lists_sort_name_ascending"

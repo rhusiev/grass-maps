@@ -1,67 +1,31 @@
 package nl.r1a.grassmaps.ui.shell
 
-import nl.r1a.grassmaps.plugin.api.model.FavouriteListSummary
 import nl.r1a.grassmaps.plugin.api.model.FavouriteListsState
-import nl.r1a.grassmaps.plugin.api.model.FavouritePointSummary
-import nl.r1a.grassmaps.plugin.api.model.FavouriteSpecial
 import nl.r1a.grassmaps.plugin.api.service.Strings
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The lists sheet resolver (T-0213): labels, specials, colours and empties. */
+/** The lists sheet controls resolver (T-0213): close and undo in the active language. */
 class FavouritesListsContentTest {
     @Test
-    fun everyListAndPointBecomesARowWithTheActiveLanguage() {
-        val state =
-            FavouriteListsState(
-                lists =
-                    listOf(
-                        FavouriteListSummary("Cafes", "#00FF00", "cafe", pointCount = 2),
-                        FavouriteListSummary("Parks", "#0000FF", pointCount = 0),
-                    ),
-                points =
-                    listOf(
-                        FavouritePointSummary("one", "Rynok Square", "Cafes", FavouriteSpecial.HOME),
-                        FavouritePointSummary("two", "Office", null, FavouriteSpecial.WORK),
-                        FavouritePointSummary("three", "Aqueduct", "Parks"),
-                    ),
-                undoAvailable = true,
-            )
+    fun theControlsUseTheActiveLanguage() {
+        val content = favouritesListsContent(FavouriteListsState(undoAvailable = true), MapStrings(UKRAINIAN))
 
-        val content = favouritesListsContent(state, MapStrings(UKRAINIAN))
-
-        assertEquals("Списки", content.title)
         assertEquals("Закрити списки", content.close)
         assertEquals("Скасувати", content.undo)
         assertTrue(content.undoAvailable)
-        assertNull(content.empty)
-        assertEquals(
-            listOf(
-                FavouritesListRow("Cafes", 0xFF00FF00L, "cafe", 2),
-                FavouritesListRow("Parks", 0xFF0000FFL, null, 0),
-            ),
-            content.lists,
-        )
-        assertEquals(
-            listOf(
-                FavouritesPointRow("one", "Rynok Square", "Cafes", "Дім"),
-                FavouritesPointRow("two", "Office", "Без списку", "Робота"),
-                FavouritesPointRow("three", "Aqueduct", "Parks", null),
-            ),
-            content.points,
-        )
     }
 
     @Test
-    fun anEmptyLibrarySaysThereAreNoLists() {
+    fun anEmptyLibraryKeepsItsUndoState() {
         val content = favouritesListsContent(FavouriteListsState(), MapStrings(ENGLISH))
 
-        assertEquals("No lists yet", content.empty)
-        assertTrue(content.lists.isEmpty())
-        assertTrue(content.points.isEmpty())
-        assertEquals(false, content.undoAvailable)
+        assertEquals("Close the lists", content.close)
+        assertEquals("Undo", content.undo)
+        assertFalse(content.undoAvailable)
     }
 
     @Test
@@ -95,24 +59,14 @@ class FavouritesListsContentTest {
     private companion object {
         val ENGLISH =
             mapOf(
-                TITLE_KEY to "Lists",
                 CLOSE_KEY to "Close the lists",
                 UNDO_KEY to "Undo",
-                EMPTY_KEY to "No lists yet",
-                NO_LIST_KEY to "No list",
-                HOME_KEY to "Home",
-                WORK_KEY to "Work",
             )
 
         val UKRAINIAN =
             mapOf(
-                TITLE_KEY to "Списки",
                 CLOSE_KEY to "Закрити списки",
                 UNDO_KEY to "Скасувати",
-                EMPTY_KEY to "Списків ще немає",
-                NO_LIST_KEY to "Без списку",
-                HOME_KEY to "Дім",
-                WORK_KEY to "Робота",
             )
     }
 }

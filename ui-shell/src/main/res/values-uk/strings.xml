@@ -19,19 +19,11 @@
     <string name="place_card_copy">Копіювати</string>
     <string name="place_card_walk_estimate">орієнтовно %1$s пішки</string>
 
-    <string name="favourites_lists_title">Списки</string>
     <string name="favourites_lists_close">Закрити списки</string>
     <string name="favourites_lists_undo">Скасувати</string>
-    <string name="favourites_lists_empty">Списків ще немає</string>
     <string name="favourites_lists_no_list">Без списку</string>
     <string name="favourites_lists_home">Дім</string>
     <string name="favourites_lists_work">Робота</string>
-    <string name="favourites_lists_new_list">Новий список</string>
-    <string name="favourites_lists_create">Створити список</string>
-    <string name="favourites_lists_points">Точки</string>
-    <string name="favourites_lists_move_here">Перемістити вибрану точку сюди</string>
-    <string name="favourites_lists_search">Пошук у збереженому</string>
-    <string name="favourites_lists_search_hint">Назва або опис</string>
     <string name="favourites_lists_sort">Сортування</string>
     <string name="favourites_lists_sort_insertion">Порядок файлу</string>
     <string name="favourites_lists_sort_name_ascending">Назва А-Я</string>

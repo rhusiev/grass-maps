@@ -51,8 +51,8 @@ class SheetHeadingUniquenessTest {
         assertTrue("group visibility is not wired", host.contains("onToggleGroupShown = actions.onToggleGroupShown"))
         assertTrue("the map command is not wired", host.contains("onShowOnMap = onShowOnMap"))
         assertTrue("the undo command is not wired", host.contains("onUndo = actions.onUndo"))
-        assertTrue("the 48 dp tap target is gone", section.contains("private const val MIN_TAP_TARGET_DP = 48"))
-        assertTrue("the colour swatch is not a 48 dp target", section.contains(".size(MIN_TAP_TARGET_DP.dp)"))
+        assertEquals("the shared tap target is not 48 dp", 48, MapControlMetrics.TAP_TARGET_DP)
+        assertTrue("the colour swatch is not a 48 dp target", section.contains(".size(MapControlMetrics.TAP_TARGET_DP.dp)"))
     }
 
     private companion object {

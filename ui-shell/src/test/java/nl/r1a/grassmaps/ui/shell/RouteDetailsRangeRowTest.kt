@@ -63,7 +63,7 @@ class RouteDetailsRangeRowTest {
 
         assertTrue(
             "Clear has no 48 dp minimum in both dimensions",
-            ".sizeIn(minWidth = MIN_TAP_TARGET_DP.dp, minHeight = MIN_TAP_TARGET_DP.dp)" in row,
+            ".sizeIn(minWidth = MapControlMetrics.TAP_TARGET_DP.dp, minHeight = MapControlMetrics.TAP_TARGET_DP.dp)" in row,
         )
         assertTrue("Clear lost its command", "Role.Button, onClick = onClear" in row)
         assertTrue("the range row lost its spoken label", "contentDescription = row.clearLabel" in row)

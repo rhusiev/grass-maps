@@ -497,7 +497,7 @@ private fun ElevationRangeRow(
             modifier =
                 Modifier
                     .clickable(role = Role.Button, onClick = onClear)
-                    .sizeIn(minWidth = MIN_TAP_TARGET_DP.dp, minHeight = MIN_TAP_TARGET_DP.dp)
+                    .sizeIn(minWidth = MapControlMetrics.TAP_TARGET_DP.dp, minHeight = MapControlMetrics.TAP_TARGET_DP.dp)
                     .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp)
                     .semantics { contentDescription = row.clearLabel },
         )
@@ -828,7 +828,7 @@ private fun ElevationChip(
                 .chipOutline(palette.tokens, CHIP_SHAPE, selection = if (selected) palette.chipSelected else null)
                 .background(background, CHIP_SHAPE)
                 .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-                .sizeIn(minWidth = MIN_TAP_TARGET_DP.dp, minHeight = MIN_TAP_TARGET_DP.dp)
+                .sizeIn(minWidth = MapControlMetrics.TAP_TARGET_DP.dp, minHeight = MapControlMetrics.TAP_TARGET_DP.dp)
                 .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp, vertical = CHIP_PADDING_VERTICAL_DP.dp),
     )
 }
@@ -858,7 +858,7 @@ fun AnalysisDetailsToggle(
         modifier =
             modifier
                 .clickable(role = Role.Button, onClick = onClick)
-                .sizeIn(minWidth = MIN_TAP_TARGET_DP.dp, minHeight = MIN_TAP_TARGET_DP.dp)
+                .sizeIn(minWidth = MapControlMetrics.TAP_TARGET_DP.dp, minHeight = MapControlMetrics.TAP_TARGET_DP.dp)
                 // The chevron is decoration; the spoken label is the action.
                 .semantics { contentDescription = strings.resolve(key) },
     )
@@ -886,7 +886,6 @@ private const val CHIP_FONT_SP = 12
 private const val CHIP_GAP_DP = 6
 private const val CHIP_PADDING_HORIZONTAL_DP = 10
 private const val CHIP_PADDING_VERTICAL_DP = 5
-private const val MIN_TAP_TARGET_DP = 48
 private const val DETAILS_FONT_SP = 14
 private const val GRID_STROKE_PX = 1f
 private const val LINE_STROKE_PX = 1.6f

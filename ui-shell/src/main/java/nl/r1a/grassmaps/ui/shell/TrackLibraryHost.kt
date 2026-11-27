@@ -454,7 +454,7 @@ private fun FolderTile(
     Row(
         modifier =
             modifier
-                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                 .background(
                     if (folder.selected) colors.selectedSurface else colors.field,
                     RoundedCornerShape(TILE_CORNER_DP.dp),
@@ -473,7 +473,7 @@ private fun FolderTile(
             Box(
                 modifier =
                     Modifier
-                        .size(MIN_TAP_TARGET_DP.dp)
+                        .size(MapControlMetrics.TAP_TARGET_DP.dp)
                         .clickable(role = Role.Button) { onRename(folderId) }
                         .semantics { contentDescription = renameLabel },
                 contentAlignment = Alignment.Center,
@@ -567,7 +567,7 @@ private fun TrackRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                 .background(
                     if (selected) colors.selection else Color.Transparent,
                     RoundedCornerShape(TILE_CORNER_DP.dp),
@@ -693,8 +693,8 @@ private fun UndoBar(
             style = TextStyle(color = colors.undoAction, fontSize = ROW_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
             modifier =
                 Modifier
-                    .heightIn(min = MIN_TAP_TARGET_DP.dp)
-                    .widthIn(min = MIN_TAP_TARGET_DP.dp)
+                    .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
+                    .widthIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                     .clickable(role = Role.Button, onClick = onUndo)
                     .padding(ACTION_PADDING_DP.dp),
         )
@@ -749,8 +749,8 @@ private fun SelectionBar(
                 Box(
                     modifier =
                         Modifier
-                            .heightIn(min = MIN_TAP_TARGET_DP.dp)
-                            .widthIn(min = MIN_TAP_TARGET_DP.dp)
+                            .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
+                            .widthIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                             .clickable(role = Role.Button) { onAction(action.kind) }
                             .padding(horizontal = ACTION_PADDING_DP.dp),
                     contentAlignment = Alignment.Center,
@@ -789,7 +789,7 @@ private fun SortSheet(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                        .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                         .selectable(selected = row.selected, role = Role.RadioButton) { onChoose(row.sort) },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -976,7 +976,7 @@ private fun MoveSheet(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                        .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                         .clickable(role = Role.Button) { onMove(folder.id) }
                         .padding(SHEET_ROW_PADDING_DP.dp),
             )
@@ -1067,7 +1067,7 @@ private fun Chip(
             ),
         modifier =
             Modifier
-                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                 .background(
                     if (selected) colors.selectedSurface else colors.field,
                     RoundedCornerShape(CHIP_CORNER_DP.dp),
@@ -1092,7 +1092,7 @@ private fun PrimaryButton(
         style = TextStyle(color = colors.selectedText, fontSize = ROW_FONT_SP.sp, fontWeight = FontWeight.Bold),
         modifier =
             Modifier
-                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                 .background(colors.selectedSurface, RoundedCornerShape(BUTTON_CORNER_DP.dp))
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(BUTTON_PADDING_DP.dp),
@@ -1111,7 +1111,7 @@ private fun SecondaryButton(
         style = TextStyle(color = colors.textPrimary, fontSize = ROW_FONT_SP.sp),
         modifier =
             Modifier
-                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                 .background(colors.field, RoundedCornerShape(BUTTON_CORNER_DP.dp))
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(BUTTON_PADDING_DP.dp),
@@ -1131,7 +1131,7 @@ private fun CancelButton(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(SHEET_ROW_PADDING_DP.dp),
     )
@@ -1243,7 +1243,6 @@ private const val DESCRIPTION_HEIGHT_DP = 120
 private const val SELECTION_BAR_PADDING_DP = 5
 private const val SELECTION_CORNER_DP = 29
 private const val BAR_MARGIN_DP = 12
-private const val MIN_TAP_TARGET_DP = 48
 private const val TILE_COLUMNS = 2
 private const val TILE_ICON_DP = 22
 private const val INFO_ICON_DP = 16

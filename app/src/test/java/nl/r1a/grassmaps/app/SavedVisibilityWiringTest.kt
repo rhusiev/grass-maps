@@ -5,6 +5,7 @@ import nl.r1a.grassmaps.plugin.api.model.FavouriteListSummary
 import nl.r1a.grassmaps.plugin.api.model.FavouriteListsState
 import nl.r1a.grassmaps.plugin.api.model.FavouritePointSummary
 import nl.r1a.grassmaps.plugin.api.service.Strings
+import nl.r1a.grassmaps.ui.shell.MapControlMetrics
 import nl.r1a.grassmaps.ui.shell.SavedCommands
 import nl.r1a.grassmaps.ui.shell.savedScreenContent
 import org.junit.Assert.assertEquals
@@ -64,7 +65,7 @@ class SavedVisibilityWiringTest {
             "the Saved section does not derive content from the passed hidden groups",
             savedSection.contains("savedScreenContent(state, strings, commands, hiddenGroups, segment)"),
         )
-        assertTrue("the 48 dp target was lost", savedSection.contains("private const val MIN_TAP_TARGET_DP = 48"))
+        assertEquals("the shared tap target is not 48 dp", 48, MapControlMetrics.TAP_TARGET_DP)
         assertTrue("the segment row was lost", savedSection.contains("SegmentedRow("))
         assertTrue("the sort action was lost", savedSection.contains("SavedBarAction.SORT"))
         assertTrue("the add action was lost", savedSection.contains("SavedBarAction.ADD"))

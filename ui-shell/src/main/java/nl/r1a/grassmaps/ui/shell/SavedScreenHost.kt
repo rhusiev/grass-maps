@@ -228,7 +228,7 @@ internal fun NewGroupPanel(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                    .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                     .background(colors.soft, RoundedCornerShape(FIELD_CORNER_DP.dp))
                     .fieldOutline(colors, RoundedCornerShape(FIELD_CORNER_DP.dp))
                     .padding(horizontal = FIELD_PADDING_DP.dp, vertical = CENTRE_PADDING_DP.dp)
@@ -257,7 +257,7 @@ internal fun SortPanel(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                        .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                         .selectable(selected = row.selected, role = Role.RadioButton) { onChoose(row.sort) }
                         .padding(vertical = SMALL_GAP_DP.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -365,7 +365,7 @@ private fun SegmentedRow(
                 modifier =
                     Modifier
                         .weight(WEIGHT_ONE)
-                        .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                        .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                         .then(if (row.selected) Modifier.selectedSegment(RoundedCornerShape(SEGMENT_CORNER_DP.dp)) else Modifier)
                         .background(
                             if (row.selected) selectedSegment(colors) else Color.Transparent,
@@ -410,7 +410,7 @@ private fun SavedGroup(
             modifier =
                 Modifier
                     .weight(WEIGHT_ONE)
-                    .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                    .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                     .clickable(role = Role.Button, onClick = onToggleExpanded),
             verticalArrangement = Arrangement.Center,
         ) {
@@ -452,7 +452,7 @@ private fun GroupBadge(
     Box(
         modifier =
             Modifier
-                .size(MIN_TAP_TARGET_DP.dp)
+                .size(MapControlMetrics.TAP_TARGET_DP.dp)
                 .background(colour.copy(alpha = BADGE_TINT_ALPHA), CircleShape)
                 .then(
                     if (onClick != null) {
@@ -498,7 +498,7 @@ private fun Swatches(
             Box(
                 modifier =
                     Modifier
-                        .size(MIN_TAP_TARGET_DP.dp)
+                        .size(MapControlMetrics.TAP_TARGET_DP.dp)
                         .selectable(selected = isSelected, role = Role.RadioButton) { onChoose(preset) }
                         .semantics { contentDescription = preset }
                         .then(if (isSelected) Modifier.choiceOutline(colors, CircleShape, selection = colors.ink) else Modifier)
@@ -522,7 +522,7 @@ private fun SavedPlace(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                 .background(
                     if (selected) colors.accent.copy(alpha = SELECTED_ALPHA) else Color.Transparent,
                     RoundedCornerShape(FIELD_CORNER_DP.dp),
@@ -585,7 +585,7 @@ private fun ActionRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(vertical = CENTRE_PADDING_DP.dp),
     )
@@ -603,7 +603,7 @@ private fun MoreLink(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(start = PLACE_INDENT_DP.dp, top = CENTRE_PADDING_DP.dp, bottom = CENTRE_PADDING_DP.dp),
     )
@@ -619,8 +619,8 @@ private fun UndoPill(
     Box(
         modifier =
             Modifier
-                .heightIn(min = MIN_TAP_TARGET_DP.dp)
-                .widthIn(min = MIN_TAP_TARGET_DP.dp)
+                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
+                .widthIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                 .background(colors.snackbarBackground, RoundedCornerShape(SEGMENT_CORNER_DP.dp))
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(horizontal = PANEL_PADDING_DP.dp, vertical = SMALL_GAP_DP.dp),
@@ -751,7 +751,6 @@ private fun NoteLine(text: String) {
 
 internal const val SAVED_STORAGE_KEY = "saved_screen_storage"
 
-private const val MIN_TAP_TARGET_DP = 48
 private const val GROUP_ROW_DP = 56
 private const val BUTTON_DP = 50
 private const val ICON_DP = 22

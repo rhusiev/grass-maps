@@ -1,5 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -36,7 +37,7 @@ class SavedScreenRound4Test {
             "the resolver no longer reads group visibility from the store",
             section.contains("savedScreenContent(state, strings, commands, hiddenGroups, segment)"),
         )
-        assertTrue("the 48 dp target was lost", section.contains("private const val MIN_TAP_TARGET_DP = 48"))
+        assertEquals("the shared tap target is not 48 dp", 48, MapControlMetrics.TAP_TARGET_DP)
     }
 
     @Test

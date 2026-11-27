@@ -20,12 +20,14 @@ class FavouritesListsTapTargetTest {
     fun colourSwatchesAreFullTouchTargets() {
         val swatches = source.substringAfter("private fun Swatches(").substringBefore("\n}\n")
 
-        assertTrue("the swatch size is not the tap target", swatches.contains(".size(MIN_TAP_TARGET_DP.dp)"))
+        assertTrue("the swatch size is not the tap target", swatches.contains(".size(MapControlMetrics.TAP_TARGET_DP.dp)"))
         assertTrue(
             "the swatch is selectable only inside its inset",
-            swatches.indexOf(".selectable(") in swatches.indexOf(".size(MIN_TAP_TARGET_DP.dp)")..swatches.indexOf(".padding("),
+            swatches.indexOf(
+                ".selectable(",
+            ) in swatches.indexOf(".size(MapControlMetrics.TAP_TARGET_DP.dp)")..swatches.indexOf(".padding("),
         )
-        assertTrue("the shell tap target is not 48 dp", source.contains("private const val MIN_TAP_TARGET_DP = 48"))
+        assertEquals("the shared tap target is not 48 dp", 48, MapControlMetrics.TAP_TARGET_DP)
         assertTrue("the colour command changed", swatches.contains("onChoose(preset)"))
         assertEquals(6, PRESET_COLOURS.size)
     }
@@ -48,8 +50,8 @@ class FavouritesListsTapTargetTest {
         val action = source.substringAfter("private fun ActionRow(").substringBefore("\n}\n")
         val more = source.substringAfter("private fun MoreLink(").substringBefore("\n}\n")
 
-        assertTrue("a place action has no minimum height", action.contains(".heightIn(min = MIN_TAP_TARGET_DP.dp)"))
-        assertTrue("the more line has no minimum height", more.contains(".heightIn(min = MIN_TAP_TARGET_DP.dp)"))
+        assertTrue("a place action has no minimum height", action.contains(".heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)"))
+        assertTrue("the more line has no minimum height", more.contains(".heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)"))
     }
 
     private companion object {

@@ -94,7 +94,7 @@ fun PlaceCardHost(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                        .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                         .background(colors.accent, RoundedCornerShape(ACTION_CORNER_DP.dp))
                         .clickable(role = Role.Button) { invokePlaceCardPrimary(sheet.primaryAction, onRoute) },
                 contentAlignment = Alignment.Center,
@@ -211,7 +211,7 @@ private fun LabeledRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .heightIn(min = if (link == null) 0.dp else MIN_TAP_TARGET_DP.dp)
+                .heightIn(min = if (link == null) 0.dp else MapControlMetrics.TAP_TARGET_DP.dp)
                 .then(if (link == null) Modifier else Modifier.clickable(role = Role.Button) { onAction(link) }),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -229,7 +229,7 @@ private fun LabeledRow(
             Box(
                 modifier =
                     Modifier
-                        .size(MIN_TAP_TARGET_DP.dp)
+                        .size(MapControlMetrics.TAP_TARGET_DP.dp)
                         .clickable(role = Role.Button) { onAction(trailing) },
                 contentAlignment = Alignment.Center,
             ) {
@@ -396,7 +396,6 @@ private const val CLOSE_DESCRIPTION = "place_card_close"
 private const val PANE_TITLE_KEY = "place_card_pane_title"
 
 private const val SHEET_CHROME_HEIGHT_DP = 300
-private const val MIN_TAP_TARGET_DP = 48
 private const val TILE_TARGET_DP = 48
 private const val TILE_GAP_DP = 8
 private const val TILE_ICON_GAP_DP = 6

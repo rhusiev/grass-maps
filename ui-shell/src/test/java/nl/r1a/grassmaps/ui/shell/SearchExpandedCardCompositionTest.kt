@@ -117,7 +117,7 @@ class SearchExpandedCardCompositionTest {
             "no filled notice button",
             source.contains("private fun NoticeActionButton(") &&
                 button.contains(".background(colors.soft, RoundedCornerShape(ACTION_CORNER_DP.dp))") &&
-                button.contains(".heightIn(min = MIN_TAP_TARGET_DP.dp)"),
+                button.contains(".heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)"),
         )
         assertFalse("a button that acts has no outline (design language, Outlines and shadows)", button.contains(".border("))
         assertTrue(

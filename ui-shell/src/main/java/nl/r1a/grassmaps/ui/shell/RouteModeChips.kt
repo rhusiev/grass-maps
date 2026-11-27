@@ -175,7 +175,7 @@ internal fun RouteModeChipsRow(
             Box(
                 modifier =
                     Modifier
-                        .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                        .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                         .background(ROUTE_CHIP_COLOR, shape)
                         .chipOutline(LocalShellColors.current, shape)
                         .padding(horizontal = CHIP_PADDING_HORIZONTAL_DP.dp),
@@ -214,7 +214,7 @@ internal fun RouteAlternativeCards(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                        .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                         .background(if (card.selected) ROUTE_CHIP_SELECTED_COLOR else ROUTE_CHIP_COLOR, shape)
                         .choiceOutline(LocalShellColors.current, shape, selection = if (card.selected) ROUTE_CHIP_SELECTED_COLOR else null)
                         .selectable(
@@ -252,7 +252,6 @@ private const val SELECTED_KEY = "route_alternative_selected"
 private const val FASTER_KEY = "route_alternative_faster"
 private const val LESS_CLIMB_KEY = "route_alternative_less_climb"
 private const val ASCENT_KEY = "route_alternative_ascent"
-private const val MIN_TAP_TARGET_DP = 48
 private const val CHIP_CORNER_DP = 8
 private const val CARD_CORNER_DP = 10
 private const val CHIP_GAP_DP = 8

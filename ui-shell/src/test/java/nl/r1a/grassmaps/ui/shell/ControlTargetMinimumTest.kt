@@ -56,19 +56,12 @@ class ControlTargetMinimumTest {
 
     @Test
     fun elevationChipHasA48DpMinimumInBothDimensions() {
-        assertEquals(
-            "the elevation tap target changed",
-            "48",
-            Regex("""private const val MIN_TAP_TARGET_DP = (\d+)""")
-                .find(elevation)
-                ?.groupValues
-                ?.get(1),
-        )
+        assertEquals("the elevation tap target changed", 48, MapControlMetrics.TAP_TARGET_DP)
         val chip = elevation.substringAfter("private fun ElevationChip(").substringBefore("\n}\n")
 
         assertTrue(
             "ElevationChip has no 48 dp minimum in both dimensions",
-            chip.contains(".sizeIn(minWidth = MIN_TAP_TARGET_DP.dp, minHeight = MIN_TAP_TARGET_DP.dp)"),
+            chip.contains(".sizeIn(minWidth = MapControlMetrics.TAP_TARGET_DP.dp, minHeight = MapControlMetrics.TAP_TARGET_DP.dp)"),
         )
         assertTrue(
             "ElevationChip lost its selected-state command",
@@ -83,7 +76,7 @@ class ControlTargetMinimumTest {
 
         assertTrue(
             "AnalysisDetailsToggle has no 48 dp minimum in both dimensions",
-            toggle.contains(".sizeIn(minWidth = MIN_TAP_TARGET_DP.dp, minHeight = MIN_TAP_TARGET_DP.dp)"),
+            toggle.contains(".sizeIn(minWidth = MapControlMetrics.TAP_TARGET_DP.dp, minHeight = MapControlMetrics.TAP_TARGET_DP.dp)"),
         )
         assertTrue("Details toggle lost its command", toggle.contains("Role.Button, onClick = onClick"))
         assertTrue("Details toggle lost its label", toggle.contains("DETAILS_HIDE_KEY") && toggle.contains("DETAILS_SHOW_KEY"))

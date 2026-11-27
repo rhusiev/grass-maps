@@ -82,7 +82,7 @@ internal fun ListBottomBar(
             modifier =
                 Modifier
                     .weight(WEIGHT_ONE)
-                    .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                    .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                     .semantics { contentDescription = placeholder },
             decorationBox = { field ->
                 Row(
@@ -130,7 +130,7 @@ internal fun RoundIconButton(
     Box(
         modifier =
             Modifier
-                .size(MIN_TAP_TARGET_DP.dp)
+                .size(MapControlMetrics.TAP_TARGET_DP.dp)
                 .background(if (filled) colors.soft else Color.Transparent, CircleShape)
                 .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
                 .semantics { contentDescription = label },
@@ -147,7 +147,6 @@ internal fun RoundIconButton(
 /** A full list screen's background: white on light, the dark map tone on dark (round 9 `k-saved`). */
 internal fun listScreenBackground(colors: ShellColors): Color = if (colors.dark) colors.map else colors.surface
 
-private const val MIN_TAP_TARGET_DP = 48
 private const val ICON_DP = 22
 private const val GAP_DP = 8
 private const val SEARCH_INSET_DP = 8

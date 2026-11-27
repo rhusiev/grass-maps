@@ -465,7 +465,7 @@ private fun NoticeActionButton(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                 .background(colors.soft, RoundedCornerShape(ACTION_CORNER_DP.dp))
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(horizontal = ACTION_PADDING_DP.dp)
@@ -555,7 +555,6 @@ private const val ROW_GAP_DP = 4
 private const val ROW_PADDING_DP = 6
 
 // Shared by every notice button, including the no-index action.
-private const val MIN_TAP_TARGET_DP = 48
 private const val CHIP_HEIGHT_DP = 48
 private const val CHIP_GAP_DP = 6
 private const val ACTION_CORNER_DP = 10

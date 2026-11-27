@@ -1,5 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -18,10 +19,10 @@ class SavedTapTargetTest {
     fun barIconsAre48DpInBothDimensions() {
         val button = bar.substringAfter("internal fun RoundIconButton(").substringBefore("\n}\n")
 
-        assertTrue("the round icon button is not a 48 dp square", button.contains(".size(MIN_TAP_TARGET_DP.dp)"))
+        assertTrue("the round icon button is not a 48 dp square", button.contains(".size(MapControlMetrics.TAP_TARGET_DP.dp)"))
         assertTrue("the round icon button lost its spoken label", button.contains("contentDescription = label"))
-        assertTrue("the bar tap target is not 48 dp", bar.contains("private const val MIN_TAP_TARGET_DP = 48"))
-        assertTrue("the bar search field is not 48 dp high", bar.contains(".heightIn(min = MIN_TAP_TARGET_DP.dp)"))
+        assertEquals("the shared tap target is not 48 dp", 48, MapControlMetrics.TAP_TARGET_DP)
+        assertTrue("the bar search field is not 48 dp high", bar.contains(".heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)"))
     }
 
     @Test

@@ -65,8 +65,8 @@ class SearchNotReadyActionTest {
         // named constant and its heightIn use in the source instead.
         val source = File(HOST_FILE).readText()
 
-        assertTrue("the named 48 dp constant is missing", source.contains("private const val MIN_TAP_TARGET_DP = 48"))
-        assertTrue("heightIn no longer uses the constant", source.contains("heightIn(min = MIN_TAP_TARGET_DP.dp)"))
+        assertEquals("the shared 48 dp constant changed", 48, MapControlMetrics.TAP_TARGET_DP)
+        assertTrue("heightIn no longer uses the constant", source.contains("heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)"))
     }
 
     @Test

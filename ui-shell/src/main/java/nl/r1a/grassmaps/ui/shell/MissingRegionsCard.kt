@@ -42,7 +42,6 @@ private const val BODY_FONT_SP = 13
 private const val BYTES_PER_KB = 1024.0
 private const val BYTES_PER_MB = BYTES_PER_KB * 1024.0
 private const val BYTES_PER_GB = BYTES_PER_MB * 1024.0
-private const val MIN_TAP_TARGET_DP = 48
 private const val SMALL_SIZE_LIMIT = 10.0
 private const val PERCENT = 100L
 
@@ -219,7 +218,7 @@ private fun CardButton(
             ),
         modifier =
             Modifier
-                .heightIn(min = MIN_TAP_TARGET_DP.dp)
+                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                 .background(background, RoundedCornerShape(BUTTON_CORNER_DP.dp))
                 .clickable(onClick = onClick)
                 .padding(horizontal = BUTTON_PADDING_HORIZONTAL_DP.dp, vertical = BUTTON_PADDING_VERTICAL_DP.dp),

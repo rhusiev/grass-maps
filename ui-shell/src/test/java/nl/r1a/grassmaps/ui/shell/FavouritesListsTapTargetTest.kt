@@ -21,6 +21,10 @@ class FavouritesListsTapTargetTest {
         val swatches = source.substringAfter("private fun Swatches(").substringBefore("\n}\n")
 
         assertTrue("the swatch size is not the tap target", swatches.contains(".size(MIN_TAP_TARGET_DP.dp)"))
+        assertTrue(
+            "the swatch is selectable only inside its inset",
+            swatches.indexOf(".selectable(") in swatches.indexOf(".size(MIN_TAP_TARGET_DP.dp)")..swatches.indexOf(".padding("),
+        )
         assertTrue("the shell tap target is not 48 dp", source.contains("private const val MIN_TAP_TARGET_DP = 48"))
         assertTrue("the colour command changed", swatches.contains("onChoose(preset)"))
         assertEquals(6, PRESET_COLOURS.size)

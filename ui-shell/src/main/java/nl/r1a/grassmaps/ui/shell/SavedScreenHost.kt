@@ -493,11 +493,11 @@ private fun Swatches(
                 modifier =
                     Modifier
                         .size(MIN_TAP_TARGET_DP.dp)
+                        .selectable(selected = isSelected, role = Role.RadioButton) { onChoose(preset) }
+                        .semantics { contentDescription = preset }
                         .then(if (isSelected) Modifier.border(SWATCH_RING_DP.dp, colors.ink, CircleShape) else Modifier)
                         .padding(SWATCH_INSET_DP.dp)
-                        .background(argb?.let { Color(it) } ?: colors.faint, CircleShape)
-                        .selectable(selected = isSelected, role = Role.RadioButton) { onChoose(preset) }
-                        .semantics { contentDescription = preset },
+                        .background(argb?.let { Color(it) } ?: colors.faint, CircleShape),
             )
         }
     }

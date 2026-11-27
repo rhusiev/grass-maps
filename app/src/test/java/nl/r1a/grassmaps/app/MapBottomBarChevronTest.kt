@@ -36,28 +36,37 @@ class MapBottomBarChevronTest {
         )
         assertTrue(
             "the app no longer hosts the combined sheet",
-            source.contains("WidgetsSavedSheet("),
+            source.contains("WidgetsSavedSheetHost("),
         )
     }
 
     @Test
-    fun theSheetContainsWidgetsAndSavedLists() {
+    fun theSheetContainsWidgetsAndSavedTiles() {
         val sheet =
             source
                 .substringAfter("if (widgetsSavedSheetOpen && !navigationActive) {")
-                .substringBefore("\n        }")
+                .substringBefore("\n        if (libraryVisible")
 
-        assertTrue("the sheet has no widgets section", sheet.contains("widgets = {"))
-        assertTrue("the widgets section does not compose the widget model", sheet.contains("WidgetGridHost("))
-        assertTrue("widgets are not read-only in the sheet", sheet.contains("isEditing = false"))
-        assertTrue("the sheet has no saved section", sheet.contains("saved = {"))
-        assertTrue("the saved section does not compose the lists body", sheet.contains("MapSavedListsHost("))
-        assertTrue("the saved section kept the standalone chrome", sheet.contains("embedded = true"))
-        assertTrue("the saved-only sheet was not kept as a separate chevron target", !sheet.contains("FavouritesListsSession.show()"))
+        assertTrue("the sheet is not the round 9 host", sheet.contains("WidgetsSavedSheetHost("))
+        assertTrue("the sheet no longer embeds the Saved list form", !sheet.contains("MapSavedListsHost("))
+        assertTrue("Edit does not open the widgets layout tab", sheet.contains("layoutSheetTab = MapLayoutTab.Widgets"))
+        assertTrue("All N does not open the full Saved screen", sheet.contains("FavouritesListsSession.show()"))
+        assertTrue("a tile tap is not wired", sheet.contains("openSavedTile(tile.target)"))
         assertTrue(
             "the sheet lost its route to Settings",
             sheet.contains("onOpenSettings =") && sheet.contains("SettingsIndexSession.show()"),
         )
+        assertTrue("the bar at the sheet foot does not close the sheet", sheet.contains("onOpenSheet = closeSheet"))
+        assertTrue("the bar at the sheet foot is not drawn in its sheet form", sheet.contains("inSheet = true"))
+        assertTrue("the sheet bar shares the map bar's chrome key", sheet.contains("chromeKey = SHEET_BAR_KEY"))
+    }
+
+    @Test
+    fun theHostReadsWidgetsThroughTheSharedController() {
+        val host = File(SHEET_HOST_FILE).readText()
+        assertTrue("the host does not use the active widget controller", host.contains("rememberActiveWidgetController(container)"))
+        assertTrue("the widget cards are editable in the sheet", host.contains("isEditing = false"))
+        assertTrue("the host does not filter hidden groups", host.contains("hiddenGroups"))
     }
 
     @Test
@@ -132,6 +141,7 @@ class MapBottomBarChevronTest {
 
     private companion object {
         const val HOST_FILE = "src/main/java/nl/r1a/grassmaps/app/MapScreen.kt"
+        const val SHEET_HOST_FILE = "src/main/java/nl/r1a/grassmaps/app/WidgetsSavedSheetHost.kt"
         const val ENGLISH = "src/main/res/values/strings.xml"
         const val UKRAINIAN = "src/main/res/values-uk/strings.xml"
         const val LABEL_KEY = "map_bottom_bar_open_sheet"

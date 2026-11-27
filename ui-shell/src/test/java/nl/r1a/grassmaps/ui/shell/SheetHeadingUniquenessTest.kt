@@ -7,10 +7,10 @@ import java.io.File
 
 /**
  * Final blind review 6 P2-3: the chevron sheet stacked "Saved", "Lists" and
- * "Saved" above one empty saved section. The saved section keeps its own
- * heading, so the sheet and the embedded lists host must stop drawing a second
- * and a third one. Composables cannot render in a JVM test, so pin the source
- * shape and the sections that must survive the change.
+ * "Saved" above one empty saved section. Round 9 `k-half` replaced the embedded
+ * lists body with tiles under one "Saved" heading, and the full Saved screen
+ * keeps one header of its own. Composables cannot render in a JVM test, so pin
+ * the source shape and the sections that must survive the change.
  */
 class SheetHeadingUniquenessTest {
     private val sheet = File(SHEET_FILE).readText()
@@ -20,15 +20,13 @@ class SheetHeadingUniquenessTest {
     @Test
     fun theSavedHeadingIsComposedOnceInTheCombinedSheet() {
         assertEquals(
-            "the sheet still draws its own Saved title above the lists body",
-            0,
-            Regex("""text\s*=\s*savedTitle""").findAll(sheet).count(),
+            "the sheet does not name its Saved section exactly once",
+            1,
+            Regex("""R\.string\.map_sheet_saved_title""").findAll(sheet).count(),
         )
+        assertTrue("the sheet embeds a second Saved heading", !sheet.contains("SavedScreenSection("))
 
-        assertTrue(
-            "the embedded body still draws the back chevron of the full screen",
-            host.contains("onBack = actions.onClose.takeIf { !embedded }"),
-        )
+        assertTrue("the lists host kept a body-only mode", !host.contains("embedded"))
         assertTrue(
             "a second Lists header title came back",
             !host.contains("text = content.title"),
@@ -42,11 +40,10 @@ class SheetHeadingUniquenessTest {
 
     @Test
     fun theWidgetsAndSavedSectionsStillRenderWithTheirCommands() {
-        assertTrue("the sheet title is gone", sheet.contains("sheetTitle = sheetTitle"))
-        assertTrue("the widgets title is gone", sheet.contains("text = widgetsTitle"))
-        assertTrue("the widgets body is gone", sheet.contains("widgets()"))
-        assertTrue("the saved body is gone", sheet.contains("saved()"))
-        assertTrue("the Settings command is gone", sheet.contains("onClick = onOpenSettings"))
+        assertTrue("the sheet title is gone", sheet.contains("sheetTitle = stringResource(R.string.map_sheet_title)"))
+        assertTrue("the widgets section is gone", sheet.contains("WidgetsSection("))
+        assertTrue("the saved section is gone", sheet.contains("SavedSection("))
+        assertTrue("the Settings command is gone", sheet.contains("actions.onOpenSettings"))
 
         assertTrue("the saved section is gone", host.contains("SavedScreenSection("))
         assertTrue("the new group panel is gone", host.contains("NewGroupPanel("))

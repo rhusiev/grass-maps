@@ -69,8 +69,25 @@ class RouteCardPlacementTest {
     @Test
     fun theMapControlsGiveWayToTheReadyPreviewOnly() {
         for (status in RoutePlanStatus.entries) {
-            assertEquals("status $status", status != RoutePlanStatus.Ready, mapControlsShown(navigationActive = false, status))
-            assertFalse("status $status during navigation", mapControlsShown(navigationActive = true, status))
+            assertEquals(
+                "status $status",
+                status != RoutePlanStatus.Ready,
+                mapControlsShown(navigationActive = false, status, widgetsSheetOpen = false),
+            )
+            assertFalse(
+                "status $status during navigation",
+                mapControlsShown(navigationActive = true, status, widgetsSheetOpen = false),
+            )
+        }
+    }
+
+    @Test
+    fun theMapControlsGiveWayToTheChevronSheet() {
+        for (status in RoutePlanStatus.entries) {
+            assertFalse(
+                "status $status with the chevron sheet open",
+                mapControlsShown(navigationActive = false, status, widgetsSheetOpen = true),
+            )
         }
     }
 }

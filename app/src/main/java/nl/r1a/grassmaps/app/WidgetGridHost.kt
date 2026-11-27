@@ -20,6 +20,7 @@ import nl.r1a.grassmaps.plugins.info.widgets.InfoWidgetsContract
 import nl.r1a.grassmaps.plugins.point.info.PointInfoContract
 import nl.r1a.grassmaps.plugins.point.info.SelectedPointValue
 import nl.r1a.grassmaps.ui.shell.GridWidget
+import nl.r1a.grassmaps.ui.shell.WidgetCell
 import nl.r1a.grassmaps.ui.shell.WidgetGrid
 import nl.r1a.grassmaps.ui.shell.WidgetLayout
 import java.util.Locale
@@ -40,18 +41,11 @@ internal fun WidgetGridHost(
     onOpenPicker: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val profile by container.activeProfile.active.collectAsState()
-    val controller = remember(container, profile.profileId) { container.widgetLayoutController(profile.profileId) }
-    LaunchedEffect(controller) { controller.load() }
+    val controller = rememberActiveWidgetController(container)
     val state by controller.state.collectAsState()
-    val layout = state.layout
-    val readings = rememberWidgetReadings(container, layout)
     val strings = container.strings
     val showsEdit = isEditing && state.isEditable
-    val cells =
-        remember(layout, readings, showsEdit, strings, units) {
-            widgetCells(layout, readings, showsEdit, strings, Locale.getDefault(), units)
-        }
+    val cells = rememberWidgetCells(container, state.layout, showsEdit, units)
     WidgetGrid(
         cells = cells,
         isEditing = showsEdit,
@@ -62,6 +56,33 @@ internal fun WidgetGridHost(
         onOpenPicker = onOpenPicker,
         modifier = modifier,
     )
+}
+
+/** The widget layout controller of the active profile, loaded once per profile. */
+@Composable
+internal fun rememberActiveWidgetController(container: AppContainer): WidgetLayoutController {
+    val profile by container.activeProfile.active.collectAsState()
+    val controller = remember(container, profile.profileId) { container.widgetLayoutController(profile.profileId) }
+    LaunchedEffect(controller) { controller.load() }
+    return controller
+}
+
+/**
+ * The cells of [layout] with their live values. The map's grid and the
+ * chevron sheet's cards read the same cells, so both show the same values.
+ */
+@Composable
+internal fun rememberWidgetCells(
+    container: AppContainer,
+    layout: WidgetLayout,
+    isEditing: Boolean,
+    units: UnitSystem,
+): List<WidgetCell> {
+    val readings = rememberWidgetReadings(container, layout)
+    val strings = container.strings
+    return remember(layout, readings, isEditing, strings, units) {
+        widgetCells(layout, readings, isEditing, strings, Locale.getDefault(), units)
+    }
 }
 
 /** The latest value of each stream whose widget [layout] shows. The other streams are not subscribed. */

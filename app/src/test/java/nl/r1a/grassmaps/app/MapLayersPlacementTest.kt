@@ -19,7 +19,7 @@ class MapLayersPlacementTest {
         val layers =
             source
                 .substringAfter("if (!navigationActive && !bottomSheetShown) {")
-                .substringBefore("if (mapControlsShown(navigationActive, plan.status)) {\n            val dispatchMapButton")
+                .substringBefore(CONTROLS_HOST)
 
         assertTrue("LayersButton is missing from its own host", layers.contains("LayersButton("))
         assertTrue("Layers lost its BottomEnd anchor", layers.contains("Alignment.BottomEnd"))
@@ -71,6 +71,8 @@ class MapLayersPlacementTest {
 
     private companion object {
         const val HOST_FILE = "src/main/java/nl/r1a/grassmaps/app/MapScreen.kt"
+        const val CONTROLS_HOST =
+            "if (mapControlsShown(navigationActive, plan.status, widgetsSavedSheetOpen)) {\n            val dispatchMapButton"
 
         // The measured Layers button height and the existing scale-bar gap.
         const val LAYERS_HEIGHT_DP = 48

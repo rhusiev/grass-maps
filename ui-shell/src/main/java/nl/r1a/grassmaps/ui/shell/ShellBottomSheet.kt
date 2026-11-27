@@ -3,6 +3,7 @@ package nl.r1a.grassmaps.ui.shell
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -29,6 +31,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -36,6 +39,7 @@ import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.coerceAtMost
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
@@ -53,6 +57,7 @@ private const val HANDLE_RADIUS_DP = 2
 private const val CLOSE_SIZE_DP = 48
 private const val CLOSE_FONT_SP = 20
 private const val CLOSE_GLYPH = "×"
+private const val DISMISS_DRAG_DP = 56
 private val DEFAULT_CHROME_HEIGHT =
     (HANDLE_TOP_DP + HANDLE_HEIGHT_DP + HANDLE_BOTTOM_DP + CLOSE_SIZE_DP + SHEET_SECTION_GAP_DP * 2).dp
 
@@ -65,6 +70,59 @@ fun sheetChromeHeight(
     header: Dp,
     footer: Dp,
 ): Dp = (HANDLE_TOP_DP + HANDLE_HEIGHT_DP + HANDLE_BOTTOM_DP + SHEET_SECTION_GAP_DP * 3 + SHEET_PADDING_DP).dp + header + footer
+
+/**
+ * The fixed height around the scrolling rows of a sheet whose handle is its
+ * dismiss control and which has no header: the 48 dp handle, [footer], the two
+ * gaps between them and the foot padding.
+ */
+fun dismissHandleChromeHeight(footer: Dp): Dp = (MapControlMetrics.TAP_TARGET_DP + SHEET_SECTION_GAP_DP * 2 + SHEET_PADDING_DP).dp + footer
+
+/** Whether a handle drag of [draggedPx], positive downward, is long enough to close the sheet. */
+internal fun dragDismissesSheet(
+    draggedPx: Float,
+    thresholdPx: Float,
+): Boolean = draggedPx >= thresholdPx
+
+/**
+ * The drag handle as the sheet's dismiss control, for a sheet without a close
+ * button. It is a 48 dp target named [label]: a tap or a drag down by
+ * [DISMISS_DRAG_DP] closes the sheet.
+ */
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun SheetDismissHandle(
+    label: String,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalShellColors.current
+    val dismissDragPx = with(LocalDensity.current) { DISMISS_DRAG_DP.dp.toPx() }
+    Box(
+        modifier =
+            modifier
+                .sizeIn(minWidth = MapControlMetrics.TAP_TARGET_DP.dp, minHeight = MapControlMetrics.TAP_TARGET_DP.dp)
+                .pointerInput(onDismiss) {
+                    var dragged = 0f
+                    detectVerticalDragGestures(
+                        onDragStart = { dragged = 0f },
+                        onDragEnd = { if (dragDismissesSheet(dragged, dismissDragPx)) onDismiss() },
+                    ) { change, amount ->
+                        change.consume()
+                        dragged += amount
+                    }
+                }.clickable(role = Role.Button, onClick = onDismiss)
+                .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier
+                .width(HANDLE_WIDTH_DP.dp)
+                .height(HANDLE_HEIGHT_DP.dp)
+                .background(colors.handle, RoundedCornerShape(HANDLE_RADIUS_DP.dp)),
+        )
+    }
+}
 
 /**
  * The close control a sheet shares with its own header.
@@ -109,6 +167,9 @@ fun SheetCloseButton(
  * large font scale never pushes the footer off the sheet.
  *
  * [closeLabel] is null when the host's own header carries the close control.
+ * [handleLabel] turns the drag handle into the dismiss control instead.
+ * [peekHeight] limits the scrolling rows to the part a host shows when the
+ * sheet opens; the rest scrolls into view.
  * [chromeHeight] is the height of the host's header and footer above the
  * scrolling area, so a sheet with pinned actions can bound its own content.
  */
@@ -122,6 +183,8 @@ fun ShellBottomSheet(
     scrim: Boolean = true,
     showHandle: Boolean = true,
     closeLabel: String? = null,
+    handleLabel: String? = null,
+    peekHeight: Dp? = null,
     chromeHeight: Dp = DEFAULT_CHROME_HEIGHT,
     header: @Composable ColumnScope.() -> Unit = {},
     footer: @Composable ColumnScope.() -> Unit = {},
@@ -174,7 +237,13 @@ fun ShellBottomSheet(
                         .semantics { paneTitle = sheetTitle },
                 verticalArrangement = Arrangement.spacedBy(SHEET_SECTION_GAP_DP.dp),
             ) {
-                if (showHandle) {
+                if (handleLabel != null) {
+                    SheetDismissHandle(
+                        label = handleLabel,
+                        onDismiss = onDismiss,
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                    )
+                } else if (showHandle) {
                     Box(
                         modifier =
                             Modifier
@@ -197,7 +266,7 @@ fun ShellBottomSheet(
                     modifier =
                         Modifier
                             .weight(1f, fill = false)
-                            .heightIn(max = contentMaxHeight)
+                            .heightIn(max = peekHeight?.coerceAtMost(contentMaxHeight) ?: contentMaxHeight)
                             .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(SHEET_SECTION_GAP_DP.dp),
                     content = content,

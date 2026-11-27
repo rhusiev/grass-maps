@@ -508,8 +508,17 @@
     <string name="map_layout_saved_content">Збережені місця</string>
     <string name="map_layout_tracks_label">T</string>
     <string name="map_layout_tracks_content">Треки</string>
-    <string name="map_sheet_widgets_title">Віджети</string>
+    <string name="map_sheet_title">Віджети та Збережене</string>
+    <string name="map_sheet_close">Закрити віджети та Збережене</string>
+    <string name="map_sheet_widgets_heading">Віджети: %1$s</string>
+    <string name="map_sheet_widgets_edit">Змінити</string>
+    <string name="map_sheet_widgets_edit_description">Змінити віджети</string>
+    <string name="map_sheet_widgets_add">Додати</string>
+    <string name="map_sheet_widgets_add_description">Додати віджет</string>
+    <string name="map_sheet_saved_all">Усі %1$d</string>
+    <string name="map_sheet_saved_all_description">Відкрити все збережене, %1$d</string>
+    <string name="map_sheet_saved_empty">Ще нічого не збережено</string>
+    <string name="map_sheet_track_length">трек %1$s</string>
     <string name="map_sheet_saved_title">Збережене</string>
     <string name="map_sheet_settings">Налаштування</string>
-    <string name="map_sheet_widgets_read_only">Висота, точність GPS, координати, швидкість, середня і максимальна швидкість та обрана точка показують поточні значення на карті. Тут значення лише для читання; змініть набір у розділі «Макет» &gt; «Віджети».</string>
 </resources>

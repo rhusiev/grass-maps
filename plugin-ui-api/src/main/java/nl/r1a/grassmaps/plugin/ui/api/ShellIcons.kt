@@ -16,6 +16,9 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * The shell's drawn icons, one vector each, built from the round-5 to round-9
@@ -117,6 +120,31 @@ object ShellIcons {
                 moveTo(19f, 12f)
                 lineTo(22f, 12f)
             }
+        }
+
+    // The widget card glyphs, traced from round 9 `k-half`
+    // (round9/_build/ui.py `altitude` and `gps`). The GPS ring's dashes are
+    // drawn as arcs, because a vector path has no dash effect.
+    val Altitude =
+        icon("altitude") {
+            stroked {
+                moveTo(2.5f, 20f)
+                lineTo(9.5f, 8.5f)
+                lineTo(13f, 14.2f)
+                moveTo(11.5f, 20f)
+                lineTo(21.5f, 20f)
+                moveTo(17.5f, 4f)
+                lineTo(17.5f, 15.5f)
+                moveTo(14.5f, 7f)
+                lineTo(17.5f, 4f)
+                lineTo(20.5f, 7f)
+            }
+        }
+
+    val Gps =
+        icon("gps") {
+            stroked { circle(12f, 12f, 3f) }
+            stroked { dashedCircle(12f, 12f, GPS_RING_RADIUS, GPS_RING_DASHES) }
         }
 
     val Flag =
@@ -346,6 +374,23 @@ object ShellIcons {
                 lineTo(7.8f, 13.8f)
                 lineTo(3.5f, 9.7f)
                 lineTo(9.4f, 8.9f)
+                close()
+            }
+        }
+
+    /** Home, traced from round 9 `k-half` (round9/_build/ui.py `home`). */
+    val Home =
+        icon("home") {
+            stroked {
+                moveTo(4f, 11f)
+                lineTo(12f, 4f)
+                lineTo(20f, 11f)
+                lineTo(20f, 20f)
+                lineTo(14.5f, 20f)
+                lineTo(14.5f, 14.5f)
+                lineTo(9.5f, 14.5f)
+                lineTo(9.5f, 20f)
+                lineTo(4f, 20f)
                 close()
             }
         }
@@ -685,6 +730,9 @@ fun ShellIcon(
 
 private val FILL = SolidColor(Color.White)
 private const val ICON_STROKE = 2f
+private const val GPS_RING_RADIUS = 7.5f
+private const val GPS_RING_DASHES = 9
+private const val FULL_TURN_RAD = (2 * PI).toFloat()
 private const val TURN_STROKE = 7f
 private const val DIM_ALPHA = 0.45f
 private const val ICON_SIZE_DP = 24
@@ -733,6 +781,22 @@ private fun ImageVector.Builder.stroked(
         strokeLineCap = StrokeCap.Round,
         strokeLineJoin = StrokeJoin.Round,
     ) { block() }
+}
+
+/** A ring of [dashes] equal arcs with equal gaps, starting at the top. */
+private fun PathBuilder.dashedCircle(
+    cx: Float,
+    cy: Float,
+    r: Float,
+    dashes: Int,
+) {
+    val step = FULL_TURN_RAD / dashes
+    repeat(dashes) { index ->
+        val start = index * step
+        val end = start + step / 2
+        moveTo(cx + r * sin(start), cy - r * cos(start))
+        arcTo(r, r, 0f, false, true, cx + r * sin(end), cy - r * cos(end))
+    }
 }
 
 private fun PathBuilder.circle(

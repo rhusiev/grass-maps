@@ -19,7 +19,7 @@ class SavedMapWiringTest {
         val call =
             mapScreen
                 .substringAfter("FavouritesListsHost(")
-                .substringBefore("embedded = embedded,")
+                .substringBefore("modifier = modifier,")
         assertTrue("the Saved sheet has no map callback", call.contains("onShowOnMap = { point ->"))
         assertTrue("the map callback does not launch", call.contains("scope.launch"))
         assertTrue("the map callback does not move the camera", call.contains("CameraUpdate(center = point)"))
@@ -33,17 +33,27 @@ class SavedMapWiringTest {
     }
 
     @Test
-    fun bothSavedSheetCallSitesPassTheMapSurface() {
+    fun theSavedScreenCallSitePassesTheMapSurface() {
         val callSites =
             Regex("MapSavedListsHost\\(")
                 .findAll(mapScreen)
                 .map { match -> mapScreen.substring(match.range.first, match.range.first + CALL_WINDOW) }
                 .filter { window -> window.contains("container = container") }
                 .toList()
-        assertEquals("both Saved sheet call sites must pass the surface", 2, callSites.size)
+        assertEquals("the Saved screen call site must pass the surface", 1, callSites.size)
         callSites.forEach { call ->
             assertTrue("a Saved sheet call site does not pass the surface", call.contains("surface = surface"))
         }
+    }
+
+    @Test
+    fun theChevronSheetTilesMoveTheCamera() {
+        val tile = mapScreen.substringAfter("val openSavedTile:").substringBefore("\n    }\n")
+        assertTrue("a track tile does not open the track card", tile.contains("openTrack(target.id)"))
+        assertTrue("a tile does not move the camera", tile.contains("CameraUpdate(center = point)"))
+        assertTrue("the camera failure is not logged", tile.contains("onFailure"))
+        val sheet = mapScreen.substringAfter("if (widgetsSavedSheetOpen && !navigationActive) {")
+        assertTrue("the sheet does not route tile taps", sheet.contains("openSavedTile(tile.target)"))
     }
 
     private companion object {

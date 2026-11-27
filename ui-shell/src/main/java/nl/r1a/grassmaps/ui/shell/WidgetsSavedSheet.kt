@@ -1,97 +1,113 @@
 package nl.r1a.grassmaps.ui.shell
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+
+/** What the half sheet's controls do. The app wires each to its own session or command. */
+data class WidgetsSavedSheetActions(
+    val onEditWidgets: () -> Unit,
+    val onOpenAllSaved: () -> Unit,
+    val onOpenTile: (SavedTile) -> Unit,
+    val onOpenSettings: () -> Unit,
+    val onDismiss: () -> Unit,
+)
 
 /**
- * The half sheet behind the map bar's chevron (round 9 `k-half`). It holds the
- * live widgets above the saved lists, so the spoken "widgets and Saved" label
- * names what the sheet actually contains.
+ * The sheet behind the map bar's chevron (round 9 `k-half`): the active
+ * profile's widget cards with Edit and Add, then the Saved tiles with "All N".
+ * The map bar stays in view at the foot of the sheet through [bar]; it is
+ * [barHeight] tall.
  *
- * The sheet adds no chrome of its own: [ShellBottomSheet] owns the scrim, the
- * handle, the close control and the one bottom-chrome reach. The hosts supply
- * both bodies as slots, so the app keeps its widget controller and saved-list
- * commands. The saved slot draws its own section heading, so this sheet does
- * not draw [savedTitle] a second time; the parameter stays for the app caller.
- * The Settings row keeps the command the old bar's Settings button carried;
- * the canon bar itself has no Settings control.
+ * The sheet has no close button: its drag handle, Back and the bar's chevron
+ * close it. Settings lies in the rest of the sheet below the half view, as in
+ * round 3 ("widgets, favourites and the rest"): the sheet opens with exactly
+ * the widgets and Saved in view, and Settings scrolls up from under them.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 fun WidgetsSavedSheet(
-    sheetTitle: String,
-    widgetsTitle: String,
-    savedTitle: String,
-    widgetsNote: String,
-    settingsLabel: String,
-    closeLabel: String,
-    onOpenSettings: () -> Unit,
-    onDismiss: () -> Unit,
-    widgets: @Composable ColumnScope.() -> Unit,
-    saved: @Composable ColumnScope.() -> Unit,
+    profileName: String,
+    widgets: List<WidgetCell>,
+    saved: SavedSheetContent,
+    actions: WidgetsSavedSheetActions,
+    barHeight: Dp,
+    bar: @Composable () -> Unit,
 ) {
-    val colors = LocalShellColors.current
+    val density = LocalDensity.current
+    var halfHeight by remember { mutableStateOf<Dp?>(null) }
     ShellBottomSheet(
-        sheetTitle = sheetTitle,
-        onDismiss = onDismiss,
-        closeLabel = closeLabel,
-        header = {
-            BasicText(
-                text = widgetsTitle,
-                style = TextStyle(color = colors.ink, fontSize = TITLE_SP.sp, fontWeight = FontWeight.SemiBold),
-            )
-        },
+        sheetTitle = stringResource(R.string.map_sheet_title),
+        onDismiss = actions.onDismiss,
+        handleLabel = stringResource(R.string.map_sheet_close),
+        peekHeight = halfHeight,
+        chromeHeight = dismissHandleChromeHeight(footer = barHeight),
+        footer = { bar() },
         content = {
-            BasicText(
-                text = widgetsNote,
-                style = TextStyle(color = colors.muted, fontSize = NOTE_SP.sp),
-            )
-            widgets()
-            saved()
-            // Settings stays at the end of the scrolling content. A pinned
-            // footer can be squeezed to zero height on a tall widget grid,
-            // which leaves the only Settings entry unreachable.
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(SETTINGS_ROW_DP.dp)
-                        .background(colors.soft, RoundedCornerShape(SETTINGS_CORNER_DP.dp))
-                        .clickable(role = Role.Button, onClick = onOpenSettings)
-                        .semantics { contentDescription = settingsLabel }
-                        .padding(horizontal = SETTINGS_INSET_DP.dp),
-                contentAlignment = Alignment.CenterStart,
+            Column(
+                modifier = Modifier.onSizeChanged { size -> halfHeight = with(density) { size.height.toDp() } },
+                verticalArrangement = Arrangement.spacedBy(SECTION_GAP_DP.dp),
             ) {
-                BasicText(
-                    text = settingsLabel,
-                    style = TextStyle(color = colors.ink, fontSize = ROW_SP.sp),
-                )
+                WidgetsSection(profileName, widgets, actions.onEditWidgets)
+                SavedSection(saved, actions)
             }
+            SheetSettingsRow(stringResource(R.string.map_sheet_settings), actions.onOpenSettings)
         },
     )
 }
 
-private const val TITLE_SP = 18
-private const val NOTE_SP = 13
-private const val ROW_SP = 15
-private const val SETTINGS_ROW_DP = 48
-private const val SETTINGS_CORNER_DP = 12
-private const val SETTINGS_INSET_DP = 12
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun WidgetsSection(
+    profileName: String,
+    widgets: List<WidgetCell>,
+    onEdit: () -> Unit,
+) {
+    Column {
+        SheetSectionHeading(
+            title = stringResource(R.string.map_sheet_widgets_heading, profileName),
+            action = stringResource(R.string.map_sheet_widgets_edit),
+            actionDescription = stringResource(R.string.map_sheet_widgets_edit_description),
+            onAction = onEdit,
+        )
+        WidgetCardRows(
+            cells = widgets,
+            addLabel = stringResource(R.string.map_sheet_widgets_add),
+            addDescription = stringResource(R.string.map_sheet_widgets_add_description),
+            onAdd = onEdit,
+        )
+    }
+}
+
+@Suppress("ktlint:standard:function-naming")
+@Composable
+private fun SavedSection(
+    saved: SavedSheetContent,
+    actions: WidgetsSavedSheetActions,
+) {
+    Column {
+        SheetSectionHeading(
+            title = stringResource(R.string.map_sheet_saved_title),
+            action = stringResource(R.string.map_sheet_saved_all, saved.allCount),
+            actionDescription = stringResource(R.string.map_sheet_saved_all_description, saved.allCount),
+            onAction = actions.onOpenAllSaved,
+        )
+        if (saved.tiles.isEmpty()) {
+            SheetNote(stringResource(R.string.map_sheet_saved_empty))
+        } else {
+            SavedTileGrid(saved.tiles, actions.onOpenTile)
+        }
+    }
+}
+
+private const val SECTION_GAP_DP = 6

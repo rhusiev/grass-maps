@@ -252,6 +252,7 @@ import nl.r1a.grassmaps.ui.shell.RoutePlanPanel
 import nl.r1a.grassmaps.ui.shell.RoutePlanSheetView
 import nl.r1a.grassmaps.ui.shell.RoutePreviewTime
 import nl.r1a.grassmaps.ui.shell.RouteSummaryCardContent
+import nl.r1a.grassmaps.ui.shell.SavedTileTarget
 import nl.r1a.grassmaps.ui.shell.SearchScreenHost
 import nl.r1a.grassmaps.ui.shell.TrackAnalysisPanel
 import nl.r1a.grassmaps.ui.shell.TrackImportConfirmSheet
@@ -261,7 +262,7 @@ import nl.r1a.grassmaps.ui.shell.TrackMapCard
 import nl.r1a.grassmaps.ui.shell.TrackMapCardAction
 import nl.r1a.grassmaps.ui.shell.TrackMapCardHost
 import nl.r1a.grassmaps.ui.shell.TrackTap
-import nl.r1a.grassmaps.ui.shell.WidgetsSavedSheet
+import nl.r1a.grassmaps.ui.shell.WidgetsSavedSheetActions
 import nl.r1a.grassmaps.ui.shell.ZoomSliderContent
 import nl.r1a.grassmaps.ui.shell.aboveBottomSheet
 import nl.r1a.grassmaps.ui.shell.followTrackSheetDisplay
@@ -365,6 +366,10 @@ private fun setAnimatorDurationScale(scale: Float) {
 
 /** The map switcher's own bottom-chrome key, so transient banners can clear it. */
 private val PROFILE_SWITCH_KEY: Any = Any()
+
+// The bar inside the chevron's sheet reports apart from the map's own bar, so
+// closing the sheet never forgets the map bar's reach.
+private val SHEET_BAR_KEY: Any = Any()
 
 /**
  * The bar sits 4 dp lower than the other bottom-start controls. A spacer above
@@ -508,14 +513,15 @@ internal fun routeSummaryCardShown(status: RoutePlanStatus): Boolean = status ==
 
 /**
  * Whether the map control rail and the quick-access button are composed. Round 8
- * `x-route-preview` draws none over a ready route: the rail rides above the
- * bottom sheet, and the tall preview sheet pushed it into the top card and the
- * status bar on the Moto g32.
+ * `x-route-preview` draws none over a ready route, and round 9 `k-half` none
+ * while the chevron's sheet is open: the rail rides above the bottom sheet, and
+ * a tall sheet pushed it into the top card and the status bar on the Moto g32.
  */
 internal fun mapControlsShown(
     navigationActive: Boolean,
     status: RoutePlanStatus,
-): Boolean = !navigationActive && !routeSummaryCardShown(status)
+    widgetsSheetOpen: Boolean,
+): Boolean = !navigationActive && !routeSummaryCardShown(status) && !widgetsSheetOpen
 
 /**
  * The widget grid's top inset under the status bar. A shown route card sits at
@@ -991,7 +997,6 @@ private fun MapContent(
     val backupVisible by BackupScreenSession.visible.collectAsState()
     val settingsVisible by ScreenSettingsSession.visible.collectAsState()
     val settingsIndexVisible by SettingsIndexSession.visible.collectAsState()
-    val settingsEntryLabel = remember(container.strings) { container.strings.resolve(SETTINGS_INDEX_TITLE_KEY) }
     val sheetOpenLabel = stringResource(R.string.map_bottom_bar_open_sheet)
     val settingsIndexPage = remember(container.strings) { settingsIndexContent(container.strings) }
     val styleChoice by container.mapStyleSettings.active.collectAsState()
@@ -1082,6 +1087,43 @@ private fun MapContent(
     var selectedTrack by remember { mutableStateOf<StoredTrack?>(null) }
     var selectedSummary by remember { mutableStateOf<TrackSummary?>(null) }
     var selectedFolderName by remember { mutableStateOf<String?>(null) }
+    // Loads a saved track and opens its map card. A tap on a drawn track and a
+    // track tile in the chevron's sheet share this path.
+    val openTrack: (String) -> Unit = { id ->
+        scope.launch {
+            val summary = container.tracks.summaries().firstOrNull { row -> row.id.value == id }
+            when (val outcome = container.tracks.stored(TrackId(id))) {
+                is Outcome.Success -> {
+                    val stored = outcome.value
+                    selectedTrack = stored
+                    selectedSummary = summary
+                    selectedFolderName =
+                        (summary?.listId ?: stored.listId)?.let { listId ->
+                            container.trackFolders.find(listId)?.name
+                        }
+                }
+
+                is Outcome.Failure -> {
+                    selectedTrack = null
+                    selectedSummary = null
+                    selectedFolderName = null
+                    Log.w(TAG, "selected track not loaded: ${outcome.error}")
+                }
+            }
+        }
+    }
+    // A Saved tile in the chevron's sheet: a place moves the map to it, a
+    // track opens its card and moves the map to its start.
+    val openSavedTile: (SavedTileTarget) -> Unit = { target ->
+        if (target is SavedTileTarget.Track) openTrack(target.id)
+        target.center?.let { point ->
+            scope.launch {
+                surface.host
+                    .animateCamera(CameraUpdate(center = point))
+                    .onFailure { error -> Log.w(TAG, "show saved item on map failed: $error") }
+            }
+        }
+    }
     // Following a track (T-0412): the card's Follow track action asks where to
     // start. The sheet keeps the position it opened with so its hints do not
     // jitter with every fix, and Start rebuilds the route from the fix of that
@@ -1420,27 +1462,7 @@ private fun MapContent(
 
                 if (id != null) {
                     selectedRelation = null
-                    scope.launch {
-                        val summary = container.tracks.summaries().firstOrNull { row -> row.id.value == id }
-                        when (val outcome = container.tracks.stored(TrackId(id))) {
-                            is Outcome.Success -> {
-                                val stored = outcome.value
-                                selectedTrack = stored
-                                selectedSummary = summary
-                                selectedFolderName =
-                                    (summary?.listId ?: stored.listId)?.let { listId ->
-                                        container.trackFolders.find(listId)?.name
-                                    }
-                            }
-
-                            is Outcome.Failure -> {
-                                selectedTrack = null
-                                selectedSummary = null
-                                selectedFolderName = null
-                                Log.w(TAG, "selected track not loaded: ${outcome.error}")
-                            }
-                        }
-                    }
+                    openTrack(id)
                 } else {
                     selectedTrack = null
                     selectedSummary = null
@@ -1546,7 +1568,7 @@ private fun MapContent(
                 )
             }
         }
-        if (mapControlsShown(navigationActive, plan.status)) {
+        if (mapControlsShown(navigationActive, plan.status, widgetsSavedSheetOpen)) {
             val dispatchMapButton: (CommandId, JsonObject) -> Unit = { id, params ->
                 dispatchLayoutButton(
                     id = id,
@@ -2449,47 +2471,59 @@ private fun MapContent(
                 surface = surface,
                 querySequence = listsQuerySequence,
                 hiddenGroups = favouritesLayerSettings.hiddenGroups,
-                embedded = false,
                 onClose = { FavouritesListsSession.hide() },
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        // The chevron's sheet holds the live widgets above the saved lists. The
-        // widget grid stays read-only here: the layout sheet owns editing, and a
-        // second editable grid would give the same controller two owners.
+        // The chevron's sheet (round 9 `k-half`). The map bar stays in view at
+        // its foot with the chevron turned down, so the bar never jumps.
         if (widgetsSavedSheetOpen && !navigationActive) {
-            WidgetsSavedSheet(
-                sheetTitle = sheetOpenLabel,
-                widgetsTitle = stringResource(ShellStrings.string.map_sheet_widgets_title),
-                savedTitle = stringResource(ShellStrings.string.map_sheet_saved_title),
-                widgetsNote = stringResource(ShellStrings.string.map_sheet_widgets_read_only),
-                settingsLabel = settingsEntryLabel,
-                closeLabel = stringResource(ShellStrings.string.search_close),
-                onOpenSettings = {
-                    widgetsSavedSheetOpen = false
-                    SettingsIndexSession.show()
-                },
-                onDismiss = { widgetsSavedSheetOpen = false },
-                widgets = {
-                    WidgetGridHost(
-                        container = container,
-                        units = units,
-                        isEditing = false,
-                        onOpenPicker = {},
-                    )
-                },
-                saved = {
-                    MapSavedListsHost(
-                        container = container,
-                        scope = scope,
-                        surface = surface,
-                        querySequence = listsQuerySequence,
-                        hiddenGroups = favouritesLayerSettings.hiddenGroups,
-                        embedded = true,
-                        onClose = { widgetsSavedSheetOpen = false },
-                    )
-                },
-            )
+            val closeSheet = { widgetsSavedSheetOpen = false }
+            WidgetsSavedSheetHost(
+                container = container,
+                units = units,
+                origin = lastFix?.position,
+                hiddenGroups = favouritesLayerSettings.hiddenGroups,
+                actions =
+                    WidgetsSavedSheetActions(
+                        onEditWidgets = {
+                            closeSheet()
+                            layoutSheetTab = MapLayoutTab.Widgets
+                        },
+                        onOpenAllSaved = {
+                            closeSheet()
+                            FavouritesListsSession.show()
+                        },
+                        onOpenTile = { tile ->
+                            closeSheet()
+                            openSavedTile(tile.target)
+                        },
+                        onOpenSettings = {
+                            closeSheet()
+                            SettingsIndexSession.show()
+                        },
+                        onDismiss = closeSheet,
+                    ),
+            ) {
+                MapBottomBar(
+                    chromeKey = SHEET_BAR_KEY,
+                    searchLabel = stringResource(ShellStrings.string.search_title),
+                    sheetLabel = stringResource(ShellStrings.string.map_sheet_close),
+                    active = profile,
+                    onOpenSearch = {
+                        closeSheet()
+                        searchExpanded = true
+                    },
+                    onSelectProfile = container.activeProfile::activate,
+                    onOpenAllProfiles = {
+                        closeSheet()
+                        ProfilesScreenSession.show()
+                    },
+                    onOpenSheet = closeSheet,
+                    inSheet = true,
+                    modifier = Modifier.offset(y = PROFILE_SWITCH_DROP_DP.dp),
+                )
+            }
         }
         if (libraryVisible && !navigationActive) {
             val libraryFlow =
@@ -2931,11 +2965,7 @@ private fun MapContent(
     }
 }
 
-/**
- * The saved-list body shared by the standalone Saved sheet and the combined
- * widgets-and-Saved sheet. Both paths drive the same commands and the same
- * persisted visibility store; only the surrounding chrome differs.
- */
+/** The full Saved screen over the map, with its commands and the persisted visibility store. */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 private fun MapSavedListsHost(
@@ -2944,7 +2974,6 @@ private fun MapSavedListsHost(
     surface: MapSurface,
     querySequence: LongArray,
     hiddenGroups: Set<String>,
-    embedded: Boolean,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -3024,7 +3053,6 @@ private fun MapSavedListsHost(
             onClose()
             TrackLibraryScreen.show()
         },
-        embedded = embedded,
         modifier = modifier,
     )
 }
@@ -3036,7 +3064,10 @@ private fun MapSavedListsHost(
  * and the banners all read a single owner. [onSelectProfile] keeps the train 90
  * fix: each dot selects its own profile rather than cycling to the next one.
  * Search has a bounded slot and the profile cluster takes the remaining width,
- * so the fixed-width chevron is never squeezed off the right end.
+ * so the fixed-width chevron is never squeezed off the right end. [inSheet]
+ * draws the same bar at the foot of the chevron's sheet (round 9 `k-half`):
+ * filled with the soft surface, without the floating ring, and with the
+ * chevron turned down to close the sheet.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -3050,6 +3081,7 @@ private fun MapBottomBar(
     onOpenAllProfiles: () -> Unit,
     onOpenSheet: () -> Unit,
     modifier: Modifier = Modifier,
+    inSheet: Boolean = false,
 ) {
     val colors = LocalShellColors.current
     val shape = RoundedCornerShape((MAP_BOTTOM_BAR_HEIGHT_DP / 2).dp)
@@ -3057,9 +3089,13 @@ private fun MapBottomBar(
         modifier =
             modifier
                 .height(MAP_BOTTOM_BAR_HEIGHT_DP.dp)
-                .background(colors.glass, shape)
-                .border(1.dp, colors.ring, shape)
-                .padding(horizontal = BAR_INSET_DP.dp)
+                .then(
+                    if (inSheet) {
+                        Modifier.background(colors.soft, shape)
+                    } else {
+                        Modifier.background(colors.glass, shape).border(1.dp, colors.ring, shape)
+                    },
+                ).padding(horizontal = BAR_INSET_DP.dp)
                 .reportsBottomChrome(key = chromeKey),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -3103,18 +3139,21 @@ private fun MapBottomBar(
         Spacer(Modifier.width(BAR_SLOT_GAP_DP.dp))
         BottomBarChevron(
             label = sheetLabel,
+            open = inSheet,
             onClick = onOpenSheet,
         )
     }
 }
 
 /** The chevron at the right end of the map's bottom bar. It opens the widgets
- * and Saved sheet. The drawn glyph is decoration; [label] is its spoken name.
+ * and Saved sheet, and points down to close it while the sheet is [open]. The
+ * drawn glyph is decoration; [label] is its spoken name.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 private fun BottomBarChevron(
     label: String,
+    open: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -3129,7 +3168,7 @@ private fun BottomBarChevron(
                 .semantics { contentDescription = label },
         contentAlignment = Alignment.Center,
     ) {
-        ShellIcon(ShellIcons.ChevronUp, colors.ink, Modifier.size(SHEET_CHEVRON_GLYPH_DP.dp))
+        ShellIcon(if (open) ShellIcons.ChevronDown else ShellIcons.ChevronUp, colors.ink, Modifier.size(SHEET_CHEVRON_GLYPH_DP.dp))
     }
 }
 

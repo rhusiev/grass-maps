@@ -74,7 +74,7 @@ class SearchMarkerPersistenceTest {
         )
         assertTrue(
             "the widgets and Saved sheet must stay in the single bar",
-            source.contains("WidgetsSavedSheet("),
+            source.contains("WidgetsSavedSheetHost("),
         )
     }
 

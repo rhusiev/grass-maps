@@ -64,10 +64,8 @@ internal fun selectedPlacePosition(
  * [onToggleGroupShown] writes an eye tap back through the same store. Neither
  * this host nor the Saved section keeps a second visibility state.
  *
- * [embedded] draws only the body for the combined widgets-and-Saved sheet,
- * which supplies its own chrome and scrolling; the panels then open inline
- * above the bar. Standalone, the screen fills the window with a back chevron
- * and opens the panels over a scrim.
+ * The screen fills the window with a back chevron and opens the panels over
+ * a scrim.
  *
  * [onShowOnMap] receives the selected place's coordinates. It has no default:
  * the app supplies the camera action, so an unwired screen cannot compile.
@@ -91,7 +89,6 @@ fun FavouritesListsHost(
     onToggleGroupShown: (String, Boolean) -> Unit = { _, _ -> },
     onShowOnMap: (GeoPoint) -> Unit,
     onOpenTracks: (() -> Unit)? = null,
-    embedded: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val actions =
@@ -108,17 +105,6 @@ fun FavouritesListsHost(
             onShowOnMap = onShowOnMap,
             onOpenTracks = onOpenTracks,
         )
-    if (embedded) {
-        FavouritesListsBody(
-            state = state,
-            strings = strings,
-            hiddenGroups = hiddenGroups,
-            actions = actions,
-            embedded = true,
-            modifier = modifier,
-        )
-        return
-    }
     Box(
         modifier =
             modifier
@@ -132,7 +118,6 @@ fun FavouritesListsHost(
             strings = strings,
             hiddenGroups = hiddenGroups,
             actions = actions,
-            embedded = false,
             modifier = Modifier.widthIn(max = SCREEN_MAX_WIDTH_DP.dp).fillMaxSize(),
         )
     }
@@ -161,9 +146,8 @@ private enum class SavedPanel {
 }
 
 /**
- * The Saved screen without its window chrome. Standalone, the reading area
- * scrolls between the header and the fixed bottom controls; embedded, the
- * caller's sheet scrolls and the controls follow the last row.
+ * The Saved screen without its window chrome. The reading area scrolls between
+ * the header and the fixed bottom controls.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -172,7 +156,6 @@ internal fun FavouritesListsBody(
     strings: Strings,
     hiddenGroups: Set<String>,
     actions: SavedHostActions,
-    embedded: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val lists = favouritesListsContent(state, strings)
@@ -189,8 +172,8 @@ internal fun FavouritesListsBody(
     val selectedPosition = selectedPlacePosition(state, selectedPoint)
     val showOnMap = { point: GeoPoint ->
         actions.onShowOnMap(point)
-        // A full screen hides the map, so the camera move is only seen once it closes.
-        if (!embedded) actions.onClose()
+        // The screen hides the map, so the camera move is only seen once it closes.
+        actions.onClose()
     }
     val rowActions =
         SavedRowActions(
@@ -220,7 +203,7 @@ internal fun FavouritesListsBody(
             segment = segment,
             onToggleGroupShown = actions.onToggleGroupShown,
             rowActions = rowActions,
-            onBack = actions.onClose.takeIf { !embedded },
+            onBack = actions.onClose,
             backLabel = lists.close,
             modifier = sectionModifier,
         )
@@ -288,14 +271,6 @@ internal fun FavouritesListsBody(
         )
     }
 
-    if (embedded) {
-        Column(modifier = modifier.fillMaxWidth()) {
-            section(Modifier)
-            panelContent(Modifier)
-            bottom(Modifier.padding(top = PANEL_GAP_DP.dp))
-        }
-        return
-    }
     Box(modifier = modifier.statusBarsPadding().navigationBarsPadding().imePadding()) {
         Column(modifier = Modifier.fillMaxSize()) {
             section(

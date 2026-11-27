@@ -468,8 +468,17 @@
     <string name="map_layout_saved_content">Saved places</string>
     <string name="map_layout_tracks_label">T</string>
     <string name="map_layout_tracks_content">Tracks</string>
-    <string name="map_sheet_widgets_title">Widgets</string>
+    <string name="map_sheet_title">Widgets and Saved</string>
+    <string name="map_sheet_close">Close widgets and Saved</string>
+    <string name="map_sheet_widgets_heading">%1$s widgets</string>
+    <string name="map_sheet_widgets_edit">Edit</string>
+    <string name="map_sheet_widgets_edit_description">Edit widgets</string>
+    <string name="map_sheet_widgets_add">Add</string>
+    <string name="map_sheet_widgets_add_description">Add a widget</string>
+    <string name="map_sheet_saved_all">All %1$d</string>
+    <string name="map_sheet_saved_all_description">Open all saved, %1$d</string>
+    <string name="map_sheet_saved_empty">Nothing saved yet</string>
+    <string name="map_sheet_track_length">%1$s track</string>
     <string name="map_sheet_saved_title">Saved</string>
     <string name="map_sheet_settings">Settings</string>
-    <string name="map_sheet_widgets_read_only">Altitude, GPS accuracy, coordinates, speed, average speed, max speed and the selected point show live values on the map. Values are read-only here; change the set in Layout &gt; Widgets.</string>
 </resources>

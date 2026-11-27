@@ -163,4 +163,3 @@ private const val SEARCH_INSET_DP = 8
 private const val BAR_PADDING_DP = 5
 private const val BAR_CORNER_DP = 29
 private const val DIVIDER_DP = 28
-

@@ -45,6 +45,7 @@ import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.api.service.Strings
@@ -258,14 +259,19 @@ private fun ReadoutRow(
     strings: Strings,
     colors: ShellColors,
 ) {
+    // The speed chip is measured first and never wraps; the stop chip takes what
+    // is left and ellipsizes the stop name, so a large font cannot squeeze the
+    // speed into a column.
+    val hasStop = readout.stopDistance != null || readout.stopName != null
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = if (hasStop) Arrangement.SpaceBetween else Arrangement.End,
     ) {
-        if (readout.stopDistance != null || readout.stopName != null) {
+        if (hasStop) {
             val stop = listOfNotNull(readout.stopDistance, readout.stopTime).joinToString(" · ")
             Row(
-                modifier = glassChip(colors),
+                modifier = Modifier.weight(1f, fill = false).padding(end = 7.dp).then(glassChip(colors)),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(7.dp),
             ) {
@@ -273,13 +279,18 @@ private fun ReadoutRow(
                 BasicText(
                     text = stop,
                     style = TextStyle(color = colors.ink, fontSize = 13.sp, fontWeight = FontWeight.Bold),
+                    softWrap = false,
                 )
                 readout.stopName?.let { name ->
-                    BasicText(text = name, style = TextStyle(color = colors.muted, fontSize = 12.sp))
+                    BasicText(
+                        text = name,
+                        style = TextStyle(color = colors.muted, fontSize = 12.sp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
         }
-        Spacer(Modifier.weight(1f))
         Row(
             modifier = glassChip(colors),
             verticalAlignment = Alignment.CenterVertically,
@@ -289,10 +300,12 @@ private fun ReadoutRow(
             BasicText(
                 text = readout.speed ?: DASH,
                 style = TextStyle(color = colors.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                softWrap = false,
             )
             BasicText(
                 text = speedUnit,
                 style = TextStyle(color = colors.muted, fontSize = 12.sp),
+                softWrap = false,
             )
         }
     }

@@ -77,11 +77,11 @@ internal fun ListBottomBar(
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
-            textStyle = TextStyle(color = colors.ink, fontSize = LABEL_FONT_SP.sp),
+            textStyle = TextStyle(color = colors.ink, fontSize = ListChromeMetrics.LABEL_FONT_SP.sp),
             cursorBrush = SolidColor(colors.ink),
             modifier =
                 Modifier
-                    .weight(WEIGHT_ONE)
+                    .weight(ListChromeMetrics.WEIGHT_ONE)
                     .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                     .semantics { contentDescription = placeholder },
             decorationBox = { field ->
@@ -90,10 +90,13 @@ internal fun ListBottomBar(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(GAP_DP.dp),
                 ) {
-                    ShellIcon(icon = ShellIcons.Search, tint = colors.ink, modifier = Modifier.size(ICON_DP.dp))
-                    Box(modifier = Modifier.weight(WEIGHT_ONE), contentAlignment = Alignment.CenterStart) {
+                    ShellIcon(icon = ShellIcons.Search, tint = colors.ink, modifier = Modifier.size(ListChromeMetrics.ICON_DP.dp))
+                    Box(modifier = Modifier.weight(ListChromeMetrics.WEIGHT_ONE), contentAlignment = Alignment.CenterStart) {
                         if (query.isEmpty()) {
-                            BasicText(text = placeholder, style = TextStyle(color = colors.muted, fontSize = LABEL_FONT_SP.sp))
+                            BasicText(
+                                text = placeholder,
+                                style = TextStyle(color = colors.muted, fontSize = ListChromeMetrics.LABEL_FONT_SP.sp),
+                            )
                         }
                         field()
                     }
@@ -138,8 +141,8 @@ internal fun RoundIconButton(
     ) {
         ShellIcon(
             icon = icon,
-            tint = if (enabled) tint ?: colors.ink else colors.muted.copy(alpha = DISABLED_ALPHA),
-            modifier = Modifier.size(ICON_DP.dp),
+            tint = if (enabled) tint ?: colors.ink else colors.muted.copy(alpha = ListChromeMetrics.DISABLED_ALPHA),
+            modifier = Modifier.size(ListChromeMetrics.ICON_DP.dp),
         )
     }
 }
@@ -147,12 +150,17 @@ internal fun RoundIconButton(
 /** A full list screen's background: white on light, the dark map tone on dark (round 9 `k-saved`). */
 internal fun listScreenBackground(colors: ShellColors): Color = if (colors.dark) colors.map else colors.surface
 
-private const val ICON_DP = 22
+/** Chrome metrics shared by the list bottom bar and the Saved rows. */
+internal object ListChromeMetrics {
+    const val ICON_DP = 22
+    const val LABEL_FONT_SP = 16
+    const val WEIGHT_ONE = 1f
+    const val DISABLED_ALPHA = 0.5f
+}
+
 private const val GAP_DP = 8
 private const val SEARCH_INSET_DP = 8
 private const val BAR_PADDING_DP = 5
 private const val BAR_CORNER_DP = 29
 private const val DIVIDER_DP = 28
-private const val LABEL_FONT_SP = 16
-private const val WEIGHT_ONE = 1f
-private const val DISABLED_ALPHA = 0.5f
+

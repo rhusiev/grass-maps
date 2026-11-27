@@ -220,7 +220,7 @@ internal fun NewGroupPanel(
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
-            textStyle = TextStyle(color = colors.ink, fontSize = LABEL_FONT_SP.sp),
+            textStyle = TextStyle(color = colors.ink, fontSize = ListChromeMetrics.LABEL_FONT_SP.sp),
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -262,10 +262,10 @@ internal fun SortPanel(
                 BasicText(
                     text = row.label,
                     style = bodyStyle().copy(fontWeight = if (row.selected) FontWeight.SemiBold else FontWeight.Normal),
-                    modifier = Modifier.weight(WEIGHT_ONE),
+                    modifier = Modifier.weight(ListChromeMetrics.WEIGHT_ONE),
                 )
                 if (row.selected) {
-                    ShellIcon(icon = ShellIcons.Check, tint = colors.accent, modifier = Modifier.size(ICON_DP.dp))
+                    ShellIcon(icon = ShellIcons.Check, tint = colors.accent, modifier = Modifier.size(ListChromeMetrics.ICON_DP.dp))
                 }
             }
         }
@@ -312,7 +312,7 @@ private fun SavedHeading(
         if (onBack != null) {
             IconButton(icon = ShellIcons.ChevronLeft, label = backLabel, filled = false, onClick = onBack)
         }
-        Column(modifier = Modifier.weight(WEIGHT_ONE)) {
+        Column(modifier = Modifier.weight(ListChromeMetrics.WEIGHT_ONE)) {
             BasicText(text = content.title, style = headingStyle())
             SecondaryLine(text = content.subtitle)
         }
@@ -333,10 +333,10 @@ private fun SavedInfoLine(
         horizontalArrangement = Arrangement.spacedBy(SMALL_GAP_DP.dp),
     ) {
         ShellIcon(icon = ShellIcons.Sort, tint = colors.muted, modifier = Modifier.size(INFO_ICON_DP.dp))
-        BasicText(text = hint, style = noteStyle(), modifier = Modifier.weight(WEIGHT_ONE))
+        BasicText(text = hint, style = noteStyle(), modifier = Modifier.weight(ListChromeMetrics.WEIGHT_ONE))
         if (onMap != null) {
             ShellIcon(icon = ShellIcons.Eye, tint = colors.muted, modifier = Modifier.size(INFO_ICON_DP.dp))
-            BasicText(text = onMap, style = noteStyle(), modifier = Modifier.weight(WEIGHT_ONE))
+            BasicText(text = onMap, style = noteStyle(), modifier = Modifier.weight(ListChromeMetrics.WEIGHT_ONE))
         }
     }
 }
@@ -360,7 +360,7 @@ private fun SegmentedRow(
             Box(
                 modifier =
                     Modifier
-                        .weight(WEIGHT_ONE)
+                        .weight(ListChromeMetrics.WEIGHT_ONE)
                         .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                         .then(if (row.selected) Modifier.selectedSegment(RoundedCornerShape(SEGMENT_CORNER_DP.dp)) else Modifier)
                         .background(
@@ -375,7 +375,7 @@ private fun SegmentedRow(
                     style =
                         TextStyle(
                             color = if (row.selected) colors.ink else colors.muted,
-                            fontSize = LABEL_FONT_SP.sp,
+                            fontSize = ListChromeMetrics.LABEL_FONT_SP.sp,
                             fontWeight = FontWeight.SemiBold,
                         ),
                 )
@@ -405,7 +405,7 @@ private fun SavedGroup(
         Column(
             modifier =
                 Modifier
-                    .weight(WEIGHT_ONE)
+                    .weight(ListChromeMetrics.WEIGHT_ONE)
                     .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                     .clickable(role = Role.Button, onClick = onToggleExpanded),
             verticalArrangement = Arrangement.Center,
@@ -533,7 +533,7 @@ private fun SavedPlace(
                     .size(PLACE_DOT_DP.dp)
                     .background(colour?.let { Color(it) } ?: colors.muted, CircleShape),
         )
-        Column(modifier = Modifier.weight(WEIGHT_ONE)) {
+        Column(modifier = Modifier.weight(ListChromeMetrics.WEIGHT_ONE)) {
             BasicText(text = place.name, style = bodyStyle())
             place.detail?.let { detail -> BasicText(text = detail, style = noteStyle()) }
         }
@@ -624,7 +624,12 @@ private fun UndoPill(
     ) {
         BasicText(
             text = label,
-            style = TextStyle(color = colors.snackbarAction, fontSize = LABEL_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
+            style =
+                TextStyle(
+                    color = colors.snackbarAction,
+                    fontSize = ListChromeMetrics.LABEL_FONT_SP.sp,
+                    fontWeight = FontWeight.SemiBold,
+                ),
         )
     }
 }
@@ -697,7 +702,7 @@ private fun PillButton(
                     when {
                         !primary -> colors.soft
                         enabled -> colors.accent
-                        else -> colors.accent.copy(alpha = DISABLED_ALPHA)
+                        else -> colors.accent.copy(alpha = ListChromeMetrics.DISABLED_ALPHA)
                     },
                     RoundedCornerShape(BUTTON_DP.dp),
                 ).clickable(enabled = enabled, role = Role.Button, onClick = onClick)
@@ -709,7 +714,7 @@ private fun PillButton(
             style =
                 TextStyle(
                     color = if (primary) colors.onAccent else colors.ink,
-                    fontSize = LABEL_FONT_SP.sp,
+                    fontSize = ListChromeMetrics.LABEL_FONT_SP.sp,
                     fontWeight = FontWeight.SemiBold,
                 ),
         )
@@ -724,7 +729,7 @@ private fun headingStyle(): TextStyle =
     TextStyle(color = LocalShellColors.current.ink, fontSize = TITLE_FONT_SP.sp, fontWeight = FontWeight.SemiBold)
 
 @Composable
-private fun bodyStyle(): TextStyle = TextStyle(color = LocalShellColors.current.ink, fontSize = LABEL_FONT_SP.sp)
+private fun bodyStyle(): TextStyle = TextStyle(color = LocalShellColors.current.ink, fontSize = ListChromeMetrics.LABEL_FONT_SP.sp)
 
 @Composable
 private fun noteStyle(): TextStyle = TextStyle(color = LocalShellColors.current.muted, fontSize = NOTE_FONT_SP.sp)
@@ -734,7 +739,7 @@ private fun noteStyle(): TextStyle = TextStyle(color = LocalShellColors.current.
 private fun SecondaryLine(text: String) {
     BasicText(
         text = text,
-        style = TextStyle(color = LocalShellColors.current.muted, fontSize = LABEL_FONT_SP.sp),
+        style = TextStyle(color = LocalShellColors.current.muted, fontSize = ListChromeMetrics.LABEL_FONT_SP.sp),
         modifier = Modifier.padding(vertical = SMALL_GAP_DP.dp),
     )
 }
@@ -749,7 +754,6 @@ internal const val SAVED_STORAGE_KEY = "saved_screen_storage"
 
 private const val GROUP_ROW_DP = 56
 private const val BUTTON_DP = 50
-private const val ICON_DP = 22
 private const val INFO_ICON_DP = 16
 private const val BADGE_DOT_DP = 16
 private const val PLACE_DOT_DP = 12
@@ -766,9 +770,6 @@ private const val SEGMENT_CORNER_DP = 24
 private const val PANEL_CORNER_DP = 22
 private const val PANEL_PADDING_DP = 16
 private const val TITLE_FONT_SP = 24
-private const val LABEL_FONT_SP = 16
 private const val NOTE_FONT_SP = 13
-private const val WEIGHT_ONE = 1f
 private const val BADGE_TINT_ALPHA = 0.16f
 private const val SELECTED_ALPHA = 0.14f
-private const val DISABLED_ALPHA = 0.5f

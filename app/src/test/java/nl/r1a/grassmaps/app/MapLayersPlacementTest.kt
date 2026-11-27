@@ -19,7 +19,7 @@ class MapLayersPlacementTest {
         val layers =
             source
                 .substringAfter("if (!navigationActive && !bottomSheetShown) {")
-                .substringBefore("if (!navigationActive) {\n            val dispatchMapButton")
+                .substringBefore("if (mapControlsShown(navigationActive, plan.status)) {\n            val dispatchMapButton")
 
         assertTrue("LayersButton is missing from its own host", layers.contains("LayersButton("))
         assertTrue("Layers lost its BottomEnd anchor", layers.contains("Alignment.BottomEnd"))

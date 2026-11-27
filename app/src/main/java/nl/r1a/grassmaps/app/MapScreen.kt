@@ -507,6 +507,17 @@ internal fun routePlanSheetShown(status: RoutePlanStatus): Boolean = status != R
 internal fun routeSummaryCardShown(status: RoutePlanStatus): Boolean = status == RoutePlanStatus.Ready
 
 /**
+ * Whether the map control rail and the quick-access button are composed. Round 8
+ * `x-route-preview` draws none over a ready route: the rail rides above the
+ * bottom sheet, and the tall preview sheet pushed it into the top card and the
+ * status bar on the Moto g32.
+ */
+internal fun mapControlsShown(
+    navigationActive: Boolean,
+    status: RoutePlanStatus,
+): Boolean = !navigationActive && !routeSummaryCardShown(status)
+
+/**
  * The widget grid's top inset under the status bar. A shown route card sits at
  * the top too, so the grid moves below its measured height and the card never
  * hides a widget at any font scale (round 9 review).
@@ -1535,7 +1546,7 @@ private fun MapContent(
                 )
             }
         }
-        if (!navigationActive) {
+        if (mapControlsShown(navigationActive, plan.status)) {
             val dispatchMapButton: (CommandId, JsonObject) -> Unit = { id, params ->
                 dispatchLayoutButton(
                     id = id,

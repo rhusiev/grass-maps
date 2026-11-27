@@ -1,7 +1,9 @@
 package nl.r1a.grassmaps.app
 
 import androidx.compose.ui.unit.dp
+import nl.r1a.grassmaps.plugin.api.model.RoutePlanStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -61,6 +63,14 @@ class RouteCardPlacementTest {
                 cardBottom + WIDGET_GRID_GAP_DP.dp <= widgetsTop,
             )
             assertTrue("the widgets never move up", widgetsTop >= widgetGridTopInset(null))
+        }
+    }
+
+    @Test
+    fun theMapControlsGiveWayToTheReadyPreviewOnly() {
+        for (status in RoutePlanStatus.entries) {
+            assertEquals("status $status", status != RoutePlanStatus.Ready, mapControlsShown(navigationActive = false, status))
+            assertFalse("status $status during navigation", mapControlsShown(navigationActive = true, status))
         }
     }
 }

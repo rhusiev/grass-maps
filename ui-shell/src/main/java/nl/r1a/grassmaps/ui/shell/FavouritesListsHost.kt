@@ -197,9 +197,8 @@ internal fun FavouritesListsBody(
         )
     val section: @Composable (Modifier) -> Unit = { sectionModifier ->
         SavedScreenSection(
-            state = state,
+            content = savedContent,
             strings = strings,
-            hiddenGroups = hiddenGroups,
             segment = segment,
             onToggleGroupShown = actions.onToggleGroupShown,
             rowActions = rowActions,

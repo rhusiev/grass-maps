@@ -38,7 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import nl.r1a.grassmaps.plugin.api.model.FavouriteListsState
 import nl.r1a.grassmaps.plugin.api.model.FavouriteSort
 import nl.r1a.grassmaps.plugin.api.service.Strings
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
@@ -75,20 +74,20 @@ internal class SavedRowActions(
  *
  * The Tracks branch is a notice on purpose when the host cannot open the track
  * library. The library's state stream and its commands are owned by
- * `app/MapScreen.kt`, outside this module; this section receives only
- * [FavouriteListsState] and does not invent a second library.
+ * `app/MapScreen.kt`, outside this module; this section receives only derived
+ * Saved content and does not invent a second library.
  *
- * [hiddenGroups] comes from the persisted layer settings on every composition,
- * so closing and reopening the screen cannot reset the eyes. An eye tap sends
- * [onToggleGroupShown] with the group and its new value; the store writes it
- * and the next composition reads it back. There is no local visibility copy.
+ * [content] is derived once by the host from the state and the persisted
+ * hidden groups, so the same rows feed this section and the bottom controls.
+ * An eye tap sends [onToggleGroupShown] with the group and its new value; the
+ * store writes it and the next composition reads it back. There is no local
+ * visibility copy.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
 internal fun SavedScreenSection(
-    state: FavouriteListsState,
+    content: SavedScreenContent,
     strings: Strings,
-    hiddenGroups: Set<String>,
     segment: SavedSegment,
     onToggleGroupShown: (String, Boolean) -> Unit,
     rowActions: SavedRowActions,
@@ -99,9 +98,6 @@ internal fun SavedScreenSection(
     var expandedGroup by remember { mutableStateOf<String?>(null) }
     var recolourGroup by remember { mutableStateOf<String?>(null) }
     var allPlacesGroup by remember { mutableStateOf<String?>(null) }
-
-    val commands = SAVED_COMMANDS
-    val content = savedScreenContent(state, strings, commands, hiddenGroups, segment)
 
     Column(modifier = modifier.fillMaxWidth()) {
         SavedHeading(content = content, onBack = onBack, backLabel = backLabel)

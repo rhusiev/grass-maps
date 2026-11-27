@@ -50,11 +50,15 @@ class SavedVisibilityWiringTest {
 
         val sectionCall = callBlock(listsHost, "SavedScreenSection(")
         assertTrue(
-            "the lists host does not forward the hidden groups to Saved",
-            sectionCall.contains("hiddenGroups = hiddenGroups"),
+            "the lists host does not forward the derived content to Saved",
+            sectionCall.contains("content = savedContent"),
         )
         assertTrue(
-            "the Saved section does not accept the persisted hidden groups",
+            "the Saved section does not accept derived content",
+            Regex("content: SavedScreenContent").containsMatchIn(signature(savedSection, "fun SavedScreenSection(")),
+        )
+        assertFalse(
+            "the Saved section still accepts the raw hidden groups",
             Regex("hiddenGroups: Set<String>").containsMatchIn(signature(savedSection, "fun SavedScreenSection(")),
         )
         assertFalse(
@@ -62,8 +66,13 @@ class SavedVisibilityWiringTest {
             savedSection.contains("mutableStateOf(emptySet<String>())"),
         )
         assertTrue(
-            "the Saved section does not derive content from the passed hidden groups",
-            savedSection.contains("savedScreenContent(state, strings, commands, hiddenGroups, segment)"),
+            "the host does not derive Saved content from the persisted hidden groups once",
+            listsHost.contains("savedScreenContent(state, strings, commands, hiddenGroups, segment)"),
+        )
+        assertEquals(1, Regex("savedScreenContent\\(").findAll(listsHost).count())
+        assertFalse(
+            "the Saved section still derives content a second time",
+            savedSection.contains("savedScreenContent("),
         )
         assertEquals("the shared tap target is not 48 dp", 48, MapControlMetrics.TAP_TARGET_DP)
         assertTrue("the segment row was lost", savedSection.contains("SegmentedRow("))

@@ -34,9 +34,11 @@ class SavedScreenRound4Test {
         assertTrue("the segmented row must sit below the list and above the bar", segment < bar)
 
         assertTrue(
-            "the resolver no longer reads group visibility from the store",
-            section.contains("savedScreenContent(state, strings, commands, hiddenGroups, segment)"),
+            "the host no longer derives content from the stored hidden groups once",
+            listsHost.contains("savedScreenContent(state, strings, commands, hiddenGroups, segment)"),
         )
+        assertEquals(1, Regex("savedScreenContent\\(").findAll(listsHost).count())
+        assertTrue("the section takes derived content", section.contains("content: SavedScreenContent"))
         assertEquals("the shared tap target is not 48 dp", 48, MapControlMetrics.TAP_TARGET_DP)
     }
 

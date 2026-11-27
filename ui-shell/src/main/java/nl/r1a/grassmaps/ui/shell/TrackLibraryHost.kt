@@ -688,15 +688,11 @@ private fun UndoBar(
             style = TextStyle(color = colors.undoText, fontSize = ROW_FONT_SP.sp),
             modifier = Modifier.weight(WEIGHT_ONE, fill = false),
         )
-        BasicText(
+        ListActionButton(
             text = undo,
-            style = TextStyle(color = colors.undoAction, fontSize = ROW_FONT_SP.sp, fontWeight = FontWeight.SemiBold),
-            modifier =
-                Modifier
-                    .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
-                    .widthIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
-                    .clickable(role = Role.Button, onClick = onUndo)
-                    .padding(ACTION_PADDING_DP.dp),
+            background = Color.Transparent,
+            ink = colors.undoAction,
+            onClick = onUndo,
         )
     }
 }
@@ -808,7 +804,13 @@ private fun SortSheet(
                 }
             }
         }
-        CancelButton(text = cancel, colors = colors, onClick = onCancel)
+        ListActionButton(
+            text = cancel,
+            background = Color.Transparent,
+            ink = colors.textSecondary,
+            onClick = onCancel,
+            fill = true,
+        )
     }
 }
 
@@ -825,8 +827,18 @@ private fun LinkSheet(
         Line(text = content.title, colors = colors, bold = true, size = TITLE_FONT_SP)
         Line(text = content.address, colors = colors, secondary = true)
         Row(horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp)) {
-            SecondaryButton(text = content.cancel, colors = colors, onClick = onCancel)
-            PrimaryButton(text = content.open, colors = colors, onClick = onOpen)
+            ListActionButton(
+                text = content.cancel,
+                background = colors.field,
+                ink = colors.textPrimary,
+                onClick = onCancel,
+            )
+            ListActionButton(
+                text = content.open,
+                background = colors.selectedSurface,
+                ink = colors.selectedText,
+                onClick = onOpen,
+            )
         }
     }
 }
@@ -887,8 +899,18 @@ private fun EditSheet(
             onChange = onShowOnMapChange,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp)) {
-            SecondaryButton(text = content.cancel, colors = colors, onClick = onCancel)
-            PrimaryButton(text = content.save, colors = colors, onClick = onSave)
+            ListActionButton(
+                text = content.cancel,
+                background = colors.field,
+                ink = colors.textPrimary,
+                onClick = onCancel,
+            )
+            ListActionButton(
+                text = content.save,
+                background = colors.selectedSurface,
+                ink = colors.selectedText,
+                onClick = onSave,
+            )
         }
     }
 }
@@ -981,7 +1003,13 @@ private fun MoveSheet(
                         .padding(SHEET_ROW_PADDING_DP.dp),
             )
         }
-        CancelButton(text = cancel, colors = colors, onClick = onCancel)
+        ListActionButton(
+            text = cancel,
+            background = Color.Transparent,
+            ink = colors.textSecondary,
+            onClick = onCancel,
+            fill = true,
+        )
     }
 }
 
@@ -1000,8 +1028,18 @@ private fun FolderSheet(
         Line(text = content.nameLabel, colors = colors, secondary = true)
         SheetTextField(value = name, colors = colors, onChange = onNameChange)
         Row(horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp)) {
-            SecondaryButton(text = content.cancel, colors = colors, onClick = onCancel)
-            PrimaryButton(text = content.save, colors = colors, onClick = onSave)
+            ListActionButton(
+                text = content.cancel,
+                background = colors.field,
+                ink = colors.textPrimary,
+                onClick = onCancel,
+            )
+            ListActionButton(
+                text = content.save,
+                background = colors.selectedSurface,
+                ink = colors.selectedText,
+                onClick = onSave,
+            )
         }
     }
 }
@@ -1077,63 +1115,6 @@ private fun Chip(
                     selection = if (selected) colors.selectedSurface else null,
                 ).clickable(onClick = onClick)
                 .padding(CHIP_PADDING_DP.dp),
-    )
-}
-
-@Suppress("ktlint:standard:function-naming")
-@Composable
-private fun PrimaryButton(
-    text: String,
-    colors: TrackLibraryPalette,
-    onClick: () -> Unit,
-) {
-    BasicText(
-        text = text,
-        style = TextStyle(color = colors.selectedText, fontSize = ROW_FONT_SP.sp, fontWeight = FontWeight.Bold),
-        modifier =
-            Modifier
-                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
-                .background(colors.selectedSurface, RoundedCornerShape(BUTTON_CORNER_DP.dp))
-                .clickable(role = Role.Button, onClick = onClick)
-                .padding(BUTTON_PADDING_DP.dp),
-    )
-}
-
-@Suppress("ktlint:standard:function-naming")
-@Composable
-private fun SecondaryButton(
-    text: String,
-    colors: TrackLibraryPalette,
-    onClick: () -> Unit,
-) {
-    BasicText(
-        text = text,
-        style = TextStyle(color = colors.textPrimary, fontSize = ROW_FONT_SP.sp),
-        modifier =
-            Modifier
-                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
-                .background(colors.field, RoundedCornerShape(BUTTON_CORNER_DP.dp))
-                .clickable(role = Role.Button, onClick = onClick)
-                .padding(BUTTON_PADDING_DP.dp),
-    )
-}
-
-@Suppress("ktlint:standard:function-naming")
-@Composable
-private fun CancelButton(
-    text: String,
-    colors: TrackLibraryPalette,
-    onClick: () -> Unit,
-) {
-    BasicText(
-        text = text,
-        style = TextStyle(color = colors.textSecondary, fontSize = ROW_FONT_SP.sp),
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
-                .clickable(role = Role.Button, onClick = onClick)
-                .padding(SHEET_ROW_PADDING_DP.dp),
     )
 }
 
@@ -1235,8 +1216,6 @@ private const val CHIP_CORNER_DP = 12
 private const val CHIP_PADDING_DP = 14
 private const val FIELD_CORNER_DP = 10
 private const val FIELD_PADDING_DP = 10
-private const val BUTTON_CORNER_DP = 14
-private const val BUTTON_PADDING_DP = 14
 private const val UNDO_CORNER_DP = 12
 private const val DOT_SIZE_DP = 12
 private const val DESCRIPTION_HEIGHT_DP = 120

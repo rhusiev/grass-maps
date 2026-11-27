@@ -37,23 +37,56 @@ class FavouritesListsTapTargetTest {
         val swatches = source.substringAfter("private fun Swatches(").substringBefore("\n}\n")
 
         assertTrue("the swatches still use one fixed row", swatches.contains("FlowRow("))
-        val swatchGap = Regex("""SWATCH_GAP_DP = (\d+)""").find(source)?.groupValues?.get(1)?.toInt() ?: 0
-        val indent = Regex("""PLACE_INDENT_DP = (\d+)""").find(source)?.groupValues?.get(1)?.toInt() ?: 0
+        val swatchGap =
+            Regex("""SWATCH_GAP_DP = (\d+)""")
+                .find(source)
+                ?.groupValues
+                ?.get(1)
+                ?.toInt() ?: 0
+        val indent =
+            Regex("""PLACE_INDENT_DP = (\d+)""")
+                .find(source)
+                ?.groupValues
+                ?.get(1)
+                ?.toInt() ?: 0
         val unwrappedWidth = indent + PRESET_COLOURS.size * 48 + (PRESET_COLOURS.size - 1) * swatchGap
         assertEquals("the single-row width the narrow screen clipped", 374, unwrappedWidth)
     }
 
     @Test
-    fun createIsAFullWidthButtonWithItsOriginalCommand() {
-        val pill = source.substringAfter("private fun PillButton(").substringBefore("\n}\n")
+    fun createIsTheSharedFullWidthButtonWithItsOriginalCommand() {
+        val shared = File("src/main/java/nl/r1a/grassmaps/ui/shell/ListActionButtons.kt").readText()
+        val button = shared.substringAfter("internal fun ListActionButton(").substringBefore("\n}\n")
 
-        assertTrue("the button has no minimum height", pill.contains(".heightIn(min = BUTTON_DP.dp)"))
-        assertTrue("the button is under 48 dp", source.contains("private const val BUTTON_DP = 50"))
+        assertTrue("the shared button has no minimum height", button.contains(".heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)"))
+        assertTrue("the shared button cannot span a panel", button.contains("Modifier.fillMaxWidth()"))
         assertTrue(
             "Create lost its command",
-            source.contains("PillButton(text = text.create, primary = true, enabled = name.isNotBlank(), onClick = onCreate)"),
+            source.contains(
+                "text = text.create",
+            ) && source.contains("enabled = name.isNotBlank()") && source.contains("onClick = onCreate"),
         )
         assertTrue("the host no longer creates the list", host.contains("actions.onCreateList(name, newColor)"))
+    }
+
+    @Test
+    fun theSavedPanelsUseTheSharedSheetWithAPaneTitle() {
+        assertTrue("the panel still draws its own scrim", !host.contains("colors.scrim"))
+        assertTrue("the panel still draws its own frame", !source.contains("SavedPanelFrame("))
+        assertTrue("the shared sheet is not used", host.contains("ShellBottomSheet("))
+        assertTrue("the sheet has no pane title", host.contains("sheetTitle ="))
+        assertTrue("the sheet has no named close control", host.contains("closeLabel = text.cancel"))
+    }
+
+    @Test
+    fun theListButtonsAreSharedWithTracks() {
+        val tracks = File("src/main/java/nl/r1a/grassmaps/ui/shell/TrackLibraryHost.kt").readText()
+
+        assertTrue("Saved keeps a private copy of the button", !source.contains("private fun PillButton("))
+        assertTrue("Saved keeps a private copy of the undo pill", !source.contains("private fun UndoPill("))
+        assertTrue("Tracks keeps private copies of the buttons", !tracks.contains("private fun PrimaryButton("))
+        assertTrue("Tracks does not use the shared button", tracks.contains("ListActionButton("))
+        assertTrue("Saved does not use the shared undo bar", source.contains("ListUndoBar("))
     }
 
     @Test

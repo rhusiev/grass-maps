@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -50,7 +48,6 @@ import nl.r1a.grassmaps.plugin.ui.api.choiceOutline
 import nl.r1a.grassmaps.plugin.ui.api.fieldOutline
 import nl.r1a.grassmaps.plugin.ui.api.floatingSurface
 import nl.r1a.grassmaps.plugin.ui.api.selectedSegment
-import nl.r1a.grassmaps.plugin.ui.api.sheetSurface
 
 /**
  * The commands the Saved screen can actually send. The Map command is exposed
@@ -181,7 +178,17 @@ internal fun SavedBottomControls(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp)) {
-        undo?.let { label -> UndoPill(label = label, onClick = onUndo) }
+        undo?.let { label ->
+            val shell = LocalShellColors.current
+            ListUndoBar(
+                message = "",
+                undo = label,
+                background = shell.snackbarBackground,
+                ink = shell.snackbarAction,
+                action = shell.snackbarAction,
+                onUndo = onUndo,
+            )
+        }
         SegmentedRow(rows = content.segments, onChoose = onChooseSegment)
         SavedBar(
             content = content,
@@ -213,7 +220,7 @@ internal fun NewGroupPanel(
 ) {
     val colors = LocalShellColors.current
     val focus = LocalFocusManager.current
-    SavedPanelFrame(title = text.newGroup, cancel = text.cancel, onCancel = onCancel, modifier = modifier) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp)) {
         SecondaryLine(text = text.name)
         // Done closes the keyboard: where the window pans instead of resizing (API 29), the keyboard covers Create.
         BasicTextField(
@@ -233,7 +240,15 @@ internal fun NewGroupPanel(
                     .semantics { contentDescription = text.name },
         )
         Swatches(selected = favouriteColour(colour), onChoose = onColourChange)
-        PillButton(text = text.create, primary = true, enabled = name.isNotBlank(), onClick = onCreate)
+        ListActionButton(
+            text = text.create,
+            background = colors.accent,
+            ink = colors.onAccent,
+            enabled = name.isNotBlank(),
+            onClick = onCreate,
+            corner = (BUTTON_DP / 2).dp,
+            fill = true,
+        )
     }
 }
 
@@ -241,15 +256,12 @@ internal fun NewGroupPanel(
 @Suppress("ktlint:standard:function-naming")
 @Composable
 internal fun SortPanel(
-    title: String,
-    cancel: String,
     sorts: List<FavouritesSortRow>,
     onChoose: (FavouriteSort) -> Unit,
-    onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalShellColors.current
-    SavedPanelFrame(title = title, cancel = cancel, onCancel = onCancel, modifier = modifier) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp)) {
         sorts.forEach { row ->
             Row(
                 modifier =
@@ -271,32 +283,6 @@ internal fun SortPanel(
                 }
             }
         }
-    }
-}
-
-/** A sheet body for the + and sort panels: a title, its rows and Cancel. */
-@Suppress("ktlint:standard:function-naming")
-@Composable
-private fun SavedPanelFrame(
-    title: String,
-    cancel: String,
-    onCancel: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    val colors = LocalShellColors.current
-    Column(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .sheetSurface(RoundedCornerShape(topStart = PANEL_CORNER_DP.dp, topEnd = PANEL_CORNER_DP.dp))
-                .background(colors.surface, RoundedCornerShape(topStart = PANEL_CORNER_DP.dp, topEnd = PANEL_CORNER_DP.dp))
-                .padding(PANEL_PADDING_DP.dp),
-        verticalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),
-    ) {
-        BasicText(text = title, style = headingStyle())
-        content()
-        PillButton(text = cancel, primary = false, enabled = true, onClick = onCancel)
     }
 }
 
@@ -611,35 +597,6 @@ private fun MoreLink(
 
 @Suppress("ktlint:standard:function-naming")
 @Composable
-private fun UndoPill(
-    label: String,
-    onClick: () -> Unit,
-) {
-    val colors = LocalShellColors.current
-    Box(
-        modifier =
-            Modifier
-                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
-                .widthIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
-                .background(colors.snackbarBackground, RoundedCornerShape(SEGMENT_CORNER_DP.dp))
-                .clickable(role = Role.Button, onClick = onClick)
-                .padding(horizontal = PANEL_PADDING_DP.dp, vertical = SMALL_GAP_DP.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        BasicText(
-            text = label,
-            style =
-                TextStyle(
-                    color = colors.snackbarAction,
-                    fontSize = ListChromeMetrics.LABEL_FONT_SP.sp,
-                    fontWeight = FontWeight.SemiBold,
-                ),
-        )
-    }
-}
-
-@Suppress("ktlint:standard:function-naming")
-@Composable
 private fun SavedBar(
     content: SavedScreenContent,
     query: String,
@@ -688,43 +645,6 @@ private fun IconButton(
     )
 }
 
-@Suppress("ktlint:standard:function-naming")
-@Composable
-private fun PillButton(
-    text: String,
-    primary: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    val colors = LocalShellColors.current
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = BUTTON_DP.dp)
-                .background(
-                    when {
-                        !primary -> colors.soft
-                        enabled -> colors.accent
-                        else -> colors.accent.copy(alpha = ListChromeMetrics.DISABLED_ALPHA)
-                    },
-                    RoundedCornerShape(BUTTON_DP.dp),
-                ).clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-                .padding(horizontal = PANEL_PADDING_DP.dp, vertical = SMALL_GAP_DP.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        BasicText(
-            text = text,
-            style =
-                TextStyle(
-                    color = if (primary) colors.onAccent else colors.ink,
-                    fontSize = ListChromeMetrics.LABEL_FONT_SP.sp,
-                    fontWeight = FontWeight.SemiBold,
-                ),
-        )
-    }
-}
-
 /** The selected segment: white on the light theme, the line grey on the dark one. */
 private fun selectedSegment(colors: ShellColors): Color = if (colors.dark) colors.line else colors.surface
 
@@ -771,8 +691,6 @@ private const val FIELD_PADDING_DP = 12
 private const val FIELD_CORNER_DP = 10
 private const val SEGMENT_PADDING_DP = 4
 private const val SEGMENT_CORNER_DP = 24
-private const val PANEL_CORNER_DP = 22
-private const val PANEL_PADDING_DP = 16
 private const val TITLE_FONT_SP = 24
 private const val NOTE_FONT_SP = 13
 private const val BADGE_TINT_ALPHA = 0.16f

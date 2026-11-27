@@ -232,14 +232,11 @@ internal fun FavouritesListsBody(
 
             SavedPanel.SORT -> {
                 SortPanel(
-                    title = text.sortTitle,
-                    cancel = text.cancel,
                     sorts = browse.sorts,
                     onChoose = { sort ->
                         panel = SavedPanel.NONE
                         actions.onSortChange(sort)
                     },
-                    onCancel = { panel = SavedPanel.NONE },
                     modifier = panelModifier,
                 )
             }
@@ -282,20 +279,19 @@ internal fun FavouritesListsBody(
             bottom(Modifier.padding(horizontal = BAR_MARGIN_DP.dp, vertical = PANEL_GAP_DP.dp))
         }
         if (panel != SavedPanel.NONE) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(LocalShellColors.current.scrim)
-                        .pointerInput(Unit) { detectTapGestures(onTap = { panel = SavedPanel.NONE }) },
-                contentAlignment = Alignment.BottomCenter,
+            // The shared sheet owns the scrim, the rounded surface, the drag
+            // handle, the close control, the focus request and the paneTitle.
+            ShellBottomSheet(
+                sheetTitle =
+                    when (panel) {
+                        SavedPanel.NEW_GROUP -> text.newGroup
+                        SavedPanel.SORT -> text.sortTitle
+                        SavedPanel.NONE -> ""
+                    },
+                onDismiss = { panel = SavedPanel.NONE },
+                closeLabel = text.cancel,
             ) {
-                // The panel scrolls when the keyboard or a large font leaves it less height than it needs.
-                panelContent(
-                    Modifier
-                        .pointerInput(Unit) { detectTapGestures(onTap = {}) }
-                        .verticalScroll(rememberScrollState()),
-                )
+                panelContent(Modifier)
             }
         }
     }

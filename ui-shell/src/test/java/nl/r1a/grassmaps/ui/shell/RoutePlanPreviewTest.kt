@@ -15,13 +15,13 @@ import java.time.ZoneId
 import java.util.Locale
 
 /**
- * The preview rule (T-0302, Save in T-0411): the three values and the two
- * actions, and nothing else. Elevation, slope, surface and way type are other
+ * The preview rule (T-0302, Save in T-0411): the three values and the Save
+ * action, and nothing else. Elevation, slope, surface and way type are other
  * tasks.
  */
 class RoutePlanPreviewTest {
     @Test
-    fun thePreviewIsExactlyTimeDistanceArrivalSaveAndStart() {
+    fun thePreviewIsExactlyTimeDistanceArrivalAndSave() {
         val preview = routePlanPreview(READY, strings(), Locale.US, ZoneId.of("UTC")) ?: error("no preview")
 
         assertEquals(
@@ -30,11 +30,10 @@ class RoutePlanPreviewTest {
                 RoutePreviewField.Distance,
                 RoutePreviewField.Arrival,
                 RoutePreviewField.Save,
-                RoutePreviewField.Start,
             ),
             preview.entries.map { it.field },
         )
-        assertEquals(listOf("25 min", "7.1 km", "22:38", "Save", "Start"), preview.entries.map { it.text })
+        assertEquals(listOf("25 min", "7.1 km", "22:38", "Save"), preview.entries.map { it.text })
         assertTrue(
             preview.entries.none { entry ->
                 listOf("elevation", "slope", "surface", "way type").any { word ->
@@ -77,7 +76,7 @@ class RoutePlanPreviewTest {
 
         val preview = routePlanPreview(one, strings(), Locale.US, ZoneId.of("UTC"))
 
-        assertEquals(5, preview?.entries?.size)
+        assertEquals(4, preview?.entries?.size)
     }
 
     @Test
@@ -93,7 +92,7 @@ class RoutePlanPreviewTest {
 
         assertEquals("20 min · Tobler walk", preview.time)
         assertEquals("22:33", preview.arrival)
-        assertEquals(5, preview.entries.size)
+        assertEquals(4, preview.entries.size)
     }
 
     @Test
@@ -128,7 +127,6 @@ class RoutePlanPreviewTest {
                 RoutePreviewField.Distance,
                 RoutePreviewField.Arrival,
                 RoutePreviewField.Save,
-                RoutePreviewField.Start,
             ),
             preview.entries.map { it.field },
         )
@@ -167,7 +165,7 @@ class RoutePlanPreviewTest {
     }
 
     @Test
-    fun aRouteWithViasStillShowsOnlyTheFiveEntries() {
+    fun aRouteWithViasStillShowsOnlyTheFourEntries() {
         val withVias =
             READY.copy(
                 vias =
@@ -186,24 +184,18 @@ class RoutePlanPreviewTest {
                 RoutePreviewField.Distance,
                 RoutePreviewField.Arrival,
                 RoutePreviewField.Save,
-                RoutePreviewField.Start,
             ),
             preview.entries.map { it.field },
         )
-        assertEquals(listOf("25 min", "7.1 km", "22:38", "Save", "Start"), preview.entries.map { it.text })
+        assertEquals(listOf("25 min", "7.1 km", "22:38", "Save"), preview.entries.map { it.text })
     }
 
     @Test
-    fun thePreviewOffersSaveBesideStartAndAPlanWithoutARouteHasNoCard() {
+    fun thePreviewOffersSaveAndAPlanWithoutARouteHasNoCard() {
         val preview = routePlanPreview(READY, strings(), Locale.US, ZoneId.of("UTC")) ?: error("no preview")
 
-        assertEquals(
-            "the two actions sit together, Save before Start",
-            listOf(RoutePreviewField.Save, RoutePreviewField.Start),
-            preview.entries.takeLast(2).map { entry -> entry.field },
-        )
+        assertEquals(RoutePreviewField.Save, preview.entries.last().field)
         assertTrue("Save has a label", preview.save.isNotBlank())
-        assertTrue("Start has a label", preview.start.isNotBlank())
 
         // A plan with no selected route has no card at all, so the Save action
         // cannot be tapped with nothing behind it. The save path reports the same
@@ -223,7 +215,6 @@ class RoutePlanPreviewTest {
                     "unit_distance_kilometres" to "%1\$s km",
                     "unit_distance_feet" to "%1\$s ft",
                     "unit_distance_miles" to "%1\$s mi",
-                    "route_preview_start" to "Start",
                     "route_preview_save" to "Save",
                 )
 

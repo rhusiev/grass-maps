@@ -11,25 +11,24 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
- * What the preview card shows: time, distance, arrival, Save and Start (T-0302,
+ * What the preview card shows: time, distance, arrival and Save (T-0302,
  * Save in T-0411). Elevation, slope, surface and way detail belong to later
  * tasks and must not be added here. The slope-aware model's name (T-0407) sits
  * inside the Time text, so it is not a field of its own.
  *
  * The design allows four elements in this card. Save is a fifth, taken as a
  * product decision on 2026-11-14 because the library needs an in-UI way in and
- * the card is where the route is. Start stays the primary action, so the two
- * actions sit on the card's own trailing row, Save before Start.
+ * the card is where the route is. Start is not a card field: the pinned bottom
+ * bar draws it from the same [START_KEY] copy.
  */
 enum class RoutePreviewField {
     Time,
     Distance,
     Arrival,
     Save,
-    Start,
 }
 
-/** One preview item. Save and Start are actions; the first three are values. */
+/** One preview item. Save is an action; the first three are values. */
 data class RoutePreviewEntry(
     val field: RoutePreviewField,
     val text: String,
@@ -45,19 +44,18 @@ data class RoutePreviewTime(
     val model: String,
 )
 
-/** The preview card. Construction fixes the list at its five entries. */
+/** The preview card. Construction fixes the list at its four entries. */
 data class RoutePreview(
     val entries: List<RoutePreviewEntry>,
 ) {
     init {
-        require(entries.map { it.field } == FIELDS) { "the preview has exactly five fields" }
+        require(entries.map { it.field } == FIELDS) { "the preview has exactly four fields" }
     }
 
     val time: String get() = entries[0].text
     val distance: String get() = entries[1].text
     val arrival: String get() = entries[2].text
     val save: String get() = entries[3].text
-    val start: String get() = entries[4].text
 
     private companion object {
         val FIELDS =
@@ -66,7 +64,6 @@ data class RoutePreview(
                 RoutePreviewField.Distance,
                 RoutePreviewField.Arrival,
                 RoutePreviewField.Save,
-                RoutePreviewField.Start,
             )
     }
 }
@@ -107,7 +104,6 @@ fun routePlanPreview(
                     ARRIVAL_FORMAT.format(Instant.ofEpochMilli(arrivalMillis(option, seconds)).atZone(zone)),
                 ),
                 RoutePreviewEntry(RoutePreviewField.Save, strings.resolve(SAVE_KEY)),
-                RoutePreviewEntry(RoutePreviewField.Start, strings.resolve(START_KEY)),
             ),
     )
 }

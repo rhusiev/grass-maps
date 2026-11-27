@@ -94,7 +94,7 @@
     <string name="route_planner_pack_missing">Routing is unavailable: the map pack is missing or incomplete</string>
     <string name="route_planner_pack_unusable">Routing is unavailable: the map pack cannot be read</string>
     <string name="route_planner_engine_unavailable">Routing is unavailable in this build</string>
-    <string name="route_planner_open_downloads">Open Settings &gt; Map downloads to install the missing map</string>
+    <string name="route_planner_open_downloads">Open Map downloads to install the missing map</string>
     <string name="route_planner_missing_title">%1$s is not on this phone</string>
     <plurals name="route_planner_missing_title_many">
         <item quantity="one">%1$s and %2$s other region are not on this phone</item>

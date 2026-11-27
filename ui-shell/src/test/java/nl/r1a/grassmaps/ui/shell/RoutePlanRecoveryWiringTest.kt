@@ -1,6 +1,7 @@
 package nl.r1a.grassmaps.ui.shell
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -35,12 +36,17 @@ class RoutePlanRecoveryWiringTest {
         val ukrainian = TestStringCatalog.read(APP_UKRAINIAN).resolver()
 
         assertEquals(
-            "Open Settings > Map downloads to install the missing map",
+            "Open Map downloads to install the missing map",
             english.resolve(GUIDANCE_KEY),
         )
         assertEquals(
-            "Відкрийте Налаштування > Завантаження карт, щоб встановити відсутню карту",
+            "Відкрийте Завантаження карт, щоб встановити відсутню карту",
             ukrainian.resolve(GUIDANCE_KEY),
+        )
+        assertFalse(
+            "the recovery copy still sends the reader through Settings",
+            english.resolve(GUIDANCE_KEY).contains("Settings") ||
+                ukrainian.resolve(GUIDANCE_KEY).contains("Налаштування"),
         )
     }
 

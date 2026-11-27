@@ -62,13 +62,20 @@ private val DEFAULT_CHROME_HEIGHT =
 
 /**
  * The fixed height around a sheet's scrolling rows: the handle, [header],
- * [footer], the three gaps between them and the foot padding. A host passes it
- * as `chromeHeight`, so its rows keep their share of the screen.
+ * [footer], the two gaps around the header, the gap before [footer] only when
+ * it draws, and the foot padding. A host passes it as `chromeHeight`, so its
+ * rows keep their share of the screen.
  */
 fun sheetChromeHeight(
     header: Dp,
     footer: Dp,
-): Dp = (HANDLE_TOP_DP + HANDLE_HEIGHT_DP + HANDLE_BOTTOM_DP + SHEET_SECTION_GAP_DP * 3 + SHEET_PADDING_DP).dp + header + footer
+): Dp {
+    val footerGap = if (footer > 0.dp) SHEET_SECTION_GAP_DP.dp else 0.dp
+    return (HANDLE_TOP_DP + HANDLE_HEIGHT_DP + HANDLE_BOTTOM_DP + SHEET_SECTION_GAP_DP * 2 + SHEET_PADDING_DP).dp +
+        header +
+        footer +
+        footerGap
+}
 
 /**
  * The fixed height around the scrolling rows of a sheet whose handle is its

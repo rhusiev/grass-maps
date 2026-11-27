@@ -192,16 +192,29 @@ class RoutePlanSheetLayoutTest {
     /**
      * AVD, font scale 2.0: the planner's 48 dp header row and 50 dp bar were
      * missing from the sheet's height bound, so only about 190 dp scrolled
-     * between them. The bound now counts the handle, both rows, the three gaps
-     * and the foot padding.
+     * between them. The bound now counts the handle, both rows, the gaps and
+     * the foot padding.
      */
     @Test
     fun theSheetBoundCountsThePlannersHeaderAndBar() {
         assertEquals(167.dp, sheetChromeHeight(header = 48.dp, footer = 50.dp))
-        assertEquals(117.dp, sheetChromeHeight(header = 48.dp, footer = 0.dp))
+        assertEquals(107.dp, sheetChromeHeight(header = 48.dp, footer = 0.dp))
         assertTrue(
             "the planner does not pass its own header and bar to the sheet bound",
             Regex("""chromeHeight =\s*sheetChromeHeight\(\s*header = CONTROL_TARGET_DP\.dp""").containsMatchIn(panel()),
+        )
+    }
+
+    @Test
+    fun anEmptyFooterDoesNotAddAGapToTheSheetBound() {
+        val withoutFooter = sheetChromeHeight(header = 48.dp, footer = 0.dp)
+        val withFooter = sheetChromeHeight(header = 48.dp, footer = 50.dp)
+
+        assertEquals(10.dp, withFooter - withoutFooter - 50.dp)
+        assertEquals(107.dp, withoutFooter)
+        assertTrue(
+            "the planner still reserves a gap for an empty bar",
+            "footer = if (layout.bar.isEmpty()) 0.dp else BAR_BUTTON_HEIGHT_DP.dp" in panel(),
         )
     }
 

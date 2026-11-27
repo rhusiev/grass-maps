@@ -885,7 +885,7 @@ private fun EditSheet(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(DESCRIPTION_HEIGHT_DP.dp)
+                    .heightIn(min = DESCRIPTION_HEIGHT_DP.dp)
                     .background(colors.surface, RoundedCornerShape(FIELD_CORNER_DP.dp))
                     .fieldOutline(colors.tokens, RoundedCornerShape(FIELD_CORNER_DP.dp))
                     .padding(FIELD_PADDING_DP.dp),
@@ -935,6 +935,7 @@ private fun VisibilityRow(
             Modifier
                 .fillMaxWidth()
                 .toggleable(value = checked, role = Role.Switch) { onChange(it) }
+                .heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)
                 .padding(vertical = ACTION_PADDING_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(ROW_GAP_DP.dp),

@@ -17,6 +17,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 import java.util.Locale
 
 /**
@@ -205,6 +206,25 @@ class TrackLibraryContentTest {
 
         val hiddenContent = trackLibraryContent(hiddenFirstTrack(), strings(UKRAINIAN, APP_UKRAINIAN), Locale.forLanguageTag("uk"))
         assertEquals("Прихований на карті", hiddenContent.rows.first().hiddenNotice)
+    }
+
+    @Test
+    fun theEditSheetRowsGrowWithTheirText() {
+        val source = File("src/main/java/nl/r1a/grassmaps/ui/shell/TrackLibraryHost.kt").readText()
+        val description = source.substringAfter("value = description,").substringBefore("Line(text = content.descriptionNote")
+        val visibility = source.substringAfter("private fun VisibilityRow(").substringBefore("\n}\n")
+
+        assertTrue(
+            "the description field is fixed and clips at font 2.0",
+            description.contains(".heightIn(min = DESCRIPTION_HEIGHT_DP.dp)"),
+        )
+        assertTrue("an exact description height came back", !description.contains(".height(DESCRIPTION_HEIGHT_DP.dp)"))
+        assertTrue(
+            "the visibility row is under 48 dp",
+            visibility.contains("toggleable(value = checked") &&
+                visibility.indexOf(".heightIn(min = MapControlMetrics.TAP_TARGET_DP.dp)") >
+                visibility.indexOf("toggleable(value = checked"),
+        )
     }
 
     @Test

@@ -509,6 +509,15 @@ internal fun routeCardInsets(
  */
 internal fun routePlanSheetShown(status: RoutePlanStatus): Boolean = status != RoutePlanStatus.Idle
 
+/**
+ * The open map layout sheet on [tab]. [fromHalfSheet] marks a sheet the
+ * chevron's sheet opened through Edit or Add, so Back returns there.
+ */
+internal data class LayoutSheetOpen(
+    val tab: MapLayoutTab,
+    val fromHalfSheet: Boolean = false,
+)
+
 /** Whether the read-only route card is composed for the plan's state (T-0612). */
 internal fun routeSummaryCardShown(status: RoutePlanStatus): Boolean = status == RoutePlanStatus.Ready
 
@@ -885,7 +894,7 @@ private fun MapContent(
     val layoutState by layoutController.state.collectAsState()
     val layout = layoutState.layout
     var isEditing by remember { mutableStateOf(false) }
-    var layoutSheetTab by remember { mutableStateOf<MapLayoutTab?>(null) }
+    var layoutSheet by remember { mutableStateOf<LayoutSheetOpen?>(null) }
     // The widget controller is the same instance the grid draws, so an edit
     // from the sheet and one from the grid see the same layout.
     val widgetController = remember(container, profile) { container.widgetLayoutController(profile) }
@@ -1402,9 +1411,15 @@ private fun MapContent(
         }
     }
     val plannerBackView = routePlanBackView(routeSheetView)
+    val backFromLayoutSheet: () -> Unit = {
+        widgetsSavedSheetOpen = layoutSheet?.fromHalfSheet == true
+        layoutSheet = null
+    }
     // Full-screen destinations are composed later, so their Back handlers win.
-    BackHandler(enabled = !navigationActive && (widgetsSavedSheetOpen || searchExpanded || plannerSheetShown || layersSheetShown)) {
+    val backOverlayShown = layoutSheet != null || widgetsSavedSheetOpen || searchExpanded || plannerSheetShown || layersSheetShown
+    BackHandler(enabled = !navigationActive && backOverlayShown) {
         when {
+            layoutSheet != null -> backFromLayoutSheet()
             widgetsSavedSheetOpen -> widgetsSavedSheetOpen = false
             searchExpanded -> searchExpanded = false
             plannerSheetShown && plannerBackView != null -> routeSheetView = plannerBackView
@@ -1503,7 +1518,7 @@ private fun MapContent(
                 container = container,
                 units = units,
                 isEditing = isEditing,
-                onOpenPicker = { layoutSheetTab = MapLayoutTab.Widgets },
+                onOpenPicker = { layoutSheet = LayoutSheetOpen(MapLayoutTab.Widgets) },
                 modifier =
                     Modifier
                         .align(Alignment.TopStart)
@@ -1594,11 +1609,11 @@ private fun MapContent(
                 isEditing = isEditing,
                 arc = layout.arc,
                 onInvoke = { id -> dispatchMapButton(id, JsonObject(emptyMap())) },
-                onAdd = { layoutSheetTab = MapLayoutTab.Buttons },
+                onAdd = { layoutSheet = LayoutSheetOpen(MapLayoutTab.Buttons) },
                 onEditingChange = { editing ->
                     isEditing = editing
                     if (!editing) {
-                        layoutSheetTab = null
+                        layoutSheet = null
                     }
                 },
                 zoomSlider = zoomSlider,
@@ -1628,7 +1643,7 @@ private fun MapContent(
                 onClick = {
                     val binding = layout.quickAccess
                     if (isEditing || binding == null) {
-                        layoutSheetTab = MapLayoutTab.Buttons
+                        layoutSheet = LayoutSheetOpen(MapLayoutTab.Buttons)
                     } else {
                         dispatchMapButton(binding.command, binding.parameters)
                     }
@@ -1666,14 +1681,15 @@ private fun MapContent(
             )
         }
         if (!navigationActive) {
-            layoutSheetTab?.let { tab ->
+            layoutSheet?.let { open ->
+                val tab = open.tab
                 MapLayoutSheet(
                     content = layoutSheetContent(layout, widgetState.layout, container.strings),
                     tab = tab,
                     labels = layoutSheetLabels,
                     quickAccessTitle = layoutQuickAccessTitle(layout, container.strings),
                     arc = layout.arc,
-                    onTab = { selected -> layoutSheetTab = selected },
+                    onTab = { selected -> layoutSheet = open.copy(tab = selected) },
                     onItem = { item ->
                         if (tab == MapLayoutTab.Widgets) {
                             GridWidget.fromStorageKey(item.key)?.let { widget ->
@@ -1697,9 +1713,9 @@ private fun MapContent(
                     editing = isEditing,
                     onEditingChange = { editing ->
                         isEditing = editing
-                        layoutSheetTab = null
+                        layoutSheet = null
                     },
-                    onClose = { layoutSheetTab = null },
+                    onClose = { layoutSheet = null },
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
@@ -2489,7 +2505,7 @@ private fun MapContent(
                     WidgetsSavedSheetActions(
                         onEditWidgets = {
                             closeSheet()
-                            layoutSheetTab = MapLayoutTab.Widgets
+                            layoutSheet = LayoutSheetOpen(MapLayoutTab.Widgets, fromHalfSheet = true)
                         },
                         onOpenAllSaved = {
                             closeSheet()

@@ -49,7 +49,10 @@ class MapBottomBarChevronTest {
 
         assertTrue("the sheet is not the round 9 host", sheet.contains("WidgetsSavedSheetHost("))
         assertTrue("the sheet no longer embeds the Saved list form", !sheet.contains("MapSavedListsHost("))
-        assertTrue("Edit does not open the widgets layout tab", sheet.contains("layoutSheetTab = MapLayoutTab.Widgets"))
+        assertTrue(
+            "Edit does not open the widgets layout tab",
+            sheet.contains("layoutSheet = LayoutSheetOpen(MapLayoutTab.Widgets, fromHalfSheet = true)"),
+        )
         assertTrue("All N does not open the full Saved screen", sheet.contains("FavouritesListsSession.show()"))
         assertTrue("a tile tap is not wired", sheet.contains("openSavedTile(tile.target)"))
         assertTrue(
@@ -59,6 +62,36 @@ class MapBottomBarChevronTest {
         assertTrue("the bar at the sheet foot does not close the sheet", sheet.contains("onOpenSheet = closeSheet"))
         assertTrue("the bar at the sheet foot is not drawn in its sheet form", sheet.contains("inSheet = true"))
         assertTrue("the sheet bar shares the map bar's chrome key", sheet.contains("chromeKey = SHEET_BAR_KEY"))
+    }
+
+    /**
+     * Q56 P1-1: chevron > Edit > Back left the app, because the map's Back
+     * handler skipped the layout sheet. Back now closes the layout sheet first
+     * and returns to the chevron's sheet only when that sheet opened it.
+     */
+    @Test
+    fun backFromTheLayoutSheetReturnsToTheSheetThatOpenedIt() {
+        val back = source.substringAfter("BackHandler(enabled = !navigationActive").substringBefore("\n    }\n")
+        assertTrue(
+            "Back is not enabled while the layout sheet is open",
+            source.contains("val backOverlayShown = layoutSheet != null ||") && back.startsWith(" && backOverlayShown)"),
+        )
+        assertTrue(
+            "Back does not close the layout sheet before every other overlay",
+            back.substringAfter("when {").trim().startsWith("layoutSheet != null -> backFromLayoutSheet()"),
+        )
+        val backAction = source.substringAfter("val backFromLayoutSheet: () -> Unit = {").substringBefore("\n    }\n")
+        assertTrue(
+            "Back does not reopen the chevron's sheet that opened the layout sheet",
+            backAction.contains("widgetsSavedSheetOpen = layoutSheet?.fromHalfSheet == true"),
+        )
+        assertTrue("Back leaves the layout sheet open", backAction.contains("layoutSheet = null"))
+        val opened = Regex("""layoutSheet = LayoutSheetOpen\([^)]*\)""").findAll(source).map { it.value }.toList()
+        assertEquals(
+            "only the chevron's sheet may mark the layout sheet as its own",
+            listOf("layoutSheet = LayoutSheetOpen(MapLayoutTab.Widgets, fromHalfSheet = true)"),
+            opened.filter { it.contains("fromHalfSheet") },
+        )
     }
 
     @Test

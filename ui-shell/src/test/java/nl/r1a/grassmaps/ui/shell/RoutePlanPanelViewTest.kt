@@ -63,14 +63,19 @@ class RoutePlanPanelViewTest {
     @Test
     fun mapBackDismissesOnlyTheFirstVisibleOverlayInSearchPlannerLayersOrder() {
         val handler =
-            Regex("""BackHandler\(\s*enabled = !navigationActive && \(([^)]+)\),?\s*\) \{\s*when \{\s*([^}]+)\}\s*\}""")
-                .find(mapScreen())
+            Regex(
+                """val backOverlayShown = ([^\n]+)\n\s*BackHandler\(enabled = !navigationActive && backOverlayShown\) \{\s*when \{\s*([^}]+)\}\s*\}""",
+            ).find(mapScreen())
 
         assertTrue("Map Back is enabled only while a map overlay is visible", handler != null)
         val (enabled, actions) = requireNotNull(handler).destructured
-        assertEquals("widgetsSavedSheetOpen || searchExpanded || plannerSheetShown || layersSheetShown", enabled)
+        assertEquals(
+            "layoutSheet != null || widgetsSavedSheetOpen || searchExpanded || plannerSheetShown || layersSheetShown",
+            enabled,
+        )
         assertEquals(
             listOf(
+                "layoutSheet != null -> backFromLayoutSheet()",
                 "widgetsSavedSheetOpen -> widgetsSavedSheetOpen = false",
                 "searchExpanded -> searchExpanded = false",
                 "plannerSheetShown && plannerBackView != null -> routeSheetView = plannerBackView",

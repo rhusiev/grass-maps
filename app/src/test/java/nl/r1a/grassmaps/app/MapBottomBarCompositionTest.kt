@@ -77,6 +77,7 @@ class MapBottomBarCompositionTest {
     @Test
     fun theBackHandlerStillDismissesSearchPlanAndLayers() {
         val back = source.substringAfter("BackHandler(enabled = !navigationActive").substringBefore("Box(Modifier.fillMaxSize()")
+        assertTrue("Back does not close the layout sheet", back.contains("layoutSheet != null -> backFromLayoutSheet()"))
         assertTrue("Back no longer closes search", back.contains("searchExpanded -> searchExpanded = false"))
         assertTrue("Back no longer closes the planner", back.contains("plannerSheetShown -> closePlan()"))
         assertTrue("Back no longer closes Layers", back.contains("layersSheetShown -> dismissLayers()"))

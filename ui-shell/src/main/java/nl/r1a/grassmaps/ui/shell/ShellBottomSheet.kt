@@ -1,5 +1,6 @@
 package nl.r1a.grassmaps.ui.shell
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -27,9 +28,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusTarget
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
@@ -42,6 +47,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.r1a.grassmaps.plugin.ui.api.LocalShellColors
+import nl.r1a.grassmaps.plugin.ui.api.ShellColors
 
 private const val SHEET_MAX_WIDTH_DP = 560
 private const val SHEET_CORNER_DP = 22
@@ -57,6 +63,8 @@ private const val CLOSE_SIZE_DP = 48
 private const val CLOSE_FONT_SP = 20
 private const val CLOSE_GLYPH = "×"
 private const val DISMISS_DRAG_DP = 56
+private const val SCROLL_TRACK_WIDTH_DP = 4
+private const val SCROLL_THUMB_MIN_DP = 24
 private val DEFAULT_CHROME_HEIGHT =
     (HANDLE_TOP_DP + HANDLE_HEIGHT_DP + HANDLE_BOTTOM_DP + CLOSE_SIZE_DP + SHEET_SECTION_GAP_DP * 2).dp
 
@@ -89,6 +97,49 @@ internal fun sheetScrollLimit(
     stops: List<Dp>,
     max: Dp,
 ): Dp = stops.filter { it <= max }.maxOrNull() ?: max
+
+/** A scroll thumb's [top] and [length] in px along a track as tall as the scrolling rows. */
+internal data class SheetScrollThumb(
+    val top: Float,
+    val length: Float,
+)
+
+/**
+ * The thumb for rows scrolled [scrollPx] of [maxScrollPx] in a [viewportPx]
+ * tall view, or null when the rows fit. Its length is the visible share of the
+ * rows, at least [minLengthPx].
+ */
+internal fun sheetScrollThumb(
+    viewportPx: Float,
+    maxScrollPx: Float,
+    scrollPx: Float,
+    minLengthPx: Float,
+): SheetScrollThumb? {
+    if (maxScrollPx <= 0f || viewportPx <= 0f) return null
+    val length = (viewportPx * viewportPx / (viewportPx + maxScrollPx)).coerceIn(minOf(minLengthPx, viewportPx), viewportPx)
+    val top = (viewportPx - length) * (scrollPx / maxScrollPx).coerceIn(0f, 1f)
+    return SheetScrollThumb(top, length)
+}
+
+/**
+ * A track and thumb in the sheet's end padding while [state] can scroll, so a
+ * sheet that opens on whole rows still shows that more rows lie below.
+ */
+private fun Modifier.sheetScrollIndicator(
+    state: ScrollState,
+    colors: ShellColors,
+): Modifier =
+    drawWithContent {
+        drawContent()
+        val width = SCROLL_TRACK_WIDTH_DP.dp.toPx()
+        val thumb =
+            sheetScrollThumb(size.height, state.maxValue.toFloat(), state.value.toFloat(), SCROLL_THUMB_MIN_DP.dp.toPx())
+                ?: return@drawWithContent
+        val x = size.width + (SHEET_PADDING_DP.dp.toPx() - width) / 2
+        val corner = CornerRadius(width / 2)
+        drawRoundRect(colors.soft, Offset(x, 0f), Size(width, size.height), corner)
+        drawRoundRect(colors.muted, Offset(x, thumb.top), Size(width, thumb.length), corner)
+    }
 
 /** Whether a handle drag of [draggedPx], positive downward, is long enough to close the sheet. */
 internal fun dragDismissesSheet(
@@ -184,6 +235,7 @@ fun SheetCloseButton(
  * opens, so a host never shows a row cut in half; the rest scrolls into view.
  * [chromeHeight] is the height of the host's header and footer above the
  * scrolling area, so a sheet with pinned actions can bound its own content.
+ * [scrollIndicator] draws a track and thumb beside rows that can scroll.
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -198,6 +250,7 @@ fun ShellBottomSheet(
     handleLabel: String? = null,
     peekStops: List<Dp> = emptyList(),
     chromeHeight: Dp = DEFAULT_CHROME_HEIGHT,
+    scrollIndicator: Boolean = false,
     header: @Composable ColumnScope.() -> Unit = {},
     footer: @Composable ColumnScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
@@ -274,12 +327,14 @@ fun ShellBottomSheet(
                     )
                 }
                 header()
+                val scrollState = rememberScrollState()
                 Column(
                     modifier =
                         Modifier
                             .weight(1f, fill = false)
                             .heightIn(max = sheetScrollLimit(peekStops, contentMaxHeight))
-                            .verticalScroll(rememberScrollState()),
+                            .then(if (scrollIndicator) Modifier.sheetScrollIndicator(scrollState, colors) else Modifier)
+                            .verticalScroll(scrollState),
                     verticalArrangement = Arrangement.spacedBy(SHEET_SECTION_GAP_DP.dp),
                     content = content,
                 )

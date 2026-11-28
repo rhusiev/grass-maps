@@ -34,7 +34,8 @@ data class WidgetsSavedSheetActions(
  * The sheet has no close button: its drag handle, Back and the bar's chevron
  * close it. Settings lies in the rest of the sheet below the half view, as in
  * round 3 ("widgets, favourites and the rest"): the sheet opens with exactly
- * the widgets and Saved in view, and Settings scrolls up from under them.
+ * the widgets and Saved in view, and Settings scrolls up from under them. A
+ * scroll indicator shows that the rows continue below (Q56 P1-2).
  */
 @Suppress("ktlint:standard:function-naming")
 @Composable
@@ -55,6 +56,7 @@ fun WidgetsSavedSheet(
         handleLabel = stringResource(R.string.map_sheet_close),
         peekStops = heights.stops(rowCount, density),
         chromeHeight = dismissHandleChromeHeight(footer = barHeight),
+        scrollIndicator = true,
         footer = { bar() },
         content = {
             Column(
